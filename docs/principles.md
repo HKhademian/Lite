@@ -12,7 +12,7 @@ Provide a language that students can begin using without learning type annotatio
 - Functions, conditions, loops, modules, and packages.
 - No universal `null`, `nil`, or `undefined` value.
 - Optional data through `Option`; recoverable failure through `Result`.
-- Declared typed recoverable errors, implicit success construction, explicit propagation at each fallible step, and local `else` recovery. Propagation spelling is under review for readable chains.
+- Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
 - A separate panic path, with its execution and cleanup contract still open.
 - Immutable and minimally visible declarations by default.
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.

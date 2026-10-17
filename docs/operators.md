@@ -77,6 +77,16 @@ To negate only `a` before comparing:
 
 The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
+## Recoverable error propagation
+
+Postfix `!` extracts one Result success payload or returns its declared recoverable error from the nearest function or closure. It participates in left-to-right postfix chaining:
+
+```text
+name := load_user(id)!.load_profile()!.name;
+```
+
+`!.` is propagation followed by ordinary member access, not a nullable accessor. Each marked outcome is evaluated once; failure prevents later chain steps from running. The enclosing function must declare every error that can escape. This operator neither asserts success nor triggers or catches a panic. Prefix `try` and postfix `?` are not alternative propagation spellings. Option handling and the full expression-precedence grammar remain open. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
+
 ## Evaluation order
 
 Ordinary operator operands evaluate left to right after precedence establishes grouping. Function arguments also evaluate left to right, after evaluating the callee. Short-circuiting skips unneeded operands. See [evaluation order](evaluation-order.md), including target selection before right-hand-side evaluation for assignment and compound updates.

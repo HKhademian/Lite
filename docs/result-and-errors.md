@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **typed declared recoverable failures, implicit success construction, explicit stepwise propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; prefix `try` spelling reopened for chaining review**.
+Status: **typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
 
 ## Purpose
 
@@ -18,9 +18,9 @@ The earlier discussion of ordinary `: Int` signatures hiding recoverable failure
 
 ## Declared error coverage
 
-Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a `try` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
+Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a postfix `!` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
 
-- A function declaring no recoverable failure must handle such failures internally; it cannot use `try` to let them escape.
+- A function declaring no recoverable failure must handle such failures internally; it cannot use `!` to let them escape.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
 - The compiler may verify coverage and identify missing declarations; it must not widen the contract to a universal error type or silently infer additional escaping failures.
@@ -69,20 +69,26 @@ if let Err(error) = validate_age(text_age) {
 }
 ```
 
-The earlier chosen prefix `try` is now under review because of noisy grouping in call chains. The following examples retain that notation as a baseline, rather than select another spelling prematurely:
+Propagation uses postfix `!`:
 
 ```text
 load_age := fn(path: String): Result<Int, LoadError> {
-    text := try read_text(path);
-    try parse_age(text)
+    text := read_text(path)!;
+    parse_age(text)!
 }
 ```
 
-`try` evaluates its operand once. For success it supplies the payload; for a recoverable error it exits the nearest function or closure with that error, subject to the enclosing declared error contract. It does not dynamically search for a handler or cross a function boundary to return from an outer caller. Applicable structured cleanup follows the existing exit rules.
+`outcome!` evaluates its operand once. For success it supplies one Result layer's payload; for a recoverable error it exits the nearest function or closure with that error, subject to the enclosing declared error contract. It does not dynamically search for a handler or cross a function boundary to return from an outer caller. Applicable structured cleanup follows the existing exit rules. This is recoverable propagation, not a panic-producing assertion of success.
 
-The example assumes the read and parse errors are covered by `LoadError`; their composition or mapping must be declared and defined, not guessed from the example. `try` must not erase error types. Its complete precedence and nested-expression grammar remain open.
+The example assumes the read and parse errors are covered by `LoadError`; their composition or mapping must be declared and defined, not guessed from the example. `!` must not erase error types. It participates in a left-to-right postfix chain, so calls and member access can continue from the extracted value without grouping:
 
-Postfix `?` was previously superseded and is now reconsidered alongside V-style postfix `!` for chaining ergonomics. Neither suffix is adopted as an additional spelling or capture marker. Optional-value propagation is a separate open decision. See [propagation and call chaining](propagation-and-chaining.md).
+```text
+name := load_user(id)!.load_profile()!.name;
+```
+
+`!.` is the postfix `!` followed by ordinary member access `.`, not a separate nullable-access operator. Whitespace between those tokens does not change meaning. Each marked step extracts only its own Result; it does not automatically extract later outcomes. Complete expression precedence and recovery-clause interactions still need formalization.
+
+Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No marker is required to retain a Result as data. Optional-value propagation remains a separate open decision. See [propagation and call chaining](propagation-and-chaining.md).
 
 ## Keeping an outcome as data
 
@@ -92,7 +98,7 @@ An ordinary fallible call returns its `Result` without automatic extraction:
 attempt := read_text(path);
 ```
 
-Here `attempt` retains the typed success-or-error outcome for storage, passing to another function, or conditional inspection. No capture marker or expected-type conversion is required. `try attempt` requests extraction and propagation later; an attached recovery clause can instead provide a fallback. Neither ordinary variable access nor storing a Result recursively unwraps or flattens it.
+Here `attempt` retains the typed success-or-error outcome for storage, passing to another function, or conditional inspection. No capture marker or expected-type conversion is required. `attempt!` requests extraction and propagation later; an attached recovery clause can instead provide a fallback. Neither ordinary variable access nor storing a Result recursively unwraps or flattens it.
 
 ## Recovery at a single operation
 
@@ -103,7 +109,7 @@ A programmer must be able to inspect and handle the failure of an individual fal
 - Evaluate the selected operation and its executed operands once. Handling its error must not silently repeat the operation.
 - Preserve a typed error value so that conditional patterns can distinguish failures and decide whether to recover or explicitly return an error.
 - Supporting local recovery does not require every ordinary intermediate binding to be a programmer-visible `Result`.
-- Recoverable errors require explicit handling, a default, or propagation before using the successful payload. Automatic propagation from ordinary code is not selected; the earlier prefix `try` spelling is under review.
+- Recoverable errors require explicit handling, a default, or postfix `!` propagation before using the successful payload. Automatic propagation from ordinary code is not selected.
 
 ### Arithmetic capture proposal
 
@@ -163,7 +169,7 @@ Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-re
 
 ```text
 save := fn(data: Data): Result<Unit, SaveError> {
-    try write_data(data);
+    write_data(data)!;
     Unit
 }
 ```
@@ -172,7 +178,7 @@ The final `Unit` represents success without data.
 
 ## Failure boundaries
 
-Recoverable errors and panics have separate paths. `try` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
+Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
 
 An arithmetic fault is not automatically a recoverable returned error merely because it can be detected. Whether ordinary fixed-width addition overflow, integer division by zero, and unrepresentable quotients belong to the recoverable contract remains open. Any selected policy must reconcile concise ordinary arithmetic with the existing requirement for local arithmetic recovery. No implicit trapping, wrapping, undefined behavior, or build-dependent change is adopted by this distinction.
 

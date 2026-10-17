@@ -1,6 +1,6 @@
 # Propagation and call chaining
 
-Status: **explicit handling at each fallible step and stored Result values retained; earlier prefix `try` spelling reopened for review; postfix alternatives are proposals**.
+Status: **postfix `!` selected for explicit propagation at each fallible step; stored Results and optional-receiver recovery with union results retained**.
 
 ## Purpose
 
@@ -16,6 +16,20 @@ Allow a successful value to continue through ordinary calls and member access wi
 - Extra parentheses around prefix propagation were rejected as an acceptable everyday chain style.
 - Syntax is a source-ergonomics decision. No compiler or benchmark establishes runtime speed differences between spellings.
 
+## Selected spelling
+
+```text
+name := load_user(id)!.load_profile()!.name;
+```
+
+Each `!` extracts one successful payload or returns its error from the nearest function or closure, subject to that function's declared error type. On failure, later calls and member accesses do not execute. On success, the postfix chain continues without extra grouping.
+
+`!.` consists of the propagation token `!` followed by the member-access token `.`. It is not a separate nullable-access operator; inserting token-separating whitespace changes no semantics. The marker propagates recoverable failures and does not assert success or trigger a panic.
+
+The visual similarity of Rust-style `?.` to JavaScript optional access was a reason to favor `!`. JavaScript's optional chain returns `undefined` for a nullish receiver; LiteScript's `!` instead explicitly forwards a declared recoverable error. See [ECMAScript optional chains](https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-optional-chains).
+
+The candidate compact error type notation `T ! E` aligns visually with this spelling, but the type shorthand and placement of its operands remain unselected. Selecting expression propagation does not adopt `T!`, `!T`, or a universal inferred error type.
+
 ## Reference-language comparisons
 
 The names below illustrate hypothetical APIs; these sketches compare expression shapes rather than claim that the APIs exist in the referenced standard libraries.
@@ -30,13 +44,13 @@ The `?` sits exactly where one Result supplies its successful payload. Ordinary 
 
 ### V: postfix propagation and a recovery block
 
-V uses postfix `!` to propagate a returned Result and `or { ... }` to recover, without requiring ordinary success constructors. Its [Result documentation](https://docs.vlang.io/type-declarations.html#handling-optionsresults) provides the comparison for a proposed LiteScript suffix spelling:
+V uses postfix `!` to propagate a returned Result and `or { ... }` to recover, without requiring ordinary success constructors. Its [Result documentation](https://docs.vlang.io/type-declarations.html#handling-optionsresults) informed the selected LiteScript suffix spelling:
 
 ```text
 name := load_user(id)!.load_profile()!.name;
 ```
 
-This is a LiteScript candidate using V's propagation spelling, not selected grammar. Each `!` would mean typed recoverable propagation, not a panic-producing forced unwrap.
+This is LiteScript source illustrating the selected spelling. Each `!` means typed recoverable propagation, not a panic-producing forced unwrap.
 
 ### Zig: prefix extraction
 
@@ -60,29 +74,28 @@ Adopting that behavior for a chain of LiteScript Result values would change the 
 
 This is useful library composition, not an implicit early-return operator.
 
-## LiteScript direction under review
+## Stored outcomes and superseded spellings
 
-The earlier prefix `try` choice is reopened. Postfix `!` and `?` are comparison candidates, not additional accepted aliases. The previous rejection of postfix `?` should not prevent evaluating its chaining shape; its eventual meaning remains unselected.
+Postfix `!` replaces the earlier prefix `try` and the candidate postfix `?` for recoverable propagation. These are not additional aliases. Optional-value handling remains separate.
 
-A postfix candidate would permit both immediate propagation and delayed propagation of a stored outcome:
+The same marker permits delayed propagation of a stored outcome:
 
 ```text
 attempt := load_user(id);
 user := attempt!;
 ```
 
-Ordinary access to `attempt` would still retain its Result value. These templates do not select `!` as final syntax or turn it into a capture marker.
+Ordinary access to `attempt` retains its Result value. The marker is not needed for capture and does not recursively flatten Result values stored inside a success payload.
 
 ## Recovery is a separate retained contract
 
 Both `operation() else(error) { fallback }` and `operation() else { fallback }` are selected. Naming the error is optional; value production is not conditional on that name. Success type `T` and normal fallback type `D` produce `T | D`. See [Result and errors](result-and-errors.md#recovery-result-type).
 
-Continuing from the value of a complete recovery block follows the existing parenthesized block-value continuation rule until a more general rule is selected. No new postfix proposal silently changes that grammar.
+Continuing from the value of a complete recovery block follows the existing parenthesized block-value continuation rule until a more general rule is selected. Selecting postfix propagation does not silently change that grammar.
 
 ## Open decisions
 
-- Choose a single propagation spelling that supports readable chains.
-- Define binding strength relative to calls, members, indexing, and recovery clauses.
+- Complete the postfix grammar and its interaction with arithmetic, indexing, and recovery clauses. Result propagation participates in left-to-right postfix chaining.
 - Preserve a precise recovery boundary: handling one step must not accidentally catch an already propagated earlier failure.
 - Define readable composition when a recovery block occurs in the middle of a chain, without silently removing the general block-continuation rule.
 - Keep Option handling and panic assertions distinct from recoverable Result propagation.

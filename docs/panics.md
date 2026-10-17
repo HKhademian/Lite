@@ -18,13 +18,13 @@ validate_age := fn(age: Int): Result<Int, AgeError> {
 }
 ```
 
-This example explicitly returns a recoverable failure. The ordinary final integer supplies implicit success. Callers inspect the Result, recover with `else(error) { ... }`, or propagate using `try`, subject to their declared error contracts.
+This example explicitly returns a recoverable failure. The ordinary final integer supplies implicit success. Callers inspect the Result, recover with `else(error) { ... }` or `else { ... }`, or propagate using postfix `!`, subject to their declared error contracts.
 
 ## Separate channels
 
-- Every escaping recoverable error must be covered by the function's declared error contract, including errors forwarded by `try`.
+- Every escaping recoverable error must be covered by the function's declared error contract, including errors forwarded by postfix `!`.
 - Panics are not implicitly included in every recoverable error declaration.
-- `try` extracts a Result or forwards its recoverable error; it does not catch a panic.
+- Postfix `!` extracts a Result or forwards its recoverable error; it does not assert success, trigger a panic, or catch a panic.
 - A Result `else(error)` clause receives its declared error type, not an arbitrary panic payload.
 - Returning `Err(value)` explicitly constructs a recoverable failure; it does not trigger a panic.
 - No panic-trigger spelling or panic-handler syntax has been selected. Examples must not imply an implemented `panic()` API or a general `try/catch` mechanism.

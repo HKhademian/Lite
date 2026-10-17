@@ -151,14 +151,16 @@ continue_exit := "continue" [expression]
 ## Recoverable error expressions
 
 ```text
-try result_expression
+result_expression!
 result_expression else(error_pattern) { recovery_body }
 result_expression else { recovery_body }
 ```
 
-These are incomplete templates. Prefix `try` illustrates the earlier propagation spelling, now under review for call-chain ergonomics. A propagation step extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. The attached `else` form, with an optional error receiver, is selected and supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
+These are selected surface templates, not complete productions. Postfix `!` extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. It participates in left-to-right postfix chaining, so `load_user(id)!.load_profile()!.name` needs no grouping around each extraction. `!.` is the `!` token followed by the ordinary `.` token, not a nullable-access token; token-separating whitespace changes no meaning.
 
-Propagation spelling, full precedence, nested-operand evaluation scope, general union typing rules, and compact typed fallibility notation remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Postfix `?` and `!` are comparison candidates, not accepted propagation aliases or capture markers; Option propagation remains separate. Panics do not flow through these Result expressions. See [propagation and call chaining](propagation-and-chaining.md).
+The attached `else` form, with an optional error receiver, supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
+
+Complete postfix productions, full precedence, nested-operand evaluation scope, general union typing rules, and compact typed fallibility notation remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics do not flow through these Result expressions. See [propagation and call chaining](propagation-and-chaining.md).
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 
