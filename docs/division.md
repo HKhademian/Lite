@@ -85,7 +85,7 @@ This has the same tokens and meaning as the spaced example. Ordinary and raw blo
 
 ## Open numeric contracts
 
-- Preserve operation-local recovery for a single `a // b`, `a / b`, or `a % b` expression before any default unwrapping or propagation. The same requirement applies to other fallible arithmetic; see [result and errors](result-and-errors.md).
+- Preserve operation-local recovery for a single `a // b`, `a / b`, or `a % b` expression. A typed recoverable outcome requires explicit handling, a fallback, or propagation before using its payload. Decide whether ordinary arithmetic faults are returned recoverable errors or another checked-fault category; that classification must preserve the local recovery requirement. See [result and errors](result-and-errors.md).
 - Define division by zero and unrepresentable results, including the signed minimum divided by `-1` for fixed-width integers.
 - Define the failure representation for operators; the earlier suggestion that named utilities return `Result` does not settle operator result types or add implicit traps.
 - Choose floating-point result representations, large-integer precision handling, and mixed numeric operand rules.

@@ -11,7 +11,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Operations have read access by default; affected receiver/parameter bindings explicitly carry `mut`. There is no additional function-level mutation marker.
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
-- A user can inspect and recover from an individual fallible operation, including arithmetic and function calls. Explicit local handling observes the outcome before any default unwrapping or propagation; it does not require every intermediate binding to be a visible `Result`.
+- Recoverable failures have statically typed error contracts. To obtain a fallible call's successful payload, a caller explicitly handles/inspects the outcome, supplies a default, or propagates the error. Keeping the outcome as a `Result` for later handling does not unwrap it.
+- A user can inspect and recover from an individual fallible operation, including arithmetic and function calls. Local handling observes the outcome without a prior implicit unwrap or automatic propagation; it does not require every intermediate binding to be a visible `Result`.
 - Composition and interfaces as the primary reuse direction.
 - Small runtime and native performance as goals, not measured achievements.
 
@@ -148,9 +149,9 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 
 Integer `//` uses floor rounding and integer `%` is its paired remainder. Define arithmetic failures, including zero divisors and unrepresentable fixed-width quotients, before claiming an operator returns a plain value, a `Result`, or an implicit trap. Complete floating-point representations, mixed numeric operations, noninteger remainder, and conversion policy independently of the selected division semantics. See [division](division.md).
 
-### 8. Operation-local recovery and default propagation
+### 8. Typed recovery syntax and arithmetic failure boundaries
 
-Local recovery is required for individual operations, including addition overflow and returned function errors. Choose how a programmer requests the raw outcome or a local fallback before any implicit propagation. Expected-`Result` capture and expression-local `else(error)` are proposals, not accepted grammar. Define default unhandled-operation behavior independently; automatic propagation from ordinary blocks has not been adopted. See [result and errors](result-and-errors.md).
+Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures require explicit handling, defaults, or propagation to obtain the successful payload; automatic propagation from ordinary code is not selected. Define compact signature notation preserving specific error types, inference and error conversion, raw-outcome capture, and ignored-outcome diagnostics. Expected-`Result` capture, postfix `?`, and expression-local `else(error)` remain syntax proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. See [result and errors](result-and-errors.md).
 
 ## Superseded suggestions
 
@@ -166,6 +167,8 @@ Local recovery is required for individual operations, including addition overflo
 - A prohibition on nested tag shadowing.
 - Suffix tags or `name: construct` as the current tag placement.
 - Mandatory `Ok(...)` on normal success paths.
+- Automatic extraction of success and propagation of recoverable failure from an ordinary call without an explicit caller choice.
+- Replacing refined recoverable error contracts with a mandatory universal error envelope as the default.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.
 - Semicolons suppressing final-expression results.
 - Requiring or allowing a semicolon after a complete block item.

@@ -71,7 +71,7 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
 
-Any fallible arithmetic operation must support local error inspection and recovery, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Capture syntax and behavior when no local handling is requested remain open; see [result and errors](result-and-errors.md).
+Arithmetic must support local error inspection and recovery, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Whether ordinary operators always expose typed recoverable outcomes, require proof that a fault is impossible, or use another explicit recovery mechanism remains open. A typed recoverable outcome requires explicit handling, a fallback, or propagation before using its payload; it does not automatically propagate. Fault classification and recovery syntax must be settled together; see [result and errors](result-and-errors.md).
 
 ## Related concepts and references
 
