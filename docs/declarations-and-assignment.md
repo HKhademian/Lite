@@ -104,6 +104,8 @@ The `type` record notation is a working sketch. Uniform binding syntax does not 
 
 Reject duplicate declarations in the same ordinary block scope. Nested shadowing is an ordinary lexical mechanism. A loop receiver list introduces bindings in slot order, permitting a later receiver to shadow an earlier one; this is separate from ordinary block redeclarations. `_` is a readable name and follows the same rules. Tag shadowing follows its own explicit `@name` namespace and the same nearest-enclosing lookup principle. Exact rules for local recursion, hoisting, duplicate names within one destructuring pattern, and shadowing diagnostics remain to be formalized.
 
+A conditional pattern binding may shadow the outer source name inside its matching branch. Resolve the source expression before introducing the narrowed name; the new binding does not alter the outer binding's type or mutability and is not visible in sibling branches. See [union type patterns](union-patterns.md).
+
 ## Rejected forms
 
 ```text

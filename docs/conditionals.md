@@ -69,6 +69,8 @@ if let Some(user) = find_user(id) {
 
 Type patterns can narrow a union's active alternative inside such a matching branch. Working examples use `binding: Type`; this exact conditional production remains illustrative. See [union type patterns](union-patterns.md). Type-pattern support does not select general typed receiver-dispatch chains.
 
+A matching pattern may shadow an outer name. In the working form `if let person: User = person`, the source expression resolves the outer `person`; the newly bound `User` name exists only in the matching branch. Sibling branches and following code resolve the outer name again. This does not reassign the outer binding or change its static type; payload ownership remains a separate rule.
+
 ## Nested ownership
 
 ```text

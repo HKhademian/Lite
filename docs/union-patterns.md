@@ -29,14 +29,18 @@ Assume `lookup(id)` returns the outcome type above:
 ```text
 person := lookup(id)!;
 
-if let user: User = person {
-    greet_user(user)
+if let person: User = person {
+    greet_user(person)
 } else if let guest: Guest = person {
     greet_guest(guest)
 }
 ```
 
-`person` retains type `User | Guest`. The first branch introduces a `User` binding only if that alternative is active; the second introduces a `Guest` binding only if that alternative is active. A successful type pattern supplies a statically narrowed value without a separate unchecked cast. Patterns and fallible extraction do not grant extra mutation or access permissions.
+The outer `person` retains type `User | Guest`. In `if let person: User = person`, the right-hand `person` resolves to that outer binding before the pattern introduces its branch-local name. The matching first branch shadows it with a `User` binding. The second condition again reads the outer union and introduces a differently named `Guest` binding, demonstrating both naming choices.
+
+The shadow does not leak into sibling branches or outside the conditional. After the branch, name lookup again selects the outer union binding. This is a new narrowed binding, not reassignment or a change to the outer binding's static type. Whether matching borrows, copies, or moves the payload remains an ownership decision; shadowing alone does not guarantee later availability of a moved value.
+
+A successful type pattern supplies a statically narrowed value without a separate unchecked cast. Patterns and fallible extraction do not grant extra mutation or access permissions.
 
 The example uses existing illustrative `if let` notation. It does not select `let` as a new general declaration keyword or finalize a new expression grammar.
 
@@ -46,8 +50,8 @@ Inside a recovery receiver, only the error payload is being matched:
 
 ```text
 person := lookup(id) else(error) {
-    if let read: ReadError = error {
-        report_read_error(read)
+    if let error: ReadError = error {
+        report_read_error(error)
     } else if let parse: ParseError = error {
         report_parse_error(parse)
     }
@@ -56,7 +60,7 @@ person := lookup(id) else(error) {
 }
 ```
 
-The receiver's static type is `ReadError | ParseError`. A matching branch can access that error type's structured payload. The handler still needs to supply its normal fallback or explicitly exit. Type matching does not automatically propagate, swallow, or retry an error.
+The receiver's static type is `ReadError | ParseError`. The first branch shadows `error` with a narrowed `ReadError` binding. The second condition reads the original receiver and binds a `ParseError` as `parse`. A matching branch can access that error type's structured payload. The handler still needs to supply its normal fallback or explicitly exit. Type matching does not automatically propagate, swallow, or retry an error.
 
 Several cases inside the same concrete error type still need case/variant or payload patterns. A type pattern distinguishes types; it cannot distinguish two values solely because their error messages differ.
 
