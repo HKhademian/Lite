@@ -28,7 +28,7 @@ Each `!` extracts one successful payload or returns its error from the nearest f
 
 The visual similarity of Rust-style `?.` to JavaScript optional access was a reason to favor `!`. JavaScript's optional chain returns `undefined` for a nullish receiver; LiteScript's `!` instead explicitly forwards a declared recoverable error. See [ECMAScript optional chains](https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-optional-chains).
 
-The candidate compact error type notation `T ! E` aligns visually with this spelling, but the type shorthand and placement of its operands remain unselected. Selecting expression propagation does not adopt `T!`, `!T`, or a universal inferred error type.
+The selected compact error type notation is `T ! E`, with success first. In type position, `T!` means exactly `T ! Error`; `!T` is not an alternate spelling. In expression position, `outcome!` extracts or propagates one outcome. This does not make an ordinary `T` fallible or introduce automatic unwrapping. The general Error contract still needs a complete definition; see [fallible types and error composition](fallible-types-and-error-composition.md).
 
 ## Reference-language comparisons
 

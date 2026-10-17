@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
+Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract and arithmetic failure policy open**.
 
 ## Purpose
 
@@ -8,15 +8,15 @@ Represent recoverable failure in a function's return type and support ordinary c
 
 ## Recoverable failure contract
 
-- A fallible function explicitly declares a statically typed recoverable error contract. `Result<T, E>` is the current explanatory notation; a shorter spelling may be chosen without losing the concrete error type `E`.
+- A fallible function explicitly declares a recoverable error contract with `T ! E`. The shorthand `T!` means exactly `T ! Error`, selecting the predefined general recoverable error contract. `Result<T, E>` remains explanatory notation for the conceptual outcome type.
 - To obtain the successful payload, a caller must explicitly inspect/handle the outcome, provide a fallback, or propagate the failure. A fallible call does not automatically supply its payload and silently return from the enclosing function on error.
 - An outcome can remain a `Result` value for storage or later handling. Keeping an outcome does not unwrap it; exact diagnostics and rules preventing an ignored recoverable failure still need formalization.
 - Implicit success means constructing a successful result from a compatible ordinary return value. It does not mean automatic success extraction or automatic error propagation at every call.
-- A single universal error envelope is not the selected default in place of refined error contracts. Aliases, unions, and explicit error mapping may reduce repetition; their syntax and conversion rules remain open. Inference can check a declared contract but must not silently add undeclared escaping errors.
+- Refined error contracts remain available through `T ! E`; `T!` deliberately selects the broader `Error` contract. An ordinary `T` does not silently become fallible. Aliases, unions, and explicit error mapping may reduce repetition; their syntax and conversion rules remain open. Inference can check a declared contract but must not silently widen a narrow one.
 
-The earlier discussion of ordinary `: Int` signatures hiding recoverable failure with automatic propagation is superseded by this explicit caller contract. Compact signature spelling remains a separate decision. The candidate `T ! E` spelling preserves a refined error type; it has not been selected as final punctuation or as a second interchangeable source spelling.
+The earlier discussion of ordinary `: Int` signatures hiding recoverable failure with automatic propagation is superseded by this explicit caller contract. An annotation `: Int!` explicitly declares general recoverable failure; `: Int ! AgeError` declares a narrower family. Neither annotation makes callers automatically unwrap the outcome.
 
-[Fallible types and error composition](fallible-types-and-error-composition.md) develops that candidate, a reusable error-family alias, and proposed compatibility rules. Its examples remain proposals and do not replace the established explanatory notation in this document yet.
+[Fallible types and error composition](fallible-types-and-error-composition.md) records the selected spellings, a proposed reusable error-family alias, and proposed composition rules. The exact definition and admissible error types of the general `Error` contract remain open.
 
 ## Declared error coverage
 
@@ -25,7 +25,7 @@ Every recoverable error that can escape a function must be covered by its declar
 - A function declaring no recoverable failure must handle such failures internally; it cannot use `!` to let them escape.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
-- The compiler may verify coverage and identify missing declarations; it must not widen the contract to a universal error type or silently infer additional escaping failures.
+- The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
 
 Exact error-set composition, generic error contracts, and conversion rules remain open. [Panics](panics.md) use a separate channel and are not implicit members of every recoverable error contract.
 
@@ -40,7 +40,7 @@ This explanatory notation does not settle enum declaration syntax. Ordinary succ
 ## Function template
 
 ```text
-validate_age := fn(age: Int): Result<Int, AgeError> {
+validate_age := fn(age: Int): Int ! AgeError {
     if age < 0 {
         return Err(AgeError.Negative)
     }
@@ -49,7 +49,7 @@ validate_age := fn(age: Int): Result<Int, AgeError> {
 }
 ```
 
-The expected `Result<Int, AgeError>` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
+The expected `Int ! AgeError` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
 
 ## Proposed conversion boundary
 
@@ -74,7 +74,7 @@ if let Err(error) = validate_age(text_age) {
 Propagation uses postfix `!`:
 
 ```text
-load_age := fn(path: String): Result<Int, LoadError> {
+load_age := fn(path: String): Int ! LoadError {
     text := read_text(path)!;
     parse_age(text)!
 }
@@ -118,7 +118,7 @@ A programmer must be able to inspect and handle the failure of an individual fal
 One earlier candidate for arithmetic is an explicit expected `Result` type at the capture point:
 
 ```text
-attempt: Result<Int, ArithmeticError> = a + b;
+attempt: Int ! ArithmeticError = a + b;
 
 if let Err(error) = attempt {
     report(error)
@@ -172,7 +172,7 @@ Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-re
 ## Unit success
 
 ```text
-save := fn(data: Data): Result<Unit, SaveError> {
+save := fn(data: Data): Unit ! SaveError {
     write_data(data)!;
     Unit
 }

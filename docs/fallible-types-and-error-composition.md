@@ -1,18 +1,19 @@
 # Fallible types and error composition
 
-Status: **working proposal; compact type spelling, error-family composition, and alias syntax require a decision**.
+Status: **`T ! E` fallible types and `T!` shorthand for `T ! Error` selected; error-family composition, aliases, and general type grammar remain proposals**.
 
 ## Purpose
 
-Keep recoverable errors explicit and precisely typed without repeating generic wrapper syntax or enumerating every error case in every function signature. This proposal builds on the selected postfix propagation and declared-error coverage rules; it does not change them.
+Keep recoverable errors explicit and typed without repeating generic wrapper syntax or enumerating every error case in every function signature. Compact fallible type spelling and its default-error shorthand are selected. The composition and alias mechanisms below remain proposals and preserve the existing declared-error coverage rules.
 
-## Proposed type template
+## Selected type templates
 
 ```text
 SuccessType ! ErrorType
+SuccessType!
 ```
 
-This is the proposed dedicated spelling for the conceptual `Result<SuccessType, ErrorType>`. It describes an ordinary first-class outcome type, usable in variables, parameters, and function return annotations. It is not a second hidden exception channel or an instruction to unwrap automatically.
+`T ! E` is the selected compact spelling for the conceptual `Result<T, E>`. `T!` is exactly shorthand for `T ! Error`; the missing error operand selects the predefined general recoverable error contract named `Error`. These are ordinary first-class outcome types, usable in variables, parameters, and function return annotations. They do not request automatic unwrapping.
 
 ```text
 read_text := fn(path: String): String ! ReadError {
@@ -29,7 +30,7 @@ attempt := read_text(path);
 text := attempt!;
 ```
 
-Under this proposal, `attempt` has type `String ! ReadError` and `text` has type `String`. The second line requires an enclosing function whose declared error contract covers `ReadError`.
+Here `attempt` has type `String ! ReadError` and `text` has type `String`. The second line requires an enclosing function whose declared error contract covers `ReadError`.
 
 ## Implicit success and explicit failure
 
@@ -47,7 +48,7 @@ The error family and member notation follow existing explanatory examples; their
 
 `Unit ! SaveError` describes successful completion without useful data or a declared save error. This proposal does not add an implicit `Unit` abbreviation.
 
-## Multiple error families
+## Multiple error families proposal
 
 ```text
 load_age := fn(path: String): Int ! (ReadError | ParseError) {
@@ -107,13 +108,31 @@ The proposal rejects an ungrouped mixture such as `User ! ReadError | ParseError
 
 In type position, `!` joins success and error types. In value position, postfix `!` extracts an outcome or propagates its failure. The parser distinguishes those contexts without relying on spaces or newlines.
 
-## Abbreviations to avoid in this proposal
+## General Error shorthand
 
-`T!` and `!T` do not identify both the success and error types. This proposal does not give either spelling a universal default error type or allow undeclared escaping errors to be inferred. An explicit alias can shorten a recurring concrete error contract instead.
+```text
+load_age := fn(path: String): Int! {
+    text := read_text(path)!;
+    parse_age(text)!
+}
+```
+
+The return annotation means `Int ! Error`. The broad recoverable error contract is declared through the shorthand; it is not inferred from an unannotated successful return type. The example assumes the read and parse errors belong to the general Error contract.
+
+- `T` declares no recoverable error channel.
+- `T!` declares `T ! Error`, allowing the general recoverable error contract.
+- `T ! E` retains a specific error contract when narrower coverage is desired.
+- `Unit!` means `Unit ! Error`, not an omitted success type.
+- `!T` is not a selected alternate spelling.
+
+The broad form does not list exactly which concrete errors can occur, so exhaustive handling of a refined error family may require a narrower declaration or explicit narrowing. The exact definition, admissible error types, extension rules, representation, and narrowing of `Error` remain open. Selecting the shorthand does not turn panics into recoverable errors, discard structured payloads, or choose allocation and boxing rules.
+
+Type and expression contexts distinguish `T!` from `outcome!`: one declares an outcome type and the other extracts or propagates an outcome value. The grammar must distinguish an omitted error operand from a supplied one through type boundaries, never spaces or newlines. `T!Error` and `T ! Error` have the same tokens and meaning.
 
 ## Open decisions and notes
 
-- Select the compact `T ! E` spelling and the transparent alias spelling independently.
+- Define the general `Error` contract and its relationship to refined recoverable error types.
+- Select the transparent alias spelling independently of the now-selected compact type notation.
 - Define general union identity, duplicate removal, flattening, membership, and narrowing.
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Set type-expression precedence and grouping consistently with other type constructors.
@@ -132,4 +151,4 @@ No runtime representation or allocation behavior is selected here. A typed union
 - [Declarations and assignment](declarations-and-assignment.md)
 - [Panics](panics.md)
 
-These are LiteScript-specific proposals based on the design discussion. Existing reference-language syntax does not make any of them established rules.
+The compact `T ! E` notation and `T!` expansion record user-selected LiteScript rules. The remaining proposals are identified above; reference-language syntax does not adopt them automatically.

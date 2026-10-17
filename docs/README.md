@@ -38,7 +38,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
 - [Propagation and call chaining](propagation-and-chaining.md): selected postfix `!`, per-step extraction, stored Results, and reference-language comparisons.
 - [Recovery receivers and fallback types](recovery-and-fallbacks.md): optional error naming, lazy fallbacks, union results, narrowing, and reference-language comparisons.
-- [Fallible types and error composition](fallible-types-and-error-composition.md): proposed `T ! E` spelling, named error families, transparent aliases, and propagation coverage.
+- [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Panics and failure channels](panics.md): a separate panic path and open arithmetic, execution, and cleanup policies.
 - [Functions](functions.md): uniform bindings, `:` result annotations, closures, and early returns.
 - [Closures](closures.md): function values, capture questions, and return boundaries.

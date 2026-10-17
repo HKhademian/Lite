@@ -46,6 +46,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Uniform name bindings can hold function and type definitions.
 - Early returns are encouraged.
 - Ordinary `Result` success is implicit when an appropriate contract is expected; errors are explicit.
+- Fallible type notation is `T ! E`; `T!` means exactly `T ! Error`, declaring the general recoverable error contract. A plain `T` declares no recoverable failure. Refined error types remain available; `!T` is not an alternate spelling. Type and expression contexts distinguish a fallible type from postfix propagation without whitespace semantics.
 - Multiline strings and adjacent literal joining are desired.
 
 ### Operators
@@ -92,7 +93,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- Compact fallible types use `T ! E`; multiple error families can be composed as `T ! (E1 | E2)` and reused through a transparent alias such as `CombinedError := type E1 | E2;`. Propagation into a declared union preserves covered alternatives and rejects uncovered ones. Type spelling, alias grammar, general union semantics, and conversions remain proposals; see [fallible types and error composition](fallible-types-and-error-composition.md).
+- Multiple error families can be composed as `T ! (E1 | E2)` and reused through a transparent alias such as `CombinedError := type E1 | E2;`. Propagation into a declared union preserves covered alternatives and rejects uncovered ones. Composition, alias grammar, general union semantics, and conversions remain proposals. `T ! E` and the `T!` expansion are already selected; define the general Error contract separately. See [fallible types and error composition](fallible-types-and-error-composition.md).
 - Full method notation, parameter rebinding and call-site syntax, access inference and conversions, capture permissions, and aliasing rules remain open. Affected receiver/parameter bindings use `mut`, without an additional function-level mutation marker; see [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
@@ -157,7 +158,7 @@ Integer `//` uses floor rounding and integer `%` is its paired remainder. Define
 
 ### 8. Typed recovery syntax and arithmetic failure boundaries
 
-Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use postfix `!` propagation or `else` recovery with an optional receiver; ordinary calls can retain their Result as data. Recovery forms `T | D` from success and normal fallback types. Every escaping recoverable error must fit an explicitly declared error contract. Define compact signature notation preserving specific error types, generic error contracts and conversion, union narrowing and representation, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. The candidate `T ! E` annotation and expected-`Result` arithmetic capture remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md), [propagation and call chaining](propagation-and-chaining.md), and [panics](panics.md).
+Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use postfix `!` propagation or `else` recovery with an optional receiver; ordinary calls can retain their Result as data. Recovery forms `T | D` from success and normal fallback types. Every escaping recoverable error must fit an explicitly declared error contract: `T ! E` is refined and `T!` explicitly means `T ! Error`. Define the general Error contract, generic error contracts and conversion, union composition and narrowing, representation, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. Expected-`Result` arithmetic capture and union-alias grammar remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md), [fallible types and error composition](fallible-types-and-error-composition.md), [propagation and call chaining](propagation-and-chaining.md), and [panics](panics.md).
 
 ## Superseded suggestions
 
@@ -177,7 +178,7 @@ Local recovery is required for individual operations, including addition overflo
 - Prefix `try` or postfix `?` as recoverable-error propagation aliases; postfix `!` is selected.
 - Requiring a `?` marker to retain a call's Result outcome.
 - Silently inferring additional escaping recoverable errors outside a function's declared error contract.
-- Replacing refined recoverable error contracts with a mandatory universal error envelope as the default.
+- Requiring every fallible declaration to use general Error instead of allowing refined error contracts. `T!` deliberately chooses general Error; `T ! E` retains a refined contract.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.
 - Semicolons suppressing final-expression results.
 - Requiring or allowing a semicolon after a complete block item.

@@ -57,7 +57,7 @@ greet := fn(name: String): Unit {
 ## Early return
 
 ```text
-validate := fn(value: Int): Result<Int, ValidationError> {
+validate := fn(value: Int): Int ! ValidationError {
     if value < 0 {
         return Err(ValidationError.Negative)
     }
@@ -78,7 +78,9 @@ Postfix `operation()!` extracts success or forwards its recoverable error from t
 
 The recovery receiver may be omitted: `operation() else { fallback }`. Both recovery forms combine success type `T` and normal fallback type `D` as `T | D`. A fallback need not have the same type as the original success. Returning that union still needs to satisfy the enclosing function's declared return type.
 
-Local handling does not require a catch boundary around unrelated statements. Exact signature shorthand, complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). [Panics](panics.md) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
+Fallible return annotations use `T ! E`; `T!` is shorthand for `T ! Error`. The general form declares broad recoverable failure, while the explicit error type can retain a refined contract. A return annotation `T` still declares no recoverable error channel. The exact general Error contract remains open.
+
+Local handling does not require a catch boundary around unrelated statements. Complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). [Panics](panics.md) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
 
 ## Closures
 

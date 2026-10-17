@@ -55,7 +55,7 @@ One proposal is constrained generic inference: the function is valid for types s
 
 Explicit signatures at public library boundaries were recommended to prevent implementation changes from silently changing published contracts. That requirement is still a working policy rather than an implemented check.
 
-Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by postfix `!`. Inference must not silently add such failures to a function promising an ordinary nonfallible result. Compact annotation spelling, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).
+Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by postfix `!`. `T ! E` declares a refined outcome type; `T!` means `T ! Error` and deliberately declares the general recoverable error contract. A plain `T` declares no recoverable error channel. Inference must not silently add such failures to a function promising an ordinary nonfallible result. The general Error definition, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).
 
 ## Results and control flow
 

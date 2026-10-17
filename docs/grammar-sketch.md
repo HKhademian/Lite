@@ -148,6 +148,17 @@ continue_exit := "continue" [expression]
 
 `break value` and labeled contribution-bearing continuation are shown as possibilities whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
+## Fallible type templates
+
+```text
+success_type ! error_type
+success_type!
+```
+
+These are selected surface templates, not complete type productions. `T!` expands exactly to `T ! Error`; an explicitly supplied error operand permits a refined contract. `!T` is not a selected spelling. The type context and valid type boundaries distinguish an omitted error operand from a supplied one; spaces and newlines cannot make that decision. An annotation `T` declares no recoverable error channel.
+
+General type precedence, union grouping and composition, alias grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md).
+
 ## Recoverable error expressions
 
 ```text
@@ -160,7 +171,7 @@ These are selected surface templates, not complete productions. Postfix `!` extr
 
 The attached `else` form, with an optional error receiver, supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
 
-Complete postfix productions, full precedence, nested-operand evaluation scope, general union typing rules, and compact typed fallibility notation remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics do not flow through these Result expressions. See [propagation and call chaining](propagation-and-chaining.md).
+Complete postfix productions, full precedence, nested-operand evaluation scope, and general union typing rules remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics do not flow through these Result expressions. See [propagation and call chaining](propagation-and-chaining.md).
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 
