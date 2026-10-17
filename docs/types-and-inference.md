@@ -1,0 +1,76 @@
+# Types and inference
+
+Status: **static typing and inference established; full type system remains a design goal**.
+
+## Purpose
+
+Students can write ordinary code without annotations while the compiler still rejects incompatible operations and assignments before execution.
+
+## Templates
+
+```text
+value := expression;
+value: Type = expression;
+function_name := fn(parameter: Type): ResultType { body };
+```
+
+## Examples
+
+```text
+name := "Sam";
+var score := 0;
+score = 10;
+```
+
+```text
+score = "ten"; /* rejected */
+```
+
+Inference chooses static types. It does not make a variable dynamically change type.
+
+## Intended type-system foundation
+
+- Primitive values and explicit numeric representations.
+- Records, tuples, and tagged unions.
+- Parametric generics with interface constraints.
+- Functions and closures as values.
+- Pattern matching and destructuring.
+- Explicitly implemented interfaces.
+- Distinct nominal domain types such as `StudentId` and `CourseId`.
+- `Unit`, `Option<T>`, and `Result<T, E>`.
+
+These are desired capabilities, not a complete or implemented specification. Syntax for all of them has not been settled.
+
+## Inferred functions
+
+```text
+double := fn(x) {
+    x + x
+};
+```
+
+One proposal is constrained generic inference: the function is valid for types supporting an appropriate addition operation. Alternatives include requiring parameter annotations in more situations. Recursive and ambiguous definitions need a specified inference boundary.
+
+Explicit signatures at public library boundaries were recommended to prevent implementation changes from silently changing published contracts. That requirement is still a working policy rather than an implemented check.
+
+## Results and control flow
+
+Reachable completion paths must produce compatible types. The compiler should not silently invent an unrelated union merely to accept incompatible branches. Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.
+
+An internal `Never` or bottom type can describe control flow that cannot complete locally. Its public spelling and general usability are open.
+
+## No universal absence
+
+An ordinary value must be initialized and valid for its type. Absence requires an optional type. No implicit uninitialized or nullable state is introduced by inference.
+
+## Major open decisions
+
+Numeric widths and overflow rules; generic syntax and inference; nominal versus structural record rules; variance; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
+
+Higher-kinded types, dependent types, unrestricted compile-time evaluation, and dynamic typing are not established requirements.
+
+## Related concepts and references
+
+- [Functions](functions.md), [Unit](unit.md), [Option](option.md), and [Result](result-and-errors.md).
+- [Composition and interfaces](composition-and-interfaces.md).
+- [References](references.md): Rust, Swift, Kotlin, Odin, and Zig provide comparison points rather than a type-system specification to copy wholesale.
