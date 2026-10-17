@@ -46,6 +46,9 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Use `and`, `or`, and `not`.
 - Use `==` for equality; express inequality through negation.
 - Comparison binds more tightly than `not`, followed by `and` and `or`.
+- `<`, `<=`, `>`, `>=`, and `==` form comparison chains at one precedence level, checking adjacent operands with strict `Bool` results.
+- Chain operands evaluate at most once from left to right; a false comparison skips later operands and comparisons. All pairs must type-check.
+- Mixed comparisons and changes in direction use the same adjacent-pair rule; `not` applies to the complete chain unless parentheses specify another grouping.
 - `?=` and `!=` have no selected meaning in the current design.
 - Supported `op=` updates use defined underlying operations and evaluate the target once.
 
@@ -155,6 +158,7 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 - An unreadable `_` wildcard, or `_ = value` as a special discard statement.
 - Granting writable owned fields through `var` alone; `mut` is required explicitly.
 - Requiring an additional function-level mutation marker beyond explicit `mut` receiver/parameter contracts.
+- Rejecting comparison chains merely to simplify the grammar, or treating them as ordinary left-associated binary comparisons.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 
 ## Documentation boundaries

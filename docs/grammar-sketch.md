@@ -148,9 +148,14 @@ continue_exit := "continue" [expression]
 logical_or  := logical_and { "or" logical_and }
 logical_and := logical_not { "and" logical_not }
 logical_not := "not" logical_not | comparison
+
+comparison := comparison_operand { comparison_operator comparison_operand }
+comparison_operator := "<" | "<=" | ">" | ">=" | "=="
 ```
 
-Comparison binds more tightly than `not`. Arithmetic, comparisons, ranges, calls, member access, literals, type syntax, and pattern grammar are intentionally not completed here. Comparison chaining still needs an explicit policy.
+Comparison binds more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Parentheses establish separate comparisons when required.
+
+`comparison_operand` is a placeholder for expressions binding more tightly than comparisons, including grouping and arithmetic; its full production remains open. With no comparison operator, the production passes through the operand expression. Arithmetic, ranges, calls, member access, literals, type syntax, and pattern grammar are intentionally not completed here. See [comparison chains](comparison-chains.md).
 
 ## Open parser interactions
 

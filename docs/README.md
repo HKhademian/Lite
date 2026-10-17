@@ -23,6 +23,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
+- [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 

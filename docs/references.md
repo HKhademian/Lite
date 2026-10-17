@@ -60,6 +60,7 @@ These sources were consulted during the design discussion. They support comparis
 - [Lua function definitions](https://www.lua.org/manual/5.4/manual.html#3.4.11): explicit function endings.
 - [Python compound statements](https://docs.python.org/3/reference/compound_stmts.html): colon/suite structure, indentation, and limits on inline nested compound statements.
 - [Python loop completion](https://docs.python.org/3/tutorial/controlflow.html#break-and-continue-statements): completion without `break`; not equivalent to a no-contribution fallback.
+- [Python comparisons](https://docs.python.org/3/reference/expressions.html#comparisons): adjacent-pair comparison chains with each operand evaluated at most once and short-circuiting. LiteScript adopts that chain direction with strict `Bool` results, not Python's dynamic comparison rules.
 
 ## Beginner syntax research
 

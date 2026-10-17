@@ -1,6 +1,6 @@
 # Operators
 
-Status: **equality and logical direction established; complete precedence and numeric semantics open**.
+Status: **equality, comparison chaining, and logical direction established; complete arithmetic precedence and numeric semantics open**.
 
 ## Working operator set
 
@@ -31,6 +31,16 @@ if not a == b {
 
 The current design uses `not a == b` for inequality. Earlier proposals for `?=` as equality and `!=` as inequality are superseded. `?=` and `!=` have no currently assigned update meaning either; an `op=` form requires a defined underlying operation.
 
+## Comparison chains
+
+```text
+inside := 0 <= x < 10;
+```
+
+Chains compare adjacent operands, evaluate each operand at most once from left to right, and stop at the first false comparison. Each adjacent pair must be statically comparable and produce `Bool`. Equality and ordering operators share the comparison precedence level; mixed operators and changes in direction use the same adjacent-pair rule.
+
+`not 0 <= x < 10` means `not (0 <= x < 10)`. Parentheses can instead make a comparison result an operand, as in `(a < b) == flag`. See [comparison chains](comparison-chains.md) for evaluation examples, ownership constraints, and the difference from a literal `and` rewrite.
+
 ## Logical precedence
 
 The intended relative precedence, from tighter to looser, is:
@@ -57,7 +67,7 @@ To negate only `a` before comparing:
 (not a) == b
 ```
 
-The full grammar must still specify arithmetic precedence, unary minus, ranges, associativity, and whether comparison chaining is prohibited. Whitespace never selects a different grouping.
+The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
 ## Compound updates
 
