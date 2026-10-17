@@ -7,8 +7,12 @@ Status: **established direction; full declaration grammar remains open**.
 ```text
 name := initializer;
 name: Type = initializer;
+mut name := initializer;
+mut name: Type = initializer;
 var name := initializer;
 var name: Type = initializer;
+var mut name := initializer;
+var mut name: Type = initializer;
 name = replacement;
 ```
 
@@ -16,15 +20,19 @@ name = replacement;
 
 - `:=` declares a binding and infers its type.
 - `: Type =` declares a binding with an explicit type.
-- Bindings are immutable by default.
-- `var` opts into reassignment.
-- A mutable binding still has a fixed static type.
-- `=` updates an existing mutable binding; it does not declare one.
+- Bindings are fixed and provide read-only access by default.
+- `var` opts into binding reassignment, without granting writable access to held data.
+- `mut` opts into writable access to held data, without granting binding reassignment.
+- `var mut` opts into both capabilities, in that order.
+- Either capability leaves the binding's static value type fixed.
+- `=` assigns an existing writable target; it does not declare one. A binding target requires `var`; a field or element target through a binding requires `mut`, permitted field/element access, and a compatible ownership contract.
 - `:=` never means "declare if absent, otherwise update."
 - Declarations and assignments are statements producing `Unit`.
 - Assignment cannot be embedded in a condition or chained as a value-producing expression.
 
-These established immutability rules concern binding reassignment. Read/write access to held data and operation receiver requirements are separate design concerns. A fixed handle can potentially hold writable access, and a reassignable handle can hold only read access. Owned-value defaults and the access syntax remain open; see [mutability, access, and operations](mutability.md).
+The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](mutability.md).
+
+The declaration prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are not alternate spellings. This does not freeze modifier placement for parameters or operation declarations.
 
 ## Examples
 
@@ -48,6 +56,30 @@ score = 20;       /* rejected: immutable binding */
 ```
 
 The second example isolates type safety; the third isolates immutability.
+
+## Held-data updates versus binding updates
+
+```text
+mut user := make_user();
+user.age = 13;              /* permitted if the field is accessible and writable */
+user = make_another_user(); /* rejected: no var */
+```
+
+```text
+var user := make_user();
+user = make_another_user(); /* permitted with a compatible type and ownership contract */
+user.age = 13;             /* rejected: no mut */
+```
+
+```text
+var mut user := make_user();
+user.age = 13;
+user = make_another_user();
+```
+
+These examples assume fresh owned construction and an accessible writable `age` field. `mut` does not create write permission through an existing read-only borrowed view or override field privacy.
+
+`count += 1` with `var count := 0` remains valid: it computes a result and assigns the `count` binding. Conversely, `user.age += 1` updates a field and requires writable access through `user`. Compound updates follow the permission of their assignment target.
 
 ## Uniform definitions
 

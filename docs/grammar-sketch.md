@@ -64,8 +64,10 @@ Without grouping, a completed block item ends before any following suffix; the f
 ## Declarations
 
 ```text
-declaration := ["var"] pattern ":=" expression
-             | ["var"] pattern ":" type "=" expression
+declaration := [binding_modifiers] pattern ":=" expression
+             | [binding_modifiers] pattern ":" type "=" expression
+
+binding_modifiers := "mut" | "var" | "var" "mut"
 
 assignment := assignable "=" expression
             | assignable update_operator expression
@@ -75,7 +77,9 @@ function := "fn" "(" [parameters] ")" [":" type] block
 
 The full lvalue grammar, parameter declarations, generics, public modifiers, and distinction between type expressions and ordinary values remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
-`_` is an identifier binding, not a special wildcard or discard-assignment target. Its declarations produce `Unit` like other declarations; assignments require an existing mutable binding.
+No modifiers means a fixed binding with read-only access. `var` permits whole-binding reassignment; `mut` permits held-data updates through the binding, subject to field, element, and ownership permissions. `var mut` permits both; `mut var` and repeated modifiers are rejected. This declaration grammar does not select receiver/parameter syntax or a function-effect modifier.
+
+`_` is an identifier binding, not a special wildcard or discard-assignment target. Its declarations produce `Unit` like other declarations. Assigning the `_` binding requires `var`; assigning a field or element through `_` requires `mut` and the target's other permissions.
 
 ## Conditionals
 

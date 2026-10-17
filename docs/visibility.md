@@ -27,7 +27,7 @@ var attempts := 0;
 attempts += 1;
 ```
 
-Binding immutability is the default. `var` explicitly expands a binding's reassignment capability; it does not make its type dynamic. Read/write access to held data and an operation's receiver requirements are separate concerns. Neither deep immutability nor writable owned fields should be inferred from this binding rule; their defaults depend on the unchosen access and ownership model. See [mutability, access, and operations](mutability.md).
+Bindings are fixed and provide read-only access by default. `var` permits reassignment; `mut` permits held-data updates through the binding; `var mut` permits both. Writable receiver/parameter access also needs an explicit `mut` contract, with its syntax still open. These capabilities do not make the value type dynamic, override field privacy, or promise global deep immutability. See [mutability, access, and operations](mutability.md).
 
 ## Other candidate explicit capabilities
 

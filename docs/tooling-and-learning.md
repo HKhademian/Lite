@@ -48,7 +48,7 @@ Diagnostics should point to declaration and use sites when relevant. Recovery sh
 
 ## Gradual learning
 
-Begin with literals, inferred bindings, calls, braces, separators, conditions, and simple loops. Then introduce mutable bindings, functions, annotations, tuple patterns, optional values, explicit errors, accumulators, tags, and packaging as needed.
+Begin with literals, inferred bindings, calls, braces, separators, conditions, and simple loops. Then introduce binding reassignment through `var`, held-data updates through `mut`, functions, annotations, tuple patterns, optional values, explicit errors, accumulators, tags, and packaging as needed. Teach the two permissions separately before combining them as `var mut`; neither requires a type annotation.
 
 There should be one language rather than different semantics for a beginner mode. Full type and ownership contracts still need to work for advanced users.
 

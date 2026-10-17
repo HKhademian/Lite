@@ -40,7 +40,7 @@ _ := 42;
 print(_);
 ```
 
-Bindings named `_` follow the usual typing, immutability, and lexical lookup rules. Repeated names in a loop's ordered receiver list shadow from left to right; this applies to `_` and to other receiver names. The last receiver with that name is visible in the header and body, subject to the ordinary phase-availability rules.
+Bindings named `_` follow the usual typing, `var`/`mut` capabilities, and lexical lookup rules. Repeated names in a loop's ordered receiver list shadow from left to right; this applies to `_` and to other receiver names. The last receiver with that name is visible in the header and body, subject to the ordinary phase-availability rules.
 
 ```text
 loop items: _, _, _ {
@@ -53,7 +53,7 @@ Here `_` names the third slot, the previous accumulator `Option<T>`. It does not
 
 Nested bindings may shadow `_` just as they shadow another name. Leaving it unread is allowed by the binding semantics; unused-binding diagnostics remain a tooling decision. Repetition within a single destructuring pattern, rather than across receiver slots, is not settled by this rule.
 
-`_ = value` is ordinary assignment and requires a mutable `_` binding. It is not a special discard operation. Declaring `_ := value` produces `Unit`, like any declaration, while retaining a readable binding.
+`_ = value` is ordinary whole-binding assignment and requires `var _`; `mut _` alone is insufficient. It is not a special discard operation. Declaring `_ := value` produces `Unit`, like any declaration, while retaining a readable binding. Held-data updates through `_` instead require `mut` and the target's other permissions.
 
 ## Case and normalization
 

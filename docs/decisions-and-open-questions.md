@@ -7,7 +7,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 ### Audience and defaults
 
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
-- Immutable bindings by default; `var` explicitly permits binding reassignment. Held-data access and owned-value mutation defaults remain separate decisions.
+- Bindings are fixed and provide read-only access by default. `var` permits binding reassignment, `mut` permits held-data updates through the binding, and `var mut` permits both.
+- Operations have read access by default; mutation requires an explicit `mut` contract. Receiver/parameter placement and any operation-level marker remain open.
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
 - Composition and interfaces as the primary reuse direction.
@@ -30,6 +31,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
 - Explicit `Unit` should be supported as a value.
 - `:=` declares with inference; `: Type =` declares with annotation; `=` assigns.
+- Declaration prefixes are `mut`, `var`, or `var mut`, with the same forms for inferred and explicit types. `mut var` and repeated modifiers are rejected.
+- Whole-binding `=` and compound updates require `var`; field/element updates require `mut` and the target's other permissions.
 - Assignments are not general expressions or chained value assignments.
 - Function result annotations use `:`, not `->`.
 - Uniform name bindings can hold function and type definitions.
@@ -72,7 +75,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- Separate binding reassignment, read/write access to held data, and operation receiver requirements. Propose read access by default for receivers and explicit writable access for mutating operations; access syntax, owned-value defaults, and aliasing rules remain open. See [mutability](mutability.md).
+- Receiver/parameter mutation syntax, access inference and conversions, aliasing rules, and whether a separate operation-level `mut` marker is required remain open. Declaration-prefix `mut` and default read access are selected; see [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
 - Boolean and unconditional item payloads use `Unit`.
@@ -124,7 +127,7 @@ For an `if` chain, distinguish the selected branch from conditions that were nev
 
 Choose generics, nominal identity, interfaces, variance, borrowing/moves/copies, shared values, closure captures, and type-level values. Define how the `Unit` type and requested `Unit` value coexist with uniform bindings.
 
-Set binding reassignment, held-data access, and receiver mutation contracts independently. Decide how `var` interacts with owned fields, how read-only access propagates, and whether a stronger frozen-value guarantee exists. Do not infer purity or global immutability from a read-only receiver.
+Binding reassignment (`var`) and held-data access (`mut`) are independent. Define how read-only access propagates, how receiver/parameter mutation is declared, and whether a stronger frozen-value guarantee exists. Do not infer purity or global immutability from a read-only receiver.
 
 ### 6. Standard library and project boundaries
 
@@ -149,6 +152,7 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 - Requiring or allowing a semicolon after a complete block item.
 - Continuing an unparenthesized block value across its item boundary through an operator, call, member access, or indexing.
 - An unreadable `_` wildcard, or `_ = value` as a special discard statement.
+- Granting writable owned fields through `var` alone; `mut` is required explicitly.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 
 ## Documentation boundaries

@@ -20,8 +20,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, readable `_`, proposed character classes, and normalization questions.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
-- [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, immutability, and mutation.
-- [Mutability, access, and operations](mutability.md): binding reassignment, held-data access, receiver requirements, and unresolved defaults.
+- [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
+- [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.

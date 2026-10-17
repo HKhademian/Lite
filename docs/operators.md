@@ -68,11 +68,15 @@ count *= 8;
 
 The target is evaluated once. The update uses the corresponding operation's types and overflow behavior.
 
+Permission follows the assignment target. `var count := 0; count += 1;` updates the binding and requires `var`. `mut user := make_user(); user.age += 1;` updates held data and requires `mut`, plus permission to write the field. Neither modifier supplies the other capability. The same distinction applies to plain `=`.
+
+Compound assignment computes the corresponding operation's result and writes the target; it does not silently grant an in-place mutation capability to a `var`-only binding. An optimization must preserve the program's observable access and aliasing semantics.
+
 ```text
 items[next_index()] += delta;
 ```
 
-`next_index()` must not be evaluated twice.
+`next_index()` must not be evaluated twice. This example requires writable element access through `items`, supplied by `mut` and the eventual collection/ownership contract.
 
 `not` is unary, so `x not= x` has no defined binary-update expansion. Use:
 

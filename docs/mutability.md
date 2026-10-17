@@ -1,6 +1,6 @@
 # Mutability, access, and operations
 
-Status: **three separate concerns identified; access model, defaults, and syntax proposed**.
+Status: **independent `var`/`mut` declaration capabilities established; receiver syntax and ownership details open**.
 
 ## Purpose
 
@@ -20,25 +20,29 @@ var user := make_user();
 user = make_another_user(); /* permitted if the types and ownership contract agree */
 ```
 
-`var` grants reassignment of the binding. It does not change the static type. Whether it also supplies writable access to an owned record's fields is a separate, unresolved default.
+`var` grants reassignment of the binding. It does not change the static value type or grant writable access to held data. That second permission requires `mut`.
 
 ## 2. Access to held data
 
-For a reference, handle, or view, distinguish two capabilities:
+For an owned value, reference, handle, or view, distinguish access permissions:
 
 - Read access: inspect the data through that access path.
 - Write access: modify permitted data through that access path.
 
-A fixed handle may provide write access. A reassignable handle may provide only read access. The four semantic combinations are:
+A fixed binding may provide write access. A reassignable binding may provide only read access. The selected declarations express the four combinations:
 
-- Fixed binding, read-only access.
-- Reassignable binding, read-only access.
-- Fixed binding, writable access.
-- Reassignable binding, writable access.
+```text
+x := make_user();         /* fixed binding; read-only access */
+mut x := make_user();     /* fixed binding; writable access */
+var x := make_user();     /* reassignable binding; read-only access */
+var mut x := make_user(); /* reassignable binding; writable access */
+```
 
-These combinations describe capabilities, not four new declaration keywords. Their ownership, lifetime, and aliasing contracts must be defined before accepting a surface syntax.
+These lines are separate alternatives, not repeated declarations in one scope. The same prefixes apply before an explicitly typed declaration, such as `mut x: User = make_user()`. Combined modifiers have the order `var mut`; `mut var` and repeated modifiers are rejected.
 
-For the proposed handle/view model, updating a field requires write access, an accessible writable field, and an ownership/aliasing state permitting the operation. Merely making the handle reassignable cannot upgrade its access to the referenced object.
+Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var`. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
+
+The examples assume an initializer that can supply the requested capability, such as fresh owned construction. `mut` cannot silently upgrade an existing read-only borrowed view, manufacture exclusive access, or request an implicit clone. Conversion and move rules for owned values remain open.
 
 ### Read-only access versus frozen data
 
@@ -48,16 +52,16 @@ A frozen value would have a stronger guarantee: its protected state cannot chang
 
 ## 3. Operation receiver requirements
 
-Proposed direction: operations receive read access by default and explicitly request write access when needed. The operation's required capability is checked against the caller's available capability.
+Operations receive read access by default; mutation requires an explicit `mut` contract. The operation's required receiver/parameter capability must be checked against the caller's available capability. Operation and parameter syntax still need selection.
 
-The following sketches use `User` for read access to a receiver and `mut User` for write access. This notation is a candidate for receiver/access contracts, not an accepted general type qualifier, reference syntax, or ownership rule. Assume the fields are accessible in the implementation context.
+The following sketches put `mut` before a receiver parameter to resemble the declaration prefix. This is proposed parameter syntax, not an accepted general type qualifier, reference syntax, argument-passing rule, or operation-declaration modifier. Assume the fields are accessible in the implementation context.
 
 ```text
 name_of := fn(self: User): String {
     self.name
 }
 
-rename := fn(self: mut User, name: String): Unit {
+rename := fn(mut self: User, name: String): Unit {
     self.name = name
 }
 ```
@@ -70,31 +74,41 @@ rename := fn(self: mut User, name: String): Unit {
 
 This makes operation mutability a requirement on its receiver, rather than an independent third state of the object. The same principle should cover ordinary parameters, interfaces, callbacks, and closures where they expose mutation capabilities.
 
+A declaration such as `mut operation := fn(...) { ... }` qualifies access to the held function value; the declaration prefix alone does not declare which receivers, parameters, or captured objects the function body may mutate. Whether a separate operation-level `mut` marker is required in addition to explicit writable receiver/parameter contracts remains open.
+
 ### Receiver read-only does not mean pure
 
 A receiver contract alone does not prohibit output, reading time, or modifying unrelated state supplied through other explicit capabilities. A pure-operation contract would need additional effect rules. Whether a receiver can change indirectly through another alias remains part of the ownership and aliasing design.
 
 ## Beginner-facing defaults
 
-The existing inferred declarations and `var count := 0; count += 1;` remain sufficient to explain binding reassignment. Advanced access types need not appear in those first lessons.
+The existing inferred declarations still let students choose permissions without writing type annotations.
 
-Before examples involving record updates or collection-building can be normative, choose how owned values expose mutation. Possibilities include granting writable owned storage through `var`, or requiring an additional explicit value/access capability. The current proposal does not choose between them.
+```text
+var count := 0;
+count += 1; /* replaces the binding's integer value; var is sufficient */
+```
 
-The recommended beginner-facing option is writable owned storage through `var`, with independent read/write access for references and views. This would let a student update an owned record without learning reference qualifiers. A `var` binding holding a read-only view would remain unable to write through that view. This is a recommendation, not an adopted ownership or inference rule.
+```text
+mut user := make_user();
+user.age += 1; /* updates held data; mut is required */
+```
 
-Accordingly, these remain undecided:
+The compound update follows the target: a whole-binding update needs `var`, while a field or element update through the binding needs `mut`. `mut count := 0; count += 1;` is rejected because the update assigns the fixed `count` binding. `var count` does not introduce reference qualifiers or mutation of a separate referenced object.
+
+The original example is now decided:
 
 ```text
 user := make_user();
-user.age = 13;
+user.age = 13; /* rejected: read-only access through user */
 ```
 
 ```text
 var user := make_user();
-user.age = 13;
+user.age = 13; /* also rejected: var permits reassignment, not held-data updates */
 ```
 
-Both depend on whether the value is owned or a handle, the access supplied by its type/initializer, field permissions, and the eventual default. Neither should be marked accepted or rejected solely from the declaration's spelling yet.
+Use `mut user` for field updates alone, or `var mut user` for both field updates and whole-binding reassignment. The earlier recommendation to grant writable owned fields through `var` alone is superseded.
 
 ## Cost and implementation direction
 
@@ -102,8 +116,8 @@ Binding and access permissions are candidates for static checking. They do not i
 
 ## Decisions still required
 
-- Choose owned-value mutation defaults and the inference rules for access-bearing values.
-- Define read/write type or parameter syntax; `mut` is provisional.
+- Define the inference and conversion rules for access-bearing values without upgrading read-only borrowed access.
+- Define parameter, receiver, and operation-level mutation syntax; declaration-prefix `mut` is selected, but other placements remain provisional.
 - Choose move/copy/borrow/share behavior, write exclusivity, and lifetimes.
 - Define how read access propagates through owned fields and reference-valued fields.
 - Define fixed fields separately from binding reassignment and whole-object replacement.

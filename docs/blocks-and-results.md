@@ -74,7 +74,7 @@ The last two blocks produce the same value. Semicolons inside a block may follow
 { ;;;;; }       /* Unit */
 ```
 
-The assignment examples assume an existing mutable `x` where needed.
+The whole-binding assignment examples assume an existing `var x` where needed. `mut` alone does not permit assigning the whole binding.
 
 ## Explicit Unit and unused values
 
@@ -89,7 +89,7 @@ The assignment examples assume an existing mutable `x` where needed.
 { _ := calculate(); }
 ```
 
-The second block produces `Unit` because its final item is a declaration. `_` remains a readable binding inside that block; it is not a special discard target. `_ = calculate()` instead means assignment and requires an existing mutable `_` binding.
+The second block produces `Unit` because its final item is a declaration. `_` remains a readable binding inside that block; it is not a special discard target. `_ = calculate()` instead means whole-binding assignment and requires an existing `var _` binding.
 
 Exactly which unused results require explicit handling, particularly `Result` values, and whether a separate discard operation is needed remain open. Binding a value to `_` must not silently exempt it from that future policy.
 
