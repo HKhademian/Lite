@@ -69,6 +69,8 @@ A body-opening brace must be distinguishable from any future record-pattern synt
 
 ## Related concepts and references
 
+- [Pattern syntax comparison](pattern-syntax-comparison.md): primary-reference review and the reasons for these surface choices.
+
 - [Conditionals](conditionals.md)
 - [Tuples and patterns](tuples-and-patterns.md)
 - [Option](option.md)

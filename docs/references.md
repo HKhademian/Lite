@@ -72,6 +72,10 @@ These sources were consulted during the design discussion. They support comparis
 - [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/): identifier character properties and language-specific profiles. LiteScript's exact profile and Unicode version remain open.
 - [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/): normalization choices for identifier equivalence. Linking the standard does not adopt a normalization policy for identifiers or strings.
 
+## Pattern syntax comparison
+
+[Conditional patterns and match syntax](pattern-syntax-comparison.md) compares the primary Rust, V, Odin, Zig, Kotlin, Dart, Swift, Python, Lua, and C++ references for binding syntax, type narrowing, arm boundaries, and scope. It distinguishes the selected LiteScript surface from remaining coverage and ownership policies.
+
 ## Local source of design decisions
 
 The primary source for LiteScript-specific choices is the design conversation through 2026-10-17. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.

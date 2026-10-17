@@ -49,6 +49,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Control flow
 
 - [Conditionals](conditionals.md): one syntax for actions and values.
+- [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match](match.md): pattern-and-brace arms for action/value selection; full coverage rules remain open.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
