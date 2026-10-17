@@ -28,7 +28,7 @@ Fractional literals require a leading digit (`0.5`); `.5` is rejected. Leading-d
 
 `/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
 
-The full arithmetic production, signed rounding, remainder, numeric conversions, and failure contracts remain open. See [division](division.md).
+For valid integer operands, `//` rounds toward negative infinity and `%` gives the paired remainder: mathematically, `a == b * (a // b) + (a % b)`. Nonzero integer remainders have the divisor's sign. `//=` and `%=` preserve those semantics. Full arithmetic productions, numeric conversions, noninteger remainder, and failure contracts remain open. See [division](division.md).
 
 ## Item separation
 

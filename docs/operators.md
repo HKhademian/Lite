@@ -17,9 +17,11 @@ and  or  not
 
 ## Division
 
-`/` produces a fractional quotient; `//` performs integer division on integer operands. `7 / 2` produces `3.5`, while `7 // 2` produces the integer quotient `3`. `//=` is the corresponding integer update, so ordinary integer arithmetic does not require named division helpers or floating-point conversions.
+`/` produces a fractional quotient; `//` performs integer floor division on integer operands. `7 / 2` produces `3.5`, while `7 // 2` produces the integer quotient `3`. `-7 // 2` produces `-4`, rounding toward negative infinity. `//=` is the corresponding integer update, so ordinary integer arithmetic does not require named division helpers or floating-point conversions.
 
-Signed rounding, the paired `%` rule, numeric representations, implicit conversions, and operator failure contracts remain open. See [division](division.md). `//` is an operator, not a newline-terminated comment.
+Integer `%` is paired with the floor quotient: mathematically, `a == b * (a // b) + (a % b)`. A nonzero remainder has the divisor's sign; `-7 % 2` is `1`, and `7 % -2` is `-1`. `%=` uses that same rule.
+
+Numeric representations, noninteger remainder, implicit conversions, and operator failure contracts remain open. See [division](division.md). `//` is an operator, not a newline-terminated comment.
 
 ## Equality and negation
 
@@ -106,7 +108,7 @@ enabled = not enabled;
 
 ## Notes and open decisions
 
-Ordering and equality support for user-defined types, reference identity, floating-point comparison details, overflow, signed division rounding, remainder, arithmetic failure representation, bitwise operators, and short-circuit update forms remain open. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification.
+Ordering and equality support for user-defined types, reference identity, floating-point comparison details, overflow, noninteger remainder, arithmetic failure representation, bitwise operators, and short-circuit update forms remain open. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification.
 
 ## Related concepts and references
 

@@ -1,6 +1,6 @@
 # Fractional and integer division
 
-Status: **`/`, `//`, and the corresponding update forms selected; signed integer rounding, remainder, and failure contracts open**.
+Status: **fractional `/`, integer floor `//`, and paired integer `%` selected; numeric representations and failure contracts open**.
 
 ## Purpose and templates
 
@@ -29,25 +29,49 @@ The earlier family of named `div_trunc`, `div_floor`, `div_ceil`, and `divmod_tr
 
 ## Compound updates
 
-`//=` applies integer division and writes the quotient to the selected target. It follows the same target-once and left-to-right evaluation rules as other compound updates:
+`//=` applies integer floor division and writes the quotient to the selected target. `%=` applies the paired integer remainder rule. They follow the same target-once and left-to-right evaluation rules as other compound updates:
 
 ```text
 var count := 7;
 count //= 2; /* integer quotient: 3 */
 ```
 
+```text
+var negative := -7;
+negative //= 2; /* -4 */
+```
+
 A whole-binding update needs `var`. A field or element update needs `mut` and the target's other permissions. The result must satisfy the target's static type. `/=` uses fractional division and is not silently substituted for `//=`.
 
-## Signed rounding: decision pending
+## Signed floor division
 
-Nonnegative examples do not choose the signed rounding rule. With operands of different signs, the main candidates differ:
+`a // b` is the mathematical quotient rounded toward negative infinity, for valid integer operands with nonzero `b` and a representable result. This rule applies to positive and negative divisors:
 
-- Floor division: `-7 // 2` produces `-4`.
-- Truncation toward zero: `-7 // 2` produces `-3`.
+```text
+7 // 2;   /* 3 */
+-7 // 2;  /* -4 */
+7 // -2;  /* -4 */
+-7 // -2; /* 3 */
+```
 
-The operator spelling is accepted; neither negative result is selected yet. The rule must be consistent across evaluation contexts and build modes.
+Floor division is not truncation toward zero. The result is consistent across evaluation contexts and build modes. An implementation must account for the signed rounding difference when lowering to an instruction with another rounding rule; it cannot substitute truncation.
 
-`%` also needs a remainder rule paired with the selected quotient so that `a == b * quotient + remainder` holds mathematically for valid operands. A combined quotient/remainder API remains open.
+## Paired integer remainder
+
+For integer operands, `%` supplies the remainder paired with `//`:
+
+```text
+7 % 2;   /* 1 */
+-7 % 2;  /* 1 */
+7 % -2;  /* -1 */
+-7 % -2; /* -1 */
+```
+
+The mathematical identity is `a == b * (a // b) + (a % b)`. A nonzero remainder has the divisor's sign. For a positive divisor, `0 <= remainder < b`; for a negative divisor, `b < remainder <= 0`. An exact division has remainder zero.
+
+This identity describes mathematical integer values, not a required fixed-width multiplication intermediate. A valid result must not be rejected merely because a naive computation of `b * quotient` would overflow. The remainder is not guaranteed nonnegative when the divisor is negative.
+
+A combined quotient/remainder API and noninteger `%` behavior remain open. The behavior of `%` when the mathematical quotient is unrepresentable also needs a failure contract; the signed-minimum/`-1` case must not acquire accidental wrapping semantics.
 
 ## Lexer interaction
 
@@ -61,10 +85,10 @@ This has the same tokens and meaning as the spaced example. Ordinary and raw blo
 
 ## Open numeric contracts
 
-- Choose signed integer rounding and its paired remainder rule.
 - Define division by zero and unrepresentable results, including the signed minimum divided by `-1` for fixed-width integers.
 - Define the failure representation for operators; the earlier suggestion that named utilities return `Result` does not settle operator result types or add implicit traps.
 - Choose floating-point result representations, large-integer precision handling, and mixed numeric operand rules.
+- Define noninteger remainder behavior and any combined quotient/remainder API.
 - Set arithmetic precedence and associativity in the complete operator grammar.
 - Choose implicit conversion and explicit narrowing policies independently of the operator spelling.
 

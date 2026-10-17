@@ -54,7 +54,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - `?=` and `!=` have no selected meaning in the current design.
 - Supported `op=` updates use defined underlying operations and evaluate the target once.
 - `/` is fractional division; `//` performs integer division on integer operands, with `//=` as its update form. Positive examples are `7 / 2` yielding `3.5` and `7 // 2` yielding `3`.
-- Ordinary integer division uses operator syntax without mandatory named rounding helpers or floating-point conversion. Signed rounding, the paired remainder rule, numeric representation, conversion policy, and operator failure contracts remain open.
+- Ordinary integer division uses operator syntax without mandatory named rounding helpers or floating-point conversion. Integer `//` rounds toward negative infinity, including for negative divisors; `-7 // 2` and `7 // -2` both produce `-4`.
+- Integer `%` is paired with the floor quotient so that `a == b * (a // b) + (a % b)` holds mathematically. A nonzero remainder has the divisor's sign. `//=` and `%=` preserve those rules; numeric representation, noninteger remainder, conversion policy, and operator failure contracts remain open.
 - `//` is not a line-comment opener. Outside comments and strings, slash operators use longest-token recognition, including `//=` as one token.
 
 ### Conditional and loop direction
@@ -144,7 +145,7 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 
 ### 7. Numeric arithmetic
 
-Select the signed rounding rule for `//` and its paired `%` semantics. Define arithmetic failures, including zero divisors and unrepresentable fixed-width quotients, before claiming an operator returns a plain value, a `Result`, or an implicit trap. Complete floating-point representations, mixed numeric operations, and conversion policy independently of the selected division spelling. See [division](division.md).
+Integer `//` uses floor rounding and integer `%` is its paired remainder. Define arithmetic failures, including zero divisors and unrepresentable fixed-width quotients, before claiming an operator returns a plain value, a `Result`, or an implicit trap. Complete floating-point representations, mixed numeric operations, noninteger remainder, and conversion policy independently of the selected division semantics. See [division](division.md).
 
 ## Superseded suggestions
 
@@ -169,6 +170,7 @@ Select the signed rounding rule for `//` and its paired `%` semantics. Define ar
 - Requiring an additional function-level mutation marker beyond explicit `mut` receiver/parameter contracts.
 - Rejecting comparison chains merely to simplify the grammar, or treating them as ordinary left-associated binary comparisons.
 - Requiring verbose named division helpers as the ordinary interface for integer-only arithmetic; `//` and `//=` are selected.
+- Truncation toward zero as the meaning of integer `//`, or a mismatched truncating remainder for integer `%`.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 
 ## Documentation boundaries

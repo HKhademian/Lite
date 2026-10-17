@@ -45,7 +45,7 @@ ratio := 7 / 2;     /* fractional quotient: 3.5 */
 quotient := 7 // 2; /* integer quotient: 3 */
 ```
 
-`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Signed rounding and the remainder rule remain open; see [division](division.md). The operator choice does not select an implicit casting policy or a floating-point representation.
+`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Integer `%` is paired with that quotient; a nonzero remainder has the divisor's sign. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or an arithmetic failure mechanism.
 
 ## Ranges
 
@@ -69,7 +69,7 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 ## Open decisions
 
-Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, signed division rounding, remainder, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
+Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
 
 ## Related concepts and references
 
