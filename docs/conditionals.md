@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, and declaration-shaped pattern conditions selected; full pattern semantics open**.
+Status: **mandatory braces, unified actions/values, and existing-name type tests and declaration-shaped pattern conditions selected; full pattern semantics open**.
 
 ## Template
 
@@ -49,11 +49,23 @@ price := if premium {
 
 ## Type rules
 
-- Conditions require `Bool`; there is no implicit truthiness.
+- Ordinary expression conditions require `Bool`; pattern and type-test conditions succeed by matching. There is no implicit truthiness.
 - Normally completing value branches must produce compatible types.
 - A conditional without `else` must have `Unit` behavior; it does not silently produce an optional value.
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
 - No arbitrary implicit union is introduced merely to accept incompatible branches.
+
+## Existing-name type tests
+
+```text
+if person: User {
+    greet_user(person)
+}
+```
+
+This tests the existing value and narrows its usable type where the test is known to hold, subject to stability. It introduces no name, assignment, copy, or unchecked cast. The declared type remains unchanged. Redeclaring `person` is optional; explicit binding is useful when a new name or producer expression is wanted.
+
+See [type tests and narrowing](type-tests-and-narrowing.md) for the selected forms and the remaining mutation, logical-flow, early-return, subtype, and generic-test decisions. Existing-name type tests are selected; their full flow-sensitive semantics are not yet a complete contract.
 
 ## Pattern conditions
 
@@ -112,6 +124,7 @@ A trailing `finally` was proposed for cleanup. There is no extra ordinary `then`
 
 ## Related concepts and references
 
+- [Type tests and narrowing](type-tests-and-narrowing.md).
 - [Pattern syntax comparison](pattern-syntax-comparison.md): primary-reference review and the reasons for these surface choices.
 
 - [Blocks and results](blocks-and-results.md), [Receiver clauses](receiver-clauses.md), and [Tags](tags-and-contexts.md).

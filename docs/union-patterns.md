@@ -22,7 +22,11 @@ binding: Type
 
 This reuses the language's colon type annotation. In a conditional, write `if binding: Type = expression { ... }`; in a match arm, write `binding: Type { ... }`. These surface forms are selected; the complete pattern grammar remains open.
 
-## Narrowing a success union
+## Narrowing without redeclaration
+
+For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).
+
+## Narrowing a success union with explicit bindings
 
 Assume `lookup(id)` returns the outcome type above:
 

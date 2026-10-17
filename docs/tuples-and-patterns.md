@@ -66,6 +66,8 @@ A union can be narrowed by matching its active alternative's type. The selected 
 
 This capability applies equally to a successful Result payload, an error-union payload inside recovery, and a union formed by an `else` fallback. It does not erase an intact Result's outer success/failure distinction. Nested pattern grammar, type identity versus subtype matching, overlap, and binding ownership remain open; see [union type patterns](union-patterns.md).
 
+For an existing name, `if person: User` also tests and narrows without introducing a binding. See [type tests and narrowing](type-tests-and-narrowing.md) for the distinction from binding patterns and the remaining stability rules.
+
 ## Underscore bindings
 
 `_` binds the supplied value and can be read, like another name. It is not a wildcard that suppresses binding.

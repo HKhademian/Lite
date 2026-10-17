@@ -97,14 +97,15 @@ conditional := [tag] "if" condition block
                [ "else" block ]
                [ finally_clause ]
 
-condition := boolean_expression | pattern_condition
+condition := boolean_expression | existing_name_type_test | pattern_condition
+existing_name_type_test := identifier ":" type
 pattern_condition := pattern ":=" expression
                    | identifier ":" type "=" expression
 
 type_pattern := identifier ":" type
 ```
 
-These selected header forms reuse declarations without `let`. A condition evaluates its source once and binds names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns, modifiers, and condition chains remains open. Ordinary conditionals do not use `then` or `endif`.
+The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns, modifiers, and condition chains remains open. Existing-name test precedence and integration into logical expressions remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
 
 ## Match
 

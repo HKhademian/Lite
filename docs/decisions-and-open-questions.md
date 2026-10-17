@@ -25,6 +25,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 ### Syntax and results
 
 - Braces are required for bodies.
+- Existing-name type tests use `if person: User { ... }` without redeclaration. Narrowing changes static knowledge, not the value or declared type; mutation stability, logical composition, negative/early-return flow, and generic/subtype semantics remain to formalize. See [type tests and narrowing](type-tests-and-narrowing.md).
 - Conditional patterns reuse declarations: `if Some(value) := expression` and `if value: Type = expression`. Matching binds branch-local names and permits lexical shadowing; no `let` keyword is added.
 - Match arms use `pattern { body }` without `case`, an arrow, or arm separators. Match shares action/value syntax and requires exhaustive value selection for closed variants; detailed coverage, fallback patterns, ordering, and ownership remain open.
 - Whitespace outside token separation and literal data does not determine structure.

@@ -34,7 +34,7 @@ match person {
 
 Given an appropriate sum type, V accepts type arms directly followed by braces. Sum-type matching requires all variants or an `else`. V also supports `if person is User` and smart-casts the subject in the branch. Source: [sum types and matching](https://docs.vlang.io/type-declarations.html#sum-types).
 
-**For LiteScript:** retain the direct pattern/body boundary, but write `user: User` to explicitly bind the narrowed value. V's existing-subject smart cast is a different name-resolution contract.
+**For LiteScript:** retain the direct pattern/body boundary. Explicit `user: User` arm bindings remain selected; existing-subject narrowing is now selected for `if person: User`, while a binding-free match-arm spelling remains under review.
 
 ## Odin: named type-switch receiver
 
@@ -69,7 +69,7 @@ Zig has optional/error-union conditional captures and tagged-union switch arms s
 
 Kotlin uses `if (person is User)` and `when (person) { is User -> ... }`. Smart casts depend on stability and mutation rules; a guard with an early exit can narrow later code. Sources: [type checks and casts](https://kotlinlang.org/docs/typecasts.html), [control flow](https://kotlinlang.org/docs/control-flow.html).
 
-**For LiteScript:** branch-local explicit shadow bindings avoid requiring those flow-sensitive smart-cast rules for this feature. They do not decide ownership or later availability after a move.
+**For LiteScript:** `if person: User` now permits existing-name narrowing alongside explicit bindings. Stability, logical-flow, and guard refinements require formalization; adopting the compact test does not adopt all Kotlin smart-cast rules or settle ownership.
 
 ## Dart: patterns with explicit local bindings
 
@@ -104,7 +104,7 @@ if Some(user) := find_user(id) {
     greet(user)
 }
 
-if person: User = person {
+if person: User {
     greet_user(person)
 }
 
@@ -114,9 +114,9 @@ label := match person {
 }
 ```
 
-The match example assumes `person: User | Guest` and String-producing display methods. These are selected surfaces, not a complete specification. Evaluation occurs once; a matched name exists only in its branch; the right-hand source resolves before introducing a shadow. Ordinary declarations require irrefutable patterns, whereas conditional matching can fail.
+The match example assumes `person: User | Guest` and String-producing display methods. These are selected surfaces, not a complete specification. Evaluation occurs once; newly bound pattern names exist only in their branch; an existing-name test introduces no shadow. For explicit bindings, the right-hand source resolves before the shadow is introduced. Ordinary declarations require irrefutable patterns, whereas conditional matching can fail.
 
-This design combines declaration consistency with V-like arm boundaries. That is a design judgment, not evidence of beginner learning outcomes or generated-code speed. Choosing a syntax does not establish a runtime type registry or allocation requirement.
+Existing-name stability and further logical/guard flow are tracked in [type tests and narrowing](type-tests-and-narrowing.md). This design combines declaration consistency with V-like arm boundaries. That is a design judgment, not evidence of beginner learning outcomes or generated-code speed. Choosing a syntax does not establish a runtime type registry or allocation requirement.
 
 ## Remaining decisions
 
