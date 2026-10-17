@@ -69,6 +69,10 @@ To negate only `a` before comparing:
 
 The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
+## Evaluation order
+
+Ordinary operator operands evaluate left to right after precedence establishes grouping. Function arguments also evaluate left to right, after evaluating the callee. Short-circuiting skips unneeded operands. See [evaluation order](evaluation-order.md), including target selection before right-hand-side evaluation for assignment and compound updates.
+
 ## Compound updates
 
 ```text

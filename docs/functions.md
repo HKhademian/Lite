@@ -22,6 +22,10 @@ double := fn(x: Int): Int {
 
 Use `:` for result annotations, matching other type annotations. The earlier `->` spelling is superseded.
 
+## Call evaluation order
+
+Evaluate the callee expression first, then the supplied argument expressions from left to right in source order, then invoke the callable. A function argument is not evaluated before an earlier supplied argument merely because of parameter type, dispatch, or optimization. This does not choose move/copy/borrow rules or temporary lifetimes; see [evaluation order](evaluation-order.md).
+
 ## Parameter mutation contracts
 
 Parameters provide read access by default. Prefix an affected parameter with `mut` to request writable access:

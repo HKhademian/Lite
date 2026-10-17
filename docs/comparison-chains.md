@@ -59,7 +59,7 @@ inside := {
 
 This is an explanation of evaluation, not a literal source substitution. Compiler temporaries must not capture user names. An explicit exit during operand evaluation follows the normal exit rules and stops the chain.
 
-The chain's evaluation order does not, by itself, settle evaluation order for other operators or function arguments.
+Chains follow the selected [left-to-right evaluation order](evaluation-order.md). Their single-evaluation and short-circuit rules additionally determine which later operands are skipped.
 
 ## Types and grouping
 

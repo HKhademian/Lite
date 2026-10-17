@@ -49,6 +49,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - `<`, `<=`, `>`, `>=`, and `==` form comparison chains at one precedence level, checking adjacent operands with strict `Bool` results.
 - Chain operands evaluate at most once from left to right; a false comparison skips later operands and comparisons. All pairs must type-check.
 - Mixed comparisons and changes in direction use the same adjacent-pair rule; `not` applies to the complete chain unless parentheses specify another grouping.
+- Ordinary operator operands evaluate left to right after grouping. Calls evaluate the callee first, then supplied argument expressions in source order, then invoke the callable. Short-circuiting skips unneeded expressions.
+- Assignment selects its target once before the right-hand side; compound updates read its current value before their right operand, then compute and write the result. Alias and lifetime rules still need formalization.
 - `?=` and `!=` have no selected meaning in the current design.
 - Supported `op=` updates use defined underlying operations and evaluate the target once.
 

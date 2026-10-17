@@ -81,6 +81,8 @@ These examples assume fresh owned construction and an accessible writable `age` 
 
 `count += 1` with `var count := 0` remains valid: it computes a result and assigns the `count` binding. Conversely, `user.age += 1` updates a field and requires writable access through `user`. Compound updates follow the permission of their assignment target.
 
+Select an assignment target once before evaluating the right-hand side. A compound update reads the selected target's current value before evaluating its right operand, then applies the operation and writes the result. The ownership contract must make target retention valid; it cannot silently change this order or reevaluate an index. See [evaluation order](evaluation-order.md).
+
 ## Uniform definitions
 
 Functions and types can be bound through the same declaration form:
