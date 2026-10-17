@@ -12,7 +12,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
 - Recoverable failures have statically typed error contracts. To obtain a fallible call's successful payload, a caller explicitly handles/inspects the outcome, supplies a default, or propagates the error. Keeping the outcome as a `Result` for later handling does not unwrap it.
-- Propagation uses prefix `try`; local recovery uses an attached `else(error) { ... }` or `else { ... }` block. The error receiver is optional and introduces no implicit name when omitted. Implicit success construction does not imply automatic call-site extraction.
+- Propagation must be explicit at each extracted Result step. The earlier prefix `try` spelling is reopened for chaining review; parenthesis-heavy chains and mandatory temporary bindings are rejected as the everyday solution. Local recovery uses an attached `else(error) { ... }` or `else { ... }` block. The error receiver is optional and introduces no implicit name when omitted. Implicit success construction does not imply automatic call-site extraction.
+- One outer propagation marker must not silently extract all intermediate Result values. Stored Results remain ordinary data; no implicit member forwarding or recursive unwrapping is selected.
 - Result recovery combines success type `T` and normally completing fallback type `D` as `T | D`, collapsing identical alternatives. An explicitly exiting fallback contributes no local alternative. This does not establish automatic union inference for other constructs or the full union type grammar.
 - Every recoverable error that can escape must be covered by the function's explicitly declared error contract, whether explicitly returned or forwarded by `try`. Inference must not silently widen the declared contract.
 - Panics use a separate path; Result recovery and `try` do not catch them. Panic triggers, execution, and cleanup guarantees remain open.
@@ -155,7 +156,7 @@ Integer `//` uses floor rounding and integer `%` is its paired remainder. Define
 
 ### 8. Typed recovery syntax and arithmetic failure boundaries
 
-Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use explicit `try` propagation or `else` recovery with an optional receiver; ordinary calls can retain their Result as data. Recovery forms `T | D` from success and normal fallback types. Every escaping recoverable error must fit an explicitly declared error contract. Define compact signature notation preserving specific error types, generic error contracts and conversion, union narrowing and representation, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. The candidate `T ! E` annotation and expected-`Result` arithmetic capture remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md) and [panics](panics.md).
+Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use explicit per-step propagation or `else` recovery with an optional receiver; ordinary calls can retain their Result as data. Reevaluate the earlier prefix `try` spelling against postfix `?` and `!`, preserving one extraction per marked outcome. Recovery forms `T | D` from success and normal fallback types. Every escaping recoverable error must fit an explicitly declared error contract. Define compact signature notation preserving specific error types, generic error contracts and conversion, union narrowing and representation, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. The candidate `T ! E` annotation and expected-`Result` arithmetic capture remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md), [propagation and call chaining](propagation-and-chaining.md), and [panics](panics.md).
 
 ## Superseded suggestions
 
@@ -172,7 +173,7 @@ Local recovery is required for individual operations, including addition overflo
 - Suffix tags or `name: construct` as the current tag placement.
 - Mandatory `Ok(...)` on normal success paths.
 - Automatic extraction of success and propagation of recoverable failure from an ordinary call without an explicit caller choice.
-- Postfix `?` as the recoverable-error propagation operator, or as a required marker to retain a call's Result outcome.
+- Requiring a `?` marker to retain a call's Result outcome. Postfix propagation itself is reopened for comparison, not selected as current syntax.
 - Silently inferring additional escaping recoverable errors outside a function's declared error contract.
 - Replacing refined recoverable error contracts with a mandatory universal error envelope as the default.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.

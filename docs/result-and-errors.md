@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **typed declared recoverable failures, implicit success construction, `try` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
+Status: **typed declared recoverable failures, implicit success construction, explicit stepwise propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; prefix `try` spelling reopened for chaining review**.
 
 ## Purpose
 
@@ -69,7 +69,7 @@ if let Err(error) = validate_age(text_age) {
 }
 ```
 
-Propagation uses prefix `try`:
+The earlier chosen prefix `try` is now under review because of noisy grouping in call chains. The following examples retain that notation as a baseline, rather than select another spelling prematurely:
 
 ```text
 load_age := fn(path: String): Result<Int, LoadError> {
@@ -82,7 +82,7 @@ load_age := fn(path: String): Result<Int, LoadError> {
 
 The example assumes the read and parse errors are covered by `LoadError`; their composition or mapping must be declared and defined, not guessed from the example. `try` must not erase error types. Its complete precedence and nested-expression grammar remain open.
 
-Postfix `?` is superseded as the recoverable-error propagation operator. The alternative `?` capture marker is not selected either. Optional-value propagation is a separate open decision.
+Postfix `?` was previously superseded and is now reconsidered alongside V-style postfix `!` for chaining ergonomics. Neither suffix is adopted as an additional spelling or capture marker. Optional-value propagation is a separate open decision. See [propagation and call chaining](propagation-and-chaining.md).
 
 ## Keeping an outcome as data
 
@@ -103,7 +103,7 @@ A programmer must be able to inspect and handle the failure of an individual fal
 - Evaluate the selected operation and its executed operands once. Handling its error must not silently repeat the operation.
 - Preserve a typed error value so that conditional patterns can distinguish failures and decide whether to recover or explicitly return an error.
 - Supporting local recovery does not require every ordinary intermediate binding to be a programmer-visible `Result`.
-- Recoverable errors require explicit handling, a default, or `try` propagation before using the successful payload. Automatic propagation from ordinary code is not selected.
+- Recoverable errors require explicit handling, a default, or propagation before using the successful payload. Automatic propagation from ordinary code is not selected; the earlier prefix `try` spelling is under review.
 
 ### Arithmetic capture proposal
 
@@ -187,4 +187,5 @@ These comparisons explain why ordinary arithmetic does not require recoverable-e
 ## Related concepts and references
 
 - [Functions](functions.md), [Conditionals](conditionals.md), and [Control-flow exits](control-flow.md).
+- [Propagation and call chaining](propagation-and-chaining.md) compares prefix, postfix, and expression-wide approaches under the retained one-step-at-a-time constraint.
 - [Rust Result handling](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html) informed explicit error values and propagation. LiteScript deliberately proposes implicit ordinary success instead of mandatory `Ok(...)` construction.
