@@ -122,6 +122,16 @@ Existing-name stability and further logical/guard flow are tracked in [type test
 
 This section evaluates the next match decisions; it does not mark the proposals as selected.
 
+### Required pattern families
+
+LiteScript now requires equality, plain enum selection, payload enum selection, destructuring, and type matching in the same construct. These capabilities and their illustrative forms are documented in [match pattern capabilities](match-patterns.md); plain versus payload cases are explained in [enums and variants](enums-and-variants.md).
+
+Rust separates constant patterns from new identifier bindings and restricts which values qualify as structural constants. Dart likewise distinguishes constant and variable patterns and supplies record/object destructuring. These are useful models, but neither makes an arbitrary runtime comparison expression interchangeable with a binding. Sources: [Rust patterns](https://doc.rust-lang.org/reference/patterns.html), [Dart pattern types](https://dart.dev/language/pattern-types).
+
+Swift distinguishes associated payloads from raw enum values. That distinction helps interpret conventional enums without assuming payload cases are integer constants or separate types. Source: [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md).
+
+**Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. Guards are the suggested sixth capability; runtime-equality punctuation, constructor qualification, and record-pattern grammar remain open.
+
 ### Arm shape and type-only selection
 
 - **V:** `Type { body }` directly supports the compact type-arm direction and narrows the existing subject.

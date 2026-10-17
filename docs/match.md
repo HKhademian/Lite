@@ -1,10 +1,12 @@
 # Match and exhaustive selection
 
-Status: **pattern-and-brace arms and union type patterns selected; full pattern, coverage, and ownership rules open**.
+Status: **equality, plain/payload enums, destructuring, and type matching required; pattern-and-brace arms selected; full grammar, coverage, and ownership rules open**.
 
 ## Purpose and template
 
 Select behavior by variant, type, or destructured data. The same match syntax works for actions and values.
+
+Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards are the recommended next capability, not yet selected.
 
 ```text
 match expression {
@@ -86,7 +88,7 @@ Automatic refinement applies only while the original subject name still denotes 
 
 Recommend source-order selection of the first successful arm, with no implicit or explicit fallthrough. Finishing an arm finishes selection; it does not require `break`. An optional guard would run only after its pattern matches; a false guard would permit later arms to match. Directly provable unreachable arms should be diagnosed.
 
-Keep ordinary switch capabilities inside match: literals and named constants, type alternatives, constructor payloads, and tuple patterns. Complete constant resolution and equality semantics before choosing their full grammar. Range and record patterns, alternatives in one arm, and custom matching hooks can be designed separately. No additional `switch` keyword is proposed.
+The required pattern categories include equality values, plain enum cases, payload cases, destructuring, and type alternatives. Complete constant resolution and equality semantics before choosing their full grammar. Range patterns, alternatives in one arm, and custom matching hooks can be designed separately. Record destructuring is in scope for the destructuring requirement, with its syntax open. No additional `switch` keyword is proposed.
 
 ### Fallback and exhaustiveness
 
@@ -124,6 +126,8 @@ A body-opening brace must be distinguishable from any future record-pattern synt
 
 - [Conditionals](conditionals.md)
 - [Tuples and patterns](tuples-and-patterns.md)
+- [Match pattern capabilities](match-patterns.md)
+- [Enums and variants](enums-and-variants.md)
 - [Option](option.md)
 - [Result and errors](result-and-errors.md)
 - [Receiver clauses](receiver-clauses.md)

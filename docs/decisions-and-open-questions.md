@@ -28,6 +28,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Existing-name type tests use `if person: User { ... }` without redeclaration. Narrowing changes static knowledge, not the value or declared type; mutation stability, logical composition, negative/early-return flow, and generic/subtype semantics remain to formalize. See [type tests and narrowing](type-tests-and-narrowing.md).
 - Conditional patterns reuse declarations: `if Some(value) := expression` and `if value: Type = expression`. Matching binds branch-local names and permits lexical shadowing; no `let` keyword is added.
 - Match arms use `pattern { body }` without `case`, an arrow, or arm separators. Match shares action/value syntax and requires exhaustive value selection for closed variants; detailed coverage, fallback patterns, ordering, and ownership remain open.
+- Match must support equality, conventional payload-free enums, enums with associated values, destructuring, and type checking/matching. Enum cases are not assumed to be separate types; plain enum support does not silently select integer conversion or representation rules. See [match pattern capabilities](match-patterns.md) and [enums and variants](enums-and-variants.md).
 - Whitespace outside token separation and literal data does not determine structure.
 - Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.

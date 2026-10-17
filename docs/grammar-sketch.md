@@ -118,6 +118,8 @@ Each arm has a braced body, with no `case`, arrow, comma, or semicolon between a
 
 This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, guards, overlaps, ordering, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` remains an ordinary binding. See [match](match.md) and [union type patterns](union-patterns.md).
 
+The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. These required categories do not select bare-name equality versus binding, runtime-equality pattern punctuation, enum declarations, or record-pattern delimiters. See [match pattern capabilities](match-patterns.md).
+
 ## Loops
 
 ```text
