@@ -70,6 +70,10 @@ Early returns are encouraged for guards and invalid cases. Explicit final `retur
 
 `return` is control flow, never a parser's ambiguity-breaking hint.
 
+## Recovering at a call
+
+A caller must be able to capture and handle a particular fallible call's typed error before any default propagation. This does not require a catch boundary around unrelated statements or imply that every intermediate value is a `Result`. The capture/recovery syntax and the default behavior of an unhandled call remain open; see [result and errors](result-and-errors.md).
+
 ## Closures
 
 ```text

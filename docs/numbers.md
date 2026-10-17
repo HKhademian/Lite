@@ -71,6 +71,8 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
 
+Any fallible arithmetic operation must support local error inspection and recovery, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Capture syntax and behavior when no local handling is requested remain open; see [result and errors](result-and-errors.md).
+
 ## Related concepts and references
 
 - [Types and inference](types-and-inference.md)

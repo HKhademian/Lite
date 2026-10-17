@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **explicit failure and implicit success established; inference and propagation details open**.
+Status: **explicit failure, implicit success, and operation-local recovery established; capture syntax and default propagation open**.
 
 ## Purpose
 
@@ -58,6 +58,50 @@ load_age := fn(path: String): Result<Int, LoadError> {
 ```
 
 This is a working illustration. A real contract must define error conversion or explicit mapping between the operations' error types. `?` must not erase those types.
+
+## Recovery at a single operation
+
+A programmer must be able to inspect and handle the failure of an individual fallible operation, including arithmetic and a function call. Addition overflow is included; this is not solely a division-by-zero mechanism.
+
+- Local recovery must be available at the operation's expression, without requiring the surrounding function or a larger computation to be used as the recovery boundary.
+- A requested local capture or recovery must observe the operation's outcome before any automatic success unwrapping or error propagation.
+- Evaluate the selected operation and its executed operands once. Handling its error must not silently repeat the operation.
+- Preserve a typed error value so that conditional patterns can distinguish failures and decide whether to recover or explicitly return an error.
+- Supporting local recovery does not require every ordinary intermediate binding to be a programmer-visible `Result`.
+- Whether unhandled operations propagate automatically, require explicit propagation, or use another explicit policy remains open. The operation-local requirement does not adopt a general `try/catch` model.
+
+### Capture proposal
+
+One candidate is an explicit expected `Result` type at the capture point:
+
+```text
+attempt: Result<Int, ArithmeticError> = a + b;
+
+if let Err(error) = attempt {
+    report(error)
+}
+```
+
+This is a proposal for capturing the addition's outcome without propagating its error first. Expected-type capture, distinct from ordinary success lifting, has not been selected. The example handles the error case only; success extraction still follows the eventual pattern contract.
+
+### Expression-local recovery proposal
+
+Another candidate reuses an attached receiving `else` for the selected expression:
+
+```text
+sum := (a + b) else(error) {
+    report(error);
+    0
+}
+
+user := load_user(id) else(error) {
+    guest_user()
+}
+```
+
+On success, this candidate supplies the successful payload. On failure, its receiver gets the typed error and the recovery block supplies a compatible fallback value. Only the selected expression is handled; a failure arising in the recovery block is not handled again by that same clause. Evaluation scope for nested fallible operands still needs a contract.
+
+This is exploratory syntax, not accepted grammar. It would extend receiving `else` beyond the previously discussed loop clauses. It does not settle propagation for an expression with no attached clause, and it does not introduce dynamic handler lookup through arbitrary callees.
 
 ## Unit success
 
