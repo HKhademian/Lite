@@ -20,6 +20,10 @@ identifier := (XID_Start | "_") { XID_Continue }
 
 This is the proposed Unicode profile, before reserved-word recognition. Case sensitivity is proposed; normalization and the pinned Unicode version remain open. See [identifiers](identifiers.md).
 
+## Numeric scanning
+
+Fractional literals require a leading digit (`0.5`); `.5` is rejected. Leading-dot context access remains distinct. Other numeric-token productions remain open; see [numbers and ranges](numbers.md).
+
 ## Item separation
 
 ```text

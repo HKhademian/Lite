@@ -16,6 +16,24 @@ var total := 0;
 
 The examples assume the same inferred integer family as an explicit `Int`. Capitalization and the full primitive type naming convention have not been frozen.
 
+## Leading zero in fractional literals
+
+Fractional literals require a digit before the decimal point. Write `0.5`; `.5` is rejected.
+
+```text
+ratio := 0.5;
+```
+
+This keeps leading-dot context access distinct from fractional-literal spelling:
+
+```text
+@attempts loop .count < 10 {
+    work()
+}
+```
+
+Requiring a leading zero settles spelling only. Floating-point representation, decimal types, exponent notation, and the complete numeric token grammar remain open.
+
 ## Representation proposal
 
 A signed 64-bit default `Int` with checked arithmetic was suggested, with explicit sized types and an optional arbitrary-precision library. This is not yet a selected specification. Overflow should not silently change meaning merely because a different build mode is used.

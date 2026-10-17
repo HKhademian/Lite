@@ -20,6 +20,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
+- Fractional literals require a leading digit: write `0.5`, not `.5`; leading-dot context access remains distinct.
 - `_` is a readable binding name, not a wildcard or a special discard-assignment target.
 - Explicit semicolons separate ordinary items; there is no automatic insertion.
 - Complete block constructs end their items without semicolons; a following semicolon is rejected, including for declarations initialized directly by block constructs.
