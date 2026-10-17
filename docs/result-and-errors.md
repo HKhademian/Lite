@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **typed declared recoverable failures, implicit success construction, `try` propagation, expression-local `else` recovery, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
+Status: **typed declared recoverable failures, implicit success construction, `try` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
 
 ## Purpose
 
@@ -121,7 +121,7 @@ This is a proposal for requesting a recoverable arithmetic outcome. It does not 
 
 ### Expression-local recovery
 
-An attached receiving `else` handles the selected Result outcome:
+An attached `else` handles the selected Result outcome. Its error receiver is optional:
 
 ```text
 user := load_user(id) else(error) {
@@ -130,9 +130,32 @@ user := load_user(id) else(error) {
 }
 ```
 
-On success, the clause supplies the successful payload without executing the recovery block. On failure, its receiver gets the statically typed error and the recovery block supplies a compatible fallback value or explicitly exits. The selected outcome is evaluated once. A failure arising in the recovery block is not handled again by that same clause; it requires its own handling or explicit propagation.
+```text
+user := load_user(id) else {
+    guest_user()
+}
+```
 
-This Result recovery form is selected. It does not introduce dynamic handler lookup through arbitrary callees or catch a panic. Full precedence, whether a receiver can be omitted, and evaluation scope for nested operands remain open. Do not automatically inherit the separate loop-completion hook's action-versus-result rules.
+On success, the expression supplies the successful payload without executing the recovery block. On failure, the block executes and, if declared, its receiver gets the statically typed error. Omitting the receiver introduces no implicit `err` name and does not change value production. The selected outcome is evaluated once. A failure arising in the recovery block is not handled again by that same clause; it requires its own handling or explicit propagation.
+
+### Recovery result type
+
+For an operation with success type `T` and a normally completing recovery block with result type `D`, the recovery expression has type `T | D`. This is a statically known union, not dynamic typing. Identical alternatives collapse: a `User` success and a `User` fallback yield `User`.
+
+```text
+message := load_user(id) else {
+    "Unavailable"
+}
+```
+
+If `load_user` succeeds with `User`, `message` has type `User | String`. A caller must narrow it before using an operation specific to only one alternative. An expected `User` annotation cannot erase the `String` alternative.
+
+- An explicitly exiting recovery branch supplies no local alternative; an early `return`, valid `break`, or other exit is checked against its own target.
+- A recovery block ending in `Unit` contributes a `Unit` alternative; `Result<User, E>` recovered this way yields `User | Unit`, without inventing null or a default User.
+- This is a selected union-forming boundary for Result recovery. It does not automatically make unrelated `if` or `match` branches infer unions.
+- General union syntax, narrowing, conversions, layout, and ownership rules remain open. `T | D` records the type relationship without settling all type grammar.
+
+This Result recovery form is selected. It does not introduce dynamic handler lookup through arbitrary callees or catch a panic. Full precedence and evaluation scope for nested operands remain open. The separate loop-completion hook's rule that a missing receiver denotes action-only behavior does not apply to Result recovery.
 
 Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-recovery proposal until operator failure contracts are settled. Selecting Result recovery does not silently make ordinary arithmetic return Result.
 

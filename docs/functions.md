@@ -76,6 +76,8 @@ A fallible function exposes a statically typed recoverable error contract. A cal
 
 Use `try operation()` to extract success or forward its recoverable error from the nearest function or closure. Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without either, the call retains its Result as ordinary data. Every recoverable error that can escape, directly or through `try`, must be covered by the function's declared error type. A declaration that promises no recoverable failure cannot silently gain one through inference.
 
+The recovery receiver may be omitted: `operation() else { fallback }`. Both recovery forms combine success type `T` and normal fallback type `D` as `T | D`. A fallback need not have the same type as the original success. Returning that union still needs to satisfy the enclosing function's declared return type.
+
 Local handling does not require a catch boundary around unrelated statements. Exact signature shorthand, complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). [Panics](panics.md) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
 
 ## Closures

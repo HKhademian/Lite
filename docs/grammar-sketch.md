@@ -153,11 +153,12 @@ continue_exit := "continue" [expression]
 ```text
 try result_expression
 result_expression else(error_pattern) { recovery_body }
+result_expression else { recovery_body }
 ```
 
-These are selected surface templates, not complete productions. Prefix `try` extracts a successful Result payload or returns its typed error from the nearest function or closure. An attached receiving `else` instead supplies a fallback or explicitly exits. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error, including one forwarded by `try`, must be covered by the function's declared contract.
+These are selected surface templates, not complete productions. Prefix `try` extracts a successful Result payload or returns its typed error from the nearest function or closure. An attached `else`, with an optional error receiver, supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error, including one forwarded by `try`, must be covered by the function's declared contract.
 
-Full precedence, nested-operand evaluation scope, the optionality of an error receiver, and compact typed fallibility notation remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Postfix `?` is not the selected recoverable-error propagation or capture spelling; Option propagation remains separate. Panics do not flow through these Result expressions.
+Full precedence, nested-operand evaluation scope, general union typing rules, and compact typed fallibility notation remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Postfix `?` is not the selected recoverable-error propagation or capture spelling; Option propagation remains separate. Panics do not flow through these Result expressions.
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 
