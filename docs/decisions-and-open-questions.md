@@ -92,6 +92,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- Compact fallible types use `T ! E`; multiple error families can be composed as `T ! (E1 | E2)` and reused through a transparent alias such as `CombinedError := type E1 | E2;`. Propagation into a declared union preserves covered alternatives and rejects uncovered ones. Type spelling, alias grammar, general union semantics, and conversions remain proposals; see [fallible types and error composition](fallible-types-and-error-composition.md).
 - Full method notation, parameter rebinding and call-site syntax, access inference and conversions, capture permissions, and aliasing rules remain open. Affected receiver/parameter bindings use `mut`, without an additional function-level mutation marker; see [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.

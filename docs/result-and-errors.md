@@ -16,6 +16,8 @@ Represent recoverable failure in a function's return type and support ordinary c
 
 The earlier discussion of ordinary `: Int` signatures hiding recoverable failure with automatic propagation is superseded by this explicit caller contract. Compact signature spelling remains a separate decision. The candidate `T ! E` spelling preserves a refined error type; it has not been selected as final punctuation or as a second interchangeable source spelling.
 
+[Fallible types and error composition](fallible-types-and-error-composition.md) develops that candidate, a reusable error-family alias, and proposed compatibility rules. Its examples remain proposals and do not replace the established explanatory notation in this document yet.
+
 ## Declared error coverage
 
 Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a postfix `!` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
