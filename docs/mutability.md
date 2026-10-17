@@ -1,6 +1,6 @@
 # Mutability, access, and operations
 
-Status: **independent `var`/`mut` declaration capabilities established; receiver syntax and ownership details open**.
+Status: **independent `var`/`mut` declarations and explicit mutation parameters established; ownership and full method syntax open**.
 
 ## Purpose
 
@@ -52,9 +52,9 @@ A frozen value would have a stronger guarantee: its protected state cannot chang
 
 ## 3. Operation receiver requirements
 
-Operations receive read access by default; mutation requires an explicit `mut` contract. The operation's required receiver/parameter capability must be checked against the caller's available capability. Operation and parameter syntax still need selection.
+Operations receive read access by default. Affected receiver and parameter bindings explicitly carry `mut` when the operation needs writable access. Those bindings describe the mutation contract; the function needs no additional mutation marker. Required capabilities must be checked against the caller's available capabilities.
 
-The following sketches put `mut` before a receiver parameter to resemble the declaration prefix. This is proposed parameter syntax, not an accepted general type qualifier, reference syntax, argument-passing rule, or operation-declaration modifier. Assume the fields are accessible in the implementation context.
+The prefix `mut` goes before the affected parameter name, matching declaration prefixes. The examples use an explicit `self` parameter to illustrate receiver access. The choice of method declaration syntax, general reference/type qualifiers, argument-passing rules, and ownership behavior remains open. Assume the fields are accessible in the implementation context.
 
 ```text
 name_of := fn(self: User): String {
@@ -69,12 +69,15 @@ rename := fn(mut self: User, name: String): Unit {
 - Read access permits operations requiring read access.
 - Write access can be restricted to read access for an operation, subject to the chosen borrowing rules.
 - An operation requiring write access cannot be called using only read access.
+- Each writable receiver or parameter must be marked separately; marking one does not grant write access through another.
 - A read operation cannot directly assign receiver fields, derive writable access to protected fields, or call another operation requiring writable access to that receiver.
 - Restricting access does not copy, freeze, or permanently revoke the owner's write capability.
 
 This makes operation mutability a requirement on its receiver, rather than an independent third state of the object. The same principle should cover ordinary parameters, interfaces, callbacks, and closures where they expose mutation capabilities.
 
-A declaration such as `mut operation := fn(...) { ... }` qualifies access to the held function value; the declaration prefix alone does not declare which receivers, parameters, or captured objects the function body may mutate. Whether a separate operation-level `mut` marker is required in addition to explicit writable receiver/parameter contracts remains open.
+A declaration such as `mut operation := fn(...) { ... }` qualifies access to the held function value; the declaration prefix alone does not declare which receivers, parameters, or captured objects the function body may mutate. There is no extra `mut fn` requirement for an operation whose affected receivers/parameters already declare `mut`.
+
+Captured state and other nonparameter capabilities still need their own contracts. Omitting a function-level marker does not grant mutation of globals or captures and does not establish a purity guarantee.
 
 ### Receiver read-only does not mean pure
 
@@ -117,7 +120,7 @@ Binding and access permissions are candidates for static checking. They do not i
 ## Decisions still required
 
 - Define the inference and conversion rules for access-bearing values without upgrading read-only borrowed access.
-- Define parameter, receiver, and operation-level mutation syntax; declaration-prefix `mut` is selected, but other placements remain provisional.
+- Complete method declarations, parameter rebinding rules, capability inference, and any call-site argument syntax. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
 - Choose move/copy/borrow/share behavior, write exclusivity, and lifetimes.
 - Define how read access propagates through owned fields and reference-valued fields.
 - Define fixed fields separately from binding reassignment and whole-object replacement.

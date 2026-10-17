@@ -73,11 +73,13 @@ assignment := assignable "=" expression
             | assignable update_operator expression
 
 function := "fn" "(" [parameters] ")" [":" type] block
+
+typed_parameter := ["mut"] pattern ":" type
 ```
 
-The full lvalue grammar, parameter declarations, generics, public modifiers, and distinction between type expressions and ordinary values remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
+The typed-parameter production shows the selected `mut` prefix; the complete parameter list, including inferred types, defaults, and parameter rebinding, remains open. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values also remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
-No modifiers means a fixed binding with read-only access. `var` permits whole-binding reassignment; `mut` permits held-data updates through the binding, subject to field, element, and ownership permissions. `var mut` permits both; `mut var` and repeated modifiers are rejected. This declaration grammar does not select receiver/parameter syntax or a function-effect modifier.
+No modifiers means a fixed binding with read-only access. `var` permits whole-binding reassignment; `mut` permits held-data updates through the binding, subject to field, element, and ownership permissions. `var mut` permits both; `mut var` and repeated modifiers are rejected. Affected function parameters explicitly carry `mut`; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
 
 `_` is an identifier binding, not a special wildcard or discard-assignment target. Its declarations produce `Unit` like other declarations. Assigning the `_` binding requires `var`; assigning a field or element through `_` requires `mut` and the target's other permissions.
 

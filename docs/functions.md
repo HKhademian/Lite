@@ -22,6 +22,24 @@ double := fn(x: Int): Int {
 
 Use `:` for result annotations, matching other type annotations. The earlier `->` spelling is superseded.
 
+## Parameter mutation contracts
+
+Parameters provide read access by default. Prefix an affected parameter with `mut` to request writable access:
+
+```text
+rename := fn(mut user: User, name: String): Unit {
+    user.name = name
+}
+```
+
+The example assumes `name` is an accessible writable field in the implementation context. The operation requires writable access to `user`; it only reads the replacement `name` parameter. Each affected receiver or parameter needs its own `mut` marker. A read-only argument cannot satisfy a writable-access requirement.
+
+The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. There is no additional `mut fn` or other function-level mutation marker.
+
+The declaration `mut rename := fn(...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
+
+These markers do not choose borrowing, copying, moving, lifetimes, argument syntax at the call site, capture permissions, or purity. Those contracts remain open; see [mutability](mutability.md) and [memory and performance](memory-and-performance.md).
+
 ## Result rules
 
 The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item without a semicolon; see [blocks and results](blocks-and-results.md).

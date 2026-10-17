@@ -27,7 +27,7 @@ var attempts := 0;
 attempts += 1;
 ```
 
-Bindings are fixed and provide read-only access by default. `var` permits reassignment; `mut` permits held-data updates through the binding; `var mut` permits both. Writable receiver/parameter access also needs an explicit `mut` contract, with its syntax still open. These capabilities do not make the value type dynamic, override field privacy, or promise global deep immutability. See [mutability, access, and operations](mutability.md).
+Bindings are fixed and provide read-only access by default. `var` permits reassignment; `mut` permits held-data updates through the binding; `var mut` permits both. Writable receiver/parameter access requires `mut` on each affected binding, without an additional function-level mutation marker. Full method notation and ownership rules remain open. These capabilities do not make the value type dynamic, override field privacy, or promise global deep immutability. See [mutability, access, and operations](mutability.md).
 
 ## Other candidate explicit capabilities
 

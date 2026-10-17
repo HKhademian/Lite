@@ -32,7 +32,7 @@ name = replacement;
 
 The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](mutability.md).
 
-The declaration prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are not alternate spellings. This does not freeze modifier placement for parameters or operation declarations.
+The declaration prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are not alternate spellings. Affected function parameters also use a `mut` prefix, as in `fn(mut user: User) { ... }`. Mutation contracts belong to receiver/parameter bindings, without an additional function-level marker; see [functions](functions.md).
 
 ## Examples
 
