@@ -17,6 +17,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 - Braces are required for bodies.
 - Whitespace outside token separation and literal data does not determine structure.
+- Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
+- Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Explicit semicolons separate items; there is no automatic insertion.
 - Extra semicolons do not become empty result-producing statements.
 - Final expressions produce block results; final declarations/assignments produce `Unit`.

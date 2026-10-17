@@ -8,6 +8,10 @@ Collect the current surface direction in one place without disguising unresolved
 
 `[x]` below means optional notation; `{x}` means repetition in grammar productions. Quoted braces and punctuation are literal tokens. The code examples elsewhere use source braces normally.
 
+## Comment scanning
+
+Before parsing items, the lexer recognizes [nested and raw comments](comments.md) as token-separating whitespace. A raw opener takes precedence over its ordinary `/*` prefix. Raw fences match their exact hash count; unterminated comments are errors. No comment form inserts `;`.
+
 ## Item separation
 
 ```text

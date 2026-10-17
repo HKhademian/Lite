@@ -59,13 +59,17 @@ The separator follows the complete conditional. A separator before `else` would 
 
 ## Comments
 
-Explicitly delimited comments were proposed:
+Comments are explicitly delimited:
 
 ```text
-/* A comment ends at its delimiter. */
+/* An ordinary comment /* may nest */ here. */
+/*# Raw text may contain unmatched /* and */ delimiters. #*/
+/*## Use a longer fence when the text contains #*/. ##*/
 ```
 
-Newline-terminated comments such as `//` were not retained as the strict whitespace-independent default. Whether block comments nest, and how documentation comments are marked, remains open.
+Ordinary comments nest; raw comments end only at the matching fence and do not nest. Neither form parses its contents as source code. Comments separate tokens but do not insert item separators. Missing closing delimiters are errors, without guessing where code resumes. See [comments](comments.md) for fence matching and interactions between the forms.
+
+Newline-terminated comments such as `//` were not retained as the strict whitespace-independent default. Documentation-comment markers remain open.
 
 ## Return boundaries
 
@@ -80,11 +84,12 @@ A newline after `return` does not decide whether an operand follows.
 
 ## Open lexical decisions
 
-Identifier Unicode rules, reserved words, numeric literals, escape sequences, comment nesting, and the full longest-token rules are not specified. Prefix `@name` and leading-dot context access must be distinguished from ordinary identifiers and member access without using whitespace as a semantic signal.
+Identifier Unicode rules, reserved words, numeric literals, escape sequences, and the full longest-token rules are not specified. Prefix `@name` and leading-dot context access must be distinguished from ordinary identifiers and member access without using whitespace as a semantic signal.
 
 ## Related concepts and references
 
 - [Blocks and results](blocks-and-results.md)
+- [Comments](comments.md)
 - [Strings](strings.md)
 - [Grammar sketch](grammar-sketch.md)
 - External languages are comparisons, not normative lexer definitions; see [references](references.md).
