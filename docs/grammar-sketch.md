@@ -12,6 +12,14 @@ Collect the current surface direction in one place without disguising unresolved
 
 Before parsing items, the lexer recognizes [nested and raw comments](comments.md) as token-separating whitespace. A raw opener takes precedence over its ordinary `/*` prefix. Raw fences match their exact hash count; unterminated comments are errors. No comment form inserts `;`.
 
+## Identifier scanning
+
+```text
+identifier := (XID_Start | "_") { XID_Continue }
+```
+
+This is the proposed Unicode profile, before reserved-word recognition. Case sensitivity is proposed; normalization and the pinned Unicode version remain open. See [identifiers](identifiers.md).
+
 ## Item separation
 
 ```text

@@ -19,6 +19,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Whitespace outside token separation and literal data does not determine structure.
 - Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
+- Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
 - Explicit semicolons separate items; there is no automatic insertion.
 - Extra semicolons do not become empty result-producing statements.
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
@@ -65,6 +66,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
 - Boolean and unconditional item payloads use `Unit`.
 - Receiver aliases are read-only snapshots of loop state.

@@ -60,6 +60,11 @@ These sources were consulted during the design discussion. They support comparis
 - Andreas Stefik and Susanna Siebert, 2013, [An Empirical Investigation into Programming Language Syntax](https://www.vidarholen.net/~vidar/An_Empirical_Investigation_into_Programming_Language_Syntax.pdf), ACM Transactions on Computing Education, DOI 10.1145/2534973. The paper examines novice syntax performance across languages; it does not isolate braces as the only relevant variable.
 - Vilma Lappi, Ville Tirronen, and Jonne Itkonen, 2023, [A replication study on the intuitiveness of programming language syntax](https://link.springer.com/article/10.1007/s11219-023-09631-7), Software Quality Journal. It supports caution about assuming expert familiarity is novice intuitiveness; it does not validate LiteScript's proposed syntax.
 
+## Unicode
+
+- [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/): identifier character properties and language-specific profiles. LiteScript's exact profile and Unicode version remain open.
+- [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/): normalization choices for identifier equivalence. Linking the standard does not adopt a normalization policy for identifiers or strings.
+
 ## Local source of design decisions
 
 The primary source for LiteScript-specific choices is the design conversation through 2026-10-17. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.

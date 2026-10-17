@@ -82,14 +82,19 @@ return @target value;
 
 A newline after `return` does not decide whether an operand follows.
 
+## Identifiers
+
+Unicode identifiers are supported. The working profile uses `XID_Start` or `_` initially, followed by `XID_Continue` characters, with case-sensitive lookup. The exact profile, normalization policy, and Unicode version remain open; see [identifiers](identifiers.md).
+
 ## Open lexical decisions
 
-Identifier Unicode rules, reserved words, numeric literals, escape sequences, and the full longest-token rules are not specified. Prefix `@name` and leading-dot context access must be distinguished from ordinary identifiers and member access without using whitespace as a semantic signal.
+The complete Unicode identifier profile, reserved words, numeric literals, escape sequences, and full longest-token rules are not specified. Prefix `@name` and leading-dot context access must be distinguished from ordinary identifiers and member access without using whitespace as a semantic signal.
 
 ## Related concepts and references
 
 - [Blocks and results](blocks-and-results.md)
 - [Comments](comments.md)
+- [Identifiers](identifiers.md)
 - [Strings](strings.md)
 - [Grammar sketch](grammar-sketch.md)
 - External languages are comparisons, not normative lexer definitions; see [references](references.md).

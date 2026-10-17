@@ -18,6 +18,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, separators, and comments.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
+- [Identifiers](identifiers.md): Unicode names, proposed character classes, and normalization questions.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, and repeated semicolons.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, immutability, and mutation.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
