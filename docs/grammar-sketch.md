@@ -45,7 +45,7 @@ item := declaration
       | expression
 ```
 
-`closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, or a declaration, assignment, or exit whose outer expression ends directly in one. Examples include a standalone block, an `if` chain, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
+`closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, or a declaration, assignment, or exit whose outer expression ends directly in one. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
 
 The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself; a separator after it is rejected. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
@@ -57,7 +57,7 @@ The exact expression productions implementing this classification remain part of
 grouped_block_value := "(" block_value_construct ")"
 ```
 
-`block_value_construct` denotes an expression-producing block, conditional, loop, or function literal. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
+`block_value_construct` denotes an expression-producing block, conditional, match, loop, or function literal. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
 
 ```text
 answer := ({ calculate() }) + 1;
@@ -98,11 +98,24 @@ conditional := [tag] "if" condition block
                [ finally_clause ]
 
 condition := boolean_expression | pattern_condition
+pattern_condition := pattern ":=" expression
+                   | identifier ":" type "=" expression
+
+type_pattern := identifier ":" type
 ```
 
-The current pattern-condition example is `if let pattern = expression`. Whether that is the final spelling is open. Ordinary conditionals do not use `then` as a separator and do not require `endif`.
+These selected header forms reuse declarations without `let`. A condition evaluates its source once and binds names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns, modifiers, and condition chains remains open. Ordinary conditionals do not use `then` or `endif`.
 
-Type-pattern narrowing of success and error unions is selected. The working shape `binding: Type` can appear in illustrative conditional and match patterns, but its complete production, exact type versus subtype behavior, and match-arm punctuation remain open. See [union type patterns](union-patterns.md).
+## Match
+
+```text
+match_expression := "match" expression "{" match_arm { match_arm } "}"
+match_arm := pattern block
+```
+
+Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
+
+This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, guards, overlaps, ordering, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` remains an ordinary binding. See [match](match.md) and [union type patterns](union-patterns.md).
 
 ## Loops
 
@@ -204,7 +217,7 @@ These are semantic rules, not consequences of associativity or whitespace. [Eval
 - Prefix tags must be distinguishable from targeted exits and context references through grammar, not whitespace.
 - `Unit` in type and expression positions needs a deliberate built-in rule.
 - Adjacent string literal tokens join before ordinary expression separation is interpreted.
-- Match arms and typed hook-dispatch chains have no selected production.
+- Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.
 
 ## Related concepts and references
 

@@ -17,7 +17,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Item boundaries
 
-A complete block construct ends its item without `;`. A semicolon after that completed construct is rejected, including after a declaration initialized directly by a block, function, conditional, or loop. The entire construct includes any attached `else`, `then`, and `finally` clauses.
+A complete block construct ends its item without `;`. A semicolon after that completed construct is rejected, including after a declaration initialized directly by a block, function, conditional, match, or loop. The entire construct includes any attached `else`, `then`, and `finally` clauses.
 
 ```text
 answer := {

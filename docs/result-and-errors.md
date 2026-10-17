@@ -66,7 +66,7 @@ Ambiguous cases, including when `T` is itself a `Result`, need a precise rule an
 Pattern matching should expose success or failure explicitly. Earlier examples used `Ok(value)` as a success pattern. Removing routine success construction does not necessarily remove the need for a named success pattern; its spelling is open.
 
 ```text
-if let Err(error) = validate_age(text_age) {
+if Err(error) := validate_age(text_age) {
     report(error)
 }
 ```
@@ -120,7 +120,7 @@ One earlier candidate for arithmetic is an explicit expected `Result` type at th
 ```text
 attempt: Int ! ArithmeticError = a + b;
 
-if let Err(error) = attempt {
+if Err(error) := attempt {
     report(error)
 }
 ```
@@ -158,7 +158,7 @@ message := load_user(id) else {
 
 If `load_user` succeeds with `User`, `message` has type `User | String`. A caller must narrow it before using an operation specific to only one alternative. An expected `User` annotation cannot erase the `String` alternative.
 
-Union alternatives can be narrowed by matching their type. This applies both to the recovered success/fallback union and to error-union receivers such as `ReadError | ParseError`. An intact Result first retains its success/failure distinction; payload type tests cannot decide that distinction when the sides overlap. See [union type patterns](union-patterns.md) for illustrative conditional patterns and the remaining grammar decisions.
+Union alternatives can be narrowed by matching their type. This applies both to the recovered success/fallback union and to error-union receivers such as `ReadError | ParseError`. An intact Result first retains its success/failure distinction; payload type tests cannot decide that distinction when the sides overlap. See [union type patterns](union-patterns.md) for selected conditional patterns and the remaining semantic decisions.
 
 - An explicitly exiting recovery branch supplies no local alternative; an early `return`, valid `break`, or other exit is checked against its own target.
 - A recovery block ending in `Unit` contributes a `Unit` alternative; `Result<User, E>` recovered this way yields `User | Unit`, without inventing null or a default User.

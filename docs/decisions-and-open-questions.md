@@ -15,7 +15,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Propagation uses postfix `!` at each extracted Result step. Calls and members can continue directly, as in `load_user(id)!.load_profile()!.name`; parenthesis-heavy chains and mandatory temporary bindings are rejected as the everyday solution. `!.` consists of two ordinary postfix-chain tokens and is not nullable access. Local recovery uses an attached `else(error) { ... }` or `else { ... }` block. The error receiver is optional and introduces no implicit name when omitted. Implicit success construction does not imply automatic call-site extraction.
 - One outer propagation marker must not silently extract all intermediate Result values. Stored Results remain ordinary data; no implicit member forwarding or recursive unwrapping is selected.
 - Result recovery combines success type `T` and normally completing fallback type `D` as `T | D`, collapsing identical alternatives. An explicitly exiting fallback contributes no local alternative. This does not establish automatic union inference for other constructs or the full union type grammar.
-- Developers can narrow success and error unions through type-pattern matching, binding an active alternative with its narrower static type. This includes unions on both sides of `!` and recovery-created unions. An intact Result preserves its outer success/failure distinction when the payload types overlap. Full pattern spelling, overlap, and ownership rules remain open; see [union type patterns](union-patterns.md).
+- Developers can narrow success and error unions through type-pattern matching, binding an active alternative with its narrower static type. This includes unions on both sides of `!` and recovery-created unions. An intact Result preserves its outer success/failure distinction when the payload types overlap. Complete pattern grammar, overlap, and ownership rules remain open; see [union type patterns](union-patterns.md).
 - Every recoverable error that can escape must be covered by the function's explicitly declared error contract, whether explicitly returned or forwarded by `!`. Inference must not silently widen the declared contract.
 - Panics use a separate path; Result recovery and `!` do not catch them. Postfix `!` is propagation, not a panic-producing assertion. Panic triggers, execution, and cleanup guarantees remain open.
 - A user can inspect and recover from an individual fallible operation, including arithmetic and function calls. Local handling observes the outcome without a prior implicit unwrap or automatic propagation; it does not require every intermediate binding to be a visible `Result`.
@@ -25,6 +25,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 ### Syntax and results
 
 - Braces are required for bodies.
+- Conditional patterns reuse declarations: `if Some(value) := expression` and `if value: Type = expression`. Matching binds branch-local names and permits lexical shadowing; no `let` keyword is added.
+- Match arms use `pattern { body }` without `case`, an arrow, or arm separators. Match shares action/value syntax and requires exhaustive value selection for closed variants; detailed coverage, fallback patterns, ordering, and ownership remain open.
 - Whitespace outside token separation and literal data does not determine structure.
 - Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
@@ -108,7 +110,6 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Module-private declarations, type-private fields, explicit exports, a manifest, and a lockfile.
 - Native compilation/caching behind a run command.
 - Ownership, deterministic cleanup, and explicit shared ownership as a candidate memory model.
-- A general `match` expression with exhaustive value arms, but no selected arm punctuation.
 
 ## Contracts to settle next
 
@@ -165,6 +166,7 @@ Local recovery is required for individual operations, including addition overflo
 
 - Indentation or newlines as statement/body delimiters.
 - Optional unblocked function, conditional, and loop bodies.
+- Provisional LiteScript `if let` headers or mandatory `case`, `=>`, or `then` separators in match arms.
 - `do/end`, `then/endif`, or specialized `endfn/endloop` as the selected block system.
 - Mandatory parentheses around every conditional as the chosen source/body divider.
 - Post-tested loop syntax and a separate required `loop if` spelling.

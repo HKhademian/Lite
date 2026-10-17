@@ -64,7 +64,7 @@ if ready { run() } else { wait() } finish();
 
 This has the same structure as the multiline example. The block boundary, not a newline, separates the conditional from `finish()`.
 
-The rule also covers standalone or tagged blocks, loop constructs, and function/type definitions. A declaration, assignment, or exit whose outer expression ends directly in an unparenthesized block construct ends at that construct as well:
+The rule also covers standalone or tagged blocks, match expressions, loop constructs, and function/type definitions. A declaration, assignment, or exit whose outer expression ends directly in an unparenthesized block construct ends at that construct as well:
 
 ```text
 answer := { calculate() }

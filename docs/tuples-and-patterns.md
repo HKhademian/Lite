@@ -53,7 +53,7 @@ The receiver separator is still open; this distinction holds whether its final s
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
 ```text
-if let Some(user) = find_user(id) {
+if Some(user) := find_user(id) {
     greet(user)
 }
 ```
@@ -62,9 +62,9 @@ The bound user exists only in the successful branch.
 
 ## Type patterns for unions
 
-A union can be narrowed by matching its active alternative's type. The working pattern spelling is `binding: Type`, for example `user: User` when examining `User | Guest`. The successful branch sees `user` as `User`; the other union alternative is not silently coerced or accessed through that binding.
+A union can be narrowed by matching its active alternative's type. The selected basic pattern spelling is `binding: Type`, for example `user: User` when examining `User | Guest`. The successful branch sees `user` as `User`; the other union alternative is not silently coerced or accessed through that binding.
 
-This capability applies equally to a successful Result payload, an error-union payload inside recovery, and a union formed by an `else` fallback. It does not erase an intact Result's outer success/failure distinction. Full spelling, type identity versus subtype matching, overlap, and binding ownership remain open; see [union type patterns](union-patterns.md).
+This capability applies equally to a successful Result payload, an error-union payload inside recovery, and a union formed by an `else` fallback. It does not erase an intact Result's outer success/failure distinction. Nested pattern grammar, type identity versus subtype matching, overlap, and binding ownership remain open; see [union type patterns](union-patterns.md).
 
 ## Underscore bindings
 

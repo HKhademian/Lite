@@ -39,7 +39,7 @@ Both forms receive the same input. The first reads it and the second leaves it u
 
 ```text
 then(result) {
-    if let Some(last) = result {
+    if Some(last) := result {
         process(last)
     } else {
         fallback()

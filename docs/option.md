@@ -17,7 +17,7 @@ This is explanatory notation; generic enum declaration syntax has not been final
 ## Example
 
 ```text
-if let Some(user) = find_user(id) {
+if Some(user) := find_user(id) {
     greet(user)
 } else {
     print("User not found")

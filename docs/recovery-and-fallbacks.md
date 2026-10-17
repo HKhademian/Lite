@@ -35,7 +35,7 @@ value := load_user(id) else {
 
 If the successful payload is `User`, `value` is `User | String`. It must be narrowed before an operation specific to `User`. Inferring the union does not make `.name` or another variant-specific member automatically accessible, invent a null state, or widen the value to an untyped container.
 
-Type-pattern matching is the selected narrowing capability for these union alternatives and for an error union received by the handler. Matching yields a branch-local value with the narrower static type. Complete pattern spelling and overlap rules remain open; see [union type patterns](union-patterns.md).
+Type-pattern matching is the selected narrowing capability for these union alternatives and for an error union received by the handler. Matching yields a branch-local value with the narrower static type. Nested pattern grammar and overlap rules remain open; see [union type patterns](union-patterns.md).
 
 A fallback returning `Unit` similarly produces `T | Unit`. A declared result type still constrains the expression: an annotation requiring `User` cannot erase a possible `String` or `Unit`. General union grammar, narrowing syntax, common-interface access, ownership, conversions, and representation remain open.
 

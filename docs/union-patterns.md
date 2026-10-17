@@ -1,6 +1,6 @@
 # Union type patterns and narrowing
 
-Status: **type-pattern narrowing of success and error unions selected; complete pattern spelling, match-arm grammar, overlap, and ownership rules open**.
+Status: **type-pattern narrowing of success and error unions selected; basic pattern and match-arm forms selected; overlap, coverage, and ownership rules open**.
 
 ## Purpose
 
@@ -14,13 +14,13 @@ Let a programmer distinguish a union's active alternative by its type and use th
 
 The success payload is one `User` or `Guest`; the failure payload is one `ReadError` or `ParseError`. These are alternative values, not tuples containing every member. A pattern observes the active alternative without reconstructing it from a message or a field-name convention.
 
-## Working type-pattern spelling
+## Selected type-pattern spelling
 
 ```text
 binding: Type
 ```
 
-This reuses the language's colon type-annotation direction. The type-pattern capability is selected; this exact production and its integration with declarations and `if let` remain illustrative, not a finalized grammar.
+This reuses the language's colon type annotation. In a conditional, write `if binding: Type = expression { ... }`; in a match arm, write `binding: Type { ... }`. These surface forms are selected; the complete pattern grammar remains open.
 
 ## Narrowing a success union
 
@@ -29,20 +29,20 @@ Assume `lookup(id)` returns the outcome type above:
 ```text
 person := lookup(id)!;
 
-if let person: User = person {
+if person: User = person {
     greet_user(person)
-} else if let guest: Guest = person {
+} else if guest: Guest = person {
     greet_guest(guest)
 }
 ```
 
-The outer `person` retains type `User | Guest`. In `if let person: User = person`, the right-hand `person` resolves to that outer binding before the pattern introduces its branch-local name. The matching first branch shadows it with a `User` binding. The second condition again reads the outer union and introduces a differently named `Guest` binding, demonstrating both naming choices.
+The outer `person` retains type `User | Guest`. In `if person: User = person`, the right-hand `person` resolves to that outer binding before the pattern introduces its branch-local name. The matching first branch shadows it with a `User` binding. The second condition again reads the outer union and introduces a differently named `Guest` binding, demonstrating both naming choices.
 
 The shadow does not leak into sibling branches or outside the conditional. After the branch, name lookup again selects the outer union binding. This is a new narrowed binding, not reassignment or a change to the outer binding's static type. Whether matching borrows, copies, or moves the payload remains an ownership decision; shadowing alone does not guarantee later availability of a moved value.
 
 A successful type pattern supplies a statically narrowed value without a separate unchecked cast. Patterns and fallible extraction do not grant extra mutation or access permissions.
 
-The example uses existing illustrative `if let` notation. It does not select `let` as a new general declaration keyword or finalize a new expression grammar.
+Conditional binding reuses declaration-shaped headers without adding a `let` keyword. Refutable matching is permitted here; ordinary declarations require irrefutable patterns for their input type.
 
 ## Narrowing an error union
 
@@ -50,9 +50,9 @@ Inside a recovery receiver, only the error payload is being matched:
 
 ```text
 person := lookup(id) else(error) {
-    if let error: ReadError = error {
+    if error: ReadError = error {
         report_read_error(error)
-    } else if let parse: ParseError = error {
+    } else if parse: ParseError = error {
         report_parse_error(parse)
     }
 
@@ -80,8 +80,7 @@ A narrowed binding exists only where its pattern matched. The producer is evalua
 
 ## Open decisions
 
-- Complete the `binding: Type` pattern spelling and its conditional syntax.
-- Choose match-arm delimiters and common fallback patterns.
+- Complete nested pattern productions and choose common fallback patterns.
 - Define exact type identity versus subtype matching, overlap, ordering, and unreachable arms.
 - Define nested type/variant/record patterns and alternatives within one arm.
 - Specify borrowing, copying, moves, and narrowed binding capabilities.

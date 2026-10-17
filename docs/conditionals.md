@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces and one syntax for actions/values established; full matching grammar open**.
+Status: **mandatory braces, unified actions/values, and declaration-shaped pattern conditions selected; full pattern semantics open**.
 
 ## Template
 
@@ -58,18 +58,28 @@ price := if premium {
 ## Pattern conditions
 
 ```text
-if let Some(user) = find_user(id) {
+if Some(user) := find_user(id) {
     greet(user)
 } else {
     print("Not found")
 }
 ```
 
-`if let` is established illustrative notation, but its integration with the later uniform declaration grammar is still open. A pattern-bound value is available only in the matching branch.
+Conditional patterns reuse declaration syntax: `if pattern := expression` for inferred destructuring and `if name: Type = expression` for typed narrowing. No `let` keyword is added. Evaluate the source once, then test the pattern; a successful pattern introduces branch-local bindings.
 
-Type patterns can narrow a union's active alternative inside such a matching branch. Working examples use `binding: Type`; this exact conditional production remains illustrative. See [union type patterns](union-patterns.md). Type-pattern support does not select general typed receiver-dispatch chains.
+```text
+if person: User = person {
+    greet_user(person)
+} else if guest: Guest = person {
+    greet_guest(guest)
+}
+```
 
-A matching pattern may shadow an outer name. In the working form `if let person: User = person`, the source expression resolves the outer `person`; the newly bound `User` name exists only in the matching branch. Sibling branches and following code resolve the outer name again. This does not reassign the outer binding or change its static type; payload ownership remains a separate rule.
+The right-hand `person` resolves to the outer binding before the pattern introduces its shadow. The first body sees a `User`; sibling conditions, sibling bodies, and following code resolve the outer name again. This does not reassign the outer value or change its static type. Borrowing, copying, and moving remain separate ownership decisions. See [union type patterns](union-patterns.md).
+
+A pattern condition tests **matching**, not the truthiness of its payload. `if Some(flag) := lookup_flag()` matches `Some(false)` as well as `Some(true)`. By contrast, `if flag` requires a `Bool` and tests its value. Whether an irrefutable condition such as `if flag := false` is rejected or diagnosed remains open; if accepted as a pattern, it would always match.
+
+`if x = value` remains invalid assignment-as-condition. The selected `if x: Type = value` is a typed declaration-shaped pattern header, not an assignment expression. Conditional binding modifiers and chained pattern conditions remain unspecified. Type-pattern support does not select typed receiver-dispatch chains.
 
 ## Nested ownership
 

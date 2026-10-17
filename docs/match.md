@@ -1,58 +1,78 @@
 # Match and exhaustive selection
 
-Status: **type-pattern narrowing of success and error unions selected; general match direction desired and surface grammar open**.
+Status: **pattern-and-brace arms and union type patterns selected; full pattern, coverage, and ownership rules open**.
 
-## Purpose
+## Purpose and template
 
-Select behavior based on variants and destructured data, especially for optional values and typed errors. Like `if`, a match should be usable for actions or values without a separate expression-only syntax.
-
-## Semantic template
+Select behavior by variant, type, or destructured data. The same match syntax works for actions and values.
 
 ```text
 match expression {
-    pattern ARM_SEPARATOR { arm_body }
-    pattern ARM_SEPARATOR { arm_body }
+    pattern { arm_body }
+    pattern { arm_body }
 }
 ```
 
-`ARM_SEPARATOR` is a placeholder, not a keyword. Early sketches used `case ... then` or `=>`; later syntax decisions require a fresh choice. Do not interpret this file as adding either arrow or a `then` separator to the grammar.
+Each pattern is followed directly by a braced body. There is no `case`, `=>`, `then`, comma, or semicolon between arms. A completed match ends its item without a semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
 
-## Intended rules
-
-- Evaluate the scrutinee once.
-- Select an appropriate matching arm.
-- Bind payload names only inside that arm.
-- Require exhaustive coverage for value-producing closed variants.
-- Let the selected arm's final expression provide the result.
-- Check normally completing arms against a compatible result type.
-- Treat early exits as exits to their explicit targets, not locally missing values.
-
-## Already illustrated conditional subset
+## Optional value example
 
 ```text
-if let Some(user) = find_user(id) {
+message := match find_user(id) {
+    Some(user) { user.display_name() }
+    None { "Not found" }
+}
+print(message);
+```
+
+The selected arm's final expression supplies the result. Both arms here produce `String`.
+
+## Union type patterns and shadowing
+
+Assume `person` has type `User | Guest`, and both display operations return `String`:
+
+```text
+label := match person {
+    person: User { person.display_name() }
+    guest: Guest { guest.display_name() }
+}
+```
+
+The input resolves the outer `person` before introducing any arm bindings. The first arm shadows that name with a `User`; the second binds a `Guest` under a different name. These names exist only in their respective bodies. Matching neither reassigns nor changes the outer binding's static type. See [union type patterns](union-patterns.md).
+
+## Conditional subset
+
+```text
+if Some(user) := find_user(id) {
     greet(user)
 } else {
     print("Not found")
 }
 ```
 
-The same pattern concepts should be reused rather than introducing a second unrelated destructuring system for match arms.
+Conditionals reuse declaration-shaped pattern headers; match arms reuse those patterns directly. There is one pattern system, with no `let` declaration keyword added for conditionals.
 
-## Union type patterns
+## Result and typing rules
 
-A programmer can distinguish success-union alternatives and error-union alternatives by their type. A matching branch binds a value with that narrower static type. The same patterns should be usable in conditionals and match arms; see [union type patterns](union-patterns.md) for working `binding: Type` examples.
-
-An intact Result still distinguishes success from failure before matching the relevant payload. Type tests alone cannot replace that outer distinction when its success and error payload types overlap. Overlapping patterns, exact type versus subtype matching, arm order, and complete coverage rules remain open.
+- Evaluate the input once.
+- Bind payload names only inside the selected arm.
+- Require exhaustive coverage for value-producing closed variants.
+- Check normally completing arms against a compatible result type; matching does not automatically form a union to accept unrelated result types.
+- Treat early exits as exits to their explicit targets, not locally missing values.
+- Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
 ## Notes and open questions
 
-Arm delimiters, `case` spelling, any separate nonbinding wildcard syntax, guard syntax, ordering, overlap, binding ownership, union coverage, and non-exhaustive public variants remain open. `_` is a readable binding name, not the spelling of a nonbinding wildcard. A fully specified type system is needed before claiming coverage checks are sound.
+Common fallback patterns, guards, arm ordering, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is a readable binding, not a nonbinding wildcard. The selected surface does not settle the success-pattern spelling for stored Results or typed receiver-dispatch chains.
+
+A body-opening brace must be distinguishable from any future record-pattern syntax without using line breaks. A fully specified type system is needed before claiming coverage checks are sound. Examples are design illustrations, not executable tests.
 
 ## Related concepts and references
 
+- [Conditionals](conditionals.md)
 - [Tuples and patterns](tuples-and-patterns.md)
 - [Option](option.md)
 - [Result and errors](result-and-errors.md)
 - [Receiver clauses](receiver-clauses.md)
-- [Kotlin conditions and when](https://kotlinlang.org/docs/control-flow.html) and [Dart branches](https://dart.dev/language/branches) provide contrasting forms of pattern selection; neither surface syntax is selected here.
+- [V sum-type matching](https://docs.vlang.io/type-declarations.html#sum-types) supplies a brace-only arm precedent; its implicit smart casts are not LiteScript's explicit pattern bindings.
+- [Rust match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html) and [Dart patterns](https://dart.dev/language/patterns) provide comparisons for patterns and branch-local bindings.
