@@ -61,6 +61,57 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
+## Next design proposals: compact arms and predictable coverage
+
+The following rules are **recommendations under review**, not newly selected grammar. See the [focused reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
+
+### Type-only arms without redeclaration
+
+Allow a type-only arm to refine an existing stable subject, analogous to `if person: User`:
+
+```text
+label := match person {
+    User { person.display_name() }
+    Guest { person.display_name() }
+}
+```
+
+This example assumes a stable `person: User | Guest` and String-producing methods. Explicit `user: User` bindings would remain available for renaming or matching a producer with no existing subject name. No implicit `it` or other receiver name would be introduced.
+
+Bare `User` is the compact V-like candidate, but it needs a name-resolution rule distinguishing type tests, named constant patterns, and capture bindings. Capitalization must not decide meaning: LiteScript permits Unicode identifiers and does not select a type-name casing rule. The alternative `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. Choose one spelling after settling pattern name resolution; neither shorthand is selected yet.
+
+Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
+
+### One evaluated subject, one selected body
+
+Recommend source-order selection of the first successful arm, with no implicit or explicit fallthrough. Finishing an arm finishes selection; it does not require `break`. An optional guard would run only after its pattern matches; a false guard would permit later arms to match. Directly provable unreachable arms should be diagnosed.
+
+Keep ordinary switch capabilities inside match: literals and named constants, type alternatives, constructor payloads, and tuple patterns. Complete constant resolution and equality semantics before choosing their full grammar. Range and record patterns, alternatives in one arm, and custom matching hooks can be designed separately. No additional `switch` keyword is proposed.
+
+### Fallback and exhaustiveness
+
+Recommend a final `else { ... }` arm for remaining values. It would bind no implicit name; `_` would remain an ordinary readable binding.
+
+```text
+message := match status {
+    200 { "Ready" }
+    404 { "Not found" }
+    else { "Other status" }
+}
+```
+
+This is proposed literal/fallback syntax, not an extension of the current grammar sketch.
+
+Recommend exhaustive matching for **both actions and values**, extending the selected requirement for value-producing closed variants. Partial handling remains available through `if`; an explicit `else { Unit }` would express intentional no-op handling in a match. For a closed union or enum, prefer enumerating all alternatives when additions should trigger a compiler diagnostic. A fallback intentionally handles future alternatives too and can hide that signal.
+
+An integer or open-interface subject needs a catch-all unless the coverage checker can establish completeness. A guarded arm does not by itself cover every value of its structural pattern. Do not synthesize `None`, a default payload, or a panic for a missing arm.
+
+### Guards and result types
+
+The candidate `pattern if condition { body }` reuses `if` rather than adding `when` or `where`. Guard bindings, mutation restrictions, ownership commitment after a successful guard, and evaluation count with alternative patterns need formal rules. Guards are not selected by this proposal alone.
+
+All normally completing arms must satisfy a compatible result contract. Giving one arm String and another Int must not silently introduce a new union-inference policy. An explicit exit is checked against its own target. Braces, final-expression values, and the ban on a semicolon after a complete match stay the same for actions and values.
+
 ## Notes and open questions
 
 Common fallback patterns, guards, arm ordering, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is a readable binding, not a nonbinding wildcard. The selected surface does not settle the success-pattern spelling for stored Results or typed receiver-dispatch chains.
@@ -76,5 +127,6 @@ A body-opening brace must be distinguishable from any future record-pattern synt
 - [Option](option.md)
 - [Result and errors](result-and-errors.md)
 - [Receiver clauses](receiver-clauses.md)
-- [V sum-type matching](https://docs.vlang.io/type-declarations.html#sum-types) supplies a brace-only arm precedent; its implicit smart casts are not LiteScript's explicit pattern bindings.
+- [Type tests and narrowing](type-tests-and-narrowing.md).
+- [V sum-type matching](https://docs.vlang.io/type-declarations.html#sum-types) supplies a brace-only arm precedent; type-only LiteScript arms and their refinement rules remain under review.
 - [Rust match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html) and [Dart patterns](https://dart.dev/language/patterns) provide comparisons for patterns and branch-local bindings.

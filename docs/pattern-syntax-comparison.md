@@ -118,6 +118,39 @@ The match example assumes `person: User | Guest` and String-producing display me
 
 Existing-name stability and further logical/guard flow are tracked in [type tests and narrowing](type-tests-and-narrowing.md). This design combines declaration consistency with V-like arm boundaries. That is a design judgment, not evidence of beginner learning outcomes or generated-code speed. Choosing a syntax does not establish a runtime type registry or allocation requirement.
 
+## Match-specific comparison and recommendations
+
+This section evaluates the next match decisions; it does not mark the proposals as selected.
+
+### Arm shape and type-only selection
+
+- **V:** `Type { body }` directly supports the compact type-arm direction and narrows the existing subject.
+- **Kotlin:** `when (subject)` uses `is Type -> body`; a subjectless `when` handles Boolean conditions. Its common selection construct does not remove the difference between subject patterns and Boolean tests. [Kotlin control flow](https://kotlinlang.org/docs/control-flow.html).
+- **Rust:** `pattern => expression` gives a broad structural-pattern vocabulary; it does not supply arbitrary `User | Guest` runtime type tests. [Rust match](https://doc.rust-lang.org/reference/expressions/match-expr.html).
+- **Zig:** switch tag/literal arms use `=>`, with separate payload captures. The syntax makes the tag and bound payload distinct. [Zig switch](https://ziglang.org/documentation/master/#switch).
+- **Odin:** type switches bind one receiver and use `case Type:`; they provide a useful explicit-naming contrast. [Odin type switch](https://odin-lang.org/docs/overview/#type-switch-statement).
+- **Swift:** switch patterns include enum payload and type-casting patterns; `case` and `:` delimit the body. [Swift patterns](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Patterns.md).
+- **Dart:** switch statements and switch expressions have different arm punctuation; LiteScript's one braced form avoids that distinction. [Dart branches](https://dart.dev/language/branches).
+- **Python:** `case pattern:` supplies class, sequence, and capture patterns, with explicit `if` guards; its dynamic name rules and indentation are not selected. [Python match](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement).
+
+**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. Decide whether type-only arms use bare `User` or marked `: User` before adding shorthand to the grammar. Bare-name capture versus constant/type resolution is a real design choice; uppercase spelling must not become an implicit grammar rule.
+
+### Exhaustiveness and fallthrough
+
+Rust requires complete match coverage. Zig requires complete switch coverage without `else`; V requires all sum variants or `else`. Swift switches are exhaustive and do not fall through automatically. Sources: [Rust coverage](https://doc.rust-lang.org/book/ch06-02-match.html#matches-are-exhaustive), [Zig exhaustive switching](https://ziglang.org/documentation/master/#Exhaustive-Switching), [V sum matching](https://docs.vlang.io/type-declarations.html#matching-sum-types), [Swift control flow](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/ControlFlow.md).
+
+Kotlin documents partial statement selection and requires exhaustive value selection. Python permits no arm to match. Odin normally runs one selected case but also offers explicit fallthrough. These policies are not one universal convention. Sources: [Kotlin statements and expressions](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements), [Python matching flow](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement), [Odin fallthrough](https://odin-lang.org/docs/overview/#fallthrough-statement).
+
+**Recommendation:** require exhaustive actions as well as values, and provide no fallthrough. `if` handles intentionally partial tests. A final `else { ... }` handles the remainder, without making `_` a wildcard. On closed unions, explicit alternatives preserve the compiler's signal when a new variant is added; broad fallbacks intentionally trade away that signal.
+
+### Ordered guards and their cost
+
+Rust and Python use `if` after a pattern; Dart uses `when`; Swift uses `where`. Sources: [Rust guards](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards), [Python guards](https://docs.python.org/3/reference/compound_stmts.html#guards), [Dart guards](https://dart.dev/language/branches#guard-clause), [Swift patterns](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Patterns.md).
+
+**Recommendation:** first matching arm in source order, no fallthrough, and an optional `pattern if condition { body }` as the guard candidate. Pattern success precedes guard evaluation; a false guard continues selection. Do not assume a guarded variant covers all its values. Avoid adopting alternative-pattern guard behavior accidentally: Rust documents that a guard may run more than once when an arm has multiple alternatives. Ownership and side-effect rules must be specified before claiming guard execution is allocation-free or optimally compiled.
+
+The resulting LiteScript proposal, examples, and unresolved name-resolution rules are collected in [match](match.md#next-design-proposals-compact-arms-and-predictable-coverage).
+
 ## Remaining decisions
 
 1. Reject or diagnose irrefutable pattern conditions. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness.
