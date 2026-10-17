@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **typed recoverable failures, implicit success construction, explicit caller handling or propagation, and operation-local recovery established; shorthand and arithmetic failure policy open**.
+Status: **typed declared recoverable failures, implicit success construction, `try` propagation, expression-local `else` recovery, and first-class Result outcomes established; compact signature spelling and arithmetic failure policy open**.
 
 ## Purpose
 
@@ -8,13 +8,24 @@ Represent recoverable failure in a function's return type and support ordinary c
 
 ## Recoverable failure contract
 
-- A fallible function exposes a statically typed recoverable error contract. `Result<T, E>` is the current explanatory notation; a shorter spelling may be chosen without losing the concrete error type `E`.
+- A fallible function explicitly declares a statically typed recoverable error contract. `Result<T, E>` is the current explanatory notation; a shorter spelling may be chosen without losing the concrete error type `E`.
 - To obtain the successful payload, a caller must explicitly inspect/handle the outcome, provide a fallback, or propagate the failure. A fallible call does not automatically supply its payload and silently return from the enclosing function on error.
 - An outcome can remain a `Result` value for storage or later handling. Keeping an outcome does not unwrap it; exact diagnostics and rules preventing an ignored recoverable failure still need formalization.
 - Implicit success means constructing a successful result from a compatible ordinary return value. It does not mean automatic success extraction or automatic error propagation at every call.
-- A single universal error envelope is not the selected default in place of refined error contracts. Error inference, aliases, unions, and explicit error mapping may reduce repetition; their syntax and conversion rules remain open.
+- A single universal error envelope is not the selected default in place of refined error contracts. Aliases, unions, and explicit error mapping may reduce repetition; their syntax and conversion rules remain open. Inference can check a declared contract but must not silently add undeclared escaping errors.
 
-The earlier discussion of ordinary `: Int` signatures hiding recoverable failure with automatic propagation is superseded by this explicit caller contract. Function signature shorthand and requirements for inferred versus written error types are separate decisions.
+The earlier discussion of ordinary `: Int` signatures hiding recoverable failure with automatic propagation is superseded by this explicit caller contract. Compact signature spelling remains a separate decision. The candidate `T ! E` spelling preserves a refined error type; it has not been selected as final punctuation or as a second interchangeable source spelling.
+
+## Declared error coverage
+
+Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a `try` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
+
+- A function declaring no recoverable failure must handle such failures internally; it cannot use `try` to let them escape.
+- If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
+- Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
+- The compiler may verify coverage and identify missing declarations; it must not widen the contract to a universal error type or silently infer additional escaping failures.
+
+Exact error-set composition, generic error contracts, and conversion rules remain open. [Panics](panics.md) use a separate channel and are not implicit members of every recoverable error contract.
 
 ## Conceptual definition
 
@@ -58,16 +69,30 @@ if let Err(error) = validate_age(text_age) {
 }
 ```
 
-Propagation must be explicit. Postfix `?` is a working candidate for requesting early propagation:
+Propagation uses prefix `try`:
 
 ```text
 load_age := fn(path: String): Result<Int, LoadError> {
-    text := read_text(path)?;
-    parse_age(text)?
+    text := try read_text(path);
+    try parse_age(text)
 }
 ```
 
-This is a working illustration. A real contract must define error conversion or explicit mapping between the operations' error types. `?` must not erase those types.
+`try` evaluates its operand once. For success it supplies the payload; for a recoverable error it exits the nearest function or closure with that error, subject to the enclosing declared error contract. It does not dynamically search for a handler or cross a function boundary to return from an outer caller. Applicable structured cleanup follows the existing exit rules.
+
+The example assumes the read and parse errors are covered by `LoadError`; their composition or mapping must be declared and defined, not guessed from the example. `try` must not erase error types. Its complete precedence and nested-expression grammar remain open.
+
+Postfix `?` is superseded as the recoverable-error propagation operator. The alternative `?` capture marker is not selected either. Optional-value propagation is a separate open decision.
+
+## Keeping an outcome as data
+
+An ordinary fallible call returns its `Result` without automatic extraction:
+
+```text
+attempt := read_text(path);
+```
+
+Here `attempt` retains the typed success-or-error outcome for storage, passing to another function, or conditional inspection. No capture marker or expected-type conversion is required. `try attempt` requests extraction and propagation later; an attached recovery clause can instead provide a fallback. Neither ordinary variable access nor storing a Result recursively unwraps or flattens it.
 
 ## Recovery at a single operation
 
@@ -78,11 +103,11 @@ A programmer must be able to inspect and handle the failure of an individual fal
 - Evaluate the selected operation and its executed operands once. Handling its error must not silently repeat the operation.
 - Preserve a typed error value so that conditional patterns can distinguish failures and decide whether to recover or explicitly return an error.
 - Supporting local recovery does not require every ordinary intermediate binding to be a programmer-visible `Result`.
-- Recoverable errors require explicit handling, a default, or propagation before using the successful payload. Exact notation remains open; automatic propagation from ordinary code is not selected.
+- Recoverable errors require explicit handling, a default, or `try` propagation before using the successful payload. Automatic propagation from ordinary code is not selected.
 
-### Capture proposal
+### Arithmetic capture proposal
 
-One candidate is an explicit expected `Result` type at the capture point:
+One earlier candidate for arithmetic is an explicit expected `Result` type at the capture point:
 
 ```text
 attempt: Result<Int, ArithmeticError> = a + b;
@@ -94,30 +119,28 @@ if let Err(error) = attempt {
 
 This is a proposal for requesting a recoverable arithmetic outcome. It does not establish that ordinary `+` returns a `Result`, or that expected types can change the operator's failure policy. Expected-type capture, distinct from ordinary success lifting, has not been selected. The example handles the error case only; success extraction still follows the eventual pattern contract.
 
-### Expression-local recovery proposal
+### Expression-local recovery
 
-Another candidate reuses an attached receiving `else` for the selected expression:
+An attached receiving `else` handles the selected Result outcome:
 
 ```text
-sum := (a + b) else(error) {
-    report(error);
-    0
-}
-
 user := load_user(id) else(error) {
+    report(error);
     guest_user()
 }
 ```
 
-On success, this candidate supplies the successful payload. On failure, its receiver gets the typed error and the recovery block supplies a compatible fallback value. Only the selected expression is handled; a failure arising in the recovery block is not handled again by that same clause. Evaluation scope for nested fallible operands still needs a contract.
+On success, the clause supplies the successful payload without executing the recovery block. On failure, its receiver gets the statically typed error and the recovery block supplies a compatible fallback value or explicitly exits. The selected outcome is evaluated once. A failure arising in the recovery block is not handled again by that same clause; it requires its own handling or explicit propagation.
 
-This is exploratory syntax, not accepted grammar. It would extend receiving `else` beyond the previously discussed loop clauses. A recoverable failure cannot propagate merely because the clause is absent; explicit handling or propagation is required to obtain its successful payload. This does not introduce dynamic handler lookup through arbitrary callees.
+This Result recovery form is selected. It does not introduce dynamic handler lookup through arbitrary callees or catch a panic. Full precedence, whether a receiver can be omitted, and evaluation scope for nested operands remain open. Do not automatically inherit the separate loop-completion hook's action-versus-result rules.
+
+Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-recovery proposal until operator failure contracts are settled. Selecting Result recovery does not silently make ordinary arithmetic return Result.
 
 ## Unit success
 
 ```text
 save := fn(data: Data): Result<Unit, SaveError> {
-    write_data(data)?;
+    try write_data(data);
     Unit
 }
 ```
@@ -126,7 +149,7 @@ The final `Unit` represents success without data.
 
 ## Failure boundaries
 
-Recoverable errors, programmer defects, process termination, and allocation failure have not been unified under one mechanism. A small terminating trap mechanism was suggested for violated invariants. That is not a settled license for implicit ordinary exceptions.
+Recoverable errors and panics have separate paths. `try` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
 
 An arithmetic fault is not automatically a recoverable returned error merely because it can be detected. Whether ordinary fixed-width addition overflow, integer division by zero, and unrepresentable quotients belong to the recoverable contract remains open. Any selected policy must reconcile concise ordinary arithmetic with the existing requirement for local arithmetic recovery. No implicit trapping, wrapping, undefined behavior, or build-dependent change is adopted by this distinction.
 

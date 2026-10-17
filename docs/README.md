@@ -35,7 +35,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Unit](unit.md): successful completion without useful data.
 - [Option](option.md): explicit absence without universal nullability.
-- [Result and errors](result-and-errors.md): typed failures, implicit success construction, explicit handling/propagation, and arithmetic failure boundaries.
+- [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, `try` propagation, `else` recovery, and stored outcomes.
+- [Panics and failure channels](panics.md): a separate panic path and open arithmetic, execution, and cleanup policies.
 - [Functions](functions.md): uniform bindings, `:` result annotations, closures, and early returns.
 - [Closures](closures.md): function values, capture questions, and return boundaries.
 - [Composition and interfaces](composition-and-interfaces.md): records, explicit capabilities, and reuse.

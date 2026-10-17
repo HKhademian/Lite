@@ -55,6 +55,8 @@ One proposal is constrained generic inference: the function is valid for types s
 
 Explicit signatures at public library boundaries were recommended to prevent implementation changes from silently changing published contracts. That requirement is still a working policy rather than an implemented check.
 
+Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by `try`. Inference must not silently add such failures to a function promising an ordinary nonfallible result. Compact annotation spelling, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).
+
 ## Results and control flow
 
 Reachable completion paths must produce compatible types. The compiler should not silently invent an unrelated union merely to accept incompatible branches. Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.

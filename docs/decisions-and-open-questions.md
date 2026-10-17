@@ -12,6 +12,9 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
 - Recoverable failures have statically typed error contracts. To obtain a fallible call's successful payload, a caller explicitly handles/inspects the outcome, supplies a default, or propagates the error. Keeping the outcome as a `Result` for later handling does not unwrap it.
+- Propagation uses prefix `try`; local recovery uses an attached receiving `else(error) { ... }` block. Implicit success construction does not imply automatic call-site extraction.
+- Every recoverable error that can escape must be covered by the function's explicitly declared error contract, whether explicitly returned or forwarded by `try`. Inference must not silently widen the declared contract.
+- Panics use a separate path; Result recovery and `try` do not catch them. Panic triggers, execution, and cleanup guarantees remain open.
 - A user can inspect and recover from an individual fallible operation, including arithmetic and function calls. Local handling observes the outcome without a prior implicit unwrap or automatic propagation; it does not require every intermediate binding to be a visible `Result`.
 - Composition and interfaces as the primary reuse direction.
 - Small runtime and native performance as goals, not measured achievements.
@@ -151,7 +154,7 @@ Integer `//` uses floor rounding and integer `%` is its paired remainder. Define
 
 ### 8. Typed recovery syntax and arithmetic failure boundaries
 
-Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures require explicit handling, defaults, or propagation to obtain the successful payload; automatic propagation from ordinary code is not selected. Define compact signature notation preserving specific error types, inference and error conversion, raw-outcome capture, and ignored-outcome diagnostics. Expected-`Result` capture, postfix `?`, and expression-local `else(error)` remain syntax proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. See [result and errors](result-and-errors.md).
+Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use explicit `try` propagation or receiving `else` recovery; ordinary calls can retain their Result as data. Every escaping recoverable error must fit an explicitly declared error contract. Define compact signature notation preserving specific error types, generic error contracts and conversion, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. The candidate `T ! E` annotation and expected-`Result` arithmetic capture remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md) and [panics](panics.md).
 
 ## Superseded suggestions
 
@@ -168,6 +171,8 @@ Local recovery is required for individual operations, including addition overflo
 - Suffix tags or `name: construct` as the current tag placement.
 - Mandatory `Ok(...)` on normal success paths.
 - Automatic extraction of success and propagation of recoverable failure from an ordinary call without an explicit caller choice.
+- Postfix `?` as the recoverable-error propagation operator, or as a required marker to retain a call's Result outcome.
+- Silently inferring additional escaping recoverable errors outside a function's declared error contract.
 - Replacing refined recoverable error contracts with a mandatory universal error envelope as the default.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.
 - Semicolons suppressing final-expression results.

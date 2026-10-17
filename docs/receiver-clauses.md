@@ -16,6 +16,8 @@ then(_) { replacement_value }
 
 Related receiver forms for `else` and `finally` were requested as well. Their inputs differ by phase and cannot be assumed to be ordinary iteration values.
 
+Result recovery now has a selected receiving form, `operation() else(error) { fallback }`. Its receiver is the operation's statically typed recoverable error, and its block supplies a compatible fallback or explicitly exits. This is distinct from the loop completion hooks below; it does not finalize typed dispatch chains, nonreceiving recovery clauses, or panic handling. See [Result and errors](result-and-errors.md).
+
 ## Action versus result
 
 The proposed hook rule is:

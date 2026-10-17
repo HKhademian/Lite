@@ -74,7 +74,9 @@ Early returns are encouraged for guards and invalid cases. Explicit final `retur
 
 A fallible function exposes a statically typed recoverable error contract. A caller must explicitly handle/inspect the outcome, provide a default, or propagate the error before using the successful payload. Keeping the returned outcome as a `Result` for later handling does not unwrap it. Implicit success construction inside a fallible function does not grant automatic propagation at its callers.
 
-Local handling does not require a catch boundary around unrelated statements. Exact signature shorthand, capture/recovery syntax, propagation spelling, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
+Use `try operation()` to extract success or forward its recoverable error from the nearest function or closure. Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without either, the call retains its Result as ordinary data. Every recoverable error that can escape, directly or through `try`, must be covered by the function's declared error type. A declaration that promises no recoverable failure cannot silently gain one through inference.
+
+Local handling does not require a catch boundary around unrelated statements. Exact signature shorthand, complete expression precedence, error conversion rules, and ignored-outcome diagnostics remain open; see [result and errors](result-and-errors.md). [Panics](panics.md) use a separate path. Existing arithmetic examples illustrate success paths and do not settle whether ordinary operators expose recoverable errors or another checked-fault policy.
 
 ## Closures
 
