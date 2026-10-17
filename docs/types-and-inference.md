@@ -28,6 +28,8 @@ score = "ten"; /* rejected */
 
 Inference chooses static types. It does not make a variable dynamically change type.
 
+Binding reassignment and read/write access to held data must be distinguished. The [mutability proposal](mutability.md) explores access requirements for operation receivers; its type notation and inference rules remain open. Inference must not silently upgrade existing read-only access to writable access.
+
 ## Intended type-system foundation
 
 - Primitive values and explicit numeric representations.

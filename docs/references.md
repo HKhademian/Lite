@@ -11,6 +11,11 @@ These sources were consulted during the design discussion. They support comparis
 - [Option](https://doc.rust-lang.org/std/option/index.html): explicit absence, pattern handling, and representation guarantees for particular types. This does not imply every `Option<T>` in a new language has no representation cost.
 - [Recoverable errors with Result](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html): typed failures and propagation. LiteScript proposes implicit ordinary success instead of mandatory construction of success wrappers.
 - [Ownership](https://doc.rust-lang.org/stable/book/ch04-01-what-is-ownership.html): an established ownership-based memory model. LiteScript's ownership rules remain unchosen.
+- [References and borrowing](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html): read/write access and constraints on simultaneous aliases; comparison material for the separate mutability proposal.
+
+## C++
+
+- [Const correctness](https://isocpp.org/wiki/faq/const-correctness): binding/pointer constness, access to referenced data, const receiver operations, and the limits of read-only access. These distinctions inform [mutability](mutability.md), without adopting C++ qualifier placement or interior-mutation exceptions.
 
 ## Kotlin
 
@@ -21,6 +26,7 @@ These sources were consulted during the design discussion. They support comparis
 ## Swift
 
 - [Statements](https://docs.swift.org/latest/documentation/the-swift-programming-language/statements/): explicit braces and branch structure.
+- [Methods](https://docs.swift.org/latest/documentation/the-swift-programming-language/methods/): explicit mutation contracts for value-type methods; the LiteScript receiver syntax remains open.
 - [Expressions](https://docs.swift.org/swift-book/ReferenceManual/Expressions.html): documented conditional-expression restrictions. Swift is not being cited as allowing arbitrary multi-statement value branches in every context.
 - [Control flow](https://docs.swift.org/swift-book/LanguageGuide/ControlFlow.html): conditional values and exhaustive branches.
 - [Value and reference types](https://www.swift.org/documentation/articles/value-and-reference-types.html): value semantics, sharing, composition, and local reasoning.

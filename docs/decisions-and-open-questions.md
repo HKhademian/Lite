@@ -7,7 +7,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 ### Audience and defaults
 
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
-- Immutable bindings by default; explicit mutation through `var`.
+- Immutable bindings by default; `var` explicitly permits binding reassignment. Held-data access and owned-value mutation defaults remain separate decisions.
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
 - Composition and interfaces as the primary reuse direction.
@@ -72,6 +72,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- Separate binding reassignment, read/write access to held data, and operation receiver requirements. Propose read access by default for receivers and explicit writable access for mutating operations; access syntax, owned-value defaults, and aliasing rules remain open. See [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
 - Boolean and unconditional item payloads use `Unit`.
@@ -122,6 +123,8 @@ For an `if` chain, distinguish the selected branch from conditions that were nev
 ### 5. Type-system and ownership foundations
 
 Choose generics, nominal identity, interfaces, variance, borrowing/moves/copies, shared values, closure captures, and type-level values. Define how the `Unit` type and requested `Unit` value coexist with uniform bindings.
+
+Set binding reassignment, held-data access, and receiver mutation contracts independently. Decide how `var` interacts with owned fields, how read-only access propagates, and whether a stronger frozen-value guarantee exists. Do not infer purity or global immutability from a read-only receiver.
 
 ### 6. Standard library and project boundaries
 

@@ -33,6 +33,8 @@ Earlier sketches used `interface Named { ... }` and `impl Named for Student { ..
 
 An interface conceptually requires a name-producing function; a `Student` implementation satisfies it using its own data. Whether receiver syntax is `self`, a named parameter, or another form remains open.
 
+The [mutability proposal](mutability.md) treats a read operation and a mutating operation as requiring different receiver capabilities. Read access would be the default and writable access explicit; the syntax and owned-value defaults are not accepted yet. Interface requirements must preserve those contracts rather than allowing an implementation to demand more write access than its declared requirement supplies.
+
 ## Reuse mechanisms
 
 Composed fields, interface default behavior, and explicit delegation were recommended as initial mechanisms. Unrestricted mixins were deferred because they need rules for conflicting methods, hidden state, and initialization order.

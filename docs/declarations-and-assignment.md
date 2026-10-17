@@ -24,6 +24,8 @@ name = replacement;
 - Declarations and assignments are statements producing `Unit`.
 - Assignment cannot be embedded in a condition or chained as a value-producing expression.
 
+These established immutability rules concern binding reassignment. Read/write access to held data and operation receiver requirements are separate design concerns. A fixed handle can potentially hold writable access, and a reassignable handle can hold only read access. Owned-value defaults and the access syntax remain open; see [mutability, access, and operations](mutability.md).
+
 ## Examples
 
 ```text

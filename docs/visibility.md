@@ -27,7 +27,7 @@ var attempts := 0;
 attempts += 1;
 ```
 
-Immutability is the default. `var` explicitly expands a binding's reassignment capability; it does not make its type dynamic. Whether immutable bindings imply deep immutability depends on the unchosen reference and ownership model.
+Binding immutability is the default. `var` explicitly expands a binding's reassignment capability; it does not make its type dynamic. Read/write access to held data and an operation's receiver requirements are separate concerns. Neither deep immutability nor writable owned fields should be inferred from this binding rule; their defaults depend on the unchosen access and ownership model. See [mutability, access, and operations](mutability.md).
 
 ## Other candidate explicit capabilities
 

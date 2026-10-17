@@ -32,6 +32,8 @@ Owned values, deterministic cleanup, inferred borrowing, and explicit shared own
 
 The design must decide whether assignments move, copy, share, or borrow nontrivial values. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
 
+[Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. Access permissions must not silently select copying, sharing, or runtime borrow checking.
+
 ## Loop state costs
 
 An accumulator retains a candidate value and replaces it after a contribution. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.
