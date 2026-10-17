@@ -70,6 +70,8 @@ then(_) { "Replacement" }
 
 A receiver was proposed as the explicit opt-in to a value-producing hook. A nonreceiving hook performs an action and preserves incoming result state. A receiving hook may transform its input. This applies to attached hooks, not ordinary function or conditional bodies.
 
+`_` in `then(_)`, `else(_)`, or `finally(_)` is a readable receiver binding. A body may use it or leave it unused; its spelling does not change the hook payload or suppress binding. The phase-specific payload contracts remain open where described above and below.
+
 ## Finally
 
 `finally` is intended to run once on structured completion or exit, after a normal result or exit payload is determined. It must not silently suppress a pending early return or propagated error.

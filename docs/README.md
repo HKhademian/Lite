@@ -18,7 +18,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, separators, and comments.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
-- [Identifiers](identifiers.md): Unicode names, proposed character classes, and normalization questions.
+- [Identifiers](identifiers.md): Unicode names, readable `_`, proposed character classes, and normalization questions.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, and repeated semicolons.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, immutability, and mutation.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
@@ -43,7 +43,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Match](match.md): exhaustive variant selection; arm syntax remains open.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
-- [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists.
+- [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists and ordered shadowing.
 - [Loop accumulator](loop-accumulator.md): contributions, optional previous values, and skipped iterations.
 - [Loop completion](loop-completion.md): `then`, `else`, and `finally`.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.

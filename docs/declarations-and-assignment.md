@@ -66,7 +66,7 @@ The `type` record notation is a working sketch. Uniform binding syntax does not 
 
 ## Scope
 
-Reject duplicate declarations in the same scope. Nested shadowing was discussed as an ordinary lexical mechanism. Tag shadowing follows its own explicit `@name` namespace and the same nearest-enclosing lookup principle. Exact rules for local recursion, hoisting, and shadowing diagnostics remain to be formalized.
+Reject duplicate declarations in the same ordinary block scope. Nested shadowing is an ordinary lexical mechanism. A loop receiver list introduces bindings in slot order, permitting a later receiver to shadow an earlier one; this is separate from ordinary block redeclarations. `_` is a readable name and follows the same rules. Tag shadowing follows its own explicit `@name` namespace and the same nearest-enclosing lookup principle. Exact rules for local recursion, hoisting, duplicate names within one destructuring pattern, and shadowing diagnostics remain to be formalized.
 
 ## Rejected forms
 
@@ -83,6 +83,8 @@ Neither is a value-producing assignment expression in this design.
 ## Related concepts and references
 
 - [Operators](operators.md)
+- [Identifiers](identifiers.md)
+- [Loop receivers](loop-receivers.md)
 - [Functions](functions.md)
 - [Types and inference](types-and-inference.md)
 - [Odin declarations](https://odin-lang.org/docs/overview/) informed the discussion; LiteScript's immutable default is its own choice.

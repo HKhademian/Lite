@@ -1,6 +1,6 @@
 # Loop receivers
 
-Status: **optional positional slots established; separator and seeded form open**.
+Status: **optional positional slots and ordered receiver shadowing established; separator and seeded form open**.
 
 ## Purpose
 
@@ -26,7 +26,23 @@ loop users as user, _, sumAge { sumAge.value_or(0) + user.age };
 loop users as _, count { print(count) };
 ```
 
-Trailing slots may be omitted; `_` explicitly ignores an intervening slot. Names are programmer-chosen. Naming the second slot `index` does not change its meaning from iteration count to collection index.
+Trailing slots may be omitted. `_` can name an otherwise unused intervening slot, but remains readable. Names are programmer-chosen. Naming the second slot `index` does not change its meaning from iteration count to collection index.
+
+## Repeated receiver names
+
+Receiver slots introduce bindings from left to right. A later receiver shadows an earlier one with the same name, including `_`:
+
+```text
+loop items as _ { inspect(_) };          /* item */
+loop items as _, _ { inspect(_) };       /* count */
+loop items as _, _, _ { inspect(_) };    /* previous accumulator */
+```
+
+The third form exposes `Option<T>` through `_`. The hidden item and count remain accessible through the construct's context fields; they have not been discarded or combined into a tuple. Distinct explicit receiver names are clearer when several slots are needed.
+
+This is ordered lexical shadowing, not reassignment or a requirement that repeated receivers have equal values or types. Within the header and body, lookup selects the last receiver binding with that name. Existing phase restrictions still apply: an item receiver is unavailable before body entry, while count and accumulator state are initialized before the first condition.
+
+This rule applies to receiver names generally, not only `_`. It does not settle duplicate bindings inside one tuple pattern or permit arbitrary duplicate declarations in a single ordinary block scope.
 
 ## Destructuring within a slot
 

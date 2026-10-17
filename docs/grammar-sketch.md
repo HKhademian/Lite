@@ -48,6 +48,8 @@ function := "fn" "(" [parameters] ")" [":" type] block
 
 The full lvalue grammar, parameter declarations, generics, public modifiers, and distinction between type expressions and ordinary values remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
+`_` is an identifier binding, not a special wildcard or discard-assignment target. Its declarations produce `Unit` like other declarations; assignments require an existing mutable binding.
+
 ## Conditionals
 
 ```text
@@ -75,6 +77,8 @@ finally_clause := "finally" ["(" pattern ")"] block
 ```
 
 `as` is working notation. `:` remains a candidate, and the final language should not accidentally acquire both spellings by treating this sketch as normative. The seeded receiver form is not specified.
+
+Separate receiver slots bind from left to right and allow later names to shadow earlier ones. Thus `as _, _, _` makes `_` refer to the accumulator slot. This does not settle duplicate names within one destructuring pattern. A hook receiver such as `then(_)` also binds a readable name.
 
 Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
 

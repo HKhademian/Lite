@@ -53,7 +53,7 @@ The last two blocks produce the same value. Semicolons are separators, not resul
 
 The assignment examples assume an existing mutable `x` where needed.
 
-## Explicit Unit and discard
+## Explicit Unit and unused values
 
 ```text
 {
@@ -63,10 +63,12 @@ The assignment examples assume an existing mutable `x` where needed.
 ```
 
 ```text
-{ _ = calculate(); }
+{ _ := calculate(); }
 ```
 
-Explicit discard is a proposed statement producing `Unit`. Exactly which unused results require explicit discard still needs specification, particularly for `Result` values.
+The second block produces `Unit` because its final item is a declaration. `_` remains a readable binding inside that block; it is not a special discard target. `_ = calculate()` instead means assignment and requires an existing mutable `_` binding.
+
+Exactly which unused results require explicit handling, particularly `Result` values, and whether a separate discard operation is needed remain open. Binding a value to `_` must not silently exempt it from that future policy.
 
 ## Block value versus return
 

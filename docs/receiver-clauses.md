@@ -20,11 +20,18 @@ Related receiver forms for `else` and `finally` were requested as well. Their in
 
 The proposed hook rule is:
 
-- No receiver: action behavior; require `Unit` or explicit discard and preserve the incoming construct result where one exists.
+- No receiver: action behavior; require a `Unit` body result and preserve the incoming construct result where one exists.
 - Receiver: the block may produce a replacement result.
-- `_`: explicitly ignore the input while opting into a result-producing block.
+- `_`: bind the input under a readable name while opting into a result-producing block. The body may leave that binding unused.
 
 This convention does not change ordinary block-tail semantics. A function body does not need a receiver to return its final expression.
+
+```text
+then(_) { process(_) }
+then(_) { "Replacement" }
+```
+
+Both forms receive the same input. The first reads it and the second leaves it unused. There is no wildcard-only interpretation of `_` here. An action hook can explicitly finish with `Unit` or a declaration when an intermediate calculation produces a value; trailing semicolons do not discard a result.
 
 ## Option handling without new dispatch syntax
 

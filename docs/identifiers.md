@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Unicode names accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
+Status: **Unicode names and readable `_` accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
 
 ## Purpose
 
@@ -31,6 +31,30 @@ Identifier spelling determines which name is being referenced. Lexical scope det
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
+## The name `_`
+
+`_` is a readable binding name, not a reserved wildcard or a write-only discard target.
+
+```text
+_ := 42;
+print(_);
+```
+
+Bindings named `_` follow the usual typing, immutability, and lexical lookup rules. Repeated names in a loop's ordered receiver list shadow from left to right; this applies to `_` and to other receiver names. The last receiver with that name is visible in the header and body, subject to the ordinary phase-availability rules.
+
+```text
+loop items: _, _, _ {
+    inspect(_);
+    Unit
+}
+```
+
+Here `_` names the third slot, the previous accumulator `Option<T>`. It does not name the item, count, or a tuple containing all three. `:` is the candidate receiver separator used in this example; choosing it over `as` remains a separate decision.
+
+Nested bindings may shadow `_` just as they shadow another name. Leaving it unread is allowed by the binding semantics; unused-binding diagnostics remain a tooling decision. Repetition within a single destructuring pattern, rather than across receiver slots, is not settled by this rule.
+
+`_ = value` is ordinary assignment and requires a mutable `_` binding. It is not a special discard operation. Declaring `_ := value` produces `Unit`, like any declaration, while retaining a readable binding.
+
 ## Case and normalization
 
 The proposed case-sensitive rule distinguishes `score` from `Score`.
@@ -51,6 +75,7 @@ Identifier normalization must not silently establish a normalization rule for st
 - [Lexical structure](lexical-structure.md)
 - [Declarations and assignment](declarations-and-assignment.md)
 - [Tuples and patterns](tuples-and-patterns.md)
+- [Loop receivers](loop-receivers.md)
 - [Tags and contexts](tags-and-contexts.md)
 - [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/)
 - [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/)

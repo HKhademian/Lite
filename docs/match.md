@@ -41,7 +41,7 @@ The same pattern concepts should be reused rather than introducing a second unre
 
 ## Notes and open questions
 
-Arm delimiters, `case` spelling, wildcard syntax, guard syntax, ordering, overlap, binding ownership, union coverage, and non-exhaustive public variants remain open. A fully specified type system is needed before claiming coverage checks are sound.
+Arm delimiters, `case` spelling, any separate nonbinding wildcard syntax, guard syntax, ordering, overlap, binding ownership, union coverage, and non-exhaustive public variants remain open. `_` is a readable binding name, not the spelling of a nonbinding wildcard. A fully specified type system is needed before claiming coverage checks are sound.
 
 ## Related concepts and references
 

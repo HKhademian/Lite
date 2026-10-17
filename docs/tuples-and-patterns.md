@@ -60,13 +60,20 @@ if let Some(user) = find_user(id) {
 
 The bound user exists only in the successful branch.
 
-## Wildcards
+## Underscore bindings
 
-`_` explicitly ignores a value or receiver slot. It is not an implicit binding that can later be read.
+`_` binds the supplied value and can be read, like another name. It is not a wildcard that suppresses binding.
+
+```text
+(_, right) := pair;
+process(_, right);
+```
+
+In a loop receiver list, repeated receiver names shadow from left to right, so `as _, _, _` leaves `_` referring to the accumulator slot. That rule concerns separate receiver slots; duplicate names within one destructuring pattern still need a policy. See [identifiers](identifiers.md) and [loop receivers](loop-receivers.md).
 
 ## Notes and open decisions
 
-Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, and typed patterns need formal specification. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and any separate nonbinding wildcard form need formal specification. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

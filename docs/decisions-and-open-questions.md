@@ -20,6 +20,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Ordinary `/* ... */` comments nest; raw `/*# ... #*/` comments use matching hash fences and do not nest.
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
+- `_` is a readable binding name, not a wildcard or a special discard-assignment target.
 - Explicit semicolons separate items; there is no automatic insertion.
 - Extra semicolons do not become empty result-producing statements.
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
@@ -45,13 +46,14 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - One `if` form works for actions and values; branch braces establish ownership.
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
-- Loop receiver slots are item, count, accumulator; trailing slots can be omitted and `_` skips a slot.
+- Loop receiver slots are item, count, accumulator; trailing slots can be omitted and `_` can name an otherwise unused slot.
+- Receiver bindings shadow from left to right; `_, _, _` leaves `_` referring to the accumulator. The rule also applies to other repeated receiver names.
 - Tuple destructuring within a slot operates on that slot's actual value.
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
 - An accumulator represents previous contributions, with absence modeled explicitly.
 - Plain `continue` and bare `break` contribute nothing.
-- Completion receivers are optional; `_` can opt into producing a replacement while ignoring the input.
+- Completion receivers are optional; `_` binds readable input and opts into a value-producing hook even if that input is left unused.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -137,6 +139,7 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 - Mandatory `Ok(...)` on normal success paths.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.
 - Semicolons suppressing final-expression results.
+- An unreadable `_` wildcard, or `_ = value` as a special discard statement.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 
 ## Documentation boundaries
