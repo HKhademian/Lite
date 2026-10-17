@@ -53,6 +53,9 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Assignment selects its target once before the right-hand side; compound updates read its current value before their right operand, then compute and write the result. Alias and lifetime rules still need formalization.
 - `?=` and `!=` have no selected meaning in the current design.
 - Supported `op=` updates use defined underlying operations and evaluate the target once.
+- `/` is fractional division; `//` performs integer division on integer operands, with `//=` as its update form. Positive examples are `7 / 2` yielding `3.5` and `7 // 2` yielding `3`.
+- Ordinary integer division uses operator syntax without mandatory named rounding helpers or floating-point conversion. Signed rounding, the paired remainder rule, numeric representation, conversion policy, and operator failure contracts remain open.
+- `//` is not a line-comment opener. Outside comments and strings, slash operators use longest-token recognition, including `//=` as one token.
 
 ### Conditional and loop direction
 
@@ -139,6 +142,10 @@ Binding reassignment (`var`) and held-data access (`mut`) are independent. Compl
 
 Specify range/iterator capabilities, invalid dynamic stride handling, collection ownership, I/O failure, import/export grammar, package identity, and build behavior.
 
+### 7. Numeric arithmetic
+
+Select the signed rounding rule for `//` and its paired `%` semantics. Define arithmetic failures, including zero divisors and unrepresentable fixed-width quotients, before claiming an operator returns a plain value, a `Result`, or an implicit trap. Complete floating-point representations, mixed numeric operations, and conversion policy independently of the selected division spelling. See [division](division.md).
+
 ## Superseded suggestions
 
 - Indentation or newlines as statement/body delimiters.
@@ -161,6 +168,7 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 - Granting writable owned fields through `var` alone; `mut` is required explicitly.
 - Requiring an additional function-level mutation marker beyond explicit `mut` receiver/parameter contracts.
 - Rejecting comparison chains merely to simplify the grammar, or treating them as ordinary left-associated binary comparisons.
+- Requiring verbose named division helpers as the ordinary interface for integer-only arithmetic; `//` and `//=` are selected.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 
 ## Documentation boundaries

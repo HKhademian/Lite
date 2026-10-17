@@ -101,7 +101,7 @@ Comments are explicitly delimited:
 
 Ordinary comments nest; raw comments end only at the matching fence and do not nest. Neither form parses its contents as source code. Comments separate tokens but do not insert item separators. Missing closing delimiters are errors, without guessing where code resumes. See [comments](comments.md) for fence matching and interactions between the forms.
 
-Newline-terminated comments such as `//` were not retained as the strict whitespace-independent default. Documentation-comment markers remain open.
+Newline-terminated comments were not retained as the strict whitespace-independent default. Outside comments and strings, `//` is the integer-division operator and `//=` is its compound-update token. Recognize the longest valid slash operator token. Documentation-comment markers remain open.
 
 ## Return boundaries
 

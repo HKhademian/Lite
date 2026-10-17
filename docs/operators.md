@@ -5,15 +5,21 @@ Status: **equality, comparison chaining, and logical direction established; comp
 ## Working operator set
 
 ```text
-+  -  *  /  %
++  -  *  /  //  %
 ==
 <  <=  >  >=
 and  or  not
 =
-+=  -=  *=  /=  %=
++=  -=  *=  /=  //=  %=
 ```
 
 `=` is assignment, not comparison. `:=` and `: Type =` belong to declarations. No increment or decrement operator has been selected.
+
+## Division
+
+`/` produces a fractional quotient; `//` performs integer division on integer operands. `7 / 2` produces `3.5`, while `7 // 2` produces the integer quotient `3`. `//=` is the corresponding integer update, so ordinary integer arithmetic does not require named division helpers or floating-point conversions.
+
+Signed rounding, the paired `%` rule, numeric representations, implicit conversions, and operator failure contracts remain open. See [division](division.md). `//` is an operator, not a newline-terminated comment.
 
 ## Equality and negation
 
@@ -100,7 +106,7 @@ enabled = not enabled;
 
 ## Notes and open decisions
 
-Ordering and equality support for user-defined types, reference identity, floating-point comparison details, overflow, division, bitwise operators, and short-circuit update forms remain open. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification.
+Ordering and equality support for user-defined types, reference identity, floating-point comparison details, overflow, signed division rounding, remainder, arithmetic failure representation, bitwise operators, and short-circuit update forms remain open. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification.
 
 ## Related concepts and references
 

@@ -24,6 +24,12 @@ This is the proposed Unicode profile, before reserved-word recognition. Case sen
 
 Fractional literals require a leading digit (`0.5`); `.5` is rejected. Leading-dot context access remains distinct. Other numeric-token productions remain open; see [numbers and ranges](numbers.md).
 
+## Division tokens
+
+`/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
+
+The full arithmetic production, signed rounding, remainder, numeric conversions, and failure contracts remain open. See [division](division.md).
+
 ## Item separation
 
 ```text

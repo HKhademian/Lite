@@ -26,6 +26,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
+- [Division](division.md): fractional `/`, integer `//`, compound updates, and unresolved signed rounding/error rules.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 
 ## Types and values

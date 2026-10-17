@@ -38,6 +38,15 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 A signed 64-bit default `Int` with checked arithmetic was suggested, with explicit sized types and an optional arbitrary-precision library. This is not yet a selected specification. Overflow should not silently change meaning merely because a different build mode is used.
 
+## Division
+
+```text
+ratio := 7 / 2;     /* fractional quotient: 3.5 */
+quotient := 7 // 2; /* integer quotient: 3 */
+```
+
+`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Signed rounding and the remainder rule remain open; see [division](division.md). The operator choice does not select an implicit casting policy or a floating-point representation.
+
 ## Ranges
 
 ```text
@@ -60,7 +69,7 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 ## Open decisions
 
-Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, division, remainder, overflow errors, wrapping operations, and range bounds all remain open.
+Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, signed division rounding, remainder, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
 
 ## Related concepts and references
 

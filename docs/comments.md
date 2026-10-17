@@ -55,7 +55,7 @@ The opening fence takes the entire consecutive run of `#` characters. A closing 
 - Inside a raw comment, no opener starts another comment.
 - Comments separate tokens as whitespace does. `first/* note */second` does not become the identifier `firstsecond`.
 - Comments do not insert item separators. `first() /* note */ second()` still needs `;` between the calls.
-- Newlines have no terminating effect. There is no default newline-terminated `//` comment form.
+- Newlines have no terminating effect. There is no newline-terminated `//` comment form; outside comments and strings, `//` and `//=` are integer-division operators. See [division](division.md).
 
 ## Missing delimiters
 
