@@ -163,6 +163,8 @@ If `load_user` succeeds with `User`, `message` has type `User | String`. A calle
 
 This Result recovery form is selected. It does not introduce dynamic handler lookup through arbitrary callees or catch a panic. Full precedence and evaluation scope for nested operands remain open. The separate loop-completion hook's rule that a missing receiver denotes action-only behavior does not apply to Result recovery.
 
+[Recovery receivers and fallback types](recovery-and-fallbacks.md) compares this optional receiver and union result rule with the reference languages. A precise union still requires narrowing before variant-specific use.
+
 Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-recovery proposal until operator failure contracts are settled. Selecting Result recovery does not silently make ordinary arithmetic return Result.
 
 ## Unit success
