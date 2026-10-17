@@ -9,11 +9,11 @@ Keep direction, stepping, keys, and entry views outside the loop keyword set whi
 ## Templates and examples
 
 ```text
-loop users as user { greet(user) };
-loop users.reverse() as user { greet(user) };
-loop users.reverse().step(2) as user { greet(user) };
-loop directory.keys() as key { process(key) };
-loop directory.items() as (key, value) { process(key, value) };
+loop users as user { greet(user) }
+loop users.reverse() as user { greet(user) }
+loop users.reverse().step(2) as user { greet(user) }
+loop directory.keys() as key { process(key) }
+loop directory.items() as (key, value) { process(key, value) }
 ```
 
 These method names are proposals, not implemented standard-library APIs.

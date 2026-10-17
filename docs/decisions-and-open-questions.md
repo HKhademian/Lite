@@ -21,8 +21,11 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
 - `_` is a readable binding name, not a wildcard or a special discard-assignment target.
-- Explicit semicolons separate items; there is no automatic insertion.
-- Extra semicolons do not become empty result-producing statements.
+- Explicit semicolons separate ordinary items; there is no automatic insertion.
+- Complete block constructs end their items without semicolons; a following semicolon is rejected, including for declarations initialized directly by block constructs.
+- Continuing a block construct's value with an operator, call, member access, or indexing requires parentheses around that construct.
+- Attached `else`, `then`, and `finally` clauses belong to the complete construct before its item ends.
+- Extra semicolons are harmless where separators are allowed, but remain forbidden after complete block items and do not become empty result-producing statements.
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
 - Explicit `Unit` should be supported as a value.
 - `:=` declares with inference; `: Type =` declares with annotation; `=` assigns.
@@ -139,6 +142,8 @@ Specify range/iterator capabilities, invalid dynamic stride handling, collection
 - Mandatory `Ok(...)` on normal success paths.
 - Mandatory trailing `None` or redundant empty clauses for simple searches.
 - Semicolons suppressing final-expression results.
+- Requiring or allowing a semicolon after a complete block item.
+- Continuing an unparenthesized block value across its item boundary through an operator, call, member access, or indexing.
 - An unreadable `_` wildcard, or `_ = value` as a special discard statement.
 - `?=` equality or conventional `!=` inequality as currently selected operators.
 

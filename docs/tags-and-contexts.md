@@ -11,7 +11,7 @@ Explicitly name a construct for metadata access and targeted exits, without inje
 ```text
 @name loop source { body }
 @name if condition { body } else { body }
-value := @name { body };
+value := @name { body }
 ```
 
 Prefix tags replace the earlier suffix-header and `label: construct` sketches. A tag names the existing construct; it does not add a wrapper block or change its kind.
@@ -22,7 +22,7 @@ Prefix tags replace the earlier suffix-header and `label: construct` sketches. A
 @users loop users as user {
     greet(user);
     print(@users.count)
-};
+}
 ```
 
 A loop conceptually exposes item, count, and accumulator. Its field values correspond to receiver slots; leaving a receiver unnamed does not remove that field. Metadata is read-only. Source-level item aliases still follow whatever move/borrow rules are selected later.
@@ -32,7 +32,7 @@ A loop conceptually exposes item, count, and accumulator. Its field values corre
 ```text
 @attempts loop .count < 10 {
     work()
-};
+}
 ```
 
 is intended to agree with:
@@ -40,7 +40,7 @@ is intended to agree with:
 ```text
 @attempts loop @attempts.count < 10 {
     work()
-};
+}
 ```
 
 `.field` refers to the current construct's context. It never searches outward for a context that happens to have that field.
@@ -50,7 +50,7 @@ is intended to agree with:
     if eligible(user) {
         print(@users.count)
     }
-};
+}
 ```
 
 Inside the conditional, `.count` is rejected; the current context is an `if`. The explicit `@users.count` reaches the loop. Body braces do not introduce a second wrapper context around their owning construct.

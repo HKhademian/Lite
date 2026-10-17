@@ -16,9 +16,10 @@ Whitespace can separate tokens. It does not insert separators or choose block bo
 
 ## Separators
 
-- `;` separates consecutive items in blocks and modules.
-- A trailing separator before `}` or end of file is optional.
-- Repeated separators are ignored rather than becoming value-producing empty statements.
+- `;` separates ordinary items in blocks and modules.
+- A complete block construct ends its item without `;`; a following semicolon is rejected.
+- A trailing separator after an ordinary item, before `}` or end of file, is optional.
+- Repeated separators are ignored where separators are allowed, rather than becoming value-producing empty statements. This does not permit a separator after a complete block construct.
 - There is no automatic semicolon insertion.
 - A semicolon does not suppress the preceding expression's result.
 - An attached `else`, `then`, or `finally` belongs to the same construct; it is not separated from that construct by `;`.
@@ -50,12 +51,43 @@ if ready {
     run()
 } else {
     wait()
-};
+}
 
 finish();
 ```
 
-The separator follows the complete conditional. A separator before `else` would end the conditional instead of attaching the branch.
+The complete conditional ends at its final branch without a separator. Writing a semicolon after that branch, or between the branches, is rejected. Attached `then` and `finally` clauses follow the same ownership rule.
+
+```text
+if ready { run() } else { wait() } finish();
+```
+
+This has the same structure as the multiline example. The block boundary, not a newline, separates the conditional from `finish()`.
+
+The rule also covers standalone or tagged blocks, loop constructs, and function/type definitions. A declaration, assignment, or exit whose outer expression ends directly in an unparenthesized block construct ends at that construct as well:
+
+```text
+answer := { calculate() }
+double := fn(x: Int): Int { x * 2 }
+print(double(answer));
+```
+
+It does not apply merely because a token happens to be `}`. Braces delimiting an import list are not a block. A block nested inside a call, grouping, or other enclosing expression does not end the outer item.
+
+## Continuing a block value
+
+Parenthesize a complete block construct before continuing its value with an operator, call, member access, or indexing:
+
+```text
+answer := ({ calculate() }) + 1;
+doubled := (fn(x: Int): Int { x * 2 })(3);
+name := ({ make_user() }).name;
+first := ({ make_items() })[0];
+```
+
+The grouping makes these ordinary expression items, so they use ordinary separators. An operator or call suffix never attaches across an unparenthesized block-item boundary. Tokens after that boundary belong to the next item and must form a valid item on their own, irrespective of line layout.
+
+See [blocks and results](blocks-and-results.md) for how these boundaries interact with tail results.
 
 ## Comments
 

@@ -26,6 +26,8 @@ import school.students.{Student, find_student};
 
 This is working notation from the initial discussion, not a settled grammar. Explicit imports and exports are the intended direction. Re-exports should be deliberate.
 
+The braces in the import-list sketch group imported names; they are not a block body. This ordinary import item keeps its separator. The ban on semicolons after complete block constructs does not apply merely because an item ends in `}`.
+
 ## Visibility
 
 Declarations should expose less by default. A private module-level declaration and private record fields were recommended defaults. The exact visibility boundary, modifier syntax, and use of `pub` need to be aligned with uniform definition bindings.

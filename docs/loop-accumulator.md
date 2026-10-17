@@ -23,7 +23,7 @@ sum := loop numbers as number, _, prev {
     prev.value_or(0) + number
 } then(result) {
     result.value_or(0)
-};
+}
 ```
 
 The proposed helper `value_or(0)` explicitly supplies an additive seed for the first contribution. The compiler does not invent zero as a universal empty-loop value.
@@ -35,7 +35,7 @@ sum := @sum loop numbers as number {
     .acc.value_or(0) + number
 } then(result) {
     result.value_or(0)
-};
+}
 ```
 
 ## Skipped contributions
@@ -44,12 +44,12 @@ sum := @sum loop numbers as number {
 last := loop numbers as number {
     if not eligible(number) {
         continue
-    };
+    }
 
     number
 } then(result) {
     result.value_or(0)
-};
+}
 ```
 
 For conceptual contributions `10, skip, 30, skip`, the final stored contribution is `30`. If every iteration skips, no contribution exists. Skipping the last body entry does not erase an earlier contribution.
@@ -71,7 +71,7 @@ found := @search loop users as user {
     if matches(user) {
         return @search Some(user)
     }
-};
+}
 ```
 
 The body normally completes with `Unit`, but the whole loop is intended to produce `Option<User>`, with `None` on exhaustion. A sound design must formalize this targeted implicit completion without treating `Unit` as a user value or silently returning `Some(Unit)`.

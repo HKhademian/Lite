@@ -19,11 +19,11 @@ The fixed slot order is **item, count, accumulator**. These are separate receive
 ## Examples
 
 ```text
-loop users { record_visit() };
-loop users as user { greet(user) };
-loop users as user, count { greet(user, count) };
-loop users as user, _, sumAge { sumAge.value_or(0) + user.age };
-loop users as _, count { print(count) };
+loop users { record_visit() }
+loop users as user { greet(user) }
+loop users as user, count { greet(user, count) }
+loop users as user, _, sumAge { sumAge.value_or(0) + user.age }
+loop users as _, count { print(count) }
 ```
 
 Trailing slots may be omitted. `_` can name an otherwise unused intervening slot, but remains readable. Names are programmer-chosen. Naming the second slot `index` does not change its meaning from iteration count to collection index.
@@ -33,9 +33,9 @@ Trailing slots may be omitted. `_` can name an otherwise unused intervening slot
 Receiver slots introduce bindings from left to right. A later receiver shadows an earlier one with the same name, including `_`:
 
 ```text
-loop items as _ { inspect(_) };          /* item */
-loop items as _, _ { inspect(_) };       /* count */
-loop items as _, _, _ { inspect(_) };    /* previous accumulator */
+loop items as _ { inspect(_) }          /* item */
+loop items as _, _ { inspect(_) }       /* count */
+loop items as _, _, _ { inspect(_) }    /* previous accumulator */
 ```
 
 The third form exposes `Option<T>` through `_`. The hidden item and count remain accessible through the construct's context fields; they have not been discarded or combined into a tuple. Distinct explicit receiver names are clearer when several slots are needed.
@@ -49,11 +49,11 @@ This rule applies to receiver names generally, not only `_`. It does not settle 
 ```text
 loop pairs as pair {
     process(pair)
-};
+}
 
 loop pairs as (left, right), count {
     process(left, right, count)
-};
+}
 ```
 
 A name and a destructuring pattern operate on the same first-slot item. Parenthesized tuple patterns do not receive a different hidden value.
@@ -63,12 +63,12 @@ A name and a destructuring pattern operate on the same first-slot item. Parenthe
 ```text
 loop count < 10 as _, count {
     print(count)
-};
+}
 
 loop as _, count {
     work();
     if count >= 10 { break }
-};
+}
 ```
 
 Count and accumulator bindings cover the entire loop header and body. Their initialization occurs before evaluating the first condition even though the names are written after it. The current item is not available until a successful advance enters the body.
@@ -78,8 +78,8 @@ Count and accumulator bindings cover the entire loop header and body. Their init
 Both of these were explored:
 
 ```text
-loop users as user, count { body };
-loop users: user, count { body };
+loop users as user, count { body }
+loop users: user, count { body }
 ```
 
 `as` reads naturally for iterable items but less naturally for Boolean and unconditional loops. `:` was explicitly considered as a neutral separator, then later examples returned to `as` while designing metadata access. No final separator was explicitly frozen after that discussion. Examples here use `as` as working notation; it is not a commitment to accept both spellings.
@@ -92,7 +92,7 @@ Bare trailing parentheses were rejected as the simple replacement because they r
 @users loop users as user {
     greet(user);
     print(@users.count)
-};
+}
 ```
 
 Leaving a slot unnamed does not remove its underlying state. Tags and leading-dot context access provide explicit access without predeclared variables.

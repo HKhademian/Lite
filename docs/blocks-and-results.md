@@ -15,6 +15,29 @@ An executable block groups items, introduces lexical scope, and produces its fin
 
 Bodies always use braces. Optional single-statement bodies and earlier `do/end` or `then/endif` block systems are superseded.
 
+## Item boundaries
+
+A complete block construct ends its item without `;`. A semicolon after that completed construct is rejected, including after a declaration initialized directly by a block, function, conditional, or loop. The entire construct includes any attached `else`, `then`, and `finally` clauses.
+
+```text
+answer := {
+    42
+}
+use(answer);
+```
+
+Both items can also appear on the same line. Whitespace never determines the boundary.
+
+To continue a block's value with an operator, call, member access, or indexing, parenthesize the construct:
+
+```text
+answer := ({ calculate() }) + 1;
+result := (fn(x: Int): Int { x * 2 })(3);
+name := ({ make_user() }).name;
+```
+
+These outer items are ordinary expressions or declarations and use ordinary separators. A closing brace inside a call argument or other enclosing expression does not terminate that enclosing item. See [lexical structure](lexical-structure.md) for the complete separator direction.
+
 ## Final-item rule
 
 - A final expression supplies the block's value.
@@ -30,7 +53,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 price := {
     discounted := calculate_discount(base);
     discounted + shipping
-};
+}
 ```
 
 ```text
@@ -41,7 +64,7 @@ price := {
 { 2 * x;;;;;;;;;; }
 ```
 
-The last two blocks produce the same value. Semicolons are separators, not result-discard operators.
+The last two blocks produce the same value. Semicolons inside a block may follow its final ordinary item without changing its result. They cannot follow a completed block item, including a nested block. An empty block may contain extra separators. Semicolons are separators, not result-discard operators.
 
 ```text
 { x = 3 }       /* Unit */
@@ -75,7 +98,7 @@ Exactly which unused results require explicit handling, particularly `Result` va
 ```text
 answer := {
     42
-};
+}
 
 use(answer);
 ```

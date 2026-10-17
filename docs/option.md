@@ -21,7 +21,7 @@ if let Some(user) = find_user(id) {
     greet(user)
 } else {
     print("User not found")
-};
+}
 ```
 
 An ordinary `User` is a user. An `Option<User>` is either a user-bearing variant or an explicitly absent variant. The compiler requires the program to handle that distinction before using a user payload.
@@ -45,7 +45,7 @@ found := @search loop users as user {
     if matches(user) {
         return @search Some(user)
     }
-};
+}
 ```
 
 The intended whole-loop result is `Option<User>`. A matching exit supplies `Some(user)`; exhausting the source supplies `None`. There is no required trailing `None` in the body or redundant `else { None }`.

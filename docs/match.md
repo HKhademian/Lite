@@ -10,7 +10,7 @@ Select behavior based on variants and destructured data, especially for optional
 
 ```text
 match expression {
-    pattern ARM_SEPARATOR { arm_body };
+    pattern ARM_SEPARATOR { arm_body }
     pattern ARM_SEPARATOR { arm_body }
 }
 ```
@@ -34,7 +34,7 @@ if let Some(user) = find_user(id) {
     greet(user)
 } else {
     print("Not found")
-};
+}
 ```
 
 The same pattern concepts should be reused rather than introducing a second unrelated destructuring system for match arms.

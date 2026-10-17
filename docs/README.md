@@ -16,10 +16,10 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Foundations
 
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
-- [Lexical structure](lexical-structure.md): whitespace, tokens, separators, and comments.
+- [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, and block boundaries.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, readable `_`, proposed character classes, and normalization questions.
-- [Blocks and results](blocks-and-results.md): final expressions, statement results, and repeated semicolons.
+- [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, immutability, and mutation.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.

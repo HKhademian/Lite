@@ -15,7 +15,7 @@ continue value;
 continue @loop;
 ```
 
-Semicolons separate items; a newline never decides whether an exit operand follows. Optional operand forms need a complete grammar, including any future labeled continuation contribution.
+Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, without a following semicolon. Optional operand forms need a complete grammar, including any future labeled continuation contribution.
 
 ## Plain return
 
@@ -27,10 +27,10 @@ Semicolons separate items; a newline never decides whether an exit operand follo
 price := @pricing {
     if invalid {
         return @pricing 0
-    };
+    }
 
     calculate_price()
-};
+}
 
 use(price);
 ```
@@ -51,7 +51,7 @@ found := @search loop users as user {
     if matches(user) {
         return @search Some(user)
     }
-};
+}
 ```
 
 The intended exhaustion result is `None`. `return @search;` would instead explicitly supply `Unit` and conflict with an `Option<User>` result.

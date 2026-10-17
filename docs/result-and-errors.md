@@ -20,10 +20,10 @@ This explanatory notation does not settle enum declaration syntax. Ordinary succ
 validate_age := fn(age: Int): Result<Int, AgeError> {
     if age < 0 {
         return Err(AgeError.Negative)
-    };
+    }
 
     age
-};
+}
 ```
 
 The expected `Result<Int, AgeError>` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
@@ -45,7 +45,7 @@ Pattern matching should expose success or failure explicitly. Earlier examples u
 ```text
 if let Err(error) = validate_age(text_age) {
     report(error)
-};
+}
 ```
 
 Postfix `?` was proposed for early propagation:
@@ -54,7 +54,7 @@ Postfix `?` was proposed for early propagation:
 load_age := fn(path: String): Result<Int, LoadError> {
     text := read_text(path)?;
     parse_age(text)?
-};
+}
 ```
 
 This is a working illustration. A real contract must define error conversion or explicit mapping between the operations' error types. `?` must not erase those types.
@@ -65,7 +65,7 @@ This is a working illustration. A real contract must define error conversion or 
 save := fn(data: Data): Result<Unit, SaveError> {
     write_data(data)?;
     Unit
-};
+}
 ```
 
 The final `Unit` represents success without data.

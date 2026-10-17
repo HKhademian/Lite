@@ -11,7 +11,7 @@ Students can write ordinary code without annotations while the compiler still re
 ```text
 value := expression;
 value: Type = expression;
-function_name := fn(parameter: Type): ResultType { body };
+function_name := fn(parameter: Type): ResultType { body }
 ```
 
 ## Examples
@@ -46,7 +46,7 @@ These are desired capabilities, not a complete or implemented specification. Syn
 ```text
 double := fn(x) {
     x + x
-};
+}
 ```
 
 One proposal is constrained generic inference: the function is valid for types supporting an appropriate addition operation. Alternatives include requiring parameter annotations in more situations. Recursive and ambiguous definitions need a specified inference boundary.

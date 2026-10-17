@@ -23,8 +23,11 @@ This is the proposed Unicode profile, before reserved-word recognition. Case sen
 ## Item separation
 
 ```text
-program := { ";" | item ";" } [item]
-block   := "{" { ";" | item ";" } [item] "}"
+program       := item_sequence
+block         := "{" item_sequence "}"
+item_sequence := { ";" }
+                 { closed_item | simple_item ";" { ";" } }
+                 [simple_item]
 
 item := declaration
       | assignment
@@ -32,7 +35,27 @@ item := declaration
       | expression
 ```
 
-This shape allows extra separators and an omitted trailing separator. Separators are not AST items and do not produce `Unit`. Declarations and assignments are items, not general value expressions.
+`closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, or a declaration, assignment, or exit whose outer expression ends directly in one. Examples include a standalone block, an `if` chain, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
+
+The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself; a separator after it is rejected. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
+
+The exact expression productions implementing this classification remain part of the incomplete expression grammar. The classification must follow syntactic structure, not a scan for the last `}` character: import-list braces and blocks nested inside calls or groupings do not end the enclosing item.
+
+## Block-value continuation
+
+```text
+grouped_block_value := "(" block_value_construct ")"
+```
+
+`block_value_construct` denotes an expression-producing block, conditional, loop, or function literal. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
+
+```text
+answer := ({ calculate() }) + 1;
+result := (fn(x: Int): Int { x * 2 })(3);
+name := ({ make_user() }).name;
+```
+
+Without grouping, a completed block item ends before any following suffix; the following tokens must form a separate valid item. Newlines never choose between those readings. Within a complete conditional or loop, attached clauses are parsed before deciding that the item has ended.
 
 ## Declarations
 

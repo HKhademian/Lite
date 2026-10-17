@@ -25,17 +25,17 @@ Provide a language that students can begin using without learning type annotatio
 ```text
 double := fn(x: Int): Int {
     x * 2
-};
+}
 
 message := if passed {
     "Congratulations"
 } else {
     "Try again"
-};
+}
 
 loop users as user {
     greet(user)
-};
+}
 ```
 
 The loop receiver separator is still a working choice. See [loop receivers](loop-receivers.md).

@@ -12,7 +12,7 @@ Build reusable programs around owned data and explicitly supplied behavior, with
 Student := type {
     name: String;
     progress: Progress
-};
+}
 ```
 
 This is working notation. Constructor syntax, accessors, and field visibility grammar are not finalized.

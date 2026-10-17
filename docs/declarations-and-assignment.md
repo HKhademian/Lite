@@ -54,12 +54,12 @@ Functions and types can be bound through the same declaration form:
 ```text
 double := fn(x: Int): Int {
     x * 2
-};
+}
 
 Student := type {
     name: String;
     age: Int
-};
+}
 ```
 
 The `type` record notation is a working sketch. Uniform binding syntax does not imply that a type can be dynamically replaced at runtime.

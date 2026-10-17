@@ -18,13 +18,13 @@ pair := (first, second);
 ```text
 loop pairs as pair {
     process(pair)
-};
+}
 ```
 
 ```text
 loop pairs as (left, right) {
     process(left, right)
-};
+}
 ```
 
 Both receive each source element. If the element is not a compatible tuple, the destructuring form is rejected. A simple name must not secretly receive an item while a tuple pattern receives unrelated loop metadata.
@@ -36,7 +36,7 @@ Loop receivers currently have separate semantic positions: item, count, accumula
 ```text
 loop pairs as (left, right), count {
     process(left, right, count)
-};
+}
 ```
 
 The grouped pattern destructures the first slot. The ungrouped comma introduces the second receiver slot.
@@ -55,7 +55,7 @@ A declaration such as `(left, right) := pair` should use an irrefutable pattern 
 ```text
 if let Some(user) = find_user(id) {
     greet(user)
-};
+}
 ```
 
 The bound user exists only in the successful branch.

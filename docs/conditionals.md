@@ -23,7 +23,7 @@ if ready {
     run()
 } else {
     wait()
-};
+}
 ```
 
 ## Value example
@@ -33,7 +33,7 @@ message := if passed {
     "Congratulations"
 } else {
     "Try again"
-};
+}
 ```
 
 The same conditional syntax produces a value through the selected branch's final expression. There is no separate ternary operator.
@@ -44,7 +44,7 @@ price := if premium {
     discounted + shipping
 } else {
     base + shipping
-};
+}
 ```
 
 ## Type rules
@@ -62,7 +62,7 @@ if let Some(user) = find_user(id) {
     greet(user)
 } else {
     print("Not found")
-};
+}
 ```
 
 `if let` is established illustrative notation, but its integration with the later uniform declaration grammar is still open. A pattern-bound value is available only in the matching branch.
@@ -76,7 +76,7 @@ if c1 {
     }
 } else {
     a2()
-};
+}
 ```
 
 Braces establish which conditional owns `else`; indentation is irrelevant.
@@ -89,7 +89,7 @@ Braces establish which conditional owns `else`; indentation is irrelevant.
     grant_access()
 } else {
     deny_access()
-};
+}
 ```
 
 The tag names the entire conditional. `.condition` denotes its evaluated condition in the simple case and must not call it again. Metadata for an `else if` chain needs a more precise definition because not all conditions are evaluated.

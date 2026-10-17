@@ -19,7 +19,7 @@ Brackets above are optional grammar notation, not literal source characters. Cur
 ```text
 loop users as user {
     greet(user)
-};
+}
 ```
 
 Evaluate the iterable source once, obtain an iterator, and advance it for successive values.
@@ -31,7 +31,7 @@ var remaining := 3;
 
 loop remaining > 0 {
     remaining -= 1
-};
+}
 ```
 
 The compiler recognizes a Boolean source expression and reevaluates it before each body entry. A function returning `Bool` is therefore called before each attempted iteration; a function producing an iterable is called once to obtain that iterable.
@@ -46,7 +46,7 @@ loop {
     if finished() {
         break
     }
-};
+}
 ```
 
 An omitted source behaves like an always-true guard. Explicit inner control flow exits the loop.
@@ -68,13 +68,13 @@ Boolean and unconditional modes were proposed to use `Unit` for their item paylo
 Direction and stride belong in source values or adapters:
 
 ```text
-loop 1..=10 as number { process(number) };
-loop 10..=1 as number { process(number) };
-loop (1..=10).step(2) as number { process(number) };
-loop users.reverse() as user { greet(user) };
-loop users.reverse().step(2) as user { greet(user) };
-loop directory.keys() as key { process(key) };
-loop directory.items() as (key, value) { process(key, value) };
+loop 1..=10 as number { process(number) }
+loop 10..=1 as number { process(number) }
+loop (1..=10).step(2) as number { process(number) }
+loop users.reverse() as user { greet(user) }
+loop users.reverse().step(2) as user { greet(user) }
+loop directory.keys() as key { process(key) }
+loop directory.items() as (key, value) { process(key, value) }
 ```
 
 The requested direction is a descending inclusive range such as `10..=1`. A positive stride magnitude follows the range's direction. Range syntax, `.step`, `.reverse`, `.keys`, and `.items` are working library/API proposals. Zero stride must have a defined rejection mechanism.

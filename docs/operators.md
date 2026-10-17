@@ -22,11 +22,11 @@ Use one equality operator, `==`:
 ```text
 if a == b {
     same()
-};
+}
 
 if not a == b {
     different()
-};
+}
 ```
 
 The current design uses `not a == b` for inequality. Earlier proposals for `?=` as equality and `!=` as inequality are superseded. `?=` and `!=` have no currently assigned update meaning either; an `op=` form requires a defined underlying operation.

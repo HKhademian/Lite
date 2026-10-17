@@ -9,7 +9,7 @@ Use the ordinary function expression as a reusable value that may capture surrou
 ```text
 transform := fn(x: Int): Int {
     x * 2
-};
+}
 ```
 
 There is no selected second shorthand syntax requiring `=>`. Earlier arrow-bodied function suggestions are not required by the current mandatory-brace direction.
@@ -20,9 +20,9 @@ The final expression supplies normal completion, exactly as in a named function.
 
 ```text
 transform := fn(x: Int): Int {
-    if x < 0 { return 0 };
+    if x < 0 { return 0 }
     x * 2
-};
+}
 ```
 
 ## Capture sketch
@@ -31,7 +31,7 @@ transform := fn(x: Int): Int {
 offset := 3;
 transform := fn(x: Int): Int {
     x + offset
-};
+}
 ```
 
 The intended meaning is that `offset` is available to the function. Whether that is a copy, move, borrow, or shared reference is not specified until the memory model is chosen.
@@ -43,9 +43,9 @@ A closure must not perform a targeted return or continuation into a construct in
 ```text
 @users loop users {
     count := @users.count;
-    callback := fn(): Int { count };
+    callback := fn(): Int { count }
     use_callback(callback)
-};
+}
 ```
 
 The callback and ownership details remain illustrative, but copying a value is distinct from capturing the ability to jump back into a loop.

@@ -23,9 +23,9 @@ A signed 64-bit default `Int` with checked arithmetic was suggested, with explic
 ## Ranges
 
 ```text
-loop 1..=10 as number { process(number) };
-loop 10..=1 as number { process(number) };
-loop (10..=1).step(3) as number { process(number) };
+loop 1..=10 as number { process(number) }
+loop 10..=1 as number { process(number) }
+loop (10..=1).step(3) as number { process(number) }
 ```
 
 The intended descending example visits `10, 7, 4, 1`. A positive step magnitude follows the direction chosen by bounds. Zero step requires rejection. Equal bounds, exclusive ranges, overflow near numeric limits, and dynamic invalid steps need precise contracts.
@@ -35,7 +35,7 @@ The intended descending example visits `10, 7, 4, 1`. A positive step magnitude 
 ```text
 loop (10..=1).step(3) as value, count {
     process(value, count)
-};
+}
 ```
 
 The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse traversal must not turn the iteration count into a descending index.

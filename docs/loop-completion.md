@@ -26,7 +26,7 @@ A receiving `then` gets the optional accumulated result and can handle both stat
 
 ```text
 message := loop items as item {
-    if not eligible(item) { continue };
+    if not eligible(item) { continue }
     score(item)
 } then(result) {
     if let Some(last) = result {
@@ -34,7 +34,7 @@ message := loop items as item {
     } else {
         "No eligible items"
     }
-};
+}
 ```
 
 The processing occurs once, not once per iteration. It uses an already computed contribution rather than reevaluating the body expression.
