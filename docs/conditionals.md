@@ -67,6 +67,8 @@ if let Some(user) = find_user(id) {
 
 `if let` is established illustrative notation, but its integration with the later uniform declaration grammar is still open. A pattern-bound value is available only in the matching branch.
 
+Type patterns can narrow a union's active alternative inside such a matching branch. Working examples use `binding: Type`; this exact conditional production remains illustrative. See [union type patterns](union-patterns.md). Type-pattern support does not select general typed receiver-dispatch chains.
+
 ## Nested ownership
 
 ```text

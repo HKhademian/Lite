@@ -158,6 +158,8 @@ message := load_user(id) else {
 
 If `load_user` succeeds with `User`, `message` has type `User | String`. A caller must narrow it before using an operation specific to only one alternative. An expected `User` annotation cannot erase the `String` alternative.
 
+Union alternatives can be narrowed by matching their type. This applies both to the recovered success/fallback union and to error-union receivers such as `ReadError | ParseError`. An intact Result first retains its success/failure distinction; payload type tests cannot decide that distinction when the sides overlap. See [union type patterns](union-patterns.md) for illustrative conditional patterns and the remaining grammar decisions.
+
 - An explicitly exiting recovery branch supplies no local alternative; an early `return`, valid `break`, or other exit is checked against its own target.
 - A recovery block ending in `Unit` contributes a `Unit` alternative; `Result<User, E>` recovered this way yields `User | Unit`, without inventing null or a default User.
 - This is a selected union-forming boundary for Result recovery. It does not automatically make unrelated `if` or `match` branches infer unions.

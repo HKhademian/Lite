@@ -102,6 +102,8 @@ condition := boolean_expression | pattern_condition
 
 The current pattern-condition example is `if let pattern = expression`. Whether that is the final spelling is open. Ordinary conditionals do not use `then` as a separator and do not require `endif`.
 
+Type-pattern narrowing of success and error unions is selected. The working shape `binding: Type` can appear in illustrative conditional and match patterns, but its complete production, exact type versus subtype behavior, and match-arm punctuation remain open. See [union type patterns](union-patterns.md).
+
 ## Loops
 
 ```text

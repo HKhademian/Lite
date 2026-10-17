@@ -1,6 +1,6 @@
 # Match and exhaustive selection
 
-Status: **pattern-based explicit handling desired; surface grammar open**.
+Status: **type-pattern narrowing of success and error unions selected; general match direction desired and surface grammar open**.
 
 ## Purpose
 
@@ -38,6 +38,12 @@ if let Some(user) = find_user(id) {
 ```
 
 The same pattern concepts should be reused rather than introducing a second unrelated destructuring system for match arms.
+
+## Union type patterns
+
+A programmer can distinguish success-union alternatives and error-union alternatives by their type. A matching branch binds a value with that narrower static type. The same patterns should be usable in conditionals and match arms; see [union type patterns](union-patterns.md) for working `binding: Type` examples.
+
+An intact Result still distinguishes success from failure before matching the relevant payload. Type tests alone cannot replace that outer distinction when its success and error payload types overlap. Overlapping patterns, exact type versus subtype matching, arm order, and complete coverage rules remain open.
 
 ## Notes and open questions
 

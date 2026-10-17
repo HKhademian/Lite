@@ -61,6 +61,8 @@ Recoverable failure has a stronger selected rule: all escaping recoverable error
 
 Reachable completion paths must fit the enclosing type contract. Result recovery has a selected union-forming rule: success type `T` and normally completing fallback type `D` produce `T | D`, whether or not the error receiver is named. This does not establish automatic union inference for unrelated conditional or match branches. Union syntax, narrowing, conversions, ownership, and layout remain open; see [Result and errors](result-and-errors.md#recovery-result-type).
 
+Type-pattern narrowing is selected for union values, including unions on either the success or error side of a fallible outcome. A matching branch receives the active alternative with its narrower static type. Exact pattern syntax, type identity versus subtype tests, overlap, and ownership remain open. An intact Result retains its outer success/failure distinction even if the two payload sides overlap; see [union type patterns](union-patterns.md).
+
 Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.
 
 An internal `Never` or bottom type can describe control flow that cannot complete locally. Its public spelling and general usability are open.

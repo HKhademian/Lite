@@ -33,6 +33,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
+- [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): successful completion without useful data.
 - [Option](option.md): explicit absence without universal nullability.
 - [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.

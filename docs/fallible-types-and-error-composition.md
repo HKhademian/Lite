@@ -50,6 +50,8 @@ The error family and member notation follow existing explanatory examples; their
 
 ## Multiple error families proposal
 
+Unions on either side of `!` can be distinguished by type patterns: `(User | Guest) ! (ReadError | ParseError)` supports narrowing the successful payload or the error payload to its active alternative. That capability is selected; the composition and propagation-membership formalization below remains proposed. See [union type patterns](union-patterns.md).
+
 ```text
 load_age := fn(path: String): Int ! (ReadError | ParseError) {
     text := read_text(path)!;
