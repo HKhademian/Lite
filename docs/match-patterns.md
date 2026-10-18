@@ -13,7 +13,7 @@ match subject {
 }
 ```
 
-The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. Full fallback and guard syntax remain proposals. Each match evaluates its subject once and uses the same action/value body form.
+The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. Fallback syntax remains a proposal; and-chained arm conditions and additional matches are selected. Each match evaluates its subject once and uses the same action/value body form.
 
 ## 1. Equality
 
@@ -130,15 +130,15 @@ Unannotated components still receive precise inferred types. Apply the whole pat
 
 The extended `(x, y: (a, b: str, c), ...rest)` shape is a separate [whole-value/nested/rest proposal](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest). It would retain y as well as its extracted components; its colon grammar and ownership rules are not settled by selecting typed component patterns.
 
-## Recommended sixth capability: guards
+## Sixth capability: arm condition chains
 
-After a structural pattern succeeds, allow a Boolean condition to refine selection. Candidate syntax, not yet selected:
+After a structural pattern succeeds, Boolean conditions and additional pattern bindings can refine selection:
 
 ```text
-Event.Click(x, y) if x >= 0 and y >= 0 { handle_click(x, y) }
+Event.Click(x, y) and x >= 0 and y >= 0 { handle_click(x, y) }
 ```
 
-If the guard is false, selection should be able to continue to another arm. Scope, side effects, mutation, evaluation count, and ownership commitment need formal rules. A guarded arm does not establish full coverage of its structural pattern.
+If a condition is false or an additional pattern fails, selection continues to later arms. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).
 
 Other useful follow-ups are alternatives in one arm, range patterns, whole-value-plus-payload binding, and a remainder/fallback arm. They are separate decisions rather than additional requirements inferred from the numbered list.
 

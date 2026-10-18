@@ -61,7 +61,7 @@ The grammar sketch uses restricted condition-operand placeholders for this bound
 
 ## Related features
 
-This selects conditional binding plus an and guard. It does not automatically select match-arm guard punctuation, refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
+The same chain rules are selected for [match arm conditions](match-guards.md), where the initial pattern already receives the match subject. These features do not automatically select refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
 
 ## References
 

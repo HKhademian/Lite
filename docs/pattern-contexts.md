@@ -8,7 +8,7 @@ Use one composable pattern vocabulary across binding and selection contexts. The
 
 An **irrefutable** pattern matches every value admitted by its input contract. A **refutable** pattern can fail for some admitted value. Refutability depends on both the pattern and the input type: a typed tuple pattern can be irrefutable for a known matching tuple and refutable for a broader union.
 
-The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). Whole-value colon patterns, rest capture details, enum shorthand, guards, and type-only arm spelling still have separate open decisions.
+The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). Whole-value colon patterns, rest capture details, enum shorthand and type-only arm spelling still have separate open decisions.
 
 Partially annotated patterns constrain their input and infer every binding from compatible possibilities as one type or a union. This does not change the separate compatible-result policy for if/match branch expressions.
 
@@ -47,9 +47,9 @@ match value {
 }
 ```
 
-The subject is evaluated once; arm bindings are local. Value selection over closed alternatives must be exhaustive. Source-order first-success selection, a final else fallback, exhaustive action matches, no fallthrough, and guards are review recommendations rather than newly selected policies.
+The subject is evaluated once; arm bindings are local. Value selection over closed alternatives must be exhaustive. And-chained conditions and additional pattern matches are selected, with source-order first-success selection and no implicit fallthrough. A final else fallback, exhaustive action matches, and any explicit fallthrough feature remain unselected.
 
-With the proposed first-success rule, a mismatch allows later arms to be tried. A guard would run after structural success and could reject the arm. Do not commit an ownership move that prevents trying the next arm after a failed subpattern or guard; the full ownership model must make this precise. This is not a general promise to roll back side effects.
+A mismatch allows later arms to be tried. The and conditions run after structural success and can reject the arm; see [match arm chains](match-guards.md). Do not commit an ownership move that prevents trying the next arm after a failed subpattern or guard; the full ownership model must make this precise. This is not a general promise to roll back side effects.
 
 ## 4. Loop receiver slots
 
@@ -111,7 +111,7 @@ Closure capture lists, imports, type/member declarations, and tag declarations d
 4. **Flow and capabilities.** Define when reassignment/alias mutation invalidates narrowing, when component relationships survive extraction, and how whole/component bindings share access. Current input projection preserves composite alternatives; arbitrary later cross-binding narrowing is still open.
 5. **Names within one pattern.** Duplicate bindings such as `(x, x)` and `(_, _)` need a policy. Recommend rejection within one simultaneous pattern, preserving readable underscore and the separately selected left-to-right shadowing between loop receiver slots. Named-field aliases can avoid collisions by choosing distinct destinations; `field as localName` is a candidate, not selected syntax. See [pattern aliases](pattern-aliases.md). Do not accidentally make repeated names equality constraints.
 6. **Ordered tests and effects.** Specify subpattern and guard evaluation order, getter/custom equality effects, and ownership commitment. Subject-once evaluation does not specify every subsequent comparison or field access.
-7. **Coverage and diagnostics.** Set action-match coverage, fallback/guard syntax, overlap, and impossible/always-matching diagnostics. Preserve closed-alternative precision without assuming the compiler can decide arbitrary Boolean guards.
+7. **Coverage and diagnostics.** Set action-match coverage, fallback syntax, overlap, and impossible/always-matching diagnostics. Preserve closed-alternative precision without assuming the compiler can decide arbitrary Boolean guards.
 8. **Leading dot.** Resolve inferred enum cases against metadata `.field`; no outward context search, no case-owner search across unrelated enums, and no silent type-driven reinterpretation of existing metadata. The collision policy remains a proposal.
 
 The syntax is promising, but these are specification gaps. No parser or soundness/completeness claim follows from the examples.

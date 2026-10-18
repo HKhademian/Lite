@@ -115,12 +115,12 @@ The selected and chain evaluates operands in order and exposes successful patter
 
 ```text
 match_expression := "match" expression "{" match_arm { match_arm } "}"
-match_arm := pattern block
+match_arm := pattern { "and" condition_operand } block
 ```
 
-Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
+Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
 
-This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, guards, overlaps, ordering, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` remains an ordinary binding. See [match](match.md) and [union type patterns](union-patterns.md).
+This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, overlaps, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` remains an ordinary binding. See [match](match.md) and [union type patterns](union-patterns.md).
 
 The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. These required categories do not select bare-name equality versus binding, runtime-equality pattern punctuation, enum declarations, or record-pattern delimiters. See [match pattern capabilities](match-patterns.md).
 
