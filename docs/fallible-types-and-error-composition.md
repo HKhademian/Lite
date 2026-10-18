@@ -73,6 +73,8 @@ LoadError := type ReadError | ParseError;
 
 This follows the uniform binding direction, but the `type` alias expression is still proposed grammar. It names a composition without introducing another nominal wrapper or losing the original error identity.
 
+The [alias syntax review](type-aliases.md) compares this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. It recommends one explicit type prefix for all named aliases; neither form is selected yet. The keyword would cover the full type expression, not just its first union member.
+
 The function can then declare:
 
 ```text

@@ -254,6 +254,8 @@ These are selected surface templates, not complete type productions. `T!` expand
 
 General type precedence, union grouping and composition, alias grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md).
 
+The [type alias comparison](type-aliases.md) evaluates direct binding Alias := TypeExpression versus Alias := type TypeExpression. The latter is recommended as one consistent way to establish type context for the whole alias initializer, including unions and fallible types, but neither is selected or added to these productions. Tuple, generic, function-type, and fresh-record alias boundaries still need full grammar.
+
 ## Recoverable error expressions
 
 ```text

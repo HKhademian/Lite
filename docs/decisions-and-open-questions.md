@@ -118,6 +118,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [type alias comparison](type-aliases.md) evaluates Member := User and Member := type User for simple aliases, unions, fallible types, tuples, generic applications, and function types. After considering composite type grammar, it recommends an explicit type prefix for all named aliases while retaining uniform := definitions. Neither spelling is selected. Both candidates must preserve transparent identity; a prefix must not create a new nominal wrapper or silently add another record-declaration form.
+
 - [Record type identity](record-type-identity.md) selects distinct identity per named and unnamed inline declaration, with explicit reconstruction between distinct types. Exact alias syntax, inferred standalone record literal types, generic instantiation, and additional conversion facilities remain open.
 
 - In an explicit record-field type position, the proposed stats: { points: Int; level: Int = 1; }; omits record because colon already requires a type. Keep the top-level Profile := record { ... } form pending broader type/value brace grammar. Distinct unnamed-type declaration identity is selected; the shorthand and whether to retain the longer nested spelling remain open. See [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).

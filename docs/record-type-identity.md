@@ -30,6 +30,8 @@ Both approaches can be statically checked. Strong typing alone does not settle t
 
 Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The exact alias declaration syntax and type-value binding rules remain open.
 
+The [alias comparison](type-aliases.md) evaluates Member := User versus Member := type User across unions and other composite types. It now recommends the explicit prefix consistently for named aliases, but neither spelling is selected. The prefix would remain transparent, not introduce a new record identity.
+
 ```text
 /* Rejected: no implicit User-to-Student conversion. */
 student: Student = user;
