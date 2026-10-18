@@ -97,15 +97,19 @@ conditional := [tag] "if" condition block
                [ "else" block ]
                [ finally_clause ]
 
-condition := boolean_expression | existing_name_type_test | pattern_condition
+condition := boolean_expression | and_condition
+and_condition := condition_operand { "and" condition_operand }
+condition_operand := condition_boolean_operand | existing_name_type_test | pattern_condition
 existing_name_type_test := identifier ":" type
-pattern_condition := pattern ":=" expression
-                   | identifier ":" type "=" expression
+pattern_condition := pattern ":=" condition_value_operand
+                   | identifier ":" type "=" condition_value_operand
 
 type_pattern := identifier ":" type
 ```
 
-The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns, modifiers, and condition chains remains open. Existing-name test precedence and integration into logical expressions remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
+The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
+
+The selected and chain evaluates operands in order and exposes successful pattern bindings to later operands and the body, never the failed branch. The condition operand placeholders exclude ungrouped top-level logical separators; nested grouping can contain ordinary Boolean and/or expressions. In `Some(user) := find_user(id) and user.age > 14`, the pattern source ends before and. Full productions remain incomplete; binding-producing or/not, repeated binding names, and general type-test precedence are not selected here. See [conditional pattern chains](condition-chains.md).
 
 ## Match
 

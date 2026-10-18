@@ -91,7 +91,17 @@ The right-hand `person` resolves to the outer binding before the pattern introdu
 
 A pattern condition tests **matching**, not the truthiness of its payload. `if Some(flag) := lookup_flag()` matches `Some(false)` as well as `Some(true)`. By contrast, `if flag` requires a `Bool` and tests its value. Whether an irrefutable condition such as `if flag := false` is rejected or diagnosed remains open; if accepted as a pattern, it would always match.
 
-`if x = value` remains invalid assignment-as-condition. The selected `if x: Type = value` is a typed declaration-shaped pattern header, not an assignment expression. Conditional binding modifiers and chained pattern conditions remain unspecified. Type-pattern support does not select typed receiver-dispatch chains.
+`if x = value` remains invalid assignment-as-condition. The selected `if x: Type = value` is a typed declaration-shaped pattern header, not an assignment expression. Conditional binding modifiers remain unspecified. Type-pattern support does not select typed receiver-dispatch chains.
+
+## Pattern binding followed by guards
+
+```text
+if Some(user) := find_user(id) and user.age > 14 {
+    greet(user)
+}
+```
+
+Evaluate operands left to right and stop at the first false result or pattern mismatch. A successful pattern makes its bindings available to later and operands and the successful body. They do not leak into else or following code. This includes chains with more than one pattern match; full scope, parsing boundaries, and open or/not interactions are in [conditional pattern chains](condition-chains.md).
 
 ## Nested ownership
 

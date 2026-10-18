@@ -62,12 +62,12 @@ The exact policy depends on the memory, aliasing, and effect models. Support for
 
 These need decisions before the grammar is implementation-ready:
 
-1. **Logical flow and precedence.** Define `not`, `and`, and `or` with type tests, including where refinements are available on a short-circuited right operand. Do not derive parsing from whitespace. Until selected, compound tests and negated type-test spellings are proposals.
+1. **Logical flow and precedence.** Pattern-binding and chains with bindings available to later Boolean operands are selected; see [conditional pattern chains](condition-chains.md). Complete not/or flow, existing-name type-test precedence, and mutation stability still need rules. Do not derive parsing from whitespace or assume binding availability on disjunction/negation paths.
 2. **Early-return guards.** Retaining a successful refinement after a negative branch returns is desirable for shallow code, but the precise control-flow and invalidation rules remain a proposal.
 3. **Negative information.** For a closed `User | Guest`, a failed User test can imply Guest; specify how this works through `else`, joins, overlapping types, and open interfaces.
 4. **Type relations.** Define exact type identity versus subtype/interface satisfaction, generic type tests and erasure/reification, and impossible or always-true tests. This form does not settle those questions.
 5. **Conditional declarations.** Decide whether irrefutable patterns such as `if flag := false` are rejected or diagnosed. Matching `Some(false)` with `Some(flag)` succeeds independently of the payload's Boolean value.
-6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, nested patterns, and any chains of conditional declarations.
+6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, nested patterns, and repeated-name rules within the selected and chains.
 
 These are semantic gaps to track, not reasons to require `person: User = person` everywhere.
 

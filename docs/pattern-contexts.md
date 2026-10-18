@@ -36,7 +36,7 @@ Refutable matching is selected. A successful whole pattern introduces its new bi
 
 An existing-name type test, `if person: User`, narrows the existing value instead of declaring a name. It needs stability rules; it is distinct from `if user: User = expression`. Literal/payload constraints test matching, not the Boolean value of a bound payload. `Some(false)` matches `Some(flag)`.
 
-Irrefutable conditional patterns, compound declaration conditions, negative flow, and refinement after early exits remain open. A plain assignment is not a condition. Action/value result rules remain those of [conditionals](conditionals.md).
+And chains can combine pattern matches and Boolean guards: successful bindings are available to subsequent operands and the successful body, with left-to-right short-circuiting. See [conditional pattern chains](condition-chains.md). Irrefutable conditional patterns, binding-producing or/not, negative flow, repeated chain names, and refinement after early exits remain open. A plain assignment is not a condition. Action/value result rules remain those of [conditionals](conditionals.md).
 
 ## 3. Match arms
 

@@ -53,6 +53,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Control flow
 
 - [Conditionals](conditionals.md): one syntax for actions and values.
+- [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match](match.md): pattern-and-brace arms for action/value selection; full coverage rules remain open.
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, and type patterns; proposed guards and remaining naming rules.
