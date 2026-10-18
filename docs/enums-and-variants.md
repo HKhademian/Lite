@@ -143,7 +143,7 @@ Compact native representation is a goal. The enum concept should not mandate a h
 
 ### Keep related data features independent
 
-- **Products:** a record/struct combines fields. Exact declaration and constructor syntax remain open.
+- **Products:** record combines fields, using the selected `Name := record { field: Type; }` surface. Construction and complete field contracts remain open; see [records](records.md).
 - **Domain wrappers:** a distinct UserId can reject accidental OrderId interchange while retaining an appropriate representation. Alias identity, wrapper syntax, conversions, and layout require separate contracts.
 - **Generated operations:** equality, hashing, formatting, copying, and destructuring can be requested or derived subject to field capabilities and visibility. A data-class keyword is not required merely to bundle convenient operations.
 - **Identity and access:** reference identity, ownership, allocation, and read/write access are separate choices. Existing var/mut permissions do not decide those semantics.

@@ -92,13 +92,13 @@ double := fn(x: Int): Int {
     x * 2
 }
 
-Student := type {
+Student := record {
     name: String;
-    age: Int
+    grade: Int;
 }
 ```
 
-The `type` record notation is a working sketch. Uniform binding syntax does not imply that a type can be dynamically replaced at runtime.
+The record keyword and typed-field surface are selected; see [records](records.md). Uniform binding syntax does not imply that a type can be dynamically replaced at runtime. Constructor, identity, and memory contracts remain open.
 
 ## Scope
 

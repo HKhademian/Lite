@@ -60,6 +60,7 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 - Assignments are not general expressions or chained value assignments.
 - Function result annotations use `:`, not `->`.
 - Uniform name bindings can hold function and type definitions.
+- Field aggregates use record, as in `Student := record { name: String; grade: Int; }`, replacing the earlier type-body record sketch. Construction, nominal/structural identity, visibility modifiers, and memory semantics remain open. See [records](records.md).
 - Early returns are encouraged.
 - Ordinary `Result` success is implicit when an appropriate contract is expected; errors are explicit.
 - Fallible type notation is `T ! E`; `T!` means exactly `T ! Error`, declaring the general recoverable error contract. A plain `T` declares no recoverable failure. Refined error types remain available; `!T` is not an alternate spelling. Type and expression contexts distinguish a fallible type from postfix propagation without whitespace semantics.

@@ -16,7 +16,7 @@ A record, tuple, or struct combines components. A Point has both x and y; it is 
 Point = { x: Int, y: Int }
 ```
 
-This is explanatory notation. LiteScript's exact record declaration, constructor, and positional matching-schema syntax remain open. A product can be nominal or structural, mutable or read-only, copied or moved, inline or reference-bearing. The shape alone does not decide those other contracts.
+This is explanatory notation. LiteScript now selects the declaration surface `Point := record { x: Int; y: Int; }`; see [records](records.md). Constructor and positional matching-schema syntax remain open. A product can be nominal or structural, mutable or read-only, copied or moved, inline or reference-bearing. The shape alone does not decide those other contracts.
 
 ## 2. Sum: one alternative at a time
 

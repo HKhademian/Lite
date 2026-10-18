@@ -1,6 +1,6 @@
 # Composition and interfaces
 
-Status: **composition-first goal established; declaration and implementation details proposed**.
+Status: **composition-first goal and record declaration surface established; interface and implementation details proposed**.
 
 ## Purpose
 
@@ -9,13 +9,13 @@ Build reusable programs around owned data and explicitly supplied behavior, with
 ## Record template
 
 ```text
-Student := type {
+Student := record {
     name: String;
-    progress: Progress
+    grade: Int;
 }
 ```
 
-This is working notation. Constructor syntax, accessors, and field visibility grammar are not finalized.
+The record keyword and typed-field surface are selected; see [records](records.md). Constructor syntax, accessors, and field visibility grammar are not finalized.
 
 ## Intended rules
 
