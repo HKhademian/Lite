@@ -1,8 +1,8 @@
 # Slot as a replacement qualifier
 
-Status: **user-proposed candidate spelling, 2026-10-18; not selected**. This refines the earlier mut-marked access summary. Value-union normalization, declaration var/mut, and all-target field-write safety remain established.
+Status: **slot selected as the replacement marker, 2026-10-18**. In a complete access contract, A | slot B | C describes readable A/B/C with B accepted for replacement. Full type grammar, grouped scope, whole-contract boundaries, and first-class access values remain open. Value-union normalization and declaration var/mut retain their established meanings.
 
-## Proposed meaning
+## Selected meaning and spelling
 
 Inside one complete access contract:
 
@@ -10,7 +10,7 @@ Inside one complete access contract:
 A | slot B | C
 ```
 
-would describe:
+describes:
 
 ```text
 read:  A | B | C
@@ -19,9 +19,9 @@ write: B
 
 Every listed alternative is readable. A slot-marked alternative is additionally accepted as a replacement through this access path, regardless of the currently stored alternative. All examples assume exact, unrelated type alternatives.
 
-This is a candidate access-contract notation, not an ordinary union of values where one alternative happens to be a slot object. No pointer, allocation, first-class reference value, address-taking operation, or runtime wrapper is selected.
+This selects the marker and its meaning within an access contract, not an ordinary union of values where one alternative happens to be a slot object. No pointer, allocation, first-class reference value, address-taking operation, runtime wrapper, or complete declaration production is selected.
 
-## Why slot is a better candidate than mut here
+## Why slot replaces the earlier mut marker
 
 The marker describes what may be stored into the selected location. It does not mean that a currently held B exposes mutable fields. Thus it separates replacement acceptance from the existing mut permission to update held data.
 
@@ -61,14 +61,27 @@ access(A | slot B | C)
 
 This summarizes operations available without narrowing; it is not unconditional equality with the full union of original access paths. The [earlier investigation](access-union-qualifiers.md) explains the read-union/write-intersection rule and preserved correlations.
 
+## Proposed scope rule
+
+Recommend treating slot as a prefix on the following type operand, with parentheses available to supply a composite operand:
+
+```text
+A | slot B | C       /* read A/B/C; accept B */
+slot (A | B) | C     /* proposed: read A/B/C; accept A/B */
+```
+
+This makes slot bind more tightly than the surrounding union. Within one complete contract, the grouped form would have the same summary as slot A | slot B | C. It would not merge two possible access paths or erase their boundaries.
+
+A transparent alias must retain its entire denoted type as the operand. If Pair := type A | B, then slot Pair would qualify both alternatives, matching slot (A | B); alias expansion must not accidentally turn it into slot A | B. These grouping and alias rules are recommendations pending confirmation, not newly selected grammar. Spaces between slot and its operand have no semantic role.
+
 ## Remaining choices
 
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
 - What delimits a complete contract, including a read-only contract with no slot member?
-- Does slot apply to only the following member or to a parenthesized value union? Scope and precedence need a single rule.
+- Confirm the proposed prefix scope, grouped operands, and transparent-alias treatment above.
 - How are payload permissions represented independently from replacement acceptance?
 - How do ownership, lifetimes, and escaped access paths preserve the declared contract?
 
-Recommend slot over mut for the replacement marker, while leaving these grammar and access-model decisions open. The candidate does not replace var or mut declarations.
+The slot marker is now selected over mut for replacement acceptance. The remaining grammar and access-model decisions stay open. It does not replace var or mut declarations.
 
 Related: [value types and access contracts](union-values-and-access.md), [field writes](union-field-writes.md), [mutability](mutability.md), and [immutability by default](immutability-by-default.md).

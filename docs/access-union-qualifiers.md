@@ -2,7 +2,7 @@
 
 Status: **user-proposed notation explored 2026-10-18; not selected**. Existing value-union normalization, var/mut permissions, and all-target field-write safety remain established. The meaning of a type-position mut qualifier and access-summary boundaries still need a decision.
 
-The later [slot qualifier proposal](slot-access-qualifier.md) suggests A | slot B | C to distinguish replacement acceptance from held-data mutability. The mut spellings below preserve the original investigation; slot is now the recommended candidate for the replacement marker, without selecting its grammar.
+The later [slot qualifier decision](slot-access-qualifier.md) selects A | slot B | C as the access-summary spelling distinguishing replacement acceptance from held-data mutability. The mut spellings below preserve the original investigation and are superseded for that role. The marker is selected; complete access grammar and boundaries remain open.
 
 ## Proposed compact outcome
 
