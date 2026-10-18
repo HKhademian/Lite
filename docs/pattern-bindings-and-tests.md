@@ -30,6 +30,8 @@ An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, no
 
 No general inline binding-plus-equality spelling is selected by these three primitives. Use the existing and chain to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
 
+The [Student aggregate examples](aggregate-patterns.md) apply these meanings to proposed record patterns: `Student(== outVal, "ali")` compares both components, while `Student(outVal, "ali")` binds the first and compares the second. Their positional schema and named-field selector grammar are separate decisions.
+
 An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
 
 An existing value uses explicit equality even if it is immutable or known at compile time. A literal can remain concise because it cannot be mistaken for a declaration. Enum cases retain their selected dot-prefixed or qualified spelling and their case identity, rather than becoming general whole-value equality tests.

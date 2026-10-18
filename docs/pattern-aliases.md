@@ -85,6 +85,8 @@ This illustrates a proposal, not selected record-pattern grammar. It would give 
 
 The benefit of as is keeping source-to-local naming distinct from LiteScript's `binding: Type`. Do not assume the JavaScript/Rust field-colon spelling drops into the existing typed and whole-value colon patterns without a grammar decision. In this candidate, as is followed by a binding name and does not perform a type cast.
 
+The [aggregate-pattern review](aggregate-patterns.md) considers the candidate `Student(age == outVal, name == "ali")`: age/name are field selectors followed by value constraints, not local bindings. Its positional equivalent needs an explicit `(age, name)` matching schema. That equality-only form does not select the general named-field/alias grammar.
+
 ## Selected duplicate-binding policy
 
 Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](pattern-shadowing.md).
