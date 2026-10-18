@@ -16,6 +16,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Foundations
 
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
+- [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, and block boundaries.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.

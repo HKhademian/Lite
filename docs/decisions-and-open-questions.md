@@ -7,6 +7,7 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 ### Audience and defaults
 
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
+- [Immutability by default](immutability-by-default.md) is a language design goal: start with fixed bindings and read-only access; make mutation an explicit, practical capability through var/mut. Writable access adds authority, not a wider set of admissible stored values. This does not select deep freezing, purity, implicit copying, or an ownership model.
 - Bindings are fixed and provide read-only access by default. `var` permits binding reassignment, `mut` permits held-data updates through the binding, and `var mut` permits both.
 - Operations have read access by default; affected receiver/parameter bindings explicitly carry `mut`. There is no additional function-level mutation marker.
 - Minimal visibility and capability exposure by default.

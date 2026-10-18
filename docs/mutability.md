@@ -6,6 +6,8 @@ Status: **independent `var`/`mut` declarations and explicit mutation parameters 
 
 Separate changing a binding, changing the data accessible through it, and declaring what an operation may change. An immutable binding alone cannot settle all three questions.
 
+[Immutability by default](immutability-by-default.md) is an explicit language design goal. Writable access adds authority to the readable baseline; mutation remains a practical, supported operation. This does not equate read-only access with frozen data or pure operations, or grant a conversion from arbitrary read-only access to writable access.
+
 ## 1. Binding reassignment
 
 This part is established:

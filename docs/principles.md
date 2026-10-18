@@ -14,7 +14,8 @@ Provide a language that students can begin using without learning type annotatio
 - Optional data through `Option`; recoverable failure through `Result`.
 - Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
 - A separate panic path, with its execution and cleanup contract still open.
-- Immutable and minimally visible declarations by default.
+- Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).
+- Minimal visibility and capability exposure by default.
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.
 - Small runtime requirements and native execution as an intended implementation direction.
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.

@@ -37,6 +37,8 @@ The names and notation explain static access, not pointer layout, allocation, or
 
 ## Proposed visible distinction
 
+The selected [immutability-by-default goal](immutability-by-default.md) places readable access at the baseline and writable access behind an explicit capability. That direction is established; the public spelling of access contracts below remains a proposal.
+
 Keep a value type and an access contract as separately describable concepts:
 
 - **Value type:** what kind of value can be produced or stored in an independently declared slot.
