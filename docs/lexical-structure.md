@@ -17,12 +17,15 @@ Whitespace can separate tokens. It does not insert separators or choose block bo
 ## Separators
 
 - `;` separates ordinary items in blocks and modules.
-- A complete block construct ends its item without `;`; a following semicolon is rejected.
+- A complete block construct ends its item without requiring `;`; a trailing semicolon is optional and allowed.
 - A trailing separator after an ordinary item, before `}` or end of file, is optional.
-- Repeated separators are ignored where separators are allowed, rather than becoming value-producing empty statements. This does not permit a separator after a complete block construct.
+- Repeated separators are ignored rather than becoming value-producing empty statements, including after a complete block construct.
 - There is no automatic semicolon insertion.
 - A semicolon does not suppress the preceding expression's result.
+- A trailing comma before the closing delimiter of a comma-separated list is optional and allowed. A trailing semicolon before a block close, end of file, or after a complete block item is likewise optional and allowed.
 - An attached `else`, `then`, or `finally` belongs to the same construct; it is not separated from that construct by `;`.
+
+Only the trailing separator is optional: commas between list elements and semicolons between ordinary adjacent items still separate them. Line breaks do not supply missing separators. This rule does not interchange comma and semicolon contexts or settle the separate singleton-tuple/grouping grammar.
 
 ## Equivalent examples
 
@@ -56,7 +59,7 @@ if ready {
 finish();
 ```
 
-The complete conditional ends at its final branch without a separator. Writing a semicolon after that branch, or between the branches, is rejected. Attached `then` and `finally` clauses follow the same ownership rule.
+The complete conditional ends at its final branch with an optional trailing semicolon. Do not insert a separator between a branch and its attached else clause: trailing means after the complete construct. Attached then/finally clauses follow the same ownership rule.
 
 ```text
 if ready { run() } else { wait() } finish();

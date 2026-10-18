@@ -14,7 +14,7 @@ Name := record {
 }
 ```
 
-The uniform binding names the record type. The declaration body lists fields; it is not an executable block with a final-expression result. Ordinary field separators follow the lexical rules: a final separator inside the body is allowed, while a separator after the complete declaration is rejected.
+The uniform binding names the record type. The declaration body lists fields; it is not an executable block with a final-expression result. Ordinary field separators follow the lexical rules: a final separator inside the body and a trailing semicolon after the complete declaration are optional and allowed.
 
 ## Example
 

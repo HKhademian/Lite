@@ -38,7 +38,7 @@ For valid integer operands, `//` rounds toward negative infinity and `%` gives t
 program       := item_sequence
 block         := "{" item_sequence "}"
 item_sequence := { ";" }
-                 { closed_item | simple_item ";" { ";" } }
+                 { closed_item { ";" } | simple_item ";" { ";" } }
                  [simple_item]
 
 item := declaration
@@ -49,7 +49,7 @@ item := declaration
 
 `closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, or a declaration, assignment, or exit whose outer expression ends directly in one. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
 
-The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself; a separator after it is rejected. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
+The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself and permits optional trailing separators. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
 The exact expression productions implementing this classification remain part of the incomplete expression grammar. The classification must follow syntactic structure, not a scan for the last `}` character: import-list braces and blocks nested inside calls or groupings do not end the enclosing item.
 
@@ -100,7 +100,7 @@ record_type := "record" "{" record_field_sequence "}"
 record_field := identifier ":" type
 ```
 
-The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration ends without a following semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
+The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
 Selected field-list fragments, independent of the still-open outer wrappers:
 
@@ -144,7 +144,7 @@ The selected and chain evaluates operands in order and exposes successful patter
 
 ```text
 match_expression := "match" expression "{" match_arm { match_arm } "}"
-match_arm := pattern { "and" condition_operand } block
+match_arm := pattern { "and" condition_operand } block { ";" }
 contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
 
@@ -152,7 +152,7 @@ Omitting the entire parenthesized payload-pattern list selects a tag-only patter
 
 The [keyword-placement alternative](match-keyword-placement.md) `expression match { ... }` is under review and is not a production or alias in this sketch. It would require explicit precedence and block-continuation rules; whitespace cannot choose the subject boundary.
 
-Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
+Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no case/arrow delimiter or required separator between arms; trailing semicolons after arm bodies are allowed. The complete match is a block-value construct: it ends its item with an optional trailing semicolon, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
 
 This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, overlaps, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. An unconstrained `_` binding may appear as a catch-all pattern and names the whole subject. See [match](match.md) and [union type patterns](union-patterns.md).
 

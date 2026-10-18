@@ -46,7 +46,7 @@ These markers do not choose borrowing, copying, moving, lifetimes, argument synt
 
 ## Result rules
 
-The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item without a semicolon; see [blocks and results](blocks-and-results.md).
+The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item with an optional trailing semicolon; see [blocks and results](blocks-and-results.md).
 
 ```text
 greet := fn(name: String): Unit {

@@ -15,7 +15,7 @@ continue value;
 continue @loop;
 ```
 
-Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, without a following semicolon. Optional operand forms need a complete grammar, including any future labeled continuation contribution.
+Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, with an optional trailing semicolon. Optional operand forms need a complete grammar, including any future labeled continuation contribution.
 
 ## Plain return
 

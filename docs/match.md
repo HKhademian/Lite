@@ -15,7 +15,7 @@ match expression {
 }
 ```
 
-Each arm header, including any and conditions, is followed directly by a braced body. There is no `case`, `=>`, `then`, comma, or semicolon between arms. A completed match ends its item without a semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
+Each arm header, including any and conditions, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. A trailing semicolon after a braced arm body is allowed. A completed match also permits an optional trailing semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
 
 The [keyword-placement review](match-keyword-placement.md) compares the current `match value { ... }` form with `value match { ... }`. It recommends retaining the current prefix form for consistency with if/loop and existing block boundaries. Subject-first matching remains an alternative under review, not a second accepted spelling.
 
@@ -141,7 +141,7 @@ An integer or open-interface subject needs a catch-all unless the coverage check
 
 The selected guard form is `pattern and condition { body }`, including additional explicit pattern bindings as later operands. The earlier pattern-if candidate is superseded. Mutation restrictions, ownership commitment, and evaluation with alternative patterns need formal rules; see [match arm chains](match-guards.md).
 
-All normally completing arms must satisfy a compatible result contract. Giving one arm String and another Int must not silently introduce a new union-inference policy. An explicit exit is checked against its own target. Braces, final-expression values, and the ban on a semicolon after a complete match stay the same for actions and values.
+All normally completing arms must satisfy a compatible result contract. Giving one arm String and another Int must not silently introduce a new union-inference policy. An explicit exit is checked against its own target. Braces, final-expression values, and optional trailing semicolons follow the same rules for actions and values.
 
 ## Notes and open questions
 

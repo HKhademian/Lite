@@ -17,7 +17,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Item boundaries
 
-A complete block construct ends its item without `;`. A semicolon after that completed construct is rejected, including after a declaration initialized directly by a block, function, conditional, match, or loop. The entire construct includes any attached `else`, `then`, and `finally` clauses.
+A complete block construct ends its item without requiring ;. A trailing semicolon is optional and allowed, including after a declaration initialized by a block, function, conditional, match, or loop. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner.
 
 ```text
 answer := {
@@ -27,6 +27,13 @@ use(answer);
 ```
 
 Both items can also appear on the same line. Whitespace never determines the boundary.
+
+```text
+answer := { 42 };
+use(answer);
+```
+
+The optional trailing semicolon does not change the block's value. The earlier ban on this spelling is superseded.
 
 To continue a block's value with an operator, call, member access, or indexing, parenthesize the construct:
 
@@ -64,7 +71,7 @@ price := {
 { 2 * x;;;;;;;;;; }
 ```
 
-The last two blocks produce the same value. Semicolons inside a block may follow its final ordinary item without changing its result. They cannot follow a completed block item, including a nested block. An empty block may contain extra separators. Semicolons are separators, not result-discard operators.
+The last two blocks produce the same value. Semicolons inside a block may follow its final ordinary item without changing its result. They may also follow a completed block item, including a nested block, without changing its result. An empty block may contain extra separators. Semicolons are separators, not result-discard operators.
 
 ```text
 { x = 3 }       /* Unit */

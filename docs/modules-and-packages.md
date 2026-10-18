@@ -26,7 +26,7 @@ import school.students.{Student, find_student};
 
 This is working notation from the initial discussion, not a settled grammar. Explicit imports and exports are the intended direction. Re-exports should be deliberate.
 
-The braces in the import-list sketch group imported names; they are not a block body. This ordinary import item keeps its separator. The ban on semicolons after complete block constructs does not apply merely because an item ends in `}`.
+The braces in the import-list sketch group imported names; they are not a block body. This ordinary import item keeps its separator. A final item may omit its separator, and block constructs now also permit an optional trailing semicolon; token classification must not depend merely on the last character being }.
 
 ## Visibility
 
