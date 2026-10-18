@@ -4,6 +4,8 @@ Status: **review dated 2026-10-18; confirmed primitives and enum/Result rules ar
 
 ## Scope
 
+The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses one explicitly proposed record wrapper without presenting it or list/rest syntax as selected.
+
 Review records, lists, arrays, slices, sets, tuples/pairs, enums, strings, ranges, numbers, Booleans, Unit, Option, Result, maps, unions, and opaque/user-defined values as one pattern system. Supporting a type does not require automatic positional extraction or equality for every value of that type. A name can bind any admitted value; equality, type tests, and decomposition require their respective capabilities.
 
 The review is a concrete draft for completing the initial surface, not an implemented parser or a choice of ownership, allocation, generic reification, or every container's library API. New syntax is identified explicitly rather than silently promoted to a confirmed rule.

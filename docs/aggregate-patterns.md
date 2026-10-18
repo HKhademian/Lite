@@ -47,7 +47,7 @@ Field = expression in construction initializes fresh data rather than mutating a
 
 The field operators are selected, not the complete record-pattern container. Student(age: Int) previously illustrated a typed positional binding under its proposed schema; it must not silently become a named-field clause with another source component. Distinguish named and positional containers explicitly, without using lookup, capitalization, or whitespace to decide.
 
-The chosen wrapper must also distinguish record data from our arrow-free match arm bodies and ordinary executable blocks. Student { field clauses } is a candidate, not selected grammar. Named field/position mixing, omission, exact arity, and match-schema declarations remain open.
+The chosen wrapper must also distinguish record data from our arrow-free match arm bodies and ordinary executable blocks. Student { field clauses } is a candidate used consistently in the [example walkthrough](pattern-examples.md), not selected grammar. Named field/position mixing, omission, exact arity, and match-schema declarations remain open.
 
 ## Positional value constraints
 

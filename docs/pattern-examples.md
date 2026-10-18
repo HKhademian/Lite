@@ -1,0 +1,349 @@
+# Construction, destructuring, and matching: example walkthrough
+
+Status: **illustrative design walkthrough dated 2026-10-18; selected rules are combined with explicitly marked wrapper/sequence proposals, not an executable specification**.
+
+## Reading conventions
+
+Examples build in complexity but are not all one program. Helper functions have the return contracts implied by their use. Fields are assumed visible in the illustrated scope; no new public/field-mutation modifier is selected. Ownership, arithmetic faults, and generic implementation are not specified by the examples.
+
+For concrete record examples, use the candidate `Student { ... }` both to construct a value and to match its named fields. This outer spelling is not selected yet. In this draft, construction braces hold data rather than executable statements, so construction uses ordinary item separators; that classification also needs confirmation. Declaration/function/if/match/loop bodies retain their established block-ending rules.
+
+The named clauses inside those wrappers are selected: field = expression initializes, field = pattern routes a component, field == expected compares without binding, and field: Type binds the same-named field with a type constraint. Examples provide all fields rather than choosing the still-open field-omission policy. Comma-separated value/pattern lists are the walkthrough convention, not a complete grammar selection.
+
+## 1. Bindings and functions
+
+```text
+name := "Ali";
+age: Int = 18;
+var score := 10;
+score += 5;
+
+double := fn(value: Int): Int {
+    value * 2
+}
+```
+
+Types are inferred unless supplied. Ordinary bindings are fixed; var permits reassignment. Whole typed bindings use =, never := after the type. The function's final expression is its result.
+
+## 2. Simple conditionals and early returns
+
+```text
+if score >= 10 {
+    print("Passed")
+} else {
+    print("Try again")
+}
+
+label := if age >= 18 {
+    "Adult"
+} else {
+    "Minor"
+}
+
+describe_age := fn(age: Int): String {
+    if age < 0 {
+        return "Invalid age"
+    }
+
+    if age >= 18 { "Adult" } else { "Minor" }
+}
+```
+
+Actions and values use the same if. return exits the function early; it is not needed for its normal final result. Semicolons do not discard an ordinary final expression.
+
+## 3. Declare and construct a record
+
+The declaration surface is selected:
+
+```text
+Student := record {
+    id: Int;
+    name: String;
+    age: Int;
+}
+```
+
+Construction uses the draft wrapper described above:
+
+```text
+student := Student {
+    id = 7,
+    name = "Ali",
+    age = 18
+};
+```
+
+Colons declare field types; equals supplies predefined fields' initial values. Initialization does not require var merely because it uses =. The record is not a superclass, and the declaration does not select reference identity or allocation semantics.
+
+## 4. Destructure a known record
+
+```text
+/* Draft outer record wrapper; selected inner clauses. */
+Student {
+    id = studentId,
+    name = studentName,
+    age = years
+} := student;
+```
+
+Each field is routed to its binding name. For a known Student with this exposed field schema and unconstrained component bindings, this is intended as irrefutable destructuring, not a runtime filter. The outer wrapper and construction classification remain proposals. It is not an executable block followed by an assignment.
+
+## 5. Match a record, then check a guard
+
+```text
+wantedName := "Ali";
+
+if Student {
+    id = _,
+    name == wantedName,
+    age: Int
+} := student and age >= 18 {
+    print("Adult student found")
+}
+```
+
+id binds readable unused-allowed _. name compares with the existing wantedName. age: Int both constrains and binds age. The guard runs only after the whole record pattern succeeds.
+
+Compare the field fragments:
+
+```text
+age = years        /* bind as years */
+age == expected    /* compare with existing expected; bind nothing */
+age: Int           /* type-test and bind as age */
+age = years: Int   /* type-test and bind as years */
+age = : Int        /* type-test only */
+```
+
+## 6. Tuples and nested positional patterns
+
+```text
+(x, y) := (10, 20);
+
+if ((x: Int, y: Int), .Some(label)) := coordinates_and_label {
+    display_point(x, y, label)
+}
+```
+
+The first declaration has a known tuple shape. The second condition can fail: its first component must match the nested typed tuple and its second must be Some. Bound names exist only after whole-pattern success. No new tuple-rest or whole-value alias spelling is selected here.
+
+## 7. Option: bind, compare, skip naming, or test the tag
+
+```text
+if .Some(age) := find_user_age(id) { show_age(age) }
+if .Some(== expectedAge) := find_user_age(id) { report_expected() }
+if .Some(_) := find_user_age(id) { report_found() }
+if .Some := find_user_age(id) { report_found() }
+```
+
+These are alternatives, not a recommendation to perform the lookup four times. Some(false) is still a successful Some match. _ is an ordinary readable binding, while tag-only .Some introduces no payload name.
+
+```text
+message := match find_user_age(id) {
+    .Some(age) and age >= 18 { "Adult" }
+    .Some { "Under 18" }
+    .None { "Not found" }
+}
+```
+
+The tag-only fallback covers remaining Some values after the guarded arm. The value result is String on every normal path.
+
+## 8. Plain enum with explicit backing values
+
+```text
+Status := enum : Float {
+    Ready = 1.1;
+    Busy = 2.2;
+    Stopped = 3.3
+}
+
+status := Status.Ready;
+
+match status {
+    .Ready { start() }
+    .Busy { wait() }
+    .Stopped { finish() }
+}
+```
+
+Status remains an enum type, not arbitrary Float values. Raw conversion and physical storage are separate contracts.
+
+For a payload enum whose schema exposes Click(Point), Key(String), and Quit, matching would compose without requiring another conditional syntax:
+
+```text
+match event {
+    .Click(Point(x, y)) { display_point(x, y) }
+    .Key(text) { handle_key(text) }
+    .Quit { close_window() }
+}
+```
+
+This last example assumes a deliberate positional Point schema; payload declarations and schema syntax remain open. .Click would also test just that case without extracting its payload.
+
+## 9. Typed Result, implicit success, explicit failure
+
+```text
+AgeError := enum : Int {
+    Negative = 1;
+    TooLarge = 2
+}
+
+validate_age := fn(age: Int): Int ! AgeError {
+    if age < 0 {
+        return .err(AgeError.Negative)
+    }
+
+    if age > 150 {
+        return .err(AgeError.TooLarge)
+    }
+
+    age
+}
+
+attempt := validate_age(inputAge);
+
+match attempt {
+    .ok(age) { show_age(age) }
+    .err(.Negative) { print("Age cannot be negative") }
+    .err(.TooLarge) { print("Age is too large") }
+}
+```
+
+Returning age constructs success implicitly. Stored outcomes are ordinary data until inspected, recovered, or explicitly propagated. .ok/.err select their side before payload matching; overlapping success/error payload types cannot erase that distinction.
+
+## 10. Recovery and propagation
+
+```text
+age := validate_age(inputAge) else(error) {
+    report(error);
+    0
+}
+
+display_name := fn(id: Int): String! {
+    load_user(id)!.load_profile()!.name
+}
+```
+
+The fallback handles failure locally. Each ! extracts one successful result or forwards its declared recoverable error. String! is the selected String ! Error shorthand, not an inferred undeclared failure set. No outer marker unwraps every intermediate step.
+
+## 11. Complex construction and nested deconstruction
+
+```text
+Contact := record {
+    email: String;
+    verified: Bool;
+}
+
+Registration := record {
+    student: Student;
+    contact: Contact;
+}
+
+registration := Registration {
+    student = Student { id = 7, name = "Ali", age = 18 },
+    contact = Contact { email = "ali@example.test", verified = true }
+};
+
+if Registration {
+    student = Student { id = studentId, name = name, age = years: Int },
+    contact = Contact { email = email, verified = true }
+} := registration and years >= 18 {
+    send_welcome(studentId, name, email)
+}
+```
+
+This uses the draft record wrapper consistently. verified = true is a literal subpattern; it does not bind a variable named true. The whole nested shape must match before the guard/body can use its bindings.
+
+## 12. Complex Result + Option + record + additional matching
+
+Assume fetch_student returns Option<Student> ! LoadError and find_profile returns Option<Profile>, where Profile exposes active: Bool. These are explanatory contracts, not new generic declaration grammar.
+
+```text
+describe_student := fn(id: Int): String {
+    fetched := fetch_student(id);
+
+    match fetched {
+        .ok(.Some(Student {
+            id = studentId,
+            name = name: String,
+            age = years: Int
+        }))
+            and years >= 18
+            and .Some(profile) := find_profile(studentId)
+            and profile.active {
+            "Active adult: " + name
+        }
+
+        .ok(.Some) { "Student needs review" }
+        .ok(.None) { "Student not found" }
+        .err(error) {
+            report(error);
+            "Student unavailable"
+        }
+    }
+}
+```
+
+The first arm requires every nested pattern and guard to succeed. A mismatch/false guard permits later arms; a later recoverable error is not silently false. Binding scope flows left to right within the arm. The function handles its fetched Result explicitly and normally produces String on every arm. Newlines only format the chain.
+
+## 13. Loops keep selection in their bodies
+
+```text
+loop optional_users as candidate {
+    if .Some(Student {
+        id = studentId,
+        name = name,
+        age = years
+    }) := candidate and years >= 18 {
+        greet(studentId, name)
+    }
+}
+```
+
+The header binds the whole source item irrefutably; the body selects it. candidate is one Option<Student>, not the source collection. The as separator remains provisional, independently of selected record field operators.
+
+## 14. Proposed lists and rest capture
+
+```text
+/* Proposed sequence forms, not selected syntax. */
+description := match values {
+    [] { "Empty" }
+    [only] { describe_one(only) }
+    [first, second, ...rest] { describe_many(first, second, rest) }
+}
+```
+
+Without rest, exact length is required by the proposal. One trailing rest receives the remainder; its static type and ownership/cost need a sequence contract. These patterns do not search a set, split a string, or consume a stream. See [sequence patterns](sequence-patterns.md).
+
+## 15. Strings, numbers/ranges, sets, and union types
+
+```text
+command := match text {
+    "start" { "Start" }
+    "stop" { "Stop" }
+    == configuredCommand { "Configured command" }
+    _ { "Unknown command" }
+}
+
+match age {
+    value and 0 <= value < 18 { report_minor(value) }
+    value and 18 <= value <= 150 { report_adult(value) }
+    _ { report_invalid() }
+}
+
+match actualSet {
+    == expectedSet { report_equal() }
+    _ { report_different() }
+}
+
+if person: Student {
+    greet_student(person)
+}
+```
+
+String patterns compare whole values, not regex matches. The numeric guards are interval tests, not equality with a range object or arbitrary strided-range membership. Set equality assumes that type supplies an equality operation; unordered binding remains undecided. The existing-name type test narrows person without redeclaring it, under the separate stability/type-test rules.
+
+## Related concepts
+
+- [All-type review](pattern-type-review.md) and [field clauses](aggregate-patterns.md).
+- [Conditionals](conditionals.md), [match arm chains](match-guards.md), and [pattern scopes](pattern-contexts.md).
+- [Sets](set-patterns.md), [records](records.md), [Result](result-and-errors.md), and [loops](loops.md).
