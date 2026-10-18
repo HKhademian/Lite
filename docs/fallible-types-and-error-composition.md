@@ -137,7 +137,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 
 - Define the general `Error` contract and its relationship to refined recoverable error types.
 - Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
-- Define general union identity, duplicate removal, flattening, membership, and narrowing.
+- Plain-union order independence, flattening, and exact identity duplicate removal are selected; complete membership, subtyping, and narrowing remain open. See [union normalization](union-normalization.md).
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Set type-expression precedence and grouping consistently with other type constructors.
 - Preserve the distinction between transparent aliases and new nominal error types.

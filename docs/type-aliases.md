@@ -61,6 +61,8 @@ User and Member denote the same type. No structural conversion, reconstruction, 
 
 The alias preserves the target's fields, construction defaults, valid-zero contract, and access permissions. It cannot grant visibility or mutation capabilities. A : Member test denotes the same type test as : User; alias names must not become separate union cases merely because their spellings differ. General union canonicalization remains its own contract.
 
+The [selected union normalization rule](union-normalization.md) now ignores plain-union member order, flattens nested plain unions, and removes duplicates by resolved identity, including aliases. It retains distinct record declarations, enum cases, and Option/Result boundaries. Subtype absorption and broader assignability remain open.
+
 Similarly:
 
 ```text

@@ -62,7 +62,7 @@ The same headless record pattern can be used independently with a Student source
 
 Under the selected nominal rule, User and Student remain separate alternatives of User | Student even if all their fields happen to match. A : User test selects User, rather than every record with the same fields. Aliases of User name the same alternative.
 
-Headless field extraction cannot replace a deliberate nominal test. Existing conditional and-chains can first narrow a broader source, then extract from it. Exact type versus subtype/interface satisfaction, generic tests, union normalization, and missing-field behavior remain shared type-system decisions.
+Headless field extraction cannot replace a deliberate nominal test. Existing conditional and-chains can first narrow a broader source, then extract from it. Plain-union order independence, flattening, and exact identity deduplication are selected separately. Exact type versus subtype/interface satisfaction, generic tests, and missing-field behavior remain shared type-system decisions.
 
 This is a semantic distinction, not a requirement for a reflection registry or heap object. A statically known source needs no runtime identity test; a union can use its eventual discriminator representation. No performance or layout implementation is implied.
 

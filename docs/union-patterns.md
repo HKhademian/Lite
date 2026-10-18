@@ -14,6 +14,8 @@ Let a programmer distinguish a union's active alternative by its type and use th
 
 The success payload is one `User` or `Guest`; the failure payload is one `ReadError` or `ParseError`. These are alternative values, not tuples containing every member. A pattern observes the active alternative without reconstructing it from a message or a field-name convention.
 
+Plain unions have selected order-independent normalization: flatten nested plain unions and remove duplicate resolved type identities, including transparent aliases. Distinct nominal record declarations remain different alternatives. This does not change match-arm order or flatten Option/Result/enum structure; see [union normalization](union-normalization.md).
+
 ## Selected type-pattern spelling
 
 ```text

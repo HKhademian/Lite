@@ -262,6 +262,8 @@ type_alias := identifier ":=" "type" type_expression
 
 The [type alias comparison](type-aliases.md) selected Alias := type TypeExpression. The prefix establishes type context for the whole alias initializer, including unions and fallible types, and creates no fresh nominal wrapper. Direct type binding without the prefix is not an alternate alias spelling. This is a surface production, not a completed type parser; tuple, generic, function-type, scope/cycle, and fresh-record alias boundaries remain open.
 
+Plain-union [normalization](union-normalization.md) is selected independently of precedence: member order does not affect identity, nested plain unions flatten, and duplicate identities disappear after alias resolution. These rules do not flatten Option/Result/enum boundaries, merge distinct nominal records, reorder match arms, or choose an ABI.
+
 ## Recoverable error expressions
 
 ```text
