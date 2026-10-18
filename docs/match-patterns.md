@@ -30,6 +30,8 @@ match answer {
 
 Require compatible operand types and a defined equality contract; do not add implicit truthiness or unrelated coercions. The spelling for matching an existing runtime value remains open. One candidate is `== expected { ... }`, making equality explicit rather than silently creating a binding named `expected`.
 
+The focused [binding-versus-testing review](pattern-bindings-and-tests.md) recommends this explicit equality form alongside bare bindings and `: Type` type-only patterns. It compares eight reference languages and identifies the existing bare None constructor as a compatibility decision before a strict bare-name rule can be selected. These recommendations remain proposals.
+
 Decide how many times and when a computed comparison value is evaluated, whether matching uses ordinary `==` or a restricted equality capability, and how side effects or fallible equality participate. The subject-once rule does not automatically answer those questions. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
 
 ## 2. Plain enums

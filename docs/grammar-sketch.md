@@ -128,6 +128,8 @@ This sketches the selected arm surface, not a full pattern parser. Common fallba
 
 The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. These required categories do not select bare-name equality versus binding, runtime-equality pattern punctuation, enum declarations, or record-pattern delimiters. See [match pattern capabilities](match-patterns.md).
 
+The [binding-versus-testing proposal](pattern-bindings-and-tests.md) recommends ordinary unmarked bindings, `== expected` value tests, and `: Type` type-only patterns. None of those proposed additions is promoted to a selected production here. Existing bare None constructor patterns need an explicit compatibility choice; silently treating them as catch-all bindings would change program meaning.
+
 Typed component patterns are selected within destructuring, as in `(x: Int, y: String)` and constructor payloads containing that tuple pattern. The same pattern can appear as a match arm or before `:=` in a conditional. The whole pattern succeeds only when all required structural and type constraints hold; it is not a converting cast. This composition requirement does not complete the recursive pattern parser, record syntax, or ownership contract.
 
 An annotation constrains its component; other binding types are inferred by narrowing the entire input against the pattern and projecting each binding's concrete type or union from the compatible portions. Composite alternatives remain intact. This is a semantic requirement, not additional syntax or a match-arm result-union rule; see [pattern binding inference](pattern-binding-inference.md).

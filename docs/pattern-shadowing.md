@@ -84,4 +84,4 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 The earlier recommendation to reject duplicate names inside one pattern is superseded by ordered shadowing. See [pattern aliases](pattern-aliases.md) for the retained reference comparison and optional distinct naming.
 
-The next suggested review is binding versus existing-value testing: choose explicit equality/type-test forms without making a pattern's meaning depend on an unrelated outer name. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.
+The [binding-versus-testing review](pattern-bindings-and-tests.md) proposes explicit equality/type-test forms without making an ordinary binding's role depend on an unrelated outer name. It also identifies the bare None constructor conflict before such a strict rule can be selected. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.

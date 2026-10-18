@@ -94,6 +94,8 @@ This example assumes a stable `person: User | Guest` and String-producing method
 
 Bare `User` is the compact V-like candidate, but it needs a name-resolution rule distinguishing type tests, named constant patterns, and capture bindings. Capitalization must not decide meaning: LiteScript permits Unicode identifiers and does not select a type-name casing rule. The alternative `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. Choose one spelling after settling pattern name resolution; neither shorthand is selected yet.
 
+The latest [binding-versus-testing review](pattern-bindings-and-tests.md) recommends marked `: User` arms and `== expected` value tests, leaving unmarked names for bindings. This is still a proposal. Existing bare None patterns need either an explicit case spelling or a specified constructor exception before that lookup rule is complete.
+
 Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
 
 ### One evaluated subject, one selected body
