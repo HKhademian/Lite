@@ -1,6 +1,6 @@
 # Slot as a replacement qualifier
 
-Status: **slot selected as the replacement marker, 2026-10-18**. In a complete access contract, A | slot B | C describes readable A/B/C with B accepted for replacement. Full type grammar, grouped scope, whole-contract boundaries, and first-class access values remain open. Value-union normalization and declaration var/mut retain their established meanings.
+Status: **slot replacement marker and grouped distribution selected, 2026-10-18**. Within one complete access contract, slot (A | B) and slot A | slot B describe the same accepted replacements. A | slot B | C reads A/B/C and accepts B. Full declaration grammar, whole-contract boundaries, and first-class access values remain open. Value-union normalization and declaration var/mut retain their established meanings.
 
 ## Selected meaning and spelling
 
@@ -38,9 +38,31 @@ parent.field = c;      /* rejected without additional narrowing if c: C */
 
 The original parent alternatives and flow/ownership proofs remain relevant. A type test of the field's current payload does not itself expand the location's write contract.
 
+## A var binding accepts its entire declared value union
+
+```text
+var mut x: A | B = new_A();
+x = new_B();
+x = new_A();
+```
+
+Both replacements fit this one binding's declared storage type. Its whole-binding access summary is slot (A | B), equivalently slot A | slot B. The var capability permits the replacements; mut separately permits held-data updates. Removing mut would not change which whole-binding replacements var accepts.
+
+The value type of x remains A | B. Its slot-qualified access summary describes operations on the binding, not a changed value type or a requirement to repeat slot in ordinary var declarations. A fixed binding with mut access still cannot be replaced merely because its held data is writable.
+
 ## Composition still needs whole-contract boundaries
 
 If one path accepts A | B and another accepts C | B, their common contract reads A | B | C and accepts B. The proposed display becomes A | slot B | C.
+
+For example, the parent alternatives already provide distinct paths:
+
+```text
+P := record { field: A | B; }
+Q := record { field: C | B; }
+mut parent: P | Q = choose_parent();
+```
+
+P.field accepts A/B; Q.field accepts C/B. The compiler computes parent.field's common access summary as A | slot B | C. It must inspect each parent's declared field contract before forming the summary. Ordinary source code needs no extra access wrapper for this field operation; the example access(...) notation below only illustrates a possible boundary for explicitly named access contracts.
 
 Replacing the word mut with slot resolves the naming conflict with payload mutation. It does not make this an ordinary union-flattening law:
 
@@ -61,24 +83,29 @@ access(A | slot B | C)
 
 This summarizes operations available without narrowing; it is not unconditional equality with the full union of original access paths. The [earlier investigation](access-union-qualifiers.md) explains the read-union/write-intersection rule and preserved correlations.
 
-## Proposed scope rule
+## Selected scope and distribution
 
-Recommend treating slot as a prefix on the following type operand, with parentheses available to supply a composite operand:
+Treat slot as a prefix on the following type operand, with parentheses available to supply a composite operand:
 
 ```text
 A | slot B | C       /* read A/B/C; accept B */
-slot (A | B) | C     /* proposed: read A/B/C; accept A/B */
+slot (A | B) | C     /* read A/B/C; accept A/B */
 ```
 
-This makes slot bind more tightly than the surrounding union. Within one complete contract, the grouped form would have the same summary as slot A | slot B | C. It would not merge two possible access paths or erase their boundaries.
+This makes slot bind more tightly than the surrounding union. Within one complete contract, distribution preserves the contract:
 
-A transparent alias must retain its entire denoted type as the operand. If Pair := type A | B, then slot Pair would qualify both alternatives, matching slot (A | B); alias expansion must not accidentally turn it into slot A | B. These grouping and alias rules are recommendations pending confirmation, not newly selected grammar. Spaces between slot and its operand have no semantic role.
+```text
+slot (A | B) = slot A | slot B
+```
+
+The equation denotes equivalent access contracts, not a new runtime equality operator. Thus slot (A | B) | C has the same summary as slot A | slot B | C. Distribution marks the alternatives accepted by one location; it does not merge two possible locations or erase their separate storage constraints.
+
+A transparent alias must retain its entire denoted type as the operand. If Pair := type A | B, then slot Pair qualifies both alternatives, matching slot (A | B); alias expansion must not accidentally turn it into slot A | B. This follows the selected transparent-alias identity and operand scope. Complete placement in signatures and declarations is still open. Spaces between slot and its operand have no semantic role.
 
 ## Remaining choices
 
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
 - What delimits a complete contract, including a read-only contract with no slot member?
-- Confirm the proposed prefix scope, grouped operands, and transparent-alias treatment above.
 - How are payload permissions represented independently from replacement acceptance?
 - How do ownership, lifetimes, and escaped access paths preserve the declared contract?
 
