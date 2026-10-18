@@ -102,16 +102,22 @@ record_field := identifier ":" type
 
 The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
-Selected field-list fragments, independent of the still-open outer wrappers:
+Selected record forms and field-list fragments:
 
 ```text
 record_initialization_field := identifier "=" expression
-named_field_pattern := identifier "=" pattern
-                     | identifier "==" pattern_value_operand
-                     | identifier ":" type
+named_record_pattern := "{" [named_record_fields] "}"
+named_record_fields := named_record_clause { "," named_record_clause } [","]
+named_record_clause := pattern "=" identifier
+                    | identifier "==" pattern_value_operand
+                    | identifier ":" type
 ```
 
-The equality form introduces no binding. The typed shorthand tests and binds under the field's own name; a type-only test uses field = : Type. The general routing form permits field = localName: Type and nested subpatterns. These fragments do not choose named-versus-positional containers, field-list omission, field separators, or the boundary with a match arm's body. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+The general matching clause is destinationPattern = sourceField, not the earlier reverse mapping. The right identifier selects a field from the source record contract; it is not outer lexical value lookup. Named pattern braces require no record type head. Equality shorthand binds nothing; typed shorthand type-tests and binds the same-named field. Type-only testing is : Type = field; typed aliasing is localName: Type = field.
+
+Construction uses TypeName { field = expression, ... }, or just { field = expression, ... } when a unique expected record type is known, including in an annotated binding and nested record field initializer. Explicit type heads remain allowed in construction. Full data-brace versus executable-expression-block disambiguation still needs productions, especially empty/single-field cases. Control-flow/function body positions always remain blocks. Do not silently select anonymous record types or type-check-dependent parses.
+
+Trailing commas are optional and allowed; complete field-list omission, defaults, partial schemas, nominal/structural matching, and ownership remain separate contracts. See [records](records.md) and [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 ## Conditionals
 

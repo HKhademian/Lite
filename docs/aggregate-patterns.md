@@ -1,6 +1,6 @@
 # Aggregate patterns: fields and positions
 
-Status: **named field initialization/routing, equality shorthand, and typed same-name binding selected; outer record wrappers, positional schemas, and full extraction contracts remain open**.
+Status: **destination-first record patterns, inferred pattern shape, contextual/explicit construction, equality shorthand, and typed same-name binding selected; complete schemas and ownership remain open**.
 
 ## Purpose
 
@@ -12,42 +12,80 @@ Assume Student exposes an age component and a name component. These examples des
 
 ### Construction and matching must be reviewed together
 
-The selected distinction is field: Type in a record declaration, field = expression when supplying a predefined field's value, and field = pattern when selecting a component for matching. The earlier field-colon value/routing proposal is superseded.
+The = direction is destination from source. Construction supplies a predefined destination field from an expression; deconstruction supplies a destination pattern from a source field. The earlier field = destinationPattern mapping was backwards and is superseded.
 
 ```text
-/* Field-list fragments; outer construction/pattern wrappers remain open. */
-{ a = 1, b = 2, c = 3 }             /* initialization expressions */
-{ a = bind, b == expected, c: Int } /* matching clauses */
+/* Construction: destination fields on the left. */
+student: Student = { id = 7, name = "Ali", age = 18, };
+
+/* Deconstruction: destination bindings on the left. */
+{
+    studentId = id,
+    studentName = name,
+    years = age,
+} := student;
 ```
 
-The selected named-pattern forms are:
+The source contract establishes the record's fields. No Student head is needed on this named record pattern. The braces contain clauses, not executable assignment statements or a declaration of an anonymous type. Source field selectors on the right resolve against that record, not outer lexical variables. Trailing commas and final semicolons are optional and allowed in their respective contexts.
+
+The general selected clause is:
 
 ```text
-field = pattern      /* route the component into any shared subpattern */
-field == expected    /* compare the component; bind no name */
-field: Type          /* type-test and bind under the field's own name */
+pattern = sourceField
 ```
 
-The last two are conveniences for `field = (== expected)` and `field = (field: Type)` respectively. These equations describe semantic expansion; they do not select general grouped-pattern syntax.
+Each destination receives that field's value under the eventual copy/move/borrow rules; binding syntax does not choose those rules.
 
 ```text
-{ age = years: Int }    /* bind as years, constrained to Int */
-{ age: Int }            /* bind as age, constrained to Int */
-{ age = : Int }         /* type test only, no age binding */
-{ age == expectedAge }  /* existing-value comparison, no age binding */
-{ age = 18 }            /* literal subpattern compares with 18 */
-{ owner = .Some(user), position = (x, y) }
+{ years = age }          /* bind source age as years */
+{ years: Int = age }     /* type-test and bind as years */
+{ : Int = age }          /* type-test only */
+{ == expected = age }    /* compare source age; bind nothing */
+{ _ = age }              /* ordinary unused-allowed binding */
 ```
 
-The field selector does not itself bind. The subpattern may bind, compare, test type, or deconstruct. The typed shorthand deliberately introduces the same-named binding; it does not also provide an independent type-only meaning. New names follow the existing recursive shadowing and scope rules.
+Existing conveniences remain:
 
-Field = expression in construction initializes fresh data rather than mutating an existing binding, so it does not require var merely because it contains =. Initialization order, required/default fields, visibility, and full constructor grammar remain separate contracts.
+```text
+{ age == expected }     /* same test as == expected = age */
+{ age: Int }            /* same as age: Int = age: test and bind age */
+```
 
-### Outer wrappers still need a decision
+These equations describe semantic expansion without introducing a general grouping syntax. A typed shorthand is not also a type-only test. Nested patterns sit on the destination side just like a simple binding:
 
-The field operators are selected, not the complete record-pattern container. Student(age: Int) previously illustrated a typed positional binding under its proposed schema; it must not silently become a named-field clause with another source component. Distinguish named and positional containers explicitly, without using lookup, capitalization, or whitespace to decide.
+```text
+{
+    .Some(user) = owner,
+    (x, y) = position,
+    { email = email, true = verified, } = contact,
+} := value;
+```
 
-The chosen wrapper must also distinguish record data from our arrow-free match arm bodies and ordinary executable blocks. Student { field clauses } is a candidate used consistently in the [example walkthrough](pattern-examples.md), not selected grammar. Named field/position mixing, omission, exact arity, and match-schema declarations remain open.
+A literal on the left is a value test; true = verified compares rather than binding true. Fields/shape are established before dependent extraction. Binding names follow the existing recursive written-order shadowing rule. The general clause is selected, but every custom nested schema and full expression boundary still needs its contract.
+
+### Inferred patterns and explicit type tests
+
+A bare record pattern does not require a redundant record type head. Matching uses the source's exposed fields and the compatible-input inference rule. It does not change nominal type identity, search every declared record for a matching field set, or grant runtime reflection.
+
+When distinguishing a particular nominal type is needed, use the existing explicit type test before destructuring:
+
+```text
+if person: Student and { years = age, } := person and years >= 18 {
+    show_age(years)
+}
+```
+
+In match, a record-pattern brace group is followed by a separate arm-body brace group:
+
+```text
+match student {
+    { studentName = name, years = age, studentId = id, } {
+        show_student(studentId, studentName, years)
+    }
+}
+```
+
+All fields are shown here to avoid selecting partial-field omission through an example. Positional constructor-family examples below remain schema proposals, not a requirement to write a type head on the selected named form. Omission, field/position mixing, duplicate source-field selection, and complete grammar remain open.
 
 ## Positional value constraints
 
@@ -118,12 +156,12 @@ This is an arm fragment assuming the User schema, compatible comparisons, and ad
 
 Named fields identify the selected components directly and do not depend on positional order. Positional subpatterns are concise for types that deliberately expose a small stable order. Both can reuse the same underlying primitive patterns; allowing one must not change the meaning of bare identifiers in the other.
 
-Recommendation: permit both only with explicit field/schema contracts. Keep positional components as ordinary subpatterns and treat named field constraints as field selection followed by a subpattern. Named clauses now use selected field = pattern, field == expected, and typed same-name field: Type. Their outer wrapper and full field/schema contract remain open.
+Recommendation: permit both only with explicit field/schema contracts. Keep positional components as ordinary subpatterns and treat named field constraints as field selection followed by a subpattern. Named clauses now use destination pattern = sourceField, with field == expected and typed same-name field: Type conveniences. Named braces infer their shape from the source; complete field/schema contracts remain open.
 
 ## Remaining decisions
 
 - Record/type patterns versus enum payload constructors, and how the matching schema is declared.
-- Outer named-field wrapper and its body boundary; selected field operators and typed shorthand must be preserved.
+- Full named-pattern productions and schema rules, preserving inferred braces, destination-first routing, and typed shorthand.
 - Whether named and positional forms may mix; no mixing rule is selected by these examples.
 - Omitted fields, exact positional arity, and rest capture; do not silently assume partial or exhaustive field extraction.
 - Duplicate source-field selection, unknown fields, visibility, extraction effects, ownership, and writable access.

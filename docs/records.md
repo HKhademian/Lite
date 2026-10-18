@@ -1,6 +1,6 @@
 # Records
 
-Status: **record declaration keyword, typed fields, = initialization, and named field-pattern operators selected; outer construction/pattern wrappers, type identity, and memory semantics remain open**.
+Status: **record declaration keyword, typed fields, = initialization, and named field-pattern operators selected; inferred named patterns and contextual construction selected; full inference, type identity, and memory semantics remain open**.
 
 ## Purpose
 
@@ -29,17 +29,31 @@ Student names the record type, name is a String field, and grade is an Int field
 
 ## Field values and named patterns
 
-Declared fields use field: Type. Supplying a predefined field's value uses field = expression. Matching routes that field's component with field = pattern:
+Declared fields use field: Type. Supplying their initial values uses field = expression. An explicit construction type is allowed, but can be omitted when the expected record type is uniquely known:
 
 ```text
-/* Fragments only; the outer construction/pattern spelling is open. */
-{ name = "Ali", grade = 12 }           /* initialization */
-{ name = studentName, grade == 12 }    /* bind name; compare grade */
-{ grade: Int }                        /* bind grade with Int constraint */
-{ grade = : Int }                     /* type test only */
+student: Student = { name = "Ali", grade = 12, };
+other := Student { name = "Sam", grade = 10, };
 ```
 
-Initialization is not reassignment through an existing binding. Named matching reuses the ordinary subpatterns, including nested records, tuples, cases, and typed bindings. See [aggregate clauses](aggregate-patterns.md#named-field-clauses). The wrapper, field omission, defaults, and construction/type inference remain separate decisions.
+The same contextual rule applies to nested record fields. If Registration declares a Student-valued student field, `Registration { student = { ... }, ... }` need not repeat Student. Initialization does not require var merely because it uses =. No search through unrelated record types by field names is implied.
+
+Deconstruction follows the same destination-from-source direction and needs no redundant type head:
+
+```text
+{ studentName = name, studentGrade = grade, } := student;
+{ grade: Int, studentName = name, } := student;
+```
+
+The second pattern binds grade with an Int constraint. General clauses are destinationPattern = sourceField. Type-only testing uses { : Int = grade, }, equality can use { == expectedGrade = grade, } or the retained compact { grade == expectedGrade, }. A record-pattern clause is not an executable assignment statement, so `_ = grade` there introduces an unused-allowed binding rather than requiring an existing var _.
+
+Named pattern braces get their shape from the source contract; they do not instantiate a type or alter nominal identity. To distinguish a particular nominal type, use an explicit type test before deconstruction. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+
+### Context and brace boundaries
+
+Record shorthand requires a known expected record type, as in an annotated initializer or predefined nested field. A field initializer's right-hand side is an expression, while a deconstruction clause's right-hand side is a source-field selector. Their syntactic contexts decide these roles; moving data is always toward the left, with copy/move/borrow details left to the memory model.
+
+Function/if/loop bodies remain executable blocks even when their expected result is a record; do not reinterpret a body as initialization. Full expression grammar must disambiguate contextual data braces from executable expression blocks, especially empty and single-field cases. Do not resolve ambiguous syntax by choosing whichever interpretation happens to type-check. Construction in other expected-type positions, exact inference propagation, omitted/default fields, and diagnostics still need a full contract.
 
 ## Access and composition
 
@@ -47,7 +61,7 @@ Records support the composition-first direction: fields can contain other data t
 
 ## Open decisions
 
-- Constructor and initialization syntax, defaults, and field order.
+- Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
 - Nominal versus structural identity and generic declarations.
 - Field visibility/accessor syntax and any per-field mutation rules.
 - Public matching schemas and named/positional destructuring.

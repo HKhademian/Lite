@@ -1,14 +1,14 @@
 # Construction, destructuring, and matching: example walkthrough
 
-Status: **illustrative design walkthrough dated 2026-10-18; selected rules are combined with explicitly marked wrapper/sequence proposals, not an executable specification**.
+Status: **illustrative design walkthrough dated 2026-10-18; selected rules are combined with explicitly marked sequence/schema proposals, not an executable specification**.
 
 ## Reading conventions
 
 Examples build in complexity but are not all one program. Helper functions have the return contracts implied by their use. Fields are assumed visible in the illustrated scope; no new public/field-mutation modifier is selected. Ownership, arithmetic faults, and generic implementation are not specified by the examples.
 
-For concrete record examples, use the candidate `Student { ... }` both to construct a value and to match its named fields. This outer spelling is not selected yet. In this draft, construction braces hold data rather than executable statements, so construction uses ordinary item separators; that classification also needs confirmation. Declaration/function/if/match/loop bodies retain their established block-ending rules.
+Record construction may explicitly name its type, or omit it when an annotated binding or predefined field supplies a unique expected record type. Named record patterns infer fields from their source and do not repeat the type name. Full contextual inference and data-brace/executable-block disambiguation remain grammar work; executable body braces never become record initialization implicitly.
 
-The named clauses inside those wrappers are selected: field = expression initializes, field = pattern routes a component, field == expected compares without binding, and field: Type binds the same-named field with a type constraint. Examples provide all fields rather than choosing the still-open field-omission policy. Comma-separated value/pattern lists are the walkthrough convention, not a complete grammar selection.
+Construction uses field = expression. Deconstruction uses destinationPattern = sourceField, keeping value flow right to left. Compact field == expected compares without binding; field: Type binds that same-named field with a constraint. Examples provide all fields rather than deciding the open omission policy. Trailing commas and final semicolons are optional and allowed; separators between ordinary items still matter.
 
 ## 1. Bindings and functions
 
@@ -63,14 +63,16 @@ Student := record {
 }
 ```
 
-Construction uses the draft wrapper described above:
+Both construction forms are selected:
 
 ```text
-student := Student {
+student: Student = {
     id = 7,
     name = "Ali",
-    age = 18
+    age = 18,
 };
+
+other := Student { id = 8, name = "Sam", age = 20, };
 ```
 
 Colons declare field types; equals supplies predefined fields' initial values. Initialization does not require var merely because it uses =. The record is not a superclass, and the declaration does not select reference identity or allocation semantics.
@@ -78,23 +80,22 @@ Colons declare field types; equals supplies predefined fields' initial values. I
 ## 4. Destructure a known record
 
 ```text
-/* Draft outer record wrapper; selected inner clauses. */
-Student {
-    id = studentId,
-    name = studentName,
-    age = years
+{
+    studentId = id,
+    studentName = name,
+    years = age,
 } := student;
 ```
 
-Each field is routed to its binding name. For a known Student with this exposed field schema and unconstrained component bindings, this is intended as irrefutable destructuring, not a runtime filter. The outer wrapper and construction classification remain proposals. It is not an executable block followed by an assignment.
+The source record supplies its shape. Each destination receives the source field named on its right. For this known Student schema and unconstrained bindings, the pattern is irrefutable. The braces are a record pattern, not executable assignments; copy/move/borrow behavior is still governed by the future memory model.
 
 ## 5. Match a record, then check a guard
 
 ```text
 wantedName := "Ali";
 
-if Student {
-    id = _,
+if {
+    _ = id,
     name == wantedName,
     age: Int
 } := student and age >= 18 {
@@ -102,16 +103,16 @@ if Student {
 }
 ```
 
-id binds readable unused-allowed _. name compares with the existing wantedName. age: Int both constrains and binds age. The guard runs only after the whole record pattern succeeds.
+_ receives id as a readable unused-allowed binding. name compares with the existing wantedName. age: Int both constrains and binds age. The guard runs only after the whole record pattern succeeds.
 
 Compare the field fragments:
 
 ```text
-age = years        /* bind as years */
+years = age        /* bind source age as years */
 age == expected    /* compare with existing expected; bind nothing */
 age: Int           /* type-test and bind as age */
-age = years: Int   /* type-test and bind as years */
-age = : Int        /* type-test only */
+years: Int = age   /* type-test and bind as years */
+: Int = age        /* type-test only */
 ```
 
 ## 6. Tuples and nested positional patterns
@@ -239,19 +240,19 @@ Registration := record {
 }
 
 registration := Registration {
-    student = Student { id = 7, name = "Ali", age = 18 },
-    contact = Contact { email = "ali@example.test", verified = true }
+    student = { id = 7, name = "Ali", age = 18, },
+    contact = { email = "ali@example.test", verified = true, },
 };
 
-if Registration {
-    student = Student { id = studentId, name = name, age = years: Int },
-    contact = Contact { email = email, verified = true }
+if {
+    { studentId = id, name = name, years: Int = age, } = student,
+    { email = email, true = verified, } = contact,
 } := registration and years >= 18 {
     send_welcome(studentId, name, email)
 }
 ```
 
-This uses the draft record wrapper consistently. verified = true is a literal subpattern; it does not bind a variable named true. The whole nested shape must match before the guard/body can use its bindings.
+The nested source fields are selected on the right. true = verified is a literal test of that field, not a binding named true. The whole nested shape must match before the guard/body can use its bindings.
 
 ## 12. Complex Result + Option + record + additional matching
 
@@ -262,10 +263,10 @@ describe_student := fn(id: Int): String {
     fetched := fetch_student(id);
 
     match fetched {
-        .ok(.Some(Student {
-            id = studentId,
-            name = name: String,
-            age = years: Int
+        .ok(.Some({
+            studentId = id,
+            name: String,
+            years: Int = age,
         }))
             and years >= 18
             and .Some(profile) := find_profile(studentId)
@@ -289,10 +290,10 @@ The first arm requires every nested pattern and guard to succeed. A mismatch/fal
 
 ```text
 loop optional_users as candidate {
-    if .Some(Student {
-        id = studentId,
+    if .Some({
+        studentId = id,
         name = name,
-        age = years
+        years = age,
     }) := candidate and years >= 18 {
         greet(studentId, name)
     }

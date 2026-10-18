@@ -1,6 +1,6 @@
 # Pattern aliases and duplicate names
 
-Status: **reference comparison dated 2026-10-18; field = pattern naming and ordered pattern shadowing selected; outer record wrapper open**.
+Status: **reference comparison dated 2026-10-18; destination = sourceField naming and ordered pattern shadowing selected; inferred named record patterns selected**.
 
 ## Purpose
 
@@ -62,26 +62,26 @@ Names are chosen for positional component values rather than copied automaticall
 
 ## Selected LiteScript naming
 
-Named field routing now uses field = pattern:
+Destination bindings appear on the left and source fields on the right:
 
 ```text
-{ x = leftX }
-{ x = leftX: Int }
-{ x: Int }
-{ x = : Int }
+{ leftX = x, }
+{ leftX: Int = x, }
+{ x: Int, }
+{ : Int = x, }
 ```
 
-These are field-list fragments, not a selected outer record-pattern wrapper. The first binds the x component as leftX. The second also constrains its type. The third binds it as x with an Int constraint; the fourth tests its type without binding it. A source field selector introduces no extra local name on its own.
+The first binds the x field as leftX. The second constrains and binds it. The third type-tests and binds it as x; the fourth only type-tests it. The source record establishes the named fields, so the pattern needs no redundant record type head. General nested destination patterns follow the same direction.
 
-This supersedes the earlier field as localName proposal for named record patterns. It does not change loop receiver as, whose separator is independently open. General field routing also supports nested patterns and value tests, so a separate renaming-only operator is unnecessary. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+This supersedes both the earlier field as localName proposal and the reversed field = localName mapping. It does not change loop receiver as, whose separator remains independently open. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 ## Selected duplicate-binding policy
 
 Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](pattern-shadowing.md).
 
-Aliases remain useful when both selected values must stay accessible. Selected field = localName binds only localName; it does not also introduce the source field's name. Its destination participates in the same ordering rule.
+Aliases remain useful when both selected values must stay accessible. Selected localName = field binds only localName; it does not also introduce the source field's name. Its destination participates in the same ordering rule.
 
-Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are the outer record wrapper, named versus positional container distinction, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
+Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are complete schema rules, named versus positional mixing, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
 
 ## Related concepts
 

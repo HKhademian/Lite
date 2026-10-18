@@ -34,7 +34,7 @@ The surrounding construct supplies the pattern's subject: `if .Some(== outValAge
 
 The [Student aggregate examples](aggregate-patterns.md) apply these meanings to proposed record patterns: `Student(== outVal, "ali")` compares both components, while `Student(outVal, "ali")` binds the first and compares the second. Their positional schema and named-field selector grammar are separate decisions.
 
-Named field operators are now selected independently of their wrapper: field = pattern routes the component, field == expected compares without binding, and field: Type binds that field under its own name with a type constraint. Use field = : Type for type-only selection. These conveniences preserve the underlying three primitives rather than changing the meaning of a bare identifier or adding equality-binding expressions.
+Named record patterns use inferred braces with destination pattern = sourceField, for example { years = age, }. The source field is selected on the right; the receiving pattern is on the left. A type-only test is { : Int = age, } and a typed alias is { years: Int = age, }. Retained conveniences field == expected compare without binding, while field: Type type-tests and binds under the same field name. These reuse the three primitives; the previous reversed field = destinationPattern mapping is superseded.
 
 The [comparison-pattern review](comparison-patterns.md) proposes extending value matching with direct <, <=, >, and >= prefixes. Equality remains the selected direct comparison. Other comparisons already work in ordinary Boolean and guards, including grouped Boolean or; general logical subpatterns and binding-producing alternatives remain separate open features.
 

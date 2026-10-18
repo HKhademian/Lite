@@ -4,7 +4,7 @@ Status: **review dated 2026-10-18; confirmed primitives and enum/Result rules ar
 
 ## Scope
 
-The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses one explicitly proposed record wrapper without presenting it or list/rest syntax as selected.
+The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses selected inferred named-record patterns and contextual construction; list/rest syntax remains proposed.
 
 Review records, lists, arrays, slices, sets, tuples/pairs, enums, strings, ranges, numbers, Booleans, Unit, Option, Result, maps, unions, and opaque/user-defined values as one pattern system. Supporting a type does not require automatic positional extraction or equality for every value of that type. A name can bind any admitted value; equality, type tests, and decomposition require their respective capabilities.
 
@@ -70,20 +70,16 @@ Recommend exact arity unless a rest pattern is written. Tuple rest capture, empt
 
 ## 4. Records
 
-Record declarations are selected as `Student := record { age: Int; name: String; }`. Their construction and full named-field pattern grammar must be completed together.
-
-The selected field rules now distinguish declaration, initialization, and matching:
+Record declarations use record. Construction targets predefined fields on the left; named deconstruction targets bindings/subpatterns on the left:
 
 ```text
-/* Field fragments; outer wrappers remain open. */
-{ a: Int; b: Int; c: Int; }        /* declaration */
-{ a = 1, b = 2, c = 3 }           /* construction */
-{ a = x, b == expected, c: Int }  /* pattern */
+student: Student = { id = 7, name = "Ali", age = 18, };
+{ studentId = id, studentName = name, years = age, } := student;
 ```
 
-General named pattern routing is field = pattern. The compact field == expected binds nothing; field: Type type-tests and binds under that field's own name. A type-only field test uses field = : Type. These replace the earlier field-colon value/routing recommendation.
+Construction may also explicitly name Student: student := Student { ... }. The type head may be omitted when a unique expected record type is known, including in an annotated binding or nested predefined record field. Unknown/ambiguous expected types need explicit information; do not search unrelated types by field names.
 
-The enclosing construction/pattern form remains open. Do not reinterpret the proposed positional Student(age: Int) by symbol lookup or capitalization. Also resolve the record-pattern brace boundary with arrow-free arm bodies. See [selected aggregate clauses](aggregate-patterns.md#named-field-clauses).
+Named patterns need no redundant type head. Their source establishes the exposed fields, and the general clause is destination pattern = sourceField. Compact field == expected compares without binding; field: Type type-tests and binds that same-named field. Type-only alias syntax is : Type = sourceField. This supersedes both field-colon routing and the reversed field = destinationPattern recommendation. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 Recommend partial named selection over exposed fields, with explicit stable schemas for positional matching. Omitted private fields remain private; a pattern does not invoke a constructor, expose hidden layout, or automatically call arbitrary getters. Exact omission, duplicate field selection, aliases, and construction syntax remain under review in [aggregate patterns](aggregate-patterns.md).
 
