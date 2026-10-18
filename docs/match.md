@@ -43,6 +43,19 @@ print(message);
 
 The selected arm's final expression supplies the result. Both arms here produce `String`.
 
+## Tag-only enum cases
+
+Omitting a case's entire payload-pattern list tests only its tag and introduces no payload binding:
+
+```text
+match find_user_age(id) {
+    .Some { report_found() }
+    .None { report_missing() }
+}
+```
+
+This selected rule applies to any payload-bearing enum case and uses the same meaning as `if .Some := source`. An unguarded .Some arm covers every Some payload; put more specific Some patterns earlier if they should be selected. It differs from .Some(_), which binds readable unused-allowed _. Complete payload-list arity, ownership, and diagnostics remain separate; see [tag-only patterns](enums-and-variants.md#tag-only-patterns).
+
 ## Union type patterns and shadowing
 
 Assume `person` has type `User | Guest`, and both display operations return `String`:

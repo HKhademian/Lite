@@ -14,7 +14,7 @@ Partially annotated patterns constrain their input and infer every binding from 
 
 ## Operator-placement audit
 
-Review dated 2026-10-18, with operator roles subsequently confirmed: the shared pattern meanings are consistent with the Some conditions, but their surrounding punctuation is construct-specific. `:=` supplies an explicit source in an inferred declaration or pattern condition; it is not part of the pattern itself. `== expected` is a value-test subpattern. Ordinary expression equality remains `left == right` and introduces no bindings. The first three Some conditions below use selected capabilities; the fourth tag-only form still needs its proposed omission rule.
+Review dated 2026-10-18, with operator roles and tag-only patterns subsequently confirmed: the shared pattern meanings are consistent with the Some conditions, but their surrounding punctuation is construct-specific. `:=` supplies an explicit source in an inferred declaration or pattern condition; it is not part of the pattern itself. `== expected` is a value-test subpattern. Ordinary expression equality remains `left == right` and introduces no bindings. All four Some condition forms below use selected capabilities.
 
 ### Conditions and nested patterns
 
@@ -60,9 +60,9 @@ The arm patterns have the same meanings as in if. They need no := because match 
 
 The initial recommendation for parameters and receiver slots remains irrefutable binding. Refutable selection can be expressed explicitly with if/match inside the function, loop, or handler. That preserves error handling and cleanup requirements without introducing an implicit mismatch path.
 
-### Tag-only omission remains a proposal
+### Tag-only omission is selected
 
-The fourth condition, `if .Some := find_user_age(id)`, would test the case without binding its payload. The corresponding match arm would be `.Some { report_found() }`. These must share a payload-omission contract, not become conditional-only or equality-only shortcuts. The rule remains proposed; the existing contextual-case grammar's optional parentheses do not establish arity or omission semantics.
+The fourth condition, `if .Some := find_user_age(id)`, tests the case without binding its payload. The corresponding match arm is `.Some { report_found() }`. Both use the selected rule: omit the entire payload-pattern list to test the case tag only. The same meaning applies to any payload-bearing enum case and nested case patterns. Partial payload lists, empty-parentheses behavior, and construction arity are not selected by this omission rule; see [tag-only patterns](enums-and-variants.md#tag-only-patterns).
 
 This tag-only form introduces no binding, whereas .Some(_) introduces the ordinary readable _. Neither pattern implicitly unwraps a stored Result, propagates a failure, or grants mutation access. The receiver mismatch and enum/metadata collision policies remain separate open questions.
 

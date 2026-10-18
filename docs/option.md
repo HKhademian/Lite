@@ -37,6 +37,16 @@ match find_user(id) {
 
 In a pattern, `.Some(user)` and `.None` both use the expected Option type to select a case. The first also binds the contained user; the second introduces no name. The examples use both dots consistently. The older explicitly named Some(user) constructor form remains admitted; this is not a new syntax restriction. Bare None is an ordinary binding, not an absent-case test.
 
+The selected tag-only form omits the payload pattern and introduces no payload binding:
+
+```text
+if .Some := find_user(id) {
+    report_found()
+}
+```
+
+The corresponding match arm is `.Some { report_found() }`; it covers every Some payload. By comparison, .Some(_) binds the payload to readable unused-allowed _. This rule concerns patterns, not construction of Some without data; see [tag-only enum patterns](enums-and-variants.md#tag-only-patterns).
+
 By contrast, `_ { ... }` is a catch-all binding arm: `_` receives the whole remaining Option value and may be read. It does not mean None, introduce implicit unwrapping, or discard the input. Its underscore prefix permits nonuse without an unused-name warning.
 
 In an expression, `None` still resolves normally as a prelude value unless shadowed. For example, `empty := None;` is value construction/use, not a pattern test; isolated Option payload inference remains open. This decision changes case-pattern spelling without adding nullability or implicit unwrapping. See [pattern bindings and tests](pattern-bindings-and-tests.md).

@@ -123,7 +123,7 @@ value_match_pattern := "==" pattern_value_operand
 typed_binding_pattern := identifier ":" type
 ```
 
-The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Arbitrary refutable receiver patterns and payload omission in bare .Some remain unselected contracts; optional parentheses in contextual_enum_case do not settle those semantics. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
+The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Bare .Some in a pattern is now selected to test only the tag with no payload binding; arbitrary refutable receiver patterns still need a mismatch contract. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
 The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
 
@@ -136,6 +136,8 @@ match_expression := "match" expression "{" match_arm { match_arm } "}"
 match_arm := pattern { "and" condition_operand } block
 contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
+
+Omitting the entire parenthesized payload-pattern list selects a tag-only pattern, even for a case that carries payloads. Thus `.Some` tests the tag without binding its payload, consistently in if, match, and nested patterns. This does not permit constructing Some without a value or settle partial/empty payload lists, constructor arity, or receiver mismatch policies; see [tag-only patterns](enums-and-variants.md#tag-only-patterns).
 
 The [keyword-placement alternative](match-keyword-placement.md) `expression match { ... }` is under review and is not a production or alias in this sketch. It would require explicit precedence and block-continuation rules; whitespace cannot choose the subject boundary.
 

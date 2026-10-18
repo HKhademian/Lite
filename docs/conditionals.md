@@ -128,14 +128,13 @@ if .Some(_) := find_user(id) { report_found() }
 
 The second condition uses the selected equality-test subpattern: compare the contained age with existing outValAge, without binding that name or comparing the whole Option. In the third condition, _ is the selected ordinary readable binding with unused-name permission; it is not a newly introduced nonbinding wildcard. The same pattern meanings apply in match and nested structures; see the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
-Separately recommend a tag-only pattern for a payload-bearing case:
+Tag-only patterns are also selected for payload-bearing cases:
 
 ```text
-/* Proposed payload-omission rule; not selected yet. */
 if .Some := find_user(id) { report_found() }
 ```
 
-Under that proposal, .Some tests only the case tag and binds no payload. The same omission rule should apply to match arms, rather than being an if-only shortcut. It would not turn a bare constructor into a complete enum value for ordinary equality. Payload omission, access/ownership effects, and case-owner inference need an explicit contract. Equality-binding conditions are ruled out; this separate omission rule remains proposed.
+Here .Some tests only the case tag and binds no payload. The same selected omission rule applies to match arms and nested case patterns. It does not turn a bare constructor into a complete enum value for ordinary equality. Access/ownership effects and complete case-owner inference retain their separate contracts; see [tag-only enum patterns](enums-and-variants.md#tag-only-patterns). Equality-binding conditions remain ruled out.
 
 ## Pattern binding followed by guards
 

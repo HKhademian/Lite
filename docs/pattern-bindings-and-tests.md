@@ -106,10 +106,15 @@ The examples use `.Some(user)` and `.None` together for consistent contextual ca
 The distinctions are:
 
 - `.Some(user)` tests the Some case and binds only its payload to user.
+- `.Some(== expected)` tests the Some case and compares its payload with existing expected, without binding a new name.
+- `.Some(_)` tests the Some case and binds its payload to ordinary readable unused-allowed _.
+- `.Some` tests the Some case without binding its payload; omitting the whole payload-pattern list is selected for any payload-bearing enum case.
 - `.None` tests the None case and introduces no binding.
 - `_` is an ordinary binding that accepts any remaining whole subject, including a whole Option or Result, without unwrapping it. It may be read, and its nonuse is explicitly allowed.
 
 An unguarded `_` arm covers the remaining values admitted at that point. It has no special priority: source-order selection applies, so placing a catch-all before more specific arms can make those arms unreachable. A specific case test such as .None does not cover unrelated cases. Exact reachability diagnostics remain open.
+
+A tag-only .Some arm covers every Some payload, but not None. The same form works in `if .Some := source` and nested case patterns, with no implicit extraction or invented payload name. This is not construction of a payload-bearing value without its data; see [tag-only patterns](enums-and-variants.md#tag-only-patterns).
 
 The distinction is syntactic context: bare names bind; explicit case forms test case identity; a payload constructor head has its own role. The selected `.None` spelling replaces earlier bare None pattern examples. Bare `User` type-arm shorthand is ruled out for the same reason: unmarked identifiers do not become tests through name lookup.
 

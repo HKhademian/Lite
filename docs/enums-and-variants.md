@@ -1,6 +1,6 @@
 # Enums and variants
 
-Status: **plain/payload enum matching, contextual .case shorthand, an explicit enum backing-type header, and assigned case values selected; full declaration, representation, conversion, and metadata disambiguation rules open**.
+Status: **plain/payload enum matching, contextual .case shorthand, tag-only patterns, an explicit enum backing-type header, and assigned case values selected; full declaration, representation, conversion, and metadata disambiguation rules open**.
 
 ## Purpose
 
@@ -107,6 +107,28 @@ match event {
 The case tag selects the active variant. Its pattern can then bind or constrain that variant's payload. This is not a function invocation. Payload-free and payload-bearing cases may coexist.
 
 All variants can belong to the same declared Event type. Matching the type Event alone does not determine which case is active. Variant cases and the separate union of existing types, such as `User | Guest`, are related selection capabilities but are not assumed to have identical type identity or declaration syntax.
+
+## Tag-only patterns
+
+A case pattern may omit its entire payload-pattern list to test only the case tag and introduce no payload bindings. This is selected for payload-bearing cases as well as payload-free cases, and has the same meaning in if, match, and nested case patterns.
+
+```text
+if .Some := find_user_age(id) {
+    report_found()
+}
+
+match event {
+    .Click { report_click() }
+    .Key { report_key() }
+    .Quit { close_window() }
+}
+```
+
+Assume Event has the Click, Key, and Quit cases introduced above. The Click and Key arms accept every payload of their respective case; they need neither payload equality nor an invented payload name. The match subject still supplies the enum owner, and explicit qualification remains available.
+
+`.Some(age)` binds its payload, `.Some(== expected)` compares its payload, `.Some(_)` binds readable unused-allowed _, and `.Some` introduces no payload binding. An unguarded tag-only arm covers the whole case, so a later more specific pattern for that case cannot be selected under the existing first-success rule; exact diagnostics remain open.
+
+This is pattern syntax, not construction of a payload-bearing enum value without its required data. It selects omission of the complete payload-pattern list, not partial argument lists or empty-parentheses behavior. Construction, payload-list arity, access/ownership effects, and recursive grammar retain their separate contracts. It does not add filtering or selective dispatch to receiver contexts whose mismatch policy remains open.
 
 ## Coverage and access
 
