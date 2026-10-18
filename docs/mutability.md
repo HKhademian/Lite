@@ -99,6 +99,8 @@ user.age += 1; /* updates held data; mut is required */
 
 The compound update follows the target: a whole-binding update needs `var`, while a field or element update through the binding needs `mut`. `mut count := 0; count += 1;` is rejected because the update assigns the fixed `count` binding. `var count` does not introduce reference qualifiers or mutation of a separate referenced object.
 
+For a union receiver, mut grants no exemption from the selected [all-target field write rule](union-field-writes.md). The assigned value must fit every possible target field type; the combined read type alone does not describe its write contract. Explicitly representable [access contracts](union-values-and-access.md) remain a proposal.
+
 The original example is now decided:
 
 ```text

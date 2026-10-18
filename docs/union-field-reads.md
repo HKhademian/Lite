@@ -1,6 +1,6 @@
 # Reading fields through a plain union
 
-Status: **selected 2026-10-18: a field read is valid when every possible alternative exposes that readable field; its result type is the normalized union of those field types**. Writes, method calls, property/getter semantics, and ownership remain separate contracts.
+Status: **selected 2026-10-18: a field read is valid when every possible alternative exposes that readable field; its result type is the normalized union of those field types**. [All-target field writes](union-field-writes.md) are selected separately. Method calls, property/getter semantics, ownership, and explicit access notation remain open.
 
 ## Rule and template
 
@@ -79,7 +79,7 @@ The original receiver still has its original nominal union type. Reading fields 
 
 ## Boundaries
 
-- Reading a common field does not grant write access. Writing a value belonging to the projected union may still violate the active record's narrower declared field type.
+- Reading a common field does not grant write access. [Writes must fit every possible target field](union-field-writes.md); membership in the projected read union alone is insufficient. [Value types and access contracts](union-values-and-access.md) explain the distinction and investigate making it visible.
 - A function-valued field can be read under this rule, but invocation compatibility and method dispatch need their own contracts.
 - No shared base class or interface is required for this field read. This does not select structural assignment for whole records.
 - No particular offset, layout, allocation strategy, or zero-cost dispatch is guaranteed. A compiler may need to select the appropriate offset and result representation for the active alternative.
