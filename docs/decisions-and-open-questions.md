@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
 ## Established direction
 
@@ -108,6 +108,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [type-category comparison](type-categories-comparison.md) separates products, named sums, unions of existing types, domain wrappers, generated operations, and value/reference semantics. The [enum proposal](enums-and-variants.md#design-direction-after-the-category-review) recommends one nominal enum concept for plain and payload cases, without automatic independently annotatable case subtypes. Raw mappings, checked conversion, flags, and physical layout remain separate decisions. No new enum, data-class, value-class, or sealed-family declaration syntax is selected by this review.
 - The [match keyword-placement review](match-keyword-placement.md) compares `match value { ... }` with subject-first `value match { ... }` and recommends retaining the current prefix form. The alternative would need explicit expression precedence and a decision on block-result continuation; no alias or syntax migration is selected by the review.
 - The [comparison-pattern review](comparison-patterns.md) recommends direct <, <=, >, and >= tests as an extension of the value-match family, with runtime bounds under an explicit operand/effect contract. Only direct == is currently selected. Other comparisons already work in and guards with grouped Boolean or for compound logic; logical subpatterns and binding-producing alternatives remain open.
 - Given a generic User with two exposed constructor fields, `User(: Int, == outVal)` recognizes the aggregate family/schema, type-matches the first component, and compares the second with an existing value, introducing no names. Generic syntax, parameter identity, variance, runtime type-test support, and the schema contract remain open; see [generic aggregate matching](aggregate-patterns.md#generic-aggregate-example).

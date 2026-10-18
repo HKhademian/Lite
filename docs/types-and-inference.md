@@ -43,6 +43,8 @@ Binding reassignment and read/write access to held data are distinct capabilitie
 
 These are desired capabilities, not a complete or implemented specification. Syntax for all of them has not been settled.
 
+The [type-category review](type-categories.md) separates products, named enum alternatives, unions of existing types, domain wrappers, generated data operations, and value/reference semantics. The [reference comparison](type-categories-comparison.md) shows why data class and value class do not provide one portable contract. The [enum proposal](enums-and-variants.md#design-direction-after-the-category-review) recommends one enum concept for plain and payload cases without selecting case-specific subtypes or a memory model.
+
 ## Inferred functions
 
 ```text

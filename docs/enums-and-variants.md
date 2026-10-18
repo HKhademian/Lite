@@ -83,6 +83,54 @@ A value-producing match over a closed enum must handle every possible case or us
 
 Payload extraction follows normal visibility and mutation permissions. Private payload details are not made public merely because match syntax exists. Decide explicitly how modules expose public cases while hiding representations, and whether non-exhaustive public enums are supported.
 
+## Design direction after the category review
+
+Status: **working proposal dated 2026-10-18; declaration grammar, case-specific types, and representation remain open**.
+
+The [twelve-language comparison](type-categories-comparison.md) distinguishes several contracts that should not be bundled into one keyword. The [type-category vocabulary](type-categories.md) explains products, sums, domain types, generated operations, and storage independently.
+
+### One enum family for plain and payload cases
+
+Recommend one nominal enum concept: named alternatives, each with zero or more payload fields. A plain enum is the zero-payload case, not a separate weaker feature. This is closer to Rust/Swift than to requiring a sealed subclass declaration for every event case.
+
+```text
+/* Conceptual type equations, not selected declaration grammar. */
+Status = Ready | Busy | Stopped
+Event  = Click(Point) | Key(String) | Quit
+Count  = Items(Int) | Retries(Int)
+```
+
+Items(3) and Retries(3) must preserve different case identities even though both carry Int. A union of existing types serves another role: `User | Guest` chooses between independently usable types. It cannot distinguish two differently named Int cases merely from the payload's type.
+
+Recommend keeping an enum case a constructor/value of the enclosing enum, without automatically creating an independently annotatable subtype for every case. Under that proposal, a Click case can carry an independently declared Point; `.Click(point)` identifies the case and exposes that payload. A whole-subject `: Point` does not unwrap Event. Whether separately annotatable case types are desirable remains an explicit design decision.
+
+An enum may implement behavior through an interface without requiring every case to inherit a common class. Conversely, an ordinary empty interface is not enough to establish a closed set of alternatives; any sealed-family facility would need a separate closedness contract.
+
+### Keep raw codes and representation separate
+
+Recommend explicit, validated conversion between raw codes and enum values. Invalid external data must not silently become an otherwise unmatchable case. Conversion names and failure channels are not chosen here. Duplicate codes would also need a rule for ambiguity or aliases.
+
+Raw Float/string/integer codes need not determine the physical tag representation. Flags, reflection names, explicit ABI layout, and compile-time constant substitution each require their own justification. TypeScript const enum is primarily an emission facility, not another sum-type category.
+
+Compact native representation is a goal. The enum concept should not mandate a heap object or virtual dispatch for every case. Recursive payloads, explicit references, generic layout, ownership, and ABI constraints still need rules; neither a universal zero-allocation claim nor a C performance claim follows from this proposal.
+
+### Keep related data features independent
+
+- **Products:** a record/struct combines fields. Exact declaration and constructor syntax remain open.
+- **Domain wrappers:** a distinct UserId can reject accidental OrderId interchange while retaining an appropriate representation. Alias identity, wrapper syntax, conversions, and layout require separate contracts.
+- **Generated operations:** equality, hashing, formatting, copying, and destructuring can be requested or derived subject to field capabilities and visibility. A data-class keyword is not required merely to bundle convenient operations.
+- **Identity and access:** reference identity, ownership, allocation, and read/write access are separate choices. Existing var/mut permissions do not decide those semantics.
+
+This direction does not add class, data class, value class, sealed, or distinct declaration syntax. Each extra construct should provide a contract not already expressible through products, named alternatives, unions, interfaces, or explicit representation.
+
+### Next enum decisions
+
+1. Confirm one enclosing nominal enum type versus independently usable case types.
+2. Choose uniform-binding declarations, case payload schemas, and construction syntax.
+3. Define closure/exhaustiveness across modules, including any non-exhaustive public enums.
+4. Specify raw mappings, checked conversions, equality, and flags separately from layout.
+5. Set representation, recursive storage, ownership, and generated-operation guarantees with the broader type model.
+
 ## Open decisions
 
 - Uniform-binding enum declarations, case declarations, payload names/types, and construction.

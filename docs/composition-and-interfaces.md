@@ -45,6 +45,8 @@ Modifiers may express visibility, mutation, effects, or dispatch, but their actu
 
 Uniform bindings could support `Name := class { ... }` if classes are introduced. This is not a decision to add inheritance or classes to the initial language. A class or identity-bearing reference type must justify semantics not already covered by records, interfaces, and explicit ownership.
 
+An ordinary interface does not define a closed set of implementers. A union of listed types, an enum's named cases, and a sealed subtype family have different closure and identity contracts. Likewise, generated data operations do not establish value copying, deep immutability, or reference identity. See [type categories](type-categories.md) and the [enum design proposal](enums-and-variants.md#design-direction-after-the-category-review).
+
 ## Open decisions
 
 Nominal identity, structural conformance, interface coherence, orphan-style implementation rules, associated types, delegation syntax, default method conflicts, field privacy, construction, and reference identity remain open.
