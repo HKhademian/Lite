@@ -115,22 +115,23 @@ These shapes may be used in a match arm or conditional pattern once their gramma
 
 Rust uses `name @ subpattern` to bind a matched value while checking another pattern. Dart list patterns support `...` with a collecting subpattern. These are useful precedents for the two capabilities, but do not select LiteScript's colon syntax, tuple-rest result type, or ownership semantics. See [Rust identifier patterns](https://doc.rust-lang.org/reference/patterns.html#identifier-patterns) and [Dart rest elements](https://dart.dev/language/pattern-types#rest-element).
 
-## Underscore bindings
+## Underscore wildcards
 
-`_` binds the supplied value and can be read, like another name. It is not a wildcard that suppresses binding.
+`_` matches one supplied component without binding it. Repeated underscores are valid in the same pattern:
 
 ```text
-(_, right) := pair;
-process(_, right);
+(first, _, third, _) := tuple;
 ```
 
-In a loop receiver list, repeated receiver names shadow from left to right, so `as _, _, _` leaves `_` referring to the accumulator slot. That rule concerns separate receiver slots; duplicate names within one destructuring pattern still need a policy. See [identifiers](identifiers.md) and [loop receivers](loop-receivers.md).
+The tuple must still have the required shape. `_: String` can constrain an ignored component's type without creating a name. Nested tuple and constructor patterns use the same rule; Some(_) still requires the Some case. Use a normal name wherever a later condition or body needs the component.
+
+In a loop receiver list, `as _, _, acc` skips item/count aliases and names the accumulator acc. `as _, _, _` binds no names. Repeated ordinary receiver names retain their separate ordered-shadowing rule. See [wildcards and skips](wildcards-and-skips.md) and [loop receivers](loop-receivers.md).
 
 ## Notes and open decisions
 
 For named fields, source names and destination bindings are distinct. Explicit aliases can avoid duplicate destination names without changing positional tuple patterns or introducing duplicate-binding shadowing. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and any separate nonbinding wildcard form need formal specification. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. The underscore wildcard is selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

@@ -132,7 +132,7 @@ Swift distinguishes associated payloads from raw enum values. That distinction h
 
 **Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. And-chained guards and additional matches are now the selected sixth capability; runtime-equality punctuation, constructor qualification, and record-pattern grammar remain open.
 
-Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations and readable underscore rules instead of copying Dart's syntax wholesale. See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations and now also selects nonbinding underscore wildcards, without copying Dart's full syntax wholesale. See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
 
 ### Arm shape and type-only selection
 
@@ -153,7 +153,7 @@ Rust requires complete match coverage. Zig requires complete switch coverage wit
 
 Kotlin documents partial statement selection and requires exhaustive value selection. Python permits no arm to match. Odin normally runs one selected case but also offers explicit fallthrough. These policies are not one universal convention. Sources: [Kotlin statements and expressions](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements), [Python matching flow](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement), [Odin fallthrough](https://odin-lang.org/docs/overview/#fallthrough-statement).
 
-**Recommendation:** require exhaustive actions as well as values, and provide no fallthrough. `if` handles intentionally partial tests. A final `else { ... }` handles the remainder, without making `_` a wildcard. On closed unions, explicit alternatives preserve the compiler's signal when a new variant is added; broad fallbacks intentionally trade away that signal.
+**Recommendation:** require exhaustive actions as well as values, and provide no fallthrough. `if` handles intentionally partial tests. The selected `_` wildcard handles the remainder as a pattern; a separate final else convenience remains a proposal. On closed unions, explicit alternatives preserve the compiler's signal when a new variant is added; broad fallbacks intentionally trade away that signal.
 
 ### Ordered guards and their cost
 
@@ -166,7 +166,7 @@ The resulting LiteScript proposal, examples, and unresolved name-resolution rule
 ## Remaining decisions
 
 1. Reject or diagnose irrefutable pattern conditions. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness.
-2. Choose fallback/otherwise patterns. `_` remains a readable binding, so it cannot silently acquire another language's nonbinding-wildcard meaning.
+2. Decide whether a separate else fallback convenience remains alongside the selected nonbinding `_` catch-all pattern.
 3. Complete guard effects/ownership, overlap, unreachable arms, and exhaustive coverage for closed unions versus open interfaces.
 4. Define nested patterns, exact-type versus subtype matching, and borrowing/moving/copying.
 5. Name the stored Result success pattern without erasing its outer success/failure tag. Success and error payload types can overlap.

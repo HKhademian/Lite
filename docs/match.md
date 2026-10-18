@@ -104,7 +104,7 @@ The required pattern categories include equality values, plain enum cases, paylo
 
 ### Fallback and exhaustiveness
 
-Recommend a final `else { ... }` arm for remaining values. It would bind no implicit name; `_` would remain an ordinary readable binding.
+Recommend a final `else { ... }` arm for remaining values. It would bind no implicit name. The selected `_` wildcard already supplies a nonbinding catch-all pattern; whether to also retain else as a convenience remains open.
 
 ```text
 message := match status {
@@ -128,7 +128,7 @@ All normally completing arms must satisfy a compatible result contract. Giving o
 
 ## Notes and open questions
 
-Common fallback patterns, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is a readable binding, not a nonbinding wildcard. The selected surface does not settle the success-pattern spelling for stored Results or typed receiver-dispatch chains.
+Common fallback patterns, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is a nonbinding wildcard and supplies an ordinary catch-all arm; it may repeat in nested patterns. The selected surface does not settle the success-pattern spelling for stored Results or typed receiver-dispatch chains.
 
 A body-opening brace must be distinguishable from any future record-pattern syntax without using line breaks. A fully specified type system is needed before claiming coverage checks are sound. Examples are design illustrations, not executable tests.
 

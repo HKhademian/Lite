@@ -41,7 +41,7 @@ This is a pattern fragment assuming an appropriate struct. Field shorthand x mea
 Point(x: var xInside, y: var yInside)
 ```
 
-This is an object-pattern fragment assuming exposed getters. The source field and the introduced variable are distinct. A typed variable subpattern can constrain the field while binding it, for example `Point(x: int xInside)`. Dart's exact getter effects, capture syntax, and wildcard rules are not selected for LiteScript. Source: [Dart object and variable patterns](https://dart.dev/language/pattern-types).
+This is an object-pattern fragment assuming exposed getters. The source field and the introduced variable are distinct. A typed variable subpattern can constrain the field while binding it, for example `Point(x: int xInside)`. Dart's exact getter effects and capture syntax are not selected for LiteScript. Source: [Dart object and variable patterns](https://dart.dev/language/pattern-types).
 
 ## Python: keyword field plus capture pattern
 
@@ -88,7 +88,7 @@ The benefit of as is keeping source-to-local naming distinct from LiteScript's `
 ## Recommended duplicate-binding policy
 
 - Require unique destination names within one simultaneous pattern, including nested parts and aliases. `(x, x)` would be rejected; it would not compare values or silently select the last binding.
-- `_` remains a readable ordinary binding; repeated `_` within one pattern therefore needs the same duplicate policy. Aliases do not turn it into a wildcard.
+- `_` is a nonbinding wildcard, so it may repeat and is excluded from destination-name collision checks. An alias is unnecessary for a skipped field; only actual introduced names participate in duplicate-binding policy.
 - Preserve nested lexical shadowing and the separately selected left-to-right shadowing between loop receiver slots. Those are different binding contexts.
 - Keep repeated names in distinct match arms independent. Conditional-chain rebinding needs its own scope policy.
 - Define duplicate source-field selection separately. Giving one source field two local names must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.

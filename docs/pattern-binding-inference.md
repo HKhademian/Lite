@@ -19,6 +19,8 @@ Here str stands for a known string type or alias. The typed component b must mat
 3. For each name, obtain the type of the component or whole value it binds in every compatible possibility.
 4. Use that type if there is only one; otherwise use their union, collapsing duplicate alternatives. Narrow composite values before projecting their component types.
 
+Only actual binding names receive inferred local types. A wildcard `_` creates no binding; a typed wildcard can still narrow the compatible input portions used for the other projections.
+
 This is input narrowing and projection, not a rule that arbitrarily unions unrelated arm result expressions. A single matching arm can bind several union-typed names while its final expression still obeys the ordinary compatible-result contract.
 
 ## Example: one constraint, several inferred bindings

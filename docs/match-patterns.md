@@ -76,7 +76,7 @@ Assume point has a compatible two-element tuple type. This pattern receives the 
 
 Tuple, record/field, and nested patterns belong to this capability. Tuple syntax already has working examples; record, sequence/rest, and named-field spellings remain open. Literal or type constraints should compose with extraction, subject to the full pattern grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
 
-Newly bound component names are branch-local and may shadow outer names. A name inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Duplicate names inside one pattern still need a policy; repeated names must not acquire equality constraints accidentally. `_` remains readable and is not a nonbinding wildcard.
+Newly bound component names are branch-local and may shadow outer names. A name inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Duplicate names inside one pattern still need a policy; repeated names must not acquire equality constraints accidentally. `_` is a nonbinding wildcard and may repeat, including in nested patterns. Typed wildcards can constrain ignored fields; see [wildcards and skips](wildcards-and-skips.md).
 
 ## 5. Type checking and matching
 
@@ -154,7 +154,7 @@ Some fragments intentionally omit remaining arms to isolate a pattern category. 
 
 ## References and related concepts
 
-- [Rust patterns](https://doc.rust-lang.org/reference/patterns.html): literals, constant paths, variants, tuples, records, and name-resolution distinctions; its exact grammar and wildcard rules are not adopted.
+- [Rust patterns](https://doc.rust-lang.org/reference/patterns.html): literals, constant paths, variants, tuples, records, and name-resolution distinctions; its complete grammar and ownership rules are not adopted automatically.
 - [Dart pattern types](https://dart.dev/language/pattern-types): constant, variable, typed, object, and record patterns.
 - [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md): payload-free and associated-value enum cases.
 - [Match](match.md), [tuples and patterns](tuples-and-patterns.md), and [reference comparison](pattern-syntax-comparison.md).

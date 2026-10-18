@@ -40,7 +40,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
 - Fractional literals require a leading digit: write `0.5`, not `.5`; leading-dot context access remains distinct.
-- `_` is a readable binding name, not a wildcard or a special discard-assignment target.
+- `_` is a wildcard in every pattern, introduces no readable value binding, and may repeat. Use explicit names to read skipped values; names such as `_temporary` remain ordinary identifiers. This supersedes the earlier readable-underscore rule. It does not add `_ = expression` discard-assignment syntax; see [wildcards and skips](wildcards-and-skips.md).
 - Explicit semicolons separate ordinary items; there is no automatic insertion.
 - Complete block constructs end their items without semicolons; a following semicolon is rejected, including for declarations initialized directly by block constructs.
 - Continuing a block construct's value with an operator, call, member access, or indexing requires parentheses around that construct.
@@ -82,14 +82,14 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - One `if` form works for actions and values; branch braces establish ownership.
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
-- Loop receiver slots are item, count, accumulator; trailing slots can be omitted and `_` can name an otherwise unused slot.
-- Receiver bindings shadow from left to right; `_, _, _` leaves `_` referring to the accumulator. The rule also applies to other repeated receiver names.
+- Loop receiver slots are item, count, accumulator; trailing slots can be omitted and `_` skips naming a slot.
+- Ordinary receiver names shadow from left to right when repeated. Wildcards introduce no names: `_, _, acc` names the accumulator acc, and `_, _, _` binds nothing.
 - Tuple destructuring within a slot operates on that slot's actual value.
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
 - An accumulator represents previous contributions, with absence modeled explicitly.
 - Plain `continue` and bare `break` contribute nothing.
-- Completion receivers are optional; `_` binds readable input and opts into a value-producing hook even if that input is left unused.
+- Completion receivers are optional; a wildcard receiver `_` leaves the input unnamed while retaining the proposed opt-in to a value-producing hook. Use a normal receiver name to read the input.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -200,7 +200,8 @@ Local recovery is required for individual operations, including addition overflo
 - Semicolons suppressing final-expression results.
 - Requiring or allowing a semicolon after a complete block item.
 - Continuing an unparenthesized block value across its item boundary through an operator, call, member access, or indexing.
-- An unreadable `_` wildcard, or `_ = value` as a special discard statement.
+- Treating `_` as a readable ordinary value binding, including reading the last loop receiver through it. The underscore now binds nothing.
+- `_ = value` as a special discard-assignment statement remains unselected.
 - Granting writable owned fields through `var` alone; `mut` is required explicitly.
 - Requiring an additional function-level mutation marker beyond explicit `mut` receiver/parameter contracts.
 - Rejecting comparison chains merely to simplify the grammar, or treating them as ordinary left-associated binary comparisons.

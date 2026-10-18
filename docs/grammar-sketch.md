@@ -87,7 +87,7 @@ The typed-parameter production shows the selected `mut` prefix; the complete par
 
 No modifiers means a fixed binding with read-only access. `var` permits whole-binding reassignment; `mut` permits held-data updates through the binding, subject to field, element, and ownership permissions. `var mut` permits both; `mut var` and repeated modifiers are rejected. Affected function parameters explicitly carry `mut`; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
 
-`_` is an identifier binding, not a special wildcard or discard-assignment target. Its declarations produce `Unit` like other declarations. Assigning the `_` binding requires `var`; assigning a field or element through `_` requires `mut` and the target's other permissions.
+Standalone `_` in a pattern is a wildcard and introduces no value binding. It may repeat, including within one tuple pattern, and cannot be read as an expression. A wildcard declaration still evaluates its initializer and produces Unit. `_ = expression` is not selected as a special discard assignment. Longer identifiers containing underscores remain ordinary names; see [wildcards and skips](wildcards-and-skips.md).
 
 ## Conditionals
 
@@ -104,7 +104,8 @@ existing_name_type_test := identifier ":" type
 pattern_condition := pattern ":=" condition_value_operand
                    | identifier ":" type "=" condition_value_operand
 
-type_pattern := identifier ":" type
+type_pattern := (identifier | "_") ":" type
+wildcard_pattern := "_"
 ```
 
 The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
@@ -121,7 +122,7 @@ contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 
 Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
 
-This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, overlaps, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` remains an ordinary binding. See [match](match.md) and [union type patterns](union-patterns.md).
+This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, overlaps, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. `_` is a nonbinding wildcard and may appear as a catch-all pattern. See [match](match.md) and [union type patterns](union-patterns.md).
 
 The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. These required categories do not select bare-name equality versus binding, runtime-equality pattern punctuation, enum declarations, or record-pattern delimiters. See [match pattern capabilities](match-patterns.md).
 
@@ -148,7 +149,7 @@ finally_clause := "finally" ["(" pattern ")"] block
 
 `as` is working notation. `:` remains a candidate, and the final language should not accidentally acquire both spellings by treating this sketch as normative. The seeded receiver form is not specified.
 
-Separate receiver slots bind from left to right and allow later names to shadow earlier ones. Thus `as _, _, _` makes `_` refer to the accumulator slot. This does not settle duplicate names within one destructuring pattern. A hook receiver such as `then(_)` also binds a readable name.
+Separate receiver slots bind ordinary names from left to right and allow later names to shadow earlier ones. `_` instead skips binding a slot: `as _, _, acc` names only acc, and `as _, _, _` names nothing. Repeated wildcards within one pattern are valid; duplicate real-name policy remains separate. A hook receiver such as `then(_)` has a wildcard pattern and introduces no name.
 
 Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
 

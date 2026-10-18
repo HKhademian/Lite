@@ -89,9 +89,9 @@ The whole-binding assignment examples assume an existing `var x` where needed. `
 { _ := calculate(); }
 ```
 
-The second block produces `Unit` because its final item is a declaration. `_` remains a readable binding inside that block; it is not a special discard target. `_ = calculate()` instead means whole-binding assignment and requires an existing `var _` binding.
+The second block produces Unit because its final item is a wildcard declaration. calculate still runs, but no `_` binding exists to read. `_ = calculate()` is not enabled as a discard-assignment operation; wildcard declarations and assignment have different syntax.
 
-Exactly which unused results require explicit handling, particularly `Result` values, and whether a separate discard operation is needed remain open. Binding a value to `_` must not silently exempt it from that future policy.
+Exactly which unused results require explicit handling, particularly `Result` values, and whether a separate discard operation is needed remain open. Matching a value with `_` must not silently exempt it from that future policy; see [wildcards and skips](wildcards-and-skips.md).
 
 ## Block value versus return
 

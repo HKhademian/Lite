@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Unicode names and readable `_` accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
+Status: **Unicode names and underscore wildcards accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
 
 ## Purpose
 
@@ -33,29 +33,28 @@ Pattern bindings may reuse the source value's name. A matching branch can shadow
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
-## The name `_`
+## Standalone underscore
 
-`_` is a readable binding name, not a reserved wildcard or a write-only discard target.
+`_` is a wildcard in every pattern. It matches without introducing a value name, may repeat, and cannot be read in an expression. This supersedes the earlier readable-binding rule.
 
 ```text
-_ := 42;
-print(_);
+(first, _, third) := triple;
+_ := calculate();
 ```
 
-Bindings named `_` follow the usual typing, `var`/`mut` capabilities, and lexical lookup rules. Repeated names in a loop's ordered receiver list shadow from left to right; this applies to `_` and to other receiver names. The last receiver with that name is visible in the header and body, subject to the ordinary phase-availability rules.
+Both declarations preserve initializer evaluation. The first binds first and third; the second binds nothing. Neither creates a readable `_`. An ordinary identifier such as `_temporary` remains a normal name under the proposed character profile.
+
+Loop receivers can skip names explicitly:
 
 ```text
-loop items: _, _, _ {
-    inspect(_);
-    Unit
+loop items as _, _, acc {
+    inspect(acc)
 }
 ```
 
-Here `_` names the third slot, the previous accumulator `Option<T>`. It does not name the item, count, or a tuple containing all three. `:` is the candidate receiver separator used in this example; choosing it over `as` remains a separate decision.
+Ordinary receiver names still shadow from left to right when repeated. Repeated wildcards introduce no names and therefore do not shadow. The item/count/accumulator state remains available through permitted metadata.
 
-Nested bindings may shadow `_` just as they shadow another name. Leaving it unread is allowed by the binding semantics; unused-binding diagnostics remain a tooling decision. Repetition within a single destructuring pattern, rather than across receiver slots, is not settled by this rule.
-
-`_ = value` is ordinary whole-binding assignment and requires `var _`; `mut _` alone is insufficient. It is not a special discard operation. Declaring `_ := value` produces `Unit`, like any declaration, while retaining a readable binding. Held-data updates through `_` instead require `mut` and the target's other permissions.
+Reading `_` is invalid; `_ = value` is not enabled as a special discard-assignment operation. Full modifier validation, ignored-outcome diagnostics, and ownership/drop behavior remain separate contracts. See [wildcards and skips](wildcards-and-skips.md).
 
 ## Case and normalization
 

@@ -41,6 +41,8 @@ match find_user(id) {
 
 Every reached operand runs once, in source order, until false or mismatch. A successful additional pattern extends the bindings available to later operands and this body. The initial pattern is applied to the original subject; `Some(profile) := ...` explicitly identifies another source rather than silently rematching the original Option<User>.
 
+Wildcards can skip positional components in additional matches, such as `and (_, last: String) := user.name_parts`. They introduce no names and may repeat; later operands can read only the components explicitly named. See [wildcards and skips](wildcards-and-skips.md).
+
 Nested destructuring also works directly in that chain, for example `and (first, last: String) := user.name_parts`, assuming a suitable tuple-valued field. Alternatively a structural pattern such as `Some((first: String, last: String))` can match an optional tuple in one step. These reuse the same typed component patterns and inference rules; no nested match statement is required merely to extract or constrain components.
 
 ## Scope, failure, and result
