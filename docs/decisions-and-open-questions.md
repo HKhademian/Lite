@@ -126,6 +126,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [qualified access-summary investigation](access-union-qualifiers.md) explores combining complete contracts that accept A | B and C | B into a summary reading A | B | C and accepting B. Proposed output A | mut B | C is not selected type syntax or a rewrite of ordinary union normalization. The meaning of type-position mut, contract boundaries, payload mutation versus replacement, and correlation preservation remain open.
+
 - The [type alias comparison](type-aliases.md) selects an explicit type prefix for named aliases while retaining uniform := definitions. Scope, generic alias parameters, cycles, namespace rules, and tuple/function/generic type grammar remain open. The prefix must not silently add another record-declaration form.
 
 - [Record type identity](record-type-identity.md) selects distinct identity per named and unnamed inline declaration, with explicit reconstruction between distinct types. Alias spelling is now selected separately; inferred standalone record literal types, generic instantiation, and additional conversion facilities remain open.
