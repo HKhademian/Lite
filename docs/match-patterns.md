@@ -93,6 +93,39 @@ Assume person has type `User | Guest`. These explicit typed-binding arms are sel
 
 A type test is different from an enum-case test. `Event.Click` and `Event.Key` can share the same declared type Event; `event: Event` cannot distinguish them. Similarly, testing a payload type cannot distinguish an intact Result's success from failure when the two payload types overlap.
 
+## Typed destructuring: selected composition rule
+
+Type patterns can occur inside destructuring patterns, not only as top-level arms. Check the structure and its component types together; bind the narrowed components only on a successful whole-pattern match. No nested conditional or match is required merely to narrow extracted values.
+
+Assume pair is either an Int/String tuple or a String/Int tuple:
+
+```text
+match pair {
+    (x: Int, y: String) { handle_number_text(x, y) }
+    (x: String, y: Int) { handle_text_number(x, y) }
+}
+```
+
+In the first arm x is Int and y is String; the second arm reverses those types. The annotations are matching constraints, not requests to convert incompatible components. Failure of any required component makes the whole pattern fail. Branch bindings do not become accessible to later arms or outside the matching branch; this does not promise rollback of arbitrary user side effects. Borrow/move/copy commitment during partial matching still needs ownership rules.
+
+The same composition applies to constructor payload patterns. With an Event.Data case carrying a pair whose components admit several types, this arm can constrain its nested payload directly:
+
+```text
+Event.Data((x: Int, y: String)) { handle_number_text(x, y) }
+```
+
+This assumes the illustrated case schema and is an arm fragment requiring other coverage as appropriate. Qualified case spelling remains illustrative, and contextual `.Data(...)` remains a separate enum-shorthand proposal.
+
+Conditional matching shares these component patterns:
+
+```text
+if (x: Int, y: String) := pair {
+    handle_number_text(x, y)
+}
+```
+
+The capability and typed tuple shape are selected. Complete tuple/record productions, generic/subtype tests, field visibility, evaluation effects, and ownership remain to formalize. A typed pattern whose component type is already statically known may need no runtime test; an impossible type constraint cannot be made valid by an implicit cast. In an ordinary declaration, the same destructuring must be irrefutable for its input type or use an explicitly defined failure contract.
+
 ## Recommended sixth capability: guards
 
 After a structural pattern succeeds, allow a Boolean condition to refine selection. Candidate syntax, not yet selected:

@@ -22,6 +22,8 @@ binding: Type
 
 This reuses the language's colon type annotation. In a conditional, write `if binding: Type = expression { ... }`; in a match arm, write `binding: Type { ... }`. These surface forms are selected; the complete pattern grammar remains open.
 
+Type patterns also compose inside destructuring: `(x: Int, y: String)` tests and narrows both tuple components in one pattern. Constructor payload patterns may contain these typed component patterns too; no nested selection construct is required solely for component type tests. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+
 ## Narrowing without redeclaration
 
 For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).

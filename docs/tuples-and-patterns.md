@@ -68,6 +68,18 @@ This capability applies equally to a successful Result payload, an error-union p
 
 For an existing name, `if person: User` also tests and narrows without introducing a binding. See [type tests and narrowing](type-tests-and-narrowing.md) for the distinction from binding patterns and the remaining stability rules.
 
+## Type constraints during destructuring
+
+Typed subpatterns are supported inside tuple and constructor payload patterns. They constrain and bind individual components in the same match operation:
+
+```text
+if (x: Int, y: String) := pair {
+    handle_number_text(x, y)
+}
+```
+
+The whole pattern must succeed before the branch executes. A mismatching component fails the pattern rather than requesting conversion, and no nested match is needed just to establish the component types. The same tuple pattern works directly in a match arm, and may appear inside a constructor payload pattern. New bindings remain local to the successful branch. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule) for examples and remaining ownership rules.
+
 ## Underscore bindings
 
 `_` binds the supplied value and can be read, like another name. It is not a wildcard that suppresses binding.

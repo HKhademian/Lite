@@ -132,6 +132,8 @@ Swift distinguishes associated payloads from raw enum values. That distinction h
 
 **Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. Guards are the suggested sixth capability; runtime-equality punctuation, constructor qualification, and record-pattern grammar remain open.
 
+Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations and readable underscore rules instead of copying Dart's syntax wholesale. See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
+
 ### Arm shape and type-only selection
 
 - **V:** `Type { body }` directly supports the compact type-arm direction and narrows the existing subject.
