@@ -45,6 +45,8 @@ is intended to agree with:
 
 `.field` refers to the current construct's context. It never searches outward for a context that happens to have that field.
 
+Leading-dot enum cases are a separate [working proposal](enums-and-variants.md#proposal-inferred-case-names). That proposal must define how an expected enum type and a current-context field are distinguished; it does not silently replace the established metadata rule. Explicit `@name.field` remains the way to select named metadata.
+
 ```text
 @users loop users as user {
     if eligible(user) {

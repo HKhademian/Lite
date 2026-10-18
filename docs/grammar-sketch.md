@@ -153,6 +153,8 @@ context_access := "." field
 
 Named tags are prefixes on the construct. Leading-dot access resolves only against the current context, without outward field search. Body braces belong to their construct and do not add another wrapper context.
 
+The proposed enum-case shorthand `.case` is not yet added to these productions. Its expected-type resolution and potential collision with metadata need a deliberate rule; see [inferred case names](enums-and-variants.md#proposal-inferred-case-names). Whitespace cannot choose either meaning.
+
 The tag scope includes its header, so a loop condition may reference initialized count or accumulator state even when receiver declarations follow the source textually. Current items are not available before body entry.
 
 ## Exits
