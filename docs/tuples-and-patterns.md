@@ -128,6 +128,8 @@ In a loop receiver list, repeated receiver names shadow from left to right, so `
 
 ## Notes and open decisions
 
+For named fields, source names and destination bindings are distinct. Explicit aliases can avoid duplicate destination names without changing positional tuple patterns or introducing duplicate-binding shadowing. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
+
 Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and any separate nonbinding wildcard form need formal specification. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
