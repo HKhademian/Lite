@@ -46,6 +46,8 @@ These markers do not choose borrowing, copying, moving, lifetimes, argument synt
 
 [Slot parameters](slot-parameters.md) now provide selected temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. An explicit call marker such as replace(slot value) remains a proposal. Ordinary local parameter rebinding, general reference values, public pointers, exact compatibility, and call-site syntax are not selected by this decision.
 
+The [ordinary parameter review](parameter-values-and-slots.md) keeps the current feature scope to ordinary inputs and writable slots. Read-only defaults do not decide copying versus borrowing. An efficient indirect calling convention must preserve the eventual observable semantics; it does not by itself introduce a public reference feature or caller writeback.
+
 ## Result rules
 
 The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item with an optional trailing semicolon; see [blocks and results](blocks-and-results.md).

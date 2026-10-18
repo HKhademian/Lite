@@ -4,6 +4,8 @@ Status: **temporary caller-location access through slot-qualified parameters sel
 
 ## Selected caller-location contract
 
+The [ordinary parameter review](parameter-values-and-slots.md) clarifies the current scope: writable caller locations can be received without introducing public pointers or general reference values. Ordinary value/borrow semantics remain a separate decision.
+
 Distinguish replacing an ordinary local parameter binding from replacing a location supplied by the caller. A declaration's access permissions alone do not select how arguments are passed.
 
 A slot-qualified parameter requests temporary access to the caller's location. Assignment through the parameter writes back to that location. This is selected separately from the slot marker's earlier descriptive meaning; it does not make every ordinary call an aliasing operation. An explicit call-site marker remains recommended, with its spelling unselected.

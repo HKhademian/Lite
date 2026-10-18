@@ -32,6 +32,8 @@ Owned values, deterministic cleanup, inferred borrowing, and explicit shared own
 
 The design must decide whether assignments move, copy, share, or borrow nontrivial values. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
 
+The selected temporary [slot parameter](slot-parameters.md) gives access to a caller variable or field; it introduces no public pointer operation or general reference-value feature. The [ordinary parameter review](parameter-values-and-slots.md) separates language-defined value/borrow behavior from backend choices such as passing an aggregate indirectly. Such choices must preserve observable identity, ownership, aliasing, and mutation behavior rather than silently select a different contract.
+
 [Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. Access permissions must not silently select copying, sharing, or runtime borrow checking.
 
 ## Loop state costs
