@@ -117,6 +117,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- [Record type identity](record-type-identity.md) recommends distinct named record declarations even for identical fields, with explicit reconstruction for conversion. Aliases should name an existing identity. Inline/anonymous identity, exact alias syntax, and conversion rules remain open; this recommendation is not yet selected.
+
 - In an explicit record-field type position, the proposed stats: { points: Int; level: Int = 1; }; omits record because colon already requires a type. Keep the top-level Profile := record { ... } form pending broader type/value brace grammar. Unnamed-type identity and whether to retain the longer nested spelling remain open; see [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
 
 - The [zero/default core distinction](zero-initialization.md) is selected. Complete field-default resolution, zero eligibility across types, generic constraints, required fields, broader literal contexts, and anonymous inline record types still need confirmation/formalization. The earlier initializer-omission form remains an unresolved alternative. Do not admit invalid zeroed enum/reference/handle states or implicitly select a Result outcome from representation bits; existing implicit-success construction remains intact.

@@ -103,6 +103,7 @@ Records support the composition-first direction: fields can contain other data t
 
 ## Open decisions
 
+- [Record type identity](record-type-identity.md) compares nominal and structural compatibility and recommends distinct named record declarations; the decision is not yet selected.
 - Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
 - Nominal versus structural identity and generic declarations.
 - Field visibility/accessor syntax and any per-field mutation rules.

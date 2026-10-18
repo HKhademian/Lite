@@ -34,6 +34,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Records](records.md): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
+- [Record type identity](record-type-identity.md): nominal versus structural compatibility, named-record recommendations, aliases, and remaining inline-type identity choices.
 - [Record creation and initialization](record-initialization.md): selected zero/default distinction; declared field defaults, nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type = 0 versus declared-default record initialization with {}, with zero eligibility and broader literal contexts still open.
 - [Type categories](type-categories.md): products, sums, raw codes, domain wrappers, generated operations, and value/reference semantics as separate decisions.
