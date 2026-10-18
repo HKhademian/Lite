@@ -44,7 +44,7 @@ The declaration `mut rename := fn(...) { ... }` would instead describe writable 
 
 These markers do not choose borrowing, copying, moving, lifetimes, argument syntax at the call site, capture permissions, or purity. Those contracts remain open; see [mutability](mutability.md) and [memory and performance](memory-and-performance.md).
 
-The [slot-parameter proposal](slot-parameters.md) separately investigates replacing a caller-supplied location. It recommends temporary caller-location access for slot-qualified parameters and an explicit call marker such as replace(slot value). Ordinary local parameter rebinding, first-class references, and this argument syntax are not yet selected. The slot replacement marker itself does not automatically choose parameter-passing semantics.
+[Slot parameters](slot-parameters.md) now provide selected temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. An explicit call marker such as replace(slot value) remains a proposal. Ordinary local parameter rebinding, general reference values, public pointers, exact compatibility, and call-site syntax are not selected by this decision.
 
 ## Result rules
 
