@@ -83,3 +83,7 @@ The primary source for LiteScript-specific choices is the design conversation th
 ## Enum and type-category comparison
 
 [Type categories across the reference languages](type-categories-comparison.md) records a focused primary-source review dated 2026-10-18. It compares Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript, Python, Lua, and Scala 3, with direct sources for enums and payload alternatives, products, data/case classes, distinct domain wrappers, representation, and value/reference semantics. It distinguishes current development documentation from a guarantee about every released compiler.
+
+## Pattern matching across type categories
+
+The [all-type pattern review](pattern-type-review.md#reference-checks), [ordered sequences](sequence-patterns.md), and [set matching](set-patterns.md) compare primary Rust, Dart, Python, Swift, and Kotlin documentation consulted on 2026-10-18. They distinguish structural decomposition, equality, membership, and search; no new collection matching grammar is adopted solely because a reference language supports it.

@@ -50,6 +50,8 @@ The receiver separator is still open; this distinction holds whether its final s
 
 ## Refutable and irrefutable patterns
 
+The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. These additions do not select tuple grouping, singleton/empty spelling, or rest ownership automatically.
+
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
 ```text

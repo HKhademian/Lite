@@ -51,6 +51,10 @@ The newline inside the quotes is data. The working direction preserves literal c
 
 ## Notes
 
+String literal patterns test the whole string through its ordinary equality contract. Existing text uses == expectedText. Neither spelling implies regex, substring, case-folding, or normalization operations. Unicode equality details remain a String contract, not a special pattern conversion.
+
+The [pattern review](pattern-type-review.md#8-strings-and-characterbyte-views) recommends explicit byte/scalar/grapheme views before sequence matching. A proposed [list pattern](sequence-patterns.md) must not silently choose one text unit or treat every string as a list.
+
 Whitespace outside literals can move freely without changing executable structure. Whitespace inside literals is part of the value. These are separate rules, not an exception that makes indentation structural.
 
 ## Open decisions

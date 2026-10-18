@@ -57,6 +57,12 @@ loop (10..=1).step(3) as number { process(number) }
 
 The intended descending example visits `10, 7, 4, 1`. A positive step magnitude follows the direction chosen by bounds. Zero step requires rejection. Equal bounds, exclusive ranges, overflow near numeric limits, and dynamic invalid steps need precise contracts.
 
+## Matching numbers and ranges
+
+Numeric literals and == expected use the shared value-match contract, without implicit numeric-string conversion or approximate Float matching. Float representation, NaN/signed-zero equality, and literal representability remain numeric contracts rather than a separate pattern-equality system.
+
+Matching a range object by equality differs from testing scalar membership. Comparison-chain guards already express an ascending interval; a strided descending range requires its own membership semantics. A bare range pattern or in-prefix pattern is not selected. See the [all-type pattern review](pattern-type-review.md#9-ranges-values-versus-membership) for examples and pending choices.
+
 ## Counter versus range value
 
 ```text

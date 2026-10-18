@@ -10,6 +10,23 @@ Assume Student exposes an age component and a name component. These examples des
 
 ## Named-field value constraints
 
+### Construction and matching must be reviewed together
+
+The subsequent all-type review raised a concern about choosing field = pattern when value fields might use field: expression. Retaining the same colon at the field-list level is the current recommendation:
+
+```text
+/* Field fragments, not complete selected construction/arm syntax. */
+{ a: 1, b: 2 }             /* value fields contain expressions */
+{ a: x, b: == expected }   /* pattern fields contain subpatterns */
+{ a: x: Int, b: "Ali" }    /* a's subpattern binds/types x */
+```
+
+The field selector does not bind; its supplied component is passed to the right-hand subpattern. The nested colon in x: Int therefore has a different grammar position from the field separator, without changing bare names into value lookups.
+
+This is not yet selected named-record grammar. The outer form must distinguish it from positional constructor patterns and executable braces. In particular, Student(age: Int) already illustrates a typed positional binding under its proposed schema; adding named field: pattern to the identical container would need a syntactic distinction. Likewise, the pattern's braces must not be mistaken for our arrow-free arm body. Define construction, matching containers, and field omission together; do not choose their meaning from capitalization, symbol lookup, or line breaks. See the [complete type review](pattern-type-review.md#4-records).
+
+### Earlier equality-only field proposal
+
 ```text
 Student(age == outVal, name == "ali")
 ```

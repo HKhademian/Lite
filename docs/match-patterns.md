@@ -4,6 +4,8 @@ Status: **equality, plain enums, payload enums, destructuring, and type matching
 
 ## Purpose and template
 
+The [all-type finalization review](pattern-type-review.md) extends this capability checklist to records, lists/arrays/slices, sets, tuples/pairs, enums, strings, range values and membership, numbers, maps, Unit, and stored Results. Confirmed primitives are retained; new collection and named-record forms are explicitly marked as proposals.
+
 One match construct must cover ordinary value selection and structured pattern matching. A separate switch construct is unnecessary for these capabilities.
 
 ```text
