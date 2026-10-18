@@ -96,7 +96,7 @@ An alias is a declaration of coverage, not automatic inference from the body. Ch
 
 For example, if `parse_age` changes its declared error type to `ParseError | EncodingError`, its propagation into `ReadError | ParseError` must fail to type-check until the caller handles, maps, or declares the additional `EncodingError` alternative.
 
-These membership rules are proposals for general error union composition, not a completed subtyping system or selected implicit conversion mechanism for arbitrary values.
+Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Their complete integration with propagation and Result compatibility remains to be specified. In particular, widening an error payload does not by itself select an implicit conversion between arbitrary Result types or a completed subtyping system.
 
 ## Grouping
 
@@ -137,7 +137,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 
 - Define the general `Error` contract and its relationship to refined recoverable error types.
 - Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
-- Plain-union order independence, flattening, and exact identity duplicate removal are selected; complete membership, subtyping, and narrowing remain open. See [union normalization](union-normalization.md).
+- Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Subtype relations, flow-refinement validity, and complete Result compatibility remain open. See [union normalization](union-normalization.md) and [union widening](union-widening.md).
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Set type-expression precedence and grouping consistently with other type constructors.
 - Preserve the distinction between transparent aliases and new nominal error types.

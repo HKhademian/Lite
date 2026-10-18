@@ -1,6 +1,6 @@
 # Union membership and checked narrowing
 
-Status: **selected 2026-10-18: an existing member value is admitted to a plain union automatically; using an arbitrary union value as one particular member requires checked narrowing**. Broader union-to-union widening, interface/subtype membership, and runtime representation remain open.
+Status: **selected 2026-10-18: an existing member value is admitted to a plain union automatically; using an arbitrary union value as one particular member requires checked narrowing**. Exact-member union-to-union widening is also selected in [union widening](union-widening.md). Interface/subtype membership and runtime representation remain open.
 
 ## Selected example
 
@@ -61,7 +61,7 @@ Likewise, two named enum cases carrying User remain distinct cases. User | User 
 
 ## Remaining contracts
 
-- Proposed union-to-union widening: permit a source union only if every source alternative is admitted by the target. This is not selected by the simpler member-entry decision alone.
+- Exact-member union-to-union widening is selected separately: every normalized source alternative must be an exact target member. See [union widening](union-widening.md) for examples and boundaries.
 - Interface/subtype overlap, numeric subtyping if introduced, and ambiguity between several compatible alternatives.
 - Capabilities, ownership, lifetime, generic constraints, and function argument/return integration.
 - Common-member operations without narrowing, negative flow, and refinement after early exits.

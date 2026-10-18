@@ -83,7 +83,7 @@ Equivalent semantic types do not make source declaration order a stable runtime 
 
 ## Boundaries still to settle
 
-- Member admission is selected; complete union-to-union widening, subtype membership, and capability/ownership compatibility remain open.
+- Member admission and [exact-member union widening](union-widening.md) are selected. Subtype membership and capability/ownership compatibility remain open.
 - Subtyping/interface overlap and absorption. Exact identity duplicate removal is selected; a rule such as reducing Subtype | Interface to Interface needs the actual type-relation contract.
 - General type precedence and explicit grouping around fallible operands. This document does not relax the current grouped-union recommendation for mixtures of | and !.
 - Generic normalization, recursive aliases, and legal recursive nominal boundaries.
