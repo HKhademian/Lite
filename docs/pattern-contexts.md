@@ -14,7 +14,7 @@ Partially annotated patterns constrain their input and infer every binding from 
 
 ## Operator-placement audit
 
-Review dated 2026-10-18: the shared pattern meanings are consistent with the four proposed Some conditions, but their surrounding punctuation is construct-specific. `:=` supplies an explicit source in an inferred declaration or pattern condition; it is not part of the pattern itself. `== expected` is a value-test subpattern. Ordinary expression equality remains `left == right` and introduces no bindings.
+Review dated 2026-10-18, with operator roles subsequently confirmed: the shared pattern meanings are consistent with the Some conditions, but their surrounding punctuation is construct-specific. `:=` supplies an explicit source in an inferred declaration or pattern condition; it is not part of the pattern itself. `== expected` is a value-test subpattern. Ordinary expression equality remains `left == right` and introduces no bindings. The first three Some conditions below use selected capabilities; the fourth tag-only form still needs its proposed omission rule.
 
 ### Conditions and nested patterns
 

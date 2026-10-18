@@ -97,10 +97,10 @@ A pattern condition tests **matching**, not the truthiness of its payload. `if S
 
 The existing expression form `if progress == .completed` compares enum values. The enum type inferred from progress supplies the owner of .completed, which is a complete payload-free value.
 
-The following proposed conditions would extend equality into pattern selection:
+The following earlier candidates are superseded as binding-condition syntax; == does not introduce pattern bindings:
 
 ```text
-/* Under review: these are not selected binding conditions. */
+/* Not binding conditions: equality never declares user or _. */
 if .Some(user) == find_user(id) { greet(user) }
 if .Some(_) == find_user(id) { report_found() }
 if .Some == find_user(id) { report_found() }
@@ -108,7 +108,7 @@ if .Some == find_user(id) { report_found() }
 
 The first form can already be read as constructing Some from an existing user and comparing it with the returned Option, assuming construction inference and equality are available. Introducing user instead is a different operation. The grammar must not choose between those meanings based on whether user happens to exist in an outer scope. Structural matching also need not require the payload to implement equality.
 
-Recommendation: retain ordinary == equality and the selected := condition for matching and binding:
+Selected rule: retain ordinary == equality and use the := condition to supply a pattern's input explicitly:
 
 ```text
 if .Some(user) := find_user(id) { greet(user) }
@@ -125,7 +125,7 @@ Separately recommend a tag-only pattern for a payload-bearing case:
 if .Some := find_user(id) { report_found() }
 ```
 
-Under that proposal, .Some tests only the case tag and binds no payload. The same omission rule should apply to match arms, rather than being an if-only shortcut. It would not turn a bare constructor into a complete enum value for ordinary equality. Payload omission, access/ownership effects, and case-owner inference need an explicit contract. No new conditional equality-binding operator or omission rule is selected by recording this review.
+Under that proposal, .Some tests only the case tag and binds no payload. The same omission rule should apply to match arms, rather than being an if-only shortcut. It would not turn a bare constructor into a complete enum value for ordinary equality. Payload omission, access/ownership effects, and case-owner inference need an explicit contract. Equality-binding conditions are ruled out; this separate omission rule remains proposed.
 
 ## Pattern binding followed by guards
 
