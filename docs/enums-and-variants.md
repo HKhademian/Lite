@@ -29,13 +29,24 @@ ExitCode := enum : Int {
 }
 ```
 
-The backing type and case-value spelling are selected. The complete set of admissible backing types, constant-expression and representability rules, omitted values, automatic numbering, and any default when the backing type is omitted remain open. Float support is required by the selected example; it must not be silently restricted to integer backing values.
+The backing-type clause and each assigned case value are independently optional. Their omission is allowed, not an open syntax question. The complete set of admissible backing types, constant-expression/representability rules, inferred/default backing type, and automatic value assignment still need semantic rules. Float support is required; it must not be silently restricted to integer backing values.
+
+### Independently optional type and values
+
+```text
+Plain := enum { Ready; Busy; Stopped; }
+Typed := enum : Int { Ready; Busy; Stopped; }
+Coded := enum { Ready = 10; Busy = 20; Stopped = 30; }
+Mixed := enum : Int { Ready = 10; Busy; Stopped = 30; }
+```
+
+These illustrate the selected combinations, including per-case omission among explicit values. An omitted backing type must use the eventual inference/default contract; an omitted value must use the eventual automatic-assignment contract. These examples do not choose zero-based numbering, increment-after-explicit behavior, collision handling, or Float automatic values.
 
 Backing values must be distinguished from payload fields. Whether and how payload-bearing cases also receive an explicit backing value requires a separate declaration rule. Physical storage and ABI guarantees, especially for payload enums, are not settled solely by this header.
 
 ### Colon introduces the backing type
 
-The colon is selected, reusing the type-annotation role of fields and function results. Here it means backing-value type, not inheritance or interface implementation. The earlier colonless header is superseded and is not an alternate spelling. Omitting the complete colon/type clause remains subject to the open omitted-backing policy.
+The colon is selected whenever a backing type is written, reusing the type-annotation role of fields and function results. Here it means backing-value type, not inheritance or interface implementation. The earlier colonless typed header is superseded and is not an alternate spelling. Omitting the complete colon/type clause is allowed; the inferred/default backing type remains to define.
 
 ## Plain cases
 
@@ -179,14 +190,14 @@ This direction does not add class, data class, value class, sealed, or distinct 
 ### Next enum decisions
 
 1. Confirm one enclosing nominal enum type versus independently usable case types.
-2. Complete the selected uniform-binding/backing-type declaration with omission rules, case payload schemas, and construction syntax.
+2. Complete the selected declaration with inference/default rules for omitted backing types/values, case payload schemas, and construction syntax.
 3. Define closure/exhaustiveness across modules, including any non-exhaustive public enums.
 4. Specify raw mappings, checked conversions, equality, and flags separately from layout.
 5. Set representation, recursive storage, ownership, and generated-operation guarantees with the broader type model.
 
 ## Open decisions
 
-- Complete enum declaration rules beyond the selected `Name := enum : BackingType { Case = value }` surface: omitted backing types/values, payload names/types, and construction.
+- Complete enum declaration rules beyond the selected optional backing-type/value surface: backing-type inference/defaults, automatic case values, payload names/types, and construction.
 - Closed versus extensible cases, nominal identity, and any variant-specific types.
 - Raw numeric values, storage widths, duplicate-value aliases, flags, explicit conversions, and FFI validity checks.
 - Contextual case-owner inference in generic/union situations, nested case patterns, and disambiguation from leading-dot context access.

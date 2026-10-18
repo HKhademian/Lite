@@ -168,6 +168,16 @@ match status {
 
 Status remains an enum type, not arbitrary Float values. Raw conversion and physical storage are separate contracts.
 
+The backing clause and case values can also be omitted independently:
+
+```text
+PlainStatus := enum { Ready; Busy; Stopped; }
+TypedStatus := enum : Int { Ready; Busy; Stopped; }
+CodedStatus := enum { Ready = 10; Busy = 20; Stopped = 30; }
+```
+
+Omission is selected; exact backing defaults/inference and automatic values remain to specify.
+
 For a payload enum whose schema exposes Click(Point), Key(String), and Quit, matching would compose without requiring another conditional syntax:
 
 ```text

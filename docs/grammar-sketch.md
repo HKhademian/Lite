@@ -119,6 +119,15 @@ Construction uses TypeName { field = expression, ... }, or just { field = expres
 
 Trailing commas are optional and allowed; complete field-list omission, defaults, partial schemas, nominal/structural matching, and ownership remain separate contracts. See [records](records.md) and [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
+## Enums
+
+```text
+enum_definition := "enum" [":" type] "{" enum_case_sequence "}"
+plain_enum_case := identifier ["=" expression]
+```
+
+The backing-type clause and each case value are independently optional, including mixed explicit/omitted values. A written backing type requires the colon. enum_case_sequence uses the selected separator/trailing-separator rules; payload declarations and full case productions remain incomplete. Inferred/default backing types, automatic values, constant expressions, and duplicate codes need separate semantic contracts. See [optional enum type and values](enums-and-variants.md#independently-optional-type-and-values).
+
 ## Conditionals
 
 ```text
