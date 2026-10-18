@@ -1,6 +1,6 @@
 # Record type identity and assignment compatibility
 
-Status: **design review dated 2026-10-18; distinct named record declarations recommended, not yet selected**. Anonymous/inline record identity, aliases, conversions, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
+Status: **distinct named record declarations selected 2026-10-18; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Anonymous/inline record identity, alias syntax, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
 
 ## The decision
 
@@ -19,19 +19,19 @@ user := User { name = "Ali", age = 10, };
 student: Student = user;
 ```
 
-Two possible contracts:
+The reviewed alternatives were:
 
-- **Nominal:** the final declaration is rejected because User and Student come from distinct type declarations. Equal fields are insufficient.
-- **Structural:** compatible fields can make the declaration valid despite the different type names. Exact versus extra-field compatibility, mutability, variance, visibility, and defaults would need precise rules.
+- **Nominal, selected:** the final declaration is rejected because User and Student come from distinct type declarations. Equal fields are insufficient.
+- **Structural, not selected for named records:** compatible fields could make the declaration valid despite the different type names. Exact versus extra-field compatibility, mutability, variance, visibility, and defaults would need precise rules.
 
 Both approaches can be statically checked. Strong typing alone does not settle the choice. Nominal identity protects distinctions between domain concepts; structural compatibility reduces adaptation between independently defined data shapes.
 
-## Recommended named-record rule
+## Selected named-record rule
 
 Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The exact alias declaration syntax and type-value binding rules remain open.
 
 ```text
-/* Rejected under the recommendation: no implicit User-to-Student conversion. */
+/* Rejected: no implicit User-to-Student conversion. */
 student: Student = user;
 
 /* Explicitly construct the destination using the source fields. */
@@ -58,7 +58,7 @@ The same headless record pattern can be used independently with a Student source
 
 ## Type tests and unions
 
-Under the nominal recommendation, User and Student remain separate alternatives of User | Student even if all their fields happen to match. A : User test selects User, rather than every record with the same fields. Aliases of User name the same alternative.
+Under the selected nominal rule, User and Student remain separate alternatives of User | Student even if all their fields happen to match. A : User test selects User, rather than every record with the same fields. Aliases of User name the same alternative.
 
 Headless field extraction cannot replace a deliberate nominal test. Existing conditional and-chains can first narrow a broader source, then extract from it. Exact type versus subtype/interface satisfaction, generic tests, union normalization, and missing-field behavior remain shared type-system decisions.
 
@@ -90,6 +90,6 @@ Reusing one named Stats record provides an explicit common type under either opt
 - **Dart records:** record shape determines structural type identity, including field types and named-field names; a typedef does not make the shape nominal. These records are not the same facility as Dart classes. Source: [Dart record types](https://dart.dev/language/records#record-types).
 - **TypeScript:** type compatibility is based on structural subtyping. This is more than an exact-field-set equality rule and has explicit exceptions and compatibility policies. Source: [TypeScript compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility.html).
 
-Recommendation: start by selecting the identity of named record declarations. Then resolve inline/anonymous types, aliases, and explicit conversions. Do not infer one from generated equality, byte layout, default values, or the ability to destructure fields.
+Named record identity is now selected. Next resolve inline/anonymous identity, aliases, and any additional explicit conversions. Do not infer one from generated equality, byte layout, default values, or the ability to destructure fields.
 
 Related: [records](records.md), [initialization](record-initialization.md), [pattern inference](pattern-binding-inference.md), [type tests](type-tests-and-narrowing.md), and [type categories](type-categories.md).

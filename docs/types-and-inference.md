@@ -45,6 +45,8 @@ These are desired capabilities, not a complete or implemented specification. Syn
 
 The [type-category review](type-categories.md) separates products, named enum alternatives, unions of existing types, domain wrappers, generated data operations, and value/reference semantics. The [reference comparison](type-categories-comparison.md) shows why data class and value class do not provide one portable contract. The [enum proposal](enums-and-variants.md#design-direction-after-the-category-review) recommends one enum concept for plain and payload cases without selecting case-specific subtypes or a memory model.
 
+Named record declarations have selected nominal identity: two independently declared records remain distinct despite identical fields. Conversion requires explicit reconstruction under their visibility and ownership contracts. Contextual record construction and headless field extraction do not introduce structural assignment compatibility. Inline/anonymous record identity remains open; see [record identity](record-type-identity.md).
+
 ## Inferred functions
 
 ```text
@@ -83,7 +85,7 @@ A component's successful type test does not automatically identify a generic par
 
 ## Major open decisions
 
-Numeric widths and overflow rules; generic syntax and inference; nominal versus structural record rules; variance; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
+Numeric widths and overflow rules; generic syntax and inference; inline/anonymous record identity; variance; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
 
 Higher-kinded types, dependent types, unrestricted compile-time evaluation, and dynamic typing are not established requirements.
 
