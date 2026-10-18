@@ -115,23 +115,23 @@ These shapes may be used in a match arm or conditional pattern once their gramma
 
 Rust uses `name @ subpattern` to bind a matched value while checking another pattern. Dart list patterns support `...` with a collecting subpattern. These are useful precedents for the two capabilities, but do not select LiteScript's colon syntax, tuple-rest result type, or ownership semantics. See [Rust identifier patterns](https://doc.rust-lang.org/reference/patterns.html#identifier-patterns) and [Dart rest elements](https://dart.dev/language/pattern-types#rest-element).
 
-## Underscore wildcards
+## Underscore bindings
 
-`_` matches one supplied component without binding it. Repeated underscores are valid in the same pattern:
+`_` is an ordinary identifier with unused-name permission. Repeated names within one pattern shadow in recursive written order:
 
 ```text
 (first, _, third, _) := tuple;
 ```
 
-The tuple must still have the required shape. `_: String` can constrain an ignored component's type without creating a name. Nested tuple and constructor patterns use the same rule; Some(_) still requires the Some case. Use a normal name wherever a later condition or body needs the component.
+The tuple must still have the required shape. The final `_` names the fourth component and may be read. `_: String` constrains and binds a component with type String. Nested tuple and constructor patterns use the same rule; Some(_) still requires Some and binds its payload. All names, not only underscores, use ordered shadowing. See [pattern binding and shadowing](pattern-shadowing.md).
 
-In a loop receiver list, `as _, _, acc` skips item/count aliases and names the accumulator acc. `as _, _, _` binds no names. Repeated ordinary receiver names retain their separate ordered-shadowing rule. See [wildcards and skips](wildcards-and-skips.md) and [loop receivers](loop-receivers.md).
+In a loop receiver list, `as _, _, acc` binds item and count as `_`, leaving count visible, and names the accumulator acc. `as _, _, _` leaves `_` naming the accumulator. See [underscore bindings and skips](wildcards-and-skips.md) and [loop receivers](loop-receivers.md).
 
 ## Notes and open decisions
 
-For named fields, source names and destination bindings are distinct. Explicit aliases can avoid duplicate destination names without changing positional tuple patterns or introducing duplicate-binding shadowing. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
+For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. The underscore wildcard is selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

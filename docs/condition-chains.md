@@ -1,6 +1,6 @@
 # Conditional pattern chains
 
-Status: **and-chained pattern binding and Boolean guards selected; binding-producing or/not and repeated-name rules open**.
+Status: **and-chained pattern binding and Boolean guards selected; binding-producing or/not and rebinding across operands open**.
 
 ## Purpose and selected example
 
@@ -23,7 +23,7 @@ The and separates two condition operands. It is not part of the value supplied t
 
 Thus user exists for the age test only after Some matches. The failed branch does not receive the newly introduced user, even when the pattern succeeded but a later guard failed. Following code and sibling conditions/bodies do not receive that new binding. An enclosing same-named value retains normal lookup outside the binding's successful scope.
 
-Pattern source expressions resolve before introducing that pattern's names. They can use bindings established by earlier operands. Repeating a name in later operands needs its own policy; the selected ordered shadowing between loop receiver slots does not silently decide it.
+Pattern source expressions resolve before introducing that pattern's names. They can use bindings established by earlier operands. Repeating a name in later operands needs its own policy; the selected ordered shadowing within each pattern and between loop receiver slots does not silently decide it. See [pattern binding and shadowing](pattern-shadowing.md).
 
 Side effects already performed by earlier operands are not rolled back when a later operand fails. Existing borrowing, mutation, and cleanup rules still apply. This feature does not choose ownership commitment timing or silently unwrap fallible calls.
 

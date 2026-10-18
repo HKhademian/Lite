@@ -26,11 +26,11 @@ loop users as user, _, sumAge { sumAge.value_or(0) + user.age }
 loop users as _, count { print(count) }
 ```
 
-Trailing slots may be omitted. `_` skips naming a slot and cannot be read. Names are programmer-chosen. Naming the second slot `index` does not change its meaning from iteration count to collection index.
+Trailing slots may be omitted. An explicit `_` binds that slot normally and allows it to be unused. Names are programmer-chosen. Naming the second slot `index` does not change its meaning from iteration count to collection index.
 
 ## Repeated receiver names
 
-Receiver slots introduce bindings from left to right. A later named receiver shadows an earlier one with the same name. A wildcard introduces no name:
+Receiver slots introduce bindings from left to right. A later receiver shadows an earlier one with the same name. `_` is an ordinary readable receiver name with unused-name permission:
 
 ```text
 loop items as item { inspect(item) }       /* item */
@@ -38,11 +38,11 @@ loop items as _, count { inspect(count) }  /* count */
 loop items as _, _, acc { inspect(acc) }   /* previous accumulator */
 ```
 
-The third form exposes `Option<T>` through acc. The item and count still exist and remain accessible through permitted context fields, but the wildcards introduce no local names. `as _, _, _` is valid and binds nothing.
+The third form exposes `Option<T>` through acc. Its two underscore receivers bind item and count, leaving the count visible as `_`. `as _, _, _` is valid and leaves the accumulator visible as `_`. Underlying state remains accessible through permitted context fields.
 
 This is ordered lexical shadowing, not reassignment or a requirement that repeated receivers have equal values or types. Within the header and body, lookup selects the last receiver binding with that name. Existing phase restrictions still apply: an item receiver is unavailable before body entry, while count and accumulator state are initialized before the first condition.
 
-For example, `as value, value, value` still leaves value naming the accumulator slot. This ordered-shadowing rule concerns real receiver names, not wildcards. It does not settle duplicate real names inside one tuple pattern or permit arbitrary duplicate declarations in an ordinary block. Repeated `_` within any pattern is valid because no name is bound.
+For example, `as value, value, value` leaves value naming the accumulator slot, just as `as _, _, _` does for `_`. Within a slot, nested pattern bindings also shadow in recursive written order. This does not permit arbitrary duplicate declarations in an ordinary block. See [pattern binding and shadowing](pattern-shadowing.md).
 
 ## Destructuring within a slot
 

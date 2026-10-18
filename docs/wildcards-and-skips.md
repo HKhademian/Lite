@@ -1,44 +1,42 @@
-# Wildcards and skipped pattern fields
+# Underscore bindings and skipped pattern fields
 
-Status: **underscore wildcard in all patterns selected on 2026-10-18; supersedes the earlier readable underscore binding**.
+Status: **ordinary readable `_` binding selected on 2026-10-18; replaces the nonbinding-wildcard decision**.
 
 ## Purpose and rule
 
-`_` matches a supplied value without introducing a name. Use it to skip positional components, payloads, parameters, or receiver slots. Every occurrence is independent; repeated underscores are valid and do not shadow each other or assert equality.
+`_` is an ordinary identifier beginning with underscore, just like `_user` or `_left`. It introduces a readable binding and explicitly permits that binding to be unused. There is no separate nonbinding underscore pattern.
 
-An ordinary name such as `_temporary` remains a readable identifier. Standalone `_` is not a readable value binding. Use an explicit name whenever the body needs the value.
-
-Longer underscore-prefixed names also explicitly allow the binding or declared field to go unused without an unused-name warning. They still bind and remain readable, unlike `_`; see [unused-name intent](unused-name-intent.md). This does not waive a separate required-use or error-handling contract.
+Repeated names within a pattern shadow in binding order. This applies to every name, including `_`; it is not a special exemption for underscores. See [pattern binding and shadowing](pattern-shadowing.md) for ordering, scope, and typing.
 
 ## Positional and nested destructuring
 
 ```text
 if (first, _, last: String, _) := record {
-    greet(first, last)
+    greet(first, last);
+    inspect(_)
 }
 ```
 
-Each underscore occupies one required position. The tuple must still have the specified shape; a wildcard is not a rest pattern. The typed last component must match String without conversion. Other named bindings retain their inferred types from all compatible input possibilities.
-
-Nested tuple and constructor payload patterns use the same wildcard:
+The tuple must have the required shape. Each `_` binds one component; the later `_` shadows the earlier one, so inspect receives the fourth component. Neither underscore creates an equality constraint. If the body does not read them, no unused-name warning is needed. A single `_` does not capture several remaining components.
 
 ```text
 if Some((first, _, last: String)) := value {
-    greet(first, last)
+    greet(first, last);
+    inspect(_)
 }
 ```
 
-Some still has to match: `Some(_)` does not match None. Skipping a component removes its binding and additional constraints, not the surrounding shape or variant tests.
+Here `_` names the middle tuple component. Some still has to match: `Some(_)` does not match None. Using an unconstrained name leaves that component unconstrained without removing surrounding shape or variant tests.
 
-## Typed wildcards
+## Typed underscore bindings
 
 ```text
 if (_, _: String) := pair {
-    report_string_component()
+    print(_)
 }
 ```
 
-A typed wildcard constrains the selected component but gives it no local name. Its successful type test still narrows the compatible input possibilities used for other bindings. The ordinary type-test/subtype and ownership rules apply; a wildcard is not an unchecked cast or a general type-inference placeholder.
+Both positions bind normally. The second component must match String without conversion; the body sees the second `_` with type String. The first binding keeps its own inferred type even though it is hidden. Type constraints still narrow compatible input possibilities for all bindings.
 
 ## Match arms and additional conditions
 
@@ -54,42 +52,56 @@ match find_user(id) {
 }
 ```
 
-Assume find_user returns Option<User> and name_parts supplies the illustrated tuple shape. A top-level `_ { body }` arm is also a catch-all pattern. As an ordinary pattern it can cover the whole remaining subject, including an intact Result, without extracting any payload or propagating an error. This does not decide whether a separate else fallback spelling is also retained.
+Assume find_user returns Option<User> and name_parts supplies the illustrated tuple shape. An unconstrained `_ { body }` arm matches any remaining subject and binds that whole subject to `_`. It can bind an intact Result without extracting its payload or propagating an error. The selected Result-side inspection rules still apply when examining an outcome's payload. A separate match else convenience remains open.
 
 ## Declarations, loops, and hooks
 
 ```text
 (first, _, third) := triple;
-_ := calculate();
+use(first, third);
+inspect(_);
+```
 
-loop items as _, count, acc {
-    inspect(count, acc)
+```text
+_ := calculate();
+inspect(_);
+```
+
+These are ordinary declarations and still require irrefutable patterns for their input contracts. A declaration produces Unit regardless of whether its bindings are subsequently read. The initializer still executes and retains its error behavior.
+
+```text
+loop items as _, _, acc {
+    inspect(_, acc)
 }
 ```
 
-Declarations still require an irrefutable pattern for their input contract. A wildcard declaration evaluates its initializer, introduces no binding, and produces Unit like other declarations. It does not cancel the initializer's work or turn its failure into success.
+The loop's second `_` names count and hides the first, which named item. `as _, _, _` instead leaves `_` naming the Option accumulator. Underlying loop state remains available through permitted construct metadata. Omitted trailing receiver slots introduce no names; an explicitly written `_` does.
 
-In loop receiver lists, underscore skips naming that slot. Item/count/accumulator state remains available through permitted construct metadata. Repeated ordinary receiver names retain their separately selected left-to-right shadowing; repeated wildcards introduce no names at all.
+Under the existing completion-hook proposal, `then(_) { process(_) }` receives and reads the same input as `then(value) { process(value) }`. The presence of a receiver permits the proposed replacement-result behavior; the underscore spelling adds no separate hook rule. Recovery receivers follow their existing error-payload contract.
 
-Under the existing completion-hook proposal, `then(_) { replacement }` still has a receiver pattern and may supply a replacement result while leaving its input unnamed. To read it, write `then(value) { process(value) }`. Recovery and other receiver patterns follow the same no-binding meaning; their phase-specific payload and result rules do not change.
+## Assignment, lifetime, and diagnostics
 
-## Scope and evaluation limits
+```text
+var _ := 1;
+_ = 2;
+inspect(_);
+```
 
-- Reading `_` as an expression is invalid because it introduces no value binding.
-- There is no ordinary variable called `_` to update. `_ = expression` is not enabled as a new discard-assignment operation by this decision; destructuring assignment remains a separate design topic.
-- Wildcards never exempt Result values or other required-use types from the eventual ignored-outcome policy. That policy remains open.
-- Skipping a field does not imply copying, allocation, ownership transfer, or a particular destruction time. Those need the ownership model.
-- Producer evaluation is preserved. Whether unused field/getter extraction can be omitted without effects needs the extraction/effect contract; do not silently adopt another language's getter behavior.
-- Capability modifiers on patterns cannot turn `_` into a readable binding. Modifier validation for mixed or binding-free patterns remains part of the full declaration grammar.
-- The proposed `...rest` is distinct from `_`: it concerns several remaining positions. Exact rest syntax, including any ignored-rest form, remains open.
+`_ = expression` is ordinary assignment to the visible binding. It requires an existing reassignable target with a compatible type. It is not a discard operation. Similarly, `mut _` controls held-data access just as mut does for any other name.
+
+Shadowing hides a name; it does not automatically destroy, copy, borrow, move, or discard its value. Hidden bindings retain their own types and ownership obligations. Their exact lifetime and destruction rules need the memory model. An underscore prefix cannot waive a separate required-use or recoverable-error-handling contract; that policy remains open.
+
+Unused-name permission also does not suppress initializer effects or promise that field/getter extraction is skipped. Structural extraction effects and ownership commitment remain separate decisions. Proposed rest capture concerns multiple components and still needs its own grammar and result contract.
+
+The same ordinary-block declaration rules apply to `_` as to other names. Permitting repeated names inside one pattern or receiver list does not enable repeated independent declarations in an otherwise duplicate-rejecting block.
 
 ## Superseded rule
 
-Earlier examples let `_` name the last loop receiver or read a hook input. Those uses now need explicit names such as count, acc, or value. The ordinary-name shadowing rules remain intact. Duplicate real names within one simultaneous pattern still need a policy; repeated wildcards are not duplicates because they bind nothing.
+The intermediate design treated `_` as a nonbinding wildcard and forbade reading it. That decision is replaced: wildcard-like matching is expressed through ordinary unconstrained bindings, underscore-prefixed unused-name intent, and ordered shadowing. Examples using `_` remain concise, but the bindings are real.
 
-## References and related concepts
+## Related concepts
 
-- [Rust wildcard patterns](https://doc.rust-lang.org/reference/patterns.html#wildcard-pattern): an underscore ignores a value without binding; Rust's detailed move/borrow rules are not automatically selected.
-- [Dart wildcard patterns](https://dart.dev/language/pattern-types#wildcard): positional skips and typed wildcards without local names.
-- [Kotlin skipped components](https://kotlinlang.org/docs/destructuring-declarations.html#underscore-for-unused-variables): skipped destructuring components have specific component-call semantics, which LiteScript must define separately.
-- [Tuples and patterns](tuples-and-patterns.md), [identifiers](identifiers.md), [loop receivers](loop-receivers.md), and [match arm chains](match-guards.md).
+- [Pattern binding and shadowing](pattern-shadowing.md)
+- [Explicitly allowed unused names](unused-name-intent.md)
+- [Identifiers](identifiers.md), [tuples and patterns](tuples-and-patterns.md), and [loop receivers](loop-receivers.md)
+- [Match arm chains](match-guards.md) and [pattern context review](pattern-contexts.md)

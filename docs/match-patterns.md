@@ -76,7 +76,7 @@ Assume point has a compatible two-element tuple type. This pattern receives the 
 
 Tuple, record/field, and nested patterns belong to this capability. Tuple syntax already has working examples; record, sequence/rest, and named-field spellings remain open. Literal or type constraints should compose with extraction, subject to the full pattern grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
 
-Newly bound component names are branch-local and may shadow outer names. A name inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Duplicate names inside one pattern still need a policy; repeated names must not acquire equality constraints accidentally. `_` is a nonbinding wildcard and may repeat, including in nested patterns. Typed wildcards can constrain ignored fields; see [wildcards and skips](wildcards-and-skips.md).
+Newly bound component names are branch-local and may shadow outer names. A name in a binding position inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Repeated binding names within a pattern shadow in recursive written order, without asserting equality. `_` follows the same rule as every other binding name and explicitly permits nonuse. Typed underscore bindings can constrain components and remain readable; see [pattern shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
 ## 5. Type checking and matching
 

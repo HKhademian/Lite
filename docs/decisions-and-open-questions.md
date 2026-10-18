@@ -40,8 +40,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Comments do not parse source text or insert item separators; missing closing delimiters are errors.
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
 - Fractional literals require a leading digit: write `0.5`, not `.5`; leading-dot context access remains distinct.
-- `_` is a wildcard in every pattern, introduces no readable value binding, and may repeat. Use explicit names to read skipped values; names such as `_temporary` remain ordinary identifiers. This supersedes the earlier readable-underscore rule. It does not add `_ = expression` discard-assignment syntax; see [wildcards and skips](wildcards-and-skips.md).
-- A longer underscore-prefixed name, such as _user or _left, remains an ordinary readable name and explicitly permits nonuse without unused-name warnings. This applies to locals, pattern/parameter/receiver bindings, and declared fields where those diagnostics apply. It does not alter visibility, initialization, ownership, type constraints, or separate required-use/error-handling rules. See [unused-name intent](unused-name-intent.md).
+- `_` is an ordinary readable underscore-prefixed binding, not a separate wildcard. Every repeated binding name within a pattern shadows in recursive written order, including `_`; the last occurrence is visible without implying equality or changing an earlier binding's type. Source lookup precedes new bindings. This replaces the nonbinding-wildcard decision; see [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
+- An underscore-prefixed name, including _, _user, or _left, remains an ordinary readable name and explicitly permits nonuse without unused-name warnings. This applies to locals, pattern/parameter/receiver bindings, and declared fields where those diagnostics apply. It does not alter visibility, initialization, ownership, type constraints, or separate required-use/error-handling rules. See [unused-name intent](unused-name-intent.md).
 - Explicit semicolons separate ordinary items; there is no automatic insertion.
 - Complete block constructs end their items without semicolons; a following semicolon is rejected, including for declarations initialized directly by block constructs.
 - Continuing a block construct's value with an operator, call, member access, or indexing requires parentheses around that construct.
@@ -83,14 +83,14 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - One `if` form works for actions and values; branch braces establish ownership.
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
-- Loop receiver slots are item, count, accumulator; trailing slots can be omitted and `_` skips naming a slot.
-- Ordinary receiver names shadow from left to right when repeated. Wildcards introduce no names: `_, _, acc` names the accumulator acc, and `_, _, _` binds nothing.
+- Loop receiver slots are item, count, accumulator; trailing slots can be omitted. An explicitly written `_` binds its slot normally and permits nonuse.
+- Receiver names shadow from left to right, including nested slot patterns and ordinary `_` bindings: `_, _, acc` leaves count visible as `_` and the accumulator as acc; `_, _, _` leaves the accumulator visible as `_`.
 - Tuple destructuring within a slot operates on that slot's actual value.
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
 - An accumulator represents previous contributions, with absence modeled explicitly.
 - Plain `continue` and bare `break` contribute nothing.
-- Completion receivers are optional; a wildcard receiver `_` leaves the input unnamed while retaining the proposed opt-in to a value-producing hook. Use a normal receiver name to read the input.
+- Completion receivers are optional; `_` is an ordinary readable receiver name that permits nonuse. Receiver presence retains the proposed opt-in to a value-producing hook.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -105,8 +105,8 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- Named-field patterns may use `field as localName`, optionally followed by a type constraint, to avoid destination-name collisions without overloading the type colon. Recommend unique destination names within each simultaneous pattern, preserving separate loop-slot shadowing and nested lexical shadowing. Source-field duplication and ownership need distinct rules. The syntax and duplicate policy remain proposals; see [pattern aliases](pattern-aliases.md).
-- The [pattern context review](pattern-contexts.md) recommends one shared pattern vocabulary with explicit per-construct mismatch behavior: irrefutable ordinary parameters/loop/hook/error receivers, refutable if/match selection, no hidden filtering or error swallowing. It also recommends distinguishing bare-name binding from explicit equality tests, rejecting duplicate bindings within a simultaneous pattern, and resolving colon/type/record ambiguities together. These are review recommendations, not newly approved semantics; the selected ordered shadowing between loop receiver slots remains separate.
+- Named-field patterns may use `field as localName`, optionally followed by a type constraint, to keep both values accessible without overloading the type colon. Repeated destination names now follow selected ordered pattern shadowing; aliases remain optional distinct naming. Alias syntax, source-field duplication, and ownership need their own rules; see [pattern aliases](pattern-aliases.md).
+- The [pattern context review](pattern-contexts.md) recommends one shared pattern vocabulary with explicit per-construct mismatch behavior: irrefutable ordinary parameters/loop/hook/error receivers, refutable if/match selection, no hidden filtering or error swallowing. It also recommends distinguishing bare-name binding from explicit equality tests and resolving colon/type/record ambiguities together. Those policies remain proposals. The former duplicate-binding rejection recommendation is superseded by selected ordered shadowing within patterns and between loop receiver slots.
 - `(x, y: (a, b: str, c), ...rest)` proposes a whole-value binding y with nested destructuring, a typed component b, and a final outer tuple-rest capture. Type constraints within destructuring are already selected; whole-value colon syntax, tuple-type ambiguity, rest result types, and simultaneous whole/component ownership remain proposals. See [nested patterns and rest](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 - Enum/metadata collision handling still needs a policy, with an explicit ambiguity diagnostic recommended rather than silent reinterpretation. The .case shorthand itself is selected. Float raw-value enums are an independent proposal; their case identity, raw mapping, uniqueness, representation, and conversions remain open. See [enums and variants](enums-and-variants.md#inferred-case-names).
 - Match review recommends type-only arms that narrow a stable existing subject (bare `User` versus marked `: User` remains open), a final `else` fallback, exhaustive action matches as well as value matches, a possible prohibition on explicit fallthrough. Source-order first-success selection, no implicit fallthrough, and and-chained guards/additional matches are now selected. None of these recommendations silently extends the selected arm grammar. Constant/type/capture name resolution needs a decision; see [match](match.md#next-design-proposals-compact-arms-and-predictable-coverage) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
@@ -176,6 +176,12 @@ Integer `//` uses floor rounding and integer `%` is its paired remainder. Define
 
 Local recovery is required for individual operations, including addition overflow and returned function errors. Recoverable failures use postfix `!` propagation or `else` recovery with an optional receiver; ordinary calls can retain their Result as data. Recovery forms `T | D` from success and normal fallback types. Every escaping recoverable error must fit an explicitly declared error contract: `T ! E` is refined and `T!` explicitly means `T ! Error`. Define the general Error contract, generic error contracts and conversion, union composition and narrowing, representation, complete expression precedence and nested-operand scope, and ignored-outcome diagnostics. Expected-`Result` arithmetic capture and union-alias grammar remain proposals. Decide whether ordinary arithmetic faults are recoverable outcomes or another checked-fault category, and reconcile that choice with local arithmetic recovery and concise ordinary code. Define the separate panic path's triggers, execution, and cleanup guarantees. See [result and errors](result-and-errors.md), [fallible types and error composition](fallible-types-and-error-composition.md), [propagation and call chaining](propagation-and-chaining.md), and [panics](panics.md).
 
+### 9. Pattern matching after underscore unification
+
+Ordinary readable underscore bindings and ordered shadowing within patterns are settled. The next pattern review should distinguish binding from existing-value equality and type-only tests. Then complete recursive pattern grammar, including aliases, whole-value/nested colon syntax, and rest capture; define rebinding across and operands, binding-producing or/not, and stability of narrowed names under mutation.
+
+Mismatch policies for loop, parameter, recovery, and completion receivers still need confirmation. Complete coverage and fallback rules, enum-case/metadata collisions, stored Result success-pattern spelling, and extraction/ownership/lifetime contracts. These are separate from underscore unused-name intent; see [pattern binding and shadowing](pattern-shadowing.md) and [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
+
 ## Superseded suggestions
 
 - Indentation or newlines as statement/body delimiters.
@@ -201,8 +207,9 @@ Local recovery is required for individual operations, including addition overflo
 - Semicolons suppressing final-expression results.
 - Requiring or allowing a semicolon after a complete block item.
 - Continuing an unparenthesized block value across its item boundary through an operator, call, member access, or indexing.
-- Treating `_` as a readable ordinary value binding, including reading the last loop receiver through it. The underscore now binds nothing.
-- `_ = value` as a special discard-assignment statement remains unselected.
+- Treating `_` as a nonbinding wildcard or prohibiting reads of it. It is an ordinary underscore-prefixed name; ordered shadowing replaces the intermediate wildcard decision.
+- Requiring unique binding names within a single pattern. Later names now shadow earlier ones; ordinary block redeclarations retain their separate rules.
+- `_ = value` as special discard syntax. It is ordinary assignment requiring an existing var binding with a compatible type.
 - Granting writable owned fields through `var` alone; `mut` is required explicitly.
 - Requiring an additional function-level mutation marker beyond explicit `mut` receiver/parameter contracts.
 - Rejecting comparison chains merely to simplify the grammar, or treating them as ordinary left-associated binary comparisons.

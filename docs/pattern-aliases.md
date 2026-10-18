@@ -1,12 +1,12 @@
 # Pattern aliases and duplicate names
 
-Status: **reference comparison dated 2026-10-18; field aliases and duplicate-binding policy proposed, not selected**.
+Status: **reference comparison dated 2026-10-18; field aliases proposed; ordered pattern shadowing selected**.
 
 ## Purpose
 
 Keep a source field's name separate from the local name introduced by a pattern. This handles records that expose the same field name in different nested values, and lets the programmer avoid shadowing an outer name when desired.
 
-Two fields named x are not themselves duplicate bindings. They become a binding collision only if the pattern attempts to introduce the same destination name twice in one simultaneous binding scope. Aliases can give the destinations distinct names.
+Two source fields named x do not have to introduce the same local name. Aliases can keep both destinations accessible. LiteScript also allows repeated destination names within a pattern through ordered shadowing; the last binding is visible. This differs from the uniqueness rules in some reference languages below.
 
 ## JavaScript: import aliases versus destructuring names
 
@@ -85,15 +85,13 @@ This illustrates a proposal, not selected record-pattern grammar. It would give 
 
 The benefit of as is keeping source-to-local naming distinct from LiteScript's `binding: Type`. Do not assume the JavaScript/Rust field-colon spelling drops into the existing typed and whole-value colon patterns without a grammar decision. In this candidate, as is followed by a binding name and does not perform a type cast.
 
-## Recommended duplicate-binding policy
+## Selected duplicate-binding policy
 
-- Require unique destination names within one simultaneous pattern, including nested parts and aliases. `(x, x)` would be rejected; it would not compare values or silently select the last binding.
-- `_` is a nonbinding wildcard, so it may repeat and is excluded from destination-name collision checks. An alias is unnecessary for a skipped field; only actual introduced names participate in duplicate-binding policy.
-- Preserve nested lexical shadowing and the separately selected left-to-right shadowing between loop receiver slots. Those are different binding contexts.
-- Keep repeated names in distinct match arms independent. Conditional-chain rebinding needs its own scope policy.
-- Define duplicate source-field selection separately. Giving one source field two local names must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
+Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](pattern-shadowing.md).
 
-The duplicate policy and alias punctuation remain recommendations pending a decision. Full record syntax, alias/type precedence, named versus positional patterns, field effects, and ownership still need formalization.
+Aliases remain useful when both selected values must stay accessible. The proposed `field as localName` binds only localName; it does not also introduce the source field's name. If alias grammar is adopted, its destination participates in the same ordering rule.
+
+Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are full record syntax, alias/type precedence, named versus positional patterns, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
 
 ## Related concepts
 

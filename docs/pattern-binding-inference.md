@@ -16,10 +16,10 @@ Here str stands for a known string type or alias. The typed component b must mat
 
 1. Start with the input's statically possible types and shapes at this match site.
 2. Apply the complete structural and type constraints. Narrow compatible portions of each alternative and discard impossible portions; an alternative containing a union at b may be partly compatible rather than entirely accepted or rejected.
-3. For each name, obtain the type of the component or whole value it binds in every compatible possibility.
-4. Use that type if there is only one; otherwise use their union, collapsing duplicate alternatives. Narrow composite values before projecting their component types.
+3. For each binding occurrence, obtain the type of the component or whole value it binds in every compatible possibility. Distinct occurrences of the same name remain distinct bindings.
+4. For that occurrence, use the single projected type or the union of its projected alternatives, collapsing duplicates. Narrow composite values before projecting their component types; do not union different occurrences merely because their names are the same.
 
-Only actual binding names receive inferred local types. A wildcard `_` creates no binding; a typed wildcard can still narrow the compatible input portions used for the other projections.
+Every binding, including `_`, receives its own inferred local type. Ordered shadowing chooses which same-named binding is visible after a successful match; it does not merge their types or erase constraints on hidden components. An underscore-prefixed name may be left unused without a warning. See [pattern binding and shadowing](pattern-shadowing.md).
 
 This is input narrowing and projection, not a rule that arbitrarily unions unrelated arm result expressions. A single matching arm can bind several union-typed names while its final expression still obeys the ordinary compatible-result contract.
 

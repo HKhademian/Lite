@@ -24,7 +24,7 @@ The proposed hook rule is:
 
 - No receiver: action behavior; require a `Unit` body result and preserve the incoming construct result where one exists.
 - Receiver: the block may produce a replacement result.
-- `_`: match the input without a name while retaining a receiver-bearing, potentially result-producing hook.
+- `_`: an ordinary readable receiver name with permission to be unused; like any present receiver, it permits the proposed result-producing behavior.
 
 This convention does not change ordinary block-tail semantics. A function body does not need a receiver to return its final expression.
 
@@ -33,7 +33,7 @@ then(value) { process(value) }
 then(_) { "Replacement" }
 ```
 
-Both forms are supplied the same input. The first names and reads it; the second uses a wildcard and introduces no name. Reading `_` is invalid. The hook proposal distinguishes receiver presence from omission, independently of whether that receiver binds a name. An action hook can explicitly finish with `Unit` or a declaration when an intermediate calculation produces a value; trailing semicolons do not discard a result.
+Both forms are supplied the same input and bind it normally. The second names it `_` and leaves it unused, which is explicitly permitted; `then(_) { process(_) }` could instead read it. The hook proposal distinguishes receiver presence from omission. An action hook can explicitly finish with Unit or a declaration when an intermediate calculation produces a value; trailing semicolons do not discard a result.
 
 ## Option handling without new dispatch syntax
 

@@ -6,7 +6,7 @@ Status: **underscore-prefixed names opt out of unused-name warnings; selected 20
 
 Use `_user`, `_left`, or another valid identifier beginning with underscore to declare that a named value or field is allowed to be unused. This is explicit diagnostic intent while retaining an ordinary, readable name.
 
-The spelling must contain at least one character after the initial underscore. `_` alone remains the nonbinding wildcard. Names such as `__`, `_temporary`, and `_学生` are ordinary identifiers where admitted by the identifier profile and carry the unused-name intent. A trailing or internal underscore alone, as in `user_` or `user_name`, does not opt in.
+`_` itself is included: it is an ordinary readable binding with the same unused-name intent. Names such as `__`, `_temporary`, and `_学生` are also ordinary identifiers where admitted by the identifier profile. A trailing or internal underscore alone, as in `user_` or `user_name`, does not opt in.
 
 ## Binding examples
 
@@ -16,7 +16,7 @@ _user := make_user();
 use(right);
 ```
 
-The first declaration binds _user without requiring a later read for unused-name diagnostics. The tuple binds _left and right; the wildcard binds nothing. Unused-name warnings are suppressed for _user and _left individually, not for unrelated names in the same scope or pattern.
+The first declaration binds _user without requiring a later read for unused-name diagnostics. The tuple binds _left, right, and _. Unused-name warnings are suppressed for _user, _left, and _ individually, not for unrelated names in the same scope or pattern.
 
 The names remain usable:
 
@@ -45,7 +45,7 @@ With a field alias, evaluate the introduced local name independently from the so
 
 - `_user` has an ordinary inferred or declared static type and is a distinct identifier from user.
 - Binding reassignment requires var; held-data mutation requires mut and the usual access permissions.
-- Duplicate-name and shadowing rules apply normally. `_user` is not a repeatable wildcard.
+- Ordered shadowing applies to repeated names within a pattern, including `_user` and `_`. The last binding of a name is visible; repeated names do not assert equality. Ordinary block redeclarations retain their separate rules. See [pattern shadowing](pattern-shadowing.md).
 - Initializers and calls retain their normal evaluation and error behavior. A prefix does not suppress execution, drop a value early, or change a pattern's constraints.
 - Naming a stored Result _attempt does not inspect, unwrap, default, or propagate it. Any separate required-use/error-handling diagnostic remains independent; its complete policy is still open.
 - This suppresses unused-name diagnostics only. It does not suppress type/access errors, unreachable-code diagnostics, redundant-capability warnings, or other unrelated checks.
@@ -59,6 +59,6 @@ Rust's compiler documentation uses underscore-prefixed names to silence unused/d
 ## Related concepts
 
 - [Identifiers](identifiers.md)
-- [Wildcards and skips](wildcards-and-skips.md)
+- [Underscore bindings and skips](wildcards-and-skips.md)
 - [Tooling and learning](tooling-and-learning.md)
 - [Declarations and assignment](declarations-and-assignment.md)

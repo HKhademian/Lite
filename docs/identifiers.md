@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Unicode names, underscore wildcards, and underscore-prefixed unused-name intent accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
+Status: **Unicode names, ordinary underscore bindings, and underscore-prefixed unused-name intent accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
 
 ## Purpose
 
@@ -33,32 +33,24 @@ Pattern bindings may reuse the source value's name. A matching branch can shadow
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
-## Standalone underscore
+## Underscore-prefixed names, including standalone underscore
 
-`_` is a wildcard in every pattern. It matches without introducing a value name, may repeat, and cannot be read in an expression. This supersedes the earlier readable-binding rule.
+`_`, `_user`, and `_left` are ordinary readable identifiers with explicit permission to be unused. Their type, var/mut capabilities, ownership, and scope rules remain ordinary. The prefix does not make declared fields private or skip initialization. See [explicit unused-name intent](unused-name-intent.md).
 
 ```text
-(first, _, third) := triple;
-_ := calculate();
+(first, _, third, _) := tuple;
+inspect(_);
 ```
 
-Both declarations preserve initializer evaluation. The first binds first and third; the second binds nothing. Neither creates a readable `_`. An ordinary identifier such as `_temporary` remains a normal name under the proposed character profile.
-
-Loop receivers can skip names explicitly:
+The second `_` shadows the first, so this read selects the fourth component. Every binding keeps its own inferred type. Repeated names follow ordered shadowing inside patterns, including nested patterns; the rule applies to all names, not only underscores. See [pattern binding and shadowing](pattern-shadowing.md).
 
 ```text
 loop items as _, _, acc {
-    inspect(acc)
+    inspect(_, acc)
 }
 ```
 
-Ordinary receiver names still shadow from left to right when repeated. Repeated wildcards introduce no names and therefore do not shadow. The item/count/accumulator state remains available through permitted metadata.
-
-Reading `_` is invalid; `_ = value` is not enabled as a special discard-assignment operation. Full modifier validation, ignored-outcome diagnostics, and ownership/drop behavior remain separate contracts. See [wildcards and skips](wildcards-and-skips.md).
-
-## Underscore-prefixed names
-
-A longer valid name beginning with underscore, such as _user or _left, is an ordinary readable name with explicit permission to be unused. Official unused-name diagnostics do not warn about that name being unused. It may still be read normally, and its type, var/mut capabilities, ownership, and scope rules remain unchanged. The rule also covers declared fields where unused-field diagnostics apply; it does not make those fields private or skip initialization. See [explicit unused-name intent](unused-name-intent.md).
+Here `_` names count; `as _, _, _` would leave `_` naming the accumulator. Omitted trailing receiver slots bind nothing. `_ = value` is ordinary assignment requiring an existing var binding and a compatible value, not discard syntax. Initializer effects and separate required-use obligations remain intact; see [underscore bindings and skips](wildcards-and-skips.md).
 
 ## Case and normalization
 

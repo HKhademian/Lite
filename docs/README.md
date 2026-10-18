@@ -18,7 +18,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, and block boundaries.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
-- [Identifiers](identifiers.md): Unicode names, standalone wildcard distinction, proposed character classes, and normalization questions.
+- [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
@@ -33,7 +33,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Types and values
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
-- [Wildcards and skips](wildcards-and-skips.md): nonbinding `_` in all patterns, repeated skips, typed wildcards, and updated receiver examples.
+- [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
+- [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): review of binding versus selection in declarations, if/match, loops, parameters, recovery, and completion hooks; recommended mismatch policies and remaining gaps.

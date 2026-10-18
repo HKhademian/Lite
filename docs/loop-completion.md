@@ -70,7 +70,7 @@ then(_) { "Replacement" }
 
 A receiver was proposed as the explicit opt-in to a value-producing hook. A nonreceiving hook performs an action and preserves incoming result state. A receiving hook may transform its input. This applies to attached hooks, not ordinary function or conditional bodies.
 
-`_` in `then(_)`, `else(_)`, or `finally(_)` is a wildcard receiver pattern. It introduces no readable name; use an explicit receiver name to inspect the input. A wildcard still counts as a present receiver under the hook proposal, so a replacement result remains possible. It does not change the phase-specific payload. The phase-specific payload contracts remain open where described above and below.
+`_` in `then(_)`, `else(_)`, or `finally(_)` is an ordinary readable receiver binding whose nonuse is allowed. For example, `then(_) { process(_) }` may read the input. Receiver presence retains the proposed opt-in to a value-producing hook; its spelling does not change the phase-specific payload. Those payload contracts remain open where described above and below.
 
 ## Finally
 
