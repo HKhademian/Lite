@@ -33,7 +33,24 @@ The backing type and case-value spelling are selected. The complete set of admis
 
 Backing values must be distinguished from payload fields. Whether and how payload-bearing cases also receive an explicit backing value requires a separate declaration rule. Physical storage and ABI guarantees, especially for payload enums, are not settled solely by this header.
 
+### Recommended refinement: colon before the backing type
+
+The latest candidate makes the backing-type boundary explicit:
+
+```text
+Status := enum : Float {
+    Ready = 1.1;
+    Busy = 2.2;
+    Stopped = 3.3
+}
+```
+
+Recommend this over the previously selected colonless header. It reuses colon's type-annotation role from fields and function results, while keeping the backing type distinct from the enum's name. Here colon means backing-value type, not inheritance or interface implementation.
+
+This is a punctuation refinement under review, not a second permanent syntax or a change to case values, matching, conversion, or layout. If selected, replace the colonless form consistently; do not retain both as aliases. Any unbacked enum would continue to omit the complete colon/type clause, with the omitted-backing policy still open.
+
 ## Plain cases
+
 
 Assume a Status enum with Ready, Busy, and Stopped cases:
 
