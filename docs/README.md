@@ -43,7 +43,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Aggregate patterns](aggregate-patterns.md): Student field/positional examples, selected primitive meanings, and proposed record schemas and selector grammar.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
-- [Pattern contexts](pattern-contexts.md): review of binding versus selection in declarations, if/match, loops, parameters, recovery, and completion hooks; recommended mismatch policies and remaining gaps.
+- [Pattern contexts](pattern-contexts.md): cross-context audit of := source placement, == value tests, bindings, declarations, if/match, receivers, and recommended mismatch policies.
 - [Pattern aliases](pattern-aliases.md): source-field naming versus destination bindings, reference-language renaming forms, and proposed as aliases.
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, and open representation/conversion contracts.
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.

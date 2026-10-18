@@ -30,6 +30,8 @@ An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, no
 
 No general inline binding-plus-equality spelling is selected by these three primitives. Use the existing and chain to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
 
+The surrounding construct supplies the pattern's subject: `if .Some(== outValAge) := find_user_age(id)` gives it explicitly, while `.Some(== outValAge) { ... }` receives it from match. The := source separator is not part of the pattern. Typed declarations retain their existing : Type = shape, and receivers do not gain hidden filtering; see the [cross-context audit](pattern-contexts.md#operator-placement-audit).
+
 The [Student aggregate examples](aggregate-patterns.md) apply these meanings to proposed record patterns: `Student(== outVal, "ali")` compares both components, while `Student(outVal, "ali")` binds the first and compares the second. Their positional schema and named-field selector grammar are separate decisions.
 
 The [comparison-pattern review](comparison-patterns.md) proposes extending value matching with direct <, <=, >, and >= prefixes. Equality remains the selected direct comparison. Other comparisons already work in ordinary Boolean and guards, including grouped Boolean or; general logical subpatterns and binding-producing alternatives remain separate open features.

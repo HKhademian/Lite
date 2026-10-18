@@ -12,6 +12,60 @@ The selected capabilities and typing rules are in [match patterns](match-pattern
 
 Partially annotated patterns constrain their input and infer every binding from compatible possibilities as one type or a union. This does not change the separate compatible-result policy for if/match branch expressions.
 
+## Operator-placement audit
+
+Review dated 2026-10-18: the shared pattern meanings are consistent with the four proposed Some conditions, but their surrounding punctuation is construct-specific. `:=` supplies an explicit source in an inferred declaration or pattern condition; it is not part of the pattern itself. `== expected` is a value-test subpattern. Ordinary expression equality remains `left == right` and introduces no bindings.
+
+### Conditions and nested patterns
+
+These three conditions use selected pattern capabilities:
+
+```text
+if .Some(age) := find_user_age(id) { show_age(age) }
+if .Some(== outValAge) := find_user_age(id) { report_expected() }
+if .Some(_) := find_user_age(id) { report_found() }
+```
+
+The first binds age, the second compares the payload with an existing outValAge without binding it, and the third binds readable _ with unused-name permission. Each source is evaluated once. A mismatch skips its body. The value-test pattern does not construct Some or compare the whole Option.
+
+Nested structure preserves the same meaning:
+
+```text
+if .Some((age: Int, == expectedName)) := lookup_age_name(id) {
+    show_age(age)
+}
+```
+
+This tests Some, then its tuple payload, binds the Int age, and compares the second component with an existing expectedName. New bindings are visible only after the whole pattern succeeds. Later and operands can use them under the existing chain rules.
+
+### Match supplies its subject
+
+```text
+match find_user_age(id) {
+    .Some(== outValAge) { report_expected() }
+    .Some(age) { show_age(age) }
+    .None { report_missing() }
+}
+```
+
+The arm patterns have the same meanings as in if. They need no := because match already supplies the subject. A later arm's additional match does supply another source explicitly, for example `and .Some(profile) := find_profile(user.id)`. An ordinary guard such as `and age == outValAge` remains a Boolean expression, not another binding pattern.
+
+### Declarations, parameters, and receivers
+
+- `(left, right) := pair` explicitly supplies pair to a declaration pattern. Outside a conditional, a refutable pattern still needs a failure contract; writing `.Some(age) := possibleAge` cannot silently acquire if's mismatch behavior.
+- `age: Int = expression` and `if age: Int = expression` retain the separately selected typed-declaration shape. They are not assignment expressions. The claim that all four Some conditions use := does not replace these typed forms. There is a grammar gap: expanding the broad pattern := source placeholder with a typed-binding pattern could also admit `if age: Int := expression`. The full grammar must explicitly select or exclude that additional spelling rather than accidentally introducing an alias; this audit does not choose it. Nested typed subpatterns remain a selected capability.
+- `loop pairs as (left, right), count` receives the item and count from the loop. No := is required inside those slots. A refutable receiver such as `.Some(== outValAge)` would need a selected mismatch policy; hidden filtering is not selected. The loop separator remains open.
+- Function parameters receive arguments, and completion/recovery receivers receive phase-specific values. Their shared patterns do not need an explicit source separator. Full destructured parameter/receiver grammar and refutable dispatch remain open; ordinary binding examples do not promise that arbitrary selective patterns are accepted there.
+- Assignment `target = value` updates an existing permitted target. Neither := nor == replaces it, and destructuring assignment still needs its own contract.
+
+The initial recommendation for parameters and receiver slots remains irrefutable binding. Refutable selection can be expressed explicitly with if/match inside the function, loop, or handler. That preserves error handling and cleanup requirements without introducing an implicit mismatch path.
+
+### Tag-only omission remains a proposal
+
+The fourth condition, `if .Some := find_user_age(id)`, would test the case without binding its payload. The corresponding match arm would be `.Some { report_found() }`. These must share a payload-omission contract, not become conditional-only or equality-only shortcuts. The rule remains proposed; the existing contextual-case grammar's optional parentheses do not establish arity or omission semantics.
+
+This tag-only form introduces no binding, whereas .Some(_) introduces the ordinary readable _. Neither pattern implicitly unwraps a stored Result, propagates a failure, or grants mutation access. The receiver mismatch and enum/metadata collision policies remain separate open questions.
+
 ## 1. Ordinary declarations
 
 ```text

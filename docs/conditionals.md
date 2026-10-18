@@ -112,10 +112,11 @@ Recommendation: retain ordinary == equality and the selected := condition for ma
 
 ```text
 if .Some(user) := find_user(id) { greet(user) }
+if .Some(== outValAge) := find_user_age(id) { report_expected() }
 if .Some(_) := find_user(id) { report_found() }
 ```
 
-In the second condition, _ is the selected ordinary readable binding with unused-name permission; it is not a newly introduced nonbinding wildcard.
+The second condition uses the selected equality-test subpattern: compare the contained age with existing outValAge, without binding that name or comparing the whole Option. In the third condition, _ is the selected ordinary readable binding with unused-name permission; it is not a newly introduced nonbinding wildcard. The same pattern meanings apply in match and nested structures; see the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
 Separately recommend a tag-only pattern for a payload-bearing case:
 
