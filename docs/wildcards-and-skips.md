@@ -48,7 +48,7 @@ match find_user(id) {
         greet(user, last)
     }
     Some(_) { report_ineligible() }
-    None { report_missing() }
+    .None { report_missing() }
 }
 ```
 

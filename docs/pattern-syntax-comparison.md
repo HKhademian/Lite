@@ -145,7 +145,7 @@ Typed destructuring is now a selected composition requirement: `(x: Int, y: Stri
 - **Dart:** switch statements and switch expressions have different arm punctuation; LiteScript's one braced form avoids that distinction. [Dart branches](https://dart.dev/language/branches).
 - **Python:** `case pattern:` supplies class, sequence, and capture patterns, with explicit `if` guards; its dynamic name rules and indentation are not selected. [Python match](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement).
 
-**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. Decide whether type-only arms use bare `User` or marked `: User` before adding shorthand to the grammar. Bare-name capture versus constant/type resolution is a real design choice; uppercase spelling must not become an implicit grammar rule.
+**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. The selected bare-name rule now rules out bare `User` as a type test: it binds. Marked `: User` remains the proposed type-only form. Explicit `.None` replaces bare None case patterns. The [focused name-role review](pattern-bindings-and-tests.md) compares these choices; uppercase spelling never establishes a type test.
 
 ### Exhaustiveness and fallthrough
 

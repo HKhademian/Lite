@@ -73,7 +73,7 @@ These are semantic gaps to track, not reasons to require `person: User = person`
 
 ## Relationship to match and Result
 
-Match-arm narrowing of an existing subject, including the shorthand spelling for a type-only arm, is under review in [match](match.md). Selecting this `if` form does not silently select bare `User` as an arm pattern.
+Match-arm narrowing of an existing subject, including the shorthand spelling for a type-only arm, is under review in [match](match.md). Under the selected bare-name rule, bare `User` binds rather than testing a type. Marked `: User` remains the proposed binding-free match arm; selecting the existing if form does not select that additional spelling.
 
 An intact Result still has an outer success/failure distinction. If both payload sides contain the same type, a payload type test cannot identify which side is active. Extract or pattern-match the outcome layer before narrowing a payload union. See [union type patterns](union-patterns.md).
 

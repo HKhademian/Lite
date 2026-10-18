@@ -23,7 +23,7 @@ Each arm header, including any and conditions, is followed directly by a braced 
 match find_user(id) {
     Some(user) and user.age > 14 { greet(user) }
     Some(user) { report_too_young(user) }
-    None { report_missing() }
+    .None { report_missing() }
 }
 ```
 
@@ -34,7 +34,7 @@ An additional pattern uses an explicit source, such as `and Some(profile) := fin
 ```text
 message := match find_user(id) {
     Some(user) { user.display_name() }
-    None { "Not found" }
+    .None { "Not found" }
 }
 print(message);
 ```
@@ -81,20 +81,20 @@ The remaining recommendations below are **under review**; arm chains and source-
 
 ### Type-only arms without redeclaration
 
-Allow a type-only arm to refine an existing stable subject, analogous to `if person: User`:
+The proposed `: Type` arm would refine an existing stable subject, analogous to `if person: User`:
 
 ```text
 label := match person {
-    User { person.display_name() }
-    Guest { person.display_name() }
+    : User { person.display_name() }
+    : Guest { person.display_name() }
 }
 ```
 
 This example assumes a stable `person: User | Guest` and String-producing methods. Explicit `user: User` bindings would remain available for renaming or matching a producer with no existing subject name. No implicit `it` or other receiver name would be introduced.
 
-Bare `User` is the compact V-like candidate, but it needs a name-resolution rule distinguishing type tests, named constant patterns, and capture bindings. Capitalization must not decide meaning: LiteScript permits Unicode identifiers and does not select a type-name casing rule. The alternative `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. Choose one spelling after settling pattern name resolution; neither shorthand is selected yet.
+The earlier bare `User` type-arm candidate is ruled out by the selected bare-name binding rule: it binds a name rather than testing a type. Capitalization and type-name lookup do not change that meaning. The proposed `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. Its binding-free spelling remains under review; explicit `user: User` is already selected.
 
-The latest [binding-versus-testing review](pattern-bindings-and-tests.md) recommends marked `: User` arms and `== expected` value tests, leaving unmarked names for bindings. This is still a proposal. Existing bare None patterns need either an explicit case spelling or a specified constructor exception before that lookup rule is complete.
+The latest [binding-versus-testing review](pattern-bindings-and-tests.md) recommends marked `: User` arms and `== expected` value tests. Those remain proposals. Bare identifiers bind, and `.None` explicitly selects the absent Option case; no bare prelude-constructor exception remains.
 
 Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
 

@@ -30,7 +30,7 @@ match answer {
 
 Require compatible operand types and a defined equality contract; do not add implicit truthiness or unrelated coercions. The spelling for matching an existing runtime value remains open. One candidate is `== expected { ... }`, making equality explicit rather than silently creating a binding named `expected`.
 
-The focused [binding-versus-testing review](pattern-bindings-and-tests.md) recommends this explicit equality form alongside bare bindings and `: Type` type-only patterns. It compares eight reference languages and identifies the existing bare None constructor as a compatibility decision before a strict bare-name rule can be selected. These recommendations remain proposals.
+The focused [binding-versus-testing review](pattern-bindings-and-tests.md) compares eight reference languages and recommends explicit equality plus `: Type` type-only patterns. Those tests remain proposals. Bare identifiers as bindings and explicit `.None` case patterns are selected; no prelude constant or type name silently changes a bare binding into a test.
 
 Decide how many times and when a computed comparison value is evaluated, whether matching uses ordinary `==` or a restricted equality capability, and how side effects or fallible equality participate. The subject-once rule does not automatically answer those questions. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
 
@@ -91,7 +91,7 @@ match person {
 }
 ```
 
-Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only arms narrowing an existing stable subject are under review: bare `User` versus marked `: User` is not settled. See [type tests and narrowing](type-tests-and-narrowing.md).
+Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only arms narrowing an existing stable subject remain under review, with marked `: User` proposed. Bare `User` is an ordinary binding under the selected bare-name rule, not a type-test alternative. See [type tests and narrowing](type-tests-and-narrowing.md).
 
 A type test is different from an enum-case test. `Event.Click` and `Event.Key` can share the same declared type Event; `event: Event` cannot distinguish them. Similarly, testing a payload type cannot distinguish an intact Result's success from failure when the two payload types overlap.
 

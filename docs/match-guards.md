@@ -18,7 +18,7 @@ The initial pattern matches the match subject. Later operands are Bool tests, ex
 match find_user(id) {
     Some(user) and user.age > 14 { greet(user) }
     Some(user) { report_too_young(user) }
-    None { report_missing() }
+    .None { report_missing() }
 }
 ```
 
@@ -35,7 +35,7 @@ match find_user(id) {
         greet(user, profile)
     }
     Some(user) { report_ineligible(user) }
-    None { report_missing() }
+    .None { report_missing() }
 }
 ```
 

@@ -26,6 +26,19 @@ if Some(user) := find_user(id) {
 
 An ordinary `User` is a user. An `Option<User>` is either a user-bearing variant or an explicitly absent variant. The compiler requires the program to handle that distinction before using a user payload.
 
+## Constructor patterns versus expression values
+
+```text
+match find_user(id) {
+    Some(user) { greet(user) }
+    .None { report_missing() }
+}
+```
+
+In a pattern, `.None` explicitly tests the absent case using the expected Option type. Bare None is an ordinary binding, not an absent-case test. A payload form such as Some(user) retains its explicit constructor role; contextual .Some(user) is also available when the owner and payload schema are known.
+
+In an expression, `None` still resolves normally as a prelude value unless shadowed. For example, `empty := None;` is value construction/use, not a pattern test; isolated Option payload inference remains open. This decision changes case-pattern spelling without adding nullability or implicit unwrapping. See [pattern bindings and tests](pattern-bindings-and-tests.md).
+
 ## Default extraction helper
 
 Examples use a proposed library helper:

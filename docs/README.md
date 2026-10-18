@@ -35,7 +35,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
 - [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
-- [Pattern bindings and tests](pattern-bindings-and-tests.md): reference comparison and proposed explicit equality/type-only forms, including the bare None constructor conflict.
+- [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bare bindings and explicit .None cases, reference comparison, and proposed equality/type-only forms.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): review of binding versus selection in declarations, if/match, loops, parameters, recovery, and completion hooks; recommended mismatch policies and remaining gaps.

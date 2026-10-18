@@ -39,7 +39,7 @@ if progress == .completed {
 
 The match subject supplies Progress to its case patterns. In the comparison, the known type of progress can supply the enum type to the right operand. This is contextual type inference, not a search through all enums for a matching name. If the owning enum cannot be determined uniquely, require qualification. Do not assume a Float subject identifies Progress merely because its raw value agrees with one case.
 
-The same contextual case form can select payload cases, such as `.Click(x, y)`, when the owning enum and payload schema are established. Type-directed resolution for other call/initialization contexts still needs complete inference rules; no arbitrary static-member feature is selected here. Existing explicitly bound constructor names, such as prelude Some/None, retain ordinary name resolution; this decision does not make every bare name an inferred enum case.
+The same contextual case form can select payload cases, such as `.Click(x, y)`, when the owning enum and payload schema are established. Type-directed resolution for other call/initialization contexts still needs complete inference rules; no arbitrary static-member feature is selected here. In patterns, unmarked bare identifiers bind; they do not become enum cases through ordinary name lookup. In particular, use `.None` to test the absent Option case. Explicit payload heads such as Some(value) retain their constructor-pattern role. Expression construction through prelude Some/None still uses ordinary name resolution; this does not make every bare expression name an inferred enum case.
 
 ### Interaction with current-context metadata: policy still open
 

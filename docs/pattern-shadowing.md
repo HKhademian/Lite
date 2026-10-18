@@ -6,7 +6,7 @@ Status: **ordered shadowing within patterns selected on 2026-10-18**.
 
 Every binding identifier in a pattern introduces an ordinary binding. Repeated identifiers are allowed and later bindings shadow earlier ones. `_` follows exactly the same rule as x or _user; its underscore prefix only permits nonuse without unused-name warnings.
 
-This decides repeated binding names, not the complete grammar distinguishing binding positions from existing-value equality tests, type-only tests, or enum selectors. A name already in scope does not silently turn a binding position into an equality constraint.
+An unmarked bare identifier in a pattern binds, even if an outer value or type has that name. Use explicit case syntax such as `.None` for a payload-free constructor test. Constructor heads with payload parentheses retain their distinct role. Existing-value equality and type-only test spellings are still proposed in the [binding-versus-testing review](pattern-bindings-and-tests.md).
 
 ## Binding order
 
@@ -84,4 +84,4 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 The earlier recommendation to reject duplicate names inside one pattern is superseded by ordered shadowing. See [pattern aliases](pattern-aliases.md) for the retained reference comparison and optional distinct naming.
 
-The [binding-versus-testing review](pattern-bindings-and-tests.md) proposes explicit equality/type-test forms without making an ordinary binding's role depend on an unrelated outer name. It also identifies the bare None constructor conflict before such a strict rule can be selected. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.
+The [binding-versus-testing review](pattern-bindings-and-tests.md) proposes explicit equality/type-test forms. Bare identifiers bind and `.None` now selects the absent Option case explicitly; the earlier constructor conflict is settled. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.

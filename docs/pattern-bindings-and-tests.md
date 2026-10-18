@@ -1,25 +1,25 @@
 # Pattern bindings, value tests, and type tests
 
-Status: **reference review and concrete proposal dated 2026-10-18; equality-pattern and type-only spellings are not yet selected**.
+Status: **bare-name bindings and explicit .None patterns selected on 2026-10-18; equality-pattern and type-only spellings remain proposals**.
 
 ## Purpose
 
 Distinguish introducing a name from testing a matched value. A pattern should not silently become a comparison merely because an unrelated constant was imported, nor become a type test because an identifier starts with an uppercase letter.
 
-Ordinary readable underscore bindings, typed bindings, constructor/tuple matching, and ordered shadowing are already selected. This review proposes the remaining spelling and lookup rules; it does not adopt them or remove existing constructor forms.
+Ordinary bare-name and underscore bindings, typed bindings, constructor/tuple matching, ordered shadowing, and explicit `.None` case patterns are selected. This review proposes equality-pattern and type-only spelling without silently adopting those further forms.
 
-## Proposed core forms
+## Core forms: selected bindings and proposed tests
 
 ```text
 name                  /* bind the matched value */
 name: Type            /* type-test and bind the narrowed value */
-== expected           /* compare with an existing value */
-: Type                /* type-test without introducing a name */
+== expected           /* proposed: compare with an existing value */
+: Type                /* proposed: type-test without introducing a name */
 42                    /* literal value pattern */
 .completed            /* contextual enum-case pattern */
 ```
 
-The bare-name rule concerns binding positions, not type names after colon, field selectors, or constructor heads. `_` remains an ordinary readable binding. Repeated bindings shadow in recursive written order; they do not assert equality.
+An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
 
 An existing value should use explicit equality even if it is immutable or known at compile time. A literal can remain concise because it cannot be mistaken for a declaration. Enum cases retain their selected dot-prefixed or qualified spelling and their case identity, rather than becoming general whole-value equality tests.
 
@@ -69,20 +69,26 @@ Assume a stable person of type User | Guest and String-producing methods. The pr
 
 Explicit `person: User` or `user: User` arms remain selected alternatives when shadowing or renaming is desired. For a producer expression with no stable existing name, prefer an explicit typed binding to access its matched value. The type-only form does not invent it, _, or another implicit receiver.
 
-In this proposal, bare User is not a type-test shorthand merely because User resolves to a type. After colon, normal type-expression lookup applies. Type-level values and their comparisons still need the type-system contract.
+Bare User is not a type-test shorthand merely because User resolves to a type; it is a binding in that position under the selected bare-name rule. After colon, normal type-expression lookup applies. The proposed binding-free `: Type` form still needs selection. Type-level values and their comparisons need the type-system contract.
 
-## Constructor compatibility still needs a decision
+## Selected constructor distinction
 
-Existing `Some(user)` and `None` patterns are already documented. A constructor head with payload parentheses has an explicit syntactic role; it is not an ordinary call evaluated during matching. A payload-free bare None is the unresolved case: a strict rule that every unmarked identifier binds would turn it into a catch-all.
+Use `.None` to select the absent Option case in a pattern. The expected Option type supplies the case owner; use qualification when that owner is not established uniquely. Bare None is an ordinary binding identifier, even when the prelude supplies a value called None. There is no special bare prelude-constructor exception.
 
-Two coherent choices remain:
+```text
+match find_user(id) {
+    Some(user) { greet(user) }
+    .None { report_missing() }
+}
+```
 
-- Use explicit case spelling for payload-free constructors, such as `.None` once its Option owner/schema is established, or an appropriate qualified case name. This keeps unmarked ordinary names as bindings. Existing None examples would need an explicit migration decision.
-- Retain bare None as a recognized prelude-constructor exception. Its identity must be specified explicitly, along with local shadowing and imports; do not pretend the rule then has no lookup-sensitive exceptions.
+The selected Some(user) pattern remains an explicit constructor head with payload parentheses, not a bare identifier pattern or an ordinary call evaluated during matching. Constructor schema/name resolution still needs a full grammar, and a general policy requiring every payload head to be dotted or qualified is not selected. Contextual `.Some(user)` follows the existing case shorthand when its owner and payload schema are established.
 
-The recommendation is explicit case spelling for a fully uniform binding rule. This review does not silently replace the selected None examples. Whether all constructor heads must be dotted/qualified, or explicit prelude forms such as Some(user) remain available, also needs formalization.
+The distinction is syntactic context: bare names bind; explicit case forms test case identity; a payload constructor head has its own role. The selected `.None` spelling replaces earlier bare None pattern examples. Bare `User` type-arm shorthand is ruled out for the same reason: unmarked identifiers do not become tests through name lookup.
 
-A qualified enum case remains a case pattern. Other qualified values such as settings.expected should use `== settings.expected` under the proposal; a dot in an arbitrary path must not itself become a generic equality marker. Existing enum/metadata `.field` collision handling remains a separate open rule.
+This changes pattern interpretation, not expression lookup. `empty := None;` can still refer to the existing prelude value in an initializer. Likewise, `return None` is an expression, not a declaration or a pattern. Whether an isolated absent value supplies enough information to infer its Option payload type remains open.
+
+A qualified enum case remains a case pattern. Other qualified values such as settings.expected would use `== settings.expected` under the equality proposal; a dot in an arbitrary path is not automatically a generic equality marker. Enum/metadata `.field` collision handling remains a separate open rule.
 
 ## Proposed equality evaluation contract
 
@@ -132,8 +138,8 @@ Match examples use literal cases, dot-prefixed enum cases, and bare type names f
 
 ## Review outcome and remaining work
 
-Recommend unmarked bindings, explicit `== expected` comparisons, and `: Type` type-only patterns. Keep literals and enum-case patterns concise. These spellings are under review, not added as selected grammar productions.
+Unmarked bindings and explicit `.None` case selection are now selected. Recommend `== expected` comparisons and `: Type` type-only patterns next; those two forms remain proposals, not selected grammar productions. Literals and enum-case patterns retain their concise direction.
 
-Before selection, resolve the bare None compatibility issue. Then settle complete operand boundaries, equality effects/fallibility, exact type/subtype semantics, and refinement stability. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
+Complete equality-operand boundaries, equality effects/fallibility, exact type/subtype semantics, and refinement stability before selecting the proposed tests. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
 
 Related: [pattern shadowing](pattern-shadowing.md), [match capabilities](match-patterns.md), [type tests](type-tests-and-narrowing.md), and [match arm chains](match-guards.md).
