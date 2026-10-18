@@ -40,13 +40,13 @@ Support conventional payload-free enum cases:
 
 ```text
 match status {
-    Status.Ready { start() }
-    Status.Busy { wait() }
-    Status.Stopped { finish() }
+    .Ready { start() }
+    .Busy { wait() }
+    .Stopped { finish() }
 }
 ```
 
-Assume these are the enum's complete cases and the called operations produce Unit. Qualified case names are illustrative; enum declarations, raw integer representations, conversion, aliases, and invalid foreign values require separate contracts. Plain enum support does not automatically adopt implicit C-style integer conversion. See [enums and variants](enums-and-variants.md).
+Assume these are the enum's complete cases and the called operations produce Unit. The subject supplies the enum owner for these contextual case names. Complete enum declarations, raw representations, conversion, aliases, and invalid foreign values require separate contracts. Plain enum support does not automatically adopt implicit C-style integer conversion. See [enums and variants](enums-and-variants.md).
 
 ## 3. Enums with payloads
 

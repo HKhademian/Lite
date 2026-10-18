@@ -8,10 +8,10 @@ Represent a choice between named cases. A plain enum has payload-free cases. A p
 
 ## Backing types and assigned values
 
-The selected explicit form places the backing type after enum and assigns each illustrated case its value with `=`:
+The selected explicit form introduces the backing type with a colon after enum and assigns each illustrated case its value with `=`:
 
 ```text
-Status := enum Float {
+Status := enum : Float {
     Ready = 1.1;
     Busy = 2.2;
     Stopped = 3.3
@@ -23,7 +23,7 @@ Here Status is the enum type, Float is its declared backing-value type, and Read
 The same explicit spelling can describe integer-valued cases:
 
 ```text
-ExitCode := enum Int {
+ExitCode := enum : Int {
     Success = 0;
     Failure = 1
 }
@@ -33,36 +33,23 @@ The backing type and case-value spelling are selected. The complete set of admis
 
 Backing values must be distinguished from payload fields. Whether and how payload-bearing cases also receive an explicit backing value requires a separate declaration rule. Physical storage and ABI guarantees, especially for payload enums, are not settled solely by this header.
 
-### Recommended refinement: colon before the backing type
+### Colon introduces the backing type
 
-The latest candidate makes the backing-type boundary explicit:
-
-```text
-Status := enum : Float {
-    Ready = 1.1;
-    Busy = 2.2;
-    Stopped = 3.3
-}
-```
-
-Recommend this over the previously selected colonless header. It reuses colon's type-annotation role from fields and function results, while keeping the backing type distinct from the enum's name. Here colon means backing-value type, not inheritance or interface implementation.
-
-This is a punctuation refinement under review, not a second permanent syntax or a change to case values, matching, conversion, or layout. If selected, replace the colonless form consistently; do not retain both as aliases. Any unbacked enum would continue to omit the complete colon/type clause, with the omitted-backing policy still open.
+The colon is selected, reusing the type-annotation role of fields and function results. Here it means backing-value type, not inheritance or interface implementation. The earlier colonless header is superseded and is not an alternate spelling. Omitting the complete colon/type clause remains subject to the open omitted-backing policy.
 
 ## Plain cases
-
 
 Assume a Status enum with Ready, Busy, and Stopped cases:
 
 ```text
 match status {
-    Status.Ready { start() }
-    Status.Busy { wait() }
-    Status.Stopped { finish() }
+    .Ready { start() }
+    .Busy { wait() }
+    .Stopped { finish() }
 }
 ```
 
-Qualified case spelling is illustrative. The selected backing-type declaration above does not yet define the complete enum grammar. The term conventional or legacy enum describes the payload-free use case, not an automatic promise of integer conversions, duplicate numeric cases, bit flags, or C ABI compatibility.
+These cases use the established contextual shorthand; qualification remains available when needed. The selected backing-type declaration above does not yet define the complete enum grammar. The term conventional or legacy enum describes the payload-free use case, not an automatic promise of integer conversions, duplicate numeric cases, bit flags, or C ABI compatibility.
 
 ## Inferred case names
 
@@ -95,7 +82,7 @@ Recommended disambiguation: enum-pattern positions use the expected enum case; e
 
 ### Float backing values and conversion policy
 
-The declaration shape `Progress := enum Float { started = 0.0; completed = 1.0 }` is now selected for an explicit backing type and assigned case values. This does not establish whether those values are physical storage discriminants or an explicit conversion mapping; complete declaration and numeric conversion rules remain open.
+The declaration shape `Progress := enum : Float { started = 0.0; completed = 1.0 }` is now selected for an explicit backing type and assigned case values. This does not establish whether those values are physical storage discriminants or an explicit conversion mapping; complete declaration and numeric conversion rules remain open.
 
 Recommend keeping case identity distinct from raw-value equality: a two-case Progress enum has two named cases, not every intermediate Float value. Decide raw-value uniqueness, invalid conversions, NaN and signed-zero treatment, and equality before selecting a float-backed representation. No approximate float comparison is implied by `.completed`.
 
@@ -177,7 +164,7 @@ This direction does not add class, data class, value class, sealed, or distinct 
 
 ## Open decisions
 
-- Complete enum declaration rules beyond the selected `Name := enum BackingType { Case = value }` surface: omitted backing types/values, payload names/types, and construction.
+- Complete enum declaration rules beyond the selected `Name := enum : BackingType { Case = value }` surface: omitted backing types/values, payload names/types, and construction.
 - Closed versus extensible cases, nominal identity, and any variant-specific types.
 - Raw numeric values, storage widths, duplicate-value aliases, flags, explicit conversions, and FFI validity checks.
 - Contextual case-owner inference in generic/union situations, nested case patterns, and disambiguation from leading-dot context access.
