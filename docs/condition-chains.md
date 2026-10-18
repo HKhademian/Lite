@@ -7,7 +7,7 @@ Status: **and-chained pattern binding and Boolean guards selected; binding-produ
 Match and bind a value, then test it in the same condition without an extra nested conditional.
 
 ```text
-if Some(user) := find_user(id) and user.age > 14 {
+if .Some(user) := find_user(id) and user.age > 14 {
     greet(user)
 }
 ```
@@ -30,8 +30,8 @@ Side effects already performed by earlier operands are not rolled back when a la
 ## More than one match
 
 ```text
-if Some(user) := find_user(id)
-    and Some(profile) := find_profile(user.id)
+if .Some(user) := find_user(id)
+    and .Some(profile) := find_profile(user.id)
     and profile.visible {
     greet(user, profile)
 }
@@ -44,7 +44,7 @@ The line breaks have no structural meaning. user is available to find_profile; b
 An and operand can contain a grouped Boolean expression:
 
 ```text
-if Some(user) := find_user(id) and (user.admin or user.age > 14) {
+if .Some(user) := find_user(id) and (user.admin or user.age > 14) {
     greet(user)
 }
 ```

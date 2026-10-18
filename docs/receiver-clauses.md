@@ -39,7 +39,7 @@ Both forms are supplied the same input and bind it normally. The second names it
 
 ```text
 then(result) {
-    if Some(last) := result {
+    if .Some(last) := result {
         process(last)
     } else {
         fallback()

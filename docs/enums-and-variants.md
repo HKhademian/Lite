@@ -41,6 +41,8 @@ The match subject supplies Progress to its case patterns. In the comparison, the
 
 The same contextual case form can select payload cases, such as `.Click(x, y)`, when the owning enum and payload schema are established. Type-directed resolution for other call/initialization contexts still needs complete inference rules; no arbitrary static-member feature is selected here. In patterns, unmarked bare identifiers bind; they do not become enum cases through ordinary name lookup. In particular, use `.None` to test the absent Option case. Explicit payload heads such as Some(value) retain their constructor-pattern role. Expression construction through prelude Some/None still uses ordinary name resolution; this does not make every bare expression name an inferred enum case.
 
+Option pattern examples use `.Some(value)` alongside `.None` for consistent presentation of this already selected shorthand. The earlier explicitly named Some(value) pattern remains an admitted constructor-head form; the examples do not create a new requirement that every constructor or aggregate head begin with a dot. A top-level `_` is instead an ordinary whole-subject binding, not a case selector; see [cases and bindings](pattern-bindings-and-tests.md#selected-constructor-distinction).
+
 ### Interaction with current-context metadata: policy still open
 
 Leading `.field` already denotes current-context metadata. Enum shorthand must not silently reinterpret an existing metadata access, search outer construct contexts, or choose a meaning solely because it happens to type-check.

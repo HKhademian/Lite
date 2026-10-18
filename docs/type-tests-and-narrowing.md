@@ -27,7 +27,7 @@ if user: User = lookup(id)! {
 Destructuring still binds the extracted parts:
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet_user(user)
 }
 ```

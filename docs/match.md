@@ -23,8 +23,8 @@ The [keyword-placement review](match-keyword-placement.md) compares the current 
 
 ```text
 match find_user(id) {
-    Some(user) and user.age > 14 { greet(user) }
-    Some(user) { report_too_young(user) }
+    .Some(user) and user.age > 14 { greet(user) }
+    .Some(user) { report_too_young(user) }
     .None { report_missing() }
 }
 ```
@@ -35,7 +35,7 @@ An additional pattern uses an explicit source, such as `and Some(profile) := fin
 
 ```text
 message := match find_user(id) {
-    Some(user) { user.display_name() }
+    .Some(user) { user.display_name() }
     .None { "Not found" }
 }
 print(message);
@@ -59,7 +59,7 @@ The input resolves the outer `person` before introducing any arm bindings. The f
 ## Conditional subset
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet(user)
 } else {
     print("Not found")

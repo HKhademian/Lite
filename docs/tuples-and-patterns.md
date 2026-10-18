@@ -53,7 +53,7 @@ The receiver separator is still open; this distinction holds whether its final s
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet(user)
 }
 ```

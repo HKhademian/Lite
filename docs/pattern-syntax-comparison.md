@@ -100,7 +100,7 @@ Neither mechanism provides a reason to introduce null into LiteScript's explicit
 ## Selected LiteScript forms
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet(user)
 }
 

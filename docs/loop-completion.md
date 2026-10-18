@@ -29,7 +29,7 @@ message := loop items as item {
     if not eligible(item) { continue }
     score(item)
 } then(result) {
-    if Some(last) := result {
+    if .Some(last) := result {
         format_score(last)
     } else {
         "No eligible items"

@@ -17,7 +17,7 @@ This is explanatory notation; generic enum declaration syntax has not been final
 ## Example
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet(user)
 } else {
     print("User not found")
@@ -30,12 +30,14 @@ An ordinary `User` is a user. An `Option<User>` is either a user-bearing variant
 
 ```text
 match find_user(id) {
-    Some(user) { greet(user) }
+    .Some(user) { greet(user) }
     .None { report_missing() }
 }
 ```
 
-In a pattern, `.None` explicitly tests the absent case using the expected Option type. Bare None is an ordinary binding, not an absent-case test. A payload form such as Some(user) retains its explicit constructor role; contextual .Some(user) is also available when the owner and payload schema are known.
+In a pattern, `.Some(user)` and `.None` both use the expected Option type to select a case. The first also binds the contained user; the second introduces no name. The examples use both dots consistently. The older explicitly named Some(user) constructor form remains admitted; this is not a new syntax restriction. Bare None is an ordinary binding, not an absent-case test.
+
+By contrast, `_ { ... }` is a catch-all binding arm: `_` receives the whole remaining Option value and may be read. It does not mean None, introduce implicit unwrapping, or discard the input. Its underscore prefix permits nonuse without an unused-name warning.
 
 In an expression, `None` still resolves normally as a prelude value unless shadowed. For example, `empty := None;` is value construction/use, not a pattern test; isolated Option payload inference remains open. This decision changes case-pattern spelling without adding nullability or implicit unwrapping. See [pattern bindings and tests](pattern-bindings-and-tests.md).
 

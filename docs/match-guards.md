@@ -18,8 +18,8 @@ Ordering comparisons and compound relationships already work as Boolean guards, 
 
 ```text
 match find_user(id) {
-    Some(user) and user.age > 14 { greet(user) }
-    Some(user) { report_too_young(user) }
+    .Some(user) and user.age > 14 { greet(user) }
+    .Some(user) { report_too_young(user) }
     .None { report_missing() }
 }
 ```
@@ -30,13 +30,13 @@ Assume the calls produce Unit and find_user returns Option<User>. The source cal
 
 ```text
 match find_user(id) {
-    Some(user)
+    .Some(user)
         and user.age > 14
-        and Some(profile) := find_profile(user.id)
+        and .Some(profile) := find_profile(user.id)
         and profile.visible {
         greet(user, profile)
     }
-    Some(user) { report_ineligible(user) }
+    .Some(user) { report_ineligible(user) }
     .None { report_missing() }
 }
 ```

@@ -61,6 +61,8 @@ match pair {
 
 The first component compares with expected; the second binds value. Ordinary `if actual == expected { ... }` remains the direct Boolean form. If used in a shared conditional pattern, the same pattern can be nested in `if (== expected, value) := pair { ... }`; no separate conditional-only pattern vocabulary is needed.
 
+The final `_` arm is an ordinary unconstrained binding: it accepts any remaining whole subject and names that whole pair `_`. It does not select an enum case, skip the match, or unpack a payload. Its unused-name permission makes the illustrated unused binding intentional; a handler could read `_` normally. Inside a tuple, the same name instead binds its particular component because that component is the subpattern's supplied subject.
+
 New names from a pattern become available only after the whole pattern succeeds. Therefore `(x, == x)` must not silently use the first component's new x as the comparison operand. The equality operand resolves in the surrounding pre-pattern scope; an unbound x is an error. Express a relationship between extracted components through the selected and chain instead:
 
 ```text
@@ -92,12 +94,20 @@ Use `.None` to select the absent Option case in a pattern. The expected Option t
 
 ```text
 match find_user(id) {
-    Some(user) { greet(user) }
+    .Some(user) { greet(user) }
     .None { report_missing() }
 }
 ```
 
-The selected Some(user) pattern remains an explicit constructor head with payload parentheses, not a bare identifier pattern or an ordinary call evaluated during matching. Constructor schema/name resolution still needs a full grammar, and a general policy requiring every payload head to be dotted or qualified is not selected. Contextual `.Some(user)` follows the existing case shorthand when its owner and payload schema are established.
+The examples use `.Some(user)` and `.None` together for consistent contextual case spelling. The expected Option type supplies both owners. The older `Some(user)` form remains an explicitly named prelude-constructor head with payload parentheses; it is not a bare identifier pattern or an ordinary call evaluated during matching. Its constructor role explains why it was previously shown without the dot, while bare None had to be changed to .None. This presentation cleanup does not select a ban on explicitly named payload heads or change aggregate patterns such as User(...). Full constructor schema/name resolution remains open.
+
+The distinctions are:
+
+- `.Some(user)` tests the Some case and binds only its payload to user.
+- `.None` tests the None case and introduces no binding.
+- `_` is an ordinary binding that accepts any remaining whole subject, including a whole Option or Result, without unwrapping it. It may be read, and its nonuse is explicitly allowed.
+
+An unguarded `_` arm covers the remaining values admitted at that point. It has no special priority: source-order selection applies, so placing a catch-all before more specific arms can make those arms unreachable. A specific case test such as .None does not cover unrelated cases. Exact reachability diagnostics remain open.
 
 The distinction is syntactic context: bare names bind; explicit case forms test case identity; a payload constructor head has its own role. The selected `.None` spelling replaces earlier bare None pattern examples. Bare `User` type-arm shorthand is ruled out for the same reason: unmarked identifiers do not become tests through name lookup.
 

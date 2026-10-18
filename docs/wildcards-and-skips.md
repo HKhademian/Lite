@@ -20,7 +20,7 @@ if (first, _, last: String, _) := record {
 The tuple must have the required shape. Each `_` binds one component; the later `_` shadows the earlier one, so inspect receives the fourth component. Neither underscore creates an equality constraint. If the body does not read them, no unused-name warning is needed. A single `_` does not capture several remaining components.
 
 ```text
-if Some((first, _, last: String)) := value {
+if .Some((first, _, last: String)) := value {
     greet(first, last);
     inspect(_)
 }
@@ -42,17 +42,19 @@ Both positions bind normally. The second component must match String without con
 
 ```text
 match find_user(id) {
-    Some(user)
+    .Some(user)
         and user.age > 14
         and (_, last: String) := user.name_parts {
         greet(user, last)
     }
-    Some(_) { report_ineligible() }
+    .Some(_) { report_ineligible() }
     .None { report_missing() }
 }
 ```
 
 Assume find_user returns Option<User> and name_parts supplies the illustrated tuple shape. An unconstrained `_ { body }` arm matches any remaining subject and binds that whole subject to `_`. It can bind an intact Result without extracting its payload or propagating an error. The selected Result-side inspection rules still apply when examining an outcome's payload. A separate match else convenience remains open.
+
+This differs from `.None`, which tests one particular case and binds nothing, and `.Some(user)`, which tests a case and binds its payload. In a tuple subpattern, `_` names one component; at the top of an arm, `_` names the entire subject. It is the same ordinary binding operation in both places, not a special selector.
 
 ## Declarations, loops, and hooks
 

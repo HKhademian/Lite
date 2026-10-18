@@ -25,7 +25,7 @@ An annotation in ordinary destructuring constrains a statically valid declaratio
 ## 2. Conditional selection
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet_user(user)
 } else {
     report_missing()
@@ -42,7 +42,7 @@ And chains can combine pattern matches and Boolean guards: successful bindings a
 
 ```text
 match value {
-    Some(item) { process(item) }
+    .Some(item) { process(item) }
     .None { report_missing() }
 }
 ```

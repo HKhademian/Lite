@@ -70,7 +70,7 @@ See [type tests and narrowing](type-tests-and-narrowing.md) for the selected for
 ## Pattern conditions
 
 ```text
-if Some(user) := find_user(id) {
+if .Some(user) := find_user(id) {
     greet(user)
 } else {
     print("Not found")
@@ -96,7 +96,7 @@ A pattern condition tests **matching**, not the truthiness of its payload. `if S
 ## Pattern binding followed by guards
 
 ```text
-if Some(user) := find_user(id) and user.age > 14 {
+if .Some(user) := find_user(id) and user.age > 14 {
     greet(user)
 }
 ```
