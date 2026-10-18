@@ -126,6 +126,8 @@ An annotation constrains its component; other binding types are inferred by narr
 
 The proposed whole-value pattern `y: (a, b: str, c)` and `...rest` capture are not added as productions yet. A nested tuple pattern after colon must be distinguishable from any tuple-type annotation, independently of whitespace or identifier casing. Rest tokenization and result typing also need a contract. See [whole-value/nested/rest patterns](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 
+The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. A `pattern` placeholder in a parameter, loop receiver, or hook production does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation. Their proposed irrefutable binding policy requires confirmation.
+
 ## Loops
 
 ```text

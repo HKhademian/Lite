@@ -70,6 +70,8 @@ This is not accepted grammar. If adopted, it would require decisions about:
 
 ## Phase-specific inputs
 
+The [pattern context review](pattern-contexts.md#7-completion-hook-receivers) recommends ordinary receivers bind irrefutably. A selective hook or Result error pattern needs an explicit unmatched-input policy; one pattern-bearing clause must not silently swallow an error or omit required cleanup. This recommendation does not select the explored typed dispatch chains.
+
 A loop `then` can receive `Option<T>` accumulator state. An empty `else` cannot receive a nonexistent `T`. A `finally` handling early returns and errors needs completion information, not just optional successful data. Defining those input types is required before making typed receiver clauses a general feature.
 
 ## Related concepts and references

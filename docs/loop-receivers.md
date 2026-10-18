@@ -58,6 +58,8 @@ loop pairs as (left, right), count {
 
 A name and a destructuring pattern operate on the same first-slot item. Parenthesized tuple patterns do not receive a different hidden value.
 
+Refutable receiver patterns do not yet have a mismatch policy. The [pattern context review](pattern-contexts.md#4-loop-receiver-slots) recommends requiring irrefutable slot bindings initially; receiver syntax must not silently filter items, end iteration, or introduce an error. The same question applies to destructuring an optional accumulator. Use explicit if/match in the body until a different behavior is selected.
+
 ## Conditional and unconditional modes
 
 ```text
