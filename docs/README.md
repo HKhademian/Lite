@@ -1,6 +1,6 @@
 # Language documentation
 
-Design snapshot: **2026-10-17**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-18**. Stage: **planning; no implementation**.
 
 ## How to read this reference
 
@@ -33,6 +33,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Types and values
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
+- [Type categories](type-categories.md): products, sums, raw codes, domain wrappers, generated operations, and value/reference semantics as separate decisions.
+- [Type categories compared](type-categories-comparison.md): enum, struct, data/case class, value-wrapper, and sealed-family models across twelve reference languages.
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
 - [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
 - [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.

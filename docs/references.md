@@ -1,6 +1,6 @@
 # References
 
-These sources were consulted during the design discussion. They support comparisons and tradeoff analysis, not claims that LiteScript implements or inherits their semantics. The documentation snapshot is dated **2026-10-17**; external pages can evolve.
+These sources were consulted during the design discussion. They support comparisons and tradeoff analysis, not claims that LiteScript implements or inherits their semantics. The documentation snapshot is dated **2026-10-18**; external pages can evolve.
 
 ## Rust
 
@@ -78,4 +78,8 @@ These sources were consulted during the design discussion. They support comparis
 
 ## Local source of design decisions
 
-The primary source for LiteScript-specific choices is the design conversation through 2026-10-17. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.
+The primary source for LiteScript-specific choices is the design conversation through 2026-10-18. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.
+
+## Enum and type-category comparison
+
+[Type categories across the reference languages](type-categories-comparison.md) records a focused primary-source review dated 2026-10-18. It compares Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript, Python, Lua, and Scala 3, with direct sources for enums and payload alternatives, products, data/case classes, distinct domain wrappers, representation, and value/reference semantics. It distinguishes current development documentation from a guarantee about every released compiler.
