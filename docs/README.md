@@ -19,6 +19,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, and block boundaries.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, standalone wildcard distinction, proposed character classes, and normalization questions.
+- [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.

@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Unicode names and underscore wildcards accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
+Status: **Unicode names, underscore wildcards, and underscore-prefixed unused-name intent accepted; XID profile and case sensitivity proposed; normalization and Unicode version open**.
 
 ## Purpose
 
@@ -56,6 +56,10 @@ Ordinary receiver names still shadow from left to right when repeated. Repeated 
 
 Reading `_` is invalid; `_ = value` is not enabled as a special discard-assignment operation. Full modifier validation, ignored-outcome diagnostics, and ownership/drop behavior remain separate contracts. See [wildcards and skips](wildcards-and-skips.md).
 
+## Underscore-prefixed names
+
+A longer valid name beginning with underscore, such as _user or _left, is an ordinary readable name with explicit permission to be unused. Official unused-name diagnostics do not warn about that name being unused. It may still be read normally, and its type, var/mut capabilities, ownership, and scope rules remain unchanged. The rule also covers declared fields where unused-field diagnostics apply; it does not make those fields private or skip initialization. See [explicit unused-name intent](unused-name-intent.md).
+
 ## Case and normalization
 
 The proposed case-sensitive rule distinguishes `score` from `Score`.
@@ -69,7 +73,7 @@ Identifier normalization must not silently establish a normalization rule for st
 - Pin the Unicode version and complete the identifier profile.
 - Confirm case sensitivity and normalization behavior.
 - Define any restrictions on format-control characters and any identifier escaping syntax.
-- Specify reserved words and diagnostics for shadowed or unused names.
+- Specify reserved words and remaining diagnostic severities/configuration. Underscore-prefixed unused-name permission is selected; unrelated shadowing and required-use diagnostics remain separate.
 
 ## Related concepts and references
 

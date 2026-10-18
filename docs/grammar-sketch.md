@@ -20,6 +20,8 @@ identifier := (XID_Start | "_") { XID_Continue }
 
 This is the proposed Unicode profile, before reserved-word recognition. Case sensitivity is proposed; normalization and the pinned Unicode version remain open. See [identifiers](identifiers.md).
 
+Standalone `_` is a wildcard in pattern positions. A longer valid identifier beginning with underscore remains an ordinary name and explicitly permits nonuse without unused-name warnings. This is a diagnostic rule, not another binding production or permission to ignore a separate required-use contract; see [unused-name intent](unused-name-intent.md).
+
 ## Numeric scanning
 
 Fractional literals require a leading digit (`0.5`); `.5` is rejected. Leading-dot context access remains distinct. Other numeric-token productions remain open; see [numbers and ranges](numbers.md).

@@ -8,6 +8,8 @@ Status: **underscore wildcard in all patterns selected on 2026-10-18; supersedes
 
 An ordinary name such as `_temporary` remains a readable identifier. Standalone `_` is not a readable value binding. Use an explicit name whenever the body needs the value.
 
+Longer underscore-prefixed names also explicitly allow the binding or declared field to go unused without an unused-name warning. They still bind and remain readable, unlike `_`; see [unused-name intent](unused-name-intent.md). This does not waive a separate required-use or error-handling contract.
+
 ## Positional and nested destructuring
 
 ```text

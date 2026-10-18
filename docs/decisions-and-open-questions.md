@@ -41,6 +41,7 @@ Snapshot: **2026-10-17**. Source: the language-design discussion in this chat. N
 - Unicode identifiers are supported; the precise Unicode profile and normalization policy remain open.
 - Fractional literals require a leading digit: write `0.5`, not `.5`; leading-dot context access remains distinct.
 - `_` is a wildcard in every pattern, introduces no readable value binding, and may repeat. Use explicit names to read skipped values; names such as `_temporary` remain ordinary identifiers. This supersedes the earlier readable-underscore rule. It does not add `_ = expression` discard-assignment syntax; see [wildcards and skips](wildcards-and-skips.md).
+- A longer underscore-prefixed name, such as _user or _left, remains an ordinary readable name and explicitly permits nonuse without unused-name warnings. This applies to locals, pattern/parameter/receiver bindings, and declared fields where those diagnostics apply. It does not alter visibility, initialization, ownership, type constraints, or separate required-use/error-handling rules. See [unused-name intent](unused-name-intent.md).
 - Explicit semicolons separate ordinary items; there is no automatic insertion.
 - Complete block constructs end their items without semicolons; a following semicolon is rejected, including for declarations initialized directly by block constructs.
 - Continuing a block construct's value with an operator, call, member access, or indexing requires parentheses around that construct.
