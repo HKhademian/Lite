@@ -97,7 +97,7 @@ Function/if/loop/match bodies remain executable blocks even when their expected 
 
 ## Access and composition
 
-The [record creation and initialization overview](record-initialization.md) separates proposed zero initialization without an initializer from declared-default construction with an initializer, including selected empty contextual record initialization. Field-default resolution and anonymous-type examples still need formalization; they do not silently complete this document's open initialization/type-identity contracts.
+The [record creation and initialization overview](record-initialization.md) separates proposed contextual zero initialization with = 0 from declared-default construction with = {}, including selected empty contextual record initialization. Initializer omission remains an unresolved alternative. Field-default resolution and anonymous-type examples still need formalization; they do not silently complete this document's open initialization/type-identity contracts.
 
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
 

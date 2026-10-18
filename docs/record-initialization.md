@@ -1,6 +1,6 @@
 # Record creation: zero initialization and declared defaults
 
-Status: **overview dated 2026-10-18; contextual empty record initialization selected, executable empty bodies still produce Unit; revised proposal separates zero initialization without an initializer from declared-default construction with a record initializer**. Detailed field-default syntax, defaultability, initializer omission, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
+Status: **overview dated 2026-10-18; contextual empty record initialization selected, executable empty bodies still produce Unit; latest proposal separates contextual zero initialization with = 0 from declared-default construction with = {}**. Detailed field-default syntax, defaultability, initializer omission, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
 ## 1. Declare a record and its defaults
 
@@ -18,20 +18,22 @@ User := record {
 }
 ```
 
-The proposed field-default spelling is `field: Type = expression`. Record-initializer construction uses these defaults for omitted fields; no-initializer zero construction bypasses them. Field declarations use semicolon separators; construction lists use commas. Final separators are optional and allowed. Record type names remain explicit in these declarations through record; the earlier bare-brace type declaration is still a separate proposal.
+The proposed field-default spelling is `field: Type = expression`. Record-initializer construction uses these defaults for omitted fields; explicit zero construction bypasses them. Field declarations use semicolon separators; construction lists use commas. Final separators are optional and allowed. Top-level record type bindings retain record; omission in explicit nested type positions is proposed separately below.
 
 ## 2. Two initialization modes
 
 There are two proposed initialization modes, with a semantic difference:
 
 ```text
-zeroed: User;       /* recursive zero initialization; ignore field defaults */
+zeroed: User = 0;   /* proposed contextual zero; ignore field defaults */
 configured: User = {}; /* apply declared defaults, then zero-fill other fields */
 ```
 
 For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is "Unknown". Both values are fully initialized when their declarations complete. Zero initialization must not secretly fall back to field defaults for a type with no valid zero value.
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
+
+The latest proposal uses an explicit contextual zero literal for zero mode; see [zero initialization](zero-initialization.md). The earlier user: User; form remains an alternative, not a prerequisite or a selected declaration. Semantic zero must exist for the type; the integer value zero is not implicitly cast to arbitrary record types.
 
 ```text
 user := User {};
@@ -55,7 +57,7 @@ Default construction includes declared field defaults. It is not a request to ov
 
 Explicit false, 0, or an empty String overrides a declared nonzero/nonempty default. Duplicate field initializers should be rejected rather than silently taking the last value. Unknown and inaccessible fields must not be accepted. These diagnostic policies are recommendations alongside the proposed default contract.
 
-This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. A typed declaration without an initializer instead recursively zero-initializes all fields, bypassing declared defaults at every depth.
+This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. The proposed user: User = 0 instead recursively zero-initializes all fields, bypassing declared defaults at every depth. Initializer omission is a separate alternative discussed below.
 
 ## 3. Override selected fields
 
@@ -171,14 +173,16 @@ There is no expected record type here. Adopting this form would require anonymou
 
 For now, use a named record type or an established expected record type. Same-name construction entries such as User { name, age } also need a separate decision; proposed deconstruction shorthand does not automatically select construction shorthand.
 
-## 8. Typed declaration without an initializer: proposal
+## 8. Typed declaration without an initializer: unresolved alternative
 
 ```text
 user: User;
 var count: Int;
 ```
 
-Under the revised proposal, these are initialized immediately: user receives a recursively zero-initialized User, ignoring declared defaults, and count is 0. They are not late-initialized bindings. A subsequent count assignment is allowed by var; a zero-initialized immutable binding is already initialized and cannot be assigned later as a special first write. In particular, user.active is false and user.address.city is empty even though the record declarations provide different defaults.
+The earlier proposal would initialize these immediately: user receives a recursively zero-initialized User, ignoring declared defaults, and count is 0. They would not be late-initialized bindings. A subsequent count assignment would be allowed by var; a zero-initialized immutable binding would already be initialized and could not be assigned later as a special first write. In particular, user.active would be false and user.address.city empty even though the record declarations provide different defaults.
+
+The newer explicit user: User = 0 proposal expresses this intent without adding initializer omission. Whether to permit the shorter declaration at all, and its policy if permitted, remain open; do not present it as selected or silently change it to declared-default initialization.
 
 Only a simple typed binding is illustrated. Pattern declarations without an explicit source are not introduced. Inferred `user :=` without a value is rejected because no type or source is supplied. The selected declaration grammar still requires an initializer until this extension is confirmed.
 
@@ -195,9 +199,9 @@ Recommended zero values are semantic values, not a guarantee about zeroed bytes.
 - General unions, functions, nonoptional references, resource handles, and validated domain types: no fabricated default. Supply a valid value unless the type explicitly provides a valid default.
 - Result: do not automatically invent success, failure, or an arbitrary error. Initialize the outcome explicitly unless an explicit type/default contract is defined later.
 
-A record can therefore be declared even when some fields have no valid zero value. A no-initializer declaration must then be rejected, even if such a field has a declared default; initializer construction can instead supply the field or use that valid declared default. Neither mode can fabricate an invalid value. Recursive construction must terminate. Generics need eventual zeroability/defaultability constraints rather than assuming every type parameter admits both modes. Contract names and syntax for those capabilities remain open.
+A record can therefore be declared even when some fields have no valid zero value. Zero construction must then be rejected, even if such a field has a declared default; record-initializer construction can instead supply the field or use that valid declared default. Neither mode can fabricate an invalid value. Recursive construction must terminate. Generics need eventual zeroability/defaultability constraints rather than assuming every type parameter admits both modes. Contract names and syntax for those capabilities remain open.
 
-Zero/default validity is not the same as satisfying a business rule. A plain String permits empty text. A required nonempty name or valid age needs validation or an appropriate domain type; a syntax for marking an otherwise-defaultable field required is still open. Cross-field invariants also cannot be guaranteed by filling each field independently. A validated domain type with no valid zero must reject no-initializer construction rather than bypass its invariant.
+Zero/default validity is not the same as satisfying a business rule. A plain String permits empty text. A required nonempty name or valid age needs validation or an appropriate domain type; a syntax for marking an otherwise-defaultable field required is still open. Cross-field invariants also cannot be guaranteed by filling each field independently. A validated domain type with no valid zero must reject zero construction rather than bypass its invariant.
 
 ## 10. Evaluation, mutability, and implementation cost
 

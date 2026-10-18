@@ -102,9 +102,11 @@ record_field := identifier ":" type
 
 The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
-The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression, zero initialization for simple typed declarations without explicit initializers, and declared-default filling when a record initializer is supplied. No-initializer declarations recursively bypass field defaults and require valid zero values. Those declaration/default-resolution extensions are not yet added to these selected productions. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
+The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression and declared-default filling when a record initializer is supplied. Zero mode bypasses declared defaults and requires valid zero values. The latest proposal expresses it with contextual literal 0 in an ordinary initialized declaration; initializer omission remains an unresolved alternative. Those field-default/literal-typing extensions are not yet formalized in these productions. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
 
 The proposed nested field type `stats: { points: Int; level: Int = 1; };` uses braces in an explicit type position and omits record there. The full type production and unnamed-type identity remain open. This does not remove record from a top-level binding such as Profile := record { ... }.
+
+The newer [contextual zero proposal](zero-initialization.md) uses value: Type = 0 for zero initialization without adding a declaration production. It requires a defined valid semantic zero for the expected type and bypasses declared field defaults. This is a proposed literal-typing rule, not a general Int-to-record conversion. Initializer omission remains a separate unresolved alternative.
 
 Selected record forms and field-list fragments:
 
