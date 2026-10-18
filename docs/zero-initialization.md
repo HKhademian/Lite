@@ -1,6 +1,6 @@
 # Contextual zero initialization
 
-Status: **proposal dated 2026-10-18; explicit `value: Type = 0` for valid semantic zero initialization, distinct from declared-default record construction**. This is not a selected universal conversion or an implementation. Empty contextual record construction and executable empty-body Unit results are already selected separately.
+Status: **core rule selected 2026-10-18: explicit `value: Type = 0` requests valid semantic zero initialization, distinct from declared-default record construction with = {}**. Only literal 0 has this special meaning; integer variables and nonzero integer literals are not implicitly converted to records. Complete zero eligibility, broader expression contexts, and literal/inference rules remain open. This is not a universal conversion or an implementation.
 
 ## Core distinction
 
@@ -19,7 +19,7 @@ configured: Profile = {};
 
 Using the proposed nested type shorthand, zeroed has empty name, points 0, and level 0. configured has name "Guest", points 0, and level 1. The record type is stated once in each binding; no redundant construction head is needed.
 
-Recommend the explicit pair:
+The selected core pair is:
 
 - `value: Type = 0`: recursively zero-initialize, bypassing declared field defaults.
 - `value: Type = { ... }`: record-initialize, applying declared defaults to omitted fields; an empty list applies all available defaults.
@@ -28,7 +28,7 @@ The earlier `value: Type;` form remains an unresolved alternative. The explicit 
 
 ## Meaning of 0
 
-The literal is interpreted using an established expected type. This proposes a context-sensitive literal rule, not an implicit conversion from an arbitrary integer:
+The literal is interpreted using an established expected type. This selects a contextual zero-literal rule, not an implicit conversion from an arbitrary integer:
 
 ```text
 number := 0;             /* ordinary inferred Int */
@@ -40,7 +40,7 @@ badLiteral: Profile = 5;  /* rejected: nonzero integer literal is not Profile */
 
 Only literal 0 receives this special contextual-zero rule. Other integer literals, such as user: User = 5, remain incompatible with a record type; this does not introduce numeric record constructors. Likewise, a computed integer expression that happens to equal zero does not acquire record-construction meaning. This proposal introduces no general numeric truthiness, string conversion, pointer conversion, arithmetic operation on records, or universal comparison operation. Existing conversions and operations remain separately checked.
 
-Start with the exact literal spelling 0, not an arbitrary constant-expression evaluator. Whether this contextual capability extends uniformly to call arguments, return expressions, match-value operands, and generic expressions still needs a complete literal/inference contract. The initializer examples above are the proposed concrete starting point.
+Start with the exact literal spelling 0, not an arbitrary constant-expression evaluator. Whether this contextual capability extends uniformly to call arguments, return expressions, match-value operands, and generic expressions still needs a complete literal/inference contract. Typed initialization is the selected starting point.
 
 ## Semantic zero values
 

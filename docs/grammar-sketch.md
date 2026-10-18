@@ -106,7 +106,7 @@ The [initialization overview](record-initialization.md) proposes field: Type = d
 
 The proposed nested field type `stats: { points: Int; level: Int = 1; };` uses braces in an explicit type position and omits record there. The full type production and unnamed-type identity remain open. This does not remove record from a top-level binding such as Profile := record { ... }.
 
-The newer [contextual zero proposal](zero-initialization.md) uses value: Type = 0 for zero initialization without adding a declaration production. It requires a defined valid semantic zero for the expected type and bypasses declared field defaults. This is a proposed literal-typing rule, not a general Int-to-record conversion. Initializer omission remains a separate unresolved alternative.
+The selected [contextual zero rule](zero-initialization.md) uses value: Type = 0 for zero initialization without adding a declaration production. It requires a defined valid semantic zero for the expected type and bypasses declared field defaults. Only literal 0 has this special meaning; integer variables and nonzero integer literals are not implicitly converted to records. Complete zero-eligibility and literal/inference contracts remain open. Initializer omission remains a separate unresolved alternative.
 
 Selected record forms and field-list fragments:
 
