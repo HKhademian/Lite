@@ -104,6 +104,8 @@ The selected declaration surface is `Student := record { name: String; grade: In
 
 The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression, zero initialization for simple typed declarations without explicit initializers, and declared-default filling when a record initializer is supplied. No-initializer declarations recursively bypass field defaults and require valid zero values. Those declaration/default-resolution extensions are not yet added to these selected productions. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
 
+The proposed nested field type `stats: { points: Int; level: Int = 1; };` uses braces in an explicit type position and omits record there. The full type production and unnamed-type identity remain open. This does not remove record from a top-level binding such as Profile := record { ... }.
+
 Selected record forms and field-list fragments:
 
 ```text

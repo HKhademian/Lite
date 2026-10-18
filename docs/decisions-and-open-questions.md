@@ -116,6 +116,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- In an explicit record-field type position, the proposed stats: { points: Int; level: Int = 1; }; omits record because colon already requires a type. Keep the top-level Profile := record { ... } form pending broader type/value brace grammar. Unnamed-type identity and whether to retain the longer nested spelling remain open; see [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
+
 - The revised [creation overview](record-initialization.md) proposes typed declarations without an initializer (recursive zero initialization, bypassing declared defaults) versus record initializer construction (explicit initializer > declared field default > recursive nested defaults/valid leaf zero > diagnostic). Field-default spelling, zeroability/defaultability, required fields, and anonymous inline record types still need confirmation/formalization. Empty contextual record construction and empty executable-body Unit results are separately confirmed. Do not admit invalid zeroed enum/reference/handle states or implicitly select a Result outcome.
 
 - Record-pattern syntax investigation: the selected named pattern has no type-name prefix; construction-shaped TypeName { ... } is not an alternative deconstruction form. Nominal selection uses explicit colon type tests. A bare match-arm name still binds before its body, so not every name-plus-braces sequence can be banned. The suggested same-name shorthand { name, age } and removal of record from type declarations remain separate proposals; see [records](records.md#no-construction-shaped-record-patterns).

@@ -79,6 +79,8 @@ This shorthand is not yet added to the selected grammar. It needs field-presence
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 
+An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; };` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Its identity and full type grammar remain proposals; see [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
+
 ### Reference comparison and tradeoff
 
 - Rust's struct-pattern grammar includes a path before its field braces. LiteScript deliberately keeps that type/constructor selection separate from its selected named-field extraction. Source: [Rust struct patterns](https://doc.rust-lang.org/reference/patterns.html#struct-patterns).

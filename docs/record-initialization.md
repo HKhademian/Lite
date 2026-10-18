@@ -139,7 +139,7 @@ Inline source notation does not promise physical in-place storage, heap allocati
 ```text
 Profile := record {
     name: String;
-    stats: record {
+    stats: {
         points: Int;
         level: Int = 1;
     };
@@ -151,7 +151,13 @@ profile := Profile {
 };
 ```
 
-This reuses record to declare an unnamed field type, then uses its known field contract for construction. It is an inline type declaration, not a shared default object. Under the proposal, omitted stats would recursively initialize points to 0 and level to 1.
+The field's colon already starts a type position, so the recommended shorthand omits a redundant record keyword before its type braces. This declares an unnamed field type, then uses its known field contract for construction. It is an inline type declaration, not a shared default object. Under the proposal, omitted stats in record-initializer mode would recursively initialize points to 0 and level to 1:
+
+```text
+profile: Profile = {};
+```
+
+This is distinct from a bare-brace top-level type declaration: Profile := still starts an expression position, so this proposal retains its record keyword. Whether the longer nested stats: record { ... } spelling remains as an alias is a separate syntax choice; recommending the shorter form does not select two interchangeable spellings.
 
 Whether independently declared identical unnamed records share type identity, can be named later, or can appear in public signatures remains open. This proposal must not silently settle nominal versus structural typing.
 
