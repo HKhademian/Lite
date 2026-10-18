@@ -1,6 +1,6 @@
 # Pattern aliases and duplicate names
 
-Status: **reference comparison dated 2026-10-18; field aliases proposed; ordered pattern shadowing selected**.
+Status: **reference comparison dated 2026-10-18; field = pattern naming and ordered pattern shadowing selected; outer record wrapper open**.
 
 ## Purpose
 
@@ -60,40 +60,28 @@ val (x, xInside) = pair
 
 Names are chosen for positional component values rather than copied automatically from source fields. An additional field alias is unnecessary in this form. Its component-operator mechanism is not a general structural-pattern contract for LiteScript. Source: [Kotlin destructuring](https://kotlinlang.org/docs/destructuring-declarations.html).
 
-## LiteScript recommendation
+## Selected LiteScript naming
 
-For named-field patterns, consider:
-
-```text
-field as localName
-field as localName: Type
-```
-
-The field is a selector, not a local declaration in addition to localName. Only the chosen local name is introduced. A following type constraint would test and narrow the selected value without conversion. Alias naming must not alter the selected source value, inference, visibility, or ownership permissions.
-
-For illustration, assuming Point is a record with one exposed x field, a possible future record-pattern form could be:
+Named field routing now uses field = pattern:
 
 ```text
-match pair {
-    (Point(x as leftX), Point(x as rightX)) {
-        process(leftX, rightX)
-    }
-}
+{ x = leftX }
+{ x = leftX: Int }
+{ x: Int }
+{ x = : Int }
 ```
 
-This illustrates a proposal, not selected record-pattern grammar. It would give distinct local names to two source fields both named x. Ordinary positional tuple patterns already let the programmer choose distinct names without an alias keyword.
+These are field-list fragments, not a selected outer record-pattern wrapper. The first binds the x component as leftX. The second also constrains its type. The third binds it as x with an Int constraint; the fourth tests its type without binding it. A source field selector introduces no extra local name on its own.
 
-The benefit of as is keeping source-to-local naming distinct from LiteScript's `binding: Type`. Do not assume the JavaScript/Rust field-colon spelling drops into the existing typed and whole-value colon patterns without a grammar decision. In this candidate, as is followed by a binding name and does not perform a type cast.
-
-The [aggregate-pattern review](aggregate-patterns.md) considers the candidate `Student(age == outVal, name == "ali")`: age/name are field selectors followed by value constraints, not local bindings. Its positional equivalent needs an explicit `(age, name)` matching schema. That equality-only form does not select the general named-field/alias grammar.
+This supersedes the earlier field as localName proposal for named record patterns. It does not change loop receiver as, whose separator is independently open. General field routing also supports nested patterns and value tests, so a separate renaming-only operator is unnecessary. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 ## Selected duplicate-binding policy
 
 Repeated destination names within one pattern are permitted. Bind in recursive written order; the later binding shadows the earlier one. This includes `_`, which is an ordinary readable name with permission to be unused. `(x, x)` binds both components and exposes the second as x; it does not compare them. The earlier recommendation to reject duplicates is superseded. See [pattern binding and shadowing](pattern-shadowing.md).
 
-Aliases remain useful when both selected values must stay accessible. The proposed `field as localName` binds only localName; it does not also introduce the source field's name. If alias grammar is adopted, its destination participates in the same ordering rule.
+Aliases remain useful when both selected values must stay accessible. Selected field = localName binds only localName; it does not also introduce the source field's name. Its destination participates in the same ordering rule.
 
-Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are full record syntax, alias/type precedence, named versus positional patterns, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
+Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are the outer record wrapper, named versus positional container distinction, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
 
 ## Related concepts
 

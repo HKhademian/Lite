@@ -1,6 +1,6 @@
 # Aggregate patterns: fields and positions
 
-Status: **Student examples reviewed on 2026-10-18; the three base pattern operations are selected, but record-pattern syntax and positional schemas remain proposals**.
+Status: **named field initialization/routing, equality shorthand, and typed same-name binding selected; outer record wrappers, positional schemas, and full extraction contracts remain open**.
 
 ## Purpose
 
@@ -8,32 +8,46 @@ Apply bind, type match, and value match to components of one structured value. T
 
 Assume Student exposes an age component and a name component. These examples describe candidate record/constructor patterns; they do not select a class, inheritance, or record declaration grammar.
 
-## Named-field value constraints
+## Named-field clauses
 
 ### Construction and matching must be reviewed together
 
-The subsequent all-type review raised a concern about choosing field = pattern when value fields might use field: expression. Retaining the same colon at the field-list level is the current recommendation:
+The selected distinction is field: Type in a record declaration, field = expression when supplying a predefined field's value, and field = pattern when selecting a component for matching. The earlier field-colon value/routing proposal is superseded.
 
 ```text
-/* Field fragments, not complete selected construction/arm syntax. */
-{ a: 1, b: 2 }             /* value fields contain expressions */
-{ a: x, b: == expected }   /* pattern fields contain subpatterns */
-{ a: x: Int, b: "Ali" }    /* a's subpattern binds/types x */
+/* Field-list fragments; outer construction/pattern wrappers remain open. */
+{ a = 1, b = 2, c = 3 }             /* initialization expressions */
+{ a = bind, b == expected, c: Int } /* matching clauses */
 ```
 
-The field selector does not bind; its supplied component is passed to the right-hand subpattern. The nested colon in x: Int therefore has a different grammar position from the field separator, without changing bare names into value lookups.
-
-This is not yet selected named-record grammar. The outer form must distinguish it from positional constructor patterns and executable braces. In particular, Student(age: Int) already illustrates a typed positional binding under its proposed schema; adding named field: pattern to the identical container would need a syntactic distinction. Likewise, the pattern's braces must not be mistaken for our arrow-free arm body. Define construction, matching containers, and field omission together; do not choose their meaning from capitalization, symbol lookup, or line breaks. See the [complete type review](pattern-type-review.md#4-records).
-
-### Earlier equality-only field proposal
+The selected named-pattern forms are:
 
 ```text
-Student(age == outVal, name == "ali")
+field = pattern      /* route the component into any shared subpattern */
+field == expected    /* compare the component; bind no name */
+field: Type          /* type-test and bind under the field's own name */
 ```
 
-Under this proposal, age and name select fields. Each field's supplied value is tested against its right-hand expression. Neither selector introduces a local binding, and neither is a lookup of an ordinary outer age/name variable. outVal is an existing value; the literal is a concise value test.
+The last two are conveniences for `field = (== expected)` and `field = (field: Type)` respectively. These equations describe semantic expansion; they do not select general grouped-pattern syntax.
 
-This form needs an explicit named-field production. It is not evidence that any ordinary `name == expression` automatically binds and compares a value in a positional pattern. Full named-field patterns, alias composition, and the boundary between named clauses and positional subpatterns remain open.
+```text
+{ age = years: Int }    /* bind as years, constrained to Int */
+{ age: Int }            /* bind as age, constrained to Int */
+{ age = : Int }         /* type test only, no age binding */
+{ age == expectedAge }  /* existing-value comparison, no age binding */
+{ age = 18 }            /* literal subpattern compares with 18 */
+{ owner = .Some(user), position = (x, y) }
+```
+
+The field selector does not itself bind. The subpattern may bind, compare, test type, or deconstruct. The typed shorthand deliberately introduces the same-named binding; it does not also provide an independent type-only meaning. New names follow the existing recursive shadowing and scope rules.
+
+Field = expression in construction initializes fresh data rather than mutating an existing binding, so it does not require var merely because it contains =. Initialization order, required/default fields, visibility, and full constructor grammar remain separate contracts.
+
+### Outer wrappers still need a decision
+
+The field operators are selected, not the complete record-pattern container. Student(age: Int) previously illustrated a typed positional binding under its proposed schema; it must not silently become a named-field clause with another source component. Distinguish named and positional containers explicitly, without using lookup, capitalization, or whitespace to decide.
+
+The chosen wrapper must also distinguish record data from our arrow-free match arm bodies and ordinary executable blocks. Student { field clauses } is a candidate, not selected grammar. Named field/position mixing, omission, exact arity, and match-schema declarations remain open.
 
 ## Positional value constraints
 
@@ -104,17 +118,17 @@ This is an arm fragment assuming the User schema, compatible comparisons, and ad
 
 Named fields identify the selected components directly and do not depend on positional order. Positional subpatterns are concise for types that deliberately expose a small stable order. Both can reuse the same underlying primitive patterns; allowing one must not change the meaning of bare identifiers in the other.
 
-Recommendation: permit both only with explicit field/schema contracts. Keep positional components as ordinary subpatterns and treat named field constraints as field selection followed by a subpattern. The exact general selector-to-subpattern delimiter remains open; the user's equality-only named form does not settle type, binding, or nested-field syntax.
+Recommendation: permit both only with explicit field/schema contracts. Keep positional components as ordinary subpatterns and treat named field constraints as field selection followed by a subpattern. Named clauses now use selected field = pattern, field == expected, and typed same-name field: Type. Their outer wrapper and full field/schema contract remain open.
 
 ## Remaining decisions
 
 - Record/type patterns versus enum payload constructors, and how the matching schema is declared.
-- Full named-field grammar, aliases, nested subpatterns, and colon/type ambiguities.
+- Outer named-field wrapper and its body boundary; selected field operators and typed shorthand must be preserved.
 - Whether named and positional forms may mix; no mixing rule is selected by these examples.
 - Omitted fields, exact positional arity, and rest capture; do not silently assume partial or exhaustive field extraction.
 - Duplicate source-field selection, unknown fields, visibility, extraction effects, ownership, and writable access.
 
-The selected pattern binding order and branch scope still apply. Field selectors are not bindings. If later grammar introduces named bindings or aliases, their written pattern order determines shadowing, not physical record order. Semantic equality and extraction effects retain their separate open contracts.
+The selected pattern binding order and branch scope still apply. Field selectors are not bindings. Selected field subpatterns introduce bindings in written pattern order, not physical record order. Semantic equality and extraction effects retain their separate open contracts.
 
 ## Related concepts
 

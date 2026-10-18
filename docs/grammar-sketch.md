@@ -102,6 +102,17 @@ record_field := identifier ":" type
 
 The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration ends without a following semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
+Selected field-list fragments, independent of the still-open outer wrappers:
+
+```text
+record_initialization_field := identifier "=" expression
+named_field_pattern := identifier "=" pattern
+                     | identifier "==" pattern_value_operand
+                     | identifier ":" type
+```
+
+The equality form introduces no binding. The typed shorthand tests and binds under the field's own name; a type-only test uses field = : Type. The general routing form permits field = localName: Type and nested subpatterns. These fragments do not choose named-versus-positional containers, field-list omission, field separators, or the boundary with a match arm's body. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+
 ## Conditionals
 
 ```text

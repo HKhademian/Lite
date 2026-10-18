@@ -1,6 +1,6 @@
 # Records
 
-Status: **record declaration keyword and typed-field surface selected; construction, type identity, and memory semantics remain open**.
+Status: **record declaration keyword, typed fields, = initialization, and named field-pattern operators selected; outer construction/pattern wrappers, type identity, and memory semantics remain open**.
 
 ## Purpose
 
@@ -26,6 +26,20 @@ Student := record {
 ```
 
 Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. It does not choose the use of type for aliases or other type definitions.
+
+## Field values and named patterns
+
+Declared fields use field: Type. Supplying a predefined field's value uses field = expression. Matching routes that field's component with field = pattern:
+
+```text
+/* Fragments only; the outer construction/pattern spelling is open. */
+{ name = "Ali", grade = 12 }           /* initialization */
+{ name = studentName, grade == 12 }    /* bind name; compare grade */
+{ grade: Int }                        /* bind grade with Int constraint */
+{ grade = : Int }                     /* type test only */
+```
+
+Initialization is not reassignment through an existing binding. Named matching reuses the ordinary subpatterns, including nested records, tuples, cases, and typed bindings. See [aggregate clauses](aggregate-patterns.md#named-field-clauses). The wrapper, field omission, defaults, and construction/type inference remain separate decisions.
 
 ## Access and composition
 

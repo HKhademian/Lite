@@ -70,18 +70,18 @@ Recommend exact arity unless a rest pattern is written. Tuple rest capture, empt
 
 Record declarations are selected as `Student := record { age: Int; name: String; }`. Their construction and full named-field pattern grammar must be completed together.
 
-The user raised the useful field-colon correspondence:
+The selected field rules now distinguish declaration, initialization, and matching:
 
 ```text
-/* Field fragments only: outer construction/pattern grammar is open. */
-{ a: 1, b: 2 }                  /* a value expression in each field */
-{ a: x, b: == expected }        /* a subpattern in each field */
-{ a: x: Int, b: "Ali" }         /* bind/type-test a; value-test b */
+/* Field fragments; outer wrappers remain open. */
+{ a: Int; b: Int; c: Int; }        /* declaration */
+{ a = 1, b = 2, c = 3 }           /* construction */
+{ a = x, b == expected, c: Int }  /* pattern */
 ```
 
-Recommend retaining : as the field separator in both values and named patterns. It is a label separator at the field-list level; a nested name: Type is a typed binding at the subpattern level. This does not require field = pattern, which was only an alternative raised for review and is not selected.
+General named pattern routing is field = pattern. The compact field == expected binds nothing; field: Type type-tests and binds under that field's own name. A type-only field test uses field = : Type. These replace the earlier field-colon value/routing recommendation.
 
-Do not insert named field: pattern directly into the existing positional Student(...) grammar: `Student(age: Int)` already denotes a typed positional binding under that proposed schema. A distinct named container or marker is needed to avoid choosing roles by lookup or capitalization. Also resolve the boundary between a record pattern's braces and our arrow-free arm body. The fragments above select no anonymous record literal or arm delimiter.
+The enclosing construction/pattern form remains open. Do not reinterpret the proposed positional Student(age: Int) by symbol lookup or capitalization. Also resolve the record-pattern brace boundary with arrow-free arm bodies. See [selected aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 Recommend partial named selection over exposed fields, with explicit stable schemas for positional matching. Omitted private fields remain private; a pattern does not invoke a constructor, expose hidden layout, or automatically call arbitrary getters. Exact omission, duplicate field selection, aliases, and construction syntax remain under review in [aggregate patterns](aggregate-patterns.md).
 

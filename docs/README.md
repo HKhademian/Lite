@@ -40,7 +40,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
 - [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.
 - [Comparison patterns](comparison-patterns.md): proposed direct ordering tests, selected Boolean guards, and the boundary between pattern alternatives and Boolean or.
-- [Aggregate patterns](aggregate-patterns.md): Student field/positional examples, selected primitive meanings, and proposed record schemas and selector grammar.
+- [Aggregate patterns](aggregate-patterns.md): selected named field routing, equality and typed shorthand; positional examples and open outer wrappers/schemas.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): cross-context audit of := source placement, == value tests, bindings, declarations, if/match, receivers, and recommended mismatch policies.

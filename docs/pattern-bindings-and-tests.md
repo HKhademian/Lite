@@ -34,6 +34,8 @@ The surrounding construct supplies the pattern's subject: `if .Some(== outValAge
 
 The [Student aggregate examples](aggregate-patterns.md) apply these meanings to proposed record patterns: `Student(== outVal, "ali")` compares both components, while `Student(outVal, "ali")` binds the first and compares the second. Their positional schema and named-field selector grammar are separate decisions.
 
+Named field operators are now selected independently of their wrapper: field = pattern routes the component, field == expected compares without binding, and field: Type binds that field under its own name with a type constraint. Use field = : Type for type-only selection. These conveniences preserve the underlying three primitives rather than changing the meaning of a bare identifier or adding equality-binding expressions.
+
 The [comparison-pattern review](comparison-patterns.md) proposes extending value matching with direct <, <=, >, and >= prefixes. Equality remains the selected direct comparison. Other comparisons already work in ordinary Boolean and guards, including grouped Boolean or; general logical subpatterns and binding-producing alternatives remain separate open features.
 
 An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
