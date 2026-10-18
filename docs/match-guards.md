@@ -12,6 +12,8 @@ pattern and condition_operand and condition_operand { body }
 
 The initial pattern matches the match subject. Later operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. There is no separate if, when, or where separator.
 
+Ordering comparisons and compound relationships already work as Boolean guards, for example `pattern and lower <= value < upper and (ready or retry_allowed)`. Direct component ordering prefixes such as >= minimum are a separate [comparison-pattern proposal](comparison-patterns.md). Boolean or inside a grouped guard does not select alternative binding-producing patterns.
+
 ## Boolean guard example
 
 ```text
