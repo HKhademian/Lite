@@ -123,6 +123,8 @@ Binding and access permissions are candidates for static checking. They do not i
 
 ## Decisions still required
 
+See the [slot-parameter proposal](slot-parameters.md) for the next distinction: replacing a local parameter versus replacing caller storage through a supplied slot. Neither local-var parameter semantics nor slot write-through/call syntax is selected merely by the existing var/mut/slot markers.
+
 - Define the inference and conversion rules for access-bearing values without upgrading read-only borrowed access.
 - Complete method declarations, parameter rebinding rules, capability inference, and any call-site argument syntax. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
 - Choose move/copy/borrow/share behavior, write exclusivity, and lifetimes.

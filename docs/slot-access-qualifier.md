@@ -104,6 +104,8 @@ A transparent alias must retain its entire denoted type as the operand. If Pair 
 
 ## Remaining choices
 
+The next [slot-parameter review](slot-parameters.md) proposes temporary caller-location access and explicit argument markers, with parameter-readable/source-readable and parameter-write/source-write compatibility checked in opposite directions. Its parameter passing, call syntax, and lifetime choices remain proposals.
+
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
 - What delimits a complete contract, including a read-only contract with no slot member?
 - How are payload permissions represented independently from replacement acceptance?

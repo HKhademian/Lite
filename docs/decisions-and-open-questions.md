@@ -127,6 +127,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [slot-parameter proposal](slot-parameters.md) recommends temporary caller-location access for slot-qualified parameters, an explicit call marker such as replace(slot value), and checking both readable possibilities and accepted writes. Local var parameters would rebind locally under a separate recommendation. Parameter passing, call syntax, lifetimes, aliasing, and first-class access values remain unselected; the review compares Swift, Rust, Zig 0.15.1, and V.
+
 - The [qualified access-summary investigation](access-union-qualifiers.md) explores combining complete contracts that accept A | B and C | B into a summary reading A | B | C and accepting B. Its original A | mut B | C spelling is superseded by the selected slot marker. Whole-contract composition and correlation preservation remain open; this is not a rewrite of ordinary union normalization.
 - The [slot qualifier](slot-access-qualifier.md) and grouped distribution are selected. Its prefix applies to one type operand, including a parenthesized union or a transparent alias denoting that whole union. Complete declaration syntax, whole-contract boundaries, and access-value ownership remain open. A common projection from several parent fields must still respect every original storage contract; distribution within one contract does not flatten those parent paths into one unrestricted slot.
 

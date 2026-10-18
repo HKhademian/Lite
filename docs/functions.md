@@ -44,6 +44,8 @@ The declaration `mut rename := fn(...) { ... }` would instead describe writable 
 
 These markers do not choose borrowing, copying, moving, lifetimes, argument syntax at the call site, capture permissions, or purity. Those contracts remain open; see [mutability](mutability.md) and [memory and performance](memory-and-performance.md).
 
+The [slot-parameter proposal](slot-parameters.md) separately investigates replacing a caller-supplied location. It recommends temporary caller-location access for slot-qualified parameters and an explicit call marker such as replace(slot value). Ordinary local parameter rebinding, first-class references, and this argument syntax are not yet selected. The slot replacement marker itself does not automatically choose parameter-passing semantics.
+
 ## Result rules
 
 The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item with an optional trailing semicolon; see [blocks and results](blocks-and-results.md).

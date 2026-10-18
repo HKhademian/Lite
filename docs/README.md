@@ -45,6 +45,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Union values and access contracts](union-values-and-access.md): a slot containing a union versus a union of possible slots; proposed explicit read/write contracts and reference-language comparisons.
 - [Qualified access summaries](access-union-qualifiers.md): exploration of A | mut B | C, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
 - [Slot access qualifier](slot-access-qualifier.md): selected replacement marker, grouped distribution, and var-binding summaries; whole access-contract grammar remains open.
+- [Slot parameters](slot-parameters.md): proposed temporary caller-location access, explicit call markers, two-direction compatibility, and Swift/Rust/Zig/V comparisons.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): selected zero/default distinction; declared field defaults, nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type = 0 versus declared-default record initialization with {}, with zero eligibility and broader literal contexts still open.
