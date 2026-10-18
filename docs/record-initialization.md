@@ -163,6 +163,8 @@ This is distinct from a bare-brace top-level type declaration: Profile := still 
 
 Whether independently declared identical unnamed records share type identity, can be named later, or can appear in public signatures remains open. This proposal must not silently settle nominal versus structural typing.
 
+The [inline identity review](record-type-identity.md#recommended-inline-rule-identity-per-declaration) recommends distinct types per inline declaration, matching the selected named-record rule. Reuse one named Stats declaration when different outer records should share that field type. This inline recommendation is not yet selected.
+
 ## 7. Standalone inferred record literal: separate proposal
 
 ```text

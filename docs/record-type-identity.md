@@ -83,6 +83,47 @@ Two further options are per-declaration identity for unnamed record types as wel
 
 Reusing one named Stats record provides an explicit common type under either option. Standalone inferred literals without an expected type, such as point := { x = 1, y = 2 }, also remain proposals; they must not automatically select either identity model.
 
+### Recommended inline rule: identity per declaration
+
+Recommend applying one rule to named and unnamed record type declarations: each declaration defines a distinct type. Omitting its name or the redundant record keyword in a type position does not implicitly request structural compatibility. This is a recommendation, not yet selected.
+
+```text
+Player := record {
+    stats: { points: Int; };
+}
+
+Team := record {
+    stats: { points: Int; };
+}
+
+player: Player = { stats = { points = 10, }, };
+
+/* Rejected under this recommendation: different inline type declarations. */
+badTeam: Team = { stats = player.stats, };
+
+/* Explicit reconstruction into Team's established stats type. */
+team: Team = { stats = { points = player.stats.points, }, };
+```
+
+Type identity is checked independently of ownership and mutation permissions.
+
+When a shared type is intended, declare it once:
+
+```text
+Stats := record { points: Int; }
+Player := record { stats: Stats; }
+Team := record { stats: Stats; }
+
+player: Player = { stats = { points = 10, }, };
+team: Team = { stats = player.stats, };
+```
+
+The last initializer is now type-compatible because both fields use the same Stats declaration; actual transfer still obeys the eventual copy/move/borrow rules. No structural conversion or automatic deep copy is implied.
+
+An inline declaration inside Player defines Player's stats type once under the eventual compile-time type model. Constructing another Player value does not itself mint another type or require runtime type allocation. Generics, declaration instantiation, recursive types, and how an unnamed type can be referred to later still need formal rules.
+
+The alternative remains viable: make unnamed records compatible by exact shape while named declarations remain nominal. Its benefit is less adaptation for temporary data. Its cost is a second identity policy and rules for defaults, field order, recursive shapes, access capabilities, and visibility. Either option must keep contextual data braces distinct from record type declarations and executable bodies.
+
 ## Reference-language comparison
 
 - **Rust:** struct declarations define nominal types. Type aliases introduce names for existing types. This separates domain identity from naming and reuse. Sources: [structs](https://doc.rust-lang.org/reference/items/structs.html) and [aliases](https://doc.rust-lang.org/reference/items/type-aliases.html).

@@ -119,6 +119,7 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 ## Working proposals requiring confirmation or formalization
 
 - [Record type identity](record-type-identity.md) now selects distinct named records and explicit reconstruction. Inline/anonymous identity, exact alias syntax, and additional conversion facilities remain open.
+- The [inline identity recommendation](record-type-identity.md#recommended-inline-rule-identity-per-declaration) applies distinct identity per declaration to unnamed inline record types too. Equal-shaped fields in Player and Team would need reconstruction unless both use one shared Stats declaration. Structural identity for unnamed shapes alongside nominal named records remains the alternative; no inline policy is selected yet.
 
 - In an explicit record-field type position, the proposed stats: { points: Int; level: Int = 1; }; omits record because colon already requires a type. Keep the top-level Profile := record { ... } form pending broader type/value brace grammar. Unnamed-type identity and whether to retain the longer nested spelling remain open; see [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
 
