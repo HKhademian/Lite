@@ -1,6 +1,6 @@
 # Record type identity and assignment compatibility
 
-Status: **distinct named record declarations selected 2026-10-18; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Anonymous/inline record identity, alias syntax, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
+Status: **distinct identity per record type declaration selected 2026-10-18, including named and unnamed inline declarations; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Alias syntax, inferred standalone literal types, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
 
 ## The decision
 
@@ -22,7 +22,7 @@ student: Student = user;
 The reviewed alternatives were:
 
 - **Nominal, selected:** the final declaration is rejected because User and Student come from distinct type declarations. Equal fields are insufficient.
-- **Structural, not selected for named records:** compatible fields could make the declaration valid despite the different type names. Exact versus extra-field compatibility, mutability, variance, visibility, and defaults would need precise rules.
+- **Structural, not selected for record declarations:** compatible fields could make the declaration valid despite the different type names. Exact versus extra-field compatibility, mutability, variance, visibility, and defaults would need precise rules.
 
 Both approaches can be statically checked. Strong typing alone does not settle the choice. Nominal identity protects distinctions between domain concepts; structural compatibility reduces adaptation between independently defined data shapes.
 
@@ -64,7 +64,7 @@ Headless field extraction cannot replace a deliberate nominal test. Existing con
 
 This is a semantic distinction, not a requirement for a reflection registry or heap object. A statically known source needs no runtime identity test; a union can use its eventual discriminator representation. No performance or layout implementation is implied.
 
-## Inline and anonymous types: next dependent decision
+## Inline and anonymous record declarations
 
 The proposed inline form is:
 
@@ -77,15 +77,15 @@ Profile := record {
 }
 ```
 
-It is an unnamed type declaration, not a contextual value initializer. Deciding named records alone does not yet decide whether another independently written stats type is compatible with it.
+It is an unnamed type declaration, not a contextual value initializer. The selected rule gives it its own identity, just like a named declaration. Another independently written stats declaration is a distinct type even when its fields and defaults match. The exact nested type shorthand remains a syntax proposal, independently of this confirmed identity rule.
 
-Two further options are per-declaration identity for unnamed record types as well, or structural identity for unnamed record shapes alongside nominal named records. The latter is a deliberate hybrid, not a consequence of merely omitting a name. Field defaults complicate structural identity: two equal field-type shapes can supply different construction defaults. Specify where those defaults belong before claiming complete equivalence.
+Structural identity for unnamed shapes alongside nominal named records was considered and not selected. Omitting a type name does not request structural compatibility. Different defaults can belong to distinct declarations without requiring defaults to determine cross-declaration shape compatibility.
 
-Reusing one named Stats record provides an explicit common type under either option. Standalone inferred literals without an expected type, such as point := { x = 1, y = 2 }, also remain proposals; they must not automatically select either identity model.
+Reusing one named Stats record provides an explicit common type. Standalone inferred literals without an expected type, such as point := { x = 1, y = 2 }, remain a separate proposal; their type-producing and inference rules must be specified rather than silently introducing structural compatibility.
 
-### Recommended inline rule: identity per declaration
+### Selected inline rule: identity per declaration
 
-Recommend applying one rule to named and unnamed record type declarations: each declaration defines a distinct type. Omitting its name or the redundant record keyword in a type position does not implicitly request structural compatibility. This is a recommendation, not yet selected.
+Apply one selected rule to named and unnamed record type declarations: each declaration defines a distinct type. Omitting its name or the redundant record keyword in a type position does not request structural compatibility.
 
 ```text
 Player := record {
@@ -98,7 +98,7 @@ Team := record {
 
 player: Player = { stats = { points = 10, }, };
 
-/* Rejected under this recommendation: different inline type declarations. */
+/* Rejected: different inline type declarations. */
 badTeam: Team = { stats = player.stats, };
 
 /* Explicit reconstruction into Team's established stats type. */
@@ -122,7 +122,7 @@ The last initializer is now type-compatible because both fields use the same Sta
 
 An inline declaration inside Player defines Player's stats type once under the eventual compile-time type model. Constructing another Player value does not itself mint another type or require runtime type allocation. Generics, declaration instantiation, recursive types, and how an unnamed type can be referred to later still need formal rules.
 
-The alternative remains viable: make unnamed records compatible by exact shape while named declarations remain nominal. Its benefit is less adaptation for temporary data. Its cost is a second identity policy and rules for defaults, field order, recursive shapes, access capabilities, and visibility. Either option must keep contextual data braces distinct from record type declarations and executable bodies.
+The rejected structural alternative would reduce adaptation for temporary data but introduce a second identity policy and compatibility rules for defaults, field order, recursive shapes, access capabilities, and visibility. The selected per-declaration rule still keeps contextual data braces distinct from record type declarations and executable bodies.
 
 ## Reference-language comparison
 
@@ -131,6 +131,6 @@ The alternative remains viable: make unnamed records compatible by exact shape w
 - **Dart records:** record shape determines structural type identity, including field types and named-field names; a typedef does not make the shape nominal. These records are not the same facility as Dart classes. Source: [Dart record types](https://dart.dev/language/records#record-types).
 - **TypeScript:** type compatibility is based on structural subtyping. This is more than an exact-field-set equality rule and has explicit exceptions and compatibility policies. Source: [TypeScript compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility.html).
 
-Named record identity is now selected. Next resolve inline/anonymous identity, aliases, and any additional explicit conversions. Do not infer one from generated equality, byte layout, default values, or the ability to destructure fields.
+Record declaration identity is now selected for named and unnamed inline types. Next resolve aliases, inferred standalone literal types, and any additional explicit conversions. Do not infer one from generated equality, byte layout, default values, or the ability to destructure fields.
 
 Related: [records](records.md), [initialization](record-initialization.md), [pattern inference](pattern-binding-inference.md), [type tests](type-tests-and-narrowing.md), and [type categories](type-categories.md).

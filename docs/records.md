@@ -1,6 +1,6 @@
 # Records
 
-Status: **record declaration keyword, typed fields, = initialization, named field-pattern operators, inferred named patterns, contextual construction, and distinct named-record identity selected**. Inline/anonymous identity, full inference, and memory semantics remain open.
+Status: **record declaration keyword, typed fields, = initialization, named field-pattern operators, inferred named patterns, contextual construction, and distinct identity per record declaration selected, including inline types**. Full inference, standalone literal types, and memory semantics remain open.
 
 ## Purpose
 
@@ -79,7 +79,7 @@ This shorthand is not yet added to the selected grammar. It needs field-presence
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 
-An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; };` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Its identity and full type grammar remain proposals; see [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
+An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; };` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Distinct identity per inline declaration is selected; its shorthand and full type grammar remain proposals. See [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
 
 ### Reference comparison and tradeoff
 
@@ -97,17 +97,17 @@ Function/if/loop/match bodies remain executable blocks even when their expected 
 
 ## Access and composition
 
-Separately declared named records are distinct types even when their fields are identical. Convert by explicitly reconstructing the destination through its exposed construction contract; equal fields alone do not permit assignment. Type-head omission in construction and deconstruction does not change that identity. See [record type identity](record-type-identity.md).
+Separately declared record types are distinct even when their fields are identical, including unnamed inline types. Convert by explicitly reconstructing the destination through its exposed construction contract; equal fields alone do not permit assignment. Type-head omission in construction and deconstruction does not change that identity. See [record type identity](record-type-identity.md).
 
-The [record creation and initialization overview](record-initialization.md) separates proposed contextual zero initialization with = 0 from declared-default construction with = {}, including selected empty contextual record initialization. Initializer omission remains an unresolved alternative. Field-default resolution and anonymous-type examples still need formalization; they do not silently complete this document's open initialization/type-identity contracts.
+The [record creation and initialization overview](record-initialization.md) separates selected contextual zero initialization with = 0 from declared-default construction with = {}, including selected empty contextual record initialization. Initializer omission remains an unresolved alternative. Field-default resolution and inline-type grammar still need formalization; they do not silently complete this document's other initialization/type-system contracts.
 
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
 
 ## Open decisions
 
-- [Record type identity](record-type-identity.md) records selected nominal named records; inline/anonymous identity, aliases, and additional conversion facilities remain open.
+- [Record type identity](record-type-identity.md) records selected nominal identity for all record type declarations; aliases, inferred standalone literals, and additional conversion facilities remain open.
 - Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
-- Inline/anonymous record identity and generic declarations.
+- Inferred standalone record literals and generic declarations/instantiation.
 - Field visibility/accessor syntax and any per-field mutation rules.
 - Public matching schemas and named/positional destructuring.
 - Generated equality, hashing, formatting, and copy operations.

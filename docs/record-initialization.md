@@ -161,9 +161,9 @@ profile: Profile = {};
 
 This is distinct from a bare-brace top-level type declaration: Profile := still starts an expression position, so this proposal retains its record keyword. Whether the longer nested stats: record { ... } spelling remains as an alias is a separate syntax choice; recommending the shorter form does not select two interchangeable spellings.
 
-Whether independently declared identical unnamed records share type identity, can be named later, or can appear in public signatures remains open. This proposal must not silently settle nominal versus structural typing.
+Independently declared unnamed record types have distinct identity, even with identical fields. How such a type can be named later or appear in public signatures remains open. The inline shorthand's full grammar is still a syntax proposal; its declaration identity is now selected.
 
-The [inline identity review](record-type-identity.md#recommended-inline-rule-identity-per-declaration) recommends distinct types per inline declaration, matching the selected named-record rule. Reuse one named Stats declaration when different outer records should share that field type. This inline recommendation is not yet selected.
+The [inline identity rule](record-type-identity.md#selected-inline-rule-identity-per-declaration) selects distinct types per inline declaration, matching named records. Reuse one named Stats declaration when different outer records should share that field type.
 
 ## 7. Standalone inferred record literal: separate proposal
 
