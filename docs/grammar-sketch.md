@@ -155,7 +155,7 @@ An annotation constrains its component; other binding types are inferred by narr
 
 The proposed whole-value pattern `y: (a, b: str, c)` and `...rest` capture are not added as productions yet. A nested tuple pattern after colon must be distinguishable from any tuple-type annotation, independently of whitespace or identifier casing. Rest tokenization and result typing also need a contract. See [whole-value/nested/rest patterns](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 
-The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. A `pattern` placeholder in a parameter, loop receiver, or hook production does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation. Their proposed irrefutable binding policy requires confirmation.
+The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. Loop receiver patterns must be irrefutable; selection belongs in the body. The corresponding parameter and completion/recovery receiver policy remains proposed. A pattern placeholder does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation.
 
 ## Loops
 
@@ -171,6 +171,8 @@ finally_clause := "finally" ["(" pattern ")"] block
 ```
 
 `as` is working notation. `:` remains a candidate, and the final language should not accidentally acquire both spellings by treating this sketch as normative. The seeded receiver form is not specified.
+
+Every receiver slot must use a pattern irrefutable under its input contract. Reject a loop receiver that can fail; this applies in all source modes. Refutable patterns belong in if/match inside the body. This semantic constraint does not prohibit tuple destructuring with a statically guaranteed shape. Filtering-header and other mismatch alternatives are [documented as deferred](loop-pattern-alternatives.md).
 
 Separate receiver slots bind names from left to right, traversing nested slot patterns recursively; later same-named bindings shadow earlier ones. `_` follows this ordinary rule: `as _, _, acc` leaves `_` naming count, and `as _, _, _` leaves it naming the accumulator. A hook receiver such as `then(_)` binds readable `_`. The full parameter and member declaration-list rules remain separate.
 

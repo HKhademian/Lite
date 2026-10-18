@@ -22,6 +22,8 @@ These method names are proposals, not implemented standard-library APIs.
 
 The source determines the item type. A simple item binding and a destructuring item pattern operate on that same type. Loop count and accumulator are separate receiver slots or tag fields, not automatically injected tuple fields in every source element.
 
+Loop receiver patterns must match every admitted slot value. Keep refutable selection inside the body for now. A present/filter adapter is a deferred library possibility, not selected syntax or an initial API requirement; see [loop pattern alternatives](loop-pattern-alternatives.md).
+
 ## Iterator evaluation
 
 An iterable-producing source expression is evaluated once. Advancing the resulting iterator supplies successive items. A Boolean loop guard is a different static source mode and is reevaluated before each attempt.

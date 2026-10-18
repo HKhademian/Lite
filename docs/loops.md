@@ -57,6 +57,8 @@ An omitted source behaves like an always-true guard. Explicit inner control flow
 
 ## State
 
+Loop receiver patterns must match every value admitted by their slot's input contract. Put refutable selection in if/match inside the body; a receiver must not silently filter items or terminate iteration. Tuple destructuring remains valid when its shape is guaranteed. See [loop receivers](loop-receivers.md) and the [deferred alternatives](loop-pattern-alternatives.md).
+
 Every loop conceptually carries an item, iteration count, and accumulator. Naming a subset is optional. Untagged loops introduce no implicit variable names.
 
 The proposed counter starts at zero before the first condition check and increments on every body entry. Body counts begin at one. A skipped contribution still counts as an entered iteration. This is not an index into a collection.

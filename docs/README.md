@@ -72,6 +72,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
 - [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists and ordered shadowing.
+- [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.
 - [Loop accumulator](loop-accumulator.md): contributions, optional previous values, and skipped iterations.
 - [Loop completion](loop-completion.md): `then`, `else`, and `finally`.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.

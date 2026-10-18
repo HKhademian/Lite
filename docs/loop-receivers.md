@@ -1,6 +1,6 @@
 # Loop receivers
 
-Status: **optional positional slots and ordered receiver shadowing established; separator and seeded form open**.
+Status: **optional positional slots, ordered receiver shadowing, and irrefutable slot patterns established; separator and seeded form open**.
 
 ## Purpose
 
@@ -58,7 +58,17 @@ loop pairs as (left, right), count {
 
 A name and a destructuring pattern operate on the same first-slot item. Parenthesized tuple patterns do not receive a different hidden value.
 
-Refutable receiver patterns do not yet have a mismatch policy. The [pattern context review](pattern-contexts.md#4-loop-receiver-slots) recommends requiring irrefutable slot bindings initially; receiver syntax must not silently filter items, end iteration, or introduce an error. The same question applies to destructuring an optional accumulator. Use explicit if/match in the body until a different behavior is selected.
+Each receiver pattern must be irrefutable for its slot's input contract. Reject a pattern that can fail; receiver syntax must not filter items, end iteration, panic, or introduce an error. This is selected for the item, count, and accumulator slots in iterable, Boolean, and unconditional modes. An optional accumulator must be inspected explicitly rather than assuming its Some case in a receiver.
+
+```text
+loop optional_users as candidate {
+    if .Some(user) := candidate {
+        greet(user)
+    }
+}
+```
+
+Here optional_users remains the source collection and candidate names one Option item. Selection belongs inside the body. Irrefutable tuple destructuring remains allowed. See the [pattern context rule](pattern-contexts.md#4-loop-receiver-slots) and [deferred alternatives](loop-pattern-alternatives.md) for filtering headers, adapters, termination, per-item alternatives, and failure-based designs.
 
 ## Conditional and unconditional modes
 
