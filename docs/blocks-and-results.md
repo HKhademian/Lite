@@ -49,7 +49,7 @@ These outer items are ordinary expressions or declarations and use ordinary sepa
 
 - A final expression supplies the block's value.
 - A final declaration or assignment produces `Unit`.
-- An empty block produces `Unit`.
+- An empty executable block produces `Unit`. Contextual record initializer braces such as `user: User = {};` are data construction, not executable blocks, and apply the record's defaults instead.
 - An empty match-arm body therefore produces Unit too: `_ {}` and `_ { Unit }` have the same result.
 - Separators are ignored when locating the final item.
 - The compiler does not search backward past a final declaration or assignment for an earlier expression.

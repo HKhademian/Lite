@@ -19,6 +19,8 @@ match status {
 
 The existing _ is an unconstrained readable binding that accepts the remaining whole subject. Its unused-name permission makes nonuse intentional. The empty body returns Unit by the ordinary block rule. Writing _ { Unit } is equivalent; the explicit Unit is optional, not required syntax.
 
+These braces are an executable arm body. They are distinct from an empty record initializer such as user: User = {}, which constructs record data using its defaults. A match expected to return a record does not turn its empty arm bodies into default record values.
+
 A specific ignored case can likewise have an empty body:
 
 ```text

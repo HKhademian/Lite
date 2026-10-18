@@ -102,7 +102,7 @@ record_field := identifier ":" type
 
 The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
-The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression, recursive valid-default filling, simple typed declarations without explicit initializers, and unnamed record field types. Those extensions are not yet added to these selected productions; executable {} retains its Unit result, distinct from explicitly headed TypeName {} construction.
+The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression, zero initialization for simple typed declarations without explicit initializers, and declared-default filling when a record initializer is supplied. No-initializer declarations recursively bypass field defaults and require valid zero values. Those declaration/default-resolution extensions are not yet added to these selected productions. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
 
 Selected record forms and field-list fragments:
 
@@ -120,6 +120,8 @@ The general matching clause is destinationPattern = sourceField, not the earlier
 Bare identifiers still bind in pattern positions. In a match arm, a name followed by braces is a binding followed by its arm body, not a headed record pattern; type-name lookup or capitalization does not change this parse. The proposed bare field-entry shorthand `{ name, age }` and bare-brace record type declarations are not added to these productions; see [record syntax investigation](records.md#proposed-same-name-field-shorthand).
 
 Construction uses TypeName { field = expression, ... }, or just { field = expression, ... } when a unique expected record type is known, including in an annotated binding and nested record field initializer. Explicit type heads remain allowed in construction. Full data-brace versus executable-expression-block disambiguation still needs productions, especially empty/single-field cases. Control-flow/function body positions always remain blocks. Do not silently select anonymous record types or type-check-dependent parses.
+
+Empty contextual record initialization is also selected: user: User = {} is record construction, as is a nested empty initializer for an established record field. A match arm or function/if/loop body {} remains executable and produces Unit, even if an enclosing result contract expects a record. This requires distinct initializer/body grammar roles; it does not permit reinterpreting executable bodies by whichever type-check succeeds.
 
 Trailing commas are optional and allowed; complete field-list omission, defaults, partial schemas, nominal/structural matching, and ownership remain separate contracts. See [records](records.md) and [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
