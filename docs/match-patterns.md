@@ -126,6 +126,8 @@ if (x: Int, y: String) := pair {
 
 The capability and typed tuple shape are selected. Complete tuple/record productions, generic/subtype tests, field visibility, evaluation effects, and ownership remain to formalize. A typed pattern whose component type is already statically known may need no runtime test; an impossible type constraint cannot be made valid by an implicit cast. In an ordinary declaration, the same destructuring must be irrefutable for its input type or use an explicitly defined failure contract.
 
+The extended `(x, y: (a, b: str, c), ...rest)` shape is a separate [whole-value/nested/rest proposal](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest). It would retain y as well as its extracted components; its colon grammar and ownership rules are not settled by selecting typed component patterns.
+
 ## Recommended sixth capability: guards
 
 After a structural pattern succeeds, allow a Boolean condition to refine selection. Candidate syntax, not yet selected:

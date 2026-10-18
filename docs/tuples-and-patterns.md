@@ -80,6 +80,39 @@ if (x: Int, y: String) := pair {
 
 The whole pattern must succeed before the branch executes. A mismatching component fails the pattern rather than requesting conversion, and no nested match is needed just to establish the component types. The same tuple pattern works directly in a match arm, and may appear inside a constructor payload pattern. New bindings remain local to the successful branch. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule) for examples and remaining ownership rules.
 
+## Proposal: whole-value binding, nested patterns, and rest
+
+The proposed shape combines binding the nested value itself, destructuring its components, a typed subpattern, and a remainder capture:
+
+```text
+(x, y: (a, b: str, c), ...rest)
+```
+
+Here str denotes a type name or alias supplied by the surrounding program; this does not select a lowercase built-in alias for String.
+
+Proposed interpretation:
+
+- x binds the first outer component.
+- y binds the whole second outer component, which must match the nested three-component pattern.
+- a, b, and c bind its components; b must match str without conversion.
+- rest captures the remaining outer components, not the remainder of y.
+
+For example, matching `(1, (2, "hello", true), 4, 5)` with str denoting String would bind x to 1, y to `(2, "hello", true)`, a to 2, b to `"hello"`, c to true, and rest to `(4, 5)`. The components and y remain separately named in the successful branch, subject to ownership permissions.
+
+### Candidate rules
+
+Recommend allowing at most one rest capture per tuple pattern, in the final position. It accepts zero or more remaining components. For a fixed tuple, rest would be a tuple with statically determined component types; an empty rest would use the zero-element tuple/Unit relationship once that contract is formalized. List/sequence rests need their own result-type, allocation, and borrowing contracts and are not selected by this tuple example.
+
+Read `name: Type` as a typed binding and `name: (subpatterns)` as a binding of the whole value plus a nested tuple constraint. This is a candidate composition rule, not a complete parser. If tuple types also use parentheses, `y: (A, B)` could be read as a tuple type or as nested bindings; resolve that before selecting the syntax. One possible rule reserves parenthesized forms here for subpatterns and uses a named tuple-type alias for a whole-value type annotation. Do not let identifier capitalization decide the parse. Generalizing colon to arbitrary subpatterns is a further decision.
+
+The whole pattern must succeed before its branch executes; failure of the nested shape or b's type fails the enclosing pattern. Ordinary declarations still require irrefutable destructuring. Simultaneous whole-value and component names must not silently clone a value, create two owners, or permit overlapping writable accesses; the borrow/move/copy model determines which uses are legal. Rest capture does not itself promise or require allocation.
+
+These shapes may be used in a match arm or conditional pattern once their grammar is selected. They do not require a second, nested match statement.
+
+### Reference comparison
+
+Rust uses `name @ subpattern` to bind a matched value while checking another pattern. Dart list patterns support `...` with a collecting subpattern. These are useful precedents for the two capabilities, but do not select LiteScript's colon syntax, tuple-rest result type, or ownership semantics. See [Rust identifier patterns](https://doc.rust-lang.org/reference/patterns.html#identifier-patterns) and [Dart rest elements](https://dart.dev/language/pattern-types#rest-element).
+
 ## Underscore bindings
 
 `_` binds the supplied value and can be read, like another name. It is not a wildcard that suppresses binding.
