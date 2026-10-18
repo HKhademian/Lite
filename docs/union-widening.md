@@ -73,7 +73,7 @@ See the [reference-language comparison](union-membership-comparison.md) for the 
 
 ## Remaining decisions
 
-- Common field reads and other operations without narrowing.
+- [Common field reads](union-field-reads.md) are selected separately. Writes, method calls, and other operations without narrowing remain open.
 - Interface overlap, subtype admission, and absorption if introduced.
 - Compatibility through generic constructors, containers, functions, and fallible types.
 - Mutation, ownership, lifetime, ABI, and public type-evolution contracts.

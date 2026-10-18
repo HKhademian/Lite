@@ -71,6 +71,8 @@ Type-pattern narrowing is selected for union values, including unions on either 
 
 Pattern bindings have a separate selected inference rule: constrain the input by the entire pattern, then give every unannotated binding its projected concrete type or union across compatible possibilities. Explicitly constraining one component does not require annotations on its siblings, and impossible alternatives must not widen any binding. Whole composite values preserve unions of complete shapes. This is not automatic union formation for incompatible match-arm result expressions. See [pattern binding inference](pattern-binding-inference.md).
 
+[Common field reads](union-field-reads.md) require the field to be readable on every possible receiver alternative. Their result type is the normalized union of the corresponding field types. A missing or inaccessible field rejects the read before result-type combination; it does not contribute a bottom type, None, or Unit. This does not select writes or method calls through unions.
+
 Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.
 
 An internal `Never` or bottom type can describe control flow that cannot complete locally. Its public spelling and general usability are open.

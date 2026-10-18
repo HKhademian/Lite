@@ -64,7 +64,7 @@ Likewise, two named enum cases carrying User remain distinct cases. User | User 
 - Exact-member union-to-union widening is selected separately: every normalized source alternative must be an exact target member. See [union widening](union-widening.md) for examples and boundaries.
 - Interface/subtype overlap, numeric subtyping if introduced, and ambiguity between several compatible alternatives.
 - Capabilities, ownership, lifetime, generic constraints, and function argument/return integration.
-- Common-member operations without narrowing, negative flow, and refinement after early exits.
+- [Common field reads](union-field-reads.md) are selected separately. Writes, method calls, negative flow, and refinement after early exits remain open.
 - Layout, tag representation, ABI, allocation choices, and optimization. Automatic source admission does not promise a representation-free operation.
 
 Related: [union-entry reference comparison](union-membership-comparison.md), [type-category comparison](type-categories-comparison.md), [normalization](union-normalization.md), [union patterns](union-patterns.md), [record identity](record-type-identity.md), and [type tests](type-tests-and-narrowing.md).

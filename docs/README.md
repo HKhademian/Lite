@@ -39,6 +39,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Plain union normalization](union-normalization.md): selected order independence, flattening, and duplicate removal without collapsing nominal records, enum cases, Option, or Result.
 - [Union membership](union-membership.md): selected automatic member admission, checked narrowing, nominal identity, and remaining representation contracts.
 - [Union widening](union-widening.md): selected automatic widening when every normalized source alternative is an exact destination member, with checked narrowing in the reverse direction.
+- [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): selected zero/default distinction; declared field defaults, nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type = 0 versus declared-default record initialization with {}, with zero eligibility and broader literal contexts still open.

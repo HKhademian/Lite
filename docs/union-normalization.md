@@ -88,7 +88,7 @@ Equivalent semantic types do not make source declaration order a stable runtime 
 - General type precedence and explicit grouping around fallible operands. This document does not relax the current grouped-union recommendation for mixtures of | and !.
 - Generic normalization, recursive aliases, and legal recursive nominal boundaries.
 - Bottom/top types, if exposed, and their union laws. Do not select public Never or Any by example.
-- Common-member operations, ownership/capability combination, runtime layout, ABI, and deterministic diagnostics.
+- [Common field reads](union-field-reads.md) use normalized unions after confirming availability on every alternative. Writes/methods, ownership/capability combination, runtime layout, ABI, and complete diagnostics remain open.
 
 The value-level example person: Person = user for Person := type User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](union-membership.md).
 
