@@ -1,6 +1,6 @@
 # Type tests and narrowing
 
-Status: **existing-name conditional type tests selected; stability, logical-flow, and full type-test rules need formalization**.
+Status: **existing-name conditional tests and binding-free : Type patterns selected; stability, logical-flow, and full type-test rules need formalization**.
 
 ## Purpose
 
@@ -73,7 +73,7 @@ These are semantic gaps to track, not reasons to require `person: User = person`
 
 ## Relationship to match and Result
 
-Match-arm narrowing of an existing subject, including the shorthand spelling for a type-only arm, is under review in [match](match.md). Under the selected bare-name rule, bare `User` binds rather than testing a type. Marked `: User` remains the proposed binding-free match arm; selecting the existing if form does not select that additional spelling.
+Type-only match arms and subpatterns use the selected `: Type` form without introducing a name. For a stable named match subject, a successful type-only arm permits narrowed use of that original name while its proof remains valid; it creates no implicit receiver or snapshot. Bare `User` binds rather than testing a type. The same type match composes with binding as `user: User`; see [pattern primitives](pattern-bindings-and-tests.md) and [match](match.md).
 
 An intact Result still has an outer success/failure distinction. If both payload sides contain the same type, a payload type test cannot identify which side is active. Extract or pattern-match the outcome layer before narrowing a payload union. See [union type patterns](union-patterns.md).
 

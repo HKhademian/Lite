@@ -34,7 +34,7 @@ match person {
 
 Given an appropriate sum type, V accepts type arms directly followed by braces. Sum-type matching requires all variants or an `else`. V also supports `if person is User` and smart-casts the subject in the branch. Source: [sum types and matching](https://docs.vlang.io/type-declarations.html#sum-types).
 
-**For LiteScript:** retain the direct pattern/body boundary. Explicit `user: User` arm bindings remain selected; existing-subject narrowing is now selected for `if person: User`, while a binding-free match-arm spelling remains under review.
+**For LiteScript:** retain the direct pattern/body boundary. Explicit `user: User` arm bindings remain selected; existing-subject narrowing is now selected for `if person: User`, and binding-free match patterns now use the selected `: Type` spelling.
 
 ## Odin: named type-switch receiver
 
@@ -130,7 +130,7 @@ Rust separates constant patterns from new identifier bindings and restricts whic
 
 Swift distinguishes associated payloads from raw enum values. That distinction helps interpret conventional enums without assuming payload cases are integer constants or separate types. Source: [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md).
 
-**Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. And-chained guards and additional matches are now the selected sixth capability; runtime-equality punctuation, constructor qualification, and record-pattern grammar remain open.
+**Recommendation:** compose the five families in one pattern system, keep equality tests distinct from name capture, and specify enum tag selection independently of type tests. And-chained guards and additional matches are now the selected sixth capability; `== expected` value matching and `: Type` type matching are selected; constructor qualification details and record-pattern grammar remain open.
 
 Typed destructuring is now a selected composition requirement: `(x: Int, y: String)` checks component types while extracting them, in both match arms and conditional patterns. Dart provides a direct precedent with typed variable subpatterns such as `(int a, String b)`; failure of a component type test fails the pattern. LiteScript retains its colon annotations. Unlike Dart's nonbinding wildcard, LiteScript's `_` is now an ordinary readable binding with unused-name permission; repeated names shadow in written pattern order. See [pattern shadowing](pattern-shadowing.md). See [Dart typed patterns](https://dart.dev/language/pattern-types#variable) and [LiteScript typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
 
@@ -145,7 +145,7 @@ Typed destructuring is now a selected composition requirement: `(x: Int, y: Stri
 - **Dart:** switch statements and switch expressions have different arm punctuation; LiteScript's one braced form avoids that distinction. [Dart branches](https://dart.dev/language/branches).
 - **Python:** `case pattern:` supplies class, sequence, and capture patterns, with explicit `if` guards; its dynamic name rules and indentation are not selected. [Python match](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement).
 
-**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. The selected bare-name rule now rules out bare `User` as a type test: it binds. Marked `: User` remains the proposed type-only form. Explicit `.None` replaces bare None case patterns. The [focused name-role review](pattern-bindings-and-tests.md) compares these choices; uppercase spelling never establishes a type test.
+**Recommendation:** keep pattern-and-brace bodies, make rebinding optional for type tests, and retain explicit patterns for payload extraction. The selected bare-name rule now rules out bare `User` as a type test: it binds. Marked `: User` is the selected type-only form; `== expected` is the selected existing-value match. Explicit `.None` replaces bare None case patterns. The [focused name-role review](pattern-bindings-and-tests.md) compares these choices; uppercase spelling never establishes a type test.
 
 ### Exhaustiveness and fallthrough
 
@@ -161,7 +161,7 @@ Rust and Python use `if` after a pattern; Dart uses `when`; Swift uses `where`. 
 
 **Selected LiteScript direction:** `pattern and condition { body }`, including additional explicit pattern bindings. Use the first fully successful arm in source order, with no implicit fallthrough. Pattern success precedes guard evaluation; a false result or additional mismatch continues selection. This supersedes the earlier pattern-if candidate; see [match arm chains](match-guards.md). Do not assume a guarded variant covers all its values. Avoid adopting alternative-pattern guard behavior accidentally: Rust documents that a guard may run more than once when an arm has multiple alternatives. Ownership and side-effect rules must be specified before claiming guard execution is allocation-free or optimally compiled.
 
-The resulting LiteScript proposal, examples, and unresolved name-resolution rules are collected in [match](match.md#next-design-proposals-compact-arms-and-predictable-coverage).
+The resulting LiteScript proposal, examples, and unresolved name-resolution rules are collected in [match](match.md#type-only-arms-and-remaining-coverage-proposals).
 
 ## Remaining decisions
 

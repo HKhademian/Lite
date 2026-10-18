@@ -19,7 +19,7 @@ The five capabilities below are selected requirements. Where a spelling extends 
 
 Match by equality with a value: numbers, strings, Booleans, named constants, and compatible values computed or obtained at runtime. This is more than an integer-only jump-table switch.
 
-Candidate literal arms:
+Literal value-match arms:
 
 ```text
 match answer {
@@ -28,9 +28,9 @@ match answer {
 }
 ```
 
-Require compatible operand types and a defined equality contract; do not add implicit truthiness or unrelated coercions. The spelling for matching an existing runtime value remains open. One candidate is `== expected { ... }`, making equality explicit rather than silently creating a binding named `expected`.
+Require compatible operand types and a defined equality contract; do not add implicit truthiness or unrelated coercions. Match an existing runtime value with `== expected { ... }`. The explicit value-match marker prevents silently creating a binding named expected. A literal such as 42 can be written directly as a concise value-match pattern.
 
-The focused [binding-versus-testing review](pattern-bindings-and-tests.md) compares eight reference languages and recommends explicit equality plus `: Type` type-only patterns. Those tests remain proposals. Bare identifiers as bindings and explicit `.None` case patterns are selected; no prelude constant or type name silently changes a bare binding into a test.
+The selected base operations are bind (`name`), type match (`: Type`), and value match (`== expected`). Typed binding `name: Type` composes the first two. The [binding-versus-testing reference review](pattern-bindings-and-tests.md) explains their distinctions and remaining semantic contracts. Bare identifiers and `.None` keep their selected roles; no prelude constant or type name silently changes a bare binding into a test.
 
 Decide how many times and when a computed comparison value is evaluated, whether matching uses ordinary `==` or a restricted equality capability, and how side effects or fallible equality participate. The subject-once rule does not automatically answer those questions. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
 
@@ -91,7 +91,7 @@ match person {
 }
 ```
 
-Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only arms narrowing an existing stable subject remain under review, with marked `: User` proposed. Bare `User` is an ordinary binding under the selected bare-name rule, not a type-test alternative. See [type tests and narrowing](type-tests-and-narrowing.md).
+Assume person has type `User | Guest`. These explicit typed-binding arms are selected. Type-only patterns use `: User` without introducing a name, including in nested structures. They narrow a stable existing subject where its identity remains valid. Bare `User` is an ordinary binding under the selected bare-name rule, not a type-test alternative. See [type tests and narrowing](type-tests-and-narrowing.md).
 
 A type test is different from an enum-case test. `Event.Click` and `Event.Key` can share the same declared type Event; `event: Event` cannot distinguish them. Similarly, testing a payload type cannot distinguish an intact Result's success from failure when the two payload types overlap.
 
@@ -146,7 +146,7 @@ Other useful follow-ups are alternatives in one arm, range patterns, whole-value
 
 ## Common contracts still to settle
 
-- Distinguish equality against an existing name, new binding, constant/enum selection, and type selection without relying on capitalization or whitespace.
+- Complete recursive composition and operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection. No interpretation may rely on capitalization or whitespace.
 - Specify ordering, overlap, unreachable arms, fallback syntax, and exhaustive action matches. Exhaustive value selection for closed variants is already required.
 - Define borrow/copy/move behavior and field access permissions, especially after a nested match fails.
 - Specify equality semantics, effects, and comparison-operand evaluation without sacrificing the once-evaluated subject contract.

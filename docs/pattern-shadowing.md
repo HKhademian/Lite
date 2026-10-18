@@ -6,7 +6,7 @@ Status: **ordered shadowing within patterns selected on 2026-10-18**.
 
 Every binding identifier in a pattern introduces an ordinary binding. Repeated identifiers are allowed and later bindings shadow earlier ones. `_` follows exactly the same rule as x or _user; its underscore prefix only permits nonuse without unused-name warnings.
 
-An unmarked bare identifier in a pattern binds, even if an outer value or type has that name. Use explicit case syntax such as `.None` for a payload-free constructor test. Constructor heads with payload parentheses retain their distinct role. Existing-value equality and type-only test spellings are still proposed in the [binding-versus-testing review](pattern-bindings-and-tests.md).
+An unmarked bare identifier in a pattern binds, even if an outer value or type has that name. Use explicit case syntax such as `.None` for a payload-free constructor test. Constructor heads with payload parentheses retain their distinct role. Existing-value tests use `== expected`; type-only tests use `: Type`. Both are selected and introduce no name; see [pattern primitives](pattern-bindings-and-tests.md).
 
 ## Binding order
 
@@ -74,7 +74,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 ## Remaining decisions
 
-- Existing-value equality and type-only pattern spelling.
+- Complete operand boundaries and composition grammar for the selected value/type tests.
 - Full recursive grammar, named-field aliases, whole-value patterns, and rest captures.
 - Rebinding across separate and operands and binding-producing or/not.
 - Per-construct mismatch behavior outside if/match selection.
@@ -84,4 +84,4 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 The earlier recommendation to reject duplicate names inside one pattern is superseded by ordered shadowing. See [pattern aliases](pattern-aliases.md) for the retained reference comparison and optional distinct naming.
 
-The [binding-versus-testing review](pattern-bindings-and-tests.md) proposes explicit equality/type-test forms. Bare identifiers bind and `.None` now selects the absent Option case explicitly; the earlier constructor conflict is settled. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.
+The [pattern primitives](pattern-bindings-and-tests.md) now select bind, type match, and value match. Bare identifiers bind and `.None` selects the absent Option case explicitly. The broader [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first) records the remaining matching contracts.

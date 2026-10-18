@@ -31,7 +31,7 @@ Identifier spelling determines which name is being referenced. Lexical scope det
 
 Pattern bindings may reuse the source value's name. A matching branch can shadow an outer union binding with a narrowed binding; the source expression is resolved before that new name becomes active. The shadow is limited to its matching branch and does not affect sibling branches or outer lookup. See [union type patterns](union-patterns.md) for examples using both same-name shadowing and a distinct pattern name.
 
-An unmarked bare identifier in a pattern binds, even if an outer constant or type uses that name. Capitalization does not turn it into a test. Use `.None` to select the absent Option case; bare None binds. Explicit constructor heads with payload parentheses, such as Some(value), keep their distinct constructor role. Equality and type-only test spelling remain proposals; see [pattern bindings and tests](pattern-bindings-and-tests.md).
+An unmarked bare identifier in a pattern binds, even if an outer constant or type uses that name. Capitalization does not turn it into a test. Use `.None` to select the absent Option case; bare None binds. Explicit constructor heads with payload parentheses, such as Some(value), keep their distinct constructor role. Use `: Type` for a type-only match and `== expected` for an existing-value match; see [pattern bindings and tests](pattern-bindings-and-tests.md).
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 

@@ -107,7 +107,9 @@ pattern_condition := pattern ":=" condition_value_operand
                    | identifier ":" type "=" condition_value_operand
 
 binding_pattern := identifier
-type_pattern := identifier ":" type
+type_match_pattern := ":" type
+value_match_pattern := "==" pattern_value_operand
+typed_binding_pattern := identifier ":" type
 ```
 
 The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
@@ -126,9 +128,9 @@ Each arm may extend its initial pattern with and-chained conditions or explicit 
 
 This sketches the selected arm surface, not a full pattern parser. Common fallback patterns, overlaps, exact type versus subtype tests, and detailed exhaustive-coverage rules remain open. An unconstrained `_` binding may appear as a catch-all pattern and names the whole subject. See [match](match.md) and [union type patterns](union-patterns.md).
 
-The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. Bare-name binding is selected; runtime-equality punctuation, type-only test spelling, enum declarations, and record-pattern delimiters remain open. See [match pattern capabilities](match-patterns.md).
+The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. The base spellings are selected: name binds, `: Type` type-matches, and `== expected` value-matches. Full operand boundaries, recursive composition, enum declarations, and record-pattern delimiters remain open. See [match pattern capabilities](match-patterns.md).
 
-Bare identifiers in pattern binding positions introduce names; they do not become equality or type tests through lookup or capitalization. Use `.None` for the absent Option case, not bare None. Existing Some(value) constructor heads remain explicit payload patterns. The [binding-versus-testing review](pattern-bindings-and-tests.md) proposes `== expected` value tests and `: Type` type-only patterns; neither proposed test is promoted to a selected production here.
+Bare identifiers in pattern binding positions introduce names; they do not become equality or type tests through lookup or capitalization. Use `.None` for the absent Option case, not bare None. Existing Some(value) constructor heads remain explicit payload patterns. The [pattern primitives](pattern-bindings-and-tests.md) select `== expected` value tests and `: Type` type-only patterns, neither of which binds a name. `name: Type` combines binding and type matching. The pattern_value_operand placeholder still requires complete expression-boundary/precedence rules; these productions describe the chosen forms without claiming a complete parser.
 
 Typed component patterns are selected within destructuring, as in `(x: Int, y: String)` and constructor payloads containing that tuple pattern. The same pattern can appear as a match arm or before `:=` in a conditional. The whole pattern succeeds only when all required structural and type constraints hold; it is not a converting cast. This composition requirement does not complete the recursive pattern parser, record syntax, or ownership contract.
 

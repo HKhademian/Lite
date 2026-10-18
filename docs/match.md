@@ -75,13 +75,13 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
-## Next design proposals: compact arms and predictable coverage
+## Type-only arms and remaining coverage proposals
 
-The remaining recommendations below are **under review**; arm chains and source-order first-success selection are already selected and identified explicitly. See the [focused reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
+Type-only arms and the three base pattern operations are selected. Coverage and fallback recommendations below remain under review where identified explicitly. See [pattern primitives](pattern-bindings-and-tests.md) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
 
 ### Type-only arms without redeclaration
 
-The proposed `: Type` arm would refine an existing stable subject, analogous to `if person: User`:
+The selected `: Type` arm refines an existing stable subject, analogous to `if person: User`:
 
 ```text
 label := match person {
@@ -92,9 +92,9 @@ label := match person {
 
 This example assumes a stable `person: User | Guest` and String-producing methods. Explicit `user: User` bindings would remain available for renaming or matching a producer with no existing subject name. No implicit `it` or other receiver name would be introduced.
 
-The earlier bare `User` type-arm candidate is ruled out by the selected bare-name binding rule: it binds a name rather than testing a type. Capitalization and type-name lookup do not change that meaning. The proposed `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. Its binding-free spelling remains under review; explicit `user: User` is already selected.
+The earlier bare `User` type-arm candidate is ruled out by the selected bare-name binding rule: it binds a name rather than testing a type. Capitalization and type-name lookup do not change that meaning. The selected `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. It introduces no name; explicit `user: User` combines the same type match with a binding.
 
-The latest [binding-versus-testing review](pattern-bindings-and-tests.md) recommends marked `: User` arms and `== expected` value tests. Those remain proposals. Bare identifiers bind, and `.None` explicitly selects the absent Option case; no bare prelude-constructor exception remains.
+Bind (`name`), type match (`: Type`), and value match (`== expected`) are selected base operations. They compose within structural patterns; exact record and whole-value composition grammar remains open. Bare identifiers bind, and `.None` explicitly selects the absent Option case; see [pattern bindings and tests](pattern-bindings-and-tests.md).
 
 Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
 
@@ -146,5 +146,5 @@ A body-opening brace must be distinguishable from any future record-pattern synt
 - [Result and errors](result-and-errors.md)
 - [Receiver clauses](receiver-clauses.md)
 - [Type tests and narrowing](type-tests-and-narrowing.md).
-- [V sum-type matching](https://docs.vlang.io/type-declarations.html#sum-types) supplies a brace-only arm precedent; type-only LiteScript arms and their refinement rules remain under review.
+- [V sum-type matching](https://docs.vlang.io/type-declarations.html#sum-types) supplies a brace-only arm precedent; LiteScript selects colon-prefixed type-only arms, with full refinement stability rules still open.
 - [Rust match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html) and [Dart patterns](https://dart.dev/language/patterns) provide comparisons for patterns and branch-local bindings.

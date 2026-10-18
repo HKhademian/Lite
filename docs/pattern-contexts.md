@@ -8,7 +8,7 @@ Use one composable pattern vocabulary across binding and selection contexts. The
 
 An **irrefutable** pattern matches every value admitted by its input contract. A **refutable** pattern can fail for some admitted value. Refutability depends on both the pattern and the input type: a typed tuple pattern can be irrefutable for a known matching tuple and refutable for a broader union.
 
-The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). Whole-value colon patterns, rest capture details, enum/metadata collision handling, and type-only arm spelling still have separate open decisions. The .case enum shorthand itself is selected.
+The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). The base operations are bind (`name`), type match (`: Type`), and value match (`== expected`). Whole-value colon patterns, rest capture details, and enum/metadata collision handling still have separate open decisions. The .case enum shorthand itself is selected.
 
 Partially annotated patterns constrain their input and infer every binding from compatible possibilities as one type or a union. This does not change the separate compatible-result policy for if/match branch expressions.
 
@@ -105,7 +105,7 @@ Closure capture lists, imports, type/member declarations, and tag declarations d
 
 ## Review findings and decisions to settle first
 
-1. **Binding versus testing an existing value.** Bare identifiers are now selected as bindings, independent of imports, capitalization, or an outer constant/type. `.None` explicitly selects the absent Option case; bare None binds. The [focused reference review](pattern-bindings-and-tests.md) recommends `== expected` existing-value tests and marked `: User` type-only arms. These two test spellings remain proposals. Qualified variants and literal patterns still need complete productions.
+1. **Binding versus testing an existing value: settled base forms.** Bind with name, type-match with `: Type`, and value-match with `== expected`. A typed binding `name: Type` combines binding and type matching. Bare names remain bindings independent of imports or capitalization; `.None` selects the absent Option case. Full expression boundaries, constructor/field composition, and equality effects still need contracts; see [pattern primitives](pattern-bindings-and-tests.md).
 2. **Colon grammar.** Typed binding, a whole-value nested pattern, tuple-type annotation, and record field labels can collide. Set their productions together before finalizing `y: (a, b: str, c)`; whitespace and capitalization cannot disambiguate them.
 3. **Mismatch outside selection.** Adopt or revise the irrefutable-default recommendation for loops, parameters, and receivers. Do not infer hidden filtering, unchecked unwrap, or extra error channels.
 4. **Flow and capabilities.** Define when reassignment/alias mutation invalidates narrowing, when component relationships survive extraction, and how whole/component bindings share access. Current input projection preserves composite alternatives; arbitrary later cross-binding narrowing is still open.

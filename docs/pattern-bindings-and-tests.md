@@ -1,27 +1,38 @@
 # Pattern bindings, value tests, and type tests
 
-Status: **bare-name bindings and explicit .None patterns selected on 2026-10-18; equality-pattern and type-only spellings remain proposals**.
+Status: **bind, type-match, and value-match primitives selected on 2026-10-18; full composition grammar and effect/ownership contracts remain open**.
 
 ## Purpose
 
 Distinguish introducing a name from testing a matched value. A pattern should not silently become a comparison merely because an unrelated constant was imported, nor become a type test because an identifier starts with an uppercase letter.
 
-Ordinary bare-name and underscore bindings, typed bindings, constructor/tuple matching, ordered shadowing, and explicit `.None` case patterns are selected. This review proposes equality-pattern and type-only spelling without silently adopting those further forms.
+The selected base operations on a supplied value are bind, type match, and value match. They share one pattern vocabulary across match arms, conditional matching, and structural subpatterns. The enclosing construct still determines whether mismatch is permitted and what happens next.
 
-## Core forms: selected bindings and proposed tests
+## Three base operations
+
+1. **Bind:** `name` introduces a local name for the supplied value.
+2. **Type match:** `: Type` checks the supplied value's type without binding a new name.
+3. **Value match:** `== expected` compares the supplied value with an existing value without binding a new name.
 
 ```text
-name                  /* bind the matched value */
-name: Type            /* type-test and bind the narrowed value */
-== expected           /* proposed: compare with an existing value */
-: Type                /* proposed: type-test without introducing a name */
-42                    /* literal value pattern */
-.completed            /* contextual enum-case pattern */
+name                  /* bind */
+: Type                /* type match */
+== expected           /* value match */
 ```
+
+These are pattern operations with a supplied subject, not standalone expressions creating values. The existing typed binding composes the first two operations:
+
+```text
+name: Type            /* type match and bind the narrowed value */
+```
+
+An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, not a fourth base operation. `== "ali"` spells its value test explicitly. Enum-case selection such as `.completed`, constructor heads, tuples, and future record forms supply structural or case constraints and route components to subpatterns; they are not all reduced to whole-value equality.
+
+No general inline binding-plus-equality spelling is selected by these three primitives. Use the existing and chain to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
 
 An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
 
-An existing value should use explicit equality even if it is immutable or known at compile time. A literal can remain concise because it cannot be mistaken for a declaration. Enum cases retain their selected dot-prefixed or qualified spelling and their case identity, rather than becoming general whole-value equality tests.
+An existing value uses explicit equality even if it is immutable or known at compile time. A literal can remain concise because it cannot be mistaken for a declaration. Enum cases retain their selected dot-prefixed or qualified spelling and their case identity, rather than becoming general whole-value equality tests.
 
 ```text
 expected := read_expected_code();
@@ -33,7 +44,7 @@ match received {
 }
 ```
 
-This is proposed equality syntax. Both inputs are assumed to have a compatible equality operation and the handlers return Unit. Here other is an unconstrained final binding, not a lookup of an outer variable. Matching still selects the first fully successful arm in source order.
+This uses the selected value-match spelling. Both inputs are assumed to have a compatible equality operation and the handlers return Unit. Here other is an unconstrained final binding, not a lookup of an outer variable. Matching still selects the first fully successful arm in source order.
 
 ## Existing-value equality inside structures
 
@@ -44,9 +55,9 @@ match pair {
 }
 ```
 
-The first component compares with expected; the second binds value. Ordinary `if actual == expected { ... }` remains the direct Boolean form. If used in a shared conditional pattern, the same candidate can be nested in `if (== expected, value) := pair { ... }`; no separate conditional-only pattern vocabulary is needed.
+The first component compares with expected; the second binds value. Ordinary `if actual == expected { ... }` remains the direct Boolean form. If used in a shared conditional pattern, the same pattern can be nested in `if (== expected, value) := pair { ... }`; no separate conditional-only pattern vocabulary is needed.
 
-New names from a pattern become available only after the whole pattern succeeds. Therefore `(x, == x)` must not silently use the first component's new x as the comparison operand. Under this proposal, the equality operand resolves in the surrounding pre-pattern scope; an unbound x is an error. Express a relationship between extracted components through the selected and chain instead:
+New names from a pattern become available only after the whole pattern succeeds. Therefore `(x, == x)` must not silently use the first component's new x as the comparison operand. The equality operand resolves in the surrounding pre-pattern scope; an unbound x is an error. Express a relationship between extracted components through the selected and chain instead:
 
 ```text
 if (left, right) := pair and left == right {
@@ -65,11 +76,11 @@ label := match person {
 }
 ```
 
-Assume a stable person of type User | Guest and String-producing methods. The proposed type-only arm introduces no name. It permits the original subject name to be used with the tested type while its refinement remains valid, as the selected `if person: User` form already does. It does not copy, freeze, or rebind the subject.
+Assume a stable person of type User | Guest and String-producing methods. The selected type-only arm introduces no name. It permits the original subject name to be used with the tested type while its refinement remains valid, as the selected `if person: User` form already does. It does not copy, freeze, or rebind the subject.
 
-Explicit `person: User` or `user: User` arms remain selected alternatives when shadowing or renaming is desired. For a producer expression with no stable existing name, prefer an explicit typed binding to access its matched value. The type-only form does not invent it, _, or another implicit receiver.
+Explicit `person: User` or `user: User` arms remain alternatives when shadowing or renaming is desired. For a producer expression with no stable existing name, prefer an explicit typed binding to access its matched value. The type-only form does not invent it, _, or another implicit receiver.
 
-Bare User is not a type-test shorthand merely because User resolves to a type; it is a binding in that position under the selected bare-name rule. After colon, normal type-expression lookup applies. The proposed binding-free `: Type` form still needs selection. Type-level values and their comparisons need the type-system contract.
+Bare User is not a type-test shorthand merely because User resolves to a type; it is a binding in that position under the selected bare-name rule. After colon, normal type-expression lookup applies. The binding-free `: Type` form is selected, including as a nested structural subpattern. Type-level values and their comparisons need the type-system contract.
 
 ## Selected constructor distinction
 
@@ -88,7 +99,7 @@ The distinction is syntactic context: bare names bind; explicit case forms test 
 
 This changes pattern interpretation, not expression lookup. `empty := None;` can still refer to the existing prelude value in an initializer. Likewise, `return None` is an expression, not a declaration or a pattern. Whether an isolated absent value supplies enough information to infer its Option payload type remains open.
 
-A qualified enum case remains a case pattern. Other qualified values such as settings.expected would use `== settings.expected` under the equality proposal; a dot in an arbitrary path is not automatically a generic equality marker. Enum/metadata `.field` collision handling remains a separate open rule.
+A qualified enum case remains a case pattern. Other qualified values such as settings.expected use `== settings.expected`; a dot in an arbitrary path is not automatically a generic equality marker. Enum/metadata `.field` collision handling remains a separate open rule.
 
 ## Proposed equality evaluation contract
 
@@ -138,8 +149,8 @@ Match examples use literal cases, dot-prefixed enum cases, and bare type names f
 
 ## Review outcome and remaining work
 
-Unmarked bindings and explicit `.None` case selection are now selected. Recommend `== expected` comparisons and `: Type` type-only patterns next; those two forms remain proposals, not selected grammar productions. Literals and enum-case patterns retain their concise direction.
+Bind (`name`), type match (`: Type`), and value match (`== expected`) are selected as base operations. Typed bindings compose binding and type matching; literals remain concise value tests. Explicit `.None` case selection and ordinary readable underscore bindings remain selected.
 
-Complete equality-operand boundaries, equality effects/fallibility, exact type/subtype semantics, and refinement stability before selecting the proposed tests. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
+Complete equality-operand boundaries, equality effects/fallibility, exact type/subtype semantics, and refinement stability before treating the design as an implementation-ready specification. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
 
 Related: [pattern shadowing](pattern-shadowing.md), [match capabilities](match-patterns.md), [type tests](type-tests-and-narrowing.md), and [match arm chains](match-guards.md).

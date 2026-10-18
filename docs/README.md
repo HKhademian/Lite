@@ -35,7 +35,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
 - [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
-- [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bare bindings and explicit .None cases, reference comparison, and proposed equality/type-only forms.
+- [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): review of binding versus selection in declarations, if/match, loops, parameters, recovery, and completion hooks; recommended mismatch policies and remaining gaps.
@@ -62,7 +62,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm chains](match-guards.md): and-chained guards, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): pattern-and-brace arms for action/value selection; full coverage rules remain open.
-- [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, and type patterns; proposed guards and remaining naming rules.
+- [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
 - [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists and ordered shadowing.
