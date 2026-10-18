@@ -1,6 +1,6 @@
 # Plain union normalization
 
-Status: **selected 2026-10-18: plain unions ignore member order, flatten nested plain unions, and remove duplicate type identities after transparent-alias resolution**. Distinct record declarations and enum cases retain identity. Subtype absorption, general assignability, recursive alias legality, representation, and ABI remain separate contracts.
+Status: **selected 2026-10-18: plain unions ignore member order, flatten nested plain unions, and remove duplicate type identities after transparent-alias resolution**. Distinct record declarations and enum cases retain identity. Automatic member admission and checked narrowing are selected separately. Subtype absorption, broader assignability, recursive alias legality, representation, and ABI remain separate contracts.
 
 ## One type despite spelling differences
 
@@ -83,14 +83,14 @@ Equivalent semantic types do not make source declaration order a stable runtime 
 
 ## Boundaries still to settle
 
-- General membership and assignment: whether a member value is admitted automatically to a union, how narrower unions widen, and how values are narrowed back.
+- Member admission is selected; complete union-to-union widening, subtype membership, and capability/ownership compatibility remain open.
 - Subtyping/interface overlap and absorption. Exact identity duplicate removal is selected; a rule such as reducing Subtype | Interface to Interface needs the actual type-relation contract.
 - General type precedence and explicit grouping around fallible operands. This document does not relax the current grouped-union recommendation for mixtures of | and !.
 - Generic normalization, recursive aliases, and legal recursive nominal boundaries.
 - Bottom/top types, if exposed, and their union laws. Do not select public Never or Any by example.
 - Common-member operations, ownership/capability combination, runtime layout, ABI, and deterministic diagnostics.
 
-The next useful value-level example is person: Person = user for Person := type User | Guest. Automatic member inclusion would avoid a cast, while recovering User from an arbitrary Person would require narrowing. That assignability policy is a proposal separate from normalization.
+The value-level example person: Person = user for Person := type User | Guest is now selected. Automatic member inclusion avoids a cast, while recovering User from an arbitrary Person requires narrowing. See [union membership](union-membership.md).
 
 ## References
 
