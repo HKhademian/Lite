@@ -63,6 +63,8 @@ Reachable completion paths must fit the enclosing type contract. Result recovery
 
 Type-pattern narrowing is selected for union values, including unions on either the success or error side of a fallible outcome. A matching branch can use the active alternative with its narrower static type. Existing names can be tested as `if person: User` without redeclaration; explicit pattern bindings remain available. Refinement validity and further flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md). Complete pattern grammar, type identity versus subtype tests, overlap, and ownership remain open. An intact Result retains its outer success/failure distinction even if the two payload sides overlap; see [union type patterns](union-patterns.md).
 
+Pattern bindings have a separate selected inference rule: constrain the input by the entire pattern, then give every unannotated binding its projected concrete type or union across compatible possibilities. Explicitly constraining one component does not require annotations on its siblings, and impossible alternatives must not widen any binding. Whole composite values preserve unions of complete shapes. This is not automatic union formation for incompatible match-arm result expressions. See [pattern binding inference](pattern-binding-inference.md).
+
 Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.
 
 An internal `Never` or bottom type can describe control flow that cannot complete locally. Its public spelling and general usability are open.

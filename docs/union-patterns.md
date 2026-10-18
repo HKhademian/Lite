@@ -24,6 +24,8 @@ This reuses the language's colon type annotation. In a conditional, write `if bi
 
 Type patterns also compose inside destructuring: `(x: Int, y: String)` tests and narrows both tuple components in one pattern. Constructor payload patterns may contain these typed component patterns too; no nested selection construct is required solely for component type tests. See [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule).
 
+Annotations may constrain only selected components. The remaining bindings are inferred from compatible input possibilities as concrete types or unions; excluded alternatives cannot continue widening sibling bindings. Composite bindings retain whole alternatives. See [pattern binding inference](pattern-binding-inference.md).
+
 ## Narrowing without redeclaration
 
 For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).

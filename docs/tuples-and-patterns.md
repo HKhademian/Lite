@@ -99,6 +99,8 @@ Proposed interpretation:
 
 For example, matching `(1, (2, "hello", true), 4, 5)` with str denoting String would bind x to 1, y to `(2, "hello", true)`, a to 2, b to `"hello"`, c to true, and rest to `(4, 5)`. The components and y remain separately named in the successful branch, subject to ownership permissions.
 
+Only b is explicitly type-constrained here. Infer x, a, c, y, and rest from all input possibilities compatible with the entire pattern; each receives its concrete type or a union of remaining types. Excluded input alternatives contribute nothing. Composite bindings retain unions of whole shapes rather than a product of independently widened fields. This static inference rule is selected independently of the proposed whole-value/rest syntax; see [pattern binding inference](pattern-binding-inference.md) for a worked example.
+
 ### Candidate rules
 
 Recommend allowing at most one rest capture per tuple pattern, in the final position. It accepts zero or more remaining components. For a fixed tuple, rest would be a tuple with statically determined component types; an empty rest would use the zero-element tuple/Unit relationship once that contract is formalized. List/sequence rests need their own result-type, allocation, and borrowing contracts and are not selected by this tuple example.

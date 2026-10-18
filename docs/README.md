@@ -33,6 +33,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
+- [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Enums and variants](enums-and-variants.md): plain cases, associated payloads, case/type distinctions, and open declaration/representation contracts.
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
