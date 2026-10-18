@@ -128,6 +128,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [caller-location keyword comparison](caller-location-keywords.md) reopens the parameter spelling ref/mut/slot/mut ref while preserving accepted temporary caller-location semantics. It recommends slot for the current limited replacement feature; a separate read-only-by-default ref mode is a larger alternative that could compose with mut and slot. Bare mut retains its selected held-data role; no replacement spelling, public pointer feature, or general reference system is selected by this review.
+
 - The [ordinary parameter review](parameter-values-and-slots.md) keeps public pointers and general reference values outside the current selected feature set. Temporary writable slots can be received without them. Read-only defaults do not settle ordinary value-versus-borrowed-view semantics; compiler representation choices must preserve whichever observable contract is eventually selected. An explicit read-only reference feature is not required merely for optimization.
 
 - [Slot parameters](slot-parameters.md) now have selected temporary caller-location semantics. Remaining proposals include an explicit call marker such as replace(slot value), checking both readable possibilities and accepted writes, and local-only rebinding for ordinary var parameters. Ordinary parameter passing, call syntax, general lifetimes, aliasing, and first-class access values remain open; the review compares Swift, Rust, Zig 0.15.1, and V.

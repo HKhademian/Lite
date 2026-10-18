@@ -67,4 +67,6 @@ Decide ordinary parameter semantics independently of writable-slot semantics. In
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 
+The later [caller-location keyword comparison](caller-location-keywords.md) explicitly evaluates ref, mut, slot, and mut ref at the user's request. It compares retaining the current scoped slot feature with adding a separate read-only-by-default ref parameter mode. No alternate receiver spelling or broader reference feature is selected by that investigation.
+
 Related: [immutability by default](immutability-by-default.md), [functions](functions.md), [mutability](mutability.md), [slot qualifier](slot-access-qualifier.md), and [memory and performance](memory-and-performance.md).

@@ -2,6 +2,8 @@
 
 Status: **temporary caller-location access through slot-qualified parameters selected, 2026-10-18**. Assignment through such a parameter replaces the caller's supplied variable or field. Expression-position slot arguments, local var parameters, complete compatibility, and general borrowing rules remain proposals. This selects no public pointer feature or general reference-value system.
 
+The subsequent [ref/mut/slot/mut ref comparison](caller-location-keywords.md) reopens the receiver's surface spelling. The accepted temporary caller-location behavior remains established; the examples below preserve the current slot form rather than selecting a second synonymous parameter spelling.
+
 ## Selected caller-location contract
 
 The [ordinary parameter review](parameter-values-and-slots.md) clarifies the current scope: writable caller locations can be received without introducing public pointers or general reference values. Ordinary value/borrow semantics remain a separate decision.
