@@ -1,6 +1,6 @@
 # Record type identity and assignment compatibility
 
-Status: **distinct identity per record type declaration selected 2026-10-18, including named and unnamed inline declarations; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Alias syntax, inferred standalone literal types, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
+Status: **distinct identity per record type declaration selected 2026-10-18, including named and unnamed inline declarations; equal fields do not permit implicit conversion, and conversion uses explicit reconstruction**. Transparent aliases use selected Alias := type TypeExpression. Inferred standalone literal types, additional conversion facilities, and the complete type-relation contract remain open. This review does not choose value/reference semantics, generated equality, layout, or inheritance.
 
 ## The decision
 
@@ -28,9 +28,9 @@ Both approaches can be statically checked. Strong typing alone does not settle t
 
 ## Selected named-record rule
 
-Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The exact alias declaration syntax and type-value binding rules remain open.
+Each separately declared named record creates a distinct type. Another name for the existing type is an alias, not a fresh record declaration. The selected spelling is Member := type User; general type-value binding rules remain open.
 
-The [alias comparison](type-aliases.md) evaluates Member := User versus Member := type User across unions and other composite types. It now recommends the explicit prefix consistently for named aliases, but neither spelling is selected. The prefix would remain transparent, not introduce a new record identity.
+The [alias comparison](type-aliases.md) evaluated Member := User versus Member := type User across unions and other composite types. The explicit prefix is now selected consistently for named aliases. It remains transparent and does not introduce a new record identity.
 
 ```text
 /* Rejected: no implicit User-to-Student conversion. */

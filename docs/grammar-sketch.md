@@ -252,9 +252,15 @@ success_type!
 
 These are selected surface templates, not complete type productions. `T!` expands exactly to `T ! Error`; an explicitly supplied error operand permits a refined contract. `!T` is not a selected spelling. The type context and valid type boundaries distinguish an omitted error operand from a supplied one; spaces and newlines cannot make that decision. An annotation `T` declares no recoverable error channel.
 
-General type precedence, union grouping and composition, alias grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md).
+General type precedence, union grouping and composition, complete type-expression grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md).
 
-The [type alias comparison](type-aliases.md) evaluates direct binding Alias := TypeExpression versus Alias := type TypeExpression. The latter is recommended as one consistent way to establish type context for the whole alias initializer, including unions and fallible types, but neither is selected or added to these productions. Tuple, generic, function-type, and fresh-record alias boundaries still need full grammar.
+### Selected alias form
+
+```text
+type_alias := identifier ":=" "type" type_expression
+```
+
+The [type alias comparison](type-aliases.md) selected Alias := type TypeExpression. The prefix establishes type context for the whole alias initializer, including unions and fallible types, and creates no fresh nominal wrapper. Direct type binding without the prefix is not an alternate alias spelling. This is a surface production, not a completed type parser; tuple, generic, function-type, scope/cycle, and fresh-record alias boundaries remain open.
 
 ## Recoverable error expressions
 

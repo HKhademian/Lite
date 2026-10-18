@@ -1,10 +1,10 @@
-# Type aliases: concise binding versus explicit type context
+# Type aliases and explicit type context
 
-Status: **comparison dated 2026-10-18; both spellings evaluated, neither selected; explicit type prefix recommended across named aliases after considering composite types**. Record declaration identity is already selected separately. Tuple, generic, and function-type examples below are candidate grammar, not additional selected syntax.
+Status: **explicit Alias := type TypeExpression selected 2026-10-18 for named transparent aliases**. Direct type binding without the prefix was evaluated and not selected as an alternate alias spelling. Record declaration identity is selected separately. Tuple, generic, and function-type examples below are candidate grammar, not additional selected syntax.
 
-## Two candidate spellings
+## Reviewed spellings
 
-### A. Bind a type directly
+### A. Bind a type directly: not selected
 
 ```text
 Member := User;
@@ -19,7 +19,7 @@ Formatter := fn(Int): String;
 
 This follows the uniform binding idea most closely: the right-hand side can denote a type, just as another initializer can denote a function or ordinary value. It is shortest for simple names and unions. It requires a defined compile-time type-expression model and rules for operators on type-denoting operands; it does not inherently require runtime type objects or reflection.
 
-### B. Explicitly introduce a type expression
+### B. Explicitly introduce a type expression: selected
 
 ```text
 Member := type User;
@@ -34,7 +34,7 @@ Formatter := type fn(Int): String;
 
 The type keyword gives the complete right-hand side a type-expression context through the declaration boundary. It does not mean only the first union member, a cast, or a fresh nominal wrapper. All operands of the union/fallible composition are type operands. Ordinary semicolon and completed-item boundaries still apply; whitespace and newlines never set the keyword's scope.
 
-Both blocks illustrate alternative language designs. They do not recommend accepting both as interchangeable spellings. List<User>, tuple type notation, and fn(Int): String still require their full type grammar regardless of the alias choice.
+The first block records the rejected alternative; the second uses the selected prefix. They are not interchangeable alias spellings. If User denotes a type, Member := User is not the selected way to alias it. If a name instead denotes an ordinary value, the ordinary value-binding rule still applies; capitalization never decides this. List<User>, tuple type notation, and fn(Int): String still require their full type grammar.
 
 ## What changes as types become more complex
 
@@ -47,9 +47,9 @@ Both blocks illustrate alternative language designs. They do not recommend accep
 
 These are readability and grammar-design tradeoffs, not claims that one spelling can be implemented and the other cannot. A compiler need not add runtime work for either alias form.
 
-## Transparent meaning under either design
+## Selected transparent meaning
 
-Assuming the explicit candidate:
+Using the selected explicit form:
 
 ```text
 Member := type User;
@@ -87,9 +87,9 @@ The type prefix must not quietly mean distinct. A separate nominal domain wrappe
 
 An explicit prefix raises an additional boundary: should Name := type { ... } be allowed to define an inline record type, and would that replace Name := record { ... }? That is a separate declaration-grammar choice. Do not silently add a second interchangeable record declaration syntax during the alias decision. The existing record form and the proposed field-type shorthand after colon retain their current statuses.
 
-## Recommendation
+## Selected rule
 
-Prefer one spelling for all named aliases:
+Use one spelling for all named aliases:
 
 ```text
 Alias := type TypeExpression;
@@ -102,7 +102,7 @@ person: User | Guest = user;
 outcome: User ! LoadError = load_user(id);
 ```
 
-The recommendation changes after considering composite types; the earlier preference for the shortest simple alias is not a selected rule. Do not require type only for complex aliases while omitting it for simple aliases unless that split is deliberately chosen. Optional type prefixes would add synonyms and should be evaluated as a third policy rather than assumed.
+The explicit form was selected after considering composite types, superseding the earlier preference for the shortest simple alias. Require type for both simple and composite aliases. Optional type prefixes and a simple/complex spelling split are not selected.
 
 Remaining contracts: exact alias production and type boundaries; use in local/module scopes; public visibility and API evolution; generic alias parameters; alias cycles and recursive nominal boundaries; namespace/shadowing rules; function and tuple type syntax; and whether types can participate in other compile-time expressions. Aliases alone do not select mutable or runtime first-class type values.
 

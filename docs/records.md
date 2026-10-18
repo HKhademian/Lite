@@ -105,7 +105,7 @@ Records support the composition-first direction: fields can contain other data t
 
 ## Open decisions
 
-- [Record type identity](record-type-identity.md) records selected nominal identity for all record type declarations; aliases, inferred standalone literals, and additional conversion facilities remain open.
+- [Record type identity](record-type-identity.md) records selected nominal identity for all record type declarations; alias scope/generics, inferred standalone literals, and additional conversion facilities remain open.
 - Complete contextual construction grammar/inference, defaults, required fields, and initialization order.
 - Inferred standalone record literals and generic declarations/instantiation.
 - Field visibility/accessor syntax and any per-field mutation rules.

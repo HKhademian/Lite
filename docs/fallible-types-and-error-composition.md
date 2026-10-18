@@ -1,10 +1,10 @@
 # Fallible types and error composition
 
-Status: **`T ! E` fallible types and `T!` shorthand for `T ! Error` selected; error-family composition, aliases, and general type grammar remain proposals**.
+Status: **`T ! E` fallible types, `T!` shorthand for `T ! Error`, and Alias := type TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
 
 ## Purpose
 
-Keep recoverable errors explicit and typed without repeating generic wrapper syntax or enumerating every error case in every function signature. Compact fallible type spelling and its default-error shorthand are selected. The composition and alias mechanisms below remain proposals and preserve the existing declared-error coverage rules.
+Keep recoverable errors explicit and typed without repeating generic wrapper syntax or enumerating every error case in every function signature. Compact fallible type spelling, its default-error shorthand, and explicit transparent alias spelling are selected. Complete composition and propagation-membership contracts still need formalization and preserve the existing declared-error coverage rules.
 
 ## Selected type templates
 
@@ -65,15 +65,15 @@ A family can already contain multiple error cases and structured payloads. A fun
 
 ## Reusing a named composition
 
-The proposed transparent alias form is:
+The selected transparent alias spelling can name an error composition:
 
 ```text
 LoadError := type ReadError | ParseError;
 ```
 
-This follows the uniform binding direction, but the `type` alias expression is still proposed grammar. It names a composition without introducing another nominal wrapper or losing the original error identity.
+This follows the selected uniform binding and explicit type-prefix rule. It names a composition without introducing another nominal wrapper or losing the original error identity. Detailed union composition and propagation membership remain separate contracts.
 
-The [alias syntax review](type-aliases.md) compares this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. It recommends one explicit type prefix for all named aliases; neither form is selected yet. The keyword would cover the full type expression, not just its first union member.
+The [alias syntax review](type-aliases.md) compared this explicit form with LoadError := ReadError | ParseError, along with simple, tuple, generic, and function aliases. One explicit type prefix is now selected for all named aliases. The keyword covers the full type expression, not just its first union member.
 
 The function can then declare:
 
@@ -136,7 +136,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 ## Open decisions and notes
 
 - Define the general `Error` contract and its relationship to refined recoverable error types.
-- Select the transparent alias spelling independently of the now-selected compact type notation.
+- Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
 - Define general union identity, duplicate removal, flattening, membership, and narrowing.
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Set type-expression precedence and grouping consistently with other type constructors.
