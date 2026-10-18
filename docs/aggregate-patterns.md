@@ -55,6 +55,34 @@ Student(_, "ali")        /* bind age as unused-allowed _; value-match name */
 
 These are aggregate-pattern candidates assuming the illustrated schema. The selected primitive meanings do not select that schema or bypass field access permissions. `_` remains a readable ordinary binding, not a special omission token.
 
+## Generic aggregate example
+
+Suppose User is generic over the types of two exposed constructor fields and supplies their positional matching schema. The generic declaration spelling and type-argument model have not been selected. Under that assumption, the required pattern interpretation is:
+
+```text
+User(: Int, == outVal)
+```
+
+There are three matching steps and two component subpatterns:
+
+1. Recognize a value belonging to the User type/constructor family and its matching schema.
+2. Type-match the first supplied component against Int, without binding it or testing it against a particular value.
+3. Compare the second supplied component with the existing outVal, without binding it.
+
+The head selects the aggregate family/schema; it does not bind a name called User, construct a new object, or compare the whole object by equality. If any required test fails, the whole pattern fails. Later component tests cannot be treated as valid accesses on an object that failed the required outer shape/type test. Exact observable extraction and comparison order still needs the effect contract.
+
+In explanatory type notation, a family might have instances written User<A, B>. This is not an adopted generic declaration syntax. A field constraint examines the supplied component; it does not automatically prove that A is exactly Int, infer B solely from the type of outVal, or cast the entire object to User<Int, B>. For example, a first field whose declared type admits Int or String could contain an Int while the enclosing generic instantiation still has the broader field contract. The generic identity, variance, subtype, and refinement models must define the valid conclusions.
+
+If the first component is statically known to be Int, its type test may need no runtime work. If it is statically incompatible, the pattern cannot succeed; choose the eventual impossible-pattern diagnostic separately. Unknown generic types require a legal type-test mechanism, such as specialization or available type information under the eventual type system. This example does not select universal type erasure, runtime type reification, reflection, allocation, or a particular dispatch representation.
+
+No new names become available to a following guard in the unbound example. To test or use the first component later, bind it explicitly:
+
+```text
+User(first: Int, == outVal) and first >= minimum { accept(first) }
+```
+
+This is an arm fragment assuming the User schema, compatible comparisons, and additional coverage as needed. The typed binding reuses the selected type-match-plus-bind form; the comparison is an ordinary Boolean guard.
+
 ## When to prefer each form
 
 Named fields identify the selected components directly and do not depend on positional order. Positional subpatterns are concise for types that deliberately expose a small stable order. Both can reuse the same underlying primitive patterns; allowing one must not change the meaning of bare identifiers in the other.

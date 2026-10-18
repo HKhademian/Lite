@@ -73,6 +73,12 @@ An internal `Never` or bottom type can describe control flow that cannot complet
 
 An ordinary value must be initialized and valid for its type. Absence requires an optional type. No implicit uninitialized or nullable state is introduced by inference.
 
+## Generic fields and structural matching
+
+The [generic User example](aggregate-patterns.md#generic-aggregate-example) requires `User(: Int, == outVal)` to recognize the exposed aggregate family/schema, type-match its first field, and value-match its second, without introducing bindings. This interpretation is conditional on a valid generic type-test and matching-schema contract; it does not select generic declaration syntax.
+
+A component's successful type test does not automatically identify a generic parameter or permit a cast of the enclosing generic value. Preserve the distinction between field-value refinement and the type argument of its container. Specialization, erasure/reification, constraints, variance, and legal tests of unknown generic parameters remain open.
+
 ## Major open decisions
 
 Numeric widths and overflow rules; generic syntax and inference; nominal versus structural record rules; variance; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
