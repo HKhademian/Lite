@@ -11,7 +11,7 @@ Distinguish a declared recoverable outcome from a failure outside ordinary Resul
 ```text
 validate_age := fn(age: Int): Int ! AgeError {
     if age < 0 {
-        return Err(AgeError.Negative)
+        return .err(AgeError.Negative)
     }
 
     age
@@ -27,7 +27,7 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 - The broad shorthand `T!` means `T ! Error` and still excludes the separate panic channel.
 - Postfix `!` extracts a Result or forwards its recoverable error; it does not assert success, trigger a panic, or catch a panic.
 - A Result `else(error)` clause receives its declared error type, not an arbitrary panic payload.
-- Returning `Err(value)` explicitly constructs a recoverable failure; it does not trigger a panic.
+- Returning `.err(value)` explicitly constructs a recoverable failure; it does not trigger a panic.
 - No panic-trigger spelling or panic-handler syntax has been selected. Examples must not imply an implemented `panic()` API or a general `try/catch` mechanism.
 
 ## Arithmetic is still a classification decision

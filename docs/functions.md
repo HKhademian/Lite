@@ -59,7 +59,7 @@ greet := fn(name: String): Unit {
 ```text
 validate := fn(value: Int): Int ! ValidationError {
     if value < 0 {
-        return Err(ValidationError.Negative)
+        return .err(ValidationError.Negative)
     }
 
     value

@@ -32,7 +32,7 @@ Exact error-set composition, generic error contracts, and conversion rules remai
 ## Conceptual definition
 
 ```text
-Result<T, E> = success(T) | Err(E)
+Result<T, E> = ok(T) | err(E)
 ```
 
 This explanatory notation does not settle enum declaration syntax. Ordinary success paths should not require an `Ok(...)` wrapper.
@@ -42,7 +42,7 @@ This explanatory notation does not settle enum declaration syntax. Ordinary succ
 ```text
 validate_age := fn(age: Int): Int ! AgeError {
     if age < 0 {
-        return Err(AgeError.Negative)
+        return .err(AgeError.Negative)
     }
 
     age
@@ -63,14 +63,21 @@ Ambiguous cases, including when `T` is itself a `Result`, need a precise rule an
 
 ## Handling and propagation
 
-Pattern matching should expose success or failure explicitly. Earlier examples used `Ok(value)` as a success pattern. Removing routine success construction does not necessarily remove the need for a named success pattern; its spelling is open.
+Stored Result patterns explicitly select the lowercase outcome cases `.ok(value)` and `.err(error)`. Successful returns remain implicit; inspecting a success does not require constructing it explicitly at every return.
 
-This is a selected semantic requirement: matching a stored Result does not implicitly extract success, propagate failure, or reinterpret a success-payload type pattern as an outcome pattern. A success pattern must explicitly identify the success side and may then destructure or constrain its payload. Its name and exact production remain open; this confirmation does not choose Ok or another spelling. Successful construction remains implicit at appropriate return contracts independently of explicit outcome inspection.
+```text
+match attempt {
+    .ok(value) { use_value(value) }
+    .err(error) { report(error) }
+}
+```
+
+Matching a stored Result does not implicitly extract success, propagate failure, or reinterpret a payload type pattern as an outcome pattern. After selecting the outcome, its payload can use the shared type, value, and structural subpatterns. Tag-only `.ok` and `.err` patterns select the side without binding a payload. Successful construction remains implicit at appropriate return contracts independently of explicit outcome inspection. Complete constructor inference remains a separate type-system contract.
 
 Match-arm and chains can inspect fields or match additional values after an outcome pattern succeeds. They must not erase the outer tag, flatten nested Results, or treat a later error as a false guard. If successful and error payloads have overlapping types, their payload type alone still cannot identify the outcome side.
 
 ```text
-if Err(error) := validate_age(text_age) {
+if .err(error) := validate_age(text_age) {
     report(error)
 }
 ```
@@ -124,7 +131,7 @@ One earlier candidate for arithmetic is an explicit expected `Result` type at th
 ```text
 attempt: Int ! ArithmeticError = a + b;
 
-if Err(error) := attempt {
+if .err(error) := attempt {
     report(error)
 }
 ```

@@ -78,7 +78,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 - Full recursive grammar, named-field aliases, whole-value patterns, and rest captures.
 - Rebinding across separate and operands and binding-producing or/not.
 - Per-construct mismatch behavior outside if/match selection.
-- Stored Result success-pattern spelling, preserving explicit outcome-side inspection.
+- Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.
 - Enum `.case` versus current-context `.field` collisions.
 - Ownership, extraction effects, narrowing stability, coverage, and diagnostics beyond unused-name intent.
 

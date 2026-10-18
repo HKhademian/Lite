@@ -145,7 +145,7 @@ All normally completing arms must satisfy a compatible result contract. Giving o
 
 ## Notes and open questions
 
-Common fallback patterns, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is an ordinary readable binding and supplies an unconstrained catch-all arm; repeated names shadow in nested patterns too. The selected surface does not settle the success-pattern spelling for stored Results or typed receiver-dispatch chains.
+Common fallback patterns, overlap, exact type versus subtype matching, borrowing/copying/moving, coverage algorithms, and non-exhaustive public variants remain open. `_` is an ordinary readable binding and supplies an unconstrained catch-all arm; repeated names shadow in nested patterns too. Stored Results use selected lowercase .ok(value)/.err(error) patterns; typed receiver-dispatch chains remain open.
 
 A body-opening brace must be distinguishable from any future record-pattern syntax without using line breaks. A fully specified type system is needed before claiming coverage checks are sound. Examples are design illustrations, not executable tests.
 

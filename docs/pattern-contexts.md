@@ -139,7 +139,7 @@ The receiver gets the failed outcome's error payload, not the whole Result or it
 
 **Recommendation:** ordinary error receivers bind irrefutably. A future selective error pattern needs explicit handling or propagation of every unmatched error; do not swallow it or convert it into successful Unit. A broad error union can already be matched inside the handler. A receiver type constraint that excludes some declared errors cannot be treated as an exhaustive handler merely because one block was written.
 
-Success/failure distinction must remain explicit for a stored Result when success and error payload types overlap. The named success-pattern spelling is still open.
+Success/failure distinction remains explicit for a stored Result even when success and error payload types overlap. Use the selected lowercase .ok(value) and .err(error) patterns; tag-only .ok and .err are also available. A recovery receiver already receives only the error payload, so it does not match another outer .err unless that payload itself is a Result.
 
 An ordinary fallible call remains Result data in a match or conditional source too. Matching must not silently unwrap it: use explicit extraction, recovery, or an outcome pattern before testing its successful payload. For example, `if user: User = load_user(id)!` explicitly propagates failure; omitting the bang must not gain the same behavior through matching.
 

@@ -78,7 +78,7 @@ An intact Result has an outer success/failure distinction. First match that dist
 
 The distinction matters when success and error types overlap. `Error ! Error` can succeed with an Error value as ordinary data or fail with an Error value. A payload type test for `Error` alone cannot identify which occurred. Type patterns must not erase the outer outcome tag or assume every Error-typed value is a failure.
 
-Explicit outcome-side matching is required for a stored Result; no implicit success unwrap or error propagation occurs merely because it is a match source. The success-pattern spelling remains open. Existing `Err(...)` illustrations describe failure patterns; removing mandatory success constructors does not settle the name of a success pattern. After the side is selected, typed/destructuring subpatterns and and-chained tests can inspect its payload normally.
+Explicit outcome-side matching uses the selected lowercase patterns `.ok(value)` and `.err(error)`. No implicit success unwrap or error propagation occurs merely because a Result is a match source. After the side is selected, typed/destructuring subpatterns and and-chained tests inspect its payload normally. Tag-only .ok and .err test only the outcome side. Successful returns remain implicit.
 
 ## Match expressions and coverage
 

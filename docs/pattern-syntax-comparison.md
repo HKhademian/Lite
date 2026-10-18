@@ -169,6 +169,6 @@ The resulting LiteScript proposal, examples, and unresolved name-resolution rule
 2. Decide whether a separate else fallback convenience remains alongside the ordinary `_` catch-all binding pattern.
 3. Complete guard effects/ownership, overlap, unreachable arms, and exhaustive coverage for closed unions versus open interfaces.
 4. Define nested patterns, exact-type versus subtype matching, and borrowing/moving/copying.
-5. Name the stored Result success pattern without erasing its outer success/failure tag. Success and error payload types can overlap.
+5. Preserve the selected lowercase .ok(value)/.err(error) outcome patterns; their payload types can overlap without erasing the outer tag. Complete payload extraction and ownership contracts separately.
 
 See [conditionals](conditionals.md), [match](match.md), [union type patterns](union-patterns.md), and the [decision ledger](decisions-and-open-questions.md).

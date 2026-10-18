@@ -37,7 +37,7 @@ Here `attempt` has type `String ! ReadError` and `text` has type `String`. The s
 ```text
 validate_age := fn(age: Int): Int ! AgeError {
     if age < 0 {
-        return Err(AgeError.Negative)
+        return .err(AgeError.Negative)
     }
 
     age
