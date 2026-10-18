@@ -70,7 +70,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm chains](match-guards.md): and-chained guards, additional pattern matches, nested extraction, scope, and rejection of an arm.
-- [Match](match.md): pattern-and-brace arms for action/value selection; full coverage rules remain open.
+- [Match](match.md): pattern-and-brace arms for action/value selection; every match is exhaustive, with the coverage algorithm and ownership details still open.
+- [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.

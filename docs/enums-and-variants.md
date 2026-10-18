@@ -143,7 +143,7 @@ This is pattern syntax, not construction of a payload-bearing enum value without
 
 ## Coverage and access
 
-A value-producing match over a closed enum must handle every possible case or use a suitable fallback once that spelling is selected. Additional action-match coverage rules remain a proposal. Adding a case should make a previously enumerated closed match incomplete; a broad fallback deliberately handles remaining cases instead.
+Every match over a closed enum must handle every possible case or use an explicit catch-all, including action-only matches. `_ {}` explicitly ignores remaining inputs with Unit; no extra Unit token is needed. Adding a case should make a previously enumerated closed match incomplete; a broad fallback deliberately handles remaining cases instead.
 
 Payload extraction follows normal visibility and mutation permissions. Private payload details are not made public merely because match syntax exists. Decide explicitly how modules expose public cases while hiding representations, and whether non-exhaustive public enums are supported.
 

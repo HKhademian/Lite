@@ -101,7 +101,7 @@ match value {
 }
 ```
 
-The subject is evaluated once; arm bindings are local. Value selection over closed alternatives must be exhaustive. And-chained conditions and additional pattern matches are selected, with source-order first-success selection and no implicit fallthrough. A final else fallback, exhaustive action matches, and any explicit fallthrough feature remain unselected.
+The subject is evaluated once; arm bindings are local. Every match must be exhaustive, including action-only matching; ignored cases can use an explicit empty fallback `_ {}`. And-chained conditions and additional pattern matches are selected, with source-order first-success selection and no implicit fallthrough. A final else fallback and any explicit fallthrough feature remain unselected.
 
 A mismatch allows later arms to be tried. The and conditions run after structural success and can reject the arm; see [match arm chains](match-guards.md). Do not commit an ownership move that prevents trying the next arm after a failed subpattern or guard; the full ownership model must make this precise. This is not a general promise to roll back side effects.
 
@@ -165,7 +165,7 @@ Closure capture lists, imports, type/member declarations, and tag declarations d
 4. **Flow and capabilities.** Define when reassignment/alias mutation invalidates narrowing, when component relationships survive extraction, and how whole/component bindings share access. Current input projection preserves composite alternatives; arbitrary later cross-binding narrowing is still open.
 5. **Names within one pattern: settled.** Repeated bindings such as `(x, x)` and `(_, _)` shadow in recursive written order. The final binding of each name is visible after success; `_` is readable and explicitly allowed to be unused. The former recommendation to reject duplicates is superseded. Rebinding across separate and operands is still open. Named-field aliases remain useful for preserving access to both values; `field as localName` is a candidate, not selected syntax. See [pattern shadowing](pattern-shadowing.md) and [pattern aliases](pattern-aliases.md).
 6. **Ordered tests and effects.** Specify subpattern and guard evaluation order, getter/custom equality effects, and ownership commitment. Subject-once evaluation does not specify every subsequent comparison or field access.
-7. **Coverage and diagnostics.** Set action-match coverage, fallback syntax, overlap, and impossible/always-matching diagnostics. Preserve closed-alternative precision without assuming the compiler can decide arbitrary Boolean guards.
+7. **Coverage and diagnostics.** Every match now requires complete coverage, with explicit empty ignore arms available. Complete coverage proofs, optional else fallback syntax, overlap, and impossible/always-matching diagnostics. Preserve closed-alternative precision without assuming the compiler can decide arbitrary Boolean guards.
 8. **Leading dot.** Resolve inferred enum cases against metadata `.field`; no outward context search, no case-owner search across unrelated enums, and no silent type-driven reinterpretation of existing metadata. The collision policy remains a proposal.
 
 The syntax is promising, but these are specification gaps. No parser or soundness/completeness claim follows from the examples.

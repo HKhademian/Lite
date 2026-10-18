@@ -20,6 +20,7 @@ Represent successful completion without useful payload data. `Unit` is not an ab
 - The unit type has one value.
 - The requested expression spelling is `Unit`.
 - Empty blocks, declarations, and assignments produce `Unit`.
+- An explicit ignored match arm can simply be `_ {}`; its empty body already returns Unit. `_ { Unit }` is equivalent but need not be written.
 - A final explicit `Unit` makes a block's result explicit.
 - Repeated separators do not introduce unit-valued items that replace a preceding expression.
 

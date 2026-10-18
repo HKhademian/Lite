@@ -1,6 +1,6 @@
 # Match and exhaustive selection
 
-Status: **five pattern families, and-chained arm tests/matches, and pattern-and-brace bodies selected; full grammar, coverage, and ownership rules open**.
+Status: **five pattern families, and-chained arm tests/matches, and pattern-and-brace bodies selected; exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
 
 ## Purpose and template
 
@@ -85,14 +85,14 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 
 - Evaluate the input once.
 - Bind payload names only inside the selected arm.
-- Require exhaustive coverage for value-producing closed variants.
+- Require exhaustive coverage for every match, including action-only selection; an explicit catch-all can handle ignored cases.
 - Check normally completing arms against a compatible result type; matching does not automatically form a union to accept unrelated result types.
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
 ## Type-only arms and remaining coverage proposals
 
-Type-only arms and the three base pattern operations are selected. Coverage and fallback recommendations below remain under review where identified explicitly. See [pattern primitives](pattern-bindings-and-tests.md) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
+Type-only arms and the three base pattern operations are selected. Every match must now be exhaustive. The separate else fallback spelling remains a recommendation; detailed coverage proofs/diagnostics remain open. See [pattern primitives](pattern-bindings-and-tests.md) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
 
 ### Type-only arms without redeclaration
 
@@ -133,9 +133,9 @@ message := match status {
 
 This is proposed literal/fallback syntax, not an extension of the current grammar sketch.
 
-Recommend exhaustive matching for **both actions and values**, extending the selected requirement for value-producing closed variants. Partial handling remains available through `if`; an explicit `else { Unit }` would express intentional no-op handling in a match. For a closed union or enum, prefer enumerating all alternatives when additions should trigger a compiler diagnostic. A fallback intentionally handles future alternatives too and can hide that signal.
+Every match must be exhaustive for both actions and values. Partial handling remains available through if. An explicit `_ {}` handles remaining inputs with Unit; `_ { Unit }` is equivalent because an empty block already returns Unit. The separate else fallback remains proposed, not required. For a closed union or enum, prefer enumerating all alternatives when additions should trigger a compiler diagnostic. A fallback intentionally handles future alternatives too and can hide that signal.
 
-An integer or open-interface subject needs a catch-all unless the coverage checker can establish completeness. A guarded arm does not by itself cover every value of its structural pattern. Do not synthesize `None`, a default payload, or a panic for a missing arm.
+An integer or open-interface subject needs a catch-all unless the coverage checker can establish completeness. See [coverage and explicit ignoring](match-coverage.md). A guarded arm does not by itself cover every value of its structural pattern. Do not synthesize `None`, a default payload, or a panic for a missing arm.
 
 ### Guards and result types
 

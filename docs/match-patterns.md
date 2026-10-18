@@ -149,7 +149,7 @@ Other useful follow-ups are alternatives in one arm, range patterns, whole-value
 ## Common contracts still to settle
 
 - Complete recursive composition and operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection. No interpretation may rely on capitalization or whitespace.
-- Specify ordering, overlap, unreachable arms, fallback syntax, and exhaustive action matches. Exhaustive value selection for closed variants is already required.
+- Every match must now be exhaustive, including actions; _ {} explicitly ignores remaining values. Specify overlap, unreachable arms, optional else fallback syntax, and the coverage algorithm.
 - Define borrow/copy/move behavior and field access permissions, especially after a nested match fails.
 - Specify equality semantics, effects, and comparison-operand evaluation without sacrificing the once-evaluated subject contract.
 - Share the applicable patterns with conditional matching; do not create an unrelated `if` pattern language.

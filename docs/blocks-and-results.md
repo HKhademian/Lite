@@ -50,6 +50,7 @@ These outer items are ordinary expressions or declarations and use ordinary sepa
 - A final expression supplies the block's value.
 - A final declaration or assignment produces `Unit`.
 - An empty block produces `Unit`.
+- An empty match-arm body therefore produces Unit too: `_ {}` and `_ { Unit }` have the same result.
 - Separators are ignored when locating the final item.
 - The compiler does not search backward past a final declaration or assignment for an earlier expression.
 - An explicit exit transfers control instead of completing the block normally.

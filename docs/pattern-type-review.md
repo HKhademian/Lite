@@ -163,7 +163,7 @@ Never/uninhabited values cannot supply a runtime subject. No universal null, uni
 
 Recommend checking shape/tag/length before accessing dependent components, then testing subpatterns in written recursive order with short-circuiting. Expected-value expressions should run once when reached. A failed pattern/guard does not roll back already performed side effects. Comparison fallibility must be explicit; a recoverable error is not ordinary mismatch. Those remaining evaluation rules are proposals alongside the already selected source-once and arm-order rules.
 
-Closed enum cases, Bool alternatives, and products with irrefutable components can support coverage checks. A proposed [] plus [head, ...rest] covers all finite admitted sequences when its components are unconstrained. Runtime equality values, arbitrary guards, unordered search, NaN, and open interfaces cannot be assumed to prove exhaustive coverage. Value-producing matches require completeness; exhaustive action matches remain a separate proposal. Ordinary _ supplies a readable catch-all binding.
+Closed enum cases, Bool alternatives, and products with irrefutable components can support coverage checks. A proposed [] plus [head, ...rest] covers all finite admitted sequences when its components are unconstrained. Runtime equality values, arbitrary guards, unordered search, NaN, and open interfaces cannot be assumed to prove exhaustive coverage. Every match now requires completeness, including actions. Ordinary _ supplies a readable catch-all binding, and _ {} explicitly ignores remaining inputs because an empty block returns Unit. Result types must still fit; see [coverage](match-coverage.md).
 
 ## Reference checks
 

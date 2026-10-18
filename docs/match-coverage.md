@@ -1,0 +1,70 @@
+# Match coverage and explicit ignoring
+
+Status: **every match must be exhaustive, including action-only matches; empty-block ignore handlers selected**.
+
+## One coverage rule
+
+Every possible input admitted by the subject's contract must be handled by some arm. This applies whether the selected body supplies useful data or only Unit. If the compiler cannot establish completeness from the arms, require an explicit catch-all. Do not synthesize None, Unit, an error, or a panic for an omitted case.
+
+Use if for an intentionally partial condition. A complete match may intentionally ignore cases, but that choice must appear in an arm.
+
+## Explicit ignore
+
+```text
+match status {
+    .Ready { start() }
+    _ {}
+}
+```
+
+The existing _ is an unconstrained readable binding that accepts the remaining whole subject. Its unused-name permission makes nonuse intentional. The empty body returns Unit by the ordinary block rule. Writing _ { Unit } is equivalent; the explicit Unit is optional, not required syntax.
+
+A specific ignored case can likewise have an empty body:
+
+```text
+match attempt {
+    .ok(value) { use_value(value) }
+    .err {}
+}
+```
+
+The lowercase .err is a tag-only case pattern, introducing no error-payload binding. Both outcome sides are explicitly handled. This is ordinary Result matching, not implicit propagation or panic recovery.
+
+## Value matches still need compatible results
+
+An empty branch produces Unit; it does not supply an arbitrary missing String or integer:
+
+```text
+/* Rejected: the catch-all cannot supply the required String. */
+label: String = match status {
+    .Ready { "Ready" }
+    _ {}
+};
+```
+
+Provide a compatible fallback or an explicit exit:
+
+```text
+label: String = match status {
+    .Ready { "Ready" }
+    _ { "Other status" }
+};
+```
+
+A result contract that explicitly admits Unit can permit an empty result branch under the eventual compatible-type rules. This does not introduce automatic union inference for unrelated match-arm results. A return/propagation exit provides no local continuation value and is checked against its exit target instead.
+
+## Coverage boundaries
+
+- A closed enum must cover its cases. A tag-only arm covers every payload of its case.
+- A closed union must cover every admitted alternative, accounting for type overlap under the eventual type-test contract.
+- Bool can be covered by true and false. Irrefutable product patterns can cover an entire known tuple/record contract.
+- Guarded arms do not by themselves prove coverage of their whole structural pattern. Include unguarded remaining cases or an explicit fallback unless a specified proof establishes otherwise.
+- Runtime equality operands, arbitrary predicates, strings/numbers, and open interfaces generally need a fallback unless a supported coverage proof establishes completeness.
+- New closed cases should invalidate a previously explicit complete enumeration. A broad fallback deliberately handles future cases and may hide that addition signal.
+
+Source-order first-success selection remains unchanged. A catch-all before a more specific arm prevents that later arm from being selected; exact unreachable/impossible-pattern diagnostics and the coverage algorithm remain to specify.
+
+## Related concepts
+
+- [Match](match.md), [guards](match-guards.md), [blocks and results](blocks-and-results.md), and [Unit](unit.md).
+- [Enum patterns](enums-and-variants.md), [Result](result-and-errors.md), and [pattern contexts](pattern-contexts.md).

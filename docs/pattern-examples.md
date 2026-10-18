@@ -353,6 +353,17 @@ if person: Student {
 
 String patterns compare whole values, not regex matches. The numeric guards are interval tests, not equality with a range object or arbitrary strided-range membership. Set equality assumes that type supplies an equality operation; unordered binding remains undecided. The existing-name type test narrows person without redeclaring it, under the separate stability/type-test rules.
 
+## 16. Every match is exhaustive; ignoring can be empty
+
+```text
+match status {
+    .Ready { start() }
+    _ {}
+}
+```
+
+The fallback explicitly handles every remaining case. _ is the ordinary unused-allowed binding; {} returns Unit, so an extra Unit expression is optional. This also applies to specific tag-only arms such as .err {}. A value match requiring String cannot use an empty Unit branch as a substitute for a String fallback. See [coverage and explicit ignoring](match-coverage.md).
+
 ## Related concepts
 
 - [All-type review](pattern-type-review.md) and [field clauses](aggregate-patterns.md).

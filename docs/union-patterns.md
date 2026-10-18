@@ -82,7 +82,7 @@ Explicit outcome-side matching uses the selected lowercase patterns `.ok(value)`
 
 ## Match expressions and coverage
 
-The same type patterns should work in general `match` arms. A value-producing match over a closed union is intended to cover every possible alternative or use a suitable fallback. Merely inspecting one alternative in an action conditional does not require providing a replacement value for the others.
+The same type patterns should work in general `match` arms. Every match over a closed union must cover every possible alternative or use an explicit catch-all, including actions. An empty fallback _ {} explicitly ignores remaining alternatives with Unit. Merely inspecting one alternative in an action conditional does not require providing a replacement value for the others.
 
 A narrowed binding exists only where its pattern matched. The producer is evaluated once; matching does not repeat a function call. Exact coverage for guarded patterns, overlapping type relationships, and open interfaces remains to be formalized. The general `Error` contract still needs its own definition; selecting union patterns does not finalize that contract as an open interface.
 

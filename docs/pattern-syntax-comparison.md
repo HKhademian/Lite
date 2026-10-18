@@ -153,7 +153,7 @@ Rust requires complete match coverage. Zig requires complete switch coverage wit
 
 Kotlin documents partial statement selection and requires exhaustive value selection. Python permits no arm to match. Odin normally runs one selected case but also offers explicit fallthrough. These policies are not one universal convention. Sources: [Kotlin statements and expressions](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements), [Python matching flow](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement), [Odin fallthrough](https://odin-lang.org/docs/overview/#fallthrough-statement).
 
-**Recommendation:** require exhaustive actions as well as values, and provide no fallthrough. `if` handles intentionally partial tests. An unconstrained `_` binding handles the remainder as a pattern; a separate final else convenience remains a proposal. On closed unions, explicit alternatives preserve the compiler's signal when a new variant is added; broad fallbacks intentionally trade away that signal.
+**Selected:** require exhaustive actions as well as values, with no implicit fallthrough. Explicit _ {} handles intentionally ignored inputs and already returns Unit. `if` handles intentionally partial tests. An unconstrained `_` binding handles the remainder as a pattern; a separate final else convenience remains a proposal. On closed unions, explicit alternatives preserve the compiler's signal when a new variant is added; broad fallbacks intentionally trade away that signal.
 
 ### Ordered guards and their cost
 
