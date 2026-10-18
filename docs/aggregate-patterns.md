@@ -65,7 +65,7 @@ A literal on the left is a value test; true = verified compares rather than bind
 
 ### Inferred patterns and explicit type tests
 
-A bare record pattern does not require a redundant record type head. Matching uses the source's exposed fields and the compatible-input inference rule. It does not change nominal type identity, search every declared record for a matching field set, or grant runtime reflection.
+A named record pattern has no record type head in the selected grammar; TypeName { ... } is not an alternative deconstruction form. Matching uses the source's exposed fields and the compatible-input inference rule. It does not change nominal type identity, search every declared record for a matching field set, or grant runtime reflection. Use an explicit colon type test for nominal selection. Bare names in match still bind, so a name followed by an arm body is not a headed record pattern; see [record-pattern boundaries](records.md#no-construction-shaped-record-patterns).
 
 When distinguishing a particular nominal type is needed, use the existing explicit type test before destructuring:
 
@@ -86,6 +86,8 @@ match student {
 ```
 
 All fields are shown here to avoid selecting partial-field omission through an example. Positional constructor-family examples below remain schema proposals, not a requirement to write a type head on the selected named form. Omission, field/position mixing, duplicate source-field selection, and complete grammar remain open.
+
+The proposed same-name shorthand `{ name, age } := user` would expand to `{ name = name, age = age } := user`. It does not require a type name and does not turn bare entries into value tests. Its grammar, field omission, and `_` field-entry behavior remain proposals; see [record shorthand](records.md#proposed-same-name-field-shorthand).
 
 ## Positional value constraints
 

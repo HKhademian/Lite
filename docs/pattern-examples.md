@@ -262,7 +262,7 @@ if {
 }
 ```
 
-The nested source fields are selected on the right. true = verified is a literal test of that field, not a binding named true. The whole nested shape must match before the guard/body can use its bindings.
+Registration already declares the Student and Contact field types, so their construction heads can be omitted as shown; explicitly naming them in construction is also allowed. Deconstruction uses no Registration, Student, or Contact prefix: nested patterns receive their shape from the source fields. TypeName { ... } is not an alternative record-pattern production. The nested source fields are selected on the right. true = verified is a literal test of that field, not a binding named true. The whole nested shape must match before the guard/body can use its bindings. Use an explicit colon type test when nominal selection is intended; see [record-pattern boundaries](records.md#no-construction-shaped-record-patterns).
 
 ## 12. Complex Result + Option + record + additional matching
 

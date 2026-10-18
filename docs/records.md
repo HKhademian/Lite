@@ -47,7 +47,45 @@ Deconstruction follows the same destination-from-source direction and needs no r
 
 The second pattern binds grade with an Int constraint. General clauses are destinationPattern = sourceField. Type-only testing uses { : Int = grade, }, equality can use { == expectedGrade = grade, } or the retained compact { grade == expectedGrade, }. A record-pattern clause is not an executable assignment statement, so `_ = grade` there introduces an unused-allowed binding rather than requiring an existing var _.
 
-Named pattern braces get their shape from the source contract; they do not instantiate a type or alter nominal identity. To distinguish a particular nominal type, use an explicit type test before deconstruction. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+Named pattern braces get their shape from the source contract; they do not instantiate a type or alter nominal identity. There is no type-name prefix in the selected named-record pattern grammar. To distinguish a particular nominal type, use an explicit type test before deconstruction. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+
+### No construction-shaped record patterns
+
+Keep `TypeName { ... }` for construction expressions, not as an alternative named-record deconstruction form. The same rule applies recursively to nested records. Known source types do not need to be written again, and field extraction must not silently add a nominal type test. Explicit tests keep the existing `: Type` spelling:
+
+```text
+/* Known source contract: extract its fields. */
+{ studentName = name, studentGrade = grade, } := student;
+
+/* Broader input: test the type before extracting. */
+if person: Student and {
+    studentName = name,
+    studentGrade = grade,
+} := person {
+    show_student(studentName, studentGrade)
+}
+
+/* Rejected as a named-record declaration pattern. */
+Student { studentName = name, studentGrade = grade, } := student;
+```
+
+This restriction concerns record-pattern productions. It cannot ban every identifier followed by braces: in `match person { Student {} }`, bare Student is an ordinary binding name and the following braces are its empty arm body. That is not a Student type test or record deconstruction. Do not use capitalization or lookup of an outer type to change that binding meaning. Enum-case selectors such as `.Some(...)` still test a case and are unaffected; positional constructor-family patterns remain separate schema/type-test proposals.
+
+### Proposed same-name field shorthand
+
+The proposed `{ name, age } := user` is coherent: each bare field entry expands to `name = name` or `age = age` within a record pattern. The left occurrence binds and the right occurrence selects the source field, independently of outer variables with those names. The whole right-hand source is resolved before the new bindings. Types follow the source contract; no type-name prefix is needed.
+
+This shorthand is not yet added to the selected grammar. It needs field-presence and omission rules, the same visibility/ownership rules as explicit clauses, and a decision about bare `_`: an ordinary field entry would select a field actually named _, rather than skip an arbitrary source field. Explicit `_ = age` already binds age under the unused-allowed name.
+
+Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
+
+### Reference comparison and tradeoff
+
+- Rust's struct-pattern grammar includes a path before its field braces. LiteScript deliberately keeps that type/constructor selection separate from its selected named-field extraction. Source: [Rust struct patterns](https://doc.rust-lang.org/reference/patterns.html#struct-patterns).
+- Dart object patterns include a named type and test it before extracting properties. This is useful for nominal selection; LiteScript already has explicit colon type tests for that job. Source: [Dart object patterns](https://dart.dev/language/pattern-types#object).
+- Kotlin demonstrates destructuring without repeating the source type name, using component operations. That supports the usability direction, but does not supply LiteScript's named-field syntax or matching contract. Source: [Kotlin destructuring](https://kotlinlang.org/docs/destructuring-declarations.html).
+
+Omitting the type name shortens known-type and deeply nested extraction. The cost is an extra explicit type test when nominal discrimination is intended. Field shape alone must not establish nominal identity, expose private fields, or introduce arbitrary runtime reflection. Broader-input field compatibility and missing-field behavior still need the shared pattern contract.
 
 ### Context and brace boundaries
 
