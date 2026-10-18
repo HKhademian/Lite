@@ -44,7 +44,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): review of binding versus selection in declarations, if/match, loops, parameters, recovery, and completion hooks; recommended mismatch policies and remaining gaps.
 - [Pattern aliases](pattern-aliases.md): source-field naming versus destination bindings, reference-language renaming forms, and proposed as aliases.
-- [Enums and variants](enums-and-variants.md): plain cases, associated payloads, contextual .case shorthand, and open declaration/representation contracts.
+- [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, and open representation/conversion contracts.
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): successful completion without useful data.

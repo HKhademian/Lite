@@ -1,10 +1,37 @@
 # Enums and variants
 
-Status: **plain/payload enum matching and contextual .case shorthand selected; declaration, representation, conversion, and metadata disambiguation rules open**.
+Status: **plain/payload enum matching, contextual .case shorthand, an explicit enum backing-type header, and assigned case values selected; full declaration, representation, conversion, and metadata disambiguation rules open**.
 
 ## Purpose
 
 Represent a choice between named cases. A plain enum has payload-free cases. A payload-bearing enum also permits cases with associated values of declared types. One match construct must handle both forms.
+
+## Backing types and assigned values
+
+The selected explicit form places the backing type after enum and assigns each illustrated case its value with `=`:
+
+```text
+Status := enum Float {
+    Ready = 1.1;
+    Busy = 2.2;
+    Stopped = 3.3
+}
+```
+
+Here Status is the enum type, Float is its declared backing-value type, and Ready has the declared backing value 1.1. Status.Ready remains an enum value; this declaration does not make every Float a valid Status or select implicit conversion between them. Matching still uses Status.Ready or contextual .Ready.
+
+The same explicit spelling can describe integer-valued cases:
+
+```text
+ExitCode := enum Int {
+    Success = 0;
+    Failure = 1
+}
+```
+
+The backing type and case-value spelling are selected. The complete set of admissible backing types, constant-expression and representability rules, omitted values, automatic numbering, and any default when the backing type is omitted remain open. Float support is required by the selected example; it must not be silently restricted to integer backing values.
+
+Backing values must be distinguished from payload fields. Whether and how payload-bearing cases also receive an explicit backing value requires a separate declaration rule. Physical storage and ABI guarantees, especially for payload enums, are not settled solely by this header.
 
 ## Plain cases
 
@@ -18,7 +45,7 @@ match status {
 }
 ```
 
-Qualified case spelling is illustrative; no new enum declaration syntax is chosen here. The term conventional or legacy enum describes the payload-free use case, not an automatic promise of integer conversions, duplicate numeric cases, bit flags, or C ABI compatibility.
+Qualified case spelling is illustrative. The selected backing-type declaration above does not yet define the complete enum grammar. The term conventional or legacy enum describes the payload-free use case, not an automatic promise of integer conversions, duplicate numeric cases, bit flags, or C ABI compatibility.
 
 ## Inferred case names
 
@@ -49,9 +76,9 @@ Leading `.field` already denotes current-context metadata. Enum shorthand must n
 
 Recommended disambiguation: enum-pattern positions use the expected enum case; expression positions require an unambiguous enum-member or current-context interpretation. If both interpretations apply, report ambiguity and require `Progress.completed` or an explicit `@tag.completed`. The exact collision rule is still under review; the .case surface itself is selected. Context metadata continues to resolve only against the current construct; expected enum lookup is a separate, type-directed role, not outward context fallback.
 
-### Float raw values are a separate proposal
+### Float backing values and conversion policy
 
-The proposed declaration shape `Progress := enum Float { started = 0.0; completed = 1.0 }` asks for named cases with Float raw values. This does not establish whether raw values are storage discriminants or an explicit conversion mapping; declaration and numeric conversion grammar remain open.
+The declaration shape `Progress := enum Float { started = 0.0; completed = 1.0 }` is now selected for an explicit backing type and assigned case values. This does not establish whether those values are physical storage discriminants or an explicit conversion mapping; complete declaration and numeric conversion rules remain open.
 
 Recommend keeping case identity distinct from raw-value equality: a two-case Progress enum has two named cases, not every intermediate Float value. Decide raw-value uniqueness, invalid conversions, NaN and signed-zero treatment, and equality before selecting a float-backed representation. No approximate float comparison is implied by `.completed`.
 
@@ -85,7 +112,7 @@ Payload extraction follows normal visibility and mutation permissions. Private p
 
 ## Design direction after the category review
 
-Status: **working proposal dated 2026-10-18; declaration grammar, case-specific types, and representation remain open**.
+Status: **working proposal dated 2026-10-18; the backing-type/assigned-value declaration surface above is selected, while full grammar, case-specific types, and representation remain open**.
 
 The [twelve-language comparison](type-categories-comparison.md) distinguishes several contracts that should not be bundled into one keyword. The [type-category vocabulary](type-categories.md) explains products, sums, domain types, generated operations, and storage independently.
 
@@ -121,19 +148,19 @@ Compact native representation is a goal. The enum concept should not mandate a h
 - **Generated operations:** equality, hashing, formatting, copying, and destructuring can be requested or derived subject to field capabilities and visibility. A data-class keyword is not required merely to bundle convenient operations.
 - **Identity and access:** reference identity, ownership, allocation, and read/write access are separate choices. Existing var/mut permissions do not decide those semantics.
 
-This direction does not add class, data class, value class, sealed, or distinct declaration syntax. Each extra construct should provide a contract not already expressible through products, named alternatives, unions, interfaces, or explicit representation.
+This direction does not add class, data class, value class, sealed, or distinct declaration syntax. The subsequent explicit enum backing-type and case-value surface is recorded above. Each extra construct should provide a contract not already expressible through products, named alternatives, unions, interfaces, or explicit representation.
 
 ### Next enum decisions
 
 1. Confirm one enclosing nominal enum type versus independently usable case types.
-2. Choose uniform-binding declarations, case payload schemas, and construction syntax.
+2. Complete the selected uniform-binding/backing-type declaration with omission rules, case payload schemas, and construction syntax.
 3. Define closure/exhaustiveness across modules, including any non-exhaustive public enums.
 4. Specify raw mappings, checked conversions, equality, and flags separately from layout.
 5. Set representation, recursive storage, ownership, and generated-operation guarantees with the broader type model.
 
 ## Open decisions
 
-- Uniform-binding enum declarations, case declarations, payload names/types, and construction.
+- Complete enum declaration rules beyond the selected `Name := enum BackingType { Case = value }` surface: omitted backing types/values, payload names/types, and construction.
 - Closed versus extensible cases, nominal identity, and any variant-specific types.
 - Raw numeric values, storage widths, duplicate-value aliases, flags, explicit conversions, and FFI validity checks.
 - Contextual case-owner inference in generic/union situations, nested case patterns, and disambiguation from leading-dot context access.
