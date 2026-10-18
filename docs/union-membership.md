@@ -12,6 +12,8 @@ person: Person = user;
 
 Person admits User, so the last declaration needs no cast, explicit union wrapper, or enum-case constructor. The active value retains User's nominal identity and data. This is a union-membership rule, not an implicit User-to-Guest conversion.
 
+The destination union must already be established. person := user infers User under the ordinary inference rule; it does not search all declared unions or aliases and pick a broader type. The rule introduces no new Person(user) conversion-call syntax.
+
 Type compatibility alone does not settle copying, moving, borrowing, lifetime, allocation, or permissions. A union representation may require a tag and payload storage even though source code needs no wrapper syntax.
 
 ## Identity checks
@@ -65,4 +67,4 @@ Likewise, two named enum cases carrying User remain distinct cases. User | User 
 - Common-member operations without narrowing, negative flow, and refinement after early exits.
 - Layout, tag representation, ABI, allocation choices, and optimization. Automatic source admission does not promise a representation-free operation.
 
-Related: [type-category comparison](type-categories-comparison.md), [normalization](union-normalization.md), [union patterns](union-patterns.md), [record identity](record-type-identity.md), and [type tests](type-tests-and-narrowing.md).
+Related: [union-entry reference comparison](union-membership-comparison.md), [type-category comparison](type-categories-comparison.md), [normalization](union-normalization.md), [union patterns](union-patterns.md), [record identity](record-type-identity.md), and [type tests](type-tests-and-narrowing.md).

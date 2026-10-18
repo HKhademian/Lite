@@ -83,3 +83,5 @@ Read each language along three independent axes: choice/enum model, product or d
 The reference languages do not establish a universal meaning for enum or value class. Useful independent concepts are products, named sums, explicit unions of existing types, domain wrappers, generated data operations, and identity/reference capabilities. Plain enum values, singleton objects, and per-instance payload cases are different ways of constructing values.
 
 The simplest candidate for LiteScript is to keep those distinctions explicit while sharing matching and uniform binding syntax. See [enums and variants](enums-and-variants.md). No recommendation here selects inheritance, generated equality, a GC, boxing, or an ABI by default.
+
+The [focused union-entry comparison](union-membership-comparison.md) follows up on the now-selected rule that existing member values enter a plain union automatically and require checked narrowing to recover a particular member. It compares that specific behavior across these reference languages, including nil/default and case-wrapper differences.

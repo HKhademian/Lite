@@ -38,6 +38,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Type aliases](type-aliases.md): selected Alias := type TypeExpression, transparent identity, and comparison with the rejected direct-binding alternative.
 - [Plain union normalization](union-normalization.md): selected order independence, flattening, and duplicate removal without collapsing nominal records, enum cases, Option, or Result.
 - [Union membership](union-membership.md): selected automatic member admission, checked narrowing, nominal identity, and remaining widening/representation contracts.
+- [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): selected zero/default distinction; declared field defaults, nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type = 0 versus declared-default record initialization with {}, with zero eligibility and broader literal contexts still open.
 - [Type categories](type-categories.md): products, sums, raw codes, domain wrappers, generated operations, and value/reference semantics as separate decisions.
