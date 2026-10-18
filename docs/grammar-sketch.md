@@ -102,6 +102,8 @@ record_field := identifier ":" type
 
 The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
+The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression, recursive valid-default filling, simple typed declarations without explicit initializers, and unnamed record field types. Those extensions are not yet added to these selected productions; executable {} retains its Unit result, distinct from explicitly headed TypeName {} construction.
+
 Selected record forms and field-list fragments:
 
 ```text

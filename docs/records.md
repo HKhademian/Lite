@@ -95,6 +95,8 @@ Function/if/loop bodies remain executable blocks even when their expected result
 
 ## Access and composition
 
+The [record creation and initialization overview](record-initialization.md) covers the requested zero/default behavior, proposed field defaults, nested and inline forms, type-valid defaults, and their remaining grammar boundaries. Default filling and anonymous-type examples there are proposals; they do not silently complete this document's open initialization/type-identity contracts.
+
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
 
 ## Open decisions
