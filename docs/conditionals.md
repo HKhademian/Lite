@@ -93,6 +93,16 @@ A pattern condition tests **matching**, not the truthiness of its payload. `if S
 
 `if x = value` remains invalid assignment-as-condition. The selected `if x: Type = value` is a typed declaration-shaped pattern header, not an assignment expression. Conditional binding modifiers remain unspecified. Type-pattern support does not select typed receiver-dispatch chains.
 
+A whole typed binding must use that = form: `if age: Int := read_value()` is rejected. Type constraints inside a structural pattern still use the pattern's ordinary := source separator:
+
+```text
+if .Some(age: Int) := find_user_age(id) {
+    show_age(age)
+}
+```
+
+The same outer-binding restriction applies to ordinary declarations. It does not change direct `age: Int` patterns in match arms or type constraints inside tuple/constructor patterns.
+
 ## Case equality versus case-pattern binding
 
 The existing expression form `if progress == .completed` compares enum values. The enum type inferred from progress supplies the owner of .completed, which is a complete payload-free value.

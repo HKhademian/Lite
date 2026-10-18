@@ -20,6 +20,7 @@ name = replacement;
 
 - `:=` declares a binding and infers its type.
 - `: Type =` declares a binding with an explicit type.
+- A whole explicitly typed binding uses `name: Type = source`; `name: Type := source` is rejected, including after an allowed binding modifier. Type constraints inside a destructuring pattern remain valid, such as `(age: Int, name) := pair`, subject to the declaration's mismatch contract.
 - Bindings are fixed and provide read-only access by default.
 - `var` opts into binding reassignment, without granting writable access to held data.
 - `mut` opts into writable access to held data, without granting binding reassignment.

@@ -72,7 +72,7 @@ Without grouping, a completed block item ends before any following suffix; the f
 ## Declarations
 
 ```text
-declaration := [binding_modifiers] pattern ":=" expression
+declaration := [binding_modifiers] inferred_source_pattern ":=" expression
              | [binding_modifiers] pattern ":" type "=" expression
 
 binding_modifiers := "mut" | "var" | "var" "mut"
@@ -84,6 +84,8 @@ function := "fn" "(" [parameters] ")" [":" type] block
 
 typed_parameter := ["mut"] pattern ":" type
 ```
+
+inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 
 The typed-parameter production shows the selected `mut` prefix; the complete parameter list, including inferred types, defaults, and parameter rebinding, remains open. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values also remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
@@ -112,7 +114,7 @@ condition := boolean_expression | and_condition
 and_condition := condition_operand { "and" condition_operand }
 condition_operand := condition_boolean_operand | existing_name_type_test | pattern_condition
 existing_name_type_test := identifier ":" type
-pattern_condition := pattern ":=" condition_value_operand
+pattern_condition := inferred_source_pattern ":=" condition_value_operand
                    | identifier ":" type "=" condition_value_operand
 
 binding_pattern := identifier
@@ -121,7 +123,7 @@ value_match_pattern := "==" pattern_value_operand
 typed_binding_pattern := identifier ":" type
 ```
 
-The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions keep the separate selected identifier : type = source form. Grammar gap: allowing a top-level typed_binding_pattern under the broad pattern := source placeholder could additionally admit identifier : type := source. Select or exclude that additional spelling explicitly when completing these productions; this sketch does not settle it. Arbitrary refutable receiver patterns and payload omission in bare .Some remain unselected contracts; optional parentheses in contextual_enum_case do not settle those semantics. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
+The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Arbitrary refutable receiver patterns and payload omission in bare .Some remain unselected contracts; optional parentheses in contextual_enum_case do not settle those semantics. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
 The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). Ordinary conditionals do not use `then` or `endif`.
 
