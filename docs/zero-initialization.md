@@ -35,9 +35,10 @@ number := 0;             /* ordinary inferred Int */
 zeroed: Profile = 0;      /* contextual Profile zero */
 source := 0;
 bad: Profile = source;    /* rejected: Int is not Profile */
+badLiteral: Profile = 5;  /* rejected: nonzero integer literal is not Profile */
 ```
 
-Likewise, a computed integer expression that happens to equal zero does not acquire record-construction meaning. This proposal introduces no general numeric truthiness, string conversion, pointer conversion, arithmetic operation on records, or universal comparison operation. Existing conversions and operations remain separately checked.
+Only literal 0 receives this special contextual-zero rule. Other integer literals, such as user: User = 5, remain incompatible with a record type; this does not introduce numeric record constructors. Likewise, a computed integer expression that happens to equal zero does not acquire record-construction meaning. This proposal introduces no general numeric truthiness, string conversion, pointer conversion, arithmetic operation on records, or universal comparison operation. Existing conversions and operations remain separately checked.
 
 Start with the exact literal spelling 0, not an arbitrary constant-expression evaluator. Whether this contextual capability extends uniformly to call arguments, return expressions, match-value operands, and generic expressions still needs a complete literal/inference contract. The initializer examples above are the proposed concrete starting point.
 
