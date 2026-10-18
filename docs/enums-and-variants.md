@@ -1,6 +1,6 @@
 # Enums and variants
 
-Status: **matching both plain and payload-bearing enums required; declaration, construction, representation, and conversion grammar open**.
+Status: **plain/payload enum matching and contextual .case shorthand selected; declaration, representation, conversion, and metadata disambiguation rules open**.
 
 ## Purpose
 
@@ -20,9 +20,9 @@ match status {
 
 Qualified case spelling is illustrative; no new enum declaration syntax is chosen here. The term conventional or legacy enum describes the payload-free use case, not an automatic promise of integer conversions, duplicate numeric cases, bit flags, or C ABI compatibility.
 
-## Proposal: inferred case names
+## Inferred case names
 
-When a single enum type is established by the subject or expected type, allow `.case` instead of repeating `Enum.case`. This is a working proposal, not selected grammar yet.
+When a single enum type is established by the subject or expected type, `.case` is the selected shorthand for `Enum.case`. Keep the leading dot; do not implicitly resolve an unqualified bare name as an enum case merely because its spelling fits. Qualified access remains available.
 
 Assume progress has the enum type Progress, with started and completed cases:
 
@@ -39,13 +39,13 @@ if progress == .completed {
 
 The match subject supplies Progress to its case patterns. In the comparison, the known type of progress can supply the enum type to the right operand. This is contextual type inference, not a search through all enums for a matching name. If the owning enum cannot be determined uniquely, require qualification. Do not assume a Float subject identifies Progress merely because its raw value agrees with one case.
 
-Typed initialization and arguments are possible later applications of the same idea; no general implicit-member or arbitrary static-member feature is selected here. Payload-case shorthand such as `.Click(x, y)` can likewise be considered when the owning enum and payload schema are known.
+The same contextual case form can select payload cases, such as `.Click(x, y)`, when the owning enum and payload schema are established. Type-directed resolution for other call/initialization contexts still needs complete inference rules; no arbitrary static-member feature is selected here. Existing explicitly bound constructor names, such as prelude Some/None, retain ordinary name resolution; this decision does not make every bare name an inferred enum case.
 
-### Interaction with current-context metadata
+### Interaction with current-context metadata: policy still open
 
 Leading `.field` already denotes current-context metadata. Enum shorthand must not silently reinterpret an existing metadata access, search outer construct contexts, or choose a meaning solely because it happens to type-check.
 
-Recommended disambiguation: enum-pattern positions use the expected enum case; expression positions require an unambiguous enum-member or current-context interpretation. If both interpretations apply, report ambiguity and require `Progress.completed` or an explicit `@tag.completed`. The exact rule is still under review. Context metadata continues to resolve only against the current construct; expected enum lookup is a separate, type-directed role, not outward context fallback.
+Recommended disambiguation: enum-pattern positions use the expected enum case; expression positions require an unambiguous enum-member or current-context interpretation. If both interpretations apply, report ambiguity and require `Progress.completed` or an explicit `@tag.completed`. The exact collision rule is still under review; the .case surface itself is selected. Context metadata continues to resolve only against the current construct; expected enum lookup is a separate, type-directed role, not outward context fallback.
 
 ### Float raw values are a separate proposal
 
@@ -54,6 +54,10 @@ The proposed declaration shape `Progress := enum Float { started = 0.0; complete
 Recommend keeping case identity distinct from raw-value equality: a two-case Progress enum has two named cases, not every intermediate Float value. Decide raw-value uniqueness, invalid conversions, NaN and signed-zero treatment, and equality before selecting a float-backed representation. No approximate float comparison is implied by `.completed`.
 
 Swift supports floating-point raw enum values and inferred member expressions. Zig, Odin, and V also offer leading-dot enum shorthand, with their own type and representation rules. These are independent precedents, not a claim that each supports floating raw enums. See [Swift raw values](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md), [Swift implicit members](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Expressions.md#implicit-member-expression), [Zig enum literals](https://ziglang.org/documentation/master/#Enum-Literals), [Odin implicit selectors](https://odin-lang.org/docs/overview/#implicit-selector-expression), and [V enums](https://docs.vlang.io/type-declarations.html#enums).
+
+### Reference comparison: keep the dot
+
+Swift implicit members, Zig enum literals, Odin implicit selectors, and V enum examples all provide a leading-dot form when the owning type is known. Kotlin's when documentation describes context-sensitive resolution that can omit the enum type and leave a bare entry name, currently marked preview. LiteScript selects the dot-bearing shorthand and does not adopt bare-case contextual lookup. See the primary references above and [Kotlin when/context-sensitive resolution](https://kotlinlang.org/docs/control-flow.html#when-expressions-and-statements).
 
 ## Associated-value cases
 
@@ -82,7 +86,7 @@ Payload extraction follows normal visibility and mutation permissions. Private p
 - Uniform-binding enum declarations, case declarations, payload names/types, and construction.
 - Closed versus extensible cases, nominal identity, and any variant-specific types.
 - Raw numeric values, storage widths, duplicate-value aliases, flags, explicit conversions, and FFI validity checks.
-- Qualified versus inferred case names, and how any shorthand coexists with leading-dot context access.
+- Contextual case-owner inference in generic/union situations, nested case patterns, and disambiguation from leading-dot context access.
 - Borrowing, moves, copying, partial matching, payload access, layout, and optimization guarantees.
 
 No representation is selected by writing these examples. Plain enums can have compact numeric representations and payload enums can use tagged representations, but their actual ABI and costs need a specification and implementation.

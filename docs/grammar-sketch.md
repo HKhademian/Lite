@@ -116,6 +116,7 @@ The selected and chain evaluates operands in order and exposes successful patter
 ```text
 match_expression := "match" expression "{" match_arm { match_arm } "}"
 match_arm := pattern { "and" condition_operand } block
+contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
 
 Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no `case`, arrow, comma, or semicolon between arms. The complete match is a block-value construct: it ends its item without `;`, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
@@ -165,7 +166,7 @@ context_access := "." field
 
 Named tags are prefixes on the construct. Leading-dot access resolves only against the current context, without outward field search. Body braces belong to their construct and do not add another wrapper context.
 
-The proposed enum-case shorthand `.case` is not yet added to these productions. Its expected-type resolution and potential collision with metadata need a deliberate rule; see [inferred case names](enums-and-variants.md#proposal-inferred-case-names). Whitespace cannot choose either meaning.
+Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; pattern_list and full enum productions remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
 
 The tag scope includes its header, so a loop condition may reference initialized count or accumulator state even when receiver declarations follow the source textually. Current items are not available before body entry.
 

@@ -114,7 +114,7 @@ The same composition applies to constructor payload patterns. With an Event.Data
 Event.Data((x: Int, y: String)) { handle_number_text(x, y) }
 ```
 
-This assumes the illustrated case schema and is an arm fragment requiring other coverage as appropriate. Qualified case spelling remains illustrative, and contextual `.Data(...)` remains a separate enum-shorthand proposal.
+This assumes the illustrated case schema and is an arm fragment requiring other coverage as appropriate. Qualified case spelling remains illustrative, and contextual `.Data(...)` uses the selected enum shorthand when its owner and payload schema are known.
 
 Conditional matching shares these component patterns:
 

@@ -8,7 +8,7 @@ Use one composable pattern vocabulary across binding and selection contexts. The
 
 An **irrefutable** pattern matches every value admitted by its input contract. A **refutable** pattern can fail for some admitted value. Refutability depends on both the pattern and the input type: a typed tuple pattern can be irrefutable for a known matching tuple and refutable for a broader union.
 
-The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). Whole-value colon patterns, rest capture details, enum shorthand and type-only arm spelling still have separate open decisions.
+The selected capabilities and typing rules are in [match patterns](match-patterns.md) and [pattern binding inference](pattern-binding-inference.md). Whole-value colon patterns, rest capture details, enum/metadata collision handling, and type-only arm spelling still have separate open decisions. The .case enum shorthand itself is selected.
 
 Partially annotated patterns constrain their input and infer every binding from compatible possibilities as one type or a union. This does not change the separate compatible-result policy for if/match branch expressions.
 
