@@ -60,6 +60,37 @@ A known compatible fixed tuple can be destructured irrefutably in a declaration 
 
 Do not consume arbitrary iterators to discover a matching shape or require backtracking to restore a failed stream. Sets/maps need different semantics. Strings require an explicit byte/scalar/grapheme view rather than automatically matching as a sequence.
 
+## Length mismatch and direct declarations
+
+Working recommendation: a plain destructuring declaration must be statically guaranteed to match. Known length mismatches are compilation errors:
+
+```text
+[a, b] := [1]; /* rejected: pattern requires exactly two elements */
+```
+
+Do not invent a zero, None, uninitialized value, or additional recoverable error for b. There is no successful partial declaration. An arbitrary runtime-sized source also needs explicit selection when its shape cannot be proved:
+
+```text
+if [a, b] := values {
+    use_pair(a, b);
+} else {
+    report_wrong_length();
+}
+```
+
+Evaluate the source once. On a length mismatch, enter else with neither a nor b in scope. A matching length still needs every component subpattern to succeed. The same matching behavior applies in match arms, where later arms can handle other shapes.
+
+Recommend letting a direct literal establish a known length, so [a, b] := [1, 2] can succeed without changing the literal's selected List default. Length knowledge is a refinement fact, not an implicit conversion to a fixed array. The complete proof policy for variables, aliases, mutation, and calls remains open; direct literal proof is proposed rather than an implemented check.
+
+A rest capture permits additional elements; it does not supply missing prefix elements:
+
+```text
+[a, ...rest] := [1];    /* proposed: a is 1; rest is empty */
+[a, b, ...rest] := [1]; /* rejected: needs at least two elements */
+```
+
+Rest retains the source's element typing under its eventual remainder representation; an empty rest is still a valid typed sequence. Its view/copy/ownership contract remains open. This recommendation does not select padding, optional-position patterns, runtime assertions, or fallible destructuring shorthand.
+
 ## References and related concepts
 
 [Rust rest/slice patterns](https://doc.rust-lang.org/reference/patterns.html#rest-patterns), [Dart list patterns](https://dart.dev/language/pattern-types#list), and [Python sequence patterns](https://docs.python.org/3/reference/compound_stmts.html#sequence-patterns) offer different rest placement and capture contracts. This proposal deliberately starts with one trailing capture and retains LiteScript's readable underscore bindings.
