@@ -8,7 +8,7 @@ Odin uses [N]T for fixed arrays, []T for slices, and [dynamic]T for resizable ar
 
 ## Rust: owning arrays and vectors, borrowed slices
 
-Rust's [T; N] includes a compile-time length in the array type. Vec<T> owns a contiguous growable allocation, while &[T] and &mut [T] provide shared or writable views. Vector capacity may exceed its initialized length, with spare storage not exposed as ordinary initialized elements. This is particularly relevant to LiteScript's large-buffer use case. Rust's ownership and borrow rules also address view lifetime and reallocation. The representation distinction is useful without importing Rust's punctuation or its entire borrow system. Sources: [arrays](https://doc.rust-lang.org/std/primitive.array.html), [vectors](https://doc.rust-lang.org/std/vec/struct.Vec.html), and [slices](https://doc.rust-lang.org/std/primitive.slice.html).
+Rust's [T; N] includes a compile-time length in the array type. `Vec<T>` owns a contiguous growable allocation, while &[T] and &mut [T] provide shared or writable views. Vector capacity may exceed its initialized length, with spare storage not exposed as ordinary initialized elements. This is particularly relevant to LiteScript's large-buffer use case. Rust's ownership and borrow rules also address view lifetime and reallocation. The representation distinction is useful without importing Rust's punctuation or its entire borrow system. Sources: [arrays](https://doc.rust-lang.org/std/primitive.array.html), [vectors](https://doc.rust-lang.org/std/vec/struct.Vec.html), and [slices](https://doc.rust-lang.org/std/primitive.slice.html).
 
 ## Zig: compile-time arrays and runtime-length slices
 

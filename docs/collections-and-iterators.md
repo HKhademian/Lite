@@ -18,6 +18,12 @@ loop directory.items() as (key, value) { process(key, value) }
 
 These method names are proposals, not implemented standard-library APIs.
 
+## Proposed storage families
+
+The [sequence storage review](sequence-types.md) recommends fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. The [array proposal](arrays.md) separates compile-time inline length from runtime-sized fixed ownership; the [list proposal](lists.md) separates live initialized length from reserved capacity; the [slice proposal](slices.md) exposes existing initialized elements without owning or copying them. These roles and their source syntax remain proposals.
+
+The review recommends ordinary list inference for beginner literals, with an explicit expected array type for fixed layout. The user is reviewing that default. Owner copying/transferring/sharing, slice lifetime rules, and mutable-view formation must be decided before these examples become canonical syntax. See the [reference comparison](sequence-types-comparison.md).
+
 ## Element contract
 
 The source determines the item type. A simple item binding and a destructuring item pattern operate on that same type. Loop count and accumulator are separate receiver slots or tag fields, not automatically injected tuple fields in every source element.

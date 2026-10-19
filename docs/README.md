@@ -36,6 +36,10 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 ## Types and values
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
+- [Sequence storage families](sequence-types.md): proposed array owners, list owners, and slice views; beginner defaults, storage/copy boundaries, and decision order.
+- [Arrays](arrays.md): proposed compile-time inline arrays and runtime-sized fixed-length owners; initialization, layout, and sized-view distinctions.
+- [Lists](lists.md): proposed growable contiguous owners, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics.
+- [Slices](slices.md): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Records](records.md): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.

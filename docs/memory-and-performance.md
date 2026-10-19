@@ -38,6 +38,12 @@ The selected temporary [var-qualified parameter](slot-parameters.md) gives acces
 
 [Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
 
+## Proposed sequence representations
+
+The [sequence-family review](sequence-types.md) distinguishes compile-time inline arrays, runtime-sized fixed array owners, growable list owners, and borrowed slice views. Fixed length does not mandate stack placement. A runtime-sized owner may keep its descriptor inline while managing separately allocated elements. A slice views live initialized elements without an element allocation or copy.
+
+These are proposals. Copying an owning descriptor cannot by itself establish two independent allocation owners; list move/clone/share rules and slice lifetime/invalidation need explicit contracts. Do not silently add copy-on-write, reference counting, or heap promotion to satisfy a borrowed-view use. These facilities could be evaluated separately. Literal defaults, type syntax, allocator/failure policy, and exact ABI remain open.
+
 ## Semantic initialization versus physical writes
 
 Selected optimization principle, 2026-10-19: a source-level initialization requirement does not mandate physical initialization stores when the compiler proves them unobservable.

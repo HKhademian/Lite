@@ -139,6 +139,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [sequence-family review](sequence-types.md) proposes fixed-length array owners, growable contiguous list owners, and borrowed slice views. It distinguishes compile-time inline `Array<T, N>` from runtime-sized fixed `Array<T>`; names/type syntax remain schematic. List literals as the beginner default are recommended and under user review. Ownership/copy/move rules, slice lifetime/invalidation, mutable-view formation, bounds failure, and complete initialization APIs remain open. The [reference comparison](sequence-types-comparison.md) checks Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart; separate [array](arrays.md), [list](lists.md), and [slice](slices.md) documents record examples and tradeoffs.
+
 - Explicit reserved storage has the selected = ? surface direction and whole-value first = rule. The earlier generic reserve() operation, anonymous-record sketch, and other punctuation forms remain unselected alternatives. Full expected-type/layout rules, stack/heap allocation policy, field/element and callee initialization, ownership, allocation failure, and cleanup remain open. Ordinary omitted declarations still zero-initialize; reserved storage requires a distinct initialization/validity contract before value use. See [reserved storage](reserved-storage.md).
 
 - The [parameter-permission review](parameter-permissions.md) distinguishes local var declarations, writable caller data via mut, and caller-location replacement via var. The location association is fixed; local-only var parameter headers are retired. Combined payload/replacement qualifier syntax remains open.

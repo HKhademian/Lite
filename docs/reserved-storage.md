@@ -49,6 +49,8 @@ Sequential construction may track a count/prefix rather than one runtime flag pe
 
 The existing one-time whole-value rule remains useful for deferred immutable values. Bulk filling adds a separate element-initialization contract rather than turning ordinary var/mut parameters into implicit output buffers. See [first initialization](first-initialization.md) and [collections](collections-and-iterators.md).
 
+The later [sequence-family proposal](sequence-types.md) makes this concrete: a list with a valid descriptor can expose zero initialized elements while owning large spare capacity. An ordinary slice would expose only live initialized elements. A compile-time fixed array can reserve its full known inline layout with = ?; reserving an uninitialized runtime owner descriptor alone cannot infer or allocate an arbitrary requested element count. Names, allocation APIs, and these collection types remain proposals; see [lists](lists.md), [arrays](arrays.md), and [slices](slices.md).
+
 ## Shorthand comparison and decision
 
 The user compared these forms and subsequently approved the first as the initialization-marker direction. The remaining three are unselected alternatives, not supported synonyms:
