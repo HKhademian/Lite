@@ -91,9 +91,9 @@ The conditional's expression result is supplied by the selected branch or by the
 
 The missing-`else` case still has a normal result: if no branch matches, it is `zero(T)`. This internal result does not require an exposed metadata field.
 
-### Candidate: conditional `then`
+### Recommendation: conditional `then`, with `finally` kept for cleanup
 
-The user suggests reusing `then`, already used for loop completion, after a complete conditional chain. Under this candidate, `then` would run after a branch completes normally or after a missing-final-`else` path supplies `zero(T)`. Its body could inspect `@tag.value` and its tail expression could transform the conditional's body/result type `T` into a final type `R`, paralleling loop `then`.
+`then` is the clearer name for normal result processing after a complete conditional chain. It already names normal completion processing after a loop, so sharing it makes the same distinction across constructs: the body/result completes normally, then a following clause may inspect the result and produce `R`. The proposed conditional `then` would run after a branch completes normally or after a missing-final-`else` path supplies `zero(T)`. Its body could inspect `@tag.value` and its tail expression could transform the conditional's body/result type `T` into a final type `R`, paralleling loop `then`.
 
 ```text
 label: String = @notice if should_warn {
@@ -105,7 +105,7 @@ label: String = @notice if should_warn {
 
 Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; the proposed `then` still sees that result. The explicit tag follows the selected rule that exposed conditional metadata requires `@tag.field`.
 
-This is a normal-completion/result-processing proposal, not an all-exit cleanup guarantee. Whether a tagged return, propagated error, or panic bypasses the conditional `then` needs an explicit rule. Use `finally` when the intended contract is cleanup on normal and abrupt exits; its placement and failure rules remain in the deferred lifecycle review. If both clauses are allowed, their ordering also needs a rule. The exact suffix grammar and whether `.value` is visible only in this phase are open.
+This is a normal-completion/result-processing proposal, not an all-exit cleanup guarantee. Whether a tagged return, propagated error, or panic bypasses the conditional `then` needs an explicit rule. Keep `finally` for cleanup when leaving a scope, including the intended early-exit/failure cases; using it to transform the conditional result would blur cleanup with ordinary result production. Its exact placement and failure rules remain in the deferred lifecycle review. If both clauses are allowed, their ordering also needs a rule. This is a naming recommendation, not selected conditional syntax: the suffix grammar and whether `.value` is visible only in this phase remain open.
 
 ### Interaction with loop bodies
 

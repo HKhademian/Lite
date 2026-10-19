@@ -124,7 +124,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Keep the no-match zero result distinct from `continue`; show that a final unmatched conditional in a loop body can overwrite its accumulator.
 - Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep the expected-type and missing-`else` fallback rules coherent.
 - Preserve the selected explicit-tag lookup rule if conditional metadata is exposed: fields require `@tag.field`, untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
-- Compare keeping the conditional result internal with exposing it as `.value` only to an attached post-selection clause. The user suggests reusing loop `then` for this phase; compare that spelling with `finally`, distinguishing normal result processing from all-exit cleanup. Do not select the clause, field exposure, read phase, or abrupt-exit behavior by implication. Define how `.condition` represents an `else if` chain without claiming that unevaluated conditions were false.
+- Compare keeping the conditional result internal with exposing it as `.value` only to an attached post-selection clause. The review recommends reusing loop `then` for normal result processing and reserving `finally` for cleanup, but the conditional clause, field exposure, read phase, and abrupt-exit behavior remain open. Define how `.condition` represents an `else if` chain without claiming that unevaluated conditions were false.
 
 **Acceptance:**
 

@@ -257,7 +257,7 @@ For conditionals, when no normally completing branch constrains T, T defaults to
 
 ### 2. Completion hooks and abrupt exits
 
-The single receiverless `then` resolves the old then-versus-empty-else composition question for loops. Review whether the same suffix can follow a complete conditional chain, operate on its branch/zero result, and produce a final `R`. Keep this as a proposal. Define whether its `.value` read is restricted to the tagged conditional's `then`, and do not treat normal-completion processing as all-exit cleanup. Loop count and typed value remain available from the owning context.
+The single receiverless `then` resolves the old then-versus-empty-else composition question for loops. The review recommends the same suffix for a complete conditional chain: it can operate on the branch/zero result and produce a final `R`. This remains proposed syntax. `then` names normal result processing; reserve `finally` for cleanup that preserves a pending result or exit. Define whether `.value` reads are restricted to the tagged conditional's `then`, and do not treat normal-completion processing as all-exit cleanup. Loop count and typed value remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 

@@ -20,7 +20,7 @@ operation() else(failure) {
 
 The proposed sequence is protected evaluation, optional recovery, then finally. On successful cleanup, preserve the determined value or pending control-flow exit. A nonreceiving finally is an action hook; it does not replace an Int result with Unit merely because cleanup returns Unit.
 
-Separately, the user proposes comparing loop `then` with a post-selection result phase on conditionals. Reusing `then` may be clearer for reading or transforming a normally completed conditional result. That proposal does not settle `finally`: cleanup on normal and abrupt exits has a different job and remains under the lifecycle review. Whether both clauses may attach to one conditional, and in which order, remains open.
+For reading or transforming a normally completed conditional result, the review recommendation is to reuse loop `then`. Reserve `finally` for cleanup when leaving a scope, including the intended early-exit/failure cases. These clauses have different jobs: `then` can produce the construct's final result, while `finally` preserves the pending result or exit when cleanup completes. The recommendation does not select conditional `then` syntax or settle `finally` attachment and failure rules. Whether both clauses may attach to one conditional, and in which order, remains open.
 
 The same shape can be proposed for an explicit inner block expression and for the complete conditional. It is not a finally after each individual loop iteration unless that iteration creates its own protected region. A construct-level loop finally runs when that loop is left.
 
