@@ -28,6 +28,8 @@ score = "ten"; /* rejected */
 
 Inference chooses static types. It does not make a variable dynamically change type.
 
+Loop inference is bidirectional: body constraints and the destination's expected type cooperate. In x: Long = loop my_ints { .value + .item }, the destination constrains the loop's value type rather than selecting an unchecked cast after execution. A body containing only .value can also be inferred when the destination supplies its type. With then, the body value type and final result type remain distinct. Numeric compatibility still follows the separately defined arithmetic rules. See [loop type inference](loop-type-inference.md).
+
 A bracket literal without a more specific expected sequence type defaults to growable List: numbers := [1, 2, 3] infers `List<Int>`. Var/mut only changes access permissions, not the inferred family; later append operations must not retroactively turn a fixed array into a list. An explicit expected array type may select fixed layout under the eventual array construction contract. Empty/heterogeneous inference and complete type/literal grammar remain open. See [lists](lists.md) and [sequence storage families](sequence-types.md).
 
 A simple declaration can supply the type without an initializer: x: User; immediately creates its valid language-defined all-zero value, equivalent to x: User = 0. The distinct x: User = {} uses declared defaults. Var x: User; has the writable storage contract var User, whose read value type is User; replacement permission does not turn a read into a writable alias. Omitted inferred declarations still lack a type/source and are rejected. See [zero initialization](zero-initialization.md) and [var access](var-access-qualifier.md).

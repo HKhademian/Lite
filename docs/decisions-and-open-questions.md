@@ -137,6 +137,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Plain continue preserves .value and advances; continue value commits early and advances. Bare break preserves .value and runs then. Break value returns a nearest-loop final result directly, bypassing then; return @tag value is the named direct exit.
 - Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .value are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
 - Without then, normal completion returns final .value; with then it returns that block's tail expression, and then {} returns Unit.
+- Loop type inference uses body constraints and destination-side expected types. A Long destination can constrain .value, including a body consisting only of .value. With then, expected final type R constrains body type T only through actual type relationships. Numeric promotion/casts remain the arithmetic contract; see [loop inference](loop-type-inference.md).
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags

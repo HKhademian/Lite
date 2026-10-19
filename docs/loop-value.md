@@ -12,7 +12,7 @@ sum := loop numbers as number {
 }
 ```
 
-For Int elements, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The selected normal-result rule without then is the final .value, including its initialized zero when the loop produces nothing. Full inference, including expected-type propagation, remains to formalize.
+For Int elements with no different expected type, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The selected normal-result rule without then is final .value, including its initialized zero when the loop produces nothing. Destination-side expected types also constrain T, as explicitly selected by the user; see [bidirectional loop inference](loop-type-inference.md).
 
 ## Updates and exits
 
@@ -44,7 +44,7 @@ The user explicitly requires [all-zero storage to be a valid value of every type
 
 For ordinary numeric T this gives 0, for String empty text, for Unit Unit, and for records recursively zeroed fields without declared defaults. If T is Option, its zero is .None; there is no extra Option wrapper. Exact mappings for special types remain to design under the universal requirement. Explicit nonzero initialization is separate future work, not a requirement just to admit a type into a loop.
 
-Zero initialization still needs a known T. Reading .value alone does not establish T; the compiler must not guess a type or union member. Ordinary annotations or applicable expected result types can provide missing constraints. Representation mapping is type-directed, not an arbitrary runtime default choice.
+Zero initialization still needs a known T. A .value-only body can be typed from its destination, such as x: Long = loop source { .value }. Without a destination hint or another independent constraint, reading .value alone does not establish T; the compiler must not guess a type or union member. Representation mapping is type-directed, not an arbitrary runtime default choice.
 
 ## Completion and result types
 
