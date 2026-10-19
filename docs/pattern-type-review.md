@@ -58,7 +58,7 @@ Float patterns use the same equality contract as ordinary Float comparisons, wit
 
 ## 2. Unit
 
-Use `== Unit` to test the singleton value, or `: Unit` to test its type. Bare Unit in a binding position binds under the ordinary name rule; it is not a special constant-pattern exception. The unit value/type name-resolution contract remains tracked in [Unit](unit.md).
+Use `== Unit` to test the singleton value, or `: Unit` to test its type. Bare Unit in a binding position binds under the ordinary name rule; it is not a special constant-pattern exception. Broader type/value name resolution remains open; the Unit-specific expression/type spellings are recorded in [Unit](unit.md).
 
 Unit is neither None nor an error. A missing match arm must not manufacture any of those values.
 

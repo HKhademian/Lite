@@ -1,6 +1,6 @@
 # Unit
 
-Status: **established direction; name-resolution details open**.
+Status: **one value, `Unit`, its type/expression spellings, and its zero mapping selected; zero-sized physical representation proposed by the user, 2026-10-19; broader name-resolution and ABI details remain open**.
 
 ## Purpose
 
@@ -18,6 +18,7 @@ Represent successful completion without useful payload data. `Unit` is not an ab
 ## Rules
 
 - The unit type has one value.
+- Since `Unit` has one value, the selected universal zero rule makes `zero(Unit) = Unit`. The user proposes representing it as a zero-sized value type, so no physical byte needs to be stored. Calling-convention and foreign ABI lowering remain separate representation questions.
 - The requested expression spelling is `Unit`.
 - Empty executable blocks, declarations, and assignments produce `Unit`. Empty record initializer braces create record data; the enclosing declaration still produces Unit, independently of the record value it binds.
 - An explicit ignored match arm can simply be `_ {}`; its empty body already returns Unit. `_ { Unit }` is equivalent but need not be written.
@@ -46,11 +47,11 @@ save_student(student)   /* Result<Unit, SaveError> */
 
 ## Type and value spelling
 
-The discussion proposed using `Unit` in both type and expression positions. This needs a deliberate name-resolution rule, because ordinary type names are not implicitly instantiated. It must not accidentally turn all compile-time type bindings into runtime constructors.
+The selected type name and requested expression spelling are both `Unit`: type positions refer to the type, while a value position can refer to its unique inhabitant. This is a narrow Unit rule, not a general conversion of every type name into an expression constructor. Broader type/value namespace resolution remains open.
 
 ## Loop interaction
 
-Whether a unit-valued iteration counts as an accumulator contribution needs explicit resolution. The search-loop examples have unit-valued bodies but an optional whole-loop result; this requires separating iteration type from construct result type. See [loop accumulator](loop-accumulator.md).
+A body that normally completes with `Unit` contributes a valid `Unit` loop value. If no path contributes and nothing else constrains the body type, that type defaults to `Unit`; an expected type can override it. Plain `continue` and bare `break` remain noncontributing paths. A loop's body type and its `then` result type are separate, so a `Unit` body may still have a non-Unit whole-loop result. See [loop value](loop-value.md) and [loop inference](loop-type-inference.md).
 
 ## Related concepts and references
 
