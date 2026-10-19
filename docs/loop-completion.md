@@ -2,6 +2,8 @@
 
 Status: **intent established; clause ordering and full exit/type contracts open**.
 
+The user now proposes replacing then/empty-else/common-final processing with [one completion receiver and block](unified-loop-completion.md). That simplification is under exploration; the separate-clause examples below are retained for comparison, not finalized grammar. Full cleanup during escaping control flow remains part of the deferred lifecycle review.
+
 ## Purpose and template
 
 Handle the final contribution, absence of contributions, and cleanup without wrapping loops in functions solely to obtain a result.

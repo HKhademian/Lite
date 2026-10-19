@@ -152,6 +152,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The user proposes [unified loop completion](unified-loop-completion.md): one final receiver/block replaces separate then/empty-else/common-final processing. The minimal candidate receiver contains entered-iteration count and optional accumulator, separating zero entries from all-skipped entries. Reusing then for normal completion and bare break is recommended for evaluation; keyword, exact payload, seeds, and omitted-hook behavior are unselected. Full cleanup on escaping returns/errors/panics remains deferred; this does not yet replace existing examples or change targeted returns.
+
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.
 
 - The [loop recovery example](loop-recovery.md) is historical where it attaches recovery outside a grouped loop. Body-local ownership supersedes that workaround; normal accumulator/completion rules remain, while internal iteration/run recovery scope and cleanup require review.
