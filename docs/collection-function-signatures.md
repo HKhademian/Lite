@@ -1,21 +1,21 @@
 # Collection contracts in function inputs and outputs
 
-Status: **signature and return-model proposal, 2026-10-19**. Operation-contract sugar and inference motivate this review. The [T] contract shorthand, full generic grammar, opaque return behavior, first-class function representation, and ownership are not selected by these examples.
+Status: **signature and return-model proposal, 2026-10-19**. Operation-contract sugar and inference motivate this review. The later [indexed-sequence decision](indexed-sequence-contract.md) selects [T] for indexed traversal. Full generic grammar, opaque return behavior, first-class function representation, and ownership remain proposals here.
 
 ## One contract, two directions
 
 A collection input contract states the operations the function requires from its caller. A collection output contract states the operations the function guarantees to its caller. The definition of an operation does not change between these positions.
 
-Illustrative short signatures assume [User] means a read-only traversal contract over User elements:
+Traversal-only signatures below use temporary Iterable<User> notation. The accepted [User] shorthand would additionally require exact count and positional indexing:
 
 ```text
-visit := fn(users: [User]) {
+visit := fn(users: Iterable<User>) {
     loop users as user {
         greet(user);
     }
 }
 
-make_users := fn(): [User] {
+make_users := fn(): Iterable<User> {
     [User { name = "Ali", }, User { name = "Mina", }]
 }
 ```
@@ -38,11 +38,11 @@ The body supplies the lookup requirement and the result annotation constrains it
 
 The inferred input still has a real generic contract visible to callers and tools. Adding indexing to a previously traversal-only inferred definition changes that contract; this can break existing callers. Inference hides boilerplate, not changes in API requirements.
 
-An explicitly complete input contract must remain the boundary for body checking. If [User] guarantees traversal only, users[2] cannot be added to such a function while retaining that signature. The author must declare a stronger contract, whose final concise spelling remains open, or change to an intentionally inferred definition. Do not silently strengthen a published complete signature from its implementation.
+An explicitly complete input contract must remain the boundary for body checking. If Iterable<User> guarantees traversal only, users[2] cannot be added while retaining that signature. The author must declare an indexing contract, such as the accepted [User] direction when its full guarantees are intended, or choose an intentionally inferred definition. Do not silently strengthen a published complete signature from its implementation.
 
 An alternative is to make some annotations partial and infer additional constraints. If adopted, that category needs a defined boundary rather than having the same complete annotation unpredictably acquire requirements. The current recommendation is omitted inputs for inference and deliberately complete explicit contracts for stable APIs. The exact public-signature requirement remains open.
 
-The later [ergonomics review](collection-signature-ergonomics.md) investigated partial annotations in response to the user's concern about strong shorthand spreading into library APIs. The user's subsequent source-visibility objection favors keeping written contracts complete; compiler/tool visibility alone is insufficient. The review now recommends evaluating a short indexed-sequence contract alongside a distinct traversal-only contract. No [T] meaning is selected, and the traversal-only examples above retain their stated illustrative meaning.
+The later [ergonomics review](collection-signature-ergonomics.md) investigated partial annotations in response to the user's concern about strong shorthand spreading into library APIs. The user's subsequent source-visibility objection favors keeping written contracts complete; compiler/tool visibility alone is insufficient. The subsequent [indexed-sequence decision](indexed-sequence-contract.md) accepts [T] for the complete indexed bundle, distinct from traversal-only Iterable<T>. Examples above now use the latter notation to preserve their intended weaker requirement.
 
 ## Preserve input/output relationships
 

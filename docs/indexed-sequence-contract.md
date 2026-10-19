@@ -1,16 +1,16 @@
 # A short complete indexed-sequence contract
 
-Status: **next-step proposal, 2026-10-19; no bracket grammar selected**. This defines the behavior a convenient [T] signature could promise after the user's requirement that library capabilities remain visible in source. It is a candidate contract, not an implementation, owner representation, or revision of generic syntax.
+Status: **[T] indexed-sequence direction accepted, 2026-10-19; full generic and protocol grammar deferred**. The shorthand exposes a complete indexed and iterable contract. Writable operations require mut access and an actual writable implementation. It does not select an owner representation.
 
 ## Indexable alone is not the whole sequence
 
 A general lookup operation can accept a key such as a String or an enum value. Its successful result and failure policy belong to that lookup contract. Merely supporting brackets does not imply integer positions, traversal, a count, insertion order, or contiguous storage.
 
-The proposed ordinary sequence combines a useful subset into one visible standard contract. Beginners can use its shorthand without separately listing each underlying interface. More general library contracts remain available when the complete bundle is unnecessary.
+The accepted ordinary sequence combines a useful subset into one visible standard contract. Beginners can use its shorthand without separately listing each underlying interface. More general library contracts remain available when the complete bundle is unnecessary.
 
-## Proposed readable [T]
+## Readable [T]
 
-A complete readable indexed-sequence contract would guarantee:
+The complete readable indexed-sequence contract guarantees:
 
 - Elements with read value type T and the access/lifetime rules of the supplied provider.
 - A finite exact current element count, available without enumerating the elements.
@@ -18,12 +18,12 @@ A complete readable indexed-sequence contract would guarantee:
 - Traversal following the same positional order, retaining repeated occurrences.
 - Supported positional reads under the selected bounds-failure policy.
 
-The proposed contract includes a cheap count and constant-time positional reads; the precise complexity law and index/count integer representation need confirmation. It would admit ordinary array/list/slice providers and other implementations satisfying those guarantees. It need not admit linked structures whose indexing requires traversal; weaker traversal contracts can still accept them.
+The accepted bundle includes a cheap exact count and constant-time positional reads. The precise complexity law and index/count integer representation still need formalization. Ordinary array/list/slice providers can satisfy it; linked structures whose indexing requires traversal need a weaker traversal contract instead.
 
 It would not promise contiguous storage, growth, ownership, sorted values, uniqueness, deep copying, or an immutable snapshot against independently permitted external changes. The eventual borrow/stability rules must preserve the validity of a read or traversal during its allowed use.
 
 ```text
-/* Proposed public contract; length spelling is illustrative. */
+/* Accepted input-contract direction; generic grammar is deferred. */
 first := fn(values: [Int]): Int {
     values[0]
 }
@@ -39,9 +39,23 @@ The first example assumes the currently recommended asserting bounds policy. Emp
 
 ## Writable refinement
 
-The candidate mut [T] contract additionally requests permitted replacement of existing positional elements from a provider that actually supplies writable indexed access. The caller grants existing mut access explicitly. Mut does not fabricate a setter for a computed/read-only provider, and it does not grant growth or arbitrary structural changes.
+The mut [T] refinement additionally requests permitted replacement of existing positional elements from a provider that actually supplies writable indexed access. The caller grants existing mut access explicitly. Mut does not fabricate a setter for a computed/read-only provider, and it does not grant growth or arbitrary structural changes.
 
 Thus a sort could visibly require mut [T], while append would require a separate growth contract. Var on a local binding still permits whole replacement; received type-side var still follows the existing caller-location contract. Those permissions do not determine storage ownership or erase access compatibility checks.
+
+## Underlying operation hooks
+
+The user identifies get_index, set_index, and iterable as the underlying operation hooks:
+
+- values[index] requests get_index for positional reads.
+- values[index] = replacement requests set_index, requiring mut access and a provider that supports element replacement.
+- loop values requests iterable and its traversal protocol.
+
+These names describe the intended hooks; complete interface declarations, associated types, receiver signatures, and implementation syntax remain deferred. Merely defining a similarly named method does not establish conformance. Immutable [T] does not expose a writable operation just because the provider has one.
+
+A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities. The exact count still needs its own query contract; get_index, set_index, and iterable alone do not imply cheap exact size.
+
+General Indexable can use nonpositional keys and need not be iterable. The common hook vocabulary does not grant it all [T] laws or require every lookup to return the same failure channel. Bounds behavior remains independently under review.
 
 ## Size spellings to review separately
 
@@ -51,12 +65,12 @@ The [T;] candidate also needs a distinct semantic job before adoption. An omitte
 
 ## Function contracts versus storage
 
-For this proposal, [T] in a generic input describes what the function requires. It must not automatically mean a heap-boxed interface object. The static provider can retain its own representation under the proposed generic model.
+In the accepted direction, [T] in a generic input describes what the function requires. It must not automatically mean a heap-boxed interface object. The static provider can retain its own representation under the proposed generic model.
 
 Using the same contract in a record field, reassignable location, stored callback, or return still needs a representation rule. A capability set alone does not determine byte layout or justify copying an owner. The [function-signature review](collection-function-signatures.md) separates concrete, static-abstract, and explicit runtime-varying output models. Do not infer one of those representations merely from bracket appearance.
 
 ## Next decision
 
-Review whether this complete indexed bundle is the desired beginner default, including its count and positional-access cost guarantees. Then choose whether [T; count] is an extent refinement or an owning inline array, and determine storage forms alongside the deferred generic/interface design.
+The indexed bundle is accepted. Next review growth/removal capabilities, then choose whether [T; count] is an extent refinement or an owning inline array. Storage forms, complete hook signatures, and generic/interface grammar remain separate decisions.
 
 Related: [capabilities](collection-capabilities.md), [signature ergonomics](collection-signature-ergonomics.md), [sequence families](sequence-types.md), [arrays](arrays.md), [slices](slices.md), and [bounds policy](checked-fault-policy.md).

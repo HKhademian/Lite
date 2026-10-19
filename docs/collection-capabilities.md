@@ -6,7 +6,7 @@ These names explain semantic requirements, not mandatory annotations for beginne
 
 The [operation-contract proposal](collection-operation-contracts.md) connects this to compiler resolution: loop/bracket sugar uses a declared implementation of the required operation. Missing support is a static contract error; failure of a supported operation follows its declared outcome type. Index/key, yielded/read access, coherence, effects, and cost laws remain part of the eventual interface contract.
 
-The [short indexed-sequence proposal](indexed-sequence-contract.md) evaluates a complete [T] bundle for ordinary scripts: finite cheap count, zero-based constant-time positional reads, and traversal in positional order. A general keyed lookup contract need not supply all of these. Neither that bracket meaning nor the precise complexity/index representation is selected yet.
+The [short indexed-sequence contract](indexed-sequence-contract.md) has an accepted [T] direction: finite cheap count, zero-based constant-time positional reads, and traversal in positional order. Mut [T] adds permitted element replacement, with a real setter implementation. The user identifies get_index, set_index, and iterable hooks; full protocol grammar and precise cost/index representations remain deferred. A general keyed lookup contract need not supply this whole bundle.
 
 ## Traversal is the minimum
 
