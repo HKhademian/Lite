@@ -32,9 +32,11 @@ Student names the record type, name is a String field, and grade is an Int field
 Declared fields use field: Type. Supplying their initial values uses field = expression. An explicit construction type is allowed, but can be omitted when the expected record type is uniquely known:
 
 ```text
-student: Student = { name = "Ali", grade = 12, };
-other := Student { name = "Sam", grade = 10, };
+student: Student = { name = "Ali", grade = 12, }
+other := Student { name = "Sam", grade = 10, }
 ```
+
+The complete record construction ends the declaration item without a semicolon; a trailing semicolon remains allowed. This also applies to field declarations with block/record default initializers. Commas between supplied value fields remain required. See [record literal boundaries](record-literal-boundaries.md).
 
 The same contextual rule applies to nested record fields. If Registration declares a Student-valued student field, `Registration { student = { ... }, ... }` need not repeat Student. Initialization does not require var merely because it uses =. No search through unrelated record types by field names is implied.
 

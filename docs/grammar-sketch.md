@@ -49,11 +49,11 @@ item := declaration
       | expression
 ```
 
-`closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, or a declaration, assignment, or exit whose outer expression ends directly in one. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
+`closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, a complete record-construction expression, or a declaration, assignment, or exit whose outer expression ends directly in either form. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
 
 The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself and permits optional trailing separators. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
-The exact expression productions implementing this classification remain part of the incomplete expression grammar. The classification must follow syntactic structure, not a scan for the last `}` character: import-list braces and blocks nested inside calls or groupings do not end the enclosing item.
+The exact expression productions implementing this classification remain part of the incomplete expression grammar. The classification must follow syntactic structure, not a scan for the last `}` character: import-list braces and blocks/record constructions nested inside calls or groupings do not end the enclosing item.
 
 ## Block-value continuation
 
@@ -61,7 +61,7 @@ The exact expression productions implementing this classification remain part of
 grouped_block_value := "(" block_value_construct ")"
 ```
 
-`block_value_construct` denotes an expression-producing block, conditional, match, loop, or function literal. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
+`block_value_construct` denotes an expression-producing block, conditional, match, loop, or function literal. The same grouping requirement applies to record construction, including contextual initialization where its expected type is established. See [record literal boundaries](record-literal-boundaries.md); standalone inferred literals still need syntactic disambiguation. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
 
 ```text
 answer := ({ calculate() }) + 1;
@@ -123,7 +123,7 @@ record_type := "record" "{" record_field_sequence "}"
 record_field := identifier ":" type
 ```
 
-The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between fields and permits a final separator inside the body. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
+The selected declaration surface is `Student := record { name: String; grade: Int; }`. The record_field_sequence placeholder uses explicit semicolons between ordinary fields and permits a final separator inside the body. A field declaration ending in a complete block/record initializer follows the closed-item boundary rule and needs no additional semicolon; full field-default productions remain deferred. The complete declaration permits an optional trailing semicolon. Fields form a declaration body, not an executable tail-value block. Field modifiers, defaults, construction, generics, and the complete field-list grammar remain open; see [records](records.md).
 
 The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression and declared-default filling when a record initializer is supplied. Zero mode bypasses declared defaults and requires valid zero values. Simple typed value declarations select it through an omitted initializer or explicit contextual literal 0. Complete field-default/literal-typing rules remain unformalized. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
 

@@ -37,6 +37,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 ### Syntax and results
 
 - Braces are required for bodies.
+- Complete record constructions end outer declaration/assignment/exit items without requiring semicolons, including record field declarations with such defaults. Trailing semicolons remain allowed; inner initializer fields still need commas. The requested x := { a = 1, b = 2 } inferred form needs brace disambiguation and identity rules; see [record literal boundaries](record-literal-boundaries.md).
 - Existing-name type tests use `if person: User { ... }` without redeclaration. Narrowing changes static knowledge, not the value or declared type; mutation stability, logical composition, negative/early-return flow, and generic/subtype semantics remain to formalize. See [type tests and narrowing](type-tests-and-narrowing.md).
 - Conditional patterns reuse declarations: `if Some(value) := expression` and `if value: Type = expression`. Matching binds branch-local names and permits lexical shadowing; no `let` keyword is added.
 - Pattern matches and Boolean guards combine through and, as in `if Some(user) := find_user(id) and user.age > 14`. Operands run left to right and stop at the first mismatch/false result; bindings from successful patterns are available to later operands and the successful body, not else or following code. Binding-producing or/not and repeated chain names remain open; see [conditional pattern chains](condition-chains.md).

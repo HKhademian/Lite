@@ -17,7 +17,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Item boundaries
 
-A complete block construct ends its item without requiring ;. A trailing semicolon is optional and allowed, including after a declaration initialized by a block, function, conditional, match, or loop. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner.
+A complete block construct ends its item without requiring ;. A trailing semicolon is optional and allowed, including after a declaration initialized by a block, function, conditional, match, loop, or record construction. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner.
 
 ```text
 answer := {
@@ -35,7 +35,9 @@ use(answer);
 
 The optional trailing semicolon does not change the block's value. The earlier ban on this spelling is superseded.
 
-To continue a block's value with an operator, call, member access, or indexing, parenthesize the construct:
+Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record literal boundaries](record-literal-boundaries.md) for the requested inferred form and remaining disambiguation.
+
+To continue a block's or record construction's value with an operator, call, member access, or indexing, parenthesize the construct:
 
 ```text
 answer := ({ calculate() }) + 1;

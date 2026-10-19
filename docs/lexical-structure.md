@@ -67,25 +67,33 @@ if ready { run() } else { wait() } finish();
 
 This has the same structure as the multiline example. The block boundary, not a newline, separates the conditional from `finish()`.
 
-The rule also covers standalone or tagged blocks, match expressions, loop constructs, and function/type definitions. A declaration, assignment, or exit whose outer expression ends directly in an unparenthesized block construct ends at that construct as well:
+The rule also covers standalone or tagged blocks, match expressions, loop constructs, and function/type definitions. A declaration, assignment, or exit whose outer expression ends directly in an unparenthesized block construct or record construction ends at that construct as well:
 
 ```text
 answer := { calculate() }
 double := fn(x: Int): Int { x * 2 }
 print(double(answer));
+
+x: User = {}
+y := User {}
+/* Requested inferred-record form; literal disambiguation is pending. */
+z := { a = 1, b = 2 }
 ```
 
-It does not apply merely because a token happens to be `}`. Braces delimiting an import list are not a block. A block nested inside a call, grouping, or other enclosing expression does not end the outer item.
+The same boundary applies to a record field declaration whose default initializer ends in a complete record construction. It does not remove commas between supplied record-value fields: Outer { first = {}, second = {} } remains a comma-separated initializer.
+
+It does not apply merely because a token happens to be `}`. Braces delimiting an import list are neither a block nor record construction. A block or record construction nested inside a call, grouping, or other enclosing expression does not end the outer item.
 
 ## Continuing a block value
 
-Parenthesize a complete block construct before continuing its value with an operator, call, member access, or indexing:
+Parenthesize a complete block construct or record construction before continuing its value with an operator, call, member access, or indexing:
 
 ```text
 answer := ({ calculate() }) + 1;
 doubled := (fn(x: Int): Int { x * 2 })(3);
 name := ({ make_user() }).name;
 first := ({ make_items() })[0];
+name := (User { name = "Ali", }).name;
 ```
 
 The grouping makes these ordinary expression items, so they use ordinary separators. An operator or call suffix never attaches across an unparenthesized block-item boundary. Tokens after that boundary belong to the next item and must form a valid item on their own, irrespective of line layout.

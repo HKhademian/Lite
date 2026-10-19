@@ -168,15 +168,15 @@ Independently declared unnamed record types have distinct identity, even with id
 
 The [inline identity rule](record-type-identity.md#selected-inline-rule-identity-per-declaration) selects distinct types per inline declaration, matching named records. Reuse one named Stats declaration when different outer records should share that field type.
 
-## 7. Standalone inferred record literal: separate proposal
+## 7. Standalone inferred record literal: requested direction, grammar pending
 
 ```text
-point := { x = 1, y = 2, };
+point := { x = 1, y = 2, }
 ```
 
-There is no expected record type here. Adopting this form would require anonymous-record inference and a grammar distinct from executable blocks. It must not guess a named type by searching for matching field names. In particular, empty point := {} cannot simultaneously mean a new empty record and the existing Unit-valued empty block.
+The user requests this inline form without an expected record type. Completing it requires anonymous-record inference and a grammar distinct from executable blocks; see [record literal boundaries](record-literal-boundaries.md). The optional-semicolon boundary is selected independently of that grammar. It must not guess a named type by searching for matching field names. In particular, empty point := {} cannot simultaneously mean a new empty record and the existing Unit-valued empty block.
 
-For now, use a named record type or an established expected record type. Same-name construction entries such as User { name, age } also need a separate decision; proposed deconstruction shorthand does not automatically select construction shorthand.
+Named and established expected-type constructions remain the fully established examples; the inferred form above records the requested direction rather than a complete parser rule. Same-name construction entries such as User { name, age } also need a separate decision; proposed deconstruction shorthand does not automatically select construction shorthand.
 
 ## 8. Typed declaration without an initializer: implicit zero
 
