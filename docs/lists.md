@@ -4,6 +4,8 @@ Status: **growable List as the default bracket-literal family selected, 2026-10-
 
 ## Purpose and beginner examples
 
+`List<Int>` is [temporary explanatory notation](generic-notation.md), not a selected generic application spelling. The selected literal default remains growable List regardless of how explicit type arguments will eventually be written.
+
 A list owns a contiguous allocation with a current initialized length and possibly larger capacity. Adding/removing elements changes length. A list is not a linked list in this proposal.
 
 ```text

@@ -4,6 +4,8 @@ Status: **proposed view concept, 2026-10-19**. `Slice<T>`, slicing punctuation, 
 
 ## A view, not another element allocation
 
+`Slice<T>` uses [temporary generic notation](generic-notation.md). The future generic review will determine its source spelling; this view proposal does not select angle-bracket application syntax.
+
 A slice describes a contiguous region of initialized elements owned elsewhere. The intended representation is an address plus an element count, with ownership/lifetime facts checked separately; exact ABI and alias enforcement are open. Creating or copying a permitted slice view does not copy its elements, allocate a new element buffer, or transfer the source's ownership.
 
 ```text

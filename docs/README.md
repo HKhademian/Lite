@@ -11,6 +11,8 @@ Design snapshot: **2026-10-19**. Stage: **planning; no implementation**.
 
 Examples use `text` fences because no LiteScript syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
 
+Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See [temporary generic notation](generic-notation.md).
+
 `as` is used for loop receivers in current examples. The discussion also considered and provisionally accepted `:`; the final separator remains open. See [loop receivers](loop-receivers.md).
 
 ## Foundations
@@ -34,6 +36,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 
 ## Types and values
+
+- [Temporary generic notation](generic-notation.md): angle brackets explain type-family concepts while generic source syntax remains deferred; type inputs and compile-time values are distinct concerns.
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
 - [Sequence storage families](sequence-types.md): selected growable List literal default; proposed array owners and slice views, storage/copy boundaries, and decision order.

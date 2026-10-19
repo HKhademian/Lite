@@ -4,6 +4,8 @@ Status: **proposed storage family, 2026-10-19**. `Array<T, N>` and `Array<T>` ar
 
 ## Compile-time size
 
+The angle brackets in examples such as `Array<Float, 3>` are [temporary generic notation](generic-notation.md). Float names the intended element type; 3 names the intended static extent. Their joint spelling does not select a generic parameter mechanism, const-generic syntax, or a final array type form.
+
 `Array<T, N>` owns exactly N contiguous inline T slots. N is part of the static type, so lengths 3 and 4 are distinct array types. For ordinary nonzero-sized elements, indexed addressing follows the element stride; zero-sized elements require a representation rule.
 
 ```text

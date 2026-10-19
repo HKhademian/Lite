@@ -10,6 +10,8 @@ Status: **growable List as the default bracket-literal family selected, 2026-10-
 
 The array family needs a distinction between a compile-time length and a length chosen once at runtime. Schematic types below use `Array<T, N>` for inline compile-time arrays and `Array<T>` for runtime-sized fixed-length owners. `List<T>` and `Slice<T>` name the other roles. These are illustrative names, not a selected generic declaration grammar.
 
+The user explicitly deferred generic syntax: these angle-bracket forms describe concepts for now and can be replaced after the future generic-design review. Type inputs and static value inputs must not be conflated by the placeholder punctuation. See [temporary generic notation](generic-notation.md).
+
 ## Selected literal default and proposed advanced forms
 
 ```text

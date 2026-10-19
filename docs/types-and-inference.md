@@ -47,6 +47,8 @@ Binding reassignment and read/write access to held data are distinct capabilitie
 
 These are desired capabilities, not a complete or implemented specification. Syntax for all of them has not been settled.
 
+All angle-bracket generic forms in this reference are [temporary explanatory notation](generic-notation.md), including `Array<Float, 3>`, `List<Int>`, `Option<User>`, and `Result<T, E>`. They do not select future generic declaration or application syntax. In particular, an element type and a compile-time extent are different conceptual inputs; their mechanism and spelling await the generic-design review.
+
 The [type-category review](type-categories.md) separates products, named enum alternatives, unions of existing types, domain wrappers, generated data operations, and value/reference semantics. The [reference comparison](type-categories-comparison.md) shows why data class and value class do not provide one portable contract. The [enum proposal](enums-and-variants.md#design-direction-after-the-category-review) recommends one enum concept for plain and payload cases without selecting case-specific subtypes or a memory model.
 
 Record type declarations have selected nominal identity, including unnamed inline declarations: two independently declared records remain distinct despite identical fields. Conversion requires explicit reconstruction under their visibility and ownership contracts. Contextual record construction and headless field extraction do not introduce structural assignment compatibility. Standalone inferred record literals and generic type instantiation still need contracts; see [record identity](record-type-identity.md).

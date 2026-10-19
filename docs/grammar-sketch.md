@@ -6,6 +6,8 @@ Status: **descriptive outline, deliberately incomplete and not implementation-re
 
 Collect the current surface direction in one place without disguising unresolved inference, pattern, and clause rules as a complete specification.
 
+Angle-bracket generic examples elsewhere are [temporary documentation notation](generic-notation.md), not productions selected by this sketch. Generic declaration/application syntax is deferred. In particular, `Array<Float, 3>` does not settle how type parameters or compile-time value parameters will be expressed.
+
 `[x]` below means optional notation; `{x}` means repetition in grammar productions. Quoted braces and punctuation are literal tokens. The code examples elsewhere use source braces normally.
 
 ## Comment scanning
