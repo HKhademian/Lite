@@ -4,6 +4,8 @@ Status: **protocol decomposition proposal, 2026-10-19**. Capability-based consum
 
 These names explain semantic requirements, not mandatory annotations for beginner scripts. The [inferred-indexing proposal](collection-inference.md#inferred-indexing-for-small-scripts) derives positional-access requirements from ordinary values[index] syntax in an unannotated function parameter. Explicit published contracts and inference boundaries remain separate decisions.
 
+The [operation-contract proposal](collection-operation-contracts.md) connects this to compiler resolution: loop/bracket sugar uses a declared implementation of the required operation. Missing support is a static contract error; failure of a supported operation follows its declared outcome type. Index/key, yielded/read access, coherence, effects, and cost laws remain part of the eventual interface contract.
+
 ## Traversal is the minimum
 
 `Iterable<T>` provisionally means that an operation can obtain one forward traversal of T elements under an explicit access/consumption contract. Iterator/cursor state is separate from a reusable collection. A borrowed collection can often create local traversal state without mutating its elements; an existing one-shot cursor needs defined consumption or writable access.
