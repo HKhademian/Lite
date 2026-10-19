@@ -35,6 +35,20 @@ copied.middle.inner.position.x = 10;
 
 Here x, y, z, w, q, and u are all part of the copied Outer value. The original's inline x remains unchanged. This concerns value layout and observable fields; it does not require a particular physical copy instruction or a byte-for-byte padding guarantee. A field explicitly represented as a reference instead points to separate storage, and that target is not part of the inline copy.
 
+A named record field is still inline value storage. Its type being User rather than Int does not silently make it a reference:
+
+```text
+User := record { name: String; age: Int; }
+P := record { nested: Middle; u: Int; }
+Q := record { nested: Middle; u: User; }
+
+originalQ: Q = {};
+mut copiedQ := originalQ;
+copiedQ.u.age = 18;
+```
+
+Both P.u and Q.u are copied with their containing records. In Q, the entire inline User value is included; originalQ.u.age is unchanged by the shown edit. If User itself contains references, copy those references without cloning their targets. A backend's decision to use an indirect physical representation must preserve these value-copy semantics.
+
 Conceptually:
 
 ```text
