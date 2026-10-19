@@ -74,6 +74,8 @@ A receiver was proposed as the explicit opt-in to a value-producing hook. A nonr
 
 ## Finally
 
+The [shared finally review](finally.md) gives a full conditional example and distinguishes operation, branch-region, and construct cleanup. The same intent applies here; loop completion and failure precedence retain the open contracts below.
+
 `finally` is intended to run once on structured completion or exit, after a normal result or exit payload is determined. It must not silently suppress a pending early return or propagated error.
 
 Receiving `finally` blocks that transform an ordinary result were requested. Their input must represent completion state rather than assume a successful value always exists. The exact descriptor type, allowed transformations, cleanup failure handling, and prohibitions on escaping control flow remain open.

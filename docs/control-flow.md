@@ -70,7 +70,7 @@ Structured exits run applicable `finally` blocks while unwinding. The intended o
 
 Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
 
-These structured-exit rules do not establish cleanup behavior during a panic. The separate [panic path](panics.md) still needs termination versus unwinding and cleanup guarantees.
+The [finally example](finally.md) proposes integrating cleanup with typed panic transfer while retaining inner-to-outer structured-exit cleanup. That extension and cleanup-failure precedence remain unselected. These structured-exit rules do not establish cleanup behavior during a panic. The separate [panic path](panics.md) still needs termination versus unwinding and cleanup guarantees.
 
 ## Notes
 

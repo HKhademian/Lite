@@ -134,11 +134,11 @@ The grouping identifies the nested block expression as the recovery subject and 
 
 A similar nested region could appear in an else-if or false body. An ordinary call-level handler remains simpler when only one operation needs recovery. The language must not silently reinterpret a branch body brace as a separately handled inner block.
 
-### Recovery bodies and future finally clauses
+### Recovery bodies and finally clauses
 
 A recovery body can contain ordinary operation-level recovery too. If its own operation failure is handled locally, it can continue; otherwise a panic travels farther outward. It never restarts the same recovery body automatically.
 
-Finally remains an explored cleanup hook rather than a selected complete policy. A failure during cleanup needs its own rules, especially when another failure is already pending. This review does not assume the conditional's final handler also protects its own handler or a future finally body.
+The [full finally example](finally.md#full-conditional-example) adds operation, selected-branch, and whole-conditional cleanup. Proposed ordering is protected evaluation, optional recovery, then finally; cleanup proceeds from entered inner regions outward and preserves pending results/exits when it succeeds. Panic cleanup, cleanup failure, and receiving-finally transformations remain open. The conditional's final handler does not protect its own handler or finally body.
 
 ## Result errors remain explicit
 
@@ -172,14 +172,14 @@ An explicit nonlocal exit from the handler contributes no local fallback value. 
 ## Proposed grammar distinction
 
 ```text
-conditional_with_recovery := conditional_core [conditional_recovery]
+conditional_with_recovery := conditional_core [conditional_recovery] [finally_clause]
 conditional_core := "if" condition block
                     { "else" "if" condition block }
                     [ "else" block ]
 conditional_recovery := "else" "(" receiver_pattern ")" block
 ```
 
-This is a proposal fragment, not a replacement for the selected incomplete grammar. Existing tag placement and the exploratory finally clause need integration. Complete receiver-pattern policy, precedence with condition-local recovery, handler typing, cleanup, and any filter semantics remain open.
+This is a proposal fragment, not a replacement for the selected incomplete grammar. Existing tag placement and the proposed [finally ordering](finally.md) need complete integration. Complete receiver-pattern policy, precedence with condition-local recovery, handler typing, cleanup, and any filter semantics remain open.
 
 No newline, indentation, capitalization, or type-checking guess chooses between a false branch and a recovery clause. Parse else if, else followed by a body, and else followed by a receiver header as distinct forms. Existing mandatory braces retain unambiguous nesting.
 
