@@ -51,6 +51,28 @@ It must not automatically capture arbitrary panics inside called functions. Call
 
 Custom index providers also need a coherent contract, potentially a checked primitive and an asserting adapter. Do not silently unwrap every Result-returning function as an assertion or let operator mode guess at a provider's undeclared effects.
 
+## Ordinary algorithm code must remain direct
+
+The user objects to expecting beginners to write values[i]! > values[j]! and separately handle each indexed assignment while implementing a sort. That source burden is a reason to favor the asserting default for ordinary positional access, rather than regard per-access Result syntax as the beginner baseline.
+
+Under alternative B and the candidate complete indexed-sequence shorthand:
+
+```text
+swap_if_out_of_order := fn(values: mut [Int], i: Int, j: Int) {
+    if values[i] > values[j] {
+        temporary := values[i];
+        values[i] = values[j];
+        values[j] = temporary;
+    }
+}
+```
+
+This is a sorting step, not a complete sorting algorithm. Reads and writes use ordinary syntax without a Result marker on every access. Its public input visibly requests writable indexed-sequence access; its final conditional has Unit result under the existing action-conditional rules. The spelling [Int] remains unselected, and mut [Int] would need an actual writable indexed refinement supplied by the provider, not a fabricated setter. It does not require growth, contiguous storage, or one concrete List type.
+
+Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Applicable panic termination/capture/cleanup rules still need definition.
+
+Algorithm invariants and range-based traversal can make indexes valid; a compiler can eliminate checks when proved safe. The source does not gain or lose ! markers depending on optimization success. Expected invalid positions, such as user-supplied requests that a program intends to recover from, should use the separately explicit checked operation. Its spelling remains open; this recommendation does not introduce general panic catch blocks or change the existing Result ! operator.
+
 ## Interaction with the existing short forms
 
 If ordinary users[index] produces a plain User under alternative B, users[index]! cannot retain its earlier meaning without a distinct explicitly selected capture rule. Postfix ! is already Result extraction/propagation; it is not a general panic-capture operator.
