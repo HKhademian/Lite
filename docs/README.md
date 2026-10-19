@@ -124,6 +124,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Control flow
 
+- [Conditional recovery](conditional-recovery.md): proposed false-branch versus failure-handler distinction, unused receivers, whole-construct scope, and explicit Result handling.
 - [Conditionals](conditionals.md): one syntax for actions and values.
 - [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.

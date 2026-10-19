@@ -160,6 +160,12 @@ if c1 {
 
 Braces establish which conditional owns `else`; indentation is irrelevant.
 
+## Proposed attached recovery
+
+The user asks for if condition { ... } else(failure) { ... }. The [conditional-recovery proposal](conditional-recovery.md) reserves bare else for a false branch and receiving else for failure recovery, permits a final recovery clause after an ordinary else-if/else chain, and uses else(_) when the failure value is unused. This is an extension proposal, not selected grammar.
+
+A false condition or pattern mismatch is not failure. Returned Result values inside a branch retain their individual explicit handling/extraction requirements, and ! still targets the enclosing function/closure. A Result-valued whole conditional can be recovered as one outcome. Whole-construct panic scope, receiver typing, cleanup, and finally integration remain under review.
+
 ## Tags and completion
 
 ```text

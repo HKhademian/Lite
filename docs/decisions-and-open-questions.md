@@ -151,6 +151,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The user requests [conditional recovery](conditional-recovery.md) with if condition { ... } else(failure) { ... }. The proposal keeps bare else as false selection, permits receiving recovery after the complete ordinary branch chain, and uses else(_) for an unused failure. False is not failure, inner Results still need explicit handling, and ! still returns from the enclosing function. Scope, finally ordering, receiver typing, and exact grammar remain unselected.
+
 - The [recovery receiver review](recovery-receiver-types.md) proposes direct E | Panic for combined error/fault handlers rather than a mandatory wrapper. Optional typed receiver filters could let nonmatching panics propagate, while every returned Result error still needs explicit coverage. Carrier/category types, origin metadata, filter grammar/coverage, and representation remain unselected; existing E-only examples describe Result-only handling.
 
 - [Shared expression recovery](expression-recovery.md) uses one selected else surface for returned errors and typed panics, without extra pop_front_or helpers or implicit conversion of every call to Result. Scope remains under review: the user requests an [outcome comparison](recovery-boundaries.md) of whole-call versus argument-level handlers before choosing whole-evaluation versus operation-specific capture. Mixed-channel receiver typing, assignment attachment, cleanup, ABI, and runtime costs remain open; postfix ! and declared recoverable error coverage are unchanged.

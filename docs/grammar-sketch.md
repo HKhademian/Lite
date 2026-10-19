@@ -194,6 +194,8 @@ The existing-name test resolves a name already in scope and refines knowledge ab
 
 The selected and chain evaluates operands in order and exposes successful pattern bindings to later operands and the body, never the failed branch. The condition operand placeholders exclude ungrouped top-level logical separators; nested grouping can contain ordinary Boolean and/or expressions. In `Some(user) := find_user(id) and user.age > 14`, the pattern source ends before and. Full productions remain incomplete; binding-producing or/not, rebinding across separate operands, and general type-test precedence are not selected here. Repeated names within each individual pattern use selected ordered shadowing. See [conditional pattern chains](condition-chains.md).
 
+The user-requested [conditional recovery](conditional-recovery.md) extension would add a final else(receiver) body after the normal conditional chain. Its receiver would distinguish it from the ordinary false branch, and else(_) would ignore the failure. It is not added to the selected productions above; panic scope, finally ordering, and receiver policies remain under review. A false condition is not an error, and this proposal does not let ! return to the conditional or implicitly unwrap Result-valued operands.
+
 ## Match
 
 ```text
