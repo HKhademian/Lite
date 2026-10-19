@@ -135,6 +135,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The user proposes a generic reserve() operation for storage without initialization, as in x: User = reserve(), an anonymous record target, or a tuple target. The name/syntax, generic inference, and stack/heap allocation policy are not selected. Ordinary omitted declarations still zero-initialize; reserved storage requires a distinct initialization/validity contract before value use. First-write syntax, partial initialization, ownership, allocation failure, and cleanup remain open. See [reserved storage](reserved-storage.md).
+
 - The [parameter-permission review](parameter-permissions.md) distinguishes local var declarations, writable caller data via mut, and caller-location replacement via var. The location association is fixed; local-only var parameter headers are retired. Combined payload/replacement qualifier syntax remains open.
 
 - [Type-side mut placement](mut-qualifier-placement.md) is selected and canonical typed examples have been migrated. Qualified aliases, per-alternative access qualifiers, recursive scope/normalization, and complete type grammar remain separate decisions. The placement change does not select borrowing, copying, caller replacement, or a ref mode.

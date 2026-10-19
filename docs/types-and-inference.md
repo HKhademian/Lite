@@ -83,6 +83,8 @@ An internal `Never` or bottom type can describe control flow that cannot complet
 
 An ordinary value must be initialized and valid for its type. Absence requires an optional type. No implicit uninitialized or nullable state is introduced by inference.
 
+The separate [reserved-storage proposal](reserved-storage.md) explores an explicit reserve() operation whose layout type comes from the expected annotation. It does not select ordinary uninitialized User values: storage initialization would need its own tracked contract before ordinary value use. Its syntax, generic inference, and stack/heap policy remain open.
+
 ## Generic fields and structural matching
 
 The [generic User example](aggregate-patterns.md#generic-aggregate-example) requires `User(: Int, == outVal)` to recognize the exposed aggregate family/schema, type-match its first field, and value-match its second, without introducing bindings. This interpretation is conditional on a valid generic type-test and matching-schema contract; it does not select generic declaration syntax.

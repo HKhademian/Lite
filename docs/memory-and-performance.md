@@ -38,6 +38,10 @@ The selected temporary [var-qualified parameter](slot-parameters.md) gives acces
 
 [Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
 
+## Proposed reservation without initialization
+
+The provisional generic reserve() operation would use an expected record/tuple type to reserve appropriately sized/aligned stack or heap storage without zero/default initialization. Its surface, allocation policy, and failure handling are unselected. Ordinary declarations still initialize immediately. A reservation requires a separate initialization-state contract before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership cannot follow merely from a function-shaped spelling. See [reserved storage](reserved-storage.md).
+
 ## Loop state costs
 
 An accumulator retains a candidate value and replaces it after a contribution. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.

@@ -57,6 +57,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): omitted typed initializers and = 0 select zero; = {} uses declared defaults; nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type; and value: Type = 0 versus declared-default construction with {}, with zero eligibility and broader literal contexts still open.
+- [Reserved storage](reserved-storage.md): provisional generic reserve() for stack/heap storage without initialization; expected types, initialization state, partial construction, and allocation/cleanup questions.
 - [Type categories](type-categories.md): products, sums, raw codes, domain wrappers, generated operations, and value/reference semantics as separate decisions.
 - [Type categories compared](type-categories-comparison.md): enum, struct, data/case class, value-wrapper, and sealed-family models across twelve reference languages.
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
