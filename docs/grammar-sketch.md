@@ -245,7 +245,7 @@ Separate receiver slots bind names from left to right, traversing nested slot pa
 
 Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
 
-The hook productions show explored syntax. Receiver payloads and `then`/`else` composition are still open; grammar acceptance cannot settle those semantics.
+The hook productions show explored syntax. Receiver payloads and `then`/`else` composition are still open; grammar acceptance cannot settle those semantics. The [loop recovery example](loop-recovery.md) places failure recovery outside a grouped whole loop because normal-empty else can already carry a receiver. It does not reinterpret else(receiver) based on the receiver name/type or add an ambiguous second loop-hook production.
 
 ## Tags and contexts
 

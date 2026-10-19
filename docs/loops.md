@@ -83,6 +83,10 @@ The requested direction is a descending inclusive range such as `10..=1`. A posi
 
 Reversing an arbitrary stream may require storage; do not silently promise reverse traversal without source capability or explicit buffering.
 
+## Recovery and cleanup example
+
+The [full loop recovery example](loop-recovery.md) combines per-operation handling, an explicit iteration region, optional-accumulator completion, and outer grouped-loop recovery/finally. It also exposes a clause collision: the loop's existing normal-empty else may already have a receiver, so receiver presence cannot independently identify a failure handler. Full grammar, shared dispatch, and panic cleanup remain proposals.
+
 ## Notes
 
 The body follows the final-expression rule. A calculation followed by a final assignment or action does not secretly contribute the earlier calculation. See the accumulator document before interpreting a loop's result type.

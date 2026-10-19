@@ -90,6 +90,10 @@ Each entered construct runs its own finally once when it is left, provided clean
 
 The structured-return cleanup intent already exists. Running finally during language-managed panic transfer is a proposed extension requiring a transfer/cleanup implementation; the trace must not be read as a currently selected guarantee for every panic or abort.
 
+## Full loop counterpart
+
+The [loop recovery example](loop-recovery.md) adds operation cleanup, per-entered-iteration cleanup, then completion processing, and whole-loop cleanup. Continue leaves the iteration region but does not finish the loop; loop-level cleanup runs when the whole region is left. Its grouping also separates normal no-contribution else from failure recovery, a collision that the conditional receiver distinction cannot solve by itself.
+
 ## A handler does not protect its own finally
 
 The operation's recovery handler covers its protected subject, not itself or its finally. A new panic from an operation's finally can reach a surrounding branch recovery boundary. A panic from a branch finally can reach surrounding conditional recovery. A panic from finish_run must travel to an enclosing eligible boundary or the unhandled-fault policy; it does not re-enter report_remaining_failure.

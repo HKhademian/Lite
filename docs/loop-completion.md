@@ -72,6 +72,10 @@ A receiver was proposed as the explicit opt-in to a value-producing hook. A nonr
 
 `_` in `then(_)`, `else(_)`, or `finally(_)` is an ordinary readable receiver binding whose nonuse is allowed. For example, `then(_) { process(_) }` may read the input. Receiver presence retains the proposed opt-in to a value-producing hook; its spelling does not change the phase-specific payload. Those payload contracts remain open where described above and below.
 
+## Failure recovery is not the empty hook
+
+The user requests a full loop recovery/finally example. The [loop recovery review](loop-recovery.md) keeps normal no-contribution completion separate from failure. Since both receiving and nonreceiving empty hooks were requested, else(failure) cannot be reserved for recovery merely by looking for a receiver or its name. The example handles None in then(result) and attaches recovery outside an explicitly grouped loop. This preserves the existing completion exploration without silently retiring its receiver, and does not settle general grouping/dispatch grammar.
+
 ## Finally
 
 The [shared finally review](finally.md) gives a full conditional example and distinguishes operation, branch-region, and construct cleanup. The same intent applies here; loop completion and failure precedence retain the open contracts below.
