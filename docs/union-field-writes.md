@@ -26,7 +26,7 @@ The binding itself is declared to hold either type. It can change its active alt
 P := record { field: A; }
 Q := record { field: B; }
 
-mut parent: P | Q = choose_parent();
+parent: mut (P | Q) = choose_parent();
 value := parent.field; /* read type: A | B */
 
 parent.field = a; /* rejected: Q.field does not accept A */
@@ -43,7 +43,7 @@ Assume C, D, and E are distinct existing types:
 P := record { field: C | D; }
 Q := record { field: C | E; }
 
-mut parent: P | Q = choose_parent();
+parent: mut (P | Q) = choose_parent();
 c: C = make_c();
 d: D = make_d();
 e: E = make_e();

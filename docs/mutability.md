@@ -2,7 +2,7 @@
 
 Status: **independent `var`/`mut` declarations and explicit mutation parameters established; ownership and full method syntax open**.
 
-The subsequent [mut-placement review](mut-qualifier-placement.md) compares the current mut name: T with name: mut T as access contracts become explicit types. It recommends the latter for annotated forms, with inferred declarations retained, but no migration has been selected. The examples below still use the established prefix.
+The selected [mut placement](mut-qualifier-placement.md) is name: mut T for annotated declarations and parameters. Inferred declarations retain mut name := expression, and var remains a binding modifier. The former typed-prefix spelling is superseded.
 
 ## Purpose
 
@@ -42,7 +42,7 @@ var x := make_user();     /* reassignable binding; read-only access */
 var mut x := make_user(); /* reassignable binding; writable access */
 ```
 
-These lines are separate alternatives, not repeated declarations in one scope. The same prefixes apply before an explicitly typed declaration, such as `mut x: User = make_user()`. Combined modifiers have the order `var mut`; `mut var` and repeated modifiers are rejected.
+These lines are separate inferred alternatives, not repeated declarations in one scope. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
 
 Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var`. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
 
@@ -58,14 +58,14 @@ A frozen value would have a stronger guarantee: its protected state cannot chang
 
 Operations receive read access by default. Affected receiver and parameter bindings explicitly carry `mut` when the operation needs writable access. Those bindings describe the mutation contract; the function needs no additional mutation marker. Required capabilities must be checked against the caller's available capabilities.
 
-The prefix `mut` goes before the affected parameter name, matching declaration prefixes. The examples use an explicit `self` parameter to illustrate receiver access. The choice of method declaration syntax, general reference/type qualifiers, argument-passing rules, and ownership behavior remains open. Assume the fields are accessible in the implementation context.
+For typed parameters, mut qualifies the type after the colon. The examples use an explicit self parameter to illustrate receiver access. Full method declaration syntax, general reference qualifiers, argument-passing rules, and ownership behavior remain open. Assume the fields are accessible in the implementation context.
 
 ```text
 name_of := fn(self: User): String {
     self.name
 }
 
-rename := fn(mut self: User, name: String): Unit {
+rename := fn(self: mut User, name: String): Unit {
     self.name = name
 }
 ```

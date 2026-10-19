@@ -8,7 +8,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
 - [Immutability by default](immutability-by-default.md) is a language design goal: start with fixed bindings and read-only access; make mutation an explicit, practical capability through var/mut. Writable access adds authority, not a wider set of admissible stored values. This does not select deep freezing, purity, implicit copying, or an ownership model.
-- Bindings are fixed and provide read-only access by default. `var` permits binding reassignment, `mut` permits held-data updates through the binding, and `var mut` permits both.
+- Bindings are fixed and provide read-only access by default. Var permits binding reassignment; mut permits held-data updates. Inferred var mut x := expression grants both, with var x: mut T = expression as its annotated form.
 - Operations have read access by default; affected receiver/parameter bindings explicitly carry `mut`. There is no additional function-level mutation marker.
 - Minimal visibility and capability exposure by default.
 - Explicit optional data and typed errors instead of universal nullability.
@@ -59,8 +59,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
 - Explicit `Unit` should be supported as a value.
 - `:=` declares with inference; `: Type =` declares with annotation; `=` assigns.
-- Declaration prefixes are `mut`, `var`, or `var mut`, with the same forms for inferred and explicit types. `mut var` and repeated modifiers are rejected.
-- Typed mutation parameters use a prefix, as in `fn(mut user: User) { ... }`; the full method-receiver notation remains open.
+- Inferred declaration prefixes are mut, var, or var mut. Typed forms use name: mut T for writable data access, with var before the name when rebinding is needed. The former mut name: T and var mut name: T spellings are superseded. Inferred mut var and repeated modifiers are rejected; see [mut placement](mut-qualifier-placement.md).
+- Typed mutation parameters use fn(user: mut User) { ... }; the full method-receiver notation remains open. Inferred declarations retain mut user := expression. This changes placement without changing access or argument-passing semantics.
 - Whole-binding `=` and compound updates require `var`; field/element updates require `mut` and the target's other permissions.
 - Assignments are not general expressions or chained value assignments.
 - Function result annotations use `:`, not `->`.
@@ -128,7 +128,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- The [mut-placement review](mut-qualifier-placement.md) reopens the established mut name: T spelling. It recommends name: mut T for annotated declarations/parameters, preserving var as a binding modifier and keeping mut name := expression for inference. This would revise the earlier placement rule; it is not yet selected, and no duplicate typed spelling or runtime semantic change follows. Qualified aliases, composite access-type scope, and full grammar remain separate decisions.
+- [Type-side mut placement](mut-qualifier-placement.md) is selected and canonical typed examples have been migrated. Qualified aliases, per-alternative access qualifiers, recursive scope/normalization, and complete type grammar remain separate decisions. The placement change does not select borrowing, copying, caller replacement, or a ref mode.
 
 - The [caller-location keyword comparison](caller-location-keywords.md) reopens the parameter spelling ref/mut/slot/mut ref while preserving accepted temporary caller-location semantics. It recommends slot for the current limited replacement feature; a separate read-only-by-default ref mode is a larger alternative that could compose with mut and slot. Bare mut retains its selected held-data role; no replacement spelling, public pointer feature, or general reference system is selected by this review.
 
@@ -237,6 +237,8 @@ The [focused review](pattern-bindings-and-tests.md) compares Rust, Python, Dart,
 Loop receivers are irrefutable; parameter, recovery, and completion receiver policies remain to confirm. Complete coverage and fallback rules, enum-case/metadata collisions, stored Result payload extraction, and ownership/lifetime contracts. These are separate from underscore unused-name intent; see [pattern binding and shadowing](pattern-shadowing.md) and [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
 
 ## Superseded suggestions
+
+- Typed mutation prefixes before names, including mut user: User and fn(mut user: User). Use user: mut User in annotated declarations/parameters; inferred mut user := expression remains valid.
 
 - Bare None as an absent-case pattern or a special prelude-constructor exception. Use `.None`; bare pattern identifiers bind.
 - Bare `User` as a type-only arm selected through type-name lookup. Use the selected marked `: User` type-only pattern instead.

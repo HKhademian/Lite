@@ -28,7 +28,7 @@ score = "ten"; /* rejected */
 
 Inference chooses static types. It does not make a variable dynamically change type.
 
-Binding reassignment and read/write access to held data are distinct capabilities: `var` permits reassignment, `mut` permits writable access, and `var mut` permits both. Neither changes the static value type. [Mutability](mutability.md) also defines read access as the operation default, with explicit `mut` on affected receiver/parameter bindings and no additional function-level mutation marker. Full method notation and capability inference rules remain open. Inference must not silently upgrade an existing read-only borrowed view to writable access.
+Binding reassignment and read/write access to held data are distinct capabilities: var permits reassignment and mut permits writable data access. Inferred var mut x := expression grants both; the typed form is var x: mut T = expression. The held value's type remains fixed under assignment. [Mutability](mutability.md) also defines read access as the operation default, with mut in affected typed receiver/parameter annotations and no additional function-level mutation marker. Full method notation and capability inference rules remain open. Inference must not silently upgrade an existing read-only borrowed view to writable access.
 
 ## Intended type-system foundation
 

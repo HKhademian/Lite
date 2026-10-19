@@ -6,7 +6,7 @@ Status: **scope clarification and design review, 2026-10-18**. Read-only default
 
 Bindings and ordinary parameters are fixed and provide read access by default. These rules describe permitted operations, not whether an argument is copied, moved, borrowed, or represented by a machine address.
 
-The existing mut parameter prefix requests writable access to held data. A slot-qualified parameter additionally describes accepted replacements into the supplied caller location. Neither is permission to invent a nullable state, bypass visibility, or alter a location's declared storage type.
+The selected type-side mut parameter qualifier requests writable access to held data, as in user: mut User. A slot-qualified parameter additionally describes accepted replacements into the supplied caller location. Neither is permission to invent a nullable state, bypass visibility, or alter a location's declared storage type.
 
 ## 2. Semantic passing versus physical calling convention
 

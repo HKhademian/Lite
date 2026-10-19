@@ -2,7 +2,7 @@
 
 Status: **user-requested comparison, 2026-10-18; no replacement spelling selected**. This reopens the surface spelling of received caller locations, not the accepted behavior: access is temporary and assignment through a writable slot replaces the supplied caller variable or field. Slot access summaries, grouped distribution, and the established var/mut meanings remain selected.
 
-The later [mut qualifier placement review](mut-qualifier-placement.md) separately compares fn(mut target: T) with fn(target: mut T). Modifier placement is reopened without changing the capability distinctions or selecting a ref parameter mode.
+The later [mut qualifier placement decision](mut-qualifier-placement.md) selects fn(target: mut T), superseding the earlier typed name prefix. The examples below use the selected placement without changing capability distinctions or selecting a ref parameter mode.
 
 ## The naming concern
 
@@ -34,7 +34,7 @@ A separate aliasing mode can retain existing permissions explicitly:
 
 ```text
 fn(ref target: T)                 /* proposed read-only caller view */
-fn(mut ref target: T)             /* proposed held-data mutation */
+fn(ref target: mut T)             /* proposed held-data mutation */
 fn(ref target: slot T)            /* proposed replacement with T */
 fn(ref target: A | slot B | C)    /* proposed read A/B/C, replace with B */
 ```
@@ -46,7 +46,7 @@ These are illustrative parameter headers, not complete selected grammar or alter
 The existing form is:
 
 ```text
-rename := fn(mut user: User, name: String) {
+rename := fn(user: mut User, name: String) {
     user.name = name
 }
 ```
@@ -84,14 +84,14 @@ Its limitation is that a contract with no slot alternatives does not by itself d
 The illustrative form is:
 
 ```text
-fn(mut ref target: T)
+fn(ref target: mut T)
 ```
 
 This can cleanly compose caller aliasing with permission to mutate the referenced data. Under LiteScript's existing mut/slot separation, however, it does not automatically grant replacing the entire supplied location. Replacing it still requires a slot contract unless the language deliberately broadens mut.
 
 Rust's &mut T permits mutable access to the referent, including assignment through dereferencing; adopting those permissions wholesale would not preserve LiteScript's narrower distinction between held-data mutation and allowed replacements. The analogy is useful, but the permission boundary needs an explicit decision.
 
-If a separate ref parameter mode is introduced, mut ref is a useful combination, not necessarily a synonym for the current writable-slot parameter. Exact modifier placement and how they interact with type aliases remain open.
+If a separate ref parameter mode is introduced, combining ref with mut-qualified access is useful, not necessarily synonymous with the current writable-slot parameter. The user-requested label mut ref names that combination; the current illustrative spelling puts mut after the colon. Ref-mode grammar and interaction with type aliases remain open.
 
 ## Comparison with reference languages
 

@@ -28,12 +28,12 @@ Evaluate the callee expression first, then the supplied argument expressions fro
 
 ## Parameter mutation contracts
 
-The [placement review](mut-qualifier-placement.md) reopens mut user: User versus user: mut User. It recommends type-side qualification for annotated forms, but remains a proposal; the current examples retain the earlier prefix rule and its selected mutation semantics.
+The selected [placement rule](mut-qualifier-placement.md) is user: mut User for typed parameters. It replaces the earlier name-prefix spelling while preserving the mutation contract.
 
-Parameters provide read access by default. Prefix an affected parameter with `mut` to request writable access:
+Parameters provide read access by default. Qualify the affected parameter's type with mut to request writable access:
 
 ```text
-rename := fn(mut user: User, name: String): Unit {
+rename := fn(user: mut User, name: String): Unit {
     user.name = name
 }
 ```

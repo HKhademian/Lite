@@ -41,7 +41,7 @@ The original parent alternatives and flow/ownership proofs remain relevant. A ty
 ## A var binding accepts its entire declared value union
 
 ```text
-var mut x: A | B = new_A();
+var x: mut (A | B) = new_A();
 x = new_B();
 x = new_A();
 ```
@@ -59,7 +59,7 @@ For example, the parent alternatives already provide distinct paths:
 ```text
 P := record { field: A | B; }
 Q := record { field: C | B; }
-mut parent: P | Q = choose_parent();
+parent: mut (P | Q) = choose_parent();
 ```
 
 P.field accepts A/B; Q.field accepts C/B. The compiler computes parent.field's common access summary as A | slot B | C. It must inspect each parent's declared field contract before forming the summary. Ordinary source code needs no extra access wrapper for this field operation; the example access(...) notation below only illustrates a possible boundary for explicitly named access contracts.

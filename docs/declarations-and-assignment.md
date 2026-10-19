@@ -8,11 +8,11 @@ Status: **established direction; full declaration grammar remains open**.
 name := initializer;
 name: Type = initializer;
 mut name := initializer;
-mut name: Type = initializer;
+name: mut Type = initializer;
 var name := initializer;
 var name: Type = initializer;
 var mut name := initializer;
-var mut name: Type = initializer;
+var name: mut Type = initializer;
 name = replacement;
 ```
 
@@ -33,7 +33,7 @@ name = replacement;
 
 The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](mutability.md).
 
-The declaration prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are not alternate spellings. Affected function parameters also use a `mut` prefix, as in `fn(mut user: User) { ... }`. Mutation contracts belong to receiver/parameter bindings, without an additional function-level marker; see [functions](functions.md).
+For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected. For explicitly typed declarations, only var remains before the name; writable data access is written in the annotation, as in user: mut User or var user: mut User. The old typed-prefix spelling mut user: User is superseded and rejected. Typed function parameters follow the same rule, as in fn(user: mut User). No additional function-level mutation marker is required; see [placement](mut-qualifier-placement.md) and [functions](functions.md).
 
 ## Examples
 

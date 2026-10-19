@@ -24,7 +24,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
-- [Mut qualifier placement](mut-qualifier-placement.md): current mut name: T versus proposed name: mut T, inferred declarations, access-type composition, and migration requirements.
+- [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.

@@ -33,7 +33,7 @@ Earlier sketches used `interface Named { ... }` and `impl Named for Student { ..
 
 An interface conceptually requires a name-producing function; a `Student` implementation satisfies it using its own data. Whether receiver syntax is `self`, a named parameter, or another form remains open.
 
-[Mutability](mutability.md) treats a read operation and a mutating operation as requiring different receiver capabilities. Read access is the default; mutation requires `mut` on affected receiver/parameter bindings, without an additional function-level mutation marker. Full method notation and ownership rules remain open. Declaration prefixes independently select binding reassignment (`var`) and writable held-data access (`mut`). Interface requirements must preserve those contracts rather than allowing an implementation to demand more write access than its declared requirement supplies.
+[Mutability](mutability.md) treats a read operation and a mutating operation as requiring different receiver capabilities. Read access is the default; mutation requires a mut-qualified type on affected typed receivers/parameters, without an additional function-level mutation marker. Full method notation and ownership rules remain open. Var stays before a binding name; mut goes after the colon in annotated declarations, while inferred declarations retain their mut/var mut prefixes. Interface requirements must preserve those contracts rather than allowing an implementation to demand more write access than its declared requirement supplies.
 
 ## Reuse mechanisms
 

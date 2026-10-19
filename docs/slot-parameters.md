@@ -59,7 +59,7 @@ The same signature can accept a projected field when every possible parent permi
 ```text
 P := record { field: A | B; }
 Q := record { field: C | B; }
-mut parent: P | Q = choose_parent();
+parent: mut (P | Q) = choose_parent();
 
 put_b(slot parent.field);
 ```

@@ -72,24 +72,26 @@ Without grouping, a completed block item ends before any following suffix; the f
 ## Declarations
 
 ```text
-declaration := [binding_modifiers] inferred_source_pattern ":=" expression
-             | [binding_modifiers] pattern ":" type "=" expression
+declaration := [inferred_binding_modifiers] inferred_source_pattern ":=" expression
+             | ["var"] pattern ":" type "=" expression
 
-binding_modifiers := "mut" | "var" | "var" "mut"
+inferred_binding_modifiers := "mut" | "var" | "var" "mut"
 
 assignment := assignable "=" expression
             | assignable update_operator expression
 
 function := "fn" "(" [parameters] ")" [":" type] block
 
-typed_parameter := ["mut"] pattern ":" type
+typed_parameter := pattern ":" type
+
+mut_qualified_type := "mut" type_operand
 ```
 
 inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 
-The typed-parameter production shows the selected `mut` prefix; the complete parameter list, including inferred types, defaults, and parameter rebinding, remains open. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values also remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
+The type placeholder admits the selected mut-qualified annotation, as in user: mut User, with a parenthesized operand when the held value has a composite type. type_operand and the rest of type parsing remain incomplete; this production does not select per-alternative capabilities, generic access composition, or qualified aliases. The complete parameter list, including inferred types, defaults, and parameter rebinding, remains open. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values also remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
-No modifiers means a fixed binding with read-only access. `var` permits whole-binding reassignment; `mut` permits held-data updates through the binding, subject to field, element, and ownership permissions. `var mut` permits both; `mut var` and repeated modifiers are rejected. Affected function parameters explicitly carry `mut`; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
+No modifiers means a fixed binding with read-only access. var permits whole-binding reassignment; mut permits held-data updates through the binding, subject to field, element, and ownership permissions. Inferred var mut permits both; its typed counterpart is var user: mut User. Typed mut user: User and var mut user: User are superseded, rather than aliases. Inferred mut var and repeated modifiers are rejected. Typed parameters explicitly carry mut after the colon; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
 
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
