@@ -59,6 +59,8 @@ An explicit @name tag remains readable through then. Nested if/match/loop constr
 
 The final .value stays alive while then computes its result. The selected baseline makes .item, .index, and the optional item name available during active iterations only; retaining a tag does not automatically retain the last item. Count and value are available before the first condition, in the body, and in then. Last-item/index access in then is separately proposed, not selected.
 
+The [last-item proposal](loop-last-item.md) illustrates this possible extension using existing .item/.index spellings, with zero values on empty input and .count as evidence of actual entry. It requires a retention contract before adoption.
+
 ## Exits and cleanup
 
 Then runs after source exhaustion, a false condition, or bare break. Continue stays in iteration. Return @loop result supplies the final construct result directly and bypasses then. Unqualified return, forwarded errors via !, and panics are not normal loop completion. Break result is also selected: it returns the nearest loop's final result directly and bypasses then, just like a tagged direct result without requiring a tag.

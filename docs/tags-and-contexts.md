@@ -83,6 +83,8 @@ Count and the typed zero-initialized value exist before the first condition chec
 
 At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not retain a current item or iteration-local references automatically, grant metadata writes, or allow a tag to escape its construct.
 
+Extending .item/.index to mean the last visited entry in then is an [unselected proposal](loop-last-item.md). It must define retention and empty-input behavior rather than arise implicitly from tag scope.
+
 Additional fields require documented source capabilities and phase availability. An arbitrary iterator cannot promise reverse traversal, an exact remaining length, or last-item detection without additional work.
 
 The intended tag interface is checked statically and can lower to ordinary local state. It does not require dynamic reflection or an allocated tag object. Storing tags, passing them as ordinary values, and escaping a context are not accepted features; ordinary metadata values may be copied or captured subject to ownership rules that remain open.

@@ -153,6 +153,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- [Last-item/index completion access](loop-last-item.md) is a usage proposal requested for evaluation, not a selected extension. It reuses .item/.index in then for the last entered body, including skipped/broken entries, with zero state and count 0 for empty input. Retaining generic items, ownership after moves, borrowed iterator storage, and last-index-only support remain open. The selected baseline stays active-iteration-only.
+
 - [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and optional-search inference remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
 
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.

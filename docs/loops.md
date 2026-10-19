@@ -66,6 +66,8 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 
 Item and index are available during an active iteration, not in source/condition evaluation or completion under the selected baseline. Count and value are available before the first condition, in the body, and in then. Optional last-item/index access in then is a separate proposal. The user supports a uniform item interface in Boolean/unconditional modes; Unit remains the proposed payload. See [loop value](loop-value.md) for inference and universal zero rules.
 
+See [last-item/index usage](loop-last-item.md) for the unselected completion-phase proposal, empty-loop behavior, and retention questions.
+
 Leading-dot access uses only the current construct; named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
 ## Normal result and completion
