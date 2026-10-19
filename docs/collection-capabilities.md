@@ -12,6 +12,14 @@ The [operation-contract proposal](collection-operation-contracts.md) connects th
 
 Do not require a length, indexes, a common allocation, or a reusable source for this minimum contract. Yielded owned values versus borrowed read access must remain typed and lifetime-correct. Neither a large element copy nor a heap iterator object follows merely from the abstraction.
 
+### Iterable versus Traversable naming
+
+Traversable in the recent LiteScript examples denotes the same broad role commonly called Iterable: an element source from which a loop obtains iteration. These are alternative explanatory labels here, not two selected LiteScript interfaces. Recommend Iterable for this role to reduce ambiguity; final names and generic spelling remain open.
+
+Keep Iterator as the separate cursor/state that advances through elements. Iterable does not inherently promise independent repeated passes, stable order, length, or indexed access. Rust's IntoIterator is a comparable traversal-acquisition role, while Kotlin uses Iterable. Sources: [Rust IntoIterator](https://doc.rust-lang.org/std/iter/trait.IntoIterator.html) and [Kotlin Iterable](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-iterable/).
+
+The names are not universal synonyms across languages: Haskell Traversable supports effectful traversal while rebuilding a structure, a stronger/different abstraction than ordinary loop support. Source: [Haskell Traversable](https://hackage.haskell.org/package/base/docs/Data-Traversable.html). This naming recommendation does not adopt those languages' ownership, replay, or dispatch contracts.
+
 ## Independent extra abilities
 
 - Sized: obtain an exact size under a documented cheap-cost requirement, without exhausting the source. A traversal estimate is a different operation. Collection length and a cursor's remaining count need distinct definitions.
