@@ -2,6 +2,8 @@
 
 Status: **user-requested comparison, 2026-10-18; no replacement spelling selected**. This reopens the surface spelling of received caller locations, not the accepted behavior: access is temporary and assignment through a writable slot replaces the supplied caller variable or field. Slot access summaries, grouped distribution, and the established var/mut meanings remain selected.
 
+Subsequent clarification, 2026-10-19: explicit slot receivers are retained. The request to hide slot concerns derived mathematical type structure, and the attempted var-for-slot receiver substitution is rejected. This document preserves the earlier keyword comparison; see [slot ergonomics](slot-ergonomics.md) and [parameter permissions](parameter-permissions.md) for the current scope and remaining local-var/combined-access proposals.
+
 The later [mut qualifier placement decision](mut-qualifier-placement.md) selects fn(target: mut T), superseding the earlier typed name prefix. The examples below use the selected placement without changing capability distinctions or selecting a ref parameter mode.
 
 ## The naming concern

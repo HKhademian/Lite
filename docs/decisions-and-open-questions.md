@@ -11,7 +11,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Bindings are fixed and provide read-only access by default. Var permits binding reassignment; mut permits held-data updates. Inferred var mut x := expression grants both, with var x: mut T = expression as its annotated form.
 - Operations have read access by default; affected receiver/parameter bindings explicitly carry `mut`. There is no additional function-level mutation marker.
 - Minimal visibility and capability exposure by default.
-- Keep slot syntax hidden from ordinary code as much as possible, inferring routine access contracts and reserving advanced annotations for useful precision. This does not hide observable caller replacement or weaken write checks; see [slot ergonomics](slot-ergonomics.md).
+- Hide derived mathematical type-structure summaries such as A | slot B | C wherever possible, while retaining explicit slot receivers in function headers. This does not hide observable caller replacement or weaken write checks. The proposed var-for-slot receiver substitution was rejected; see [slot ergonomics](slot-ergonomics.md).
 - Explicit optional data and typed errors instead of universal nullability.
 - Recoverable failures have statically typed error contracts. To obtain a fallible call's successful payload, a caller explicitly handles/inspects the outcome, supplies a default, or propagates the error. Keeping the outcome as a `Result` for later handling does not unwrap it.
 - Propagation uses postfix `!` at each extracted Result step. Calls and members can continue directly, as in `load_user(id)!.load_profile()!.name`; parenthesis-heavy chains and mandatory temporary bindings are rejected as the everyday solution. `!.` consists of two ordinary postfix-chain tokens and is not nullable access. Local recovery uses an attached `else(error) { ... }` or `else { ... }` block. The error receiver is optional and introduces no implicit name when omitted. Implicit success construction does not imply automatic call-site extraction.
@@ -129,7 +129,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- The [slot-ergonomics proposal](slot-ergonomics.md) recommends var target: T and var target: mut T parameters for common temporary caller replacement, keeping slot contracts inferred underneath. This reconsiders the earlier local-only var parameter proposal. Neither var-parameter meaning, call-site spelling, nor the public status of restricted slot annotations is selected; one canonical meaning must be chosen before migrating examples.
+- The [parameter-permission review](parameter-permissions.md) recommends local-only rebinding if ordinary var parameters are admitted. Mut qualifies held-data access; slot replaces caller content while keeping the supplied location association fixed. Combined payload/replacement qualifier syntax remains open. Var is not a substitute for a slot receiver; the earlier substitution proposal was rejected.
 
 - [Type-side mut placement](mut-qualifier-placement.md) is selected and canonical typed examples have been migrated. Qualified aliases, per-alternative access qualifiers, recursive scope/normalization, and complete type grammar remain separate decisions. The placement change does not select borrowing, copying, caller replacement, or a ref mode.
 
@@ -240,6 +240,8 @@ The [focused review](pattern-bindings-and-tests.md) compares Rust, Python, Dart,
 Loop receivers are irrefutable; parameter, recovery, and completion receiver policies remain to confirm. Complete coverage and fallback rules, enum-case/metadata collisions, stored Result payload extraction, and ownership/lifetime contracts. These are separate from underscore unused-name intent; see [pattern binding and shadowing](pattern-shadowing.md) and [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
 
 ## Superseded suggestions
+
+- Replacing explicit slot receivers with var parameters to hide slot syntax. The user's ergonomics request concerns inferred mathematical type structure, not removing the function-header marker.
 
 - Typed mutation prefixes before names, including mut user: User and fn(mut user: User). Use user: mut User in annotated declarations/parameters; inferred mut user := expression remains valid.
 

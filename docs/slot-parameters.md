@@ -2,7 +2,7 @@
 
 Status: **temporary caller-location access through slot-qualified parameters selected, 2026-10-18**. Assignment through such a parameter replaces the caller's supplied variable or field. Expression-position slot arguments, local var parameters, complete compatibility, and general borrowing rules remain proposals. This selects no public pointer feature or general reference-value system.
 
-The subsequent [ref/mut/slot/mut ref comparison](caller-location-keywords.md) reopens the receiver's surface spelling. The accepted temporary caller-location behavior remains established; the examples below preserve the current slot form rather than selecting a second synonymous parameter spelling.
+The [ref/mut/slot/mut ref comparison](caller-location-keywords.md) records alternative spellings considered earlier. The user subsequently retained explicit slot receivers while asking to hide derived mathematical slot summaries; see [slot ergonomics](slot-ergonomics.md). No ref parameter mode or synonymous var caller-replacement spelling is selected.
 
 ## Selected caller-location contract
 
@@ -12,9 +12,9 @@ Distinguish replacing an ordinary local parameter binding from replacing a locat
 
 A slot-qualified parameter requests temporary access to the caller's location. Assignment through the parameter writes back to that location. This is selected separately from the slot marker's earlier descriptive meaning; it does not make every ordinary call an aliasing operation. An explicit call-site marker remains recommended, with its spelling unselected.
 
-## Var parameter semantics remain a choice
+## Ordinary var parameters are separate
 
-The later [slot-ergonomics proposal](slot-ergonomics.md) recommends using var parameters for caller replacement to minimize visible slot syntax. That competes with the earlier local-value interpretation below. Neither interpretation is selected; the same syntax must not acquire two implicit meanings.
+The attempted substitution of var parameters for slot receivers is rejected; it misunderstood the [slot-ergonomics goal](slot-ergonomics.md). The local-value interpretation below remains a separate proposal, not selected parameter grammar.
 
 ```text
 local_only := fn(var value: A | B) {
@@ -22,7 +22,7 @@ local_only := fn(var value: A | B) {
 }
 ```
 
-Under the earlier local-var interpretation, the assignment replaces this parameter's local binding. It does not rebind the caller's variable. The later ergonomics proposal would instead write back to the caller. This is an unresolved choice of var parameter semantics, not a selected parameter grammar or a decision about copying, moving, shared objects, or payload ownership.
+Under the recommended local-var interpretation, the assignment replaces this parameter's local binding. It does not rebind the caller's variable. Copying, moving, shared objects, payload ownership, and whether to admit local-var parameter syntax remain open. See [parameter permissions](parameter-permissions.md).
 
 ## Slot parameter with proposed call syntax
 
@@ -37,13 +37,17 @@ replace(slot value);
 
 The selected meaning is that target denotes the supplied caller location, so assignment through it replaces value. It is not an independent local value parameter, and no extra var or mut is required merely to repeat the already explicit slot-replacement requirement. Mutating fields of the stored payload still requires the appropriate mut access. The example's call-site slot marker remains a syntax proposal.
 
+The association between target and its caller location remains fixed for this call. Writing through target replaces content, not that association. No retargetable reference handle is introduced; an additional var marker has no selected caller-write role here. Combined payload mutation and replacement syntax is reviewed in [parameter permissions](parameter-permissions.md).
+
 The signature applies the selected type-position slot replacement contract to a temporary caller location. Complete parameter/type grammar still needs formalization. Expression-position slot value is a proposed way to explicitly supply a location. The same word would make replacement authority visible in the declaration and at the call; that argument expression syntax is not selected by the caller-location decision alone.
 
 For an ordinary binding, the caller must possess var authority. A fixed mut binding does not qualify for replacement of that binding. For a record field, writable access through the parent and the field's permitted replacement types are required; the parent binding itself need not be reassignable.
 
 The source must be a valid writable location. A literal, ordinary function result, or arithmetic temporary must not silently become caller storage via an implicit temporary. Exact addressability and computed-property support remain open.
 
-## Restrict replacement without restricting readable alternatives
+## Advanced partial-write contract illustration
+
+The mixed contract below illustrates the mathematical access rule. Its public advanced type grammar remains open; the user prefers deriving these summaries rather than making them routine annotations. This does not change the explicit full-slot receiver above.
 
 ```text
 put_b := fn(target: A | slot B | C) {

@@ -16,7 +16,7 @@ Provide a language that students can begin using without learning type annotatio
 - A separate panic path, with its execution and cleanup contract still open.
 - Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).
 - Minimal visibility and capability exposure by default.
-- Infer routine slot/access contracts and keep slot syntax out of ordinary code as much as possible; expose advanced precision when needed. See [slot ergonomics](slot-ergonomics.md).
+- Infer derived slot/access type structure, keeping mathematical summaries such as A | slot B | C out of routine code. Retain explicit slot receivers in function headers. See [slot ergonomics](slot-ergonomics.md).
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.
 - Small runtime requirements and native execution as an intended implementation direction.
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.

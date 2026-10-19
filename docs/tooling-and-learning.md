@@ -56,7 +56,7 @@ Begin with literals, inferred bindings, calls, braces, separators, conditions, a
 
 There should be one language rather than different semantics for a beginner mode. Full type and ownership contracts still need to work for advanced users.
 
-The [slot-ergonomics goal](slot-ergonomics.md) keeps slot inference behind familiar declarations wherever possible. Teach var replacement and mut data access first; describe rejected writes in terms of the actual field and replacement types. Advanced read/write summaries can remain available without making their internal vocabulary mandatory in beginner code.
+The clarified [slot-ergonomics goal](slot-ergonomics.md) keeps mathematical type-structure summaries inferred, while retaining explicit slot receivers for caller-location access. Teach var binding replacement, mut data access, and slot caller replacement as distinct operations. Describe rejected writes in terms of the actual field and replacement types; advanced summaries need not become mandatory beginner annotations.
 
 ## Explicit names versus editor convenience
 
