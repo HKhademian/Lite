@@ -43,6 +43,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Collection capabilities](collection-capabilities.md): proposed traversal, size, repeatability, indexing, contiguity, membership, and output requirements; no universal container superclass.
 - [Collection operation contracts](collection-operation-contracts.md): compiler resolution beneath loop/bracket sugar, missing support versus runtime failure, and inferred requirements without new beginner vocabulary.
 - [Collection function signatures](collection-function-signatures.md): required inputs, guaranteed outputs, inferred versus complete contracts, generic relationships, static abstract returns, and explicit runtime representations.
+- [Collection signature ergonomics](collection-signature-ergonomics.md): the risk of overconstrained library APIs, complete shorthand versus partial element annotations, and explicit stable contracts.
 - [Collection and source contracts](collection-source-contracts.md): static/runtime/unknown size, hot/cold production, replay, stability, and future generator consumption.
 - [Collection order and shared traversal](collection-order-and-traversal.md): positional/insertion/sorted/unspecified order, iterable sets, noniterable membership stores, and reference examples.
 - [Checked collection operations](checked-collection-operations.md): proposed fallible indexing, mismatch versus extraction failure, and flat checked declarations with explicit recovery.
