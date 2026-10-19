@@ -1,6 +1,6 @@
 # Tags and contexts
 
-Status: **prefix position, explicit access, shadowing, and no-fallback current context established**.
+Status: **prefix position, explicit access, shadowing, no-fallback loop context, and explicit-tag conditional metadata lookup established; exposure of a conditional result field and multi-branch condition metadata remain open**.
 
 ## Purpose
 
@@ -43,9 +43,13 @@ is intended to agree with:
 }
 ```
 
-`.field` refers to the current construct's context. It never searches outward for a context that happens to have that field.
+For loops, `.field` refers to the current loop context and never searches outward for another context with that field. Conditional contexts do not participate in leading-dot lookup, whether tagged or untagged; conditional fields, if exposed, require `@tag.field`. Within a conditional nested in a loop, use the loop's explicit tag for loop metadata. Ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search.
 
 Every loop has this context even without an explicit tag. Its attached then block uses the same owning loop context, so .count and .value work directly in both the loop body and then. A hidden context introduces no ordinary identifier and requires no allocated tag object. An explicit @name simply makes that context addressable from nested constructs; then does not require a separate receiver such as done.
+
+Every `if` or `else if` chain also has one result context, whether tagged or untagged. Its result has type `T` and begins at zero before branch selection. If no branch matches and there is no final `else`, that zero is the conditional's normal result. An explicit `@name` names the context for targeted operations; it does not add a wrapper block.
+
+The context exists for result construction even when it has no tag. Any conditional metadata exposed from that context requires an explicit `@tag.field`; it does not shadow an enclosing loop for leading-dot access. Inside a conditional nested in a loop, use an explicit loop tag for the outer context, and reject ambiguous leading-dot metadata reads rather than searching outward. Whether the conditional result is exposed as a `.value` field remains open. A normally completing branch result flows out as the `if` expression's result, so a final `if` in a loop body can supply the loop's next contribution. The [conditional and loop example](conditionals.md#interaction-with-loop-bodies) uses `@sum.value` explicitly for the outer accumulator.
 
 Leading-dot enum cases are a selected [type-directed form](enums-and-variants.md#inferred-case-names). The disambiguation policy must define how an expected enum case and a current-context field are distinguished; selecting case shorthand does not silently replace the established metadata rule. Explicit `@name.field` remains the way to select named metadata.
 
@@ -57,13 +61,15 @@ Leading-dot enum cases are a selected [type-directed form](enums-and-variants.md
 }
 ```
 
-Inside the conditional, `.count` is rejected; the current context is an `if`. The explicit `@users.count` reaches the loop. Body braces do not introduce a second wrapper context around their owning construct.
+The explicit `@users.count` addresses the loop from inside the conditional. Body braces do not introduce a second wrapper context around their owning construct. Conditional metadata would require its own explicit tag.
 
 ## Different construct interfaces
 
-Loop tags can expose `.item`, `.index`, `.count`, and `.value`, and identify loop exits or continuation targets. Conditional tags can expose evaluated-condition or branch metadata and identify an exit target, but do not expose loop counters or allow continuation.
+Loop tags expose `.item`, `.index`, `.count`, and `.value`, and identify loop exits or continuation targets. Conditional tags identify the conditional context and can identify an exit target, but do not expose loop counters or allow continuation. Whether a conditional tag exposes its result as `.value` or other metadata remains open; any exposed field requires explicit tagged access.
 
 For a simple conditional, `.condition` denotes the already evaluated condition. It does not reevaluate a function call. Multi-branch condition metadata is still open.
+
+The conditional expression has result type `T`, begins with zero(T), and returns the normally completing selected branch result or the zero fallback. Whether that result is exposed as read-only `.value` metadata remains open. The user sees no ordinary read use in conditions or branches and proposes comparing a post-selection `then` with the loop's existing completion clause; `@tag.value` might be readable only there. Any exposed conditional field requires an explicit tag. This result-processing `then` would not imply all-exit cleanup; abrupt-exit behavior and multi-branch `.condition` metadata remain open.
 
 ## Scope and shadowing
 
@@ -79,11 +85,11 @@ The earlier prohibition on active tag shadowing is superseded.
 
 ## Availability and implementation
 
-Count and the typed zero-initialized value exist before the first condition check. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then, not in source/condition evaluation. Count/value are also readable in conditions and then. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
+Count and the typed zero-initialized loop value exist before the first condition check. A conditional's zero-initialized result likewise exists before its first condition is evaluated, whether or not it is exposed as metadata. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then. After zero entries, then exposes typed zero placeholders for item/index with count 0. Item/index are not available in source/condition evaluation before an entry. Loop count/value are also readable in conditions and then. A conditional `then` after result selection is a candidate only; its syntax, `.value` read phase, and treatment of abrupt exits remain open.
 
 At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not by itself retain an item or iteration-local references, grant metadata writes, or allow a tag to escape its construct. Reading last-item metadata in then requires that used item to remain valid.
 
-Last-visited .item/.index access in then uses [field-sensitive retention](loop-last-item.md): keep item state only when completion observes it. On empty input, item/index retain their zero values and count is 0. The optional source item name is not reintroduced in then.
+Last-visited .item/.index access in then uses [field-sensitive retention](loop-last-item.md): keep item state only when completion observes it. On empty input, then exposes zero placeholders for item/index and count is 0; there is no last item to retain. The optional source item name is not reintroduced in then.
 
 Additional fields require documented source capabilities and phase availability. An arbitrary iterator cannot promise reverse traversal, an exact remaining length, or last-item detection without additional work.
 

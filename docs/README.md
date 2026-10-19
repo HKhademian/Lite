@@ -104,7 +104,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, selected tag-only patterns, and open representation/conversion contracts.
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
-- [Unit](unit.md): successful completion without useful data.
+- [Unit](unit.md): successful completion without useful data; one value, selected zero mapping, and proposed zero-sized physical representation.
 - [Option](option.md): explicit absence without universal nullability.
 - [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
 - [Throw as an error return](error-return-sugar.md): proposed throw error shorthand for return .err(error), declared error coverage, function/closure boundaries, and unchanged caller handling.
@@ -140,14 +140,14 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.value on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
 - [Optional loop item name](loop-receivers.md): one item identifier, body-local destructuring, and metadata instead of receiver lists.
-- [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.
+- [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection and historical receiver-pattern/filtering alternatives, with adapter, termination, branch, and failure questions deferred.
 - [Loop value](loop-value.md): typed zero-initialized .value, internal commits, skipped iterations, and result inference.
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
 - [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
 - [Finally](finally.md): full operation/branch/conditional cleanup example, proposed ordering, preserved values/exits, and open panic/cleanup-failure rules.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
-- [Loop completion](loop-completion.md): `then`, `else`, and `finally`.
+- [Loop completion](loop-completion.md): receiverless `then`, its result and metadata, and its distinction from deferred cleanup.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.
 - [Tags and contexts](tags-and-contexts.md): prefix tags, typed metadata, shadowing, and leading-dot access.
 - [Control-flow exits](control-flow.md): `return`, targeted return, `break`, and `continue`.

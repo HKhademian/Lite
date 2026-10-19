@@ -43,6 +43,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Complete record constructions end outer declaration/assignment/exit items without requiring semicolons, including record field declarations with such defaults. Trailing semicolons remain allowed; inner initializer fields still need commas. The requested x := { a = 1, b = 2 } inferred form needs brace disambiguation and identity rules; see [record literal boundaries](record-literal-boundaries.md).
 - Existing-name type tests use `if person: User { ... }` without redeclaration. Narrowing changes static knowledge, not the value or declared type; mutation stability, logical composition, negative/early-return flow, and generic/subtype semantics remain to formalize. See [type tests and narrowing](type-tests-and-narrowing.md).
 - Conditional patterns reuse declarations: `if Some(value) := expression` and `if value: Type = expression`. Matching binds branch-local names and permits lexical shadowing; no `let` keyword is added.
+- Every conditional owns a result context, optionally named with `@tag`. Its result starts at zero; when an `if`/`else if` chain has no final `else` and no condition matches, that zero is the normal result. When no normally completing branch constrains its type, it defaults to `Unit`, overridable by an expected type. Conditional metadata, if exposed, requires explicit `@tag.field`; conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata access is rejected rather than searched outward. Whether the result is exposed as `.value` metadata remains open. The user sees no ordinary use for reading it in a condition or branch and proposes comparing a post-selection `then` with loop completion as its read phase. Multi-branch `.condition` metadata remains open; see [conditionals](conditionals.md) and [tags](tags-and-contexts.md).
 - Pattern matches and Boolean guards combine through and, as in `if Some(user) := find_user(id) and user.age > 14`. Operands run left to right and stop at the first mismatch/false result; bindings from successful patterns are available to later operands and the successful body, not else or following code. Binding-producing or/not and repeated chain names remain open; see [conditional pattern chains](condition-chains.md).
 - Match arms may extend their initial pattern through and with Boolean conditions and additional explicit pattern matches. Earlier bindings are available to later operands and the body; false/mismatch tries later arms, and the first fully successful arm is selected without implicit fallthrough. Nested typed destructuring uses the same pattern system. See [match arm chains](match-guards.md).
 - Match arms use pattern { body } without case, an arrow, or required arm separators; trailing semicolons after arm bodies are allowed. Match shares action/value syntax and requires exhaustive coverage for every match. Ignored cases need an explicit arm, such as _ {}, whose empty block already returns Unit. Complete coverage proofs, optional else fallback syntax, and ownership remain open; see [match coverage](match-coverage.md).
@@ -74,6 +75,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Extra semicolons are harmless, including after complete block items, and do not become empty result-producing statements. Trailing commas in comma-separated lists are optional and allowed; required separators between ordinary items/list elements remain significant.
 - Final expressions produce block results; final declarations/assignments produce `Unit`.
 - Explicit `Unit` should be supported as a value.
+- Since `Unit` has one inhabitant, the selected universal zero rule makes `zero(Unit) = Unit`. The user proposes zero-sized physical storage; calling convention and foreign ABI lowering remain separate representation details. See [Unit](unit.md) and [universal zero initialization](zero-initialization.md).
 - `:=` declares with inference; `: Type =` declares with annotation; `=` assigns.
 - Inferred declaration prefixes are mut, var, or var mut. Typed forms use name: mut T for writable data access, with var before the name when rebinding is needed. The former mut name: T and var mut name: T spellings are superseded. Inferred mut var and repeated modifiers are rejected; see [mut placement](mut-qualifier-placement.md).
 - Typed mutation parameters use fn(user: mut User) { ... }; the full method-receiver notation remains open. Inferred declarations retain mut user := expression. This changes placement without changing access or argument-passing semantics.
@@ -130,7 +132,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
 - Loop headers allow one optional item identifier introduced by as; colon and header patterns are retired. Count/value receiver lists, receiver-slot shadowing, and header tuple patterns are retired. The item name denotes the same current element as .item; destructuring and refutable selection belong inside the body. See [item naming](loop-receivers.md).
-- Loop metadata supplies .item, .index, .count, and .value. Index is zero-based traversal position, independent of source keys/positions and reversal/step. Count counts entered iterations. Item/index are readable during active iterations and as last-visited metadata in then, not in source/condition evaluation. Count/value are available before the first condition, in the body, and in then. Retain last-item state for completion only when observable use requires it.
+- Loop metadata supplies .item, .index, .count, and .value. Index is zero-based traversal position, independent of source keys/positions and reversal/step. Count counts entered iterations. Item/index are readable during active iterations and as last-visited metadata in then if an iteration occurred, not in source/condition evaluation. After zero entries, then exposes typed zero placeholders for .item and .index, with .count == 0 distinguishing them from an actual first entry. Count/value are available before the first condition, in the body, and in then. Retain last-item state for completion only when observable use requires it.
 - Loop .value replaces .acc and automatic Option accumulators. It has a static body-result type and is zero-initialized before iteration; tail completion, continue value, or break value commits; plain continue and bare break preserve. No value_or helper or previous receiver is required. See [loop value](loop-value.md).
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
@@ -146,7 +148,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Put it before the construct: `@name loop ...`, `@name if ...`, or `@name { ... }`.
 - Construct kind determines metadata and permitted operations.
 - Tags follow lexical shadowing; an inner tag may reuse a name.
-- `.field` refers only to the current construct, with no outward fallback.
+- Loop `.field` shorthand refers only to its current loop context, with no outward fallback; within a conditional, use an explicit loop tag. Conditional metadata, if exposed, requires `@tag.field`, and ambiguous leading-dot metadata reads are rejected.
 - `@name.field` explicitly selects a named context.
 - A loop's tag remains accessible in its attached completion block. Final count and typed value are readable there; other metadata must be valid for that phase. This scope does not keep iteration-local items/references alive automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
@@ -155,9 +157,9 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 - **Priority uncertainty, 2026-10-19:** the user is not convinced return @tag value should bypass then. Its target syntax/lexical scope remain selected; completion execution and payload T/R interaction are open. See [tagged-return note](control-flow.md#tagged-return-and-completion-unresolved). Bare break and break value still reach then.
 
-- [Last-item/index completion access](loop-last-item.md) now has selected use-based retention: .item/.index describe the last entered body in then, including skipped/broken entries, with zero state and count 0 for empty input. Unobserved item metadata needs no completion retention; reading only count/index/value or declaring a tag does not retain every field. Generic ownership/borrowing and lowering remain shared implementation contracts.
+- [Last-item/index completion access](loop-last-item.md) has selected use-based retention: .item/.index describe the last entered body in then, including skipped/broken entries. After zero entries, then exposes typed zero placeholders for .item/.index and count 0; an unobserved item needs no retention. Reading only count/index/value or declaring a tag does not retain every field. Generic ownership/borrowing and lowering remain shared implementation contracts.
 
-- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and optional-search inference remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
+- [Unified loop completion](unified-loop-completion.md) uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and optional-search inference remain open. Full cleanup on escaping returns/errors/panics stays deferred; tagged-return behavior remains unresolved as recorded in [control flow](control-flow.md#tagged-return-and-completion-unresolved).
 
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.
 
@@ -231,7 +233,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Full method notation, combined caller grants, access inference and conversions, capture permissions, and aliasing rules remain open. Separate mut/var call grants are selected; local-only var parameter headers are retired. Affected receiver/parameter bindings use `mut`, without an additional function-level mutation marker; see [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
-- A uniform item interface for Boolean/unconditional loops is supported for generalization; Unit is the proposed payload, not yet selected.
+- The uniform `.item` interface is selected for Boolean/unconditional loops: active-body `.item` is `Unit`. After zero entries, `then` exposes type-directed zero placeholders for `.item` and `.index`, with `.count == 0` distinguishing the metadata state. The source-less alternatives are recorded as rejected in [item naming](loop-receivers.md#other-source-modes); see [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
+- `Unit` is single-inhabitant, so the selected zero rule makes it the zero value for no-contributor loops and source-less `.item` placeholders. The user proposes zero-sized physical storage; ABI lowering remains open. See [Unit](unit.md).
 - Loop metadata is read-only; the one optional item name follows its eventual ownership/access contract.
 - Count and typed value metadata exist before the first loop condition; old count/previous receiver names are retired.
 - Iterable expressions evaluate once; Boolean sources are reevaluated through static mode selection.
@@ -248,9 +251,13 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. Complete inference for last-value loops, Unit actions, circular .value reads, targeted-result-only search loops, and optional results without nested wrapping. Implement a coherent inference specification for the selected no-then .value rule and any future nonzero initialization mechanism.
 
+When a loop has no contributing path and nothing else constrains T, T defaults to Unit; an expected type can override that default. Plain continue and bare break do not themselves contribute Unit; an action body that normally completes with Unit does. A `then` result independent of `.value` determines R but leaves T at its default. See [noncontributing loop paths](loop-type-inference.md#loops-with-no-contributing-path).
+
+For conditionals, when no normally completing branch constrains T, T defaults to Unit; an expected type can override it. The missing-final-else path returns zero(T). That is a real conditional result: when the `if` is the final expression in a loop body, the loop commits it and may replace its previous `.value`. `continue` remains the distinct skip operation. Inside the `if`, use an explicit loop tag to read the enclosing loop's `.value`.
+
 ### 2. Completion hooks and abrupt exits
 
-The single receiverless then resolves the old then-versus-empty-else composition question. Complete the inference algorithm for the selected result rules; do not reintroduce receiver-presence value modes. Count and typed value remain available from the owning context.
+The single receiverless `then` resolves the old then-versus-empty-else composition question for loops. Review whether the same suffix can follow a complete conditional chain, operate on its branch/zero result, and produce a final `R`. Keep this as a proposal. Define whether its `.value` read is restricted to the tagged conditional's `then`, and do not treat normal-completion processing as all-exit cleanup. Loop count and typed value remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 
@@ -262,13 +269,13 @@ As is selected for one optional item name, with colon retired. There is no remai
 
 ### 4. Context phase rules
 
-Specify initialized fields during source evaluation, conditions, bodies, hooks, and cleanup. Define whether a standalone untagged expression block establishes a new current context. Ordinary body braces do not add a wrapper context.
+Specify initialized fields during source evaluation, conditions, bodies, hooks, and cleanup. A conditional's internal result exists before selection, but whether it is exposed as `.value` metadata remains open. The user sees no ordinary use in conditions or branches and proposes a conditional `then` as a possible after-result read phase, reusing loop completion syntax. Any exposed conditional metadata requires `@tag.field`; ambiguous leading-dot metadata reads are rejected, without outward fallback. Keep `then`'s normal-completion role distinct from all-exit `finally` cleanup; define abrupt-exit behavior before selection. `.condition` for an `else if` chain must not misrepresent conditions that were never evaluated. Define whether a standalone untagged expression block establishes a new current context. Ordinary body braces do not add a wrapper context.
 
 For an `if` chain, distinguish the selected branch from conditions that were never evaluated. Do not represent an unevaluated condition as if it had evaluated false.
 
 ### 5. Type-system and ownership foundations
 
-Choose generics, nominal identity, interfaces, variance, borrowing/moves/copies, shared values, closure captures, and type-level values. Define how the `Unit` type and requested `Unit` value coexist with uniform bindings.
+Choose generics, nominal identity, interfaces, variance, borrowing/moves/copies, shared values, closure captures, and type-level values. Define general type/value namespace rules; the Unit-specific `Unit` type and expression spellings are selected, while broader name resolution remains open.
 
 Binding reassignment (`var`) and held-data access (`mut`) are independent. Complete method notation and receiver/parameter passing rules, define how read-only access propagates, and decide whether a stronger frozen-value guarantee exists. Mutation is marked on affected receiver/parameter bindings, without an additional function-level marker. Do not infer purity or global immutability from a read-only receiver.
 
@@ -290,7 +297,7 @@ Ordinary readable underscore bindings and ordered shadowing within patterns are 
 
 The [focused review](pattern-bindings-and-tests.md) compares Rust, Python, Dart, Swift, Kotlin, Odin, Zig, and V. Bind (`name`), type match (`: Type`), and value match (`== expected`) are now selected base operations, alongside explicit `.None` case spelling. Complete operand/effect, recursive composition, and type-refinement contracts.
 
-Loop receivers are irrefutable; parameter, recovery, and completion receiver policies remain to confirm. Complete coverage and fallback rules, enum-case/metadata collisions, stored Result payload extraction, and ownership/lifetime contracts. These are separate from underscore unused-name intent; see [pattern binding and shadowing](pattern-shadowing.md) and [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
+Loop headers now bind only one optional item name; no receiver pattern needs an irrefutability rule. Parameter, recovery, and completion receiver policies remain to confirm. Complete coverage and fallback rules, enum-case/metadata collisions, stored Result payload extraction, and ownership/lifetime contracts. These are separate from underscore unused-name intent; see [pattern binding and shadowing](pattern-shadowing.md) and [pattern context review](pattern-contexts.md#review-findings-and-decisions-to-settle-first).
 
 ## Superseded suggestions
 
