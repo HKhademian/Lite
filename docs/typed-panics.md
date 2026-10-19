@@ -1,6 +1,6 @@
 # Future strongly typed panics
 
-Status: **future direction requested by the user, 2026-10-19**. Panic/fault events should carry strongly typed categories and appropriate structured information. Catch syntax, propagation mechanism, exact operation classification, and ABI remain future work.
+Status: **future direction requested by the user, 2026-10-19**. Panic/fault events should carry strongly typed categories and appropriate structured information. The later [shared expression recovery](expression-recovery.md) direction selects attached else as its surface. Capture scope, transfer mechanism, exact operation classification, and ABI remain future work.
 
 ## Intended categories
 
@@ -17,7 +17,7 @@ Names such as NullAccess, DivisionByZero, IntegerOverflow, and BoundsFault are e
 
 Typed panic information remains separate from a returned T ! E outcome. It does not automatically add every possible panic category to every function's declared recoverable error type. The proposed throw error continues to mean return .err(error), not a panic trigger.
 
-Typing a panic also does not select whether it is catchable, unwinds, aborts a task or process, runs cleanup, or can be converted into a recoverable Result at a chosen boundary. Those choices require their own contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
+Typing alone did not select recovery. The later else direction requests typed panic recovery, while its supported scope, transfer mechanism, cleanup, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
 
 If a checked operation converts a selected fault into a returned error, the resulting Result and any outward propagation obey the existing explicitly declared error contract. Which panic information is retained by such conversion remains open.
 

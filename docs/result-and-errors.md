@@ -142,6 +142,8 @@ This is a proposal for requesting a recoverable arithmetic outcome. It does not 
 
 ### Expression-local recovery
 
+The later [shared recovery direction](expression-recovery.md) extends the same attached else surface to typed panics from a non-Result operation. Scope, mixed-channel receiver typing, and fault transfer remain pending. The following paragraphs specify returned-Result handling; they do not silently settle panic behavior.
+
 An attached `else` handles the selected Result outcome. Its error receiver is optional:
 
 ```text

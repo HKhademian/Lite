@@ -1,6 +1,6 @@
 # Adding and removing sequence ends
 
-Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. Recommend aligning ordinary pops with the eventual ordinary index failure policy; no default is selected. Names, allocation failures, and API signatures remain under review.
+Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. The later user request accepts direct ordinary pops/indexing and selects attached else recovery for typed faults; full capture scope and mechanics remain pending. Names, allocation failures, and API signatures remain under review.
 
 ## Proposed operations
 
@@ -30,7 +30,17 @@ print(first);
 print(last);
 ```
 
-These examples assume the currently recommended asserting default for indexing and removal; an empty pop would fault safely, rather than return Option. That policy remains a proposal. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change the List literal default. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
+The user accepts these direct sequence operations: an empty pop faults safely rather than returning Option. Attached else provides the requested recovery surface; its full scope and implementation remain open. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change the List literal default. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
+
+The same operation supports explicit local recovery without a second helper:
+
+```text
+first := pop_front(mut numbers) else {
+    fallback_number()
+}
+```
+
+This extends else beyond returned-Result inspection to a typed-fault recovery boundary. It does not make every ordinary call return Result. See [shared expression recovery](expression-recovery.md).
 
 ## Mutability and supported operations
 
@@ -50,9 +60,9 @@ The earlier default Option<T> recommendation is withdrawn after the user's consi
 
 Recommend one source-level failure policy for ordinary positional operations:
 
-- Under the currently recommended asserting default, indexed reads and pops produce T; indexed writes produce Unit. An invalid position or empty removal triggers the appropriate safe typed fault before that operation changes storage.
-- Under the alternative recoverable default, reads and pops produce typed Results, and writes produce a typed Result with Unit success. Their errors can distinguish BoundsError from EmptySequence; these names are illustrative. The established explicit handling/propagation rules apply.
-- Explicit checked variants of asserting operations produce typed Results for local recovery. The exact checked spelling and capture scope remain unselected; attaching else to a plain T is not automatically a handler for panics.
+- In the accepted direct sequence-operation direction, indexed reads and pops produce T; indexed writes produce Unit. An invalid position or empty removal triggers the appropriate safe typed fault before that operation changes storage.
+- Under the earlier alternative recoverable default, reads and pops produce typed Results, and writes produce a typed Result with Unit success. Their errors can distinguish BoundsError from EmptySequence; these names are illustrative. The established explicit handling/propagation rules apply.
+- The later shared-recovery direction selects operation() else { ... } for typed faults as well as returned errors. Its capture scope and receiver typing remain pending. A separate capture-as-Result spelling is still open; no additional checked helper is required merely for a fallback.
 
 A separate deliberately optional query/removal may return Option<T>. This expresses an expected absence rather than a request to assert availability. Such a helper is an alternative API, not the proposed ordinary-pop default; names and whether it is needed initially remain open. No implicit conversion between Option and Result is introduced.
 
@@ -70,7 +80,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-- Choose canonical names and a shared default failure mode for ordinary indexing/removal. Keep optional removal as a distinct alternative rather than the assumed default.
+- Confirm canonical names and specify the chosen direct-operation/else recovery direction, including capture scope and mixed failure typing. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.
 - Specify ownership transfer, exception/fault safety during element construction, and cleanup.
 - Define view/cursor invalidation and overlapping mutation. Structural mutation may relocate or invalidate storage even when indexed replacement is permitted.

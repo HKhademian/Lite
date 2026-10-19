@@ -23,7 +23,7 @@ The explicit mut argument follows selected caller grants. Adding mut grants muta
 
 Var numbers := [...] would permit whole-binding replacement, while var mut would permit both replacement and held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`.
 
-The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The revised recommendation aligns ordinary pop with the eventual ordinary indexing failure policy; a separate Option-returning removal remains an alternative. Both the default and allocation failure policy remain proposals.
+The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Capture scope, concrete helper names, and allocation failure policy remain open.
 
 ## Length, capacity, and initialization
 
@@ -61,7 +61,7 @@ Appending within spare capacity may avoid relocation, but a safe API rule may co
 
 ## Empty values, access, and cost
 
-Prefer a valid empty list without a public null state or mandatory allocation for emptiness. A read-only list view does not imply that no authorized alias can modify its allocation. Bound checks should be defined and may be optimized when proven safe; their failure channel remains open alongside the broader fault policy.
+Prefer a valid empty list without a public null state or mandatory allocation for emptiness. A read-only list view does not imply that no authorized alias can modify its allocation. Bounds faults in the accepted sequence direction use the typed fault path, with attached else recovery requested. Checks may be optimized when proved unnecessary; capture scope and transfer/cleanup remain open.
 
 The goal is specialized element storage and predictable allocation costs, without mandatory per-element boxing. No implementation, mandatory two/three-word ABI, growth factor, or measured performance is established.
 

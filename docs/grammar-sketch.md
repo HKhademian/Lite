@@ -295,7 +295,7 @@ The [type alias comparison](type-aliases.md) selected Alias := type TypeExpressi
 
 Plain-union [normalization](union-normalization.md) is selected independently of precedence: member order does not affect identity, nested plain unions flatten, and duplicate identities disappear after alias resolution. These rules do not flatten Option/Result/enum boundaries, merge distinct nominal records, reorder match arms, or choose an ABI.
 
-## Recoverable error expressions
+## Recoverable error expressions and shared recovery direction
 
 ```text
 result_expression!
@@ -307,7 +307,7 @@ These are selected surface templates, not complete productions. Postfix `!` extr
 
 The attached `else` form, with an optional error receiver, supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
 
-Complete postfix productions, full precedence, nested-operand evaluation scope, and general union typing rules remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics do not flow through these Result expressions. See [propagation and call chaining](propagation-and-chaining.md).
+Complete postfix productions, full precedence, nested-operand evaluation scope, and general union typing rules remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics remain separate from returned Result data. The later [shared recovery direction](expression-recovery.md) requests expression else(...) { ... } for typed panic recovery too; complete scope, mixed-channel receiver typing, and assignment attachment are pending. This is a recovery boundary, not implicit Result conversion. See [propagation and call chaining](propagation-and-chaining.md).
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 

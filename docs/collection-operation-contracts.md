@@ -23,7 +23,7 @@ An inferred generic parameter can acquire its required contract from these opera
 ## Two distinct failures
 
 - Missing contract: the receiver cannot support the operation. Reject the definition or call at compilation when its static contract is insufficient.
-- Supported operation fails: a valid lookup may encounter an out-of-bounds index or another declared lookup failure. Handle or propagate its typed Result through the existing else/! model, or retain the outcome for inspection.
+- Supported operation fails: an operation may use its declared Result channel or a specified typed fault channel. Result errors retain explicit else/! handling or outcome storage. The accepted positional sequence direction uses direct values with typed faults and requests the same else recovery surface; ! does not capture those faults. See [shared recovery](expression-recovery.md) for pending scope and receiver typing.
 
 An unsupported operation does not automatically become a recoverable runtime error. A provider's declared failure type also must not be silently broadened by the sugar. An explicitly dynamic capability-test API could be considered separately.
 

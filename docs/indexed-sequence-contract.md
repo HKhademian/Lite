@@ -35,7 +35,7 @@ show := fn(values: [Int]) {
 
 Both headers expose the same complete input requirement. This intentionally restricts show more than a traversal-only implementation needs; a general library version should use the separately named Iterable contract instead. The compiler must not silently weaken the annotated requirement merely because show does not index.
 
-The first example assumes the currently recommended asserting bounds policy. Empty input would cause a safe bounds fault; it does not create an undeclared returned Result. Both that default and the explicit checked operation remain under review.
+The user accepts direct ordinary positional access: empty input faults safely instead of creating an undeclared Result. The later [shared recovery direction](expression-recovery.md) uses values[index] else { ... } for local typed-fault recovery. Full scope, fault typing, and transfer/cleanup still need specification.
 
 ## Writable refinement
 
