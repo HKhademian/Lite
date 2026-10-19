@@ -21,8 +21,8 @@ The body sees the previous state. A normal tail value is committed after the bod
 ```text
 sum := loop numbers as number, _, prev {
     prev.value_or(0) + number
-} then(result) {
-    result.value_or(0)
+} then {
+    .acc.value_or(0)
 }
 ```
 
@@ -33,8 +33,8 @@ Tagged access expresses the same state:
 ```text
 sum := @sum loop numbers as number {
     .acc.value_or(0) + number
-} then(result) {
-    result.value_or(0)
+} then {
+    .acc.value_or(0)
 }
 ```
 
@@ -47,8 +47,8 @@ last := loop numbers as number {
     }
 
     number
-} then(result) {
-    result.value_or(0)
+} then {
+    .acc.value_or(0)
 }
 ```
 
@@ -78,14 +78,14 @@ The body normally completes with `Unit`, but the whole loop is intended to produ
 
 ## Explicit seed
 
-Explicit seeded receivers were requested and several earlier header forms illustrated them. Their current spelling is not settled. A seed must be initialized once before any condition references it. It must also be decided whether seed presence and body-contribution presence are tracked separately, especially when selecting `else`.
+Explicit seeded receivers were requested and several earlier header forms illustrated them. Their current spelling is not settled. A seed must be initialized once before any condition references it. It must also be decided whether seed presence and body-contribution presence are tracked separately, when inspecting completion state.
 
 ## Open contracts
 
 - Whether `Unit` is an ordinary contribution in all loop modes.
 - How `T` and `R` are inferred when only targeted exits produce data.
 - Exact normal-completion behavior without `then`.
-- How an explicit seed affects `else` eligibility.
+- How an explicit seed is distinguished from an actual contribution in completion state.
 - Ownership, replacement cleanup, and borrowing of previous contributions.
 
 ## Related concepts and references

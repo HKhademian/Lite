@@ -147,6 +147,8 @@ An ordinary fallible call remains Result data in a match or conditional source t
 
 ## 7. Completion-hook receivers
 
+**Loop update, 2026-10-19:** loop completion no longer takes a receiver pattern. Use then { ... } with .count/.acc from the owning loop context and ordinary tail-expression semantics. The receiver/mismatch and action-only proposals below are historical for loops; they remain exploration material for other hooks. See [current loop completion](loop-completion.md).
+
 then, loop else, and finally receive different phase-specific inputs. Matching must be checked against that actual input; an empty loop cannot supply an invented accumulator value, and cleanup on an abrupt exit is not an ordinary successful result.
 
 **Recommendation:** use irrefutable receiver binding and explicit if/match inside a hook initially. Repeated typed clauses remain exploratory. Before selecting them, define dispatch versus transformation pipelines, ordering, coverage, unmatched input behavior, cleanup guarantees, and compatibility of transformed results.

@@ -45,6 +45,8 @@ is intended to agree with:
 
 `.field` refers to the current construct's context. It never searches outward for a context that happens to have that field.
 
+Every loop has this context even without an explicit tag. Its attached then block uses the same owning loop context, so .count and .acc work directly in both the loop body and then. A hidden context introduces no ordinary identifier and requires no allocated tag object. An explicit @name simply makes that context addressable from nested constructs; then does not require a separate receiver such as done.
+
 Leading-dot enum cases are a selected [type-directed form](enums-and-variants.md#inferred-case-names). The disambiguation policy must define how an expected enum case and a current-context field are distinguished; selecting case shorthand does not silently replace the established metadata rule. Explicit `@name.field` remains the way to select named metadata.
 
 ```text

@@ -7,10 +7,12 @@ Status: **one loop keyword and three source modes established; protocol and infe
 ```text
 [@tag] loop [source] [receiver_clause] {
     body
-} [completion_clauses]
+} [then { completion_body }]
 ```
 
 Brackets above are optional grammar notation, not literal source characters. Current examples use `as` for receivers; `:` is another candidate. See [loop receivers](loop-receivers.md).
+
+Completion uses a single receiverless then block. Both body and completion can access the owning loop context through .count/.acc without naming a tag; an explicit tag remains useful inside nested contexts. Then's final expression is the loop result. See [loop completion](loop-completion.md).
 
 ## Source modes
 

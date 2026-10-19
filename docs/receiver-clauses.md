@@ -2,6 +2,8 @@
 
 Status: **optional hook receivers requested; typed/pattern-dispatch chains exploratory**.
 
+**Loop update, 2026-10-19:** the loop-completion receiver examples and action/result distinction below are historical. Current loop completion uses then { ... } with .count/.acc from the owning context, including untagged loops, and ordinary tail-expression results. Then(result), then(done), and then(_) are retired for loops. Result recovery receivers remain unchanged; body-wide cleanup remains deferred. See [current loop completion](loop-completion.md).
+
 ## Purpose
 
 Give completion blocks explicitly named input and make value transformation visible, while reusing ordinary conditionals and patterns.
@@ -47,7 +49,7 @@ then(result) {
 }
 ```
 
-This is the preferred current exploration for optional loop accumulators. Presence/absence of one `T` is naturally an `Option<T>`, not an untyped mixture of unrelated runtime values.
+This was the earlier receiver-based exploration for optional loop accumulators. Current loops inspect the same optional state through .acc without a completion receiver. Presence/absence of one `T` is naturally an `Option<T>`, not an untyped mixture of unrelated runtime values.
 
 ## Typed clause proposal
 

@@ -1,38 +1,51 @@
 # Loop completion
 
-Status: **intent established; clause ordering and full exit/type contracts open**.
-
-The user now proposes replacing then/empty-else/common-final processing with [one completion receiver and block](unified-loop-completion.md). That simplification is under exploration; the separate-clause examples below are retained for comparison, not finalized grammar. Full cleanup during escaping control flow remains part of the deferred lifecycle review.
-
-The owning loop tag must remain accessible during that completion phase, including its final count and optional accumulator. Access to other metadata depends on its validity in that phase; this does not retain iteration-local values automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
+Status: **one receiverless then block with owning-loop context selected by the user, 2026-10-19; complete exit/type contracts open**.
 
 ## Purpose and template
 
-Handle the final contribution, absence of contributions, and cleanup without wrapping loops in functions solely to obtain a result.
+Handle final contributions and their absence in one completion block, without a separate receiver name or empty-case hook:
 
 ```text
-loop source as item {
-    body
-} then(result) {
-    completion_body
-} else(_) {
-    no_contribution_body
-} finally {
-    cleanup()
+sum := loop numbers as number, _, previous {
+    previous.value_or(0) + number
+} then {
+    .acc.value_or(0)
 }
 ```
 
-This template lists candidate clauses. It does not settle how `then` and a separate `else` compose; see the explicit open issue below.
+Every loop has a context, even without an explicit tag. Then uses that same context; .count is the final entered-iteration count and .acc is the optional final accumulator. An explicit @name tag names this context and remains accessible through completion. See [unified completion](unified-loop-completion.md) and [full examples](loop-examples.md).
 
-## Current optional-accumulator direction
+## Results
 
-A receiving `then` gets the optional accumulated result and can handle both states itself:
+Then follows the ordinary final-expression rule. It may transform contribution type T into whole-loop result R. Receiver presence is no longer a switch between result transformation and action-only behavior:
+
+```text
+then { .acc.value_or(0) }  /* explicit Int result */
+then { "Finished" }       /* explicit String result */
+then { Unit }             /* Unit */
+then {}                   /* Unit */
+```
+
+These are clause fragments. The older then(result), then(done), and then(_) forms are retired for loop completion. If common finishing actions should preserve a value, explicitly return that value as the tail expression; an action returning Unit does not silently preserve an earlier accumulator. Trailing semicolons still do not discard expression values.
+
+Behavior and inference when then is omitted remain separate design questions.
+
+## Empty versus no contribution
+
+For an unseeded loop, zero entered iterations gives .count == 0 and .acc is .None. All-skipped iterations give a positive count but still .None. A final skipped entry or bare break preserves a prior contribution. Seeded loops still need explicit seed-versus-contribution rules.
+
+Capture metadata before entering a different construct context:
 
 ```text
 message := loop items as item {
-    if not eligible(item) { continue }
+    if not eligible(item) { continue; }
     score(item)
-} then(result) {
+} then {
+    entered := .count;
+    result := .acc;
+    report_attempts(entered);
+
     if .Some(last) := result {
         format_score(last)
     } else {
@@ -41,58 +54,24 @@ message := loop items as item {
 }
 ```
 
-The processing occurs once, not once per iteration. It uses an already computed contribution rather than reevaluating the body expression.
+The inner else is normal conditional selection. The old separate loop else and its priority/composition question are superseded by handling both states inside then.
 
-Earlier rules in which `then` ran only after physically nonempty normal completion were revised during the discussion. The optional-state proposal lets it handle `None` as well.
+## Context scope
 
-## Empty versus no contribution
+Then is an attached loop phase, not a new metadata owner. Its direct .count/.acc access works on tagged and untagged loops. A nested if/match/loop has its own context; leading-dot lookup never searches outward. Use a named loop tag or captured local to reach outer state from that nested construct.
 
-`else` evolved from "zero entered iterations" to "no contributing iterations." Those differ when all entries execute plain `continue`. The latest direction treats skipped entries as no contribution.
+Metadata remains read-only and phase-checked. The final accumulator stays available while then computes a result; iteration-local values and a last item are not automatically retained. The final whole-loop result cannot be read before it has been computed.
 
-A separate `else` should be a convenience for handling the no-contribution state, not a second block that handles the same `None` a second time. Whether it takes priority over `then`, or is specified as syntax sugar for optional matching, is still open.
+## Exits and cleanup
 
-The exact receiver payload for a standalone `else` is not fixed. It cannot be a fabricated previous `T`; a unit/empty-completion marker was suggested.
+The current completion direction runs then once after source exhaustion, a false condition, or bare break. Continue remains inside iteration. Return @loop value supplies the final result directly and bypasses completion; unqualified return exits the nearest function/closure. Error forwarding by ! and panics are not normal loop completion.
 
-## Exits
+Break value remains unconfirmed shorthand. Its retention does not follow from the receiverless completion choice.
 
-- Normal source exhaustion reaches completion processing.
-- Bare `break` stops iteration without contributing; the latest proposal also routes the preserved state through completion processing.
-- `continue` does not finish the construct.
-- `return @loop value` supplies the final construct result directly, bypassing `then` and `else`.
-- Unqualified `return` exits the nearest function or closure.
-- Structured exits run applicable `finally` blocks.
+Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, resource disposal, finally placement, and cleanup failures remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Ordinary operation-level recovery inside loop bodies remains available, and returned Results still require explicit handling or propagation.
 
-`break value` was retained as a possible concise nearest-loop final result, distinct from bare `break`. Its final spelling/retention after general targeted returns should be explicitly confirmed.
+## Historical designs
 
-## Receiving versus nonreceiving hooks
+Separate then/empty-else/finally clauses, Option or state-record completion receivers, and receiver-presence action/result modes were earlier explorations. They are superseded for normal loop completion. Historical generic hook and cleanup discussions do not reintroduce them as alternate loop forms.
 
-```text
-then { print("Finished") }
-then(last) { transform(last) }
-then(_) { "Replacement" }
-```
-
-A receiver was proposed as the explicit opt-in to a value-producing hook. A nonreceiving hook performs an action and preserves incoming result state. A receiving hook may transform its input. This applies to attached hooks, not ordinary function or conditional bodies.
-
-`_` in `then(_)`, `else(_)`, or `finally(_)` is an ordinary readable receiver binding whose nonuse is allowed. For example, `then(_) { process(_) }` may read the input. Receiver presence retains the proposed opt-in to a value-producing hook; its spelling does not change the phase-specific payload. Those payload contracts remain open where described above and below.
-
-## Failure recovery is not the empty hook
-
-Normal no-contribution completion remains separate from failure. The user resolves the placement direction by requiring recovery inside construct bodies; see [body-owned recovery](body-recovery.md). The external grouped-loop handler in the [earlier example](loop-recovery.md) is superseded. This preserves then/empty-else exploration without repurposing a completion receiver as a failure receiver. Body-wide recovery/contribution scope and special cleanup sections are deferred for the joint cleanup/resource review.
-
-## Finally
-
-The [shared finally review](finally.md) gives a full conditional example and distinguishes operation, branch-region, and construct cleanup. The same intent applies here; loop completion and failure precedence retain the open contracts below.
-
-`finally` is intended to run once on structured completion or exit, after a normal result or exit payload is determined. It must not silently suppress a pending early return or propagated error.
-
-Receiving `finally` blocks that transform an ordinary result were requested. Their input must represent completion state rather than assume a successful value always exists. The exact descriptor type, allowed transformations, cleanup failure handling, and prohibitions on escaping control flow remain open.
-
-This is not a promise to run cleanup after forced process termination or an implementation-level abort.
-
-## Related concepts and references
-
-- [Receiver clauses](receiver-clauses.md)
-- [Loop accumulator](loop-accumulator.md)
-- [Control-flow exits](control-flow.md)
-- [Python loop completion](https://docs.python.org/3/tutorial/controlflow.html#break-and-continue-statements) is a useful contrast: its loop `else` is associated with completion without `break`, not specifically the absence of contributions proposed here.
+Related: [receivers](loop-receivers.md), [accumulator](loop-accumulator.md), [control-flow exits](control-flow.md), [tags](tags-and-contexts.md), and [historical hook proposals](receiver-clauses.md).

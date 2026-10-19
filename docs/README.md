@@ -137,7 +137,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
 - [Loop examples](loop-examples.md): full worked loop, all current source/receiver forms, completion state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
-- [Unified loop completion](unified-loop-completion.md): proposed single final block receiving iteration count and optional accumulator, with completion distinguished from deferred cleanup.
+- [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.acc on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
 - [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists and ordered shadowing.
 - [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.

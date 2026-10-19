@@ -137,7 +137,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
 - An accumulator represents previous contributions, with absence modeled explicitly.
 - Plain `continue` and bare `break` contribute nothing.
-- Completion receivers are optional; `_` is an ordinary readable receiver name that permits nonuse. Receiver presence retains the proposed opt-in to a value-producing hook.
+- Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .acc are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -153,7 +153,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- The user proposes [unified loop completion](unified-loop-completion.md): one final receiver/block replaces separate then/empty-else/common-final processing. The minimal candidate receiver contains entered-iteration count and optional accumulator, separating zero entries from all-skipped entries. Reusing then for normal completion and bare break is recommended for evaluation; keyword, exact payload, seeds, and omitted-hook behavior are unselected. Full cleanup on escaping returns/errors/panics remains deferred; this does not yet replace existing examples or change targeted returns.
+- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and optional accumulator come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, seed tracking, and omitted-hook behavior remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
 
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.
 
@@ -253,7 +253,7 @@ Define iteration type `T`, accumulator state `Option<T>`, and final result type 
 
 ### 2. Completion hooks and abrupt exits
 
-Set the exact relationship between receiving `then` and a separate `else`. The latest optional-state proposal lets `then` handle both presence and absence, so a separate `else` must not process the same empty case again.
+The single receiverless then resolves the old then-versus-empty-else composition question. Complete its result inference and omitted-hook behavior; do not reintroduce receiver-presence value modes. Count and optional accumulator remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 

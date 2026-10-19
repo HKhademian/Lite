@@ -227,13 +227,13 @@ The [pattern context review](pattern-contexts.md) distinguishes shared pattern f
 ## Loops
 
 ```text
-loop := [tag] "loop" [source] [receivers] block
-        [then_clause] [else_clause] [finally_clause]
+loop := [tag] "loop" [source] [receivers] block [loop_completion]
 
 receivers := "as" pattern ["," pattern ["," pattern]]
 
-then_clause    := "then" ["(" pattern ")"] block
-else_clause    := "else" ["(" pattern ")"] block
+loop_completion := "then" block
+
+/* Shared cleanup candidate used above; not a loop completion clause. */
 finally_clause := "finally" ["(" pattern ")"] block
 ```
 
@@ -241,11 +241,11 @@ finally_clause := "finally" ["(" pattern ")"] block
 
 Every receiver slot must use a pattern irrefutable under its input contract. Reject a loop receiver that can fail; this applies in all source modes. Refutable patterns belong in if/match inside the body. This semantic constraint does not prohibit tuple destructuring with a statically guaranteed shape. Filtering-header and other mismatch alternatives are [documented as deferred](loop-pattern-alternatives.md).
 
-Separate receiver slots bind names from left to right, traversing nested slot patterns recursively; later same-named bindings shadow earlier ones. `_` follows this ordinary rule: `as _, _, acc` leaves `_` naming count, and `as _, _, _` leaves it naming the accumulator. A hook receiver such as `then(_)` binds readable `_`. The full parameter and member declaration-list rules remain separate.
+Separate receiver slots bind names from left to right, traversing nested slot patterns recursively; later same-named bindings shadow earlier ones. `_` follows this ordinary rule: `as _, _, acc` leaves `_` naming count, and `as _, _, _` leaves it naming the accumulator. Loop completion has no receiver pattern: then(_) and then(done) are retired. This does not change ordinary header receivers or optional Result-recovery receivers. The full parameter and member declaration-list rules remain separate.
 
 Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
 
-The hook productions show explored syntax. Receiver payloads and `then`/`else` composition are still open; grammar acceptance cannot settle those semantics. The external grouped-loop handler in the [earlier loop example](loop-recovery.md) is superseded by [body-owned recovery](body-recovery.md). Do not add a second error-catching else production to the loop hooks or reinterpret a completion receiver by its name/type. Internal body-wide recovery and its iteration/completion scope are deferred for the joint cleanup/resource review.
+The loop completion production uses the selected receiverless then surface. It retains the owning loop context even without an explicit tag: .count/.acc work directly, and ordinary tail-expression rules determine its result. Then does not create a new metadata context. Separate loop empty-else/finally and completion-receiver productions are superseded; all-exit cleanup remains deferred. The external grouped-loop handler in the [earlier loop example](loop-recovery.md) is superseded by [body-owned recovery](body-recovery.md). Do not add a second error-catching else production to the loop hooks or reinterpret a completion receiver by its name/type. Internal body-wide recovery and its iteration/completion scope are deferred for the joint cleanup/resource review.
 
 ## Tags and contexts
 

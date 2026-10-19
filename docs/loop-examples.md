@@ -1,6 +1,6 @@
 # Loop examples: complete working design
 
-Status: **design examples, 2026-10-19; no compiler implementation or execution claim**. These examples use the latest unified-completion proposal with tag access. They do not finalize the receiver separator, completion keyword, library adapters, or other contracts explicitly marked open below. Helpers such as print, format_total, visit, and parse_int stand for separately defined operations.
+Status: **design examples, 2026-10-19; no compiler implementation or execution claim**. These examples use the latest unified-completion proposal with tag access. They do not finalize the header receiver separator, library adapters, or other contracts explicitly marked open below. Loop completion uses receiverless then with the owning loop context. Helpers such as print, format_total, visit, and parse_int stand for separately defined operations.
 
 ## Full worked example
 
@@ -38,11 +38,12 @@ summary := @scan loop numbers as number, count, previous {
 
     /* Normal tail expression commits the next accumulator value. */
     total + number
-} then(done) {
+} then {
     /* The loop tag remains readable in completion. */
     print(@scan.count);
 
-    if done.count == 0 {
+    entered := .count;
+    if entered == 0 {
         "No iterations"
     } else {
         match @scan.acc {
@@ -57,7 +58,7 @@ print(summary);
 
 Under the proposed completion rules, the shown input enters five iterations. Contributions are 3, skip, 3, 8, then break preserving 8. The value 99 is never visited. Then runs once with count 5 and acc .Some(8); its final String becomes summary. The receiver count is not a zero-based source index.
 
-Previous is the accumulator before this iteration; done.acc and @scan.acc refer to the final accumulator during completion. An explicit tag works inside nested if/match contexts, where leading-dot lookup must not search outward. Metadata is read-only.
+Previous is the accumulator before this iteration; .acc and @scan.acc refer to the final accumulator during completion. The local entered captures .count before entering the nested if, which has its own current context. An explicit tag works inside nested if/match contexts, where leading-dot lookup must not search outward. Metadata is read-only.
 
 Useful alternative inputs:
 
@@ -103,8 +104,8 @@ total := @bounded loop @bounded.count < 10
     and @bounded.acc.value_or(0) < 30
     as _, count, previous {
     previous.value_or(0) + count
-} then(done) {
-    done.acc.value_or(0)
+} then {
+    .acc.value_or(0)
 }
 ```
 
@@ -216,29 +217,29 @@ found := @search loop users as user {
 
 This is the requested concise optional-search direction: exhaustion supplies None. Its precise result inference is still open, so it is not a completed typing rule. Return @search supplies the final loop result and bypasses completion processing. Bare return @search supplies Unit, not an inferred empty Option. Break value remains unconfirmed shorthand; use the established tagged-return form when showing an explicit final-result exit.
 
-## Completion receiver variants
+## Completion results without receivers
 
-The receiving candidate can transform an Int contribution into another final type:
+Then can transform an Int contribution into another final type without a receiver:
 
 ```text
 description := @total loop numbers as number {
     @total.acc.value_or(0) + number
-} then(done) {
-    format_total(done.acc.value_or(0))
+} then {
+    format_total(.acc.value_or(0))
 }
 ```
 
-An unused-allowed receiver still opts into a value-producing hook:
+A constant final result needs no receiver or dummy binding:
 
 ```text
 message := loop users as user {
     greet(user);
-} then(_) {
+} then {
     "Finished"
 }
 ```
 
-The action-only candidate remains:
+An action whose result is Unit makes the whole completion block return Unit:
 
 ```text
 loop users as user {
@@ -248,7 +249,7 @@ loop users as user {
 }
 ```
 
-The action-only preservation contract and exact result inference without completion remain open. Neither example defines how Unit participates in accumulator contributions. The unified proposal does not add separate loop empty-else or finally clauses; all-exit cleanup remains deferred.
+There is no receiver-presence distinction and no automatic accumulator preservation when then returns Unit. Then {} likewise returns Unit. Exact result inference without completion and how Unit participates in iteration contributions remain open. There are no separate loop empty-else or finally clauses in this direction; all-exit cleanup remains deferred.
 
 ## Local error handling and function exits
 
@@ -262,8 +263,8 @@ sum := loop texts as text, _, previous {
     }
 
     previous.value_or(0) + number
-} then(done) {
-    done.acc.value_or(0)
+} then {
+    .acc.value_or(0)
 }
 ```
 
@@ -274,8 +275,8 @@ sum_text := fn(texts: [String]): Int! {
     loop texts as text, _, previous {
         number := parse_int(text)!;
         previous.value_or(0) + number
-    } then(done) {
-        done.acc.value_or(0)
+    } then {
+        .acc.value_or(0)
     }
 }
 ```
@@ -284,6 +285,6 @@ Postfix ! exits the function on a returned error; it is not a loop break and doe
 
 ## Boundaries still to settle
 
-The examples cover the current forms and explicit candidates without introducing seeded-header syntax, break-value shorthand, whole-loop external recovery, post-tested loops, or all-exit completion semantics. Receiver separator, unified then adoption, seed syntax, some Unit/result inference rules, optional-search inference, adapter APIs, ownership, and cleanup still need decisions. No runtime cost or execution result here is compiler-verified.
+The examples cover the current forms and explicit candidates without introducing seeded-header syntax, break-value shorthand, whole-loop external recovery, post-tested loops, or all-exit completion semantics. Header receiver separator, seed syntax, some Unit/result inference rules, optional-search inference, adapter APIs, ownership, and cleanup still need decisions. No runtime cost or execution result here is compiler-verified.
 
 Related: [loops](loops.md), [receivers](loop-receivers.md), [accumulator](loop-accumulator.md), [unified completion](unified-loop-completion.md), [tags](tags-and-contexts.md), [control-flow exits](control-flow.md), and [deferred cleanup/resources](deferred-cleanup-and-resources.md).

@@ -46,7 +46,7 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `continue`: move to the next iteration without a contribution.
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
-- `return @loop value`: finish the loop directly with final result type `R`, bypassing ordinary `then`/`else` processing.
+- `return @loop value`: finish the loop directly with final result type `R`, bypassing ordinary then completion processing.
 
 ```text
 found := @search loop users as user {
