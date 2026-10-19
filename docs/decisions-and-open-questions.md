@@ -134,7 +134,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Loop .value replaces .acc and automatic Option accumulators. It has a static body-result type and is zero-initialized before iteration; tail completion, continue value, or break value commits; plain continue and bare break preserve. No value_or helper or previous receiver is required. See [loop value](loop-value.md).
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
-- Plain continue preserves .value and advances; continue value commits early and advances. Bare break preserves .value and runs then. Break value commits its T operand, stops the nearest loop, and runs then; return @tag value is the named direct exit that bypasses then.
+- Plain continue preserves .value and advances; continue value commits early and advances. Bare break preserves .value and runs then. Break value commits its T operand, stops the nearest loop, and runs then; whether return @tag value runs or bypasses then is explicitly unresolved.
 - Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .value are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
 - Without then, normal completion returns final .value; with then it returns that block's tail expression, and then {} returns Unit.
 - Loop type inference uses body constraints and destination-side expected types. A Long destination can constrain .value, including a body consisting only of .value. With then, expected final type R constrains body type T only through actual type relationships. Numeric promotion/casts remain the arithmetic contract; see [loop inference](loop-type-inference.md).
@@ -152,6 +152,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
+
+- **Priority uncertainty, 2026-10-19:** the user is not convinced return @tag value should bypass then. Its target syntax/lexical scope remain selected; completion execution and payload T/R interaction are open. See [tagged-return note](control-flow.md#tagged-return-and-completion-unresolved). Bare break and break value still reach then.
 
 - [Last-item/index completion access](loop-last-item.md) now has selected use-based retention: .item/.index describe the last entered body in then, including skipped/broken entries, with zero state and count 0 for empty input. Unobserved item metadata needs no completion retention; reading only count/index/value or declaring a tag does not retain every field. Generic ownership/borrowing and lowering remain shared implementation contracts.
 
@@ -252,7 +254,7 @@ The single receiverless then resolves the old then-versus-empty-else composition
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 
-Break value is selected as commit-and-stop followed by normal completion. Return @tag value remains a direct R-result exit bypassing then; labeled contribution-bearing continue remains open.
+Break value is selected as commit-and-stop followed by normal completion. The user explicitly questions tagged-return bypass of then; resolve that behavior and its T/R payload types before treating it as selected. Labeled contribution-bearing continue remains open.
 
 ### 3. Optional item naming and initialization
 

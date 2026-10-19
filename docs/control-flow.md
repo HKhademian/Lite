@@ -48,7 +48,7 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
 - `break value`: commit a body value of type T, stop the nearest loop, and run then if present. No tag is required.
-- `return @loop value`: finish the loop directly with final result type `R`, bypassing ordinary then completion processing.
+- `return @loop value`: exit the named loop; whether its then block executes is explicitly unresolved (see the note below).
 
 ```text
 found := @search loop users as user {
@@ -60,13 +60,17 @@ found := @search loop users as user {
 
 The intended exhaustion result is `None`. `return @search;` would instead explicitly supply `Unit` and conflict with an `Option<User>` result.
 
+## Tagged return and completion: unresolved
+
+The user is not convinced that return @tag value should bypass then (2026-10-19). Keep the target syntax and lexical targeting, but do not treat bypass or execution of then as selected. Revisit how the exit payload relates to body type T and completion result R before choosing. This uncertainty does not reopen the selected break/break value behavior: both reach then, with only break value replacing .value.
+
 ## Labeled continuation and break shorthand
 
 `continue @loop` was retained for explicitly advancing an enclosing loop. A target that is an `if` or ordinary block cannot continue.
 
 Break value commits its operand to .value, stops the nearest loop, and enters normal completion. Its operand has the body value type T, just like continue value; then may transform T into final result type R. Without then, the committed .value is the final result. Bare break performs the same stop/completion without replacing .value.
 
-The earlier documentation incorrectly made break value bypass then. That behavior is removed. Return @tag value remains the direct tagged result exit that bypasses then. The named break @tag value and contribution-bearing continue @tag value forms remain unselected.
+The earlier documentation incorrectly made break value bypass then. That behavior is removed. Whether return @tag value should bypass then is now explicitly uncertain; the previous bypass rule is only a candidate. The named break @tag value and contribution-bearing continue @tag value forms remain unselected.
 
 ```text
 status := loop numbers as number {

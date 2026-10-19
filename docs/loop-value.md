@@ -21,7 +21,7 @@ For Int elements with no different expected type, addition constrains T to Int a
 - Plain continue: advance without changing .value.
 - Bare break: stop without changing .value, then run normal completion processing.
 - Break value: commit a T value, stop the nearest loop, and run then if present. Without then, the committed .value is the result.
-- Return @loop result: supply the final construct result directly and bypass normal completion, as before.
+- Return @loop result: exit the named construct; whether then executes and how its T/R types interact with the exit payload are explicitly under review.
 
 The old acc/previous receiver slots and .acc field are retired. .value is loop-owned read-only metadata; these rules describe its internal commits, not a new permission to assign to metadata.
 

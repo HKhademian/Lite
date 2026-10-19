@@ -31,7 +31,7 @@ summary := @scan loop numbers as number {
 }
 ```
 
-The intended trace enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. Return @scan supplies a String directly and bypasses then.
+The intended trace enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. The earlier return @scan example assumes a direct String exit that bypasses then; that tagged-return completion policy is now explicitly unresolved, so this path is illustrative only.
 
 An empty source or all-skipped source leaves Int value 0. Count distinguishes no entries from some entries; value cannot distinguish no commit from a genuine result of zero. A skipped last entry preserves the prior value. No Option is automatically inserted.
 
@@ -124,7 +124,7 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 }
 ```
 
-Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present. Return @tag result remains the direct final-result exit that bypasses then.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present. Whether return @tag result bypasses then is now unresolved; do not treat the older direct-result policy as selected.
 
 Every nested if/match/loop has its own current context. Use named tags or captured locals to read outer metadata; leading-dot lookup never searches outward. The optional item name is useful for lexical access inside such nested bodies.
 
