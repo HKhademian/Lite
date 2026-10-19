@@ -44,9 +44,9 @@ When then simply returns .value, T and R are directly connected and the destinat
 
 ## All paths must agree with their contracts
 
-- Body tail expressions and continue value must satisfy the selected body type T.
-- Then tail expressions, break value, and return @loop value must satisfy the final result R.
-- Bare break and plain continue do not invent new value types.
+- Body tail expressions, continue value, and break value must satisfy the selected body type T.
+- Then tail expressions and return @loop value must satisfy the final result R.
+- Bare break and plain continue preserve .value without inventing new value types. Break value commits before completion; it is not a direct R-return path.
 - Assignment/declaration tails produce Unit; a Long destination does not silently turn such a body into a numeric sum.
 - Conditional/match branches retain their ordinary type/union rules; inference cannot erase incompatible operations.
 - Types and zero representations are determined at compile time, before runtime source checks or body execution.

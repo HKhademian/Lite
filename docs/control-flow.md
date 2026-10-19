@@ -47,7 +47,7 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `continue`: move to the next iteration without a contribution.
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
-- `break value`: finish the nearest loop directly with final result type R, bypassing then; no tag is required.
+- `break value`: commit a body value of type T, stop the nearest loop, and run then if present. No tag is required.
 - `return @loop value`: finish the loop directly with final result type `R`, bypassing ordinary then completion processing.
 
 ```text
@@ -64,18 +64,20 @@ The intended exhaustion result is `None`. `return @search;` would instead explic
 
 `continue @loop` was retained for explicitly advancing an enclosing loop. A target that is an `if` or ordinary block cannot continue.
 
-Break value is explicitly retained by the user for untagged loops. It supplies the nearest loop's final result type R, not a new body contribution T, and bypasses then. Bare break remains distinct: preserve .value and run then. The named break @tag value form is not selected; use return @tag value for a named direct exit. Contribution-bearing continue @tag value remains separate open syntax.
+Break value commits its operand to .value, stops the nearest loop, and enters normal completion. Its operand has the body value type T, just like continue value; then may transform T into final result type R. Without then, the committed .value is the final result. Bare break performs the same stop/completion without replacing .value.
+
+The earlier documentation incorrectly made break value bypass then. That behavior is removed. Return @tag value remains the direct tagged result exit that bypasses then. The named break @tag value and contribution-bearing continue @tag value forms remain unselected.
 
 ```text
 status := loop numbers as number {
-    if number < 0 { break "Stopped"; }
-    number
+    if number < 0 { break 0; }
+    .value + number
 } then {
-    "Finished"
+    format_total(.value)
 }
 ```
 
-The body value is Int while the construct result is String. A negative item returns Stopped directly; normal completion returns Finished. No tag or wrapper function is needed.
+Assume format_total maps Int to String. A negative item commits Int zero, stops, and still executes format_total(0). The body value is Int while the final completion result is String.
 
 ## Cleanup
 

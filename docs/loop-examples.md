@@ -124,7 +124,7 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 }
 ```
 
-Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value is selected as a direct nearest-loop final result, bypassing then.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present. Return @tag result remains the direct final-result exit that bypasses then.
 
 Every nested if/match/loop has its own current context. Use named tags or captured locals to read outer metadata; leading-dot lookup never searches outward. The optional item name is useful for lexical access inside such nested bodies.
 

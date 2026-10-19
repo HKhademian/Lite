@@ -61,7 +61,7 @@ Assume score returns Int. Empty input and all-skipped input both leave value 0; 
 
 ## Completion versus cleanup
 
-Then runs after exhaustion, a false condition, or bare break. Plain continue and break preserve .value. Continue value commits early; ordinary body completion commits its tail expression. Break result returns directly from the nearest loop, bypassing then; return @loop result does the same for a named loop. Function returns, forwarded errors, and panics are not ordinary completion.
+Then runs after exhaustion, a false condition, bare break, or break value. Plain continue and break preserve .value. Continue value commits early; ordinary body completion commits its tail expression. Break value commits its operand to .value, stops the nearest loop, and still runs then. Return @loop result supplies a direct final result and bypasses then. Function returns, forwarded errors, and panics are not ordinary completion.
 
 All-exit cleanup, defer, scoped resources, pending-exit replacement, and cleanup failures remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Renaming a hook or adding metadata does not settle those lifecycle rules.
 
