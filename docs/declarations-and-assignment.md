@@ -29,7 +29,7 @@ name = replacement;
 - `mut` opts into writable access to held data, without granting binding reassignment.
 - `var mut` opts into both capabilities, in that order.
 - Either capability leaves the binding's static value type fixed.
-- `=` assigns an existing writable target; it does not declare one. A binding target requires `var`; a field or element target through a binding requires `mut`, permitted field/element access, and a compatible ownership contract.
+- `=` does not declare a name. For a binding explicitly reserved with = ?, its first whole-value = may initialize it without var, subject to definite-initialization checks. Later whole-binding replacement requires var. A field or element update through an initialized binding requires mut, permitted field/element access, and a compatible ownership contract. Partial construction has a separate open contract.
 - `:=` never means "declare if absent, otherwise update."
 - Declarations and assignments are statements producing `Unit`.
 - Assignment cannot be embedded in a condition or chained as a value-producing expression.
@@ -48,13 +48,13 @@ x: User = {};  /* default construction; apply declared field defaults */
 x: User = ?;   /* explicit reserved storage; payload not yet initialized */
 ```
 
-The first four declarations fully initialize their bindings immediately. The final = ? form explicitly reserves storage instead; it is not usable as an ordinary User before initialization. The already-initialized fixed bindings cannot receive a later first assignment as an initialization exception. First initialization of reserved storage needs its own construction contract; it is not ordinary replacement. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule.
+The first four declarations fully initialize their bindings immediately. The final = ? form explicitly reserves storage instead; it is not usable as an ordinary User before initialization. Its first whole-value x = value is permitted once per execution path without var; later replacement requires var. Every path reaching an ordinary use must have initialized the binding. The already-initialized fixed bindings cannot receive a later first assignment as an initialization exception. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule. See [first initialization](first-initialization.md).
 
 The first binding exposes User. The var binding exposes the writable storage contract var User: it reads User and accepts replacement User values. Reading that binding still produces a User value; it does not produce a writable reference or transfer its storage permission. See [var access](var-access-qualifier.md).
 
 Omission and = 0 use the same recursive valid-zero rule; = {} uses the separate declared-default policy. A field default does not rescue a type lacking a valid zero. An inferred name := still requires a source, and omitted-source destructuring is not introduced. Function parameters and record fields retain their own declaration contracts; this rule does not create optional function arguments. See [zero initialization](zero-initialization.md).
 
-The = ? marker is selected for simple typed value declarations; it is not an ordinary unknown-value expression. A source-level explicit reservation differs from the optimizer omitting unobservable zero stores in otherwise initialized code. See [reserved storage](reserved-storage.md) for open first-write, lifetime, and cleanup contracts.
+The = ? marker is selected for simple typed value declarations; it is not an ordinary unknown-value expression. A source-level explicit reservation differs from the optimizer omitting unobservable zero stores in otherwise initialized code. Whole-value first = is selected; partial construction, caller initialization, lifetime, and cleanup contracts remain open. See [reserved storage](reserved-storage.md).
 
 ## Examples
 

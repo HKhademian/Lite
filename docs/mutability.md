@@ -26,6 +26,8 @@ user = make_another_user(); /* permitted if the types and ownership contract agr
 
 `var` grants reassignment of the binding. It does not change the static value type or grant writable access to held data. That second permission requires `mut`.
 
+For a binding explicitly reserved with x: User = ?, the first whole-value x = make_user() initializes rather than replaces a value and does not require var. It is allowed once per execution path; every path reaching ordinary use must have initialized x. The next whole-value write requires var. This does not change the already-initialized examples above or select partial field/element construction. See [first initialization](first-initialization.md).
+
 ## 2. Access to held data
 
 For an owned value, reference, handle, or view, distinguish access permissions:

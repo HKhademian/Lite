@@ -63,7 +63,7 @@ Source validity is checked independently of optimization. A type without a valid
 
 ## Explicit reservation without initialization
 
-The selected surface direction value: Type = ? requests appropriately sized/aligned storage without zero/default initialization. The earlier generic reserve() operation remains unselected. Allocation policy, first-initialization operations, and failure handling remain open. Ordinary declarations still initialize immediately unless they explicitly request this reservation state. A reservation requires tracked initialization before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership do not follow merely from the marker. See [reserved storage](reserved-storage.md).
+The selected surface direction value: Type = ? requests appropriately sized/aligned storage without zero/default initialization. Whole-value first initialization uses = once per execution path without var; later replacement requires var. The earlier generic reserve() operation remains unselected. Allocation policy, field/element and callee construction, and failure handling remain open. Ordinary declarations still initialize immediately unless they explicitly request this reservation state. A reservation requires tracked initialization before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership do not follow merely from the marker. See [reserved storage](reserved-storage.md) and [first initialization](first-initialization.md).
 
 ## Loop state costs
 

@@ -1,6 +1,6 @@
 # Reserved storage without initialization
 
-Status: **value: Type = ? selected as the surface direction, 2026-10-19; not implementation-ready**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, initialization operations, allocation failure, ownership, and cleanup remain undecided.
+Status: **value: Type = ? and whole-value first initialization with = selected, 2026-10-19; not implementation-ready**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, partial/callee construction, allocation failure, ownership, and cleanup remain undecided.
 
 ## Selected initialization marker
 
@@ -87,7 +87,9 @@ Reading a tuple or enum discriminator also requires valid initialization. A type
 
 Initializing reserved fields for the first time must be distinguished from assignment to an existing live value. A fixed x could become a fully initialized immutable User without implying that it may be reassigned afterward. Var and mut retain their established replacement and held-data permissions once a value exists.
 
-The syntax and permission for first initialization are open. Do not assume the sketches select x = value, x.field = value, an initializer callback, or an init/finalize keyword. In particular, today's fixed-binding assignment rule must not silently be bypassed by an ordinary function call named reserve.
+Whole-value x = value is selected as first initialization without var when the compiler proves x has not already been initialized on any reaching path. Multiple assignment sites in mutually exclusive branches are allowed, but every path reaching a value use must have initialized x. Later replacement requires var. No fallback zero value is supplied to a missing branch. See [first initialization](first-initialization.md).
+
+Field/element construction, initializer callbacks, and initialization through a callee remain separate decisions. No init/finalize keyword is selected. An ordinary function named reserve cannot silently grant first-initialization semantics outside the selected marker contract.
 
 If field-by-field construction is supported, track which fields are initialized on every control-flow path. A complete value requires every required field and the type's validity contract, including any cross-field invariant. Partially written record storage is not automatically a usable User. Whether initialized subfields can be accessed during construction requires a separate rule.
 
@@ -110,7 +112,7 @@ The compiler may be able to enforce initialization facts statically; no universa
 - Whether any separate function-shaped facility is needed alongside the selected ? initialization marker, and its storage/result contract.
 - Expected-type inference, eligible layouts, and explicit generic arguments when inference is unavailable.
 - Stack/heap choice, allocation failure, ownership, escape, and lifetime rules.
-- Whole-value or field-by-field initialization syntax, capability grants, and completion proofs.
+- Field/element initialization syntax, caller construction contracts, capability grants, and complete control-flow proofs beyond the selected whole-value first = rule.
 - Partial cleanup, repeated initialization, and validation of complete values.
 
 Related: [zero initialization](zero-initialization.md), [record creation](record-initialization.md), [declarations](declarations-and-assignment.md), [types and inference](types-and-inference.md), [records](records.md), and [memory and performance](memory-and-performance.md).
