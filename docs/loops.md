@@ -93,5 +93,6 @@ The body follows the final-expression rule. A calculation followed by a final as
 
 ## Related concepts and references
 
+- [Full loop examples](loop-examples.md) cover the current forms and unified-completion candidate, with unsettled contracts marked.
 - [Receivers](loop-receivers.md), [Accumulator](loop-accumulator.md), [Completion](loop-completion.md), and [Tags](tags-and-contexts.md).
 - [Rust loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html), [Odin control flow](https://odin-lang.org/docs/overview/), and [V loops](https://docs.vlang.io/statements-&-expressions.html#for-loop) are comparisons. Their loop result rules are not the proposed LiteScript rules.

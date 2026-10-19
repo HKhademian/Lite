@@ -17,6 +17,8 @@ This receiver is explicitly named metadata, not a new implicit loop variable. It
 
 ## Candidate syntax
 
+See [full loop examples](loop-examples.md) for the combined syntax, alternate source modes, nested exits, and completion edge cases.
+
 Reuse then as one completion block, now receiving the state rather than only Option<T>:
 
 ```text
