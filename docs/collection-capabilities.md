@@ -31,7 +31,7 @@ The names are not universal synonyms across languages: Haskell Traversable suppo
 - `Contiguous<T>`: provide an appropriate bounded view over physically consecutive initialized elements. This would refine relevant size/index requirements; the exact graph remains open.
 - Reversible: traverse in reverse without silently buffering a one-shot stream. Its relationship to repeatability and cursor movement needs definition.
 - `Membership<T>`: answer a membership query under specified equality semantics, potentially using a provider's efficient lookup.
-- Insertion/output capabilities: accept elements into an appropriate destination. Ordered append, set insertion, indexed replacement, and arbitrary element mutation are different operations with different laws.
+- Insertion/output capabilities: accept elements into an appropriate destination. Ordered append, set insertion, indexed replacement, and arbitrary element mutation are different operations with different laws. The [end-operation review](sequence-end-operations.md) proposes separate push/pop capabilities and discusses their costs.
 
 These are composable requirements, not a proposed class-inheritance tree or a list of methods every collection must implement. For example, a set can be traversable and cheaply sized without being indexable or contiguous. A chunked sequence can provide fast logical indexing without one contiguous element region. A packed-bit representation need not expose addressable Bool slots merely because it supports logical indexing.
 

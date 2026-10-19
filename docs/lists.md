@@ -14,14 +14,16 @@ loop numbers as number { print(number) }
 
 mut editable := [10, 20, 30];
 editable[0] = 99;
-append(mut editable, 40);
+push_back(mut editable, 40);
 ```
 
-The literal's growable List default is selected; the append helper and complete indexing API remain proposals. With no more specific expected type, [10, 20, 30] infers `List<Int>`, whether its binding is fixed, var, mut, or var mut. A plain binding provides read-only access even though the collection kind supports growth. Actual changes require the corresponding access permission. An explicit expected array type can select fixed layout under its future construction contract.
+The literal's growable List default is selected; the push_back helper remains a [proposed end operation](sequence-end-operations.md), and the complete indexing API still needs formalization. With no more specific expected type, [10, 20, 30] infers `List<Int>`, whether its binding is fixed, var, mut, or var mut. A plain binding provides read-only access even though the collection kind supports growth. Actual changes require the corresponding access permission. An explicit expected array type can select fixed layout under its future construction contract.
 
 The explicit mut argument follows selected caller grants. Adding mut grants mutation; it must not change List into another collection kind. A fixed list binding can permit mutation of its container data without permitting replacement of the binding. Empty and heterogeneous literal inference remain open.
 
 Var numbers := [...] would permit whole-binding replacement, while var mut would permit both replacement and held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`.
+
+The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. Pop Option behavior and allocation failure policy remain proposals.
 
 ## Length, capacity, and initialization
 

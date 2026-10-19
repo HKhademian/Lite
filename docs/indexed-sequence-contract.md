@@ -53,7 +53,7 @@ The user identifies get_index, set_index, and iterable as the underlying operati
 
 These names describe the intended hooks; complete interface declarations, associated types, receiver signatures, and implementation syntax remain deferred. Merely defining a similarly named method does not establish conformance. Immutable [T] does not expose a writable operation just because the provider has one.
 
-A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities. The exact count still needs its own query contract; get_index, set_index, and iterable alone do not imply cheap exact size.
+A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities; see [end operations](sequence-end-operations.md). The exact count still needs its own query contract; get_index, set_index, and iterable alone do not imply cheap exact size.
 
 General Indexable can use nonpositional keys and need not be iterable. The common hook vocabulary does not grant it all [T] laws or require every lookup to return the same failure channel. Bounds behavior remains independently under review.
 
