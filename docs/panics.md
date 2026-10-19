@@ -1,10 +1,12 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; triggers, arithmetic classification, execution behavior, and cleanup guarantees open**.
+Status: **a panic path separate from typed recoverable errors established; strongly typed panic information requested as future work; exact triggers, arithmetic classification, execution behavior, and cleanup guarantees open**.
 
 ## Purpose
 
 Distinguish a declared recoverable outcome from a failure outside ordinary Result handling. A separate path does not imply that panics are automatically recoverable, use hardware exceptions, or require a stack-unwinding runtime.
+
+The user requests [strongly typed panics](typed-panics.md) in the future, including underlying null access, zero division, arithmetic overflow, and related faults. Typed categories and structured payloads are the intended direction; general capture, safe recovery, effect declarations, and exact trigger rules are not selected by that request. Underlying null faults do not introduce public nullable values.
 
 ## Recoverable failure template
 
