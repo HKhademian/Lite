@@ -51,6 +51,8 @@ validate_age := fn(age: Int): Int ! AgeError {
 
 The expected `Int ! AgeError` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
 
+The user has proposed throw error as exact shorthand for return .err(error). Its [error-return proposal](error-return-sugar.md) preserves declared error coverage, nearest-function/closure exits, and explicit caller handling. Explicit return .ok(value) remains available alongside implicit success. The throw spelling is not yet selected; it adds no implicit exception channel or panic operation.
+
 ## Proposed conversion boundary
 
 - An already compatible `Result` passes through unchanged.

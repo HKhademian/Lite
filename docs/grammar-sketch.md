@@ -272,6 +272,8 @@ continue_exit := "continue" [expression]
 
 `break value` and labeled contribution-bearing continuation are shown as possibilities whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
+The [throw proposal](error-return-sugar.md) considers throw expression as shorthand for return .err(expression), with a required operand and the nearest function/closure as its target. This is not yet an adopted exit production; it would not introduce dynamic handler search or a tagged-throw form.
+
 ## Fallible type templates
 
 ```text
