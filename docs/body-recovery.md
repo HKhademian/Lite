@@ -31,7 +31,82 @@ if condition {
 
 The intended difference is that supported panics from first() or second() could reach the same body-owned handler. The handler is inside the body's braces rather than a second outer else competing with normal branch selection. This is the interpretation suggested by the function analogy, but the user has not yet chosen the exact body-wide form or its full scope.
 
-The delimiter must distinguish a body-wide recovery section from a handler attached to the final operation. A newline cannot do that. The semicolon in this illustration ends the second operation; whether that suffices as the body-clause discriminator or another explicit form is needed remains a grammar decision. This document does not select a new meaning for existing separators or claim a complete parser.
+The delimiter must distinguish a body-wide recovery section from a handler attached to the final operation. A newline cannot do that. The explicit-semicolon candidate below is one proposed discriminator; whether to adopt it or use another form remains a grammar decision. This document does not select a new meaning for existing separators or claim a complete parser.
+
+## Concrete body-section proposal
+
+The user asks for a less vague illustration. One concrete candidate divides a body into work, optional recovery, and optional cleanup, all inside the same braces:
+
+```text
+inspect_file := fn(path: String) {
+    prepare();
+
+    text := read_text(path) else {
+        "Unavailable"
+    }
+
+    inspect(text);
+
+    else(failure) {
+        report_body_failure(failure)
+    }
+
+    finally {
+        finish_inspection()
+    }
+}
+```
+
+Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; finally placement and panic-cleanup behavior remain under review.
+
+### How it executes
+
+1. On entry to the body, establish its handler for the work region; it is not activated only after reaching its written position.
+2. Run prepare, the explicitly handled read, and inspect in order.
+3. If work completes normally, skip the body recovery section.
+4. If a supported typed panic escapes an operation-local handler while the work region is active, stop remaining work and enter the body recovery section once.
+5. After work or recovery finishes, run the proposed body-owned finally. Structured early exits run applicable cleanup without being intercepted as failures.
+6. A new panic in recovery/finally goes outward; these sections do not catch themselves. Cleanup failure competing with an existing failure still needs a separate policy.
+
+If prepare panics, the read and inspect do not execute. If the read returns .err, its local fallback supplies "Unavailable" and inspect still runs. If inspect panics, the body handler runs. In each ordinary trace, finally follows under the proposed cleanup rule. No retry or rollback occurs.
+
+### The same body layout in an if branch
+
+```text
+if enabled {
+    first();
+    second();
+
+    else(failure) {
+        recover_branch(failure)
+    }
+
+    finally {
+        finish_branch()
+    }
+} else {
+    show_disabled()
+}
+```
+
+The internal else handles the selected true body; the external else remains ordinary false selection. A false condition enters only the false body, so the true body's handler/cleanup is not active. A panic while evaluating the condition occurs before entering either branch body and needs an enclosing body handler or operation-local recovery. This is the concrete literal-body scope being proposed, not an extension of an inner handler to its header.
+
+### Proposed explicit separator rule
+
+The first body-owned hook requires an explicit semicolon ending the work section. A handler with no such boundary remains attached to its operation:
+
+```text
+second() else(failure) { recover_operation(failure) }
+second(); else(failure) { recover_body(failure) }
+```
+
+These snippets illustrate the proposed distinction within their containing body. Semicolon ends the operation in the second form, so the following else belongs to the body. Newlines and indentation make no difference. After a final work item ending in a complete block, the same explicit separator would still be required to introduce a body hook; repeated separators would retain their existing ignored-extra behavior. A body with cleanup only would likewise separate work from its finally section explicitly.
+
+This delimiter proposal needs review before adoption. It does not make semicolon a value-discard operator. Body hooks would be attached clauses rather than ordinary final work items; the existing final-expression rule would apply to the completed work region, with recovery/value and cleanup transformations specified separately. The Unit examples avoid assuming a new normal-return type rule.
+
+Receiver omission could remain supported for a body-owned else because its explicit separator/brace owner already distinguishes it from a call handler or external false branch. That would need to be stated in the final grammar rather than inferred from this illustration.
+
+Recovery/cleanup may use their receiver and outer bindings such as path. Work-local names must not become magically initialized if failure occurred before their declaration. Definite-initialization and lifetime rules must govern any such access; the examples do not use text from recovery or cleanup.
 
 ## What the ownership correction settles
 

@@ -152,6 +152,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The user requests a concrete description of body-wide recovery. The [body-section proposal](body-recovery.md#concrete-body-section-proposal) illustrates work followed by internal else/finally sections, with an explicit semicolon ending work to distinguish a body handler from the final call's handler. This spelling, activation scope, body-finally placement, definite initialization, value rules, and cleanup-failure behavior remain proposals; it does not change explicit inner Result handling or ! targets.
+
 - The [loop recovery example](loop-recovery.md) is historical where it attaches recovery outside a grouped loop. Body-local ownership supersedes that workaround; normal accumulator/completion rules remain, while internal iteration/run recovery scope and cleanup require review.
 
 - The [finally review](finally.md) responds to the missing cleanup in the full example, adding operation, entered branch-region, and whole-conditional finally hooks. Its external construct-handler placement is superseded; its cleanup review proposes protected evaluation, optional recovery, then Unit cleanup that preserves pending values/exits, proceeding inner to outer. Existing structured-exit intent is retained; panic cleanup, secondary failures, receiver transformations, and full attachment grammar remain unselected.

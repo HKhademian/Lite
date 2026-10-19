@@ -124,7 +124,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Control flow
 
-- [Body-owned recovery](body-recovery.md): selected internal placement for construct recovery, operation-local versus body-wide scope, and pending body-section grammar.
+- [Body-owned recovery](body-recovery.md): selected internal recovery placement, concrete proposed work/recovery/cleanup sections, operation-local versus body-wide scope, and delimiter decisions.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
 - [Conditionals](conditionals.md): one syntax for actions and values.
 - [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
