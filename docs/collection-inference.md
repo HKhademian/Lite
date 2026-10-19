@@ -105,6 +105,8 @@ This proposal does not silently strengthen an explicitly complete public travers
 
 The later [signature review](collection-function-signatures.md) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
 
+The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Inferring omitted parameters remains a candidate convenience; silently supplementing a complete-looking collection annotation is no longer recommended. The short [T] meaning remains open, with indexed-sequence shorthand now another recommended candidate for beginner ergonomics.
+
 ## Could a short collection annotation help?
 
 An element-oriented annotation is a useful alternative to evaluate:

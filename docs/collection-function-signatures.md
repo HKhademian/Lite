@@ -42,7 +42,7 @@ An explicitly complete input contract must remain the boundary for body checking
 
 An alternative is to make some annotations partial and infer additional constraints. If adopted, that category needs a defined boundary rather than having the same complete annotation unpredictably acquire requirements. The current recommendation is omitted inputs for inference and deliberately complete explicit contracts for stable APIs. The exact public-signature requirement remains open.
 
-The later [ergonomics review](collection-signature-ergonomics.md) investigates that partial-annotation alternative in response to the user's concern about strong shorthand spreading into library APIs. It retains the complete-contract model as another candidate. Neither candidate is selected, and partial inference must not be silently assumed in the complete-signature examples above.
+The later [ergonomics review](collection-signature-ergonomics.md) investigated partial annotations in response to the user's concern about strong shorthand spreading into library APIs. The user's subsequent source-visibility objection favors keeping written contracts complete; compiler/tool visibility alone is insufficient. The review now recommends evaluating a short indexed-sequence contract alongside a distinct traversal-only contract. No [T] meaning is selected, and the traversal-only examples above retain their stated illustrative meaning.
 
 ## Preserve input/output relationships
 
