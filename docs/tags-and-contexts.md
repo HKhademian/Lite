@@ -69,6 +69,7 @@ For a simple conditional, `.condition` denotes the already evaluated condition. 
 - Nested tags may shadow outer tags, like ordinary lexical names.
 - `@name` resolves to the nearest declaration.
 - A header's tag covers the entire construct, including its source/condition.
+- A loop tag remains in scope through its attached completion block, not just iteration. Its final count and optional accumulator remain readable there; other fields require documented completion-phase availability. See [unified loop completion](unified-loop-completion.md#access-through-the-owning-loop-tag).
 - Leaving an inner scope reveals an outer tag again.
 - Use distinct tags when both contexts must remain addressable.
 
@@ -77,6 +78,8 @@ The earlier prohibition on active tag shadowing is superseded.
 ## Availability and implementation
 
 Count and accumulator state must exist before the first condition check. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
+
+At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not retain a current item or iteration-local references automatically, grant metadata writes, or allow a tag to escape its construct.
 
 Additional fields require documented source capabilities and phase availability. An arbitrary iterator cannot promise reverse traversal, an exact remaining length, or last-item detection without additional work.
 

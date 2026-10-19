@@ -4,6 +4,8 @@ Status: **intent established; clause ordering and full exit/type contracts open*
 
 The user now proposes replacing then/empty-else/common-final processing with [one completion receiver and block](unified-loop-completion.md). That simplification is under exploration; the separate-clause examples below are retained for comparison, not finalized grammar. Full cleanup during escaping control flow remains part of the deferred lifecycle review.
 
+The owning loop tag must remain accessible during that completion phase, including its final count and optional accumulator. Access to other metadata depends on its validity in that phase; this does not retain iteration-local values automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
+
 ## Purpose and template
 
 Handle the final contribution, absence of contributions, and cleanup without wrapping loops in functions solely to obtain a result.

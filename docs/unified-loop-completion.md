@@ -2,6 +2,8 @@
 
 Status: **user-requested simplification under exploration, 2026-10-19; not selected grammar**. Replace separate loop then/empty-else/common-final processing with one block receiving completion state. This proposal does not finalize the deferred body-wide cleanup design.
 
+The user additionally requires the owning loop tag to remain accessible in its completion block. This scope requirement is selected independently of the pending keyword and receiver grammar.
+
 ## Minimal receiver
 
 The final block needs two independent facts:
@@ -43,6 +45,31 @@ message := loop items as item {
 ```
 
 The inner else is ordinary conditional selection; there is no separate loop empty clause. The receiving block follows the ordinary final-expression rule and can transform contribution type T into whole-loop result R. Nonreceiving action hooks and behavior when the completion block is omitted retain their existing open questions; this proposal does not settle them implicitly.
+
+## Access through the owning loop tag
+
+The loop's lexical scope includes its attached completion block. Finishing iteration does not end the tag's lifetime before completion processing has finished:
+
+```text
+sum := @sum loop numbers as number {
+    @sum.acc.value_or(0) + number
+} then(done) {
+    report_iterations(done.count);
+    @sum.acc.value_or(0)
+}
+```
+
+Here done.count and @sum.count describe the same final entered-iteration count; done.acc and @sum.acc describe the same final accumulated state. The completion receiver is a convenient named view of that state, not a second accumulator. The tag can expose other documented metadata when that metadata is valid in the completion phase; its interface need not be limited to the receiver's minimal fields.
+
+- @sum.count is available even when zero iterations ran.
+- @sum.acc is the final committed optional accumulator, including preservation across skips and bare break. The completion block can inspect it and calculate a different final result from it.
+- Metadata remains read-only. Producing the completion block's final expression does not implicitly overwrite the iteration accumulator or contribute another iteration.
+- A current item, an iteration-local binding, or a reference into released iterator storage must not become accessible merely because the tag still exists. Last-item retention and any additional metadata need explicit phase and lifetime contracts; no empty-loop item is fabricated.
+- The final whole-loop result is still being computed, so the tag cannot expose that unfinished result as an already available value.
+
+Nested constructs retain their own current contexts. An explicit @sum.acc can reach the owning loop from inside a nested conditional; leading-dot access still never searches outward. Nested same-named tags follow ordinary lexical shadowing. The tag cannot escape as a first-class stored value, and retaining its scope does not make the finished iteration resumable.
+
+The completion block therefore has access to all loop information that is still valid, without keeping every item or consumed resource alive by default. Exact ownership and lowering remain separate design work.
 
 ## Completion versus cleanup
 

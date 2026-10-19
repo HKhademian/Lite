@@ -148,6 +148,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Tags follow lexical shadowing; an inner tag may reuse a name.
 - `.field` refers only to the current construct, with no outward fallback.
 - `@name.field` explicitly selects a named context.
+- A loop's tag remains accessible in its attached completion block. Final count and optional accumulator are readable there; other metadata must be valid for that phase. This scope does not keep iteration-local items/references alive automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
