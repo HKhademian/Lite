@@ -91,6 +91,28 @@ It must not silently switch between those meanings in parameters, fields, and re
 
 Do not finalize this shorthand as a side effect of choosing generic punctuation. Its meaning needs review first.
 
+## Bracket spelling and the slice distinction
+
+The user identified two candidate families:
+
+```text
+Icon[]          /* element type followed by brackets */
+Icon[10]        /* element type followed by an extent */
+
+[Icon]          /* brackets around the element type */
+[Icon; 10]      /* brackets around element type and extent */
+```
+
+Both are source-spelling candidates; no ownership or representation is selected by their appearance. The working recommendation is the bracket-enclosed family: it visually groups the collection type and composes as [[Icon; 4]; 3]. If fixed-array meaning is chosen, that nested example would describe three arrays of four Icons.
+
+The resemblance to slices is real. Rust writes its dynamically sized slice type as [T], usually accessed through a borrowed &[T] or &mut [T]; [T; N] is a fixed-size array type. Zig and Odin use []T for slices and [N]T for fixed arrays. Sources: [Rust slices](https://doc.rust-lang.org/reference/types/slice.html), [Rust arrays](https://doc.rust-lang.org/reference/types/array.html), [Zig 0.15.1 slices](https://ziglang.org/documentation/0.15.1/#Slices), and [Odin slices](https://odin-lang.org/docs/overview/#slices).
+
+A contiguous slice can give an array or list a shared input representation without copying elements. An arbitrary set, chunked source, or generator cannot generally provide that same representation without materialization. Consequently, choosing slice semantics for fn(icons: [Icon]) would narrow the earlier provider-independent traversal goal.
+
+For that consumer goal, the working recommendation is to evaluate [Icon] as a concise read-only traversal requirement and retain an explicit slice concept when contiguity is required. The [Icon; 10] candidate needs its own decision: inline fixed-array storage, an exact-length view, or a requirement with a statically known extent. Length and ownership are separate properties. A lazy or one-shot source must not be counted or materialized implicitly to establish the extent.
+
+This recommendation does not select those meanings. A final choice must also cover fields, results, stored abstract values, expected literal construction, and mutation. The provider-independent form must not become a contiguous slice solely because it appears in a parameter.
+
 ## Recommendation and teaching progression
 
 Teach literal values, named loop receivers, and ordinary calls first. Extend contextual construction through known collection element types. Evaluate inferred generic requirements for simple functions, while keeping an explicit contract form available for libraries and advanced code.
