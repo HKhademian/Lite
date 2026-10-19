@@ -56,6 +56,8 @@ Begin with literals, inferred bindings, calls, braces, separators, conditions, a
 
 There should be one language rather than different semantics for a beginner mode. Full type and ownership contracts still need to work for advanced users.
 
+The [slot-ergonomics goal](slot-ergonomics.md) keeps slot inference behind familiar declarations wherever possible. Teach var replacement and mut data access first; describe rejected writes in terms of the actual field and replacement types. Advanced read/write summaries can remain available without making their internal vocabulary mandatory in beginner code.
+
 ## Explicit names versus editor convenience
 
 The language should not silently inject `it`, `count`, or `acc`. An editor may suggest explicit receiver bindings or generate a snippet, leaving names visible and editable in source.

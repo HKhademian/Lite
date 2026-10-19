@@ -11,6 +11,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Bindings are fixed and provide read-only access by default. Var permits binding reassignment; mut permits held-data updates. Inferred var mut x := expression grants both, with var x: mut T = expression as its annotated form.
 - Operations have read access by default; affected receiver/parameter bindings explicitly carry `mut`. There is no additional function-level mutation marker.
 - Minimal visibility and capability exposure by default.
+- Keep slot syntax hidden from ordinary code as much as possible, inferring routine access contracts and reserving advanced annotations for useful precision. This does not hide observable caller replacement or weaken write checks; see [slot ergonomics](slot-ergonomics.md).
 - Explicit optional data and typed errors instead of universal nullability.
 - Recoverable failures have statically typed error contracts. To obtain a fallible call's successful payload, a caller explicitly handles/inspects the outcome, supplies a default, or propagates the error. Keeping the outcome as a `Result` for later handling does not unwrap it.
 - Propagation uses postfix `!` at each extracted Result step. Calls and members can continue directly, as in `load_user(id)!.load_profile()!.name`; parenthesis-heavy chains and mandatory temporary bindings are rejected as the everyday solution. `!.` consists of two ordinary postfix-chain tokens and is not nullable access. Local recovery uses an attached `else(error) { ... }` or `else { ... }` block. The error receiver is optional and introduces no implicit name when omitted. Implicit success construction does not imply automatic call-site extraction.
@@ -127,6 +128,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
+
+- The [slot-ergonomics proposal](slot-ergonomics.md) recommends var target: T and var target: mut T parameters for common temporary caller replacement, keeping slot contracts inferred underneath. This reconsiders the earlier local-only var parameter proposal. Neither var-parameter meaning, call-site spelling, nor the public status of restricted slot annotations is selected; one canonical meaning must be chosen before migrating examples.
 
 - [Type-side mut placement](mut-qualifier-placement.md) is selected and canonical typed examples have been migrated. Qualified aliases, per-alternative access qualifiers, recursive scope/normalization, and complete type grammar remain separate decisions. The placement change does not select borrowing, copying, caller replacement, or a ref mode.
 

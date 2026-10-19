@@ -50,6 +50,8 @@ These markers do not choose borrowing, copying, moving, lifetimes, argument synt
 
 The [ordinary parameter review](parameter-values-and-slots.md) keeps the current feature scope to ordinary inputs and writable slots. Read-only defaults do not decide copying versus borrowing. An efficient indirect calling convention must preserve the eventual observable semantics; it does not by itself introduce a public reference feature or caller writeback.
 
+The selected [slot-ergonomics goal](slot-ergonomics.md) is to keep slot syntax out of ordinary code as much as possible. Its current proposal uses var target: T parameters for temporary caller replacement, with slot contracts inferred underneath. This is an alternative to the earlier local-var parameter interpretation, not a selected meaning or a second spelling to silently support alongside it.
+
 ## Result rules
 
 The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item with an optional trailing semicolon; see [blocks and results](blocks-and-results.md).

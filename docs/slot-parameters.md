@@ -12,7 +12,9 @@ Distinguish replacing an ordinary local parameter binding from replacing a locat
 
 A slot-qualified parameter requests temporary access to the caller's location. Assignment through the parameter writes back to that location. This is selected separately from the slot marker's earlier descriptive meaning; it does not make every ordinary call an aliasing operation. An explicit call-site marker remains recommended, with its spelling unselected.
 
-## Local rebinding is a separate proposal
+## Var parameter semantics remain a choice
+
+The later [slot-ergonomics proposal](slot-ergonomics.md) recommends using var parameters for caller replacement to minimize visible slot syntax. That competes with the earlier local-value interpretation below. Neither interpretation is selected; the same syntax must not acquire two implicit meanings.
 
 ```text
 local_only := fn(var value: A | B) {
@@ -20,7 +22,7 @@ local_only := fn(var value: A | B) {
 }
 ```
 
-Under the recommended local-var interpretation, the assignment replaces this parameter's local binding. It does not rebind the caller's variable. This is a proposal for var parameters, not a selected parameter grammar or a decision about copying, moving, shared objects, or payload ownership.
+Under the earlier local-var interpretation, the assignment replaces this parameter's local binding. It does not rebind the caller's variable. The later ergonomics proposal would instead write back to the caller. This is an unresolved choice of var parameter semantics, not a selected parameter grammar or a decision about copying, moving, shared objects, or payload ownership.
 
 ## Slot parameter with proposed call syntax
 

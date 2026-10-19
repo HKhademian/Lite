@@ -104,6 +104,8 @@ A transparent alias must retain its entire denoted type as the operand. If Pair 
 
 ## Remaining choices
 
+The [slot-ergonomics goal](slot-ergonomics.md) is to minimize explicit slot syntax in ordinary code. Existing var declarations already derive full replacement contracts. Proposed var parameters could extend that approach to common APIs; restricted contracts and public annotation forms still need a decision.
+
 [Slot parameters](slot-parameters.md) have selected temporary caller-location semantics: assignment through them replaces the supplied caller variable or field for the duration of the call. Explicit argument markers and complete access compatibility remain proposals, as do aliasing and general lifetime rules. Public pointers and general reference values are not selected.
 
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
