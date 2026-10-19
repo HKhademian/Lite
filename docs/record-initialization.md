@@ -134,7 +134,7 @@ make_user := fn(name: String): User {
 
 The explicit type head makes these ordinary construction expressions. The factory's outer braces are an executable body; its final User construction supplies its result. Omitting a construction head at arbitrary call arguments or function tail positions requires the broader expected-type/brace grammar, which is not selected merely by these examples.
 
-Inline source notation does not promise physical in-place storage, heap allocation, deep copying, or a particular ABI. Ownership, references, and layout have separate contracts.
+Nested initializer notation alone does not request a graph clone or a particular allocation/ABI. The selected record-value rule stores ordinary nested record fields inline in their containing value: a named User field is still copied with that value. Reference fields preserve their targets rather than cloning them. Exact physical representation must preserve these semantics; see [local shadowing and copies](local-shadowing-and-copies.md). Ownership, reference syntax, resource copy eligibility, and ABI details remain separate contracts.
 
 ## 6. Unnamed record type inside a record: proposal
 

@@ -103,6 +103,12 @@ The [record creation and initialization overview](record-initialization.md) sepa
 
 Records support the composition-first direction: fields can contain other data types, and interfaces describe behavior. Declaration and field visibility follow the minimal-exposure goal; their modifier syntax remains open. Binding reassignment and writable held-data access remain independent var/mut capabilities.
 
+## Inline nested values and copying
+
+An ordinary record-valued field contributes its value storage to the containing record. A named type such as User does not implicitly turn that field into a reference. If P has u: Int and Q has u: User, both u fields are copied as part of their containing record values; Q includes the entire inline User and all its nested inline record fields.
+
+Reference-valued fields instead copy their reference representation, retaining targets and existing permissions without cloning separately stored data. The selected mutable-copy declaration mut copy := original follows this shallow value-copy rule. ABI details, padding bytes, copy eligibility for resources, and general transfer/cleanup contracts remain open; see [local shadowing and copies](local-shadowing-and-copies.md).
+
 ## Open decisions
 
 - [Record type identity](record-type-identity.md) records selected nominal identity for all record type declarations; alias scope/generics, inferred standalone literals, and additional conversion facilities remain open.
@@ -110,8 +116,8 @@ Records support the composition-first direction: fields can contain other data t
 - Inferred standalone record literals and generic declarations/instantiation.
 - Field visibility/accessor syntax and any per-field mutation rules.
 - Public matching schemas and named/positional destructuring.
-- Generated equality, hashing, formatting, and copy operations.
-- Ownership, borrowing, reference identity, storage, and layout.
+- Generated equality, hashing, formatting, and additional copy operations beyond the selected shallow record-copy rule.
+- Ownership, borrowing, reference identity, resource copy eligibility, and precise layout/ABI beyond inline record-value semantics.
 
 Selecting record does not independently choose those contracts.
 
