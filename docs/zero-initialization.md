@@ -92,6 +92,7 @@ The full expected-type rule must specify how contextual zero interacts with this
 - Zero initialization is a value operation; a binding still obeys independent var/mut permissions.
 - No source-level raw memory clearing, implicit allocation, or guaranteed representation is selected.
 - The compiler may directly construct the final representation, with no mandated default construction followed by clearing.
+- Zero initialization is semantic, not a mandate to issue zero stores. If a complete replacement makes those stores unobservable on all relevant paths, the compiler may omit them, use untouched storage internally, or eliminate storage entirely. Defined reads and any required cleanup effects must still be preserved, including exits before replacement. See [initialization and physical writes](memory-and-performance.md#semantic-initialization-versus-physical-writes).
 - It must prove a legal zero contract statically; lack of such a contract is a compile error, not a panic or recoverable runtime failure.
 - Unknown generic types need an eventual zeroability constraint. Capability names and declaration syntax are open.
 - If the expected type is missing or admits several incompatible zero alternatives, the compiler must not guess a record/union case.

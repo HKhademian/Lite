@@ -38,7 +38,30 @@ The selected temporary [var-qualified parameter](slot-parameters.md) gives acces
 
 [Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
 
-## Proposed reservation without initialization
+## Semantic initialization versus physical writes
+
+Selected optimization principle, 2026-10-19: a source-level initialization requirement does not mandate physical initialization stores when the compiler proves them unobservable.
+
+```text
+var x: User;       /* semantically valid zero initialization */
+x = make_user();   /* replaces the complete value */
+```
+
+For this example, the compiler may leave the destination storage physically uninitialized until the replacement, construct the result directly there when valid, keep the value in registers, or eliminate storage entirely. It must preserve every defined observation and any required initialization, replacement, or cleanup effect. This is permission to optimize, not a requirement that a backend discover or apply the transformation.
+
+The proof must cover reads through x or other accessible paths, captures and callbacks, and exits before replacement. If the right-hand side fails or exits, any required cleanup or observation must still behave as if the zero value had been initialized. Once cleanup rules are defined, an observable cleanup effect cannot be erased just because the value is overwritten on the normal path.
+
+```text
+var x: User;
+inspect(x);          /* must observe the defined zero value */
+x = make_user();
+```
+
+Here merely exposing untouched bytes would be invalid. The compiler may still avoid physical zero stores if it can preserve the zero observation through constant folding, replacement of reads, or another equivalent representation.
+
+Source validity is checked independently of optimization. A type without a valid zero remains ineligible for var x: Type;, even when the following line overwrites it. An explicit uninitialized-storage request has a separate source contract. Backend-elided zeroing does not expose a new readable uninitialized state or choose stack versus heap.
+
+## Explicit reservation without initialization
 
 The provisional generic reserve() operation would use an expected record/tuple type to reserve appropriately sized/aligned stack or heap storage without zero/default initialization. Its surface, allocation policy, and failure handling are unselected. Ordinary declarations still initialize immediately. A reservation requires a separate initialization-state contract before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership cannot follow merely from a function-shaped spelling. See [reserved storage](reserved-storage.md).
 

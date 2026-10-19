@@ -213,6 +213,7 @@ Zero/default validity is not the same as satisfying a business rule. A plain Str
 - Each construction establishes its own logical default values. Do not introduce accidental shared writable collections through a declaration default. Ownership/copy rules must establish whether any noncopyable default can be reused.
 - `mut user := User {};` grants writable held-data access; `var user := User {};` permits replacing the binding; `var mut` permits both. Default initialization does not change those permissions.
 - No mandated preliminary zero-fill followed by overwrites is implied. A compiler may construct the final valid representation directly and remove redundant stores. This does not establish C-level performance before implementation and measurement.
+- In var x: User; x = make_user();, zero initialization remains the source meaning, but its physical stores may be omitted if they have no observable effect. Reads, aliases, callbacks, exits before replacement, and any required cleanup must retain that meaning. See [semantic initialization versus physical writes](memory-and-performance.md#semantic-initialization-versus-physical-writes).
 
 ## References
 
