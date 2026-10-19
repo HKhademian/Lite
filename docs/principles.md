@@ -18,6 +18,7 @@ Provide a language that students can begin using without learning type annotatio
 - Minimal visibility and capability exposure by default.
 - Infer derived access type structure, keeping mathematical summaries such as A | var B | C out of routine code. Explicit type-side var in a function header declares caller replacement; local-only var belongs in the body. See [var access](var-access-qualifier.md) and [access ergonomics](slot-ergonomics.md).
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.
+- Collection consumers request the capabilities they need; standard and user implementations provide them. Shared element-typed APIs must not require primitive-wrapper collection families, conversion to one standard container, or a universal boxed-object representation. See [collection abstractions](collection-abstractions.md).
 - Small runtime requirements and native execution as an intended implementation direction.
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.
 - One conditional syntax for actions and values.

@@ -13,6 +13,7 @@ Make a convenient language compatible with predictable data representation and a
 - Unboxed scalar values and records where their semantics allow it.
 - Predictable collection storage and explicit expensive representations.
 - Specialization and static dispatch where appropriate.
+- Shared collection capabilities for primitive and record elements without a mandatory boxed-wrapper API split.
 - Metadata and tags that can lower to ordinary local state.
 - Optional facilities linked only when used, where practical.
 
@@ -37,6 +38,12 @@ The design must still decide general assignment and ordinary parameter move/copy
 The selected temporary [var-qualified parameter](slot-parameters.md) gives access to a caller variable or field; it introduces no public pointer operation or general reference-value feature. The var qualifier replaces the former slot keyword. The [ordinary parameter review](parameter-values-and-slots.md) separates language-defined value/borrow behavior from backend choices such as passing an aggregate indirectly. Such choices must preserve observable identity, ownership, aliasing, and mutation behavior rather than silently select a different contract.
 
 [Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
+
+## Generic collection requirements
+
+The selected [collection API direction](collection-abstractions.md) separates consumer abilities from storage providers. A common traversal contract should not require object boxing, a heap-allocated iterator, dynamic dispatch, or materialization into List merely to cross the input boundary. Recommend specialization of the concrete provider/element types for the ordinary path; exact compiler and generic mechanisms remain open.
+
+Runtime-erased providers and heterogeneous element representations are separate choices with their own dispatch/ownership costs. Specialization can also cost code size and compilation time. [Generic collection performance](generic-collection-performance.md) records those tradeoffs and reference-language examples. [Provider-neutral algorithms](collection-algorithms.md) covers fast hooks and destinations; removing generic-call overhead alone does not change a linear algorithm into indexed lookup.
 
 ## Proposed sequence representations
 

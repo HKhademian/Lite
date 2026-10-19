@@ -54,4 +54,6 @@ An operation may still explicitly construct and return a standard List when that
 
 The user-selected principle is capability-based APIs with unified element typing. The capability vocabulary, complexity laws, explicit conformance/coherence, static specialization versus erased runtime values, and exact generic syntax still need design. See [collection capabilities](collection-capabilities.md).
 
+Provider-neutral input alone does not settle the algorithm or output representation. The [algorithm proposal](collection-algorithms.md) covers lawful fast paths, lazy results, and caller-selected destinations. The [generic performance review](generic-collection-performance.md) separates compile-time constraints, runtime-erased providers, and heterogeneous element storage.
+
 Related: [interfaces](composition-and-interfaces.md), [sequence storage providers](sequence-types.md), [iteration](collections-and-iterators.md), [temporary generic notation](generic-notation.md), and [caller mutation grants](caller-mutation-grants.md).

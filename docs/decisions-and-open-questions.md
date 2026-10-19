@@ -141,6 +141,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- The [algorithm proposal](collection-algorithms.md) recommends lawful provider customization with generic fallbacks, lazy transformations, and caller-selected sinks/factories so standard containers do not become compulsory outputs. The [performance review](generic-collection-performance.md) recommends static specialization for ordinary capability constraints and separates explicit runtime-erased providers from heterogeneous elements. Customization precedence/coherence, effects and cost laws, binary ABI, specialization budgets, exact output contracts, and generic/dispatch syntax remain open.
+
 - The [collection-capability proposal](collection-capabilities.md) decomposes traversal, cheap exact size, repeatability/order, indexing, contiguity, reversal, membership, and output abilities. A traversal input alone does not promise size, replayability, or a Slice. Interface names, refinement/law/cost rules, cursor consumption and yielded access, fallible/async protocols, dispatch, and conformance/coherence remain open. Existing mut/var grants do not create unsupported operations or authorize hidden iterator consumption.
 
 - Generic source syntax is explicitly deferred. Angle-bracket examples such as `Array<Float, 3>`, `List<Int>`, `Option<User>`, and `Result<T, E>` describe concepts only; they select neither declaration/application grammar nor a generic parameter mechanism. Type inputs and compile-time values are distinct concerns for the future review. Existing literal defaults and selected T ! E fallibility syntax retain their independent status. See [temporary generic notation](generic-notation.md).

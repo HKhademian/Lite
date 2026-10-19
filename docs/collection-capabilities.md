@@ -37,6 +37,8 @@ Do not count a one-shot source by traversing it and then quietly assume it can b
 
 An implementation must satisfy behavior, element type/access, failure handling, and any stated cost promises. Providing methods with matching names is insufficient. A capability does not imply ownership of the elements or permission to mutate them. Exact method signatures and whether constraints carry complexity guarantees must be reviewed together.
 
+A public generic body must be checked against its published requirements, so adding indexing or a size lookup cannot silently make a traversal-only API reject other providers. Optional optimized hooks require the separately defined [customization contract](collection-algorithms.md); access to one concrete standard type must not leak into the baseline implementation.
+
 No blanket covariance of mutable or contiguous element storage follows from these interfaces. Plain-union value widening does not justify writing a new alternative into a narrower source or reinterpreting a different element stride. A logical adapting iterator might support conversions that a direct Slice cannot, under a separately defined conversion contract.
 
 ## Integration with loops and providers
