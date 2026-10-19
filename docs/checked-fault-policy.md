@@ -67,11 +67,17 @@ swap_if_out_of_order := fn(values: mut [Int], i: Int, j: Int) {
 }
 ```
 
-This is a sorting step, not a complete sorting algorithm. Reads and writes use ordinary syntax without a Result marker on every access. Its public input visibly requests writable indexed-sequence access; its final conditional has Unit result under the existing action-conditional rules. The spelling [Int] remains unselected, and mut [Int] would need an actual writable indexed refinement supplied by the provider, not a fabricated setter. It does not require growth, contiguous storage, or one concrete List type.
+This is a sorting step, not a complete sorting algorithm. Reads and writes use ordinary syntax without a Result marker on every access. Its public input visibly requests writable indexed-sequence access; its final conditional has Unit result under the existing action-conditional rules. The [Int] indexed-sequence direction is now accepted, and mut [Int] needs an actual writable indexed refinement supplied by the provider, not a fabricated setter. It does not require growth, contiguous storage, or one concrete List type.
 
 Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Applicable panic termination/capture/cleanup rules still need definition.
 
 Algorithm invariants and range-based traversal can make indexes valid; a compiler can eliminate checks when proved safe. The source does not gain or lose ! markers depending on optimization success. Expected invalid positions, such as user-supplied requests that a program intends to recover from, should use the separately explicit checked operation. Its spelling remains open; this recommendation does not introduce general panic catch blocks or change the existing Result ! operator.
+
+## Consistency with removal
+
+The user points out that default Option-returning pop would require unpacking unlike the proposed direct indexed reads/writes. The revised [end-operation review](sequence-end-operations.md) recommends aligning ordinary pop with whichever ordinary index policy is selected: direct T or Unit with a safe fault under alternative B, or typed Result under alternative A. Empty removal and invalid position can have distinct typed failures while following the same handling mode.
+
+Explicit checked operations under B would return typed Results for recovery; their exact syntax remains open. A deliberately optional lookup/removal can still be a separate Option-returning API. Neither that API nor a blanket panic-capture operator is selected by the consistency requirement. Empty removal must not change the sequence, without implying rollback of earlier effects.
 
 ## Interaction with the existing short forms
 

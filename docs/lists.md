@@ -23,7 +23,7 @@ The explicit mut argument follows selected caller grants. Adding mut grants muta
 
 Var numbers := [...] would permit whole-binding replacement, while var mut would permit both replacement and held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`.
 
-The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. Pop Option behavior and allocation failure policy remain proposals.
+The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The revised recommendation aligns ordinary pop with the eventual ordinary indexing failure policy; a separate Option-returning removal remains an alternative. Both the default and allocation failure policy remain proposals.
 
 ## Length, capacity, and initialization
 

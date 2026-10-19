@@ -1,6 +1,6 @@
 # Adding and removing sequence ends
 
-Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. Canonical names, empty-pop behavior, allocation failures, and API signatures remain under review.
+Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. Recommend aligning ordinary pops with the eventual ordinary index failure policy; no default is selected. Names, allocation failures, and API signatures remain under review.
 
 ## Proposed operations
 
@@ -8,8 +8,8 @@ Recommend one symmetric family:
 
 - push_front adds one element before the current first element.
 - push_back adds one element after the current last element.
-- pop_front removes and returns the first element, if present.
-- pop_back removes and returns the last element, if present.
+- pop_front removes and returns the first element; empty behavior follows the operation's selected failure mode.
+- pop_back removes and returns the last element; empty behavior follows the operation's selected failure mode.
 
 Front/back name logical sequence ends, irrespective of physical buffer layout or element comparisons. Existing element order is preserved. A push adds exactly one occurrence, allowing repeats; it does not implicitly flatten an iterable or enforce set uniqueness. Bulk extension needs its own operation contract.
 
@@ -23,18 +23,14 @@ mut numbers := [2, 3];
 push_front(mut numbers, 1);
 push_back(mut numbers, 4);
 
-/* Proposed pop result: Option<Int>. */
-if .Some(first) := pop_front(mut numbers) {
-    print(first)
-}
-
-match pop_back(mut numbers) {
-    .Some(last) { print(last) }
-    .None {}
-}
+/* Revised candidate: direct values, like ordinary indexing. */
+first := pop_front(mut numbers);
+last := pop_back(mut numbers);
+print(first);
+print(last);
 ```
 
-These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change the List literal default. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
+These examples assume the currently recommended asserting default for indexing and removal; an empty pop would fault safely, rather than return Option. That policy remains a proposal. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change the List literal default. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
 
 ## Mutability and supported operations
 
@@ -48,11 +44,21 @@ A writable fixed array or fixed-length slice can satisfy element replacement wit
 
 A concrete inferred List value can expose its actual growth operations. An explicit parameter values: mut [T] exposes only that contract; a library function using push_back must state its extra requirement, or deliberately use an inferred input contract. Full generic composition syntax is deferred. Mut alone must not conceal an additional growth requirement in a complete public signature.
 
-## Proposed empty-pop behavior
+## Align indexing and removal failure modes
 
-Recommend Option<T>: .Some(value) after removing an element, .None when already empty. Empty removal leaves the sequence unchanged. An Option absence is not an uninitialized payload or public null pointer. The returned element is a value removed from storage, not a borrowed view into the vacated slot; its transfer/copy rules must follow the eventual ownership contract.
+The earlier default Option<T> recommendation is withdrawn after the user's consistency objection. It is a useful optional-removal design, but it adds mandatory unpacking to ordinary pop while the current indexing recommendation allows direct values. Method names borrowed from another language do not require importing that language's default return policy.
 
-This is independent of asserting positional bounds checks. A deliberately optional removal can coexist with values[index] using the selected eventual fault policy. An asserting or typed-error removal alternative remains possible, but adding every variant is not required for the first API.
+Recommend one source-level failure policy for ordinary positional operations:
+
+- Under the currently recommended asserting default, indexed reads and pops produce T; indexed writes produce Unit. An invalid position or empty removal triggers the appropriate safe typed fault before that operation changes storage.
+- Under the alternative recoverable default, reads and pops produce typed Results, and writes produce a typed Result with Unit success. Their errors can distinguish BoundsError from EmptySequence; these names are illustrative. The established explicit handling/propagation rules apply.
+- Explicit checked variants of asserting operations produce typed Results for local recovery. The exact checked spelling and capture scope remain unselected; attaching else to a plain T is not automatically a handler for panics.
+
+A separate deliberately optional query/removal may return Option<T>. This expresses an expected absence rather than a request to assert availability. Such a helper is an alternative API, not the proposed ordinary-pop default; names and whether it is needed initially remain open. No implicit conversion between Option and Result is introduced.
+
+This proposal unifies the choice of failure mode, not all error payloads or mutation contracts. A successful read returns an element under its read/access contract; a successful write returns Unit; a successful pop removes and returns an element. The removed value is not a borrowed view into the vacated slot, and its transfer/copy rules must follow the eventual ownership contract.
+
+An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. General panic capture and cleanup remain separate decisions. See [bounds and checked fault policy](checked-fault-policy.md).
 
 ## Costs depend on storage
 
@@ -64,7 +70,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-- Choose canonical names and whether ordinary pop returns Option.
+- Choose canonical names and a shared default failure mode for ordinary indexing/removal. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.
 - Specify ownership transfer, exception/fault safety during element construction, and cleanup.
 - Define view/cursor invalidation and overlapping mutation. Structural mutation may relocate or invalidate storage even when indexed replacement is permitted.
@@ -74,7 +80,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 Rust VecDeque uses push_front, push_back, pop_front, and pop_back. Its pops return Option, and its ring buffer need not occupy one contiguous slice. This supplies the naming and absence precedent, not an automatic adoption of Rust ownership. Source: [Rust VecDeque](https://doc.rust-lang.org/std/collections/struct.VecDeque.html).
 
-Kotlin ArrayDeque uses addFirst/addLast and removeFirst/removeLast. The ordinary removals throw when empty; removeFirstOrNull/removeLastOrNull offer nullable alternatives. LiteScript's proposed optional removal uses Option instead. Source: [Kotlin ArrayDeque](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-array-deque/).
+Kotlin ArrayDeque uses addFirst/addLast and removeFirst/removeLast. The ordinary removals throw when empty; removeFirstOrNull/removeLastOrNull offer nullable alternatives. A deliberately optional LiteScript removal could use Option instead; that does not select its ordinary default. Source: [Kotlin ArrayDeque](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-array-deque/).
 
 Rust Vec documents amortized constant-time push, while insertion/removal at the front shifts elements. Its collections overview distinguishes the performance of Vec and VecDeque. Sources: [Vec operations](https://doc.rust-lang.org/std/vec/struct.Vec.html) and [collection costs](https://doc.rust-lang.org/std/collections/index.html#performance).
 
