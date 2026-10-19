@@ -35,6 +35,8 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 
 ## Types and values
 
+- [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
+
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
 - [Records](records.md): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
 - [Record type identity](record-type-identity.md): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
