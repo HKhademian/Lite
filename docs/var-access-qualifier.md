@@ -1,0 +1,107 @@
+# Var: writable storage access
+
+Status: **selected direction, 2026-10-19**. Use type-side var for the caller-location replacement contract formerly spelled slot. Local-only header modifiers are omitted: local working bindings belong in the body. The corresponding explicit call grant is var. The old slot spelling is retired, rather than retained as a synonym. General type inference and advanced access grammar remain incomplete.
+
+## One permission, different storage owners
+
+Var means permission to replace the content of a location. A local declaration creates that location; a var-qualified parameter receives temporary access to a location supplied by the caller.
+
+```text
+var user := make_user(); /* create a reassignable local binding */
+
+replace := fn(user: var User) {
+    user = make_another_user()
+}
+
+replace(var user); /* assignment inside replace updates this caller binding */
+```
+
+The parameter does not own an independent local working copy. Its association with the supplied location is fixed for the call. Assignment changes that location's content, not which location the parameter designates. No general pointer/reference value or escaping access handle is introduced.
+
+## Local implementation details stay in the body
+
+```text
+local_work := fn(param: User) {
+    var param := param;
+    param = make_another_user()
+}
+```
+
+Resolve the initializer against the input parameter, then introduce a new local binding. Reassigning that binding does not replace the caller's binding. This needs no fn(var param: User) mode, no caller grant, and no public signature change.
+
+In contrast:
+
+```text
+caller_work := fn(param: var User) {
+    param = make_another_user()
+}
+```
+
+Caller replacement is observable API behavior and must appear in both the parameter contract and the explicit caller grant. A declaration var param := param inside caller_work would shadow the received location with a new local binding; subsequent assignments would then affect that local binding only.
+
+The user's abbreviated fn(param) and fn(param: var) forms express the same contrast. Accept omitted value types only where the eventual inference rules can determine them, for example from a known callable type. The var marker does not mean Any or remove the requirement for a statically known value type. General unannotated parameter inference remains open; the fully typed forms above do not depend on it.
+
+## Var and mut remain independent
+
+```text
+rename := fn(user: mut User) {
+    user.name = "Ali"
+}
+
+replace := fn(user: var User) {
+    user = make_user()
+}
+
+mut editable := make_user();
+rename(mut editable);
+
+var replaceable := make_user();
+replace(var replaceable);
+```
+
+Mut allows permitted changes inside supplied data. Var allows replacement of supplied storage. Neither alone grants the other. A fixed mut binding cannot satisfy whole-binding var replacement. A plain var binding does not permit updates to its payload's fields. Combined replacement/payload qualifier and call-marker order remain open.
+
+For a field argument, var parent.field requires existing write authority through the parent plus compatible accepted replacement types. The parent binding itself need not be var; an accessible field through mut parent can be a writable location. Literals and detached temporaries do not silently become caller storage.
+
+## Preserve readable and writable alternatives
+
+Within one complete access contract:
+
+```text
+A | var B | C
+
+read:  A | B | C
+write: B
+```
+
+The compiler retains the same information as the former A | slot B | C. The readable value type is A | B | C. Var marks accepted replacements, not a new kind of B object, and does not make B's fields mutable.
+
+Var qualifies the following type operand and binds more tightly than the surrounding union. Within one contract, var (A | B) is equivalent to var A | var B. A transparent alias preserves its full denotation as that operand. A local var value: A | B already derives this full replacement contract; users need not annotate it again.
+
+Advanced mixed annotations and their exact grammar still need formalization. Routine field access should infer these summaries and show readable/accepted-write types only when useful.
+
+## Combining possible locations is still different from flattening a value union
+
+```text
+P := record { field: A | B; }
+Q := record { field: C | B; }
+parent: mut (P | Q) = choose_parent();
+```
+
+The common field access reads A/B/C and accepts B. Its summary is A | var B | C: reads combine by union; accepted writes are those permitted by every possible target. Renaming slot to var does not change that calculation.
+
+Do not flatten two separate complete access contracts as though they were one value union. Combining a path that accepts A/B with one that accepts C/B must preserve their boundary and shared write guarantee. Parentheses alone do not identify such a boundary in the incomplete public type grammar. A common summary also does not preserve every correlation needed for later narrowing.
+
+## Compatibility and cost
+
+The callee must handle every possible source read, and every replacement the callee may perform must be accepted by the source location. A source reading A/B/C and accepting only B cannot supply var (A | B | C), even though its readable type matches: the callee could write A or C. Checking the readable union alone is insufficient.
+
+The rename adds no runtime representation or conversion. Actual copying, borrowing, cleanup, exclusivity, callbacks, and refinement invalidation require their own contracts. Explicit local mutable record copies retain their selected shallow-copy behavior; explicit caller grants must not silently detach into copies.
+
+## Migration and remaining decisions
+
+Canonical caller-replacement signatures, call grants, and access summaries use var. Slot remains a useful descriptive word for storage and in historical document paths, but is not a second source keyword. Historical keyword comparisons retain their original examples with a status note.
+
+Complete qualifier grammar, mixed contracts, combined mut/var access, inferred parameter value types, alias/lifetime checks, and public first-class access types remain open. No local-only var function-header mode is added.
+
+Related: [parameter permissions](parameter-permissions.md), [caller grants](caller-mutation-grants.md), [caller-location parameters](slot-parameters.md), [access summaries](slot-access-qualifier.md), [local shadowing and copies](local-shadowing-and-copies.md), and [union values versus access](union-values-and-access.md).

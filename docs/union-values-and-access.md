@@ -79,7 +79,7 @@ Rust makes mutable references invariant in the referenced type, while shared ref
 
 The subsequent [qualified access-summary proposal](access-union-qualifiers.md) explores A | mut B | C as a compact readable/writable contract. It distinguishes the merge of complete access paths from ordinary union flattening and keeps payload mutation separate from replacement permissions. The notation remains unselected.
 
-The later [slot spelling and grouped distribution](slot-access-qualifier.md) are selected instead of mut for accepted replacement alternatives. A | slot B | C accepts B; slot (A | B) is equivalent to slot A | slot B within one complete contract. This lowercase marker describes accepted replacements and is not the abstract Slot<T> constructor used earlier to illustrate separate storage locations. A var binding of A | B accepts both replacements. Full contract declaration grammar and access-value permissions remain open.
+The later [replacement qualifier and grouped distribution](slot-access-qualifier.md) use canonical var, replacing the intermediate slot spelling. A | var B | C accepts B; var (A | B) is equivalent to var A | var B within one complete contract. This marker describes accepted replacements and is not the abstract Slot<T> constructor used earlier to illustrate separate storage locations. A var binding of A | B accepts both replacements. Full contract declaration grammar and access-value permissions remain open; see [var access](var-access-qualifier.md).
 
 Recommend one value-union operation plus separately visible access contracts. Start with precise diagnostics and inferred contracts; consider explicit API notation alongside references, properties, and parameter passing rather than selecting an isolated operator now.
 

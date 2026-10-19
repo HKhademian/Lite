@@ -1,6 +1,6 @@
 # Explicit caller grants
 
-Status: **selected 2026-10-19**. Calls grant temporary writable data access with mut and caller-location replacement with slot. Source capabilities must already exist. Ordinary read-only input transfer and complete alias/lifetime rules remain open.
+Status: **selected 2026-10-19**. Calls grant temporary writable data access with mut and caller-location replacement with var. Source capabilities must already exist. Ordinary read-only input transfer and complete alias/lifetime rules remain open.
 
 ## Change data in a supplied value
 
@@ -27,35 +27,35 @@ The call marker grants existing authority; it cannot upgrade read-only access or
 ## Replace a supplied location's content
 
 ```text
-replace := fn(target: slot User) {
+replace := fn(target: var User) {
     target = make_user()
 }
 
 var userVar := make_user();
-replace(slot userVar);
+replace(var userVar);
 ```
 
 The caller variable receives the replacement. Var authority is required for replacement of a whole variable; its held data need not be mutable. A fixed mut binding supplies writable data, not whole-binding replacement authority.
 
 ```text
-replace(userVar); /* rejected: missing explicit slot grant */
+replace(userVar); /* rejected: missing explicit var grant */
 
 mut fixedUser := make_user();
-replace(slot fixedUser); /* rejected: caller binding is fixed */
+replace(var fixedUser); /* rejected: caller binding is fixed */
 ```
 
 For fields and elements, apply their existing write requirements: writable parent access, a valid target, and compatibility with every possible target field type. The parent's binding itself need not be var to update a field.
 
-Slot User alone does not permit modifying fields of the current payload. A call supplies the requested capability, not every capability the caller happens to possess.
+Var User alone does not permit modifying fields of the current payload. A call supplies the requested capability, not every capability the caller happens to possess.
 
 ## Signature and grant must agree
 
 - A mut-qualified parameter requires a mut argument and existing writable data access.
-- A slot-qualified parameter requires a slot argument and a writable, type-compatible location.
+- A var-qualified parameter requires a var argument and a writable, type-compatible location.
 - Ordinary read-only parameters receive no write permission merely because the source was declared var or mut.
 - A var mut source can supply either grant independently when a particular call requests it.
 
-Combined mut/slot contracts and argument syntax remain open. The two selected markers do not establish a combined modifier order.
+Combined mut/var contracts and argument syntax remain open. The two selected markers do not establish a combined modifier order.
 
 ## Evaluation and scope
 
@@ -65,8 +65,8 @@ Granted access lasts for the call. Exact overlap/exclusivity checks, callbacks, 
 
 ## No extra parameter mode for local work
 
-Use a local declaration or shadowing to create a working binding. The proposed var parameter mode is retired from the current design. Local declarations preserve the distinction between rebinding a local name and receiving authority over caller storage.
+Use a local declaration or shadowing to create a working binding. A left-side fn(var target: T) header for local rebinding is retired. Type-side fn(target: var T) instead describes caller replacement and belongs in the public contract. See [the var qualifier](var-access-qualifier.md).
 
 Ordinary read-only value/copy/move/borrow semantics remain open. They cannot become an unmarked route to mutate caller data.
 
-Related: [functions](functions.md), [parameter permissions](parameter-permissions.md), [mutability](mutability.md), [slot parameters](slot-parameters.md), and [evaluation order](evaluation-order.md).
+Related: [functions](functions.md), [parameter permissions](parameter-permissions.md), [mutability](mutability.md), [var parameters](slot-parameters.md), and [evaluation order](evaluation-order.md).

@@ -1,8 +1,8 @@
 # Naming caller-location parameters
 
-Status: **user-requested comparison, 2026-10-18; no replacement spelling selected**. This reopens the surface spelling of received caller locations, not the accepted behavior: access is temporary and assignment through a writable slot replaces the supplied caller variable or field. Slot access summaries, grouped distribution, and the established var/mut meanings remain selected.
+Status: **historical comparison, 2026-10-18; spelling recommendation superseded 2026-10-19**. The [var access decision](var-access-qualifier.md) now uses type-side var for caller replacement and retires slot as a source keyword. The examples and assessment below preserve the earlier alternatives; they are not current canonical spellings.
 
-Subsequent clarification, 2026-10-19: explicit slot receivers are retained. The request to hide slot concerns derived mathematical type structure, and the attempted var-for-slot receiver substitution is rejected. This document preserves the earlier keyword comparison; see [slot ergonomics](slot-ergonomics.md) and [parameter permissions](parameter-permissions.md) for the current scope and remaining local-var/combined-access proposals.
+An intermediate clarification retained slot receivers while hiding derived mathematics. The later user decision uses fn(target: var T), with explicit var call grants. Local-only header modifiers are omitted; use body declarations instead. See [access ergonomics](slot-ergonomics.md) and [parameter permissions](parameter-permissions.md) for current contracts.
 
 The later [mut qualifier placement decision](mut-qualifier-placement.md) selects fn(target: mut T), superseding the earlier typed name prefix. The examples below use the selected placement without changing capability distinctions or selecting a ref parameter mode.
 

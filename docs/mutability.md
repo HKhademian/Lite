@@ -125,10 +125,10 @@ Binding and access permissions are candidates for static checking. They do not i
 
 ## Decisions still required
 
-[Slot parameters](slot-parameters.md) replace caller storage through explicit slot grants; mut parameter calls explicitly grant mutation of supplied data. Local-only var parameter headers are retired: use a local declaration and shadowing. Ordinary read-only input transfer and general borrowing rules remain open. This does not select a public pointer system or imply that mut alone replaces the caller's binding.
+[Var parameters](slot-parameters.md) replace caller storage through explicit var grants; mut parameter calls explicitly grant mutation of supplied data. Local-only var parameter headers are retired: use a local declaration and shadowing. Ordinary read-only input transfer and general borrowing rules remain open. This does not select a public pointer system or imply that mut alone replaces the caller's binding.
 
 - Define the inference and conversion rules for access-bearing values without upgrading read-only borrowed access.
-- Complete method declarations, capability inference, and combined payload/replacement argument syntax. Separate mut and slot grants are selected. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
+- Complete method declarations, capability inference, and combined payload/replacement argument syntax. Separate mut and var grants are selected. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
 - Choose move/copy/borrow/share behavior, write exclusivity, and lifetimes.
 - Define how read access propagates through owned fields and reference-valued fields.
 - Define fixed fields separately from binding reassignment and whole-object replacement.

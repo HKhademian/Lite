@@ -1,6 +1,6 @@
-# Binding, payload, and slot permissions in function headers
+# Binding, payload, and var permissions in function headers
 
-Status: **selected permissions, updated 2026-10-19**. Type-side mut, temporary caller-location slot parameters, and explicit mut/slot call grants are selected. Local-only var parameter headers are retired in favor of local declarations. Combined mut/slot type grammar remains open.
+Status: **selected permissions, updated 2026-10-19**. Type-side mut, temporary caller-location var parameters, and explicit mut/var call grants are selected. Local-only var parameter headers are retired in favor of local declarations. Combined mut/var type grammar remains open.
 
 ## Three distinct targets
 
@@ -40,30 +40,30 @@ The ordinary body declaration creates a new reassignable binding and shadows the
 
 The separate local-only var parameter feature is retired. A caller's own var declaration supplies whole-binding replacement authority for a caller-location operation; that is a different target from this local shadow.
 
-## Slot: replace caller storage
+## Var: replace caller storage
 
 ```text
-replace := fn(target: slot User) {
+replace := fn(target: var User) {
     target = make_user()
 }
 ```
 
-Target denotes one supplied caller location for the duration of replace(slot userVar). Assigning through it replaces that location's content. A whole caller binding must already be var. No additional var is needed on the slot parameter to repeat that replacement authority.
+Target denotes one supplied caller location for the duration of replace(var userVar). Assigning through it replaces that location's content. A whole caller binding must already be var. No additional var is needed on the var parameter to repeat that replacement authority.
 
 The parameter's association with its caller location remains fixed. Assignment through target does not retarget a reference handle to some other location. No operation to reseat such a handle or create an escaping pointer/reference value has been selected.
 
-Slot User does not by itself permit target.age = 20. That changes the held payload, which requires mut access as well. Conversely, mut User permits held-data updates without implicitly authorizing replacement of the caller location.
+The qualifier var User does not by itself permit target.age = 20. That changes the held payload, which requires mut access as well. Conversely, mut User permits held-data updates without implicitly authorizing replacement of the caller location.
 
 ## Combining permissions
 
 Inside a body, var mut value := source combines local binding replacement with a shallow mutable record copy. It does not write back to the caller. A direct mut parameter call instead grants access to the supplied caller data.
 
-A slot receiver that needs both caller replacement and payload mutation must require both capabilities. Slot (mut User) is a possible spelling: receive a location whose readable/replacement value contract provides writable User access. This combined qualifier grammar, its capabilities on inserted values, and ownership rules need confirmation; do not treat it as selected merely because the separate markers exist.
+A var receiver that needs both caller replacement and payload mutation must require both capabilities. The form var (mut User) is a possible spelling: receive a location whose readable/replacement value contract provides writable User access. This combined qualifier grammar, its capabilities on inserted values, and ownership rules need confirmation; do not treat it as selected merely because the separate markers exist.
 
-The supplied location association is fixed. If a future language feature supports retargetable access handles, that needs a distinct contract; the current temporary slot does not provide one.
+The supplied location association is fixed. If a future language feature supports retargetable access handles, that needs a distinct contract; the current temporary var does not provide one.
 
 ## Surface syntax versus derived mathematics
 
-An explicit slot receiver is intentional source syntax. A derived projection summary such as A | slot B | C should normally remain inferred or explained in ordinary terms. The [slot-ergonomics clarification](slot-ergonomics.md) concerns hiding that mathematical type structure, not removing slot from function headers.
+An explicit var receiver is intentional source syntax. A derived projection summary such as A | var B | C should normally remain inferred or explained in ordinary terms. The [var-ergonomics clarification](slot-ergonomics.md) concerns hiding that mathematical type structure, not removing var from function headers.
 
-Related: [functions](functions.md), [mutability](mutability.md), [declarations](declarations-and-assignment.md), [slot parameters](slot-parameters.md), [slot qualifier](slot-access-qualifier.md), and [ordinary parameter passing](parameter-values-and-slots.md).
+Related: [functions](functions.md), [mutability](mutability.md), [declarations](declarations-and-assignment.md), [var parameters](slot-parameters.md), [var qualifier](slot-access-qualifier.md), and [ordinary parameter passing](parameter-values-and-slots.md).

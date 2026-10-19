@@ -1,12 +1,12 @@
-# Keep derived slot summaries implicit
+# Keep derived var summaries implicit
 
-Status: **scope clarified by the user, 2026-10-19**. Hide derived type-structure summaries such as A | slot B | C wherever possible. Explicit slot receivers in function signatures are retained. The proposed substitution of var parameters for caller replacement was based on an overbroad reading of this goal and is rejected.
+Status: **ergonomics goal retained; spelling updated 2026-10-19**. Hide derived type-structure summaries such as A | var B | C wherever possible. Explicit type-side var receivers replace the former slot spelling; see [the var qualifier](var-access-qualifier.md). This later naming decision supersedes the earlier rejection of changing receiver spelling merely to hide mathematical notation.
 
 ## Goal
 
-Keep writable-slot contracts precise without requiring users to write out the derived mathematics of field projections and access composition. Infer routine summaries such as readable A/B/C with accepted writes B rather than making users annotate every expression as A | slot B | C.
+Keep writable-storage contracts precise without requiring users to write out the derived mathematics of field projections and access composition. Infer routine summaries such as readable A/B/C with accepted writes B rather than making users annotate every expression as A | var B | C.
 
-This goal does not hide the explicit slot receiver that asks for caller-location access. It concerns derived type structure and presentation, rather than eliminating the keyword from function headers. Hiding the mathematical notation must not discard the distinctions between readable values, accepted replacements, and mutable payloads.
+This goal does not hide the explicit var receiver that asks for caller-location access. It concerns derived type structure and presentation, rather than eliminating the keyword from function headers. Hiding the mathematical notation must not discard the distinctions between readable values, accepted replacements, and mutable payloads.
 
 ## Already implicit in ordinary declarations
 
@@ -15,27 +15,27 @@ var value: A | B = new_A();
 value = new_B();
 ```
 
-This binding already accepts both replacement types; users need not write slot (A | B) again. Its inferred slot summary describes the operations permitted by the declaration rather than adding another mandatory annotation.
+This binding already accepts both replacement types; users need not write var (A | B) again. Its inferred var summary describes the operations permitted by the declaration rather than adding another mandatory annotation.
 
-Likewise, a field read through P | Q already derives its common contract from the two field declarations. Neither the parent union nor the field use needs a user-written slot keyword merely to compute that contract.
+Likewise, a field read through P | Q already derives its common contract from the two field declarations. Neither the parent union nor the field use needs a user-written var keyword merely to compute that contract.
 
-## Explicit slot receivers stay visible
+## Explicit var receivers stay visible
 
-The selected caller-location behavior remains expressible with an explicit slot parameter:
+The selected caller-location behavior remains expressible with an explicit var parameter:
 
 ```text
-replace := fn(target: slot (A | B)) {
+replace := fn(target: var (A | B)) {
     target = new_B()
 }
 ```
 
 The function explicitly requests a caller location that accepts A or B. The compiler can derive this contract's detailed access summary without requiring another annotation at every use.
 
-Caller replacement requires an explicit grant such as replace(slot value). The location must already permit replacement; see [caller grants](caller-mutation-grants.md).
+Caller replacement requires an explicit grant such as replace(var value). The location must already permit replacement; see [caller grants](caller-mutation-grants.md).
 
-## Rejected receiver substitution
+## Local implementation versus caller contract
 
-The previous version of this document proposed fn(var target: T) as a replacement for a slot receiver. The user clarified that the goal did not request this substitution. Do not treat var parameters as caller-location receivers or migrate slot headers to that form.
+The earlier fn(var target: T) substitution was not selected. Local rebinding is an implementation detail: write var target := target inside the body instead. The subsequently selected fn(target: var T) describes caller replacement, which is observable and must remain in the signature. These two placements are not synonyms.
 
 The later local-only var parameter proposal is also retired. Use ordinary declarations and sequential shadowing in the body. The [parameter-permission review](parameter-permissions.md) separates local rebinding, held-data mutation, and caller-location replacement.
 
@@ -48,18 +48,18 @@ This field accepts B on every possible parent.
 The operation may assign A or C, which some parents reject.
 ```
 
-A parameter requiring slot (A | B | C) promises the callee permission to replace with any declared member. It cannot accept that restricted field merely because the derived slot summary is hidden. A function implementation that currently writes only B does not automatically narrow its published replacement contract.
+A parameter requiring var (A | B | C) promises the callee permission to replace with any declared member. It cannot accept that restricted field merely because the derived var summary is hidden. A function implementation that currently writes only B does not automatically narrow its published replacement contract.
 
-The mathematical contract A | slot B | C describes the more precise requirement. Prefer inference or an accessible explanation for routine use. Whether advanced APIs can explicitly write such mixed contracts or name them through aliases remains open; retaining a simple slot receiver does not settle every advanced type expression.
+The mathematical contract A | var B | C describes the more precise requirement. Prefer inference or an accessible explanation for routine use. Whether advanced APIs can explicitly write such mixed contracts or name them through aliases remains open; retaining a simple var receiver does not settle every advanced type expression.
 
 ## Tooling and teaching
 
 Teach read-only defaults, var replacement, and mut data updates before the derived access model. Show ordinary errors in terms of the binding, field, and rejected replacement. Advanced diagnostics can expose readable and accepted-write sets on demand.
 
-Hiding derived type-structure terminology must not hide observable mutation or caller replacement. Slot signatures and eventual call syntax still need a clear effect contract. No runtime cost or performance improvement follows merely from omitting a mathematical annotation.
+Hiding derived type-structure terminology must not hide observable mutation or caller replacement. Var signatures and eventual call syntax still need a clear effect contract. No runtime cost or performance improvement follows merely from omitting a mathematical annotation.
 
 ## Recommendation and remaining decisions
 
-Keep explicit caller-location receivers and infer derived access summaries. Explicit mut/slot call grants are selected; local-only var parameter headers are retired. Combined payload/replacement permissions, advanced partial-write annotations, complete compatibility, and alias/lifetime rules remain open.
+Keep explicit caller-location receivers and infer derived access summaries. Explicit mut/var call grants are selected; local-only var parameter headers are retired. Combined payload/replacement permissions, advanced partial-write annotations, complete compatibility, and alias/lifetime rules remain open.
 
-Related: [slot parameters](slot-parameters.md), [slot qualifier](slot-access-qualifier.md), [mut placement](mut-qualifier-placement.md), [mutability](mutability.md), [functions](functions.md), and [tooling](tooling-and-learning.md).
+Related: [var parameters](slot-parameters.md), [var qualifier](slot-access-qualifier.md), [mut placement](mut-qualifier-placement.md), [mutability](mutability.md), [functions](functions.md), and [tooling](tooling-and-learning.md).

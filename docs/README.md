@@ -46,13 +46,14 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
 - [Union values and access contracts](union-values-and-access.md): a slot containing a union versus a union of possible slots; proposed explicit read/write contracts and reference-language comparisons.
 - [Qualified access summaries](access-union-qualifiers.md): exploration of A | mut B | C, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
-- [Slot access qualifier](slot-access-qualifier.md): selected replacement marker, grouped distribution, and var-binding summaries; whole access-contract grammar remains open.
-- [Slot parameters](slot-parameters.md): selected temporary caller-location access and explicit call grants; proposed two-direction compatibility, with Swift/Rust/Zig/V comparisons.
-- [Slot ergonomics](slot-ergonomics.md): infer derived mathematical slot summaries while retaining explicit slot receivers; the var-for-caller-replacement substitution is rejected.
-- [Parameter permissions](parameter-permissions.md): local var declarations, payload mut, and caller-location slot; fixed location associations and open combined-access syntax.
-- [Caller mutation grants](caller-mutation-grants.md): explicit mut for caller-data updates and slot for caller-location replacement; existing source authority is required.
+- [Var access qualifier](var-access-qualifier.md): var unifies local replacement permission and received caller-storage access; no local-only header modifier; slot is retired as a source keyword.
+- [Replacement access summaries](slot-access-qualifier.md): canonical var marker, grouped distribution, and var-binding summaries; whole access-contract grammar remains open.
+- [Caller-location parameters](slot-parameters.md): selected temporary caller-location access and explicit var grants; proposed two-direction compatibility, with Swift/Rust/Zig/V comparisons.
+- [Access ergonomics](slot-ergonomics.md): infer derived mathematical summaries while keeping caller-visible replacement explicit in signatures and calls.
+- [Parameter permissions](parameter-permissions.md): local var declarations, payload mut, and caller-storage var; fixed location associations and open combined-access syntax.
+- [Caller mutation grants](caller-mutation-grants.md): explicit mut for caller-data updates and var for caller-location replacement; existing source authority is required.
 - [Ordinary parameters and slots](parameter-values-and-slots.md): read-only defaults, semantic passing versus compiler representation, and scoped writable locations without adopting public pointers or general references.
-- [Caller-location keywords](caller-location-keywords.md): user-requested ref/mut/slot/mut ref comparison, current-slot versus separate-ref designs, and preserved permission boundaries.
+- [Caller-location keywords](caller-location-keywords.md): historical ref/mut/slot/mut ref comparison, superseded spelling recommendation, and preserved permission boundaries.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): selected zero/default distinction; declared field defaults, nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Contextual zero initialization](zero-initialization.md): selected value: Type = 0 versus declared-default record initialization with {}, with zero eligibility and broader literal contexts still open.
