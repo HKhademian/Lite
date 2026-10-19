@@ -36,6 +36,12 @@ An iterable-producing source expression is evaluated once. Advancing the resulti
 - Last-item detection may need lookahead and must not be promised as free universal metadata.
 - Accumulating a final value is not automatically equivalent to collecting all values.
 
+## Reserved array and buffer storage
+
+Large arrays are the primary use case for [explicit reserved storage](reserved-storage.md#main-use-case-large-arrays-and-buffers). Successful reservation provides storage with unwritten payload bytes; it does not create a missing/null allocation or make those elements readable. A construction protocol must distinguish reserved capacity from initialized elements before ordinary iteration can expose them.
+
+Sequential prefix filling and arbitrary-index filling may need different proof/tracking strategies. Dynamic-size allocation, length versus capacity, first element writes, partial views, and cleanup remain open. Neither the loop syntax nor mut/var caller grants automatically selects an output-buffer initialization contract.
+
 ## Open decisions
 
 The iteration interface; owned versus borrowed items; mutation during iteration; reusable versus consuming iterators; errors while advancing; termination signaling; adapter representation; and capabilities exposed through tags.

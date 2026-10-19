@@ -65,6 +65,8 @@ Source validity is checked independently of optimization. A type without a valid
 
 The selected surface direction value: Type = ? requests appropriately sized/aligned storage without zero/default initialization. Whole-value first initialization uses = once per execution path without var; later replacement requires var. The earlier generic reserve() operation remains unselected. Allocation policy, field/element and callee construction, and failure handling remain open. Ordinary declarations still initialize immediately unless they explicitly request this reservation state. A reservation requires tracked initialization before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership do not follow merely from the marker. See [reserved storage](reserved-storage.md) and [first initialization](first-initialization.md).
 
+Large arrays/buffers are the primary motivation: provide storage, then fill element payloads without a mandatory preliminary zero pass. The storage exists; its unwritten contents are unspecified, not a null state or readable random values. Allocation bookkeeping and element validity are separate. A sequential initialized-prefix strategy may avoid per-element runtime flags, but arbitrary filling loops, partial cleanup, and collection length/capacity semantics need explicit contracts. No measured speedup or chosen array API follows from this goal.
+
 ## Loop state costs
 
 An accumulator retains a candidate value and replaces it after a contribution. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.

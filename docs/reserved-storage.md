@@ -25,6 +25,30 @@ These preserve the user's earlier function-shaped sketches. The expected annotat
 
 Records, anonymous record aggregates, and tuples motivate the same operation: reserve enough correctly aligned storage for the complete aggregate. Inline nested records contribute to its layout. Reference-valued fields occupy representation storage but do not cause allocation of their targets.
 
+## Main use case: large arrays and buffers
+
+User clarification, 2026-10-19: bulk element storage, especially large arrays, is the primary motivation. Reserve the storage and populate it directly rather than requiring a preliminary pass that zeroes every element. Array type syntax, dynamic-size allocation APIs, and indexed first-initialization syntax remain open; the single-User examples illustrate the marker rather than its primary workload.
+
+Reservation means storage has been provided. It is not a null pointer, a missing allocation, None, or a recoverable allocation-failure result. No public pointer syntax is implied. Heap allocation failure must have its own eventual contract rather than becoming a readable null inside an ordinary value.
+
+The payload bytes are unspecified. They may contain previous contents or happen to be zero; the language promises neither random generation nor stable readable values. A physically reserved element slot is not yet a valid value of its element type. In particular, an unwritten reference field is not implicitly a valid null reference.
+
+For sequential filling, the conceptual state could be:
+
+```text
+reserved storage:        N element slots
+initialized prefix:      [0, k)
+uninitialized remainder: [k, N)
+```
+
+This is explanatory notation, not selected source syntax. An initialization contract must prevent ordinary element reads outside the valid region. A whole fixed-size array cannot be used as an initialized array until its required elements are valid. A future growable collection could instead expose only its initialized prefix as live elements while retaining unused capacity; that needs its own valid collection representation and length/capacity contract.
+
+Reservation bookkeeping, such as storage extent and allocation ownership, is distinct from the unwritten payload. It must remain valid wherever needed to fill or release storage. This does not mean = ? automatically initializes any descriptor fields that are themselves part of the reserved Type.
+
+Sequential construction may track a count/prefix rather than one runtime flag per element. Arbitrary-index construction requires a different coverage proof or tracking strategy; the compiler is not promised to prove arbitrary filling loops. On early exit, any required element cleanup applies only to initialized elements, followed by releasing owned storage under the eventual policy. Exact APIs, checks, and cleanup remain open.
+
+The existing one-time whole-value rule remains useful for deferred immutable values. Bulk filling adds a separate element-initialization contract rather than turning ordinary var/mut parameters into implicit output buffers. See [first initialization](first-initialization.md) and [collections](collections-and-iterators.md).
+
 ## Shorthand comparison and decision
 
 The user compared these forms and subsequently approved the first as the initialization-marker direction. The remaining three are unselected alternatives, not supported synonyms:
@@ -112,7 +136,7 @@ The compiler may be able to enforce initialization facts statically; no universa
 - Whether any separate function-shaped facility is needed alongside the selected ? initialization marker, and its storage/result contract.
 - Expected-type inference, eligible layouts, and explicit generic arguments when inference is unavailable.
 - Stack/heap choice, allocation failure, ownership, escape, and lifetime rules.
-- Field/element initialization syntax, caller construction contracts, capability grants, and complete control-flow proofs beyond the selected whole-value first = rule.
+- Bulk array/element initialization syntax, initialized-prefix or arbitrary-index tracking, caller construction contracts, capability grants, and complete control-flow proofs beyond the selected whole-value first = rule.
 - Partial cleanup, repeated initialization, and validation of complete values.
 
 Related: [zero initialization](zero-initialization.md), [record creation](record-initialization.md), [declarations](declarations-and-assignment.md), [types and inference](types-and-inference.md), [records](records.md), and [memory and performance](memory-and-performance.md).
