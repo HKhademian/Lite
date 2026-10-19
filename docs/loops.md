@@ -85,7 +85,7 @@ Reversing an arbitrary stream may require storage; do not silently promise rever
 
 ## Recovery and cleanup example
 
-The user now requires recovery inside construct bodies; see [body-owned recovery](body-recovery.md). The [earlier loop example](loop-recovery.md) is superseded where it attaches failure recovery outside a grouped whole loop. Ordinary loop completion hooks and operation-level handling remain intact; body-wide iteration/run scope, finally placement, and cleanup are still under review.
+The user now requires recovery inside construct bodies; see [body-owned recovery](body-recovery.md). The [earlier loop example](loop-recovery.md) is superseded where it attaches failure recovery outside a grouped whole loop. Ordinary loop completion hooks and operation-level handling remain intact; body-wide iteration/run scope and special cleanup sections are deferred for the joint cleanup/resource review.
 
 ## Notes
 

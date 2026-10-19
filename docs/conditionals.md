@@ -162,7 +162,7 @@ Braces establish which conditional owns `else`; indentation is irrelevant.
 
 ## Recovery belongs inside bodies
 
-The user rejects an external error-catching else(failure) attached to the whole conditional. Recovery belongs inside fn/if/loop/match bodies; ordinary else retains false-selection meaning. Operation-level handlers inside each branch remain valid with optional receivers. A body-wide handler form and its coverage still need specification; see [body-owned recovery](body-recovery.md).
+The user rejects an external error-catching else(failure) attached to the whole conditional. Recovery belongs inside fn/if/loop/match bodies; ordinary else retains false-selection meaning. Operation-level handlers inside each branch remain valid with optional receivers. Body-wide handler syntax and coverage are deferred for the joint cleanup/resource review; see [body-owned recovery](body-recovery.md).
 
 The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target, implicitly unwrap inner Results, or settle finally placement.
 

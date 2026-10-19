@@ -2,6 +2,8 @@
 
 Status: **existing structured-cleanup intent with a full conditional example, 2026-10-19**. The user requests finally in the recovery example. Attachment grammar, panic transfer, cleanup-failure behavior, and receiving-finally transformations remain proposals. The example below uses only Unit cleanup that preserves the pending result or exit.
 
+Body-wide special cleanup sections are now explicitly deferred for a joint [defer and resource-management review](deferred-cleanup-and-resources.md). The illustrations here do not finalize that feature or its syntax.
+
 ## Placement correction
 
 The full example below predates the user's [body-owned recovery rule](body-recovery.md). Error-catching clauses attached outside complete if/loop/match constructs are superseded; keep the example as cleanup-order history rather than current complete syntax. The user correction does not independently finalize finally placement or its cleanup-failure rules.

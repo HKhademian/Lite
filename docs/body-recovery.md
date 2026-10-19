@@ -1,6 +1,12 @@
 # Recovery owned by a construct body
 
-Status: **body-local ownership selected by the user, 2026-10-19; exact body-handler syntax and scope pending**. Treat fn/if/loop/match bodies as owners of their recovery. Do not attach an error-catching else(failure) at the outer level of an if/loop/match construct. Operation-level recovery remains available inside bodies. The user asks what the distinction between operation-local and body-wide handling means; the second form below is an illustration, not selected grammar.
+Status: **body-local ownership selected; body-wide special sections explicitly deferred by the user, 2026-10-19**. Treat fn/if/loop/match bodies as owners of their recovery. Do not attach an error-catching else(failure) at the outer level of an if/loop/match construct. Operation-level recovery remains available inside bodies. The body-wide examples below are retained as candidate illustrations, not selected grammar.
+
+## Deferred review
+
+The user supports the body-wide concept but asks to leave its design for later, together with future defer syntax and scoped resource management such as TypeScript's using/await using. See [deferred cleanup and resource review](deferred-cleanup-and-resources.md).
+
+The semicolon delimiter, internal else/finally sections, activation scope, and execution rules below are frozen proposals for that review. They introduce no current grammar or new meaning for separators. Operation-level recovery remains usable independently of this deferred feature.
 
 ## One operation inside the body
 

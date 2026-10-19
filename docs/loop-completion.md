@@ -74,7 +74,7 @@ A receiver was proposed as the explicit opt-in to a value-producing hook. A nonr
 
 ## Failure recovery is not the empty hook
 
-Normal no-contribution completion remains separate from failure. The user resolves the placement direction by requiring recovery inside construct bodies; see [body-owned recovery](body-recovery.md). The external grouped-loop handler in the [earlier example](loop-recovery.md) is superseded. This preserves then/empty-else exploration without repurposing a completion receiver as a failure receiver. Body-wide recovery/contribution scope and finally placement remain open.
+Normal no-contribution completion remains separate from failure. The user resolves the placement direction by requiring recovery inside construct bodies; see [body-owned recovery](body-recovery.md). The external grouped-loop handler in the [earlier example](loop-recovery.md) is superseded. This preserves then/empty-else exploration without repurposing a completion receiver as a failure receiver. Body-wide recovery/contribution scope and special cleanup sections are deferred for the joint cleanup/resource review.
 
 ## Finally
 
