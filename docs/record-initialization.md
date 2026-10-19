@@ -30,6 +30,8 @@ zeroed: User = 0;   /* explicit contextual zero; ignore field defaults */
 configured: User = {}; /* apply declared defaults, then zero-fill other fields */
 ```
 
+The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](reserved-storage.md).
+
 For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is "Unknown". Both values are fully initialized when their declarations complete. Zero initialization must not secretly fall back to field defaults for a type with no valid zero value.
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.

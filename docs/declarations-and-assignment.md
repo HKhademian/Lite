@@ -45,13 +45,16 @@ x: User;       /* implicit zero initialization; read-only User */
 var x: User;   /* implicit zero initialization; reassignable User storage */
 x: User = 0;   /* explicit zero initialization; bypass field defaults */
 x: User = {};  /* default construction; apply declared field defaults */
+x: User = ?;   /* explicit reserved storage; payload not yet initialized */
 ```
 
-Each declaration fully initializes its binding immediately. The fixed bindings cannot receive a later first assignment as an initialization exception. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule.
+The first four declarations fully initialize their bindings immediately. The final = ? form explicitly reserves storage instead; it is not usable as an ordinary User before initialization. The already-initialized fixed bindings cannot receive a later first assignment as an initialization exception. First initialization of reserved storage needs its own construction contract; it is not ordinary replacement. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule.
 
 The first binding exposes User. The var binding exposes the writable storage contract var User: it reads User and accepts replacement User values. Reading that binding still produces a User value; it does not produce a writable reference or transfer its storage permission. See [var access](var-access-qualifier.md).
 
 Omission and = 0 use the same recursive valid-zero rule; = {} uses the separate declared-default policy. A field default does not rescue a type lacking a valid zero. An inferred name := still requires a source, and omitted-source destructuring is not introduced. Function parameters and record fields retain their own declaration contracts; this rule does not create optional function arguments. See [zero initialization](zero-initialization.md).
+
+The = ? marker is selected for simple typed value declarations; it is not an ordinary unknown-value expression. A source-level explicit reservation differs from the optimizer omitting unobservable zero stores in otherwise initialized code. See [reserved storage](reserved-storage.md) for open first-write, lifetime, and cleanup contracts.
 
 ## Examples
 

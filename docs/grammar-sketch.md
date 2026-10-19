@@ -75,6 +75,7 @@ Without grouping, a completed block item ends before any following suffix; the f
 declaration := [inferred_binding_modifiers] inferred_source_pattern ":=" expression
              | ["var"] pattern ":" type "=" expression
              | ["var"] identifier ":" type
+             | ["var"] identifier ":" type "=" "?"
 
 inferred_binding_modifiers := "mut" | "var" | "var" "mut"
 
@@ -92,6 +93,8 @@ var_qualified_access := "var" type_operand
 inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 
 The no-initializer alternative applies only to simple typed value declarations. It immediately supplies the type's valid semantic zero, equivalent to explicitly writing = 0; it bypasses declared field defaults. A missing valid zero is a compile-time error. It does not introduce source-free destructuring, optional function arguments, or late first assignment. Inferred name := still requires a source. Conditional type tests, parameter lists, and record-field declarations retain their own contexts and contracts. A declaration without an initializer is a simple item and follows the existing separator rules.
+
+The = ? alternative is the selected explicit reserved-storage marker for a simple typed value declaration. It supplies no initialized payload and requires the separate construction-state contract before ordinary reads or value use. It is not a general expression, ordinary assignment right-hand side, inferred ?Type expression, or ?= declaration operator. First-initialization syntax, layout eligibility, allocation policy, and complete state/cleanup rules remain open; see [reserved storage](reserved-storage.md). An initialized source declaration remains initialized semantically even if the optimizer omits unobservable physical stores.
 
 The type placeholder admits mut-qualified held-data access and type-side var caller-storage access, as in user: mut User and target: var User. Var replaces the former slot marker. These qualifiers apply to a following type operand, with grouping for composite operands. type_operand and the rest of type parsing remain incomplete; complete mixed access grammar and generic access composition remain open. Inferred parameter value types and defaults remain open: fn(param: var) is meaningful only where the eventual inference rules can determine the omitted value type. Left-side fn(var param: T) headers for local rebinding are omitted; use declarations inside the body. Full lvalue grammar, generics, public modifiers, and type-expression/value distinctions remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 

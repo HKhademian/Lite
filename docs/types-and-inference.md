@@ -83,7 +83,7 @@ An internal `Never` or bottom type can describe control flow that cannot complet
 
 An ordinary value must be initialized and valid for its type. Absence requires an optional type. No implicit uninitialized or nullable state is introduced by inference.
 
-The separate [reserved-storage proposal](reserved-storage.md) explores an explicit reserve() operation whose layout type comes from the expected annotation. It does not select ordinary uninitialized User values: storage initialization would need its own tracked contract before ordinary value use. Its syntax, generic inference, and stack/heap policy remain open.
+The explicit [reserved-storage marker](reserved-storage.md) uses value: Type = ? and derives layout from the expected annotation. It does not introduce readable uninitialized User values: storage requires tracked initialization before ordinary value use. The complete construction-state contract and stack/heap policy remain open. The earlier generic reserve() spelling remains a separate proposal.
 
 ## Generic fields and structural matching
 

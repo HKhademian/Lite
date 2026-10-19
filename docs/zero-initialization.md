@@ -30,9 +30,9 @@ Omitted initializers never select declared-default construction. Both omitted an
 
 Omission is selected for simple typed value declarations, not inferred name := without a source or source-free destructuring. Parameter and field-list contracts remain separate. A type without valid semantic zero rejects both the omitted and explicit-zero declaration, rather than applying declared defaults or fabricating a nullable state.
 
-## Separate proposed uninitialized storage
+## Separate explicit uninitialized storage
 
-The proposed value: Type = reserve() explicitly requests storage without initializing its payload. It is not an alternative meaning of omission, 0, or {}. Its spelling and stack/heap policy remain undecided. Reserved storage must be distinguished from a valid initialized Type; see [reserved storage](reserved-storage.md) for the proposal and open construction-state contract.
+The selected surface direction value: Type = ? explicitly requests storage without initializing its payload. It is not an alternative meaning of omission, 0, or {}. The earlier reserve() spelling is not a selected synonym. Stack/heap policy and the complete construction-state contract remain open. Reserved storage must be distinguished from a valid initialized Type; see [reserved storage](reserved-storage.md).
 
 ## Meaning of 0
 

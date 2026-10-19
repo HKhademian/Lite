@@ -63,7 +63,7 @@ Source validity is checked independently of optimization. A type without a valid
 
 ## Explicit reservation without initialization
 
-The provisional generic reserve() operation would use an expected record/tuple type to reserve appropriately sized/aligned stack or heap storage without zero/default initialization. Its surface, allocation policy, and failure handling are unselected. Ordinary declarations still initialize immediately. A reservation requires a separate initialization-state contract before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership cannot follow merely from a function-shaped spelling. See [reserved storage](reserved-storage.md).
+The selected surface direction value: Type = ? requests appropriately sized/aligned storage without zero/default initialization. The earlier generic reserve() operation remains unselected. Allocation policy, first-initialization operations, and failure handling remain open. Ordinary declarations still initialize immediately unless they explicitly request this reservation state. A reservation requires tracked initialization before it becomes usable as a valid value; stack lifetimes, partial cleanup, and heap ownership do not follow merely from the marker. See [reserved storage](reserved-storage.md).
 
 ## Loop state costs
 
