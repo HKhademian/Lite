@@ -103,6 +103,8 @@ The earlier conversation's Indexed<Int> example expressed the semantic requireme
 
 This proposal does not silently strengthen an explicitly complete public traversal-only contract when its implementation adds indexing. Inferred generic functions, expected callable types, explicit complete constraints, and public-signature stability still require a generalization policy. The [T] shorthand's meaning also remains open; this example requires no new indexable keyword or capability punctuation.
 
+The later [signature review](collection-function-signatures.md) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
+
 ## Could a short collection annotation help?
 
 An element-oriented annotation is a useful alternative to evaluate:
