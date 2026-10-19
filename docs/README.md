@@ -124,7 +124,8 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Control flow
 
-- [Conditional recovery](conditional-recovery.md): proposed false-branch versus failure-handler distinction, unused receivers, whole-construct scope, and explicit Result handling.
+- [Body-owned recovery](body-recovery.md): selected internal placement for construct recovery, operation-local versus body-wide scope, and pending body-section grammar.
+- [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
 - [Conditionals](conditionals.md): one syntax for actions and values.
 - [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
@@ -139,7 +140,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.
 - [Loop accumulator](loop-accumulator.md): contributions, optional previous values, and skipped iterations.
 - [Finally](finally.md): full operation/branch/conditional cleanup example, proposed ordering, preserved values/exits, and open panic/cleanup-failure rules.
-- [Loop recovery](loop-recovery.md): full operation/iteration/whole-loop recovery and finally example, completion state, and the empty-hook/failure-handler collision.
+- [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
 - [Loop completion](loop-completion.md): `then`, `else`, and `finally`.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.
 - [Tags and contexts](tags-and-contexts.md): prefix tags, typed metadata, shadowing, and leading-dot access.

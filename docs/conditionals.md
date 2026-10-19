@@ -160,13 +160,11 @@ if c1 {
 
 Braces establish which conditional owns `else`; indentation is irrelevant.
 
-## Proposed attached recovery
+## Recovery belongs inside bodies
 
-The user asks for if condition { ... } else(failure) { ... }. The [conditional-recovery proposal](conditional-recovery.md) reserves bare else for a false branch and receiving else for failure recovery, permits a final recovery clause after an ordinary else-if/else chain, and uses else(_) when the failure value is unused. This is an extension proposal, not selected grammar.
+The user rejects an external error-catching else(failure) attached to the whole conditional. Recovery belongs inside fn/if/loop/match bodies; ordinary else retains false-selection meaning. Operation-level handlers inside each branch remain valid with optional receivers. A body-wide handler form and its coverage still need specification; see [body-owned recovery](body-recovery.md).
 
-A false condition or pattern mismatch is not failure. Returned Result values inside a branch retain their individual explicit handling/extraction requirements, and ! still targets the enclosing function/closure. A Result-valued whole conditional can be recovered as one outcome. Whole-construct panic scope, receiver typing, cleanup, and finally integration remain under review.
-
-The [branch ownership review](conditional-recovery.md#recovery-inside-every-branch) clarifies that ordinary operation() else { ... } remains valid inside true, else-if, false, and recovery bodies, with an optional receiver. Only the proposed clause at the conditional boundary requires a receiver to distinguish it from false selection. A final recovery clause would own the whole chain; a smaller shared region needs an explicit inner recovery subject, whose full block grammar remains a proposal.
+The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target, implicitly unwrap inner Results, or settle finally placement.
 
 ## Tags and completion
 

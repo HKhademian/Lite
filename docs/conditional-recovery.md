@@ -1,6 +1,6 @@
 # Recovery attached to a conditional
 
-Status: **user-requested extension, 2026-10-19; proposed syntax and semantics**. The user approves the named recovery form on calls and asks whether if condition { ... } else(failure) { ... } can catch failure. This document proposes a disambiguation rule; it does not silently select the remaining general panic-boundary or receiver-type designs.
+Status: **external conditional recovery superseded by body-local ownership, 2026-10-19**. The user rejects error-catching else(failure) attached outside if/loop/match constructs and asks for recovery inside their bodies, like fn. The external handlers and grouping workarounds below are historical investigation, not current syntax recommendations. Operation-local handling inside branches remains valid. See [body-owned recovery](body-recovery.md) for the selected placement and pending body-wide form.
 
 ## Keep false selection distinct from failure
 

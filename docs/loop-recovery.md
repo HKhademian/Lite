@@ -1,6 +1,6 @@
 # Loop recovery and finally
 
-Status: **full example requested by the user, 2026-10-19; attachment and cleanup rules remain proposals**. This combines the existing loop receiver/optional-accumulator direction with operation recovery, iteration-region recovery, completion processing, and whole-loop recovery/cleanup. It does not select a new empty-completion meaning or rename its receiver as a failure receiver.
+Status: **external construct-handler placement superseded, 2026-10-19**. The example records the earlier grouped-loop recovery proposal; the user now requires recovery inside fn/if/loop/match bodies. Its external whole-loop handler is no longer recommended. Accumulator/completion distinctions and operation-local handling remain relevant; body-wide scope and syntax are reviewed in [body-owned recovery](body-recovery.md). Finally placement is not independently settled by that correction.
 
 ## A collision the if proposal does not solve
 

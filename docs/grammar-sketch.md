@@ -194,7 +194,7 @@ The existing-name test resolves a name already in scope and refines knowledge ab
 
 The selected and chain evaluates operands in order and exposes successful pattern bindings to later operands and the body, never the failed branch. The condition operand placeholders exclude ungrouped top-level logical separators; nested grouping can contain ordinary Boolean and/or expressions. In `Some(user) := find_user(id) and user.age > 14`, the pattern source ends before and. Full productions remain incomplete; binding-producing or/not, rebinding across separate operands, and general type-test precedence are not selected here. Repeated names within each individual pattern use selected ordered shadowing. See [conditional pattern chains](condition-chains.md).
 
-The user-requested [conditional recovery](conditional-recovery.md) extension would add a final else(receiver) body after the normal conditional chain. Its receiver would distinguish it from the ordinary false branch, and else(_) would ignore the failure. It is not added to the selected productions above; panic scope, finally ordering, and receiver policies remain under review. A false condition is not an error, and this proposal does not let ! return to the conditional or implicitly unwrap Result-valued operands.
+The earlier [external conditional recovery](conditional-recovery.md) proposal is superseded by [body-owned recovery](body-recovery.md). Do not add an error-catching else(receiver) after the normal conditional chain. An internal body-wide section still needs a delimiter and scope contract; no new production is selected. Plain else remains false selection, ! still returns from the enclosing function/closure, and inner Results are not implicitly unwrapped.
 
 ## Match
 
@@ -245,7 +245,7 @@ Separate receiver slots bind names from left to right, traversing nested slot pa
 
 Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
 
-The hook productions show explored syntax. Receiver payloads and `then`/`else` composition are still open; grammar acceptance cannot settle those semantics. The [loop recovery example](loop-recovery.md) places failure recovery outside a grouped whole loop because normal-empty else can already carry a receiver. It does not reinterpret else(receiver) based on the receiver name/type or add an ambiguous second loop-hook production.
+The hook productions show explored syntax. Receiver payloads and `then`/`else` composition are still open; grammar acceptance cannot settle those semantics. The external grouped-loop handler in the [earlier loop example](loop-recovery.md) is superseded by [body-owned recovery](body-recovery.md). Do not add a second error-catching else production to the loop hooks or reinterpret a completion receiver by its name/type. Internal body recovery and its iteration/completion scope remain under review.
 
 ## Tags and contexts
 
