@@ -56,7 +56,7 @@ Prefer a view when the eventual ownership model permits it, but no borrowed Slic
 
 ## Context restrictions
 
-A known compatible fixed tuple can be destructured irrefutably in a declaration or loop receiver. A general runtime list may have another length, so [first, second] would normally be refutable and belongs in if/match. List shape checks do not become permitted filtering loop headers through this proposal. Type-level fixed lengths may prove a particular pattern irrefutable; that proof depends on the input contract.
+A known compatible fixed tuple can be destructured irrefutably in a declaration or loop receiver. A general runtime list may have another length, so [first, second] would normally be refutable and belongs in if/match unless an explicit checked-binding failure contract is provided. The later [checked-operation proposal](checked-collection-operations.md) explores a flat else handler for this purpose. List shape checks do not become permitted filtering loop headers through either proposal. Type-level fixed lengths may prove a particular pattern irrefutable; that proof depends on the input contract.
 
 Do not consume arbitrary iterators to discover a matching shape or require backtracking to restore a failed stream. Sets/maps need different semantics. Strings require an explicit byte/scalar/grapheme view rather than automatically matching as a sequence.
 
@@ -68,7 +68,7 @@ Working recommendation: a plain destructuring declaration must be statically gua
 [a, b] := [1]; /* rejected: pattern requires exactly two elements */
 ```
 
-Do not invent a zero, None, uninitialized value, or additional recoverable error for b. There is no successful partial declaration. An arbitrary runtime-sized source also needs explicit selection when its shape cannot be proved:
+Do not invent a zero, None, uninitialized value, or implicit recoverable error for b. There is no successful partial declaration. An arbitrary runtime-sized source needs explicit selection or an explicit checked-binding failure contract when its shape cannot be proved. The selection form is:
 
 ```text
 if [a, b] := values {
@@ -89,7 +89,7 @@ A rest capture permits additional elements; it does not supply missing prefix el
 [a, b, ...rest] := [1]; /* rejected: needs at least two elements */
 ```
 
-Rest retains the source's element typing under its eventual remainder representation; an empty rest is still a valid typed sequence. Its view/copy/ownership contract remains open. This recommendation does not select padding, optional-position patterns, runtime assertions, or fallible destructuring shorthand.
+Rest retains the source's element typing under its eventual remainder representation; an empty rest is still a valid typed sequence. Its view/copy/ownership contract remains open. This recommendation does not select padding, optional-position patterns, or runtime assertions. The later [flat checked-binding proposal](checked-collection-operations.md#proposed-flat-checked-binding) separately explores explicit recovery for shape failures; its grammar and propagation form remain open.
 
 ## References and related concepts
 

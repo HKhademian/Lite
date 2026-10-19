@@ -57,6 +57,8 @@ Ordinary slices expose initialized elements only. Spare capacity in a list and r
 
 Empty slices should be valid values with length zero rather than public null states. Indexing or slicing checks logical bounds; exact failure handling remains open. A length-zero view must not permit element reads.
 
+The [checked-operation proposal](checked-collection-operations.md) considers a typed Result for dynamic indexing, with ordinary else recovery or postfix ! propagation. Static validity proofs and slicing-range errors need their own precise rules; this is not yet a selected indexing contract.
+
 ## Keep the base view small
 
 Recommend contiguous views only in the initial core. Reverse/step adapters may use iterators or a later strided-view abstraction rather than silently making copies or changing Slice's layout. A type-level known extent `Slice<T, N>` may later preserve static length proofs, but is not an owning `Array<T, N>`.

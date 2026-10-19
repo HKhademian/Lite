@@ -74,6 +74,8 @@ This tag-only form introduces no binding, whereas .Some(_) introduces the ordina
 
 Current direction requires an irrefutable pattern for the known input type. A refutable declaration needs an explicitly defined failure contract; none is selected. Do not silently panic, skip initialization, or introduce an absent binding.
 
+The [checked collection-operation proposal](checked-collection-operations.md) explores an explicit else handler on a fallible sequence binding, keeping successful names at the surrounding scope. This would add a failure contract rather than make ordinary stored values implicitly become Results. The existing if/match selection forms remain valid; no general refutable-declaration grammar is selected yet.
+
 An annotation in ordinary destructuring constrains a statically valid declaration; it does not secretly turn the declaration into a runtime filter. Use conditional matching when failure is expected. The ordinary declaration's final result remains Unit.
 
 ## 2. Conditional selection
