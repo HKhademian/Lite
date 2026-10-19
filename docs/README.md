@@ -86,6 +86,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Comparison patterns](comparison-patterns.md): proposed direct ordering tests, selected Boolean guards, and the boundary between pattern alternatives and Boolean or.
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
+- [Tuple spread and rest](tuple-spread-and-rest.md): requested construction spreading and typed pattern capture, known shapes, evaluation order, and unresolved empty/singleton tuple details.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): cross-context audit of := source placement, == value tests, bindings, declarations, if/match, receivers, and recommended mismatch policies.
 - [Pattern type review](pattern-type-review.md): comprehensive coverage review, confirmed rules, and the remaining record, sequence, set, range, and evaluation decisions.

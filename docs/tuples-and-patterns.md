@@ -84,6 +84,8 @@ The whole pattern must succeed before the branch executes. A mismatching compone
 
 ## Proposal: whole-value binding, nested patterns, and rest
 
+Rest capture belongs to the destructuring pattern. The user also requests ...tuple in construction expressions to combine tuples while preserving positional types. See [construction spread and pattern rest](tuple-spread-and-rest.md) for both directions and the remaining empty/singleton and ownership questions. This does not yet introduce variadic tuple-type declarations.
+
 The proposed shape combines binding the nested value itself, destructuring its components, a typed subpattern, and a remainder capture:
 
 ```text
