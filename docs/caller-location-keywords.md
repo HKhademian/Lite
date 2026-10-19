@@ -2,6 +2,8 @@
 
 Status: **user-requested comparison, 2026-10-18; no replacement spelling selected**. This reopens the surface spelling of received caller locations, not the accepted behavior: access is temporary and assignment through a writable slot replaces the supplied caller variable or field. Slot access summaries, grouped distribution, and the established var/mut meanings remain selected.
 
+The later [mut qualifier placement review](mut-qualifier-placement.md) separately compares fn(mut target: T) with fn(target: mut T). Modifier placement is reopened without changing the capability distinctions or selecting a ref parameter mode.
+
 ## The naming concern
 
 The current sketch uses target: slot (A | B). Slot already describes accepted replacement alternatives; its use as a parameter also identifies caller-location access. Decide whether these are one location-capability concept expressed uniformly, or whether parameter passing deserves a separate marker.

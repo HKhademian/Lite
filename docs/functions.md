@@ -28,6 +28,8 @@ Evaluate the callee expression first, then the supplied argument expressions fro
 
 ## Parameter mutation contracts
 
+The [placement review](mut-qualifier-placement.md) reopens mut user: User versus user: mut User. It recommends type-side qualification for annotated forms, but remains a proposal; the current examples retain the earlier prefix rule and its selected mutation semantics.
+
 Parameters provide read access by default. Prefix an affected parameter with `mut` to request writable access:
 
 ```text

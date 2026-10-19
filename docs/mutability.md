@@ -2,6 +2,8 @@
 
 Status: **independent `var`/`mut` declarations and explicit mutation parameters established; ownership and full method syntax open**.
 
+The subsequent [mut-placement review](mut-qualifier-placement.md) compares the current mut name: T with name: mut T as access contracts become explicit types. It recommends the latter for annotated forms, with inferred declarations retained, but no migration has been selected. The examples below still use the established prefix.
+
 ## Purpose
 
 Separate changing a binding, changing the data accessible through it, and declaring what an operation may change. An immutable binding alone cannot settle all three questions.

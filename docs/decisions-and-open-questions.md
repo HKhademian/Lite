@@ -1,6 +1,6 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
 ## Established direction
 
@@ -127,6 +127,8 @@ Snapshot: **2026-10-18**. Source: the language-design discussion in this chat. N
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
+
+- The [mut-placement review](mut-qualifier-placement.md) reopens the established mut name: T spelling. It recommends name: mut T for annotated declarations/parameters, preserving var as a binding modifier and keeping mut name := expression for inference. This would revise the earlier placement rule; it is not yet selected, and no duplicate typed spelling or runtime semantic change follows. Qualified aliases, composite access-type scope, and full grammar remain separate decisions.
 
 - The [caller-location keyword comparison](caller-location-keywords.md) reopens the parameter spelling ref/mut/slot/mut ref while preserving accepted temporary caller-location semantics. It recommends slot for the current limited replacement feature; a separate read-only-by-default ref mode is a larger alternative that could compose with mut and slot. Bare mut retains its selected held-data role; no replacement spelling, public pointer feature, or general reference system is selected by this review.
 

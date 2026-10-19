@@ -1,6 +1,6 @@
 # Language documentation
 
-Design snapshot: **2026-10-18**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-19**. Stage: **planning; no implementation**.
 
 ## How to read this reference
 
@@ -24,6 +24,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
+- [Mut qualifier placement](mut-qualifier-placement.md): current mut name: T versus proposed name: mut T, inferred declarations, access-type composition, and migration requirements.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
