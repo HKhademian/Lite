@@ -1,6 +1,6 @@
 # Contextual zero initialization
 
-Status: **core rule selected 2026-10-18: explicit `value: Type = 0` requests valid semantic zero initialization, distinct from declared-default record construction with = {}**. Only literal 0 has this special meaning; integer variables and nonzero integer literals are not implicitly converted to records. Complete zero eligibility, broader expression contexts, and literal/inference rules remain open. This is not a universal conversion or an implementation.
+Status: **explicit zero initialization selected 2026-10-18; implicit zero initialization for omitted initializers selected 2026-10-19**. A simple typed declaration value: Type; immediately initializes valid semantic zero, equivalent to value: Type = 0. Declared-default record construction uses = {} instead. Only literal 0 has the special contextual-zero expression meaning; integer variables and nonzero integer literals are not implicitly converted to records. Complete zero eligibility, broader expression contexts, and literal/inference rules remain open. This is not a universal conversion or an implementation.
 
 ## Core distinction
 
@@ -19,12 +19,16 @@ configured: Profile = {};
 
 Using the proposed nested type shorthand, zeroed has empty name, points 0, and level 0. configured has name "Guest", points 0, and level 1. The record type is stated once in each binding; no redundant construction head is needed.
 
-The selected core pair is:
+The selected forms are:
 
+- `value: Type;`: immediately zero-initialize, equivalent to explicitly supplying = 0.
+- `var value: Type;`: the same zero initialization, with whole-binding replacement permission.
 - `value: Type = 0`: recursively zero-initialize, bypassing declared field defaults.
 - `value: Type = { ... }`: record-initialize, applying declared defaults to omitted fields; an empty list applies all available defaults.
 
-The earlier `value: Type;` form remains an unresolved alternative. The explicit zero literal removes the need to adopt initializer omission just to make zero initialization accessible. Do not silently switch omitted declarations between modes.
+Omitted initializers never select declared-default construction. Both omitted and explicit-zero forms fully initialize the binding when declared; no uninitialized or deferred first-assignment state exists. The fixed binding exposes Type, while var value: Type exposes the writable storage contract var Type. Reading either still produces a Type value. See [declarations](declarations-and-assignment.md) and [var access](var-access-qualifier.md).
+
+Omission is selected for simple typed value declarations, not inferred name := without a source or source-free destructuring. Parameter and field-list contracts remain separate. A type without valid semantic zero rejects both the omitted and explicit-zero declaration, rather than applying declared defaults or fabricating a nullable state.
 
 ## Meaning of 0
 

@@ -6,10 +6,12 @@ Status: **established direction; full declaration grammar remains open**.
 
 ```text
 name := initializer;
+name: Type;
 name: Type = initializer;
 mut name := initializer;
 name: mut Type = initializer;
 var name := initializer;
+var name: Type;
 var name: Type = initializer;
 var mut name := initializer;
 var name: mut Type = initializer;
@@ -19,7 +21,8 @@ name = replacement;
 ## Rules
 
 - `:=` declares a binding and infers its type.
-- `: Type =` declares a binding with an explicit type.
+- `: Type =` declares a binding with an explicit type and supplied initializer.
+- A simple typed binding may omit its initializer: name: Type; immediately zero-initializes that type, bypassing declared field defaults. It is equivalent to name: Type = 0 and requires a valid semantic zero. It does not leave an uninitialized or late-assignment state.
 - A whole explicitly typed binding uses `name: Type = source`; `name: Type := source` is rejected, including after an allowed binding modifier. Type constraints inside a destructuring pattern remain valid, such as `(age: Int, name) := pair`, subject to the declaration's mismatch contract.
 - Bindings are fixed and provide read-only access by default.
 - `var` opts into binding reassignment, without granting writable access to held data.
@@ -34,6 +37,21 @@ name = replacement;
 The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](mutability.md).
 
 For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected. For explicitly typed declarations, only var remains before the name; writable data access is written in the annotation, as in user: mut User or var user: mut User. The old typed-prefix spelling mut user: User is superseded and rejected. Typed function parameters follow the same rule, as in fn(user: mut User). No additional function-level mutation marker is required; see [placement](mut-qualifier-placement.md) and [functions](functions.md).
+
+## Omitted, zero, and default initialization
+
+```text
+x: User;       /* implicit zero initialization; read-only User */
+var x: User;   /* implicit zero initialization; reassignable User storage */
+x: User = 0;   /* explicit zero initialization; bypass field defaults */
+x: User = {};  /* default construction; apply declared field defaults */
+```
+
+Each declaration fully initializes its binding immediately. The fixed bindings cannot receive a later first assignment as an initialization exception. Var permits subsequent whole-binding replacement, but not field mutation without mut. Repeated x declarations use the selected sequential local shadowing rule.
+
+The first binding exposes User. The var binding exposes the writable storage contract var User: it reads User and accepts replacement User values. Reading that binding still produces a User value; it does not produce a writable reference or transfer its storage permission. See [var access](var-access-qualifier.md).
+
+Omission and = 0 use the same recursive valid-zero rule; = {} uses the separate declared-default policy. A field default does not rescue a type lacking a valid zero. An inferred name := still requires a source, and omitted-source destructuring is not introduced. Function parameters and record fields retain their own declaration contracts; this rule does not create optional function arguments. See [zero initialization](zero-initialization.md).
 
 ## Examples
 

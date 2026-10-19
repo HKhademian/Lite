@@ -28,6 +28,8 @@ score = "ten"; /* rejected */
 
 Inference chooses static types. It does not make a variable dynamically change type.
 
+A simple declaration can supply the type without an initializer: x: User; immediately creates valid semantic zero, equivalent to x: User = 0. The distinct x: User = {} uses declared defaults. Var x: User; has the writable storage contract var User, whose read value type is User; replacement permission does not turn a read into a writable alias. Omitted inferred declarations still lack a type/source and are rejected. See [zero initialization](zero-initialization.md) and [var access](var-access-qualifier.md).
+
 Binding reassignment and read/write access to held data are distinct capabilities: var permits reassignment and mut permits writable data access. Inferred var mut x := expression grants both; the typed form is var x: mut T = expression. The held value's type remains fixed under assignment. [Mutability](mutability.md) also defines read access as the operation default, with mut in affected typed receiver/parameter annotations and no additional function-level mutation marker. Full method notation and capability inference rules remain open. Inference must not silently upgrade an existing read-only borrowed view to writable access.
 
 ## Intended type-system foundation

@@ -1,6 +1,6 @@
 # Record creation: zero initialization and declared defaults
 
-Status: **overview dated 2026-10-18; contextual zero initialization with = 0 and declared-default record construction with = {} selected; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, initializer omission, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
+Status: **overview updated 2026-10-19; omitted typed initializers and = 0 select zero initialization; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
 ## 1. Declare a record and its defaults
 
@@ -25,7 +25,8 @@ The proposed field-default spelling is `field: Type = expression`. Record-initia
 There are two selected core initialization modes, with a semantic difference:
 
 ```text
-zeroed: User = 0;   /* contextual zero; ignore field defaults */
+implicit: User;     /* implicit zero; ignore field defaults */
+zeroed: User = 0;   /* explicit contextual zero; ignore field defaults */
 configured: User = {}; /* apply declared defaults, then zero-fill other fields */
 ```
 
@@ -33,7 +34,7 @@ For zeroed, name and address.city are empty Strings, age and address.postalCode 
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
-The selected rule uses an explicit contextual zero literal for zero mode; see [zero initialization](zero-initialization.md). The earlier user: User; form remains an alternative, not a prerequisite or a selected declaration. Semantic zero must exist for the type; the integer value zero is not implicitly cast to arbitrary record types.
+Omitting the initializer of a simple typed binding selects the same semantic zero as explicit = 0; neither uses declared field defaults. Semantic zero must exist for the type; the integer value zero is not implicitly cast to arbitrary record types. See [zero initialization](zero-initialization.md).
 
 ```text
 user := User {};
@@ -57,7 +58,7 @@ Default construction includes declared field defaults. It is not a request to ov
 
 Explicit false, 0, or an empty String overrides a declared nonzero/nonempty default. Duplicate field initializers should be rejected rather than silently taking the last value. Unknown and inaccessible fields must not be accepted. These diagnostic policies are recommendations alongside the proposed default contract.
 
-This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. The selected user: User = 0 instead recursively zero-initializes all fields, bypassing declared defaults at every depth. Initializer omission is a separate alternative discussed below.
+This resolution applies only to record-initializer construction, such as User {} or user: User = { ... }. Both user: User; and user: User = 0 instead recursively zero-initialize all fields, bypassing declared defaults at every depth.
 
 ## 3. Override selected fields
 
@@ -175,18 +176,18 @@ There is no expected record type here. Adopting this form would require anonymou
 
 For now, use a named record type or an established expected record type. Same-name construction entries such as User { name, age } also need a separate decision; proposed deconstruction shorthand does not automatically select construction shorthand.
 
-## 8. Typed declaration without an initializer: unresolved alternative
+## 8. Typed declaration without an initializer: implicit zero
 
 ```text
 user: User;
 var count: Int;
 ```
 
-The earlier proposal would initialize these immediately: user receives a recursively zero-initialized User, ignoring declared defaults, and count is 0. They would not be late-initialized bindings. A subsequent count assignment would be allowed by var; a zero-initialized immutable binding would already be initialized and could not be assigned later as a special first write. In particular, user.active would be false and user.address.city empty even though the record declarations provide different defaults.
+These declarations immediately initialize their bindings: user receives a recursively zero-initialized User, ignoring declared defaults, and count is 0. They are not late-initialized bindings. A subsequent count assignment is allowed by var; the fixed user binding is already initialized and cannot be assigned later as a special first write. In particular, user.active is false and user.address.city empty even though the record declarations provide different defaults.
 
-The newer explicit user: User = 0 proposal expresses this intent without adding initializer omission. Whether to permit the shorter declaration at all, and its policy if permitted, remain open; do not present it as selected or silently change it to declared-default initialization.
+This omitted-initializer form is selected and equivalent to explicitly supplying = 0. The separate = {} form applies declared defaults. Neither omission nor var changes the declared value type: the writable storage contract of var user: User is var User, while reading it produces User. Var alone does not grant mutable access to User fields.
 
-Only a simple typed binding is illustrated. Pattern declarations without an explicit source are not introduced. Inferred `user :=` without a value is rejected because no type or source is supplied. The selected declaration grammar still requires an initializer until this extension is confirmed.
+Omission is supported for simple typed bindings and obeys the same valid-zero requirement as = 0. Pattern declarations without an explicit source are not introduced. Inferred user := without a value is rejected because no type or source is supplied. Function parameters and record-field lists keep their own contracts.
 
 ## 9. Valid zero values versus declared defaults
 

@@ -18,6 +18,17 @@ replace(var user); /* assignment inside replace updates this caller binding */
 
 The parameter does not own an independent local working copy. Its association with the supplied location is fixed for the call. Assignment changes that location's content, not which location the parameter designates. No general pointer/reference value or escaping access handle is introduced.
 
+## Zero initialization does not change the access contract
+
+```text
+x: User;      /* implicit semantic zero; read-only User */
+var x: User;  /* same zero; writable storage contract var User */
+x: User = 0;  /* explicit semantic zero */
+x: User = {}; /* declared-default record construction */
+```
+
+The omitted initializer and = 0 have the same valid-zero requirement and bypass declared defaults. Each declaration completes initialization immediately. The var declaration exposes var User as its storage access contract: reads produce User and permitted writes accept User. Reading x does not transfer a writable alias or wrap its value in a runtime reference object. Var does not make fields inside User mutable. See [zero initialization](zero-initialization.md).
+
 ## Local implementation details stay in the body
 
 ```text
