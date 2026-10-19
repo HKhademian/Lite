@@ -64,7 +64,7 @@ Later successful and operands can use existing earlier bindings. Whether a separ
 
 Loop receiver slots retain their selected order: item, count, accumulator. Traverse each slot's pattern in order before the next slot. In `as _, _, acc`, the visible `_` names count; in `as _, _, _`, it names the accumulator. A repeated name never bypasses a receiver's phase-availability rules.
 
-This rule does not enable duplicate independent declarations in an ordinary block, repeated function parameter declarations, or repeated record field declarations. Those enclosing declaration lists keep their own contracts. Nested lexical scopes can shadow ordinary names as before. Each match arm has its own scope, independent of sibling arms.
+Sequential local declarations may also shadow earlier bindings in the same block; see [local shadowing and copies](local-shadowing-and-copies.md). Repeated function parameter declarations and repeated record field declarations retain separate contracts. Nested lexical scopes can shadow ordinary names as before. Each match arm has its own scope, independent of sibling arms.
 
 ## Capabilities and lifetime
 

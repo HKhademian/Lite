@@ -30,11 +30,13 @@ could compile and cache native code. This was a proposed scripting experience; n
 
 Owned values, deterministic cleanup, inferred borrowing, and explicit shared ownership were recommended as a promising direction. Automatic reference counting was discussed as another tradeoff. A tracing collector was not selected, nor was a complete no-GC ownership system specified.
 
-The design must decide whether assignments move, copy, share, or borrow nontrivial values. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
+One copy rule is selected: mut copy := existing_record creates a shallow mutable record copy. All inline nested records belong to the outer value layout and are copied with it; reference fields preserve their targets and existing access permissions. No referenced graph is cloned. This is a semantic storage rule, not a universal unchecked memcpy contract for managed resources; see [local shadowing and copies](local-shadowing-and-copies.md).
+
+The design must still decide general assignment and ordinary parameter move/copy/share/borrow rules for nontrivial values, copy eligibility, and cleanup. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
 
 The selected temporary [slot parameter](slot-parameters.md) gives access to a caller variable or field; it introduces no public pointer operation or general reference-value feature. The [ordinary parameter review](parameter-values-and-slots.md) separates language-defined value/borrow behavior from backend choices such as passing an aggregate indirectly. Such choices must preserve observable identity, ownership, aliasing, and mutation behavior rather than silently select a different contract.
 
-[Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. Access permissions must not silently select copying, sharing, or runtime borrow checking.
+[Mutability, access, and operations](mutability.md) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
 
 ## Loop state costs
 

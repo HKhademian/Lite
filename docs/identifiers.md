@@ -27,7 +27,7 @@ Digits may continue a name but do not begin one under this profile. Punctuation 
 
 ## Names and scope
 
-Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible. A declaration does not become mutable merely because an inner binding can shadow it.
+Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible. Sequential local declarations may shadow earlier names in the same block. Resolve each ordinary initializer before introducing its new binding: var x := x reads the old x and introduces a new reassignable x. This does not change the old binding's permissions; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 Pattern bindings may reuse the source value's name. A matching branch can shadow an outer union binding with a narrowed binding; the source expression is resolved before that new name becomes active. The shadow is limited to its matching branch and does not affect sibling branches or outer lookup. See [union type patterns](union-patterns.md) for examples using both same-name shadowing and a distinct pattern name.
 

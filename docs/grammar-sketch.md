@@ -93,6 +93,8 @@ The type placeholder admits the selected mut-qualified annotation, as in user: m
 
 No modifiers means a fixed binding with read-only access. var permits whole-binding reassignment; mut permits held-data updates through the binding, subject to field, element, and ownership permissions. Inferred var mut permits both; its typed counterpart is var user: mut User. Typed mut user: User and var mut user: User are superseded, rather than aliases. Inferred mut var and repeated modifiers are rejected. Typed parameters explicitly carry mut after the colon; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
 
+Sequential ordinary local declarations may shadow earlier names in the same block. Resolve an ordinary initializer before introducing its new names. This does not select recursive function initialization or duplicate parameter/field-list entries. A mutable declaration from an existing copyable record creates a shallow mutable copy, including inline nested records but preserving reference targets and permissions; see [local shadowing and copies](local-shadowing-and-copies.md).
+
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
 ## Records

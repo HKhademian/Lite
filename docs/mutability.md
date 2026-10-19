@@ -42,11 +42,11 @@ var x := make_user();     /* reassignable binding; read-only access */
 var mut x := make_user(); /* reassignable binding; writable access */
 ```
 
-These lines are separate inferred alternatives, not repeated declarations in one scope. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
+These lines show four inferred alternatives for comparison. Sequential declarations may also shadow a name in one block. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
 
 Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var`. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
 
-The examples assume an initializer that can supply the requested capability, such as fresh owned construction. `mut` cannot silently upgrade an existing read-only borrowed view, manufacture exclusive access, or request an implicit clone. Conversion and move rules for owned values remain open.
+Fresh construction can supply writable access without a redundant copy. A mutable declaration initialized from an existing copyable record, such as mut x := x, explicitly creates a mutable shallow copy: all inline nested records are copied, while reference fields preserve their targets and permissions. It does not upgrade access to the original or recursively clone referenced data. General transfer, resource copy eligibility, and ownership rules remain open; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 ### Read-only access versus frozen data
 

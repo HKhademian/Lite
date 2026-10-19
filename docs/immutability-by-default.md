@@ -35,7 +35,7 @@ Operation parameters and receivers require only read access by default. Qualify 
 
 Conceptually, writing adds an ability to the readable baseline. It also adds proof obligations: the caller must possess writable access, the target must permit the write, and the assigned value must satisfy its storage contract.
 
-This is capability addition, not automatic type widening or an ability to upgrade a borrowed read-only view. Restricting writable access to a read-only use must follow the eventual borrowing rules. Reversing that restriction cannot manufacture authority, exclusive access, or an implicit clone.
+This is capability addition, not automatic type widening or an ability to upgrade a borrowed read-only view. Restricting writable access to a read-only use must follow the eventual borrowing rules. Reversing that restriction cannot manufacture authority or exclusive access. An explicit mutable declaration from an existing copyable record instead creates a new shallow copy; it does not upgrade the original view. See [local shadowing and copies](local-shadowing-and-copies.md).
 
 For example, a projected union field may read C | D | E but permit writing only C. Adding mut does not widen that write contract to C | D | E. See [value types and access contracts](union-values-and-access.md).
 
@@ -50,7 +50,7 @@ Likewise, a read-only receiver does not make an operation pure. Output, resource
 - New parameters, views, captures, and interface requirements should start from readable access and expose mutation requirements explicitly. Their exact contracts still need review.
 - Diagnostics should distinguish fixed-binding replacement, missing writable access, and an incompatible field write rather than treating all three as one immutable-value error.
 - Explicit mutation must preserve visibility, type safety, and the chosen ownership rules.
-- The compiler should not silently copy or freeze data to satisfy an access requirement. Representation and performance still need an implementation and measurement.
+- The compiler should not silently copy or freeze an argument to satisfy a writable caller-access requirement. Explicit mutable-copy declarations have their own selected shallow-copy semantics. Representation and performance still need an implementation and measurement.
 
 These are design criteria, not selection of closure capture modes, transitive read-only rules, persistent collections, or a memory-management strategy.
 
