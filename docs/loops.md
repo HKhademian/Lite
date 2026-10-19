@@ -62,9 +62,9 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 - .item: current source element. An optional item name denotes this same value.
 - .index: zero-based iteration position, not original source index/key. Body positions begin at 0 even for a reversed or stepped source.
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
-- .value: last committed body result of static type T, initialized to T's valid semantic zero. A completed tail expression or continue value commits; plain continue and break preserve it.
+- .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression or continue value commits; plain continue and break preserve it.
 
-Item requires an active iteration. Index availability in conditions/completion remains a phase question; empty sources must not invent a last item/index. Unit as the item payload for Boolean/unconditional sources remains a proposal. See [loop value](loop-value.md) for inference and zero-eligibility rules.
+Item requires an active iteration. Index availability in conditions/completion remains a phase question; empty sources must not invent a last item/index. Unit as the item payload for Boolean/unconditional sources remains a proposal. See [loop value](loop-value.md) for inference and universal zero rules.
 
 Leading-dot access uses only the current construct; named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 

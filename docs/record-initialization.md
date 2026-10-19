@@ -32,11 +32,11 @@ configured: User = {}; /* apply declared defaults, then zero-fill other fields *
 
 The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](reserved-storage.md).
 
-For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is "Unknown". Both values are fully initialized when their declarations complete. Zero initialization must not secretly fall back to field defaults for a type with no valid zero value.
+For zeroed, name and address.city are empty Strings, age and address.postalCode are 0, and active is false. For configured, active is true and address.city is "Unknown". Both values are fully initialized when their declarations complete. Every field type must map zero storage to a valid value; zero initialization never falls back to declared defaults.
 
 The empty contextual record initializer is selected: its established initializer position and expected record type give it record-construction meaning. Empty executable bodies still produce Unit. The full grammar must express these distinct roles without using trial type-checking to choose a parse.
 
-Omitting the initializer of a simple typed binding selects the same semantic zero as explicit = 0; neither uses declared field defaults. Semantic zero must exist for the type; the integer value zero is not implicitly cast to arbitrary record types. See [zero initialization](zero-initialization.md).
+Omitting the initializer of a simple typed binding selects the same semantic zero as explicit = 0; neither uses declared field defaults. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
 
 ```text
 user := User {};
@@ -55,7 +55,7 @@ Default construction includes declared field defaults. It is not a request to ov
 
 1. Use the explicitly supplied field value, if present.
 2. Otherwise use the field's declared default, if present.
-3. Otherwise recursively apply defaults for a nested record, or use the leaf type's valid zero value, if available.
+3. Otherwise recursively apply defaults for a nested record, or use the leaf type's language-defined zero value.
 4. Otherwise reject construction with a diagnostic identifying the missing field.
 
 Explicit false, 0, or an empty String overrides a declared nonzero/nonempty default. Duplicate field initializers should be rejected rather than silently taking the last value. Unknown and inaccessible fields must not be accepted. These diagnostic policies are recommendations alongside the proposed default contract.
@@ -189,24 +189,15 @@ These declarations immediately initialize their bindings: user receives a recurs
 
 This omitted-initializer form is selected and equivalent to explicitly supplying = 0. The separate = {} form applies declared defaults. Neither omission nor var changes the declared value type: the writable storage contract of var user: User is var User, while reading it produces User. Var alone does not grant mutable access to User fields.
 
-Omission is supported for simple typed bindings and obeys the same valid-zero requirement as = 0. Pattern declarations without an explicit source are not introduced. Inferred user := without a value is rejected because no type or source is supplied. Function parameters and record-field lists keep their own contracts.
+Omission is supported for simple typed bindings and uses the same universally valid all-zero representation as = 0. Pattern declarations without an explicit source are not introduced. Inferred user := without a value is rejected because no type or source is supplied. Function parameters and record-field lists keep their own contracts.
 
 ## 9. Valid zero values versus declared defaults
 
-Recommended zero values are semantic values, not a guarantee about zeroed bytes. Default construction can replace them through declared field defaults:
+All-zero storage must represent a valid value of every type. This replaces the earlier zero-eligibility restriction. Numeric zero, false, empty String, Unit, recursively zeroed fields, and empty collection states require representations consistent with that rule. Option's zero is its explicit .None state.
 
-- Int: 0; Float: 0.0; Bool: false; String: empty text; Unit: Unit.
-- Option: its explicit .None case. This is typed absence, not a null state admitted by every type.
-- Standard growable collections: empty, subject to their eventual allocator/capacity and collection contracts.
-- Tuples and fixed-size arrays: recursively default each component/element when all are defaultable; fixed-size arrays do not become empty arrays.
-- Records: zero mode recursively ignores all declared field defaults; initializer mode recursively applies declared defaults to omitted fields.
-- Enums: no invented first case and no unnamed numeric-zero case. A default case/value needs an explicit contract, or the field must be supplied.
-- General unions, functions, nonoptional references, resource handles, and validated domain types: no fabricated default. Supply a valid value unless the type explicitly provides a valid default.
-- Result: do not automatically invent success, failure, or an arbitrary error. Initialize the outcome explicitly unless an explicit type/default contract is defined later.
+Functions, references, enums, unions, resource wrappers, and constrained domains also require defined zero mappings. A zero function must have meaningful callable behavior, not be rejected as an invalid target. Exact mappings remain design work; no particular first enum/union alternative is silently chosen here. See [universal zero initialization](zero-initialization.md).
 
-A record can therefore be declared even when some fields have no valid zero value. Zero construction must then be rejected, even if such a field has a declared default; record-initializer construction can instead supply the field or use that valid declared default. Neither mode can fabricate an invalid value. Recursive construction must terminate. Generics need eventual zeroability/defaultability constraints rather than assuming every type parameter admits both modes. Contract names and syntax for those capabilities remain open.
-
-Zero/default validity is not the same as satisfying a business rule. A plain String permits empty text. A required nonempty name or valid age needs validation or an appropriate domain type; a syntax for marking an otherwise-defaultable field required is still open. Cross-field invariants also cannot be guaranteed by filling each field independently. A validated domain type with no valid zero must reject zero construction rather than bypass its invariant.
+Declared-default construction is separate: = {} uses field defaults, whereas omitted initialization and = 0 bypass them. Required-field syntax, cross-field validation, and default evaluation remain separate contracts; they must respect the universal zero rule rather than introduce types with no zero representation.
 
 ## 10. Evaluation, mutability, and implementation cost
 

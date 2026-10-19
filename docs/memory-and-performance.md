@@ -56,7 +56,7 @@ These storage representations are proposals; the growable List default for unann
 Selected optimization principle, 2026-10-19: a source-level initialization requirement does not mandate physical initialization stores when the compiler proves them unobservable.
 
 ```text
-var x: User;       /* semantically valid zero initialization */
+var x: User;       /* valid all-zero language value */
 x = make_user();   /* replaces the complete value */
 ```
 
@@ -72,7 +72,7 @@ x = make_user();
 
 Here merely exposing untouched bytes would be invalid. The compiler may still avoid physical zero stores if it can preserve the zero observation through constant folding, replacement of reads, or another equivalent representation.
 
-Source validity is checked independently of optimization. A type without a valid zero remains ineligible for var x: Type;, even when the following line overwrites it. An explicit uninitialized-storage request has a separate source contract. Backend-elided zeroing does not expose a new readable uninitialized state or choose stack versus heap.
+Source validity is checked independently of optimization. Every type must have a valid zero representation, so var x: Type; remains available for all types; optimization does not define or bypass special-type zero semantics. An explicit uninitialized-storage request has a separate source contract. Backend-elided zeroing does not expose a new readable uninitialized state or choose stack versus heap.
 
 ## Explicit reservation without initialization
 
@@ -82,7 +82,7 @@ Large arrays/buffers are the primary motivation: provide storage, then fill elem
 
 ## Loop state costs
 
-An accumulator retains a candidate value and replaces it after a contribution. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.
+The typed .value starts at its all-zero value and is replaced after a body value commit. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.
 
 A tag is intended as a statically checked context handle, not a dictionary of runtime fields. Unused state can potentially be removed, but precise representation and optimization claims require an implementation.
 

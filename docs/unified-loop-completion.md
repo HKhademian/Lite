@@ -20,9 +20,9 @@ One then block replaces the old then/empty-else/common-final combination for nor
 - .item: current iterable element, available during an active iteration.
 - .index: zero-based iteration position, selected by the user. It is independent of original source indices/keys, reversal, or stride. Its condition/completion availability remains a separate phase contract.
 - .count: entered-iteration count, zero before entry and one-based during the body; final count remains available in then.
-- .value: the last committed body result, initialized to its statically determined type's valid semantic zero before iteration; final value remains available in then.
+- .value: the last committed body result, initialized to its statically determined type's valid all-zero value before iteration; final value remains available in then.
 
-A loop may name only its item with as name. Count/value receiver lists and completion receivers are retired. So are .acc, previous, automatic Option wrapping, and mandatory value_or extraction. See [loop value](loop-value.md) for typing, commits, and zero eligibility.
+A loop may name only its item with as name. Count/value receiver lists and completion receivers are retired. So are .acc, previous, automatic Option wrapping, and mandatory value_or extraction. See [loop value](loop-value.md) for typing, commits, and universal zero mappings.
 
 ## Access through the owning loop tag
 
@@ -68,7 +68,7 @@ All-exit cleanup, defer, scoped resources, pending-exit replacement, and cleanup
 ## Open contracts
 
 - Exact inference for .value, action/Unit bodies, and targeted-result-only loops.
-- Full zeroability rules, additional metadata, and nonzero initialization syntax.
+- Special-type zero mappings, additional metadata, and nonzero initialization syntax.
 - Item/index availability outside active iterations and any last-item retention.
 - Ownership, replacement cleanup, and representation/cost rules.
 

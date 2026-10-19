@@ -1,10 +1,10 @@
 # Loop value
 
-Status: **typed, zero-initialized .value replaces the optional accumulator, selected by the user 2026-10-19; complete inference and lifetime contracts open**.
+Status: **typed, universally zero-initialized .value replaces the optional accumulator, selected by the user 2026-10-19; complete inference and lifetime contracts open**.
 
 ## Core rule
 
-Every loop owns a .value with a compile-time type T inferred from the body's value-producing paths and any applicable expected type. It is initialized once to T's valid semantic zero before the first condition check. This is not an automatically inserted Option<T>, an untyped cell, or a request for raw zero bytes.
+Every loop owns a .value with a compile-time type T inferred from the body's value-producing paths and any applicable expected type. It is initialized once to T's language-defined all-zero value before the first condition check. All-zero storage must map to a valid T value. This is not an automatically inserted Option<T> or an untyped cell.
 
 ```text
 sum := loop numbers as number {
@@ -37,13 +37,13 @@ sum := @total loop numbers as number {
 
 Count includes skipped entries. A skipped final entry does not erase an earlier value. Skipping does not roll back effects or consumed source items.
 
-## Zero is typed and valid
+## Zero is universal and typed
 
-The existing [zero-initialization contract](zero-initialization.md) applies: numeric zero for numeric T, empty text for String, Unit for Unit, and recursively valid zeros for eligible records. Declared record field defaults are not used. If T itself is an Option, its semantic zero is .None; there is no extra Option wrapper around it.
+The user explicitly requires [all-zero storage to be a valid value of every type](zero-initialization.md), including functions, references, enums, and unions. The earlier zeroability restriction is superseded. The implementation must define meaningful representations/operations for these zeros, not turn them into invalid values.
 
-A type with no valid semantic zero cannot silently acquire one. Required references, resources, nonzero domains, enums/unions without a chosen valid zero, and records containing such fields retain their existing restrictions. An explicit seed or alternative initialization mechanism would need a later design; none is selected here. A generic loop that requires this initialization also needs a future zeroability contract.
+For ordinary numeric T this gives 0, for String empty text, for Unit Unit, and for records recursively zeroed fields without declared defaults. If T is Option, its zero is .None; there is no extra Option wrapper. Exact mappings for special types remain to design under the universal requirement. Explicit nonzero initialization is separate future work, not a requirement just to admit a type into a loop.
 
-Zero initialization needs a known T. Reading .value does not establish T by itself, and the compiler must not guess an arbitrary type or union case. Ordinary annotations in the body or an applicable result annotation can provide missing constraints. This is a compile-time typing problem, not a runtime missing-value case.
+Zero initialization still needs a known T. Reading .value alone does not establish T; the compiler must not guess a type or union member. Ordinary annotations or applicable expected result types can provide missing constraints. Representation mapping is type-directed, not an arbitrary runtime default choice.
 
 ## Completion and result types
 
@@ -65,7 +65,7 @@ For an empty or all-skipped Int-valued loop, .value remains 0. A loop that actua
 
 - Full inference for circular .value uses, action paths, and loops with only targeted exits.
 - Exact no-then result typing and optional-search inference.
-- Explicit nonzero seeds and zeroability constraints for generics.
+- Explicit nonzero seeds and complete generic/result inference under universal zero initialization.
 - Ownership, replacement cleanup, moves, and borrowing of .value across iterations/completion.
 - Any future contribution-count or completion-reason metadata.
 

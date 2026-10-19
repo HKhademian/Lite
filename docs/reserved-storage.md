@@ -93,8 +93,8 @@ Every candidate retains the same initialization-state, lifetime, ownership, and 
 ## Distinction from ordinary initialization
 
 ```text
-x: User;             /* selected: implicit valid semantic zero */
-x: User = 0;         /* selected: explicit valid semantic zero */
+x: User;             /* selected: implicit valid all-zero value */
+x: User = 0;         /* selected: explicit valid all-zero value */
 x: User = {};        /* selected: declared-default construction */
 x: User = ?;         /* selected marker: storage exists; payload not initialized */
 ```
@@ -107,7 +107,7 @@ Recommendation: preserve User as the intended value/layout type while tracking w
 
 An ordinary generic function returning T promises a valid T. Consequently, the earlier reserve() proposal cannot simply return arbitrary bytes through that ordinary contract. The selected ? marker requires compiler-recognized initialization-state semantics, though the exact tracking representation remains open. A function-shaped facility or explicit reserved-storage result type would need a separate contract if introduced. The intended expected type supplies layout; it does not prove initialized validity.
 
-Reading a tuple or enum discriminator also requires valid initialization. A type lacking a valid zero could still be constructed through reserved storage if its layout can be reserved and a valid initialization operation exists. Reservation alone never proves that operation possible.
+Reading a tuple or enum discriminator also requires valid initialization. Every type has a valid all-zero value, but reserved storage deliberately skips that initialization. Arbitrary uninitialized bytes do not become a readable value merely because all-zero bytes would be valid. Reservation still needs the construction-state rules.
 
 ## First initialization, later mutation
 
