@@ -143,7 +143,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.
 - [Loop value](loop-value.md): typed zero-initialized .value, internal commits, skipped iterations, and result inference.
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
-- [Last item during completion](loop-last-item.md): unselected .item/.index extension for reporting, zero/empty behavior, and item-retention tradeoffs.
+- [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
 - [Finally](finally.md): full operation/branch/conditional cleanup example, proposed ordering, preserved values/exits, and open panic/cleanup-failure rules.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.

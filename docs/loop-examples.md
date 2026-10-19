@@ -90,7 +90,7 @@ loop {
 }
 ```
 
-Count and typed value are initialized before the first condition. A current item is not available until an entry exists. Index is the zero-based active traversal position; the selected baseline restricts item/index to active iterations. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
+Count and typed value are initialized before the first condition. A current item is not available until an entry exists. Index is the zero-based active traversal position; item/index are available during active iterations and as last-visited metadata in then, but not in source/condition evaluation. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
 
 ## Direction, stride, keys, and entries
 
@@ -147,7 +147,7 @@ message := loop users as user {
 }
 ```
 
-The body's value type stays Int in the numeric examples while then can compute String. Then {} or a Unit-producing final action yields Unit; it does not silently preserve a prior value. The tag remains in scope through then, but the last item is not automatically retained.
+The body's value type stays Int in the numeric examples while then can compute String. Then {} or a Unit-producing final action yields Unit; it does not silently preserve a prior value. The tag remains in scope through then; a last item is retained for completion only when that computation observes it.
 
 ## Local recovery or function propagation
 
@@ -174,6 +174,6 @@ Local recovery skips a failed parse without committing a new value. Postfix ! fo
 
 ## Not finalized by these examples
 
-Full .value type inference and zero representation, optional-search inference, nonzero initialization, optional last-item/index retention, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
+Full .value type inference and zero representation, optional-search inference, nonzero initialization, ownership mechanics for used last-item state, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
 
 Related: [loops](loops.md), [item name](loop-receivers.md), [value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [deferred cleanup](deferred-cleanup-and-resources.md).

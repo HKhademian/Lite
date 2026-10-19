@@ -62,11 +62,11 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 - .item: current source element. An optional item name denotes this same value.
 - .index: zero-based iteration position, not original source index/key. Body positions begin at 0 even for a reversed or stepped source.
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
-- .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression or continue value commits; plain continue and break preserve it.
+- .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression, continue value, or break value commits; plain continue and bare break preserve it.
 
-Item and index are available during an active iteration, not in source/condition evaluation or completion under the selected baseline. Count and value are available before the first condition, in the body, and in then. Optional last-item/index access in then is a separate proposal. The user supports a uniform item interface in Boolean/unconditional modes; Unit remains the proposed payload. See [loop value](loop-value.md) for inference and universal zero rules.
+Item and index are available during an active iteration and as the last visited entry in then, but not in source/condition evaluation. Count and value are available before the first condition, in the body, and in then. Retain item/index for completion only when its observable computation uses them. The user supports a uniform item interface in Boolean/unconditional modes; Unit remains the proposed payload. See [loop value](loop-value.md) for inference and universal zero rules.
 
-See [last-item/index usage](loop-last-item.md) for the unselected completion-phase proposal, empty-loop behavior, and retention questions.
+See [last-item/index access](loop-last-item.md) for zero/empty behavior and field-sensitive retention.
 
 Leading-dot access uses only the current construct; named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 

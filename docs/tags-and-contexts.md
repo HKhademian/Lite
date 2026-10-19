@@ -79,11 +79,11 @@ The earlier prohibition on active tag shadowing is superseded.
 
 ## Availability and implementation
 
-Count and the typed zero-initialized value exist before the first condition check. Index is zero-based traversal position during an active entry, not an original source index/key; the selected baseline permits item/index reads only during an active iteration. Count/value are also readable in conditions and then. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
+Count and the typed zero-initialized value exist before the first condition check. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then, not in source/condition evaluation. Count/value are also readable in conditions and then. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
 
-At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not retain a current item or iteration-local references automatically, grant metadata writes, or allow a tag to escape its construct.
+At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not by itself retain an item or iteration-local references, grant metadata writes, or allow a tag to escape its construct. Reading last-item metadata in then requires that used item to remain valid.
 
-Extending .item/.index to mean the last visited entry in then is an [unselected proposal](loop-last-item.md). It must define retention and empty-input behavior rather than arise implicitly from tag scope.
+Last-visited .item/.index access in then uses [field-sensitive retention](loop-last-item.md): keep item state only when completion observes it. On empty input, item/index retain their zero values and count is 0. The optional source item name is not reintroduced in then.
 
 Additional fields require documented source capabilities and phase availability. An arbitrary iterator cannot promise reverse traversal, an exact remaining length, or last-item detection without additional work.
 

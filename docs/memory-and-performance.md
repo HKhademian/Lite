@@ -84,7 +84,7 @@ Large arrays/buffers are the primary motivation: provide storage, then fill elem
 
 The typed .value starts at its all-zero value and is replaced after a body value commit. It does not implicitly mean collecting every iteration into an array. Replacement may still require destruction or ownership transfer. An optimizer cannot skip side effects just because earlier values are overwritten.
 
-A tag is intended as a statically checked context handle, not a dictionary of runtime fields. Unused state can potentially be removed, but precise representation and optimization claims require an implementation.
+A tag is intended as a statically checked context handle, not a dictionary of runtime fields. Last-item retention for completion is driven by observable field use: unused item state need not survive for then, and reading only count/index/value does not retain every field. Used state still obeys ownership/cleanup semantics; precise representation and measured optimization claims require an implementation.
 
 ## Source adapters
 

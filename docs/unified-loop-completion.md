@@ -17,8 +17,8 @@ One then block replaces the old then/empty-else/common-final combination for nor
 
 ## Loop metadata
 
-- .item: current iterable element, available during an active iteration.
-- .index: zero-based iteration position, selected by the user. It is independent of original source indices/keys, reversal, or stride. The selected baseline limits it to active iterations.
+- .item: current iterable element during an active iteration; the last entered item in then when observed there.
+- .index: zero-based iteration position, selected by the user. It is independent of original source indices/keys, reversal, or stride. It is available during active iterations and as the last entered index in then.
 - .count: entered-iteration count, zero before entry and one-based during the body; final count remains available in then.
 - .value: the last committed body result, initialized to its statically determined type's valid all-zero value before iteration; final value remains available in then.
 
@@ -37,7 +37,7 @@ sum := @sum loop numbers as number {
 
 The tag names the same context as direct .field access. It remains lexically available through completion and is useful inside nested if/match/loop contexts, where leading-dot access does not search outward. An untagged loop can capture metadata into ordinary locals before entering such a nested context.
 
-Metadata is read-only. The final .value has body type T while then computes final result R; reading .value is not reading an unfinished R. Keeping the tag available does not retain a current item, iteration-local references, or iterator resources automatically. Tags are not accepted first-class escaping values and need not be allocated objects.
+Metadata is read-only. The final .value has body type T while then computes final result R; reading .value is not reading an unfinished R. Keeping the tag available does not automatically retain all item storage, iteration-local references, or iterator resources. Completion observes last-item/index fields through use-based retention; unused item state need not survive for then. Tags are not accepted first-class escaping values and need not be allocated objects.
 
 ## Empty and skipped processing
 
@@ -69,7 +69,7 @@ All-exit cleanup, defer, scoped resources, pending-exit replacement, and cleanup
 
 - Exact inference for .value, action/Unit bodies, and targeted-result-only loops.
 - Special-type zero mappings, additional metadata, and nonzero initialization syntax.
-- Optional last-item/index retention in then; baseline access is active-iteration-only.
+- Ownership/lifetime mechanics for observed last-item state; unused fields require no completion retention.
 - Ownership, replacement cleanup, and representation/cost rules.
 
 Related: [full examples](loop-examples.md), [completion](loop-completion.md), [loop value](loop-value.md), [tags](tags-and-contexts.md), and [loops](loops.md).
