@@ -14,6 +14,45 @@ These are the user's sketches. The expected annotation supplies the intended lay
 
 Records, anonymous record aggregates, and tuples motivate the same operation: reserve enough correctly aligned storage for the complete aggregate. Inline nested records contribute to its layout. Reference-valued fields occupy representation storage but do not cause allocation of their targets.
 
+## Candidate shorthand spellings
+
+The user also proposed these alternatives; none is selected:
+
+```text
+x: User = ?;
+x: User = {?};
+x ?= User;
+x := ?User;
+```
+
+### Expected-type marker: x: User = ?
+
+This is the leading punctuation recommendation. It keeps the ordinary typed declaration and changes only its initialization request. The expected type supplies layout, so the same marker could work for records, tuples, scalars, and other eligible layouts. Omission, 0, {}, and ? would visibly distinguish implicit zero, explicit zero, declared defaults, and no initialization.
+
+The question mark would denote a construction/storage marker, not a usable unknown value or optional User. Its legal contexts and grammar still need a decision. In particular, it cannot be passed wherever an ordinary User expression is accepted merely because it appears after =.
+
+### Record-shaped marker: x: User = {?}
+
+This resembles the existing record-initializer form. The extra braces need a specific purpose: the exact syntax could mean reserve the whole aggregate or leave selected/remaining fields uninitialized during partial construction. Those are different contracts. Requiring record-shaped braces for tuples and scalars would also need explanation.
+
+Do not accept both ? and {?} as synonyms just to postpone this choice. If partial-initializer markers are later useful, define their field/default behavior separately; no mixed field-initializer syntax is selected here.
+
+### Declaration operator: x ?= User
+
+This is compact but introduces another declaration operator specifically for reservation. It also resembles an op= update, while its right-hand side supplies a type rather than a replacement value. The existing := definition and = assignment distinction becomes harder to teach. Recommend against this alternative. The current operators document assigns ?= no meaning, so this is a readability/consistency concern rather than a collision with a selected operator.
+
+### Typed reservation expression: x := ?User
+
+This retains the ordinary inferred-binding operator and supplies the layout type on the right. It could avoid repeating the name in a typed declaration, but needs a new type-directed reservation-expression rule: ?User cannot simply produce an already valid User. Composite tuple/record operands, grouping, prefix precedence, and permitted expression positions require formalization.
+
+It is a credible alternative if one self-contained typed reservation form is preferred. Supporting it alongside an expected-type ? marker needs a demonstrated use, rather than adding both immediately.
+
+### Recommendation and common boundaries
+
+Prefer x: User = ? if choosing a compact contextual marker. Keep reserve() as the readable baseline while evaluating whether punctuation is worthwhile. This recommendation does not select either spelling or promise that both remain synonyms.
+
+Every candidate retains the same initialization-state, lifetime, ownership, and cleanup obligations below. None alone selects stack versus heap, an allocator, or allocation-failure handling. The punctuation choice must not redefine ordinary zero/default initialization or make uninitialized storage readable.
+
 ## Distinction from ordinary initialization
 
 ```text
@@ -57,7 +96,7 @@ The compiler may be able to enforce initialization facts statically; no universa
 
 ## Decisions to revisit
 
-- Ordinary library operation versus compiler-recognized storage/construction operation.
+- Reserve spelling versus punctuation shorthand, and ordinary library operation versus compiler-recognized storage/construction operation.
 - Expected-type inference, eligible layouts, and explicit generic arguments when inference is unavailable.
 - Stack/heap choice, allocation failure, ownership, escape, and lifetime rules.
 - Whole-value or field-by-field initialization syntax, capability grants, and completion proofs.
