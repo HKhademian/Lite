@@ -1,6 +1,6 @@
 # Control-flow exits
 
-Status: **targeted returns and bare/value loop exits selected; labeled contribution syntax remains open**.
+Status: **targeted return targets and bare/value loop exits selected; targeted-return completion interactions and labeled contribution syntax remain open**.
 
 ## Templates
 
@@ -51,18 +51,48 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `return @loop value`: exit the named loop; whether its then block executes is explicitly unresolved (see the note below).
 
 ```text
-found := @search loop users as user {
+found: Option<User> = @search loop users as user {
     if matches(user) {
         return @search Some(user)
     }
 }
 ```
 
-The intended exhaustion result is `None`. `return @search;` would instead explicitly supply `Unit` and conflict with an `Option<User>` result.
+On a match, the tagged exit supplies `Some(user)`. On a non-match, the conditional has no final `else`, so it returns its zero `Option<User>` (`.None`), which the loop commits as its body value. Exhaustion therefore yields `.None` without a `None` body or explicit `continue`. The explicit destination types both the loop result and the conditional fallback. With no `then`, direct-result and completion-directed tagged-return candidates have the same result type and value here; this example does not settle their behavior when `then` is present. `return @search;` would supply `Unit` and conflict with an `Option<User>` result.
 
 ## Tagged return and completion: unresolved
 
 The user is not convinced that return @tag value should bypass then (2026-10-19). Keep the target syntax and lexical targeting, but do not treat bypass or execution of then as selected. Revisit how the exit payload relates to body type T and completion result R before choosing. This uncertainty does not reopen the selected break/break value behavior: both reach then, with only break value replacing .value.
+
+The user asks to keep this open and compare more cases. These sketches isolate where the candidate meanings differ:
+
+1. **No `then`:** a direct target result of type T and a contribution of type T both produce the same loop value. The observable difference is small, so this case alone does not settle the rule.
+2. **Same-type `then` with an effect:** if `then` logs `.count` and returns `.value`, a direct tagged return skips that log; a completion-directed exit runs it. The result value can match while execution differs.
+3. **`then` transforms T into R:** if the body contributes `User` and `then` returns `String`, a direct exit must supply the loop's final `String` result (or the language must define another result-composition rule). A completion-directed exit supplies a `User` contribution and lets `then` produce `String`.
+4. **Return to an outer loop from a nested loop:** both models leave the inner loop early. It remains to specify whether the target outer loop runs its `then`, and confirm that the abandoned inner loop does not run ordinary completion merely because it is being exited. Cleanup on this path belongs to the deferred lifecycle review.
+5. **Return to a non-loop block:** targeted return already supplies that target's result directly. A rule that commits T and runs `then` would therefore be loop-specific, because ordinary blocks have no loop completion hook.
+
+```text
+summary := @search loop users as user {
+    if matches(user) {
+        return @search user
+    }
+    .value
+} then {
+    log(.count);
+    describe(.value)
+}
+```
+
+Here the body state has type T = `User`, while `then` produces R = `String`. Under the direct-result candidate, the early payload must satisfy R and `then` is skipped. Under the completion-directed candidate, the early payload satisfies T, replaces `.value`, and `then` produces R. Whether `describe` or the payload should be optional or wrapped is a separate type-design question; this sketch compares control flow only.
+
+### Candidate models, not selections
+
+- **Direct target result:** the payload has the target's final result type R and bypasses its `then`. This matches targeted return for ordinary blocks, but early and normal loop paths must agree on R; completion effects are skipped.
+- **Commit and complete:** the payload has body type T, replaces the target loop's `.value`, stops that loop, and runs its `then` to produce R. This lets the completion block observe an early exit, but makes `return @loop value` behave like a labeled contribution-bearing break. Intermediate exited loops and other tagged targets need explicit rules.
+- **Separate the spellings:** preserve `return @tag value` as a direct target result and consider a labeled `break @loop value` for commit-and-complete. That adds syntax; the labeled break form is not selected.
+
+Do not use `then` as a cleanup guarantee in any model. Its current contract is ordinary loop completion; early returns, propagated errors, and panics belong to the deferred cleanup/resource review.
 
 ## Labeled continuation and break shorthand
 
