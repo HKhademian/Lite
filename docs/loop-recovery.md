@@ -2,6 +2,8 @@
 
 Status: **external construct-handler placement superseded, 2026-10-19**. The example records the earlier grouped-loop recovery proposal; the user now requires recovery inside fn/if/loop/match bodies. Its external whole-loop handler is no longer recommended. Accumulator/completion distinctions and operation-local handling remain relevant; body-wide scope and syntax are reviewed in [body-owned recovery](body-recovery.md). Finally placement is not independently settled by that correction.
 
+**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.index/.count/.value metadata, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
+
 ## A collision the if proposal does not solve
 
 Loops already explore both else { ... } and else(empty) { ... } for normal no-contribution completion. Receiver presence therefore cannot distinguish that hook from failure recovery. A binder named failure is not special syntax, and changing its spelling must not change the clause's meaning.

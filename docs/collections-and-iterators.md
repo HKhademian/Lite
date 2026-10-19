@@ -13,7 +13,10 @@ loop users as user { greet(user) }
 loop users.reverse() as user { greet(user) }
 loop users.reverse().step(2) as user { greet(user) }
 loop directory.keys() as key { process(key) }
-loop directory.items() as (key, value) { process(key, value) }
+loop directory.items() as entry {
+    (key, value) := entry;
+    process(key, value);
+}
 ```
 
 These method names are proposals, not implemented standard-library APIs.
@@ -26,9 +29,7 @@ Growable List inference is selected for bracket literals without a more specific
 
 ## Element contract
 
-The source determines the item type. A simple item binding and a destructuring item pattern operate on that same type. Loop count and accumulator are separate receiver slots or tag fields, not automatically injected tuple fields in every source element.
-
-Loop receiver patterns must match every admitted slot value. Keep refutable selection inside the body for now. A present/filter adapter is a deferred library possibility, not selected syntax or an initial API requirement; see [loop pattern alternatives](loop-pattern-alternatives.md).
+The source determines the item type. One optional header name denotes that element. Destructuring and refutable selection happen inside the body. Count/index/value are context fields, not tuple components or receiver slots. A present/filter adapter remains a deferred library possibility; see [loop pattern alternatives](loop-pattern-alternatives.md).
 
 ## Iterator evaluation
 

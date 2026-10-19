@@ -66,8 +66,8 @@ Matching a range object by equality differs from testing scalar membership. Comp
 ## Counter versus range value
 
 ```text
-loop (10..=1).step(3) as value, count {
-    process(value, count)
+loop (10..=1).step(3) as value {
+    process(value, .count)
 }
 ```
 

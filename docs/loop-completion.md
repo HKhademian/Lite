@@ -1,41 +1,39 @@
 # Loop completion
 
-Status: **one receiverless then block with owning-loop context selected by the user, 2026-10-19; complete exit/type contracts open**.
+Status: **one receiverless then block using loop metadata selected; .value now typed and zero-initialized, 2026-10-19; complete exit/type contracts open**.
 
-## Purpose and template
-
-Handle final contributions and their absence in one completion block, without a separate receiver name or empty-case hook:
+## Template
 
 ```text
-sum := loop numbers as number, _, previous {
-    previous.value_or(0) + number
+sum := loop numbers as number {
+    .value + number
 } then {
-    .acc.value_or(0)
+    print(.count);
+    .value
 }
 ```
 
-Every loop has a context, even without an explicit tag. Then uses that same context; .count is the final entered-iteration count and .acc is the optional final accumulator. An explicit @name tag names this context and remains accessible through completion. See [unified completion](unified-loop-completion.md) and [full examples](loop-examples.md).
+Every loop has a context even without a named tag. Then is an attached phase of that same loop, with final .count and .value available directly. There is no done/result receiver and no .acc or automatic Option wrapper. See [loop value](loop-value.md).
 
 ## Results
 
-Then follows the ordinary final-expression rule. It may transform contribution type T into whole-loop result R. Receiver presence is no longer a switch between result transformation and action-only behavior:
+Then follows the ordinary final-expression rule and can transform body value type T into final result type R:
 
 ```text
-then { .acc.value_or(0) }  /* explicit Int result */
-then { "Finished" }       /* explicit String result */
-then { Unit }             /* Unit */
-then {}                   /* Unit */
+then { .value }             /* body's final T value */
+then { format_total(.value) } /* a transformed result */
+then { "Finished" }         /* String */
+then { Unit }               /* Unit */
+then {}                     /* Unit */
 ```
 
-These are clause fragments. The older then(result), then(done), and then(_) forms are retired for loop completion. If common finishing actions should preserve a value, explicitly return that value as the tail expression; an action returning Unit does not silently preserve an earlier accumulator. Trailing semicolons still do not discard expression values.
+These are clause fragments. A Unit tail does not silently preserve an earlier value. Trailing semicolons do not discard expression values. Without then, the working normal-completion result is .value; the exact inference rules remain to formalize.
 
-Behavior and inference when then is omitted remain separate design questions.
+## Empty, skipped, and zero-valued loops
 
-## Empty versus no contribution
+For Int-valued loops, .value starts at 0. An empty source or all-skipped entries leave it at 0; no value_or helper is required. A positive .count means entries ran, not that any entry committed a value. A genuine contribution of 0 is also 0, so .value alone cannot distinguish these histories.
 
-For an unseeded loop, zero entered iterations gives .count == 0 and .acc is .None. All-skipped iterations give a positive count but still .None. A final skipped entry or bare break preserves a prior contribution. Seeded loops still need explicit seed-versus-contribution rules.
-
-Capture metadata before entering a different construct context:
+Capture metadata before entering another construct context:
 
 ```text
 message := loop items as item {
@@ -43,35 +41,32 @@ message := loop items as item {
     score(item)
 } then {
     entered := .count;
-    result := .acc;
-    report_attempts(entered);
+    total := .value;
 
-    if .Some(last) := result {
-        format_score(last)
+    if entered == 0 {
+        "No iterations"
     } else {
-        "No eligible items"
+        format_score(total)
     }
 }
 ```
 
-The inner else is normal conditional selection. The old separate loop else and its priority/composition question are superseded by handling both states inside then.
+Assume score returns Int and format_score returns String. All-skipped nonempty input reaches format_score(0). There is no separate loop empty-else.
 
-## Context scope
+## Scope and availability
 
-Then is an attached loop phase, not a new metadata owner. Its direct .count/.acc access works on tagged and untagged loops. A nested if/match/loop has its own context; leading-dot lookup never searches outward. Use a named loop tag or captured local to reach outer state from that nested construct.
+An explicit @name tag remains readable through then. Nested if/match/loop constructs own their own current contexts; leading-dot lookup never searches outward. Use a tag or captured local for outer metadata.
 
-Metadata remains read-only and phase-checked. The final accumulator stays available while then computes a result; iteration-local values and a last item are not automatically retained. The final whole-loop result cannot be read before it has been computed.
+The final .value stays alive while then computes its result. .item and the optional item name require an active iteration; retaining the tag does not keep a last item alive. Index is the zero-based active iteration position; its condition/completion-phase contract still needs formalization. No invalid last item/index is fabricated for empty input. Count and value are initialized before the first condition.
 
 ## Exits and cleanup
 
-The current completion direction runs then once after source exhaustion, a false condition, or bare break. Continue remains inside iteration. Return @loop value supplies the final result directly and bypasses completion; unqualified return exits the nearest function/closure. Error forwarding by ! and panics are not normal loop completion.
+The current completion direction runs then after source exhaustion, a false condition, or bare break. Continue stays in iteration. Return @loop result supplies the final construct result directly and bypasses then. Unqualified return, forwarded errors via !, and panics are not normal loop completion. Break value remains unconfirmed shorthand.
 
-Break value remains unconfirmed shorthand. Its retention does not follow from the receiverless completion choice.
+Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, disposal, finally placement, and cleanup failures remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
 
-Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, resource disposal, finally placement, and cleanup failures remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Ordinary operation-level recovery inside loop bodies remains available, and returned Results still require explicit handling or propagation.
+## Historical forms
 
-## Historical designs
+Separate then/empty-else/finally clauses, completion receivers, action-preservation modes, optional accumulators, and previous-value receiver slots are superseded for loops. General Option/Result values and error receivers are unchanged.
 
-Separate then/empty-else/finally clauses, Option or state-record completion receivers, and receiver-presence action/result modes were earlier explorations. They are superseded for normal loop completion. Historical generic hook and cleanup discussions do not reintroduce them as alternate loop forms.
-
-Related: [receivers](loop-receivers.md), [accumulator](loop-accumulator.md), [control-flow exits](control-flow.md), [tags](tags-and-contexts.md), and [historical hook proposals](receiver-clauses.md).
+Related: [unified completion](unified-loop-completion.md), [loop value](loop-value.md), [item naming](loop-receivers.md), [examples](loop-examples.md), and [exits](control-flow.md).

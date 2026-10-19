@@ -109,17 +109,16 @@ A mismatch allows later arms to be tried. The and conditions run after structura
 
 ## 4. Loop receiver slots
 
+The former receiver-slot pattern design is superseded. Current loop headers allow only one optional item identifier. Count, index, and typed zero-initialized value come from metadata; no count/value receivers or header patterns remain.
+
 ```text
-loop pairs as (left, right), count {
-    process(left, right, count)
+loop pairs as pair {
+    (left, right) := pair;
+    process(left, right, .count);
 }
 ```
 
-The item pattern receives the source element. Count and accumulator have distinct receiver slots; a tuple pattern does not acquire all loop metadata. Ordered shadowing applies both between slots and recursively within each slot's pattern, including ordinary `_` bindings; see [pattern shadowing](pattern-shadowing.md).
-
-**Selected initial policy:** require each receiver pattern to be irrefutable for that slot's contract. Reject patterns that can fail for an admitted input. A receiver must not filter, stop the loop, panic, or introduce an error on mismatch. Explicit matching inside the body expresses selection. [Deferred alternatives](loop-pattern-alternatives.md) preserve filtering, adapters, termination, per-item mismatch branches, recoverable failure, and assertions for later consideration.
-
-Likewise, matching Some(acc) directly against an Option accumulator that admits None is rejected; receive the whole optional state and inspect it in the body. This applies to item, count, and accumulator slots in all loop modes. Loop-source patterns are a separate question: the current grammar selects Boolean or iterable sources, not a pattern-binding condition. Do not assume `loop Some(item) := next()` is accepted because the analogous if form exists.
+Destructuring follows ordinary declaration rules in the body. Refutable selection uses if/match inside that body; it is not filtering, unchecked extraction, or a new error path in the header. The older [header-pattern alternatives](loop-pattern-alternatives.md) are historical/deferred. See [current item naming](loop-receivers.md).
 
 ## 5. Function and closure parameters
 
@@ -147,7 +146,7 @@ An ordinary fallible call remains Result data in a match or conditional source t
 
 ## 7. Completion-hook receivers
 
-**Loop update, 2026-10-19:** loop completion no longer takes a receiver pattern. Use then { ... } with .count/.acc from the owning loop context and ordinary tail-expression semantics. The receiver/mismatch and action-only proposals below are historical for loops; they remain exploration material for other hooks. See [current loop completion](loop-completion.md).
+**Loop update, 2026-10-19:** loop completion no longer takes a receiver pattern. Use then { ... } with .count/.value from the owning loop context and ordinary tail-expression semantics. The receiver/mismatch and action-only proposals below are historical for loops; they remain exploration material for other hooks. See [current loop completion](loop-completion.md).
 
 then, loop else, and finally receive different phase-specific inputs. Matching must be checked against that actual input; an empty loop cannot supply an invented accumulator value, and cleanup on an abrupt exit is not an ordinary successful result.
 
@@ -165,7 +164,7 @@ Closure capture lists, imports, type/member declarations, and tag declarations d
 
 1. **Binding versus testing an existing value: settled base forms.** Bind with name, type-match with `: Type`, and value-match with `== expected`. A typed binding `name: Type` combines binding and type matching. Bare names remain bindings independent of imports or capitalization; `.None` selects the absent Option case. Full expression boundaries, constructor/field composition, and equality effects still need contracts; see [pattern primitives](pattern-bindings-and-tests.md).
 2. **Colon grammar.** Typed binding, a whole-value nested pattern, tuple-type annotation, and record field labels can collide. Set their productions together before finalizing `y: (a, b: str, c)`; whitespace and capitalization cannot disambiguate them.
-3. **Mismatch outside selection.** Loop slots now require irrefutable patterns with selection inside the body. Adopt or revise the corresponding recommendation for parameters and completion/recovery receivers separately. Do not infer hidden filtering, unchecked unwrap, or extra error channels.
+3. **Mismatch outside selection.** Loop headers now take only an optional item name, with destructuring/selection inside the body. Adopt or revise the corresponding recommendation for parameters and completion/recovery receivers separately. Do not infer hidden filtering, unchecked unwrap, or extra error channels.
 4. **Flow and capabilities.** Define when reassignment/alias mutation invalidates narrowing, when component relationships survive extraction, and how whole/component bindings share access. Current input projection preserves composite alternatives; arbitrary later cross-binding narrowing is still open.
 5. **Names within one pattern: settled.** Repeated bindings such as `(x, x)` and `(_, _)` shadow in recursive written order. The final binding of each name is visible after success; `_` is readable and explicitly allowed to be unused. The former recommendation to reject duplicates is superseded. Rebinding across separate and operands is still open. Named-field aliases remain useful for preserving access to both values; `field as localName` is a candidate, not selected syntax. See [pattern shadowing](pattern-shadowing.md) and [pattern aliases](pattern-aliases.md).
 6. **Ordered tests and effects.** Specify subpattern and guard evaluation order, getter/custom equality effects, and ownership commitment. Subject-once evaluation does not specify every subsequent comparison or field access.

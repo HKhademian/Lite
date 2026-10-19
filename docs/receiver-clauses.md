@@ -2,7 +2,7 @@
 
 Status: **optional hook receivers requested; typed/pattern-dispatch chains exploratory**.
 
-**Loop update, 2026-10-19:** the loop-completion receiver examples and action/result distinction below are historical. Current loop completion uses then { ... } with .count/.acc from the owning context, including untagged loops, and ordinary tail-expression results. Then(result), then(done), and then(_) are retired for loops. Result recovery receivers remain unchanged; body-wide cleanup remains deferred. See [current loop completion](loop-completion.md).
+**Loop update, 2026-10-19:** the loop-completion receiver examples and action/result distinction below are historical. Current loop completion uses then { ... } with .count/.value from the owning context, including untagged loops, and ordinary tail-expression results. Then(result), then(done), and then(_) are retired for loops. Result recovery receivers remain unchanged; body-wide cleanup remains deferred. See [current loop completion](loop-completion.md).
 
 ## Purpose
 

@@ -1,164 +1,65 @@
-# Loop examples: complete working design
+# Loop examples: metadata-only state
 
-Status: **design examples, 2026-10-19; no compiler implementation or execution claim**. These examples use the latest unified-completion proposal with tag access. They do not finalize the header receiver separator, library adapters, or other contracts explicitly marked open below. Loop completion uses receiverless then with the owning loop context. Helpers such as print, format_total, visit, and parse_int stand for separately defined operations.
+Status: **updated to the one-item-name and typed .value direction, 2026-10-19; design examples, not compiler-verified execution**. As, adapter names, continue value retention, and full inference remain working contracts. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
-## Full worked example
+## Full worked loop
 
-Assume format_total takes an Int and returns a String.
+Assume numbers has Int elements and format_total maps Int to String.
 
 ```text
 numbers := [3, -2, 0, 5, -1, 99];
 
-summary := @scan loop numbers as number, count, previous {
-    /* Exit the tagged loop directly, bypassing then. */
+summary := @scan loop numbers as number {
     if number == -999 {
         return @scan "Cancelled";
     }
+    if number == -1 { break; }
+    if number < 0 { continue; }
 
-    /* Stop without adding a contribution; then still processes state. */
-    if number == -1 {
-        break;
-    }
-
-    /* Skip without replacing the previous contribution. */
-    if number < 0 {
-        continue;
-    }
-
-    print(count);
+    print(.item);
+    print(.index);
     print(.count);
-    print(@scan.item);
 
-    total := previous.value_or(0);
-
-    /* Contribute early, then advance to the next iteration. */
     if number == 0 {
-        continue total;
+        continue @scan.value;
     }
 
-    /* Normal tail expression commits the next accumulator value. */
-    total + number
+    .value + number
 } then {
-    /* The loop tag remains readable in completion. */
-    print(@scan.count);
-
-    entered := .count;
-    if entered == 0 {
-        "No iterations"
-    } else {
-        match @scan.acc {
-            .Some(total) { format_total(total) }
-            .None { "Iterations ran, but all skipped" }
-        }
-    }
+    print(.count);
+    format_total(.value)
 }
-
-print(summary);
 ```
 
-Under the proposed completion rules, the shown input enters five iterations. Contributions are 3, skip, 3, 8, then break preserving 8. The value 99 is never visited. Then runs once with count 5 and acc .Some(8); its final String becomes summary. The receiver count is not a zero-based source index.
+The intended trace enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. Return @scan supplies a String directly and bypasses then.
 
-Previous is the accumulator before this iteration; .acc and @scan.acc refer to the final accumulator during completion. The local entered captures .count before entering the nested if, which has its own current context. An explicit tag works inside nested if/match contexts, where leading-dot lookup must not search outward. Metadata is read-only.
+An empty source or all-skipped source leaves Int value 0. Count distinguishes no entries from some entries; value cannot distinguish no commit from a genuine result of zero. A skipped last entry preserves the prior value. No Option is automatically inserted.
 
-Useful alternative inputs:
-
-- []: count 0, acc .None, producing "No iterations". Empty literal element typing comes from context; standalone empty-literal inference remains separate.
-- [-2, -3]: count 2, acc .None, producing the all-skipped message.
-- [3, -2]: count 2, acc .Some(3), retaining a contribution despite the final skip.
-- [0]: count 1, acc .Some(0), because continue total explicitly contributes zero.
-- [-1]: count 1, acc .None, because bare break contributes nothing.
-- [-999]: the direct result is "Cancelled" and then is bypassed.
-
-## Three source modes
-
-### Iterable: source evaluated once
+## Item name or direct context
 
 ```text
+sum := loop numbers {
+    .value + .item
+}
+
+sum := loop numbers as number {
+    .value + number
+}
+
 loop users as user {
     greet(user);
+    report_visit(.index, .count);
 }
 ```
 
-An expression that produces an iterable is evaluated once to obtain the source. Iteration then advances that source.
-
-### Boolean: condition reevaluated before each entry
+There are no count/previous/accumulator receiver slots. The working normal result without then is the final .value. Item names are ordinary read-only bindings; no mutable access is granted by naming an item. Destructure inside the body:
 
 ```text
-@attempts loop @attempts.count < 10 {
-    attempt();
+loop pairs as pair {
+    (left, right) := pair;
+    inspect_pair(left, right, .count);
 }
-```
 
-Count starts at zero before the first condition and increments on entry. The body is entered with counts 1 through 10. The untagged current-context form is:
-
-```text
-loop .count < 10 {
-    attempt();
-}
-```
-
-Accumulator state can also participate in the condition:
-
-```text
-total := @bounded loop @bounded.count < 10
-    and @bounded.acc.value_or(0) < 30
-    as _, count, previous {
-    previous.value_or(0) + count
-} then {
-    .acc.value_or(0)
-}
-```
-
-Line breaks have no grammatical meaning. Count and accumulator are initialized before the first condition; there is no current item before body entry. Boolean/unconditional item payload Unit remains a proposed choice.
-
-### Unconditional: no source
-
-```text
-loop {
-    work();
-    if finished() {
-        break;
-    }
-}
-```
-
-There is no post-condition syntax. Put a check after work inside the body when needed. Naming the count also works without a source:
-
-```text
-loop as _, count {
-    print(count);
-    if count >= 10 {
-        break;
-    }
-}
-```
-
-## Receiver combinations
-
-These are alternative forms, not clauses of one loop:
-
-```text
-loop users { record_visit(); }
-loop users as user { greet(user); }
-loop users as user, count { report_visit(user, count); }
-loop users as user, _, previous { previous.value_or(0) + user.age }
-loop users as _, count { print(count); }
-loop users as _, _, previous { inspect(previous); }
-```
-
-The slots are item, entered-iteration count, previous optional accumulator. Trailing slots may be omitted. Underscore-prefixed names are ordinary bindings allowed to be unused; _ also binds normally. Repeated names shadow from left to right, so as _, _, _ leaves _ naming the accumulator. No implicit ordinary names are introduced.
-
-An item may be destructured when every admitted item has that shape:
-
-```text
-loop pairs as (left, right), count {
-    inspect_pair(left, right, count);
-}
-```
-
-Refutable selection stays in the body:
-
-```text
 loop optional_users as candidate {
     if .Some(user) := candidate and user.age >= 18 {
         greet(user);
@@ -166,11 +67,34 @@ loop optional_users as candidate {
 }
 ```
 
-Do not replace candidate in that header with a refutable .Some(user) pattern. Filtering and mismatch behavior are not part of loop receiver syntax.
+Header tuple patterns and refutable patterns are not current forms.
+
+## Three source modes
+
+```text
+/* Iterable: obtain source once, then advance. */
+loop users as user { greet(user); }
+
+/* Boolean: reevaluate before every body entry. */
+loop .count < 10 { attempt(); }
+
+/* Count and value can constrain a Boolean loop. */
+total := @bounded loop @bounded.count < 10 and @bounded.value < 30 {
+    @bounded.value + @bounded.count
+}
+
+/* No source: unconditional iteration. */
+loop {
+    work();
+    if finished() { break; }
+}
+```
+
+Count and typed value are initialized before the first condition. A current item is not available until an entry exists. Index is the zero-based active traversal position; condition/completion access still needs its own phase rule. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
 
 ## Direction, stride, keys, and entries
 
-These are source/adaptor candidates, not new loop keywords. The exact range and library spellings remain provisional:
+These are provisional source/adapter spellings, not new loop keywords:
 
 ```text
 loop 1..=10 as number { print(number); }
@@ -179,59 +103,43 @@ loop (1..=10).step(2) as number { print(number); }
 loop users.reverse() as user { greet(user); }
 loop users.reverse().step(2) as user { greet(user); }
 loop directory.keys() as key { inspect(key); }
-loop directory.items() as (key, value) { inspect_entry(key, value); }
+loop directory.items() as entry {
+    (key, value) := entry;
+    inspect_entry(key, value);
+}
 ```
 
-Reverse/step availability depends on source capabilities. Reversing an arbitrary stream must not silently promise cheap traversal or hidden buffering. Count still counts entered iterations rather than original collection positions.
+Reversal and stepping still yield index 0, 1, 2, etc., independent of original source indices/keys. Source capabilities govern whether reverse/step is supported without hidden buffering.
 
-## Nested loops and targeted exits
+## Nested loops and exits
 
 ```text
 @rows loop grid as row {
     @cells loop row as cell {
-        if cell < 0 {
-            continue @rows;
-        }
-
-        if cell == 0 {
-            break;
-        }
-
+        if cell < 0 { continue @rows; }
+        if cell == 0 { break; }
         visit(cell);
-        report_position(@rows.count, @cells.count);
+        report_position(@rows.index, @cells.index);
     }
 }
 ```
 
-Bare break ends the nearest loop. Continue @rows abandons the remaining inner work and advances the outer loop without an outer contribution; it does not normally complete the inner loop. Targeted transfers do not cross function/closure boundaries. Cleanup during escaping transfers belongs to the separate deferred lifecycle review.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value remains unconfirmed shorthand.
 
-A tagged return can supply a complete outer-loop result directly:
+Every nested if/match/loop has its own current context. Use named tags or captured locals to read outer metadata; leading-dot lookup never searches outward. The optional item name is useful for lexical access inside such nested bodies.
 
-```text
-found := @search loop users as user {
-    if matches(user) {
-        return @search Some(user);
-    }
-}
-```
-
-This is the requested concise optional-search direction: exhaustion supplies None. Its precise result inference is still open, so it is not a completed typing rule. Return @search supplies the final loop result and bypasses completion processing. Bare return @search supplies Unit, not an inferred empty Option. Break value remains unconfirmed shorthand; use the established tagged-return form when showing an explicit final-result exit.
-
-## Completion results without receivers
-
-Then can transform an Int contribution into another final type without a receiver:
+## Completion results
 
 ```text
-description := @total loop numbers as number {
-    @total.acc.value_or(0) + number
+sum := loop numbers as number { .value + number }
+
+text := loop numbers as number {
+    .value + number
 } then {
-    format_total(.acc.value_or(0))
+    print(.count);
+    format_total(.value)
 }
-```
 
-A constant final result needs no receiver or dummy binding:
-
-```text
 message := loop users as user {
     greet(user);
 } then {
@@ -239,52 +147,33 @@ message := loop users as user {
 }
 ```
 
-An action whose result is Unit makes the whole completion block return Unit:
+The body's value type stays Int in the numeric examples while then can compute String. Then {} or a Unit-producing final action yields Unit; it does not silently preserve a prior value. The tag remains in scope through then, but the last item is not automatically retained.
+
+## Local recovery or function propagation
+
+Assume parse_int returns Int!, and report_error returns Unit.
 
 ```text
-loop users as user {
-    greet(user);
-} then {
-    print("Finished");
-}
-```
-
-There is no receiver-presence distinction and no automatic accumulator preservation when then returns Unit. Then {} likewise returns Unit. Exact result inference without completion and how Unit participates in iteration contributions remain open. There are no separate loop empty-else or finally clauses in this direction; all-exit cleanup remains deferred.
-
-## Local error handling and function exits
-
-Assume parse_int returns Int! and report_error returns Unit. Recover an individual parse by skipping that iteration:
-
-```text
-sum := loop texts as text, _, previous {
+sum := loop texts as text {
     number := parse_int(text) else(error) {
         report_error(error);
         continue;
     }
-
-    previous.value_or(0) + number
-} then {
-    .acc.value_or(0)
+    .value + number
 }
-```
 
-Or explicitly forward its error from a declared fallible function:
-
-```text
 sum_text := fn(texts: [String]): Int! {
-    loop texts as text, _, previous {
+    loop texts as text {
         number := parse_int(text)!;
-        previous.value_or(0) + number
-    } then {
-        .acc.value_or(0)
+        .value + number
     }
 }
 ```
 
-Postfix ! exits the function on a returned error; it is not a loop break and does not enter the normal-completion block. A plain return likewise exits the nearest function/closure, not the nearest loop. Panics follow their implicit failure path. Body-wide recovery/cleanup syntax is deferred; these examples use only existing operation-local recovery.
+Local recovery skips a failed parse without committing a new value. Postfix ! forwards an error from the nearest function/closure and does not enter normal loop completion. Panics retain their implicit failure path. Body-wide handlers, defer, resources, and all-exit cleanup remain deferred.
 
-## Boundaries still to settle
+## Not finalized by these examples
 
-The examples cover the current forms and explicit candidates without introducing seeded-header syntax, break-value shorthand, whole-loop external recovery, post-tested loops, or all-exit completion semantics. Header receiver separator, seed syntax, some Unit/result inference rules, optional-search inference, adapter APIs, ownership, and cleanup still need decisions. No runtime cost or execution result here is compiler-verified.
+Full .value type inference and zero representation, no-then result typing, optional-search inference, nonzero initialization, item/index completion availability, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
 
-Related: [loops](loops.md), [receivers](loop-receivers.md), [accumulator](loop-accumulator.md), [unified completion](unified-loop-completion.md), [tags](tags-and-contexts.md), [control-flow exits](control-flow.md), and [deferred cleanup/resources](deferred-cleanup-and-resources.md).
+Related: [loops](loops.md), [item name](loop-receivers.md), [value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [deferred cleanup](deferred-cleanup-and-resources.md).

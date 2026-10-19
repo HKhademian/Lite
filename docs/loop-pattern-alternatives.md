@@ -2,6 +2,8 @@
 
 Status: **selection inside the loop body is selected for now; filtering headers and other receiver-mismatch behaviors are deferred**.
 
+**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.index/.count/.value metadata, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
+
 ## Selected form
 
 Bind the current source item, then select explicitly inside the body:

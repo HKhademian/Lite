@@ -136,12 +136,13 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources.
-- [Loop examples](loop-examples.md): full worked loop, all current source/receiver forms, completion state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
-- [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.acc on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
+- [Loop examples](loop-examples.md): worked loops with one optional item name, metadata state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
+- [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.value on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
-- [Loop receivers](loop-receivers.md): optional item/count/accumulator binding lists and ordered shadowing.
+- [Optional loop item name](loop-receivers.md): one item identifier, body-local destructuring, and metadata instead of receiver lists.
 - [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection, irrefutable header receivers, and deferred filtering, adapter, termination, branch, and failure forms.
-- [Loop accumulator](loop-accumulator.md): contributions, optional previous values, and skipped iterations.
+- [Loop value](loop-value.md): typed zero-initialized .value, internal commits, skipped iterations, and result inference.
+- [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
 - [Finally](finally.md): full operation/branch/conditional cleanup example, proposed ordering, preserved values/exits, and open panic/cleanup-failure rules.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
 - [Loop completion](loop-completion.md): `then`, `else`, and `finally`.

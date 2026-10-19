@@ -17,36 +17,12 @@ pair := (first, second);
 
 ```text
 loop pairs as pair {
-    process(pair)
+    (left, right) := pair;
+    process(left, right);
 }
 ```
 
-```text
-loop pairs as (left, right) {
-    process(left, right)
-}
-```
-
-Both receive each source element. If the element is not a compatible tuple, the destructuring form is rejected. A simple name must not secretly receive an item while a tuple pattern receives unrelated loop metadata.
-
-## Receiver lists are not tuples
-
-Loop receivers currently have separate semantic positions: item, count, accumulator.
-
-```text
-loop pairs as (left, right), count {
-    process(left, right, count)
-}
-```
-
-The grouped pattern destructures the first slot. The ungrouped comma introduces the second receiver slot.
-
-```text
-as (a, b)  /* one tuple pattern for the item */
-as a, b    /* item receiver followed by count receiver */
-```
-
-The receiver separator is still open; this distinction holds whether its final spelling is `as` or `:`.
+The optional item name always denotes the current source element. Current headers allow only that one identifier; destructuring belongs in the body. Count/index/value come from metadata and are not injected into the tuple item. Former header tuple patterns and item/count/accumulator receiver lists are retired. See [item naming](loop-receivers.md).
 
 ## Refutable and irrefutable patterns
 
@@ -129,7 +105,7 @@ Rust uses `name @ subpattern` to bind a matched value while checking another pat
 
 The tuple must still have the required shape. The final `_` names the fourth component and may be read. `_: String` constrains and binds a component with type String. Nested tuple and constructor patterns use the same rule; Some(_) still requires Some and binds its payload. All names, not only underscores, use ordered shadowing. See [pattern binding and shadowing](pattern-shadowing.md).
 
-In a loop receiver list, `as _, _, acc` binds item and count as `_`, leaving count visible, and names the accumulator acc. `as _, _, _` leaves `_` naming the accumulator. See [underscore bindings and skips](wildcards-and-skips.md) and [loop receivers](loop-receivers.md).
+Loop headers now take only one optional item name; body-local tuple patterns retain the ordered shadowing rules above. See [item naming](loop-receivers.md).
 
 ## Notes and open decisions
 

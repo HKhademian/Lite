@@ -129,15 +129,13 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - One `if` form works for actions and values; branch braces establish ownership.
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
-- Loop receiver slots are item, count, accumulator; trailing slots can be omitted. An explicitly written `_` binds its slot normally and permits nonuse.
-- Receiver names shadow from left to right, including nested slot patterns and ordinary `_` bindings: `_, _, acc` leaves count visible as `_` and the accumulator as acc; `_, _, _` leaves the accumulator visible as `_`.
-- Tuple destructuring within a slot operates on that slot's actual value.
-- Loop receiver patterns must be irrefutable for their input contracts in every slot and loop mode. Reject receivers that can fail; put refutable matching inside the body. Irrefutable tuple destructuring remains allowed. Filtering headers, adapters, mismatch termination/branches, and mismatch failures/assertions are [documented alternatives](loop-pattern-alternatives.md), not selected receiver behavior.
+- Loop headers allow one optional item identifier. Count/value receiver lists, receiver-slot shadowing, and header tuple patterns are retired. The item name denotes the same current element as .item; destructuring and refutable selection belong inside the body. See [item naming](loop-receivers.md).
+- Loop metadata supplies .item, .index, .count, and .value. Index is zero-based traversal position, independent of source keys/positions and reversal/step. Count counts entered iterations. Index availability outside active bodies remains a phase contract.
+- Loop .value replaces .acc and automatic Option accumulators. It has a static body-result type and is zero-initialized before iteration; tail completion or continue value commits, plain continue/break preserve. No value_or helper or previous receiver is required. See [loop value](loop-value.md).
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
-- An accumulator represents previous contributions, with absence modeled explicitly.
 - Plain `continue` and bare `break` contribute nothing.
-- Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .acc are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
+- Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .value are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -148,12 +146,12 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Tags follow lexical shadowing; an inner tag may reuse a name.
 - `.field` refers only to the current construct, with no outward fallback.
 - `@name.field` explicitly selects a named context.
-- A loop's tag remains accessible in its attached completion block. Final count and optional accumulator are readable there; other metadata must be valid for that phase. This scope does not keep iteration-local items/references alive automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
+- A loop's tag remains accessible in its attached completion block. Final count and typed value are readable there; other metadata must be valid for that phase. This scope does not keep iteration-local items/references alive automatically. See [completion tag access](unified-loop-completion.md#access-through-the-owning-loop-tag).
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
 
-- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and optional accumulator come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, seed tracking, and omitted-hook behavior remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
+- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and omitted-hook behavior remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
 
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.
 
@@ -219,7 +217,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - [Aggregate patterns](aggregate-patterns.md) compare candidate named-field constraints such as `Student(age == outVal, name == "ali")` with `Student(== outVal, "ali")`. Equivalence requires an explicit `(age, name)` matching schema. `Student(outVal, "ali")` instead binds the first component under the selected primitive rule. Named braces with destination-first source-field selection are now selected; the older named Student(...) wrapper is superseded. Positional schema declaration, field/position mixing, omitted-field policy, and extraction contracts remain proposals.
 - The [pattern primitive review](pattern-bindings-and-tests.md) now selects the base spellings. Complete value-operand boundaries, comparison effects/fallibility, exact type/subtype rules, and narrowing stability. No bare prelude-constructor exception is retained; broader inline pattern combinations require their own grammar.
 - Named deconstruction uses destinationPattern = sourceField in inferred braces, superseding field as localName and the reverse field = destinationPattern. Same-name field: Type binds and type-tests; : Type = sourceField only tests. Complete schema rules, duplicate source-field selection, and ownership remain open; see [pattern aliases](pattern-aliases.md).
-- The [pattern context review](pattern-contexts.md) selects irrefutable loop slots and refutable if/match selection, with no hidden filtering or error swallowing. Irrefutable parameters and completion/recovery receivers remain recommendations. Remaining colon/type/record grammar is proposed. The bind/type-match/value-match distinction is selected; the former duplicate-binding rejection recommendation is superseded by selected ordered shadowing within patterns and between loop receiver slots.
+- The [pattern context review](pattern-contexts.md) selects irrefutable loop slots and refutable if/match selection, with no hidden filtering or error swallowing. Irrefutable parameters and completion/recovery receivers remain recommendations. Remaining colon/type/record grammar is proposed. The bind/type-match/value-match distinction is selected; the former duplicate-binding rejection recommendation is superseded by selected ordered shadowing within patterns; loop receiver lists are now retired.
 - `(x, y: (a, b: str, c), ...rest)` proposes a whole-value binding y with nested destructuring, a typed component b, and a final outer tuple-rest capture. Type constraints within destructuring are already selected; whole-value colon syntax, tuple-type ambiguity, rest result types, and simultaneous whole/component ownership remain proposals. See [nested patterns and rest](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 - Enum/metadata collision handling still needs a policy, with an explicit ambiguity diagnostic recommended rather than silent reinterpretation. The .case shorthand and explicit Float backing-value declarations are selected. Raw mapping, uniqueness, representation, conversions, and floating-point equality details remain open. See [enums and variants](enums-and-variants.md#inferred-case-names).
 - Type-only arms now use selected `: Type` and can narrow a stable existing subject without redeclaration. Every match is now exhaustive, with explicit empty ignore arms. Remaining proposals include a final else fallback and any explicit fallthrough capability. Source-order first-success selection, no implicit fallthrough, and and-chained conditions are selected. Complete operand grammar and constructor-head resolution; see [match](match.md#type-only-arms-and-remaining-coverage-proposals) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).
@@ -242,28 +240,19 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ### 1. Loop contribution and construct-result inference
 
-Define iteration type `T`, accumulator state `Option<T>`, and final result type `R` independently. Explain all of these with one coherent system:
-
-- Last-value loops.
-- Action loops with `Unit` bodies.
-- Search loops whose only non-Unit values come from targeted returns.
-- Empty loops and loops whose every entry skips.
-- Existing `Option` values without accidental nested wrapping or flattening.
-- Explicit seeds that may or may not count as body contributions.
+Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. Complete inference for last-value loops, Unit actions, circular .value reads, targeted-result-only search loops, and optional results without nested wrapping. Formalize the working no-then result rule and any future nonzero initialization mechanism.
 
 ### 2. Completion hooks and abrupt exits
 
-The single receiverless then resolves the old then-versus-empty-else composition question. Complete its result inference and omitted-hook behavior; do not reintroduce receiver-presence value modes. Count and optional accumulator remain available from the owning context.
+The single receiverless then resolves the old then-versus-empty-else composition question. Complete its result inference and omitted-hook behavior; do not reintroduce receiver-presence value modes. Count and typed value remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 
 Confirm whether `break value` remains alongside `return @tag value`, and whether labeled contribution-bearing `continue` is accepted.
 
-### 3. Receiver punctuation and initialization
+### 3. Optional item naming and initialization
 
-Choose one separator. `:` was explicitly favored for all modes, but later receiver and tag examples continued using `as`. The documentation uses `as` provisionally rather than silently accepting both.
-
-Define explicit seed syntax in the final receiver-list form. Retired parenthesized prototypes should not become an accidental second syntax.
+Choose the separator spelling for one optional item name; as remains working notation. There is no remaining count/value receiver list or header tuple pattern. Define any future nonzero value initialization without reviving the retired receiver/seed forms accidentally.
 
 ### 4. Context phase rules
 

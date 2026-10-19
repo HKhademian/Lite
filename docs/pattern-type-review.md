@@ -37,7 +37,7 @@ match find_value() {
 }
 ```
 
-Whole typed bindings use name: Type = source, never name: Type := source. Typed components inside a structural pattern remain valid. Loop slots must be irrefutable; selection stays inside the body. Parameters and completion/recovery receivers still need their separate mismatch policies. See [pattern contexts](pattern-contexts.md).
+Whole typed bindings use name: Type = source, never name: Type := source. Typed components inside a structural pattern remain valid. Loop headers now accept only an optional item name; destructuring and selection stay inside the body. Parameters and completion/recovery receivers still need their separate mismatch policies. See [pattern contexts](pattern-contexts.md).
 
 ## 1. Numbers and Booleans
 

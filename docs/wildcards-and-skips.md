@@ -72,14 +72,12 @@ inspect(_);
 These are ordinary declarations and still require irrefutable patterns for their input contracts. A declaration produces Unit regardless of whether its bindings are subsequently read. The initializer still executes and retains its error behavior.
 
 ```text
-loop items as _, _, acc {
-    inspect(_, acc)
+loop items as _ {
+    inspect(_, .count);
 }
 ```
 
-The loop's second `_` names count and hides the first, which named item. `as _, _, _` instead leaves `_` naming the Option accumulator. Underlying loop state remains available through permitted construct metadata. Omitted trailing receiver slots introduce no names; an explicitly written `_` does.
-
-Under the existing completion-hook proposal, `then(_) { process(_) }` receives and reads the same input as `then(value) { process(value) }`. The presence of a receiver permits the proposed replacement-result behavior; the underscore spelling adds no separate hook rule. Recovery receivers follow their existing error-payload contract.
+The one optional loop item name follows ordinary underscore rules. Count/index/value use metadata; receiver lists and loop-completion receivers are retired. Then { ... } uses its owning context and ordinary tail-expression results. Recovery receivers still follow their error-payload contract.
 
 ## Assignment, lifetime, and diagnostics
 

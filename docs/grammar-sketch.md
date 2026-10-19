@@ -227,9 +227,9 @@ The [pattern context review](pattern-contexts.md) distinguishes shared pattern f
 ## Loops
 
 ```text
-loop := [tag] "loop" [source] [receivers] block [loop_completion]
+loop := [tag] "loop" [source] [item_binding] block [loop_completion]
 
-receivers := "as" pattern ["," pattern ["," pattern]]
+item_binding := "as" identifier
 
 loop_completion := "then" block
 
@@ -237,15 +237,13 @@ loop_completion := "then" block
 finally_clause := "finally" ["(" pattern ")"] block
 ```
 
-`as` is working notation. `:` remains a candidate, and the final language should not accidentally acquire both spellings by treating this sketch as normative. The seeded receiver form is not specified.
+As is provisional spelling for a single optional item name. There is no header count/value receiver list, tuple-pattern receiver, or completion receiver. Destructuring and refutable selection belong in the body; no header mismatch behavior is implied.
 
-Every receiver slot must use a pattern irrefutable under its input contract. Reject a loop receiver that can fail; this applies in all source modes. Refutable patterns belong in if/match inside the body. This semantic constraint does not prohibit tuple destructuring with a statically guaranteed shape. Filtering-header and other mismatch alternatives are [documented as deferred](loop-pattern-alternatives.md).
+Every loop owns .item, .index, .count, and typed .value metadata, subject to phase availability. Index is zero-based traversal position; count is entered-iteration count. Value is zero-initialized before iteration and internally replaced by a completed tail expression or continue value. Plain continue/break preserve it. The old .acc/Option accumulator and previous-value slots are retired. See [loop value](loop-value.md) for typing and zero rules.
 
-Separate receiver slots bind names from left to right, traversing nested slot patterns recursively; later same-named bindings shadow earlier ones. `_` follows this ordinary rule: `as _, _, acc` leaves `_` naming count, and `as _, _, _` leaves it naming the accumulator. Loop completion has no receiver pattern: then(_) and then(done) are retired. This does not change ordinary header receivers or optional Result-recovery receivers. The full parameter and member declaration-list rules remain separate.
+Source type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production. Count and value can be read in a condition; item requires an active entry, and index's condition/completion contract remains open.
 
-Source expression type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production.
-
-The loop completion production uses the selected receiverless then surface. It retains the owning loop context even without an explicit tag: .count/.acc work directly, and ordinary tail-expression rules determine its result. Then does not create a new metadata context. Separate loop empty-else/finally and completion-receiver productions are superseded; all-exit cleanup remains deferred. The external grouped-loop handler in the [earlier loop example](loop-recovery.md) is superseded by [body-owned recovery](body-recovery.md). Do not add a second error-catching else production to the loop hooks or reinterpret a completion receiver by its name/type. Internal body-wide recovery and its iteration/completion scope are deferred for the joint cleanup/resource review.
+Then retains the same owning loop context, including on untagged loops, and follows ordinary final-expression rules. Separate loop empty-else/finally and completion-receiver forms are superseded. All-exit cleanup and body-wide recovery remain [deferred](deferred-cleanup-and-resources.md); external whole-loop error handlers remain retired.
 
 ## Tags and contexts
 
@@ -261,7 +259,7 @@ Named tags are prefixes on the construct. Leading-dot access resolves only again
 
 Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; pattern_list and full enum productions remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
 
-The tag scope includes its header, so a loop condition may reference initialized count or accumulator state even when receiver declarations follow the source textually. Current items are not available before body entry.
+The tag scope includes its header, so a loop condition may reference initialized count or typed value state even when receiver declarations follow the source textually. Current items are not available before body entry.
 
 ## Exits
 

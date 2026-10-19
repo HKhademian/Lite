@@ -47,12 +47,12 @@ inspect(_);
 The second `_` shadows the first, so this read selects the fourth component. Every binding keeps its own inferred type. Repeated names follow ordered shadowing inside patterns, including nested patterns; the rule applies to all names, not only underscores. See [pattern binding and shadowing](pattern-shadowing.md).
 
 ```text
-loop items as _, _, acc {
-    inspect(_, acc)
+loop items as _ {
+    inspect(_, .count);
 }
 ```
 
-Here `_` names count; `as _, _, _` would leave `_` naming the accumulator. Omitted trailing receiver slots bind nothing. `_ = value` is ordinary assignment requiring an existing var binding and a compatible value, not discard syntax. Initializer effects and separate required-use obligations remain intact; see [underscore bindings and skips](wildcards-and-skips.md).
+Here _ is the one optional item name and may be read. Loop count/index/value use metadata rather than extra receiver slots. _ = value is ordinary assignment requiring an existing var binding and compatible value, not discard syntax. Initializer effects and required-use obligations remain intact; see [underscore bindings and skips](wildcards-and-skips.md).
 
 ## Case and normalization
 

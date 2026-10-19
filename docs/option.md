@@ -77,15 +77,9 @@ The intended whole-loop result is `Option<User>`. A matching exit supplies `Some
 
 This is a specific implicit optional-completion rule. It does not introduce nullable ordinary values, implicit zero, or arbitrary default error values. Its precise inference interaction with the iteration body's `Unit` type is still open.
 
-## Accumulator state
+## Explicit optional loop values
 
-An unseeded previous contribution is represented as `Option<T>`:
-
-- `None` before a contribution.
-- `Some(value)` after a contribution.
-- Unchanged after a plain `continue` or bare `break`.
-
-That internal state and the whole loop's result need not be the same type.
+Loops no longer insert an Option accumulator automatically. Their .value has a statically determined body-result type and is zero-initialized. If that type is explicitly Option<T>, its absent state is part of that Option type; there is no additional wrapper. See [loop value](loop-value.md). The earlier .acc/previous receiver model is superseded.
 
 ## Open decisions
 
