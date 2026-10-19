@@ -67,6 +67,79 @@ The name _ is still an ordinary readable receiver with permission to be unused, 
 
 This introduces a small context-specific restriction on receiver omission. It avoids another keyword and distinguishes the roles with explicit punctuation. The cost is a potentially repeated else when both false behavior and recovery are present. Parenthesizing a completed conditional before attaching generic receiverless recovery is another possible disambiguation, but is not required or selected by this proposal.
 
+## Recovery inside every branch
+
+Being inside a conditional does not change ordinary operation recovery. The receiver remains optional for an operation in the true body, any else-if body, or the normal false body:
+
+```text
+if first_condition {
+    first_action() else {
+        recover_first()
+    }
+} else if second_condition {
+    second_action() else(failure) {
+        recover_second(failure)
+    }
+} else {
+    false_action() else {
+        recover_false()
+    }
+}
+```
+
+Assume each selected operation and its successful fallback fit the branch's required Unit behavior. Each local handler belongs to that operation. The closing body brace keeps it inside the selected branch; no indentation rule is involved. A receiver may be present or absent independently in each handler. The proposed receiver requirement at a conditional boundary is not a ban on receiverless recovery inside a conditional.
+
+Only one normal branch executes. A handler in the true body does not handle a failure from an else-if condition or the false body, since that handler is not active there. Handler receiver names are branch-local and may reuse the same spelling without sharing storage or leaking into other branches.
+
+## Local versus whole-conditional ownership
+
+Under the proposed final recovery clause, the following handler belongs to the whole conditional. In this example the actions return plain Unit and may raise typed panics; they do not leave returned Result errors unhandled:
+
+```text
+if first_condition {
+    first_action()
+} else if second_condition {
+    second_action()
+} else {
+    false_action()
+} else(failure) {
+    recover_remaining(failure)
+}
+```
+
+Under the recommended whole-construct panic scope, this covers failures during executed conditions and the selected body, including supported synchronous callees. These local operations must already satisfy normal Result handling: the final clause does not collect arbitrary inner returned errors.
+
+Local operation recovery and whole-conditional recovery can be combined. A local handler that completes successfully prevents that event from reaching an outer handler. If its fallback itself panics, a surrounding conditional recovery boundary could catch that new panic; the failed local handler does not re-enter itself. A panic in the final conditional handler propagates to an enclosing eligible boundary rather than returning to that same handler.
+
+The visual location alone must not select a different ownership rule. In particular, a receiving else immediately after the true body is not silently branch-local when no other branch follows and whole-conditional when a later else-if is added. The proposed conditional recovery clause is always final and belongs to the complete conditional. To protect a smaller region, put its recovery expression inside the branch.
+
+### A whole branch body as one recovery region
+
+Several operations in a branch may need one shared panic boundary. Recovering only the final call does not cover earlier operations. A distinct inner block expression could identify that smaller region; this is an additional surface proposal:
+
+```text
+if condition {
+    ({
+        prepare();
+        perform();
+    }) else(failure) {
+        recover_branch(failure)
+    }
+} else {
+    false_action()
+}
+```
+
+The grouping identifies the nested block expression as the recovery subject and avoids assigning its handler to the surrounding if. Exact general block-recovery grammar is not selected by this example. It must integrate with the existing block-value grouping and item-boundary rules. Prepare/perform are assumed to produce Unit in this illustration; returned Results still need explicit handling before plain-payload use, and ! still returns from the enclosing function.
+
+A similar nested region could appear in an else-if or false body. An ordinary call-level handler remains simpler when only one operation needs recovery. The language must not silently reinterpret a branch body brace as a separately handled inner block.
+
+### Recovery bodies and future finally clauses
+
+A recovery body can contain ordinary operation-level recovery too. If its own operation failure is handled locally, it can continue; otherwise a panic travels farther outward. It never restarts the same recovery body automatically.
+
+Finally remains an explored cleanup hook rather than a selected complete policy. A failure during cleanup needs its own rules, especially when another failure is already pending. This review does not assume the conditional's final handler also protects its own handler or a future finally body.
+
 ## Result errors remain explicit
 
 A recovery clause is not an implicit collector of all .err values produced inside a branch. If an operation returns T ! E where its next use requires T, it still needs its own recovery, inspection, or ! extraction. An outer conditional recovery clause does not make that use type-correct.

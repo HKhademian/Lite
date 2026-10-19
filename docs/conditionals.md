@@ -166,6 +166,8 @@ The user asks for if condition { ... } else(failure) { ... }. The [conditional-r
 
 A false condition or pattern mismatch is not failure. Returned Result values inside a branch retain their individual explicit handling/extraction requirements, and ! still targets the enclosing function/closure. A Result-valued whole conditional can be recovered as one outcome. Whole-construct panic scope, receiver typing, cleanup, and finally integration remain under review.
 
+The [branch ownership review](conditional-recovery.md#recovery-inside-every-branch) clarifies that ordinary operation() else { ... } remains valid inside true, else-if, false, and recovery bodies, with an optional receiver. Only the proposed clause at the conditional boundary requires a receiver to distinguish it from false selection. A final recovery clause would own the whole chain; a smaller shared region needs an explicit inner recovery subject, whose full block grammar remains a proposal.
+
 ## Tags and completion
 
 ```text

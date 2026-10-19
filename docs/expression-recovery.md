@@ -92,6 +92,8 @@ The capture promise concerns language-defined faults with valid transfer/cleanup
 
 The user requests if condition { ... } else(failure) { ... }. The [conditional-recovery review](conditional-recovery.md) proposes bare else for false selection and receiving else for recovery, including a final handler after the complete normal branch chain. The conditional form would require an explicit receiver, using _ when unused, because omission otherwise collides with its ordinary false branch. Result handling and ! propagation rules remain unchanged. This extension and its full panic scope remain proposals.
 
+Ordinary operation recovery keeps its optional receiver inside every conditional branch and inside a handler body. The proposed conditional-boundary restriction does not spread inward to these calls. The [branch scope review](conditional-recovery.md#local-versus-whole-conditional-ownership) distinguishes local operation handlers, final whole-chain recovery, and a proposed explicit inner block for a smaller shared region.
+
 ## Grammar still to specify
 
 - Which exact expression an attached else protects, including argument evaluation and postfix chains.
