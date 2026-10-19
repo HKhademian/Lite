@@ -4,7 +4,7 @@ Status: **whole-value equality and Boolean guards use existing primitives; unord
 
 ## Why sets differ from sequences
 
-A set describes distinct elements without an intrinsic positional order. The mathematical set {10, 20, 30} is used below as explanatory notation, not selected LiteScript literal syntax. There is no inherent first or second value to assign to an ordered [a, b] pattern.
+A set describes distinct elements. Its membership contract alone does not establish stable positional order, but its traversal can preserve insertion order, use sorted order, or leave order unspecified. A particular traversal can yield first and second values without the set promising stable indexes. The mathematical set {10, 20, 30} is used below as explanatory notation, not selected LiteScript literal syntax. See [order and shared traversal](collection-order-and-traversal.md) for this distinction and the reference comparisons.
 
 ## 1. Equality: exactly the same elements
 
@@ -34,6 +34,8 @@ This accepts a set containing 10, 20, 30 because the guard only requires 10 and 
 A count constraint could require exactly two elements, but the count API is also a library decision. An empty-set test needs no positional syntax: use the type's emptiness/count predicate. A future explicit in pattern could test one subject's membership in a set; it is not selected here.
 
 ## 3. Unordered extraction: search for elements to bind
+
+This section concerns finding assignments by member constraints. Extracting positions from one set traversal is a different candidate operation: it follows that traversal's order and need not search permutations. Direct traversal-pattern syntax, stability, shape failure, consumption, and rest contracts remain open. The current sequence-pattern restriction does not assert that such a projection is impossible.
 
 Consider a hypothetical pattern selecting two different Int elements from a set and binding them to a and b. For the set {10, 20, 30}, the assignments include (10, 20), (20, 10), (10, 30), and others. Even a two-element set still permits both assignments unless another rule chooses one.
 

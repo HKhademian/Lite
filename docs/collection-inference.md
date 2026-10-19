@@ -113,6 +113,8 @@ For that consumer goal, the working recommendation is to evaluate [Icon] as a co
 
 This recommendation does not select those meanings. A final choice must also cover fields, results, stored abstract values, expected literal construction, and mutation. The provider-independent form must not become a contiguous slice solely because it appears in a parameter.
 
+The later [order and shared-traversal review](collection-order-and-traversal.md) clarifies that compatible ordinary sets can satisfy a minimal element-source input. Traversal yields values in the provider's order without promising stable positions, sorting, uniqueness for every provider, or indexed storage. The user's ordinary sequence examples preserve supplied positions and duplicates without requiring value comparison.
+
 ## Recommendation and teaching progression
 
 Teach literal values, named loop receivers, and ordinary calls first. Extend contextual construction through known collection element types. Evaluate inferred generic requirements for simple functions, while keeping an explicit contract form available for libraries and advanced code.

@@ -17,6 +17,8 @@ Rust's Iterator separates size_hint from consuming operations such as count, ill
 
 Traversal, random indexing, contiguous storage, and repeatability are separate capabilities. An algorithm requesting one pass should admit a suitable unknown-size source; an operation needing random access must request that capability explicitly.
 
+Traversal order also needs a precise contract: list positions preserve the supplied occurrence order, insertion-preserving sets retain insertion policy, sorted providers use an ordering relation, and other traversals may leave order unspecified. These guarantees do not require the same storage. See [collection order](collection-order-and-traversal.md).
+
 Size facts must remain valid until the dependent access completes. A prior length check is insufficient if aliases, callbacks, or concurrent updates can invalidate it. The eventual access model must establish a stable read, borrow, snapshot, or another appropriate guarantee. Do not silently snapshot every source.
 
 ## Production and replay

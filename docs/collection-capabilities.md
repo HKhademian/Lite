@@ -12,7 +12,7 @@ Do not require a length, indexes, a common allocation, or a reusable source for 
 
 - Sized: obtain an exact size under a documented cheap-cost requirement, without exhausting the source. A traversal estimate is a different operation. Collection length and a cursor's remaining count need distinct definitions.
 - Repeatable: create independent traversals while the source remains valid under its access contract. This does not promise a frozen snapshot across external mutation.
-- Ordered: promise the ordering property the algorithm needs, rather than relying on incidental provider traversal order. Its exact meaning must be specified.
+- Order guarantees: distinguish preserved sequence positions, insertion order, comparator-sorted order, and unspecified traversal order. A plain list needs no element comparator or uniqueness rule. An iterable set can participate without promising persistent positions. Exact capability names and their graph remain open; see [order and shared traversal](collection-order-and-traversal.md).
 - `Indexed<T>`: access a valid logical index with a specified complexity contract. Linked-list indexing must not pretend to have constant-time random access.
 - `Contiguous<T>`: provide an appropriate bounded view over physically consecutive initialized elements. This would refine relevant size/index requirements; the exact graph remains open.
 - Reversible: traverse in reverse without silently buffering a one-shot stream. Its relationship to repeatability and cursor movement needs definition.
