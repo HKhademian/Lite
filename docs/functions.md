@@ -28,6 +28,8 @@ Evaluate the callee expression first, then the supplied argument expressions fro
 
 ## Collection input requirements
 
+Simple collection functions should not require beginner authors to know protocol names. The [inference proposal](collection-inference.md) explores fn(icons) with reusable requirements inferred from the body, plus contextual construction of collection elements. Generalization, public signatures, and any short annotation remain open; omitting a parameter type does not yet select a generic mechanism.
+
 The user-selected direction is to constrain collection inputs by the operations required, not their provider type or compile-time size. Conceptually, fn(icons: `Iterable<Icon>`) can traverse compatible list, array, set, slice, or generated sources without requiring a List conversion. The angle-bracket/interface notation is provisional and does not mandate boxed runtime dispatch. Sized, repeatable, indexed, or contiguous requirements belong in a signature only when needed. Cursor consumption, yielded access, and retained-source lifetimes must remain explicit in their eventual contracts. See [collection abstractions](collection-abstractions.md) and [capabilities](collection-capabilities.md).
 
 ## Parameter mutation contracts

@@ -63,6 +63,8 @@ double := fn(x) {
 
 One proposal is constrained generic inference: the function is valid for types supporting an appropriate addition operation. Alternatives include requiring parameter annotations in more situations. Recursive and ambiguous definitions need a specified inference boundary.
 
+The [collection-inference proposal](collection-inference.md) applies this question to simple collection functions: infer a reusable traversal requirement rather than locking an omitted input annotation to List from one call. It also explores propagating known element types into nested record literals. Neither proposal selects structural record compatibility, automatic caller mutation, inferred escaping errors, or new generic syntax.
+
 Explicit signatures at public library boundaries were recommended to prevent implementation changes from silently changing published contracts. That requirement is still a working policy rather than an implemented check.
 
 Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by postfix `!`. `T ! E` declares a refined outcome type; `T!` means `T ! Error` and deliberately declares the general recoverable error contract. A plain `T` declares no recoverable error channel. Inference must not silently add such failures to a function promising an ordinary nonfallible result. The general Error definition, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).

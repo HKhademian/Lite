@@ -4,6 +4,8 @@ Status: **API design direction selected by the user, 2026-10-19**. Consumers req
 
 ## The icons example
 
+Beginners should be able to create and use collections before naming traversal protocols. The [collection-inference proposal](collection-inference.md) explores contextual nested literals and simple fn(icons) definitions. The annotated example below explains the required behavior; it is not a required first-lesson spelling.
+
 ```text
 render_icons := fn(icons: Iterable<Icon>) {
     loop icons as icon {
