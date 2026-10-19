@@ -89,7 +89,7 @@ mut_qualified_type := "mut" type_operand
 
 inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 
-The type placeholder admits the selected mut-qualified annotation, as in user: mut User, with a parenthesized operand when the held value has a composite type. type_operand and the rest of type parsing remain incomplete; this production does not select per-alternative capabilities, generic access composition, or qualified aliases. The complete parameter list, including inferred types, defaults, and parameter rebinding, remains open. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values also remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
+The type placeholder admits the selected mut-qualified annotation, as in user: mut User, with a parenthesized operand when the held value has a composite type. type_operand and the rest of type parsing remain incomplete; this production does not select per-alternative capabilities, generic access composition, or qualified aliases. Inferred parameter types and defaults remain open. Local-only var parameter headers are retired; use ordinary declarations inside the body. Full lvalue grammar, generics, public modifiers, and the distinction between type expressions and ordinary values remain open. Refutable patterns cannot be assumed valid declarations without a failure contract.
 
 No modifiers means a fixed binding with read-only access. var permits whole-binding reassignment; mut permits held-data updates through the binding, subject to field, element, and ownership permissions. Inferred var mut permits both; its typed counterpart is var user: mut User. Typed mut user: User and var mut user: User are superseded, rather than aliases. Inferred mut var and repeated modifiers are rejected. Typed parameters explicitly carry mut after the colon; a method receiver follows the same rule once its full declaration notation is defined. No additional function-level mutation marker is required.
 
@@ -97,7 +97,17 @@ Sequential ordinary local declarations may shadow earlier names in the same bloc
 
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
-## Records
+## Caller mutation grants
+
+```text
+call_argument := expression
+               | "mut" mutable_data_argument
+               | "slot" replaceable_location_argument
+```
+
+The last two operand names are semantic placeholders, not complete productions. Mut parameters require explicit mut grants with existing mutable source access; slot parameters require explicit slot grants with an existing writable caller location. Plain arguments do not grant either caller effect. Each supplied source is evaluated once in the selected left-to-right order. Combined grants and complete operand/overlap rules remain open; see [caller grants](caller-mutation-grants.md).
+
+## Record declarations
 
 ```text
 record_type := "record" "{" record_field_sequence "}"

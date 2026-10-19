@@ -106,7 +106,7 @@ A transparent alias must retain its entire denoted type as the operand. If Pair 
 
 The clarified [slot-ergonomics goal](slot-ergonomics.md) hides derived mathematical slot summaries while retaining explicit slot receivers in function headers. Existing var declarations already derive full replacement contracts. Var parameters must not be substituted for slot receivers; restricted mixed contracts and advanced annotation forms still need a decision.
 
-[Slot parameters](slot-parameters.md) have selected temporary caller-location semantics: assignment through them replaces the supplied caller variable or field for the duration of the call. Explicit argument markers and complete access compatibility remain proposals, as do aliasing and general lifetime rules. Public pointers and general reference values are not selected.
+[Slot parameters](slot-parameters.md) have selected temporary caller-location semantics: assignment through them replaces the supplied caller variable or field for the duration of the call. Explicit mut/slot argument grants are selected; complete access compatibility, aliasing, and general lifetime rules remain open. Public pointers and general reference values are not selected.
 
 - Is this notation visible only in inferred diagnostics, or also legal in signatures and aliases?
 - What delimits a complete contract, including a read-only contract with no slot member?

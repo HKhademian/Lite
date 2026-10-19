@@ -31,13 +31,13 @@ replace := fn(target: slot (A | B)) {
 
 The function explicitly requests a caller location that accepts A or B. The compiler can derive this contract's detailed access summary without requiring another annotation at every use.
 
-The exact call-site syntax remains open. Retaining the receiver spelling does not silently select an unmarked call or another argument marker.
+Caller replacement requires an explicit grant such as replace(slot value). The location must already permit replacement; see [caller grants](caller-mutation-grants.md).
 
 ## Rejected receiver substitution
 
 The previous version of this document proposed fn(var target: T) as a replacement for a slot receiver. The user clarified that the goal did not request this substitution. Do not treat var parameters as caller-location receivers or migrate slot headers to that form.
 
-Ordinary var parameters may instead describe local rebinding if that feature is selected. This remains a separate proposal. The [parameter-permission review](parameter-permissions.md) explains local var, held-data mut, and caller-location slot without conflating them.
+The later local-only var parameter proposal is also retired. Use ordinary declarations and sequential shadowing in the body. The [parameter-permission review](parameter-permissions.md) separates local rebinding, held-data mutation, and caller-location replacement.
 
 ## Preserve restricted field writes
 
@@ -60,6 +60,6 @@ Hiding derived type-structure terminology must not hide observable mutation or c
 
 ## Recommendation and remaining decisions
 
-Keep explicit slot receivers and infer derived access summaries. Decide the optional local-var parameter feature, combined payload/replacement permissions, call-site visibility, advanced partial-write annotations, complete compatibility, and alias/lifetime rules separately.
+Keep explicit caller-location receivers and infer derived access summaries. Explicit mut/slot call grants are selected; local-only var parameter headers are retired. Combined payload/replacement permissions, advanced partial-write annotations, complete compatibility, and alias/lifetime rules remain open.
 
 Related: [slot parameters](slot-parameters.md), [slot qualifier](slot-access-qualifier.md), [mut placement](mut-qualifier-placement.md), [mutability](mutability.md), [functions](functions.md), and [tooling](tooling-and-learning.md).

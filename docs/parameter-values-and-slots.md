@@ -1,12 +1,12 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification and design review, 2026-10-18**. Read-only defaults and temporary caller-location access for slot parameters are selected. Ordinary parameter value/borrow semantics, call-site slot spelling, copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/slot call grants are selected. Ordinary read-only parameter value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
 Bindings and ordinary parameters are fixed and provide read access by default. These rules describe permitted operations, not whether an argument is copied, moved, borrowed, or represented by a machine address.
 
-The selected type-side mut parameter qualifier requests writable access to held data, as in user: mut User. A slot-qualified parameter additionally describes accepted replacements into the supplied caller location. Neither is permission to invent a nullable state, bypass visibility, or alter a location's declared storage type.
+The type-side mut parameter qualifier requests writable caller-data access, as in user: mut User, explicitly granted by rename(mut userVar). The updates affect supplied data, without a detached-copy fallback. A slot-qualified parameter describes accepted replacements into the caller location, explicitly granted by replace(slot userVar). Neither marker manufactures authority, invents a nullable state, bypasses visibility, or changes a location's declared storage type.
 
 ## 2. Semantic passing versus physical calling convention
 
@@ -28,7 +28,7 @@ replace := fn(target: slot (A | B)) {
 }
 
 var value: A | B = new_A();
-replace(slot value); /* call marker is still a spelling proposal */
+replace(slot value);
 ```
 
 Assignment through target writes back to the supplied location. There is no pointer dereference expression in this design, and target is not an independent local variable that happens to receive a copied value.

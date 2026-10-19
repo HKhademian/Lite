@@ -44,13 +44,13 @@ The same rule applies to a method's receiver binding. The complete method notati
 
 The declaration `mut rename := fn(...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
 
-These markers do not choose borrowing, copying, moving, lifetimes, argument syntax at the call site, capture permissions, or purity. Those contracts remain open; see [mutability](mutability.md) and [memory and performance](memory-and-performance.md).
+Calling a mut-qualified parameter requires an explicit grant, as in rename(mut userVar, "Ali"). The caller must already provide mutable access. Updates affect that supplied data; the compiler must not silently mutate a detached copy or upgrade a read-only argument. This selects temporary writable caller-data access for mut parameters. Ordinary read-only input transfer, complete alias/lifetime rules, capture permissions, and purity remain open; see [caller grants](caller-mutation-grants.md).
 
-[Slot parameters](slot-parameters.md) now provide selected temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. An explicit call marker such as replace(slot value) remains a proposal. Ordinary local parameter rebinding, general reference values, public pointers, exact compatibility, and call-site syntax are not selected by this decision.
+[Slot parameters](slot-parameters.md) provide temporary access to a caller-supplied location: assignment through the parameter replaces the supplied variable or field. The explicit call grant replace(slot value) requires a compatible writable location; a whole-binding argument must be var. Slot alone grants no payload mutation. General reference values, public pointers, and complete compatibility/alias rules remain open.
 
 The [ordinary parameter review](parameter-values-and-slots.md) keeps the current feature scope to ordinary inputs and writable slots. Read-only defaults do not decide copying versus borrowing. An efficient indirect calling convention must preserve the eventual observable semantics; it does not by itself introduce a public reference feature or caller writeback.
 
-The clarified [slot-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure while retaining explicit slot receivers. The proposal to replace them with var target: T was rejected. [Parameter permissions](parameter-permissions.md) keeps held-data mut distinct from caller replacement and recommends local-only rebinding if ordinary var parameters are admitted; that local-var feature remains open.
+The [slot-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn(count: Int) { var count := count; count += 1; count }. The proposed local-only var parameter feature is retired. Held-data mutation and caller replacement remain distinct capabilities; see [parameter permissions](parameter-permissions.md).
 
 ## Result rules
 

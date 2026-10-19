@@ -47,9 +47,10 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 - [Union values and access contracts](union-values-and-access.md): a slot containing a union versus a union of possible slots; proposed explicit read/write contracts and reference-language comparisons.
 - [Qualified access summaries](access-union-qualifiers.md): exploration of A | mut B | C, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
 - [Slot access qualifier](slot-access-qualifier.md): selected replacement marker, grouped distribution, and var-binding summaries; whole access-contract grammar remains open.
-- [Slot parameters](slot-parameters.md): selected temporary caller-location access; proposed call markers and two-direction compatibility, with Swift/Rust/Zig/V comparisons.
+- [Slot parameters](slot-parameters.md): selected temporary caller-location access and explicit call grants; proposed two-direction compatibility, with Swift/Rust/Zig/V comparisons.
 - [Slot ergonomics](slot-ergonomics.md): infer derived mathematical slot summaries while retaining explicit slot receivers; the var-for-caller-replacement substitution is rejected.
-- [Parameter permissions](parameter-permissions.md): local binding var, payload mut, and caller-location slot; fixed slot associations and open combined-access syntax.
+- [Parameter permissions](parameter-permissions.md): local var declarations, payload mut, and caller-location slot; fixed location associations and open combined-access syntax.
+- [Caller mutation grants](caller-mutation-grants.md): explicit mut for caller-data updates and slot for caller-location replacement; existing source authority is required.
 - [Ordinary parameters and slots](parameter-values-and-slots.md): read-only defaults, semantic passing versus compiler representation, and scoped writable locations without adopting public pointers or general references.
 - [Caller-location keywords](caller-location-keywords.md): user-requested ref/mut/slot/mut ref comparison, current-slot versus separate-ref designs, and preserved permission boundaries.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.

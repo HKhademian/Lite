@@ -58,7 +58,7 @@ A frozen value would have a stronger guarantee: its protected state cannot chang
 
 Operations receive read access by default. Affected receiver and parameter bindings explicitly carry `mut` when the operation needs writable access. Those bindings describe the mutation contract; the function needs no additional mutation marker. Required capabilities must be checked against the caller's available capabilities.
 
-For typed parameters, mut qualifies the type after the colon. The examples use an explicit self parameter to illustrate receiver access. Full method declaration syntax, general reference qualifiers, argument-passing rules, and ownership behavior remain open. Assume the fields are accessible in the implementation context.
+For typed parameters, mut qualifies the type after the colon. Calling such a parameter requires an explicit grant, as in rename(mut userVar, "Ali"), and mutable source access must already exist. Writes affect the supplied data rather than a detached copy. The examples use an explicit self parameter to illustrate receiver access. Full method declaration syntax, ordinary read-only parameter transfer, and complete ownership/alias rules remain open. Assume the fields are accessible in the implementation context.
 
 ```text
 name_of := fn(self: User): String {
@@ -125,10 +125,10 @@ Binding and access permissions are candidates for static checking. They do not i
 
 ## Decisions still required
 
-[Slot parameters](slot-parameters.md) now have selected temporary caller-location semantics: assignment through them replaces caller storage. Ordinary local-var parameter semantics, argument spelling, and general borrowing rules remain open. This does not select a public pointer system or imply that mut alone replaces the caller's binding.
+[Slot parameters](slot-parameters.md) replace caller storage through explicit slot grants; mut parameter calls explicitly grant mutation of supplied data. Local-only var parameter headers are retired: use a local declaration and shadowing. Ordinary read-only input transfer and general borrowing rules remain open. This does not select a public pointer system or imply that mut alone replaces the caller's binding.
 
 - Define the inference and conversion rules for access-bearing values without upgrading read-only borrowed access.
-- Complete method declarations, parameter rebinding rules, capability inference, and any call-site argument syntax. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
+- Complete method declarations, capability inference, and combined payload/replacement argument syntax. Separate mut and slot grants are selected. Mutation is marked on affected receiver/parameter bindings without an additional function-level marker.
 - Choose move/copy/borrow/share behavior, write exclusivity, and lifetimes.
 - Define how read access propagates through owned fields and reference-valued fields.
 - Define fixed fields separately from binding reassignment and whole-object replacement.
