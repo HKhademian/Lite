@@ -19,7 +19,7 @@ Proposed meaning:
 - If protected evaluation raises a supported typed panic, execute the recovery clause.
 - False and pattern mismatch are ordinary selection outcomes, not failures. They do not create a failure receiver or invoke recovery.
 
-Assume action/recover have Unit behavior in this action example. The recovery clause does not create a normal false branch or change the existing requirement that a conditional lacking such a branch have Unit behavior.
+Assume action/recover have Unit behavior in this action example. The recovery clause does not create a normal false branch. This historical draft assumed a missing false branch required Unit; the current [conditional result rule](conditionals.md#missing-final-else) instead returns zero(T), which remains Unit in this example.
 
 ## Both false behavior and recovery
 
