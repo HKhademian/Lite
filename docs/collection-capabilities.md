@@ -21,6 +21,8 @@ Do not require a length, indexes, a common allocation, or a reusable source for 
 
 These are composable requirements, not a proposed class-inheritance tree or a list of methods every collection must implement. For example, a set can be traversable and cheaply sized without being indexable or contiguous. A chunked sequence can provide fast logical indexing without one contiguous element region. A packed-bit representation need not expose addressable Bool slots merely because it supports logical indexing.
 
+The [source-contract proposal](collection-source-contracts.md) additionally separates static/runtime/unknown size from hot/cold production, eagerness, replayability, and synchronous/asynchronous delivery. No ordinary pattern should implicitly drain or subscribe to a source merely to discover its shape. Generator and subscription mechanisms remain future work.
+
 ## Consumer examples
 
 ```text
