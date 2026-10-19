@@ -16,7 +16,7 @@ then(_) { replacement_value }
 
 Related receiver forms for `else` and `finally` were requested as well. Their inputs differ by phase and cannot be assumed to be ordinary iteration values.
 
-Result recovery has selected forms `operation() else(error) { fallback }` and `operation() else { fallback }`. If present, the receiver is the operation's statically typed recoverable error; otherwise there is no implicit error binding. Both forms produce values: success type `T` and normal fallback type `D` form `T | D`. An explicitly exiting recovery branch adds no local alternative. This differs from the loop completion hooks below: omitting a Result recovery receiver does not select action-only behavior. Typed dispatch chains and panic handling remain separate. See [Result and errors](result-and-errors.md).
+Result recovery has selected forms `operation() else(error) { fallback }` and `operation() else { fallback }`. When a Result-only handler includes a receiver, it receives the operation's statically typed recoverable error. Omitting the receiver introduces no implicit error binding. Both forms produce values: success type `T` and normal fallback type `D` form `T | D`. An explicitly exiting recovery branch adds no local alternative. This differs from the loop completion hooks below: omitting a Result recovery receiver does not select action-only behavior. The later shared else direction also supports typed panic capture. Its combined receiver type and selective typed patterns remain proposals in [recovery receiver types](recovery-receiver-types.md); general dispatch chains remain separate. See [Result and errors](result-and-errors.md).
 
 ## Action versus result
 

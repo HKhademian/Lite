@@ -72,6 +72,8 @@ The handler itself is outside its own recovery boundary. Its failure must go to 
 
 ## Typed handler inputs
 
+The [receiver-type review](recovery-receiver-types.md) compares a direct E | Panic receiver with a tagged Failure<E> wrapper, and proposes optional typed receiver filtering. These remain proposals; a combined handler cannot be assumed to receive only E.
+
 For returned-error handling alone, the receiver retains the operation's declared E. A known intrinsic fault can have a precise fault category. If arbitrary called code can panic without public panic-effect declarations, a general boundary needs a defined typed panic carrier or another explicit typing mechanism; it cannot claim to know a finite precise union merely by looking at T ! E.
 
 When one boundary handles both channels, preserve their origin if payload types overlap. A discriminated returned-error versus panic representation is one candidate; flattening both into an untagged payload union loses that distinction. Carrier variants, receiver-pattern syntax, payload ownership, category extensibility, and representation remain proposals. Receiverless else avoids binding a payload but does not settle the missing type contract.

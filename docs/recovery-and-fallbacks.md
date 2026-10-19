@@ -21,7 +21,7 @@ user := load_user(id) else {
 }
 ```
 
-The recovery block executes only on recoverable failure. An omitted receiver introduces no implicit error variable. The selected operation is evaluated once. Handler failures are not caught again by that same handler; panics use their separate path.
+These paragraphs describe returned-Result recovery. The later shared else direction also supports typed panic capture, with combined receiver typing under review in [recovery receiver types](recovery-receiver-types.md). An omitted receiver introduces no implicit error variable. The selected operation is evaluated once. A handler does not catch its own failure; that failure follows its appropriate outward channel.
 
 ## Result typing and narrowing
 

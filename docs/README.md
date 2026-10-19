@@ -112,6 +112,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Recovery receivers and fallback types](recovery-and-fallbacks.md): optional error naming, lazy fallbacks, union results, narrowing, and reference-language comparisons.
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
+- [Recovery receiver types](recovery-receiver-types.md): proposed direct E | Panic versus tagged wrappers, optional typed filtering, overlap, and returned-error coverage.
 - [Shared expression recovery](expression-recovery.md): selected else surface for returned errors and typed panics, pending evaluation scope, receiver typing, cleanup, and runtime design.
 - [Panics and failure channels](panics.md): a separate panic path and open arithmetic, execution, and cleanup policies.
 - [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture and propagation still open.

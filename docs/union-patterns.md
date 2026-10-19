@@ -56,7 +56,9 @@ Conditional binding reuses declaration-shaped headers without adding a `let` key
 
 ## Narrowing an error union
 
-Inside a recovery receiver, only the error payload is being matched:
+In this Result-only example, the receiver holds the declared error payload. A general call whose else also catches panics needs the separate [combined receiver contract](recovery-receiver-types.md); do not assume it still has only the declared E.
+
+Inside a Result-only recovery receiver:
 
 ```text
 person := lookup(id) else(error) {
