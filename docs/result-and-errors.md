@@ -105,6 +105,12 @@ name := load_user(id)!.load_profile()!.name;
 
 Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No marker is required to retain a Result as data. Optional-value propagation remains a separate open decision. See [propagation and call chaining](propagation-and-chaining.md).
 
+## Results passed as arguments
+
+Each Result argument must have its own explicit recovery, inspection, or ! extraction when the receiving parameter expects its ordinary payload. An else around the enclosing call cannot satisfy this requirement. For example, op(exp1(), exp2()) else { fallback_result() } is rejected when exp1/exp2 return Results and op requires their plain success values. Use local argument fallbacks or explicit propagation; see [recovery boundaries](recovery-boundaries.md#result-arguments-require-their-own-handling).
+
+This is independent of panic capture: a returned .err is not a panic. An intact Result can still be passed deliberately to a parameter that accepts Result data, just as it can be stored for later inspection.
+
 ## Keeping an outcome as data
 
 An ordinary fallible call returns its `Result` without automatic extraction:

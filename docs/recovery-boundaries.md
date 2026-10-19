@@ -1,10 +1,48 @@
 # Whole-call and argument-level recovery
 
-Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the user has requested investigation rather than selected the final boundary rule.
+Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the final panic-boundary rule remains under review. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
 
-## Two forms with different outcomes
+## Result arguments require their own handling
 
-Assume exp1 produces an A, exp2 produces a B, and op accepts those values and produces an R. These first traces concern typed panics; returned Result errors are addressed separately below.
+This rule comes before the panic-scope comparison. Suppose exp1 returns A ! E1, exp2 returns B ! E2, and op expects ordinary A and B arguments. The following does not type-check:
+
+```text
+/* Rejected: an outer handler cannot supply plain A/B arguments. */
+result := op(exp1(), exp2()) else {
+    fallback_result()
+}
+```
+
+Each Result argument needs its own explicit inspection/recovery or postfix ! extraction before the invocation. A fallback around the outer call cannot satisfy that requirement, even if it can catch panics raised during argument evaluation.
+
+The preferred explicit local-recovery form is:
+
+```text
+result := op(
+    exp1() else { fallback_arg1() },
+    exp2() else { fallback_arg2() },
+) else {
+    fallback_result()
+}
+```
+
+Each inner else handles that argument's Result and supplies a value acceptable to the corresponding parameter. If op itself returns R ! Eop, its outer else handles Eop and supplies the overall fallback. The outer handler does not also receive E1 or E2 merely because those outcomes were produced somewhere inside the call expression.
+
+An explicit propagation alternative is:
+
+```text
+result := op(exp1()!, exp2()!) else {
+    fallback_result()
+}
+```
+
+On an argument's .err, its ! exits the nearest enclosing function/closure under that function's declared compatible error contract. It does not hand the returned error to the outer call's else. Normal return is not a panic. A function intentionally accepting Result data can instead receive an intact Result argument; the extraction requirement applies when the parameter needs its plain payload.
+
+## Panic-only scope comparison
+
+
+
+Assume exp1 produces an A, exp2 produces a B, and op accepts those values and produces an R. Both argument results are plain values in this comparison. They do not return Result. This explicit assumption is essential: the first form below is rejected for unhandled Result arguments when op needs their plain payloads.
 
 ### One outer fallback
 
@@ -24,7 +62,7 @@ Under the recommended whole-evaluation interpretation:
 
 If exp1 panics, exp2 and op never run. If exp2 panics, exp1 has already run but op never runs. If op panics, both arguments have already run. In all three cases the fallback replaces the overall result. Earlier effects are not rolled back.
 
-### Local argument fallbacks plus an outer fallback
+### Preferred local argument fallbacks plus an outer fallback
 
 ```text
 result := op(
@@ -49,10 +87,7 @@ A handler that explicitly returns, breaks, or performs another nonlocal exit doe
 
 Assume multiply accepts two Int values and succeeds for the small values illustrated. This example does not classify all arithmetic faults.
 
-```text
-/* Missing either position: replace the whole calculation with 0. */
-answer := multiply(values[0], values[1]) else { 0 }
-```
+The user prefers explicit recovery at each argument:
 
 ```text
 /* Missing positions: substitute arguments, then calculate. */
@@ -62,7 +97,16 @@ answer := multiply(
 ) else { 0 }
 ```
 
-With an empty values sequence, the first form produces 0 without calling multiply. The second supplies 2 and 3 and produces 6. With values containing only 5, the first still produces 0; the second produces 15. With [5, 7], both produce 35.
+With an empty values sequence, local recovery supplies 2 and 3 and multiply produces 6. With values containing only 5, it produces 15. With [5, 7], it produces 35. The outer fallback remains available for faults within multiply under its eventual capture contract.
+
+For comparison, the earlier broader-boundary candidate was:
+
+```text
+/* Panic-scope alternative: positional reads return plain Int values. */
+answer := multiply(values[0], values[1]) else { 0 }
+```
+
+Under whole-evaluation panic capture, this yields 0 without calling multiply if either position is missing. It does not establish the legality of analogous calls with unhandled Result arguments. The user's preference for local argument recovery is recorded without treating it as a final choice of panic-capture scope.
 
 Thus local recovery and whole-call recovery are useful simultaneously. Supporting the broader outer boundary does not make argument-level handlers redundant: their fallback values serve different positions in the computation.
 
