@@ -1,6 +1,6 @@
 # Fractional and integer division
 
-Status: **fractional `/`, integer floor `//`, and paired integer `%` selected; numeric representations and failure contracts open**.
+Status: **fractional `/`, integer floor `//`, and paired integer `%` selected; arithmetic faults use typed panics, while numeric representations and exact fault cases remain open**.
 
 ## Purpose and templates
 
@@ -85,9 +85,9 @@ This has the same tokens and meaning as the spaced example. Ordinary and raw blo
 
 ## Open numeric contracts
 
-- Preserve operation-local recovery for a single `a // b`, `a / b`, or `a % b` expression. A typed recoverable outcome requires explicit handling, a fallback, or propagation before using its payload. Decide whether ordinary arithmetic faults are returned recoverable errors or another checked-fault category; that classification must preserve the local recovery requirement. See [result and errors](result-and-errors.md).
+- Arithmetic faults use the typed panic channel, not returned `Result` errors. The user requires local recovery for each individual operation, but no syntax for recovering arithmetic faults is selected. The shared `else` surface does not yet define an arithmetic attachment. See [arithmetic fault boundaries](arithmetic-faults.md).
 - Define division by zero and unrepresentable results, including the signed minimum divided by `-1` for fixed-width integers.
-- Define the failure representation for operators; the earlier suggestion that named utilities return `Result` does not settle operator result types or add implicit traps.
+- Define arithmetic panic categories and payloads. The channel does not settle which floating-point cases are faults or make operators return `Result`.
 - Choose floating-point result representations, large-integer precision handling, and mixed numeric operand rules.
 - Define noninteger remainder behavior and any combined quotient/remainder API.
 - Set arithmetic precedence and associativity in the complete operator grammar.

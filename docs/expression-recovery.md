@@ -37,6 +37,8 @@ user := load_user(id) else(error) {
 
 Ordinary fallible calls still return Result values unless explicitly inspected, recovered, or propagated. Using shared recovery syntax does not make every call implicitly unwrap, or turn every panic into a returned .err. Postfix ! remains Result extraction and declared-error propagation; it does not capture panics.
 
+The user later selected typed panics, not returned `Result` errors, for basic arithmetic faults and requires individual-operation recovery. This shared `else` direction does not yet define arithmetic attachment syntax; do not assume `a + b else { ... }` is valid grammar. See [arithmetic fault boundaries](arithmetic-faults.md).
+
 ## Shared syntax, distinct failure channels
 
 A declared T ! E returns success or an E error. A language panic transfers control through the separate fault path. Whether a fault trigger is written explicitly is not what determines its channel: an explicit panic is still a panic, and a compiler-forwarded .err is still a returned error.

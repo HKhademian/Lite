@@ -1,6 +1,6 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; strongly typed panic information requested as future work; shared else recovery requested; exact scope, triggers, execution behavior, and cleanup guarantees open**.
+Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults assigned to the typed panic channel with individual recovery required; recovery syntax, exact scope, triggers, execution behavior, and cleanup guarantees open**.
 
 ## Purpose
 
@@ -33,13 +33,13 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 - Returning `.err(value)` explicitly constructs a recoverable failure; it does not trigger a panic.
 - Attached else is selected as a shared recovery surface. No panic-trigger spelling, full capture scope, or fault-transfer implementation has been selected; no implemented panic() API is implied.
 
-## Arithmetic is still a classification decision
+## Arithmetic channel selected; recovery syntax open
 
-Integer division by zero, overflow, and unrepresentable quotients can be detected without deciding whether they belong to the recoverable channel or the panic channel. That classification remains open for LiteScript.
+Basic arithmetic faults use typed panics, not returned `Result` errors. This includes arithmetic overflow and integer division faults when their operation contract defines them as faults. Exact triggers and payloads remain open; floating-point division may instead define non-finite results. See [arithmetic fault boundaries](arithmetic-faults.md).
 
-The design still requires local arithmetic recovery without a verbose named helper as the ordinary interface. A policy that makes arithmetic faults unconditionally unhandleable would need to reconcile that requirement, rather than silently override it. No wrapping, undefined behavior, implicit Result conversion, or build-dependent semantics are selected here.
+The user requires local recovery for each individual arithmetic operation, without a verbose named helper as the ordinary interface. No source syntax currently exposes that recovery, so the requirement does not select the shared `else` attachment for arithmetic. No wrapping, undefined behavior, implicit `Result` conversion, or build-dependent semantics are selected here.
 
-The [bounds/arithmetic policy review](checked-fault-policy.md) evaluates ordinary asserting operations plus explicit typed checked capture as an alternative to Result-returning operations by default. It distinguishes limited compiler-defined local capture from recovering arbitrary panics through calls. The later sequence direction selects direct positional operations with attached else recovery; arithmetic classification and cross-call scope remain open. The review retains earlier alternatives as history.
+The [bounds/arithmetic policy review](checked-fault-policy.md) retains ordinary asserting operations plus explicit typed checked capture as history. Arithmetic uses typed panics, and local recovery of each operation remains required. Whether its recovery boundary includes evaluated operands or calls remains open; this is distinct from deciding the arithmetic fault channel.
 
 ## Cleanup and state
 

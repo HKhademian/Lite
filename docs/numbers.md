@@ -1,6 +1,6 @@
 # Numbers and ranges
 
-Status: **numeric usability and predictable cost are goals; exact numeric contract open**.
+Status: **numeric usability and predictable cost are goals; arithmetic fault channel selected, exact numeric contract open**.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 ## Representation proposal
 
-A signed 64-bit default `Int` with checked arithmetic was suggested, with explicit sized types and an optional arbitrary-precision library. This is not yet a selected specification. Overflow should not silently change meaning merely because a different build mode is used.
+A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the representation is not selected. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Local recovery at an individual operation is required, but its syntax remains open; see [arithmetic fault boundaries](arithmetic-faults.md).
 
 ## Division
 
@@ -45,7 +45,7 @@ ratio := 7 / 2;     /* fractional quotient: 3.5 */
 quotient := 7 // 2; /* integer quotient: 3 */
 ```
 
-`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Integer `%` is paired with that quotient; a nonzero remainder has the divisor's sign. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or an arithmetic failure mechanism.
+`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Integer `%` is paired with that quotient; a nonzero remainder has the divisor's sign. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or exact arithmetic fault triggers.
 
 ## Ranges
 
@@ -75,9 +75,9 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 ## Open decisions
 
-Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, arithmetic failure representation, overflow errors, wrapping operations, and range bounds all remain open.
+Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, exact arithmetic fault triggers and payloads, wrapping operations, and range bounds all remain open.
 
-Arithmetic must support local error inspection and recovery, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Whether ordinary operators always expose typed recoverable outcomes, require proof that a fault is impossible, or use another explicit recovery mechanism remains open. A typed recoverable outcome requires explicit handling, a fallback, or propagation before using its payload; it does not automatically propagate. Fault classification and recovery syntax must be settled together; see [result and errors](result-and-errors.md).
+Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The local recovery syntax and exact fault cases remain open; see [arithmetic fault boundaries](arithmetic-faults.md).
 
 ## Related concepts and references
 

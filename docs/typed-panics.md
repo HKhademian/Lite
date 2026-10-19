@@ -1,6 +1,6 @@
 # Future strongly typed panics
 
-Status: **future direction requested by the user, 2026-10-19**. Panic/fault events should carry strongly typed categories and appropriate structured information. The later [shared expression recovery](expression-recovery.md) direction selects attached else as its surface. Capture scope, transfer mechanism, exact operation classification, and ABI remain future work.
+Status: **strongly typed panic information requested and the panic channel selected for basic arithmetic faults, 2026-10-19**. Panic/fault events should carry typed categories and appropriate structured information. Local arithmetic recovery is required, but its syntax is unresolved. Capture scope, transfer mechanism, exact operation triggers, payload details, and ABI remain future work.
 
 ## Intended categories
 
@@ -31,6 +31,6 @@ Define detection before an invalid access where possible. An arbitrary foreign-c
 
 ## Numeric details remain specific
 
-Integer zero division, floating-point nonfinite results, fixed-width overflow, and explicitly requested wrapping/saturating operations may have different contracts. Listing intended panic categories does not select the numerical policy of every operator or build mode. Ordinary arithmetic and its explicit checked forms still need a coherent final policy.
+Integer zero division and fixed-width overflow use the panic channel when their operation contract defines them as faults; they do not produce `Result` errors. Floating-point non-finite results and explicitly requested wrapping/saturating operations may have different contracts. The selected channel does not define every operator's fault cases or build-mode behavior. Local recovery syntax remains unresolved; see [arithmetic fault boundaries](arithmetic-faults.md).
 
 Related: [panics](panics.md), [bounds and arithmetic policy](checked-fault-policy.md), [Result](result-and-errors.md), [memory](memory-and-performance.md), and [division](division.md).

@@ -19,8 +19,8 @@ todos:
     content: Reconcile current loop docs, examples, grammar, and decision ledger
     status: completed
   - id: next-foundation
-    content: Select the next language foundation review from the open-question ledger
-    status: pending
+    content: Review arithmetic fault boundaries: typed panic channel selected; local recovery syntax and exact triggers remain open
+    status: in_progress
 plans:
   requires: []
   blocks: []
@@ -166,20 +166,21 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - No current-facing page contradicts a selected rule or presents an unresolved proposal as settled.
 - Local Markdown links resolve, and no test/build run is needed for this documentation-only handoff.
 
-### Step 6 — next-foundation
+### Step 6 — arithmetic-fault-boundaries
 
 **Depends on:** step 5
 **Files:** [`decisions-and-open-questions.md`](decisions-and-open-questions.md) and the chosen foundation pages
 
 **Actions:**
 
-- Select one next foundation topic from the ledger, such as ownership/value passing, generics and nominal identity, numeric fault policy, or modules/package behavior.
-- Review it contract-first against strong typing, beginner usability, minimal default visibility, and the small-runtime goal.
-- Save new open decisions in the ledger and a focused concept page; do not start compiler implementation from a planning discussion.
+- Review the user's selected policy that basic arithmetic faults use typed panics, not returned `Result` errors, while local recovery remains possible for each individual operation without an established syntax.
+- Define the scope of “basic arithmetic fault” against fixed-width overflow, integer division, remainder, and floating-point edge cases. Keep normal non-finite floating-point values distinct from faults until their contract is selected.
+- Compare recovery boundaries without inventing source grammar. Preserve explicit `Result` handling for declared function errors and the existing concise arithmetic goal.
+- Save selected policy and remaining questions in the ledger and a focused concept page; do not start compiler implementation from a planning discussion.
 
 **Acceptance:**
 
-- The next review has a narrow question, concrete alternatives, affected docs, and explicit acceptance criteria.
+- The review identifies exact arithmetic fault cases, their typed panic channel, and a local recovery contract without claiming an unselected syntax or runtime mechanism.
 
 ## Do not change
 

@@ -32,7 +32,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
-- [Division](division.md): fractional `/`, integer floor `//`, paired `%`, compound updates, and unresolved error rules.
+- [Division](division.md): fractional `/`, integer floor `//`, paired `%`, compound updates, and numeric fault cases.
+- [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, required local recovery, and unresolved recovery syntax and fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 
 ## Types and values
@@ -114,7 +115,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): proposed direct E | Panic versus tagged wrappers, optional typed filtering, overlap, and returned-error coverage.
 - [Shared expression recovery](expression-recovery.md): selected else surface for returned errors and typed panics, pending evaluation scope, receiver typing, cleanup, and runtime design.
-- [Panics and failure channels](panics.md): a separate panic path and open arithmetic, execution, and cleanup policies.
+- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, and cleanup policies.
 - [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture and propagation still open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
 - [Functions](functions.md): uniform bindings, `:` result annotations, closures, and early returns.

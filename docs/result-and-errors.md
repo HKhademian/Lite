@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract and arithmetic failure policy open**.
+Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract open; arithmetic uses typed panics with local recovery syntax unresolved**.
 
 ## Purpose
 
@@ -123,7 +123,7 @@ Here `attempt` retains the typed success-or-error outcome for storage, passing t
 
 ## Recovery at a single operation
 
-A programmer must be able to inspect and handle the failure of an individual fallible operation, including arithmetic and a function call. Addition overflow is included; this is not solely a division-by-zero mechanism.
+A programmer must be able to inspect and handle the failure of an individual fallible operation, such as a function call returning `T ! E`. Arithmetic has a separate selected contract: a basic arithmetic fault is a typed panic, not a returned `Result` error. The user also requires local recovery of an individual arithmetic operation; its syntax is not selected. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 - Local recovery must be available at the operation's expression, without requiring the surrounding function or a larger computation to be used as the recovery boundary.
 - A requested local capture or recovery must observe the operation's outcome without a prior implicit unwrap or automatic propagation.
@@ -132,9 +132,9 @@ A programmer must be able to inspect and handle the failure of an individual fal
 - Supporting local recovery does not require every ordinary intermediate binding to be a programmer-visible `Result`.
 - Recoverable errors require explicit handling, a default, or postfix `!` propagation before using the successful payload. Automatic propagation from ordinary code is not selected.
 
-### Arithmetic capture proposal
+### Earlier arithmetic-as-Result proposal (superseded)
 
-One earlier candidate for arithmetic is an explicit expected `Result` type at the capture point:
+An earlier candidate requested an arithmetic outcome through an explicit expected `Result` type:
 
 ```text
 attempt: Int ! ArithmeticError = a + b;
@@ -144,7 +144,7 @@ if .err(error) := attempt {
 }
 ```
 
-This is a proposal for requesting a recoverable arithmetic outcome. It does not establish that ordinary `+` returns a `Result`, or that expected types can change the operator's failure policy. Expected-type capture, distinct from ordinary success lifting, has not been selected. The example handles the error case only; success extraction still follows the eventual pattern contract.
+The user later selected the panic channel for basic arithmetic faults, so this candidate is superseded for those faults. An expected `Result` type does not capture or convert an arithmetic panic. Local arithmetic recovery remains required, with its syntax unresolved. The example is retained only as design history.
 
 ### Expression-local recovery
 
@@ -190,7 +190,7 @@ This Result recovery form is selected. It does not introduce dynamic handler loo
 
 [Recovery receivers and fallback types](recovery-and-fallbacks.md) compares this optional receiver and union result rule with the reference languages. A precise union still requires narrowing before variant-specific use.
 
-Applying the same form to `(a + b) else(error) { ... }` remains an arithmetic-recovery proposal until operator failure contracts are settled. Selecting Result recovery does not silently make ordinary arithmetic return Result.
+Applying the same form to `(a + b) else(fault) { ... }` is not selected arithmetic syntax. Basic arithmetic faults use the panic channel, and local recovery remains required; the Result-recovery rule does not define how that syntax attaches.
 
 ## Unit success
 
@@ -207,7 +207,7 @@ The final `Unit` represents success without data.
 
 Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
 
-An arithmetic fault is not automatically a recoverable returned error merely because it can be detected. Whether ordinary fixed-width addition overflow, integer division by zero, and unrepresentable quotients belong to the recoverable contract remains open. Any selected policy must reconcile concise ordinary arithmetic with the existing requirement for local arithmetic recovery. No implicit trapping, wrapping, undefined behavior, or build-dependent change is adopted by this distinction.
+Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The user requires local recovery for an individual operation, but the language has not selected syntax exposing that recovery. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width `%` minimum-value/`-1` case. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 ### Reference-language distinction
 

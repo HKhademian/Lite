@@ -1,12 +1,12 @@
 # Bounds, arithmetic, and checked fault policy
 
-Status: **policy history with later selected sequence direction, 2026-10-19**. The user accepts direct ordinary sequence access/removal with typed faults and requests operation() else { ... } for local recovery. The [shared recovery document](expression-recovery.md) records this surface; evaluation scope, typed receiver contracts, transfer, and cleanup remain open. Arithmetic classification is not selected by the sequence decision. Alternatives below preserve the earlier review rather than competing current meanings.
+Status: **policy history with later selected sequence and arithmetic directions, 2026-10-19**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; individual-operation recovery is required but its syntax is unresolved. The [shared recovery document](expression-recovery.md) records the sequence surface. Alternatives below preserve the earlier review rather than competing current meanings.
 
 ## Keep two design questions separate
 
 Which collection supports an operation is a static contract question. What happens when a supported operation receives an invalid index is a failure-policy question. Making indexing more convenient does not require bundling traversal, indexing, size, and contiguity in every parameter type.
 
-Only declared recoverable errors escape through T ! E, T!, and the proposed throw shorthand. A separate panic/fault channel already exists as a design direction. Choosing an operation's default channel is still a decision; math operations have not already been assigned one.
+Only declared recoverable errors escape through T ! E, T!, and the proposed throw shorthand. The separate panic/fault channel is selected for basic arithmetic faults. The earlier alternatives below are retained to show the tradeoffs, not as current arithmetic choices.
 
 ## Alternative A: recoverable outcomes by default
 
@@ -43,7 +43,7 @@ value := outcome else {
 }
 ```
 
-The same candidate boundary could request checked arithmetic for a + b. Compiler-defined local checks would branch to a failure result rather than enter the ordinary fault path. This is an explicit operation mode, not a different return type chosen by the destination annotation.
+An earlier extension of this candidate applied the checked boundary to `a + b`, branching to a returned failure result. That arithmetic proposal is superseded: basic arithmetic faults use typed panics, not returned `Result` errors. Local arithmetic-panic recovery is still required, but no spelling or conversion into a Result is selected.
 
 Such a boundary must be a defined language form: an ordinary function receiving users[index] as an argument would evaluate that argument before entering the callee. Its supported checks, typed error payloads, evaluation order, result construction, cleanup, and exact scope need specification.
 
@@ -97,10 +97,10 @@ Zig 0.15.1 demonstrates bounds safety failures separately from typed error union
 
 These comparisons show separate asserting and checked operations as a viable design pattern. They do not establish that arbitrary faults are always catchable or inexpensive. LiteScript should define local typed capture and broad panic observation as separate features.
 
-## Recommendation to evaluate
+## Historical recommendation
 
-For concise scripting, evaluate ordinary safety-checked assertions for bounds and arithmetic, together with an explicit concise typed checked form for recoverable use. Keep genuinely recoverable API failures declared and explicit. Preserve a single safe semantic policy across normal build modes and discharge checks when proved unnecessary.
+The earlier recommendation was to evaluate ordinary safety-checked assertions for bounds and arithmetic, together with an explicit concise typed checked form for recoverable use. The user has since selected the typed panic channel for basic arithmetic, with local recovery still required and its spelling open. Keep genuinely recoverable API failures declared and explicit. Preserve a single safe semantic policy across normal build modes and discharge checks when proved unnecessary.
 
-If universal explicit handling is the stronger goal, alternative A remains coherent; its syntax burden is a real design cost. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. The later sequence decision selects direct access/removal plus attached else. Confirm the remaining evaluation scope and arithmetic classifications before migrating unrelated examples.
+Alternative A remains a coherent historical comparison but is superseded for basic arithmetic faults. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. The sequence decision selects direct access/removal plus attached else; arithmetic uses typed panics and still needs an individual recovery spelling. Confirm the remaining evaluation scope before migrating unrelated examples.
 
 Related: [panics](panics.md), [Result](result-and-errors.md), [operation contracts](collection-operation-contracts.md), [division](division.md), and [signature ergonomics](collection-signature-ergonomics.md).
