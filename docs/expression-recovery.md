@@ -45,6 +45,12 @@ Else can offer one recovery surface for both without merging their contracts. On
 
 A stored Result remains ordinary data until this recovery operation is explicitly requested. A handler does not search inside records, nested Result payloads, or intermediate calls for unhandled .err values. Returned errors inside a callee must still be handled or explicitly forwarded by that callee. Normal return, tagged return, break, and continue are control-flow exits, not failures for else to intercept.
 
+## Implicit panic propagation
+
+The user explicitly confirms that an unhandled panic propagates outward automatically. It requires neither a postfix ! nor a T ! E declaration at each call. A matching active recovery boundary can intercept it; otherwise the unhandled-fault policy applies. This specifies control flow, not the transfer ABI or a promise that all faults leave recoverable state.
+
+Returned Result errors remain explicit: producing .err does not itself cause an implicit nonlocal transfer. Shared else syntax must not erase this distinction.
+
 ## Boundary question still pending
 
 Two materially different meanings remain under review:
@@ -52,7 +58,7 @@ Two materially different meanings remain under review:
 - Whole-evaluation boundary: catch supported typed panics raised while evaluating the selected expression, including executed arguments and called functions. The syntactic expression determines the boundary; its precise precedence/grouping rules must be specified. Cross-call behavior must remain the same before and after inlining.
 - Operation-specific checked behavior: capture only faults specified by the selected operation, potentially lowered directly to a checked implementation. Arbitrary panics in arguments or callees are not automatically included. Custom providers need explicit contracts; method spelling alone cannot create capture support.
 
-The first is the recommended interpretation for general panic recovery because its evaluation boundary is stable and understandable. It requires a real cross-call fault-transfer mechanism. The second is a narrower checked-operation facility and must not be advertised as general panic catch. The user has been asked to choose; neither scope is adopted by this document.
+The first is the recommended interpretation for general panic recovery because its evaluation boundary is stable and understandable. It requires a real cross-call fault-transfer mechanism. The second is a narrower checked-operation facility and must not be advertised as general panic catch. The user requests investigation of the two forms rather than selecting a scope. The [outcome comparison](recovery-boundaries.md) traces whole-call and argument-level fallbacks; neither scope is adopted by this document.
 
 The handler itself is outside its own recovery boundary. Its failure must go to an enclosing applicable boundary or remain unhandled; do not retry the failing operation or recursively re-enter the same fallback. Evaluate executed operands once in the selected left-to-right order.
 

@@ -27,7 +27,7 @@ Every recoverable error that can escape a function must be covered by its declar
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
 - The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
 
-Exact error-set composition, generic error contracts, and conversion rules remain open. [Panics](panics.md) use a separate channel and are not implicit members of every recoverable error contract.
+Exact error-set composition, generic error contracts, and conversion rules remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
 
 ## Conceptual definition
 

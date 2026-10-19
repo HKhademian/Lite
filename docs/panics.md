@@ -25,6 +25,7 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 ## Separate channels
 
 - Every escaping recoverable error must be covered by the function's declared error contract, including errors forwarded by postfix `!`.
+- Panics propagate implicitly through calls until an applicable recovery boundary or the unhandled-fault policy is reached. No ! or recoverable-error declaration is required for that transfer. The transfer mechanism and cleanup contract remain open.
 - Panics are not implicitly included in every recoverable error declaration.
 - The broad shorthand `T!` means `T ! Error` and still excludes the separate panic channel.
 - Postfix `!` extracts a Result or forwards its recoverable error; it does not assert success, trigger a panic, or catch a panic.

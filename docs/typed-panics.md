@@ -15,6 +15,8 @@ Names such as NullAccess, DivisionByZero, IntegerOverflow, and BoundsFault are e
 
 ## Preserve the existing channel distinction
 
+Panics propagate implicitly without ! or a Result error declaration, as explicitly confirmed by the user. The exact eligible handler scope and transfer/cleanup mechanism remain under review.
+
 Typed panic information remains separate from a returned T ! E outcome. It does not automatically add every possible panic category to every function's declared recoverable error type. The proposed throw error continues to mean return .err(error), not a panic trigger.
 
 Typing alone did not select recovery. The later else direction requests typed panic recovery, while its supported scope, transfer mechanism, cleanup, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
