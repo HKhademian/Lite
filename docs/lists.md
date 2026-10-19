@@ -1,6 +1,6 @@
 # Growable owning lists
 
-Status: **proposed storage family, 2026-10-19**. `List<T>`, bracket literals, helper names, and capacities below are candidates. The literal default is being reviewed with the user. No owner copy/move/share policy or allocation/error policy is selected here.
+Status: **growable List as the default bracket-literal family selected, 2026-10-19**. Full `List<T>` type grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. No owner copy/move/share policy or allocation/error policy is selected here.
 
 ## Purpose and beginner examples
 
@@ -15,7 +15,9 @@ editable[0] = 99;
 append(mut editable, 40);
 ```
 
-These propose a beginner-friendly literal and append helper. The explicit mut argument follows selected caller grants. Adding mut grants mutation; it must not change List into another collection kind. A fixed list binding can permit mutation of its container data without permitting replacement of the binding.
+The literal's growable List default is selected; the append helper and complete indexing API remain proposals. With no more specific expected type, [10, 20, 30] infers `List<Int>`, whether its binding is fixed, var, mut, or var mut. A plain binding provides read-only access even though the collection kind supports growth. Actual changes require the corresponding access permission. An explicit expected array type can select fixed layout under its future construction contract.
+
+The explicit mut argument follows selected caller grants. Adding mut grants mutation; it must not change List into another collection kind. A fixed list binding can permit mutation of its container data without permitting replacement of the binding. Empty and heterogeneous literal inference remain open.
 
 Var numbers := [...] would permit whole-binding replacement, while var mut would permit both replacement and held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`.
 

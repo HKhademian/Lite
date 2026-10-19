@@ -1,6 +1,6 @@
 # Sequence storage families
 
-Status: **proposal and design review, 2026-10-19**. This recommends array owners, list owners, and slice views. Names, generic punctuation, literals, conversions, ownership, and complete access grammar are not selected by this review. Existing var/mut, record-copy, and initialization decisions remain in force.
+Status: **growable List as the default bracket-literal family selected, 2026-10-19; storage-family details remain proposals**. Array owners, list owners, and slice views are the recommended model. Full type syntax, generic punctuation, conversions, ownership, and complete access grammar remain open. Existing var/mut, record-copy, and initialization decisions remain in force.
 
 ## Three roles
 
@@ -10,15 +10,17 @@ Status: **proposal and design review, 2026-10-19**. This recommends array owners
 
 The array family needs a distinction between a compile-time length and a length chosen once at runtime. Schematic types below use `Array<T, N>` for inline compile-time arrays and `Array<T>` for runtime-sized fixed-length owners. `List<T>` and `Slice<T>` name the other roles. These are illustrative names, not a selected generic declaration grammar.
 
-## Candidate teaching progression
+## Selected literal default and proposed advanced forms
 
 ```text
-numbers := [10, 20, 30];                 /* recommend ordinary List<Int> */
+numbers := [10, 20, 30];                 /* selected default: growable List<Int> */
 point: Array<Int, 3> = [10, 20, 30];     /* compile-time fixed array */
 tail: Slice<Int> = numbers[1..3];        /* view containing 20, 30 */
 ```
 
-These examples propose bracket literals, half-open slicing, and type syntax together; they are not existing executable syntax. The default for an unannotated literal is being reviewed with the user. Recommend List for beginner code, with an expected array type selecting fixed layout. Do not change the inferred collection kind merely because mut is added or an append occurs later. Empty and heterogeneous literals need their own inference rules, without an implicit Any type.
+Without a more specific expected sequence type, a bracket literal such as [10, 20, 30] infers a growable `List<Int>`. The collection can grow when mut access permits it; a plain binding still has read-only access. An explicit expected array type can select fixed layout, subject to its eventual type/construction rules. Half-open slicing and the displayed array/slice type syntax remain proposals, and no compiler is implemented.
+
+Adding mut or observing an append later must not change the inferred collection family. Expected typing comes from an established type context rather than guesses from future mutations. Empty and heterogeneous literals need their own inference rules, without an implicit Any type.
 
 Teach literals, indexing, and loop iteration first. Introduce fixed layout when a program needs it, then slices when functions or subranges should avoid element copies. There is no requirement to teach ownership notation in the first example, but the semantics must exist before an implementation can safely infer representation.
 
@@ -44,7 +46,7 @@ Bounded-capacity lists, type-level slice extents, strided views, SIMD operations
 
 ## Decisions to take in order
 
-1. Confirm array/list/slice roles and the default literal family.
+1. Complete array/list/slice storage roles; the default literal family is now selected as List.
 2. Choose owner copy/move/share semantics and slice lifetime/invalidation rules.
 3. Select type/literal/slicing spellings, index origin, and bounds-failure handling.
 4. Specify capacity allocation, bulk initialization, partial cleanup, and generic inference.

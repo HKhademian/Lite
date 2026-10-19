@@ -22,7 +22,7 @@ These method names are proposals, not implemented standard-library APIs.
 
 The [sequence storage review](sequence-types.md) recommends fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. The [array proposal](arrays.md) separates compile-time inline length from runtime-sized fixed ownership; the [list proposal](lists.md) separates live initialized length from reserved capacity; the [slice proposal](slices.md) exposes existing initialized elements without owning or copying them. These roles and their source syntax remain proposals.
 
-The review recommends ordinary list inference for beginner literals, with an explicit expected array type for fixed layout. The user is reviewing that default. Owner copying/transferring/sharing, slice lifetime rules, and mutable-view formation must be decided before these examples become canonical syntax. See the [reference comparison](sequence-types-comparison.md).
+Growable List inference is selected for bracket literals without a more specific expected sequence type; adding var/mut does not change that family. An explicit expected array type can select fixed layout under its future construction rules. Owner copying/transferring/sharing, exact type syntax, slice lifetime rules, and mutable-view formation remain open. See [lists](lists.md) and the [reference comparison](sequence-types-comparison.md).
 
 ## Element contract
 
