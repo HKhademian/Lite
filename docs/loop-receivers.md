@@ -1,6 +1,6 @@
 # Optional loop item name
 
-Status: **one optional item identifier using as selected by the user, 2026-10-19**.
+Status: **one optional item identifier using `as` selected; `Unit` payload for Boolean/unconditional modes selected, 2026-10-19**.
 
 ## Template
 
@@ -23,7 +23,7 @@ loop users as user {
 }
 ```
 
-Leaving out the item name introduces no implicit ordinary identifier such as it. Metadata remains accessible through the current context or an explicit @tag. The item name also provides convenient lexical access inside nested conditionals, where leading-dot access refers to that nested construct instead.
+Leaving out the item name introduces no implicit ordinary identifier such as it. Metadata remains accessible through the loop context or an explicit @tag. The item name also provides convenient lexical access inside nested conditionals. Use an explicit loop tag or captured local for outer metadata inside a conditional; conditional metadata, if exposed, requires its own explicit tag.
 
 ## Destructuring and selection belong in the body
 
@@ -57,7 +57,14 @@ loop {
 }
 ```
 
-Neither mode needs a placeholder item binding to access count or value. The user supports keeping an item interface in these modes for generalization and moving code between loop forms. Unit is the proposed payload, making .item and an optional as item binding uniform without duplicating count/index. The exact synthetic item payload remains to confirm; no iterable element is fabricated.
+Neither mode needs an item binding to access count or value. The user supports keeping an item interface in these modes for generalization and moving code between loop forms. The selected payload for an active Boolean/unconditional iteration is `Unit`; an optional `as item` binds that `Unit`. This keeps one field shape without pretending that a source element was produced.
+
+The following alternatives were considered and not selected:
+
+- **No `.item` in source-less modes:** directly reflects that no source element exists, but makes the metadata interface depend on source mode.
+- **The Boolean condition as `.item`:** exposes the `true` result that allowed entry, but gives Boolean and unconditional loops different item types and treats a guard as payload.
+
+After zero body entries, `then` still exposes `.item` and `.index` as type-directed zero placeholders; `.count == 0` signals that no entry ran. For a Boolean/unconditional loop, the `.item` placeholder is `Unit`, and `.index` is zero. No active item is available in source/condition evaluation or before a successful Boolean check / first unconditional body entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
 
 ## Retired forms
 

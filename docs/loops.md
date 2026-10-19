@@ -59,16 +59,16 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 
 ## Context state
 
-- .item: current source element. An optional item name denotes this same value.
+- .item: current source element in iterable mode, and `Unit` in Boolean or unconditional mode. If the loop enters no body, `.item` in `then` is the type-directed zero for that mode: zero of the iterable element type, or `Unit` for a source-less loop.
 - .index: zero-based iteration position, not original source index/key. Body positions begin at 0 even for a reversed or stepped source.
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
 - .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression, continue value, or break value commits; plain continue and bare break preserve it.
 
-Item and index are available during an active iteration and as the last visited entry in then, but not in source/condition evaluation. Count and value are available before the first condition, in the body, and in then. Retain item/index for completion only when its observable computation uses them. The user supports a uniform item interface in Boolean/unconditional modes; Unit remains the proposed payload. See [loop value](loop-value.md) for inference and universal zero rules.
+During an active iteration, `.item` and `.index` describe that entry. In `then`, they describe the last entered iteration when one exists. If no body was entered, `then` exposes a type-directed zero placeholder for `.item` and index `0`; `.count == 0` distinguishes those placeholders from an actual first entry. These fields are not available in source/condition evaluation before an entry. Count and value are available before the first condition, in the body, and in `then`. Retain last-item state only when completion observably uses it. See [empty-loop metadata](loop-last-item.md#zero-iteration-placeholders) and [loop value](loop-value.md) for zero rules.
 
 See [last-item/index access](loop-last-item.md) for zero/empty behavior and field-sensitive retention.
 
-Leading-dot access uses only the current construct; named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
+For loops, leading-dot access uses the loop context without searching outward; inside a conditional, use an explicit loop tag for loop metadata. Conditional metadata, if exposed, requires `@tag.field`, and ambiguous leading-dot metadata reads are rejected. Named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
 ## Normal result and completion
 

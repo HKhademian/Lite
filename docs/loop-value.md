@@ -42,7 +42,7 @@ Count includes skipped entries. A skipped final entry does not erase an earlier 
 
 The user explicitly requires [all-zero storage to be a valid value of every type](zero-initialization.md), including functions, references, enums, and unions. The earlier zeroability restriction is superseded. The implementation must define meaningful representations/operations for these zeros, not turn them into invalid values.
 
-For ordinary numeric T this gives 0, for String empty text, for Unit Unit, and for records recursively zeroed fields without declared defaults. If T is Option, its zero is .None; there is no extra Option wrapper. Exact mappings for special types remain to design under the universal requirement. Explicit nonzero initialization is separate future work, not a requirement just to admit a type into a loop.
+For ordinary numeric T this gives 0, for String empty text, for Unit its unique `Unit` value, and for records recursively zeroed fields without declared defaults. Since Unit has one inhabitant, `zero(Unit) == Unit`; the user proposes that its physical representation has zero size, requiring no stored bytes. If T is Option, its zero is .None; there is no extra Option wrapper. Exact mappings for special types remain to design under the universal requirement. Explicit nonzero initialization is separate future work, not a requirement just to admit a type into a loop.
 
 Zero initialization still needs a known T. A .value-only body can be typed from its destination, such as x: Long = loop source { .value }. Without a destination hint or another independent constraint, reading .value alone does not establish T; the compiler must not guess a type or union member. Representation mapping is type-directed, not an arbitrary runtime default choice.
 
@@ -58,13 +58,13 @@ text := loop numbers as number {
 
 Assume format_total maps Int to String. The body's .value remains Int while then computes a String result. The final construct result is not readable from .value before then has computed it. Then uses ordinary tail-expression semantics; then {} returns Unit.
 
-Action-only bodies produce Unit. A final assignment also produces Unit: an earlier calculation must not secretly remain the body's contribution. All committed paths must satisfy T's typing contract.
+Action-only bodies produce Unit. A final assignment also produces Unit: an earlier calculation must not secretly remain the body's contribution. All committed paths must satisfy T's typing contract. When T is Unit, `.value` starts as the unique `Unit` value. A body that completes with Unit commits that same value; plain `continue` and bare `break` still take noncontributing control-flow paths, although `.value` looks identical afterward. `.count` measures entered iterations, not commits.
 
 For an empty or all-skipped Int-valued loop, .value remains 0. A loop that actually produced 0 has the same value. .count separates zero entries from entered iterations, but does not reveal whether any entry committed a value. If that distinction is needed, explicit state or a future documented metadata field is required; no hidden Option/discriminator is promised by this change.
 
 ## Open contracts
 
-- Full inference for circular .value uses, action paths, and loops with only targeted exits.
+- Full inference for circular .value uses, action paths, and loops with only targeted exits. When no path contributes and nothing else constrains T, T defaults to Unit; an expected type can override it.
 - Complete typing algorithms for the selected no-then .value result and optional-search inference.
 - Explicit nonzero seeds and complete generic/result inference under universal zero initialization.
 - Ownership, replacement cleanup, moves, and borrowing of .value across iterations/completion.

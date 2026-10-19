@@ -56,7 +56,7 @@ Prefer a view when the eventual ownership model permits it, but no borrowed Slic
 
 ## Context restrictions
 
-A known compatible fixed tuple can be destructured irrefutably in a declaration or loop receiver. A general runtime list may have another length, so [first, second] would normally be refutable and belongs in if/match unless an explicit checked-binding failure contract is provided. The later [checked-operation proposal](checked-collection-operations.md) explores a flat else handler for this purpose. List shape checks do not become permitted filtering loop headers through either proposal. Type-level fixed lengths may prove a particular pattern irrefutable; that proof depends on the input contract.
+A known compatible fixed tuple can be destructured irrefutably in a declaration. In a loop, bind the whole item with the optional `as` name, then destructure it inside the body; a general runtime list may have another length, so `[first, second]` belongs in `if`/`match` unless an explicit checked-binding failure contract is provided. The later [checked-operation proposal](checked-collection-operations.md) explores a flat else handler for this purpose. List shape checks do not become filtering loop headers through that proposal. Type-level fixed lengths may prove a declaration pattern irrefutable; that proof depends on the input contract.
 
 Do not consume arbitrary iterators to discover a matching shape or require backtracking to restore a failed stream. Sets/maps need different semantics. Strings require an explicit byte/scalar/grapheme view rather than automatically matching as a sequence.
 

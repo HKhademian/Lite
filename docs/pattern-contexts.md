@@ -54,17 +54,17 @@ The arm patterns have the same meanings as in if. They need no := because match 
 
 - `(left, right) := pair` explicitly supplies pair to a declaration pattern. Outside a conditional, a refutable pattern still needs a failure contract; writing `.Some(age) := possibleAge` cannot silently acquire if's mismatch behavior.
 - `age: Int = expression` and `if age: Int = expression` are the selected whole typed-binding forms. They are not assignment expressions. Both `age: Int := expression` and `if age: Int := expression` are rejected. This resolves the previously reported grammar overlap: the := source form excludes an outermost typed binding, while nested constraints such as `.Some(age: Int)` remain valid. Match arms and receiver patterns have no := source separator to restrict and retain their ordinary typed-binding capability, subject to their own grammar/mismatch contracts.
-- `loop pairs as (left, right), count` receives the item and count from the loop. No := is required inside those slots. Each slot pattern must now be irrefutable for its input contract; a refutable receiver such as `.Some(== outValAge)` is rejected when it cannot match every admitted input. Selection belongs inside the body. The loop separator remains open.
+- A loop currently accepts one optional item identifier, such as `loop pairs as pair { ... }`. Destructure that value explicitly inside the body, for example `(left, right) := pair;`. Tuple receiver lists and their separator are retired; use `if`/`match` inside the body for refutable selection. See [item naming](loop-receivers.md).
 - Function parameters receive arguments, and completion/recovery receivers receive phase-specific values. Their shared patterns do not need an explicit source separator. Full destructured parameter/receiver grammar and refutable dispatch remain open; ordinary binding examples do not promise that arbitrary selective patterns are accepted there.
 - Assignment `target = value` updates an existing permitted target. Neither := nor == replaces it, and destructuring assignment still needs its own contract.
 
-Loop receiver slots now require irrefutable binding. The corresponding policy remains a recommendation for function parameters and completion/recovery receivers. Refutable selection can be expressed explicitly with if/match inside the function, loop, or handler. That preserves error handling and cleanup requirements without introducing an implicit mismatch path.
+Loop item naming does not introduce an implicit mismatch path: the optional item identifier binds the whole current element, while destructuring and refutable selection are explicit in the body. Receiver mismatch policy remains a separate recommendation for function parameters and completion/recovery receivers.
 
 ### Tag-only omission is selected
 
 The fourth condition, `if .Some := find_user_age(id)`, tests the case without binding its payload. The corresponding match arm is `.Some { report_found() }`. Both use the selected rule: omit the entire payload-pattern list to test the case tag only. The same meaning applies to any payload-bearing enum case and nested case patterns. Partial payload lists, empty-parentheses behavior, and construction arity are not selected by this omission rule; see [tag-only patterns](enums-and-variants.md#tag-only-patterns).
 
-This tag-only form introduces no binding, whereas .Some(_) introduces the ordinary readable _. Neither pattern implicitly unwraps a stored Result, propagates a failure, or grants mutation access. Loop receiver patterns must be irrefutable; other receiver mismatch and enum/metadata collision policies remain separate open questions.
+This tag-only form introduces no binding, whereas .Some(_) introduces the ordinary readable _. Neither pattern implicitly unwraps a stored Result, propagates a failure, or grants mutation access. Refutable loop selection belongs in an explicit if/match inside the body; other receiver mismatch and enum/metadata collision policies remain separate open questions.
 
 ## 1. Ordinary declarations
 
@@ -88,7 +88,7 @@ if .Some(user) := find_user(id) {
 }
 ```
 
-Refutable matching is selected. A successful whole pattern introduces its new bindings only in the matched branch. Mismatch selects the next branch or completes the action conditional without entering its body. The source resolves before shadow bindings and is evaluated once for that condition.
+Refutable matching is selected. A successful whole pattern introduces its new bindings only in the matched branch. Mismatch selects the next branch; if a chain has no final `else`, exhausting its conditions returns the conditional's zero-initialized result. The source resolves before shadow bindings and is evaluated once for that condition. For an action conditional whose result type is `Unit`, this remains a `Unit` result. Whether that result is exposed as `.value` metadata is a separate open question. See [conditional result rules](conditionals.md#missing-final-else).
 
 An existing-name type test, `if person: User`, narrows the existing value instead of declaring a name. It needs stability rules; it is distinct from `if user: User = expression`. Literal/payload constraints test matching, not the Boolean value of a bound payload. `Some(false)` matches `Some(flag)`.
 
@@ -148,7 +148,7 @@ An ordinary fallible call remains Result data in a match or conditional source t
 
 **Loop update, 2026-10-19:** loop completion no longer takes a receiver pattern. Use then { ... } with .count/.value from the owning loop context and ordinary tail-expression semantics. The receiver/mismatch and action-only proposals below are historical for loops; they remain exploration material for other hooks. See [current loop completion](loop-completion.md).
 
-then, loop else, and finally receive different phase-specific inputs. Matching must be checked against that actual input; an empty loop cannot supply an invented accumulator value, and cleanup on an abrupt exit is not an ordinary successful result.
+The historical loop-hook receiver proposal and current `then` context have different inputs. The old matching hook would need an actual receiver value; current `then` instead reads the loop context, where `.value` is zero-initialized and zero-entry `.item`/`.index` placeholders are distinguished by `.count == 0`. Cleanup on an abrupt exit is not an ordinary successful result.
 
 **Recommendation:** use irrefutable receiver binding and explicit if/match inside a hook initially. Repeated typed clauses remain exploratory. Before selecting them, define dispatch versus transformation pipelines, ordering, coverage, unmatched input behavior, cleanup guarantees, and compatibility of transformed results.
 

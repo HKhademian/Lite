@@ -1,6 +1,6 @@
 # Last item and index during loop completion
 
-Status: **completion access with use-based retention selected by the user, 2026-10-19; ownership/lowering mechanics remain open**. Item/index are available during active iterations and as the last visited entry in then. Only metadata observed during completion needs retention for that phase.
+Status: **completion access, zero-iteration placeholders, and use-based retention selected by the user, 2026-10-19; ownership/lowering mechanics remain open**. Item/index are available during active iterations and as the last visited entry in `then` when an iteration occurred. Only metadata observed during completion needs retention for that phase.
 
 ## What it is useful for
 
@@ -32,11 +32,13 @@ Assume describe_last returns String. With these rules, bare break on 8 leads to 
 
 This adds no last/last_item field names or completion receivers. .item and .index directly inside then select the same loop context even without an explicit tag. A nested if/match still requires a tag or captured locals; no outward field lookup is added. The optional as number binding remains iteration-local rather than being reintroduced implicitly in then.
 
-## Empty source
+## Zero-iteration placeholders
 
-To follow universal zero initialization without an automatic Option wrapper, initialize retained item storage to the element type's valid all-zero value and retained index to 0. If no body is entered, these stay zero and count is 0. A zero item is valid but is not evidence that a source item existed; count distinguishes this from a real first item at index 0.
+The user selected zero placeholders for `.item` and `.index` in `then` when no body was entered. The loop's `.count` is 0, and its typed `.value` remains its initialized zero. These are distinct metadata fields with their own types.
 
-This does not make item/index readable in a loop source expression or condition. Completion access does not extend these fields into source/condition evaluation. Index always means zero-based traversal position, independent of source keys, reversed positions, or stride.
+For an iterable loop, `.item` is the language-defined zero of the source element type. For a Boolean or unconditional loop, `.item` is `Unit`, which is its own zero value because Unit has one inhabitant. Under the user's proposed zero-sized physical representation, no bytes need to be stored. `.index` is zero. `.count == 0` distinguishes these placeholders from the item and index of an actual first entry, whose index is also zero. The placeholder does not claim that a source element existed or that a body ran. If completion reads this field after zero entries, no last source item needs to be retained.
+
+This rule applies to `then` after the loop. `.item` and `.index` are not available in a loop source expression or condition before an iteration is entered. Index means zero-based traversal position, independent of source keys, reversed positions, or stride.
 
 ## Use-based retention
 

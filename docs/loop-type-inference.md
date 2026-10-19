@@ -42,6 +42,38 @@ Assume numbers has Int elements and format_total accepts Int and returns String.
 
 When then simply returns .value, T and R are directly connected and the destination can constrain both. When then returns a constant unrelated to .value, the body still needs its own T constraints.
 
+## Search loops and noncontributing paths
+
+```text
+found: Option<User> = loop users as user {
+    if matches(user) {
+        break Some(user)
+    }
+}
+```
+
+The explicit destination types the loop result and `.value` as `Option<User>`. A matching `break value` commits `Some(user)` and stops the loop. On a non-match, the final `if` has no selected arm, so its conditional context returns zero `Option<User>` (`.None`) and the loop commits that value. No explicit `continue` or `None` body is needed.
+
+This is a deliberate value contribution, not a skip. If the loop already held a nonzero value, an unmatched conditional would replace it with zero. Use `continue` for a noncontributing loop path that must preserve `.value`, or write an explicit `else` that returns the desired existing value.
+
+Tagged-result-only search is separate. With no `then`, its direct-result and completion-directed interpretations can agree when the destination establishes `T = R`; the example in [control-flow](control-flow.md#loop-distinction) shows this case. Unannotated inference from a tagged exit alone remains open, especially when `then` transforms T into R or does not read `.value`.
+
+## Loops with no contributing path
+
+An action-only body that normally completes with `Unit` gives T an ordinary type. A body whose paths all end in plain `continue` or bare `break` has no contribution expression; those exits preserve `.value` rather than supplying T. When no path contributes and nothing else constrains T, T defaults to `Unit`. An expected type can override that default.
+
+```text
+status := loop items {
+    continue
+} then {
+    "Finished"
+}
+```
+
+Here `then` establishes R as `String`, but it does not constrain T because it never reads `.value`. The type of the zero-initialized storage is unobservable in this example. If `then` instead returns `.value`, T and R become connected: without an expected type, T defaults to `Unit` and R follows; with an expected type, that constraint can override the default. With no `then`, the loop result is `.value`, so a context such as `status: Int = loop items { continue }` can provide T.
+
+In the example above, T is `Unit` and R is `String`. The same default applies when paths end only in bare `break`; the unresolved targeted-return rule must still be analyzed separately.
+
 ## All paths must agree with their contracts
 
 - Body tail expressions, continue value, and break value must satisfy the selected body type T.

@@ -42,7 +42,7 @@ loop users as user {
 }
 ```
 
-The loop receiver separator is still a working choice. See [loop receivers](loop-receivers.md).
+The loop's optional item identifier uses the selected `as` separator; header destructuring and receiver lists are retired. See [loop receivers](loop-receivers.md).
 
 ## Beginner-facing defaults
 

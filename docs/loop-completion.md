@@ -55,9 +55,9 @@ Assume score returns Int and format_score returns String. All-skipped nonempty i
 
 ## Scope and availability
 
-An explicit @name tag remains readable through then. Nested if/match/loop constructs own their own current contexts; leading-dot lookup never searches outward. Use a tag or captured local for outer metadata.
+An explicit @name tag remains readable through then. Use a tag or captured local for outer metadata inside nested conditionals. Conditional metadata, if exposed, requires an explicit conditional tag, and ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search.
 
-The final .value stays alive while then computes its result. Count/value are also available before the first condition. Item/index are readable during active iterations and as the last entered iteration in then; the optional as item binding itself remains iteration-local. Empty loops expose zero-initialized item/index with count 0, rather than a claim that a source item existed.
+The final .value stays alive while then computes its result. Count/value are also available before the first condition. Item/index are readable during active iterations and as the last entered iteration in then if one exists; the optional as item binding itself remains iteration-local. With zero entries, then receives a type-directed zero `.item` and `.index == 0`, with `.count == 0` distinguishing placeholders from an actual first entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
 
 [Last-item/index retention](loop-last-item.md) is driven by observable field use. If then does not read .item, no retention of the last item is required for completion. Reading only index/count/value does not retain the item; an explicit tag alone does not retain all fields. Used item storage must remain valid under the eventual ownership rules.
 

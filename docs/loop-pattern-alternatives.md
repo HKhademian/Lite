@@ -31,11 +31,11 @@ loop optional_users as candidate {
 
 Plain continue retains its existing no-contribution meaning. This example introduces no new loop result or completion rule.
 
-## Header rule
+## Historical header rule (retired)
 
-Every loop receiver pattern must match every value admitted by its slot's input contract. Reject a receiver that can fail for that contract; it must not silently skip items, stop iteration, panic, or add an error channel. This restriction applies to item, count, and accumulator slots in all loop modes.
+The earlier receiver-list design required every loop receiver pattern to match every value admitted by its slot's input contract. A failing receiver could not silently skip items, stop iteration, panic, or add an error channel. That design and its item/count/accumulator slots are retired; current loop headers accept only an optional item identifier.
 
-Irrefutable destructuring remains available: `loop pairs as (left, right)` works when each item has the required tuple shape. In contrast, the following form is rejected when the item is Option<User> and may be None:
+The historical syntax allowed irrefutable destructuring such as `loop pairs as (left, right)` when each item had the required tuple shape. It would have rejected the following form when the item was Option<User> and might be None:
 
 ```text
 /* Rejected for a source that can yield None. */

@@ -73,7 +73,7 @@ Destination bindings appear on the left and source fields on the right:
 
 The first binds the x field as leftX. The second constrains and binds it. The third type-tests and binds it as x; the fourth only type-tests it. The source record establishes the named fields, so the pattern needs no redundant record type head. General nested destination patterns follow the same direction.
 
-This supersedes both the earlier field as localName proposal and the reversed field = localName mapping. It does not change loop receiver as, whose separator remains independently open. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+This supersedes both the earlier field as localName proposal and the reversed field = localName mapping. Loop `as` is independently selected for its one optional item identifier; destructuring uses a body declaration such as `(left, right) := pair`. See [aggregate clauses](aggregate-patterns.md#named-field-clauses) and [loop item naming](loop-receivers.md).
 
 ## Selected duplicate-binding policy
 

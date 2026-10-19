@@ -49,7 +49,7 @@ then(result) {
 }
 ```
 
-This was the earlier receiver-based exploration for optional loop accumulators. Current loops inspect the same optional state through .acc without a completion receiver. Presence/absence of one `T` is naturally an `Option<T>`, not an untyped mixture of unrelated runtime values.
+This was the earlier receiver-based exploration for optional loop accumulators. Current loops use typed zero-initialized `.value` without an automatic `Option` wrapper or completion receiver. General Option values still represent explicit presence/absence; loop completion reads the owning loop context directly.
 
 ## Typed clause proposal
 
@@ -74,7 +74,7 @@ This is not accepted grammar. If adopted, it would require decisions about:
 
 The [pattern context review](pattern-contexts.md#7-completion-hook-receivers) recommends ordinary receivers bind irrefutably. A selective hook or Result error pattern needs an explicit unmatched-input policy; one pattern-bearing clause must not silently swallow an error or omit required cleanup. This recommendation does not select the explored typed dispatch chains.
 
-A loop `then` can receive `Option<T>` accumulator state. An empty `else` cannot receive a nonexistent `T`. A `finally` handling early returns and errors needs completion information, not just optional successful data. Defining those input types is required before making typed receiver clauses a general feature.
+Current loop `then` has no receiver: it reads the owning context's `.value`, `.count`, and phase-valid item/index metadata. A zero-entry loop exposes selected typed zero placeholders for `.item`/`.index`, distinguished by `.count == 0`. `finally` handling early returns and errors needs completion information, not just optional successful data. Defining those input types is required before making typed receiver clauses a general feature.
 
 ## Related concepts and references
 
