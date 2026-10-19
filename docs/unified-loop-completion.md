@@ -18,7 +18,7 @@ One then block replaces the old then/empty-else/common-final combination for nor
 ## Loop metadata
 
 - .item: current iterable element, available during an active iteration.
-- .index: zero-based iteration position, selected by the user. It is independent of original source indices/keys, reversal, or stride. Its condition/completion availability remains a separate phase contract.
+- .index: zero-based iteration position, selected by the user. It is independent of original source indices/keys, reversal, or stride. The selected baseline limits it to active iterations.
 - .count: entered-iteration count, zero before entry and one-based during the body; final count remains available in then.
 - .value: the last committed body result, initialized to its statically determined type's valid all-zero value before iteration; final value remains available in then.
 
@@ -61,7 +61,7 @@ Assume score returns Int. Empty input and all-skipped input both leave value 0; 
 
 ## Completion versus cleanup
 
-The current direction runs then after exhaustion, a false condition, or bare break. Plain continue and break preserve .value. Continue value commits early; ordinary body completion commits its tail expression. Return @loop result supplies the final construct result directly, bypassing then. Function returns, forwarded errors, and panics are not ordinary completion.
+Then runs after exhaustion, a false condition, or bare break. Plain continue and break preserve .value. Continue value commits early; ordinary body completion commits its tail expression. Break result returns directly from the nearest loop, bypassing then; return @loop result does the same for a named loop. Function returns, forwarded errors, and panics are not ordinary completion.
 
 All-exit cleanup, defer, scoped resources, pending-exit replacement, and cleanup failures remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Renaming a hook or adding metadata does not settle those lifecycle rules.
 
@@ -69,7 +69,7 @@ All-exit cleanup, defer, scoped resources, pending-exit replacement, and cleanup
 
 - Exact inference for .value, action/Unit bodies, and targeted-result-only loops.
 - Special-type zero mappings, additional metadata, and nonzero initialization syntax.
-- Item/index availability outside active iterations and any last-item retention.
+- Optional last-item/index retention in then; baseline access is active-iteration-only.
 - Ownership, replacement cleanup, and representation/cost rules.
 
 Related: [full examples](loop-examples.md), [completion](loop-completion.md), [loop value](loop-value.md), [tags](tags-and-contexts.md), and [loops](loops.md).

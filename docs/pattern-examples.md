@@ -310,7 +310,7 @@ loop optional_users as candidate {
 }
 ```
 
-The header binds the whole source item irrefutably; the body selects it. candidate is one Option<Student>, not the source collection. The as separator remains provisional, independently of selected record field operators.
+The header binds the whole source item irrefutably; the body selects it. candidate is one Option<Student>, not the source collection. As is selected for the single optional item name, independently of record field operators.
 
 ## 14. Proposed lists and rest capture
 

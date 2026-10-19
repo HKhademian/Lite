@@ -1,6 +1,6 @@
 # Optional loop item name
 
-Status: **one optional item identifier selected by the user, 2026-10-19; separator spelling remains provisional**.
+Status: **one optional item identifier using as selected by the user, 2026-10-19**.
 
 ## Template
 
@@ -57,10 +57,10 @@ loop {
 }
 ```
 
-Neither mode needs a placeholder item binding to access count or value. Whether either mode exposes Unit through .item remains a protocol question; no fabricated source item is introduced by the optional-name syntax.
+Neither mode needs a placeholder item binding to access count or value. The user supports keeping an item interface in these modes for generalization and moving code between loop forms. Unit is the proposed payload, making .item and an optional as item binding uniform without duplicating count/index. The exact synthetic item payload remains to confirm; no iterable element is fabricated.
 
 ## Retired forms
 
-The old as item, count, previous and as _, _, acc lists, repeated receiver-slot shadowing, seeded receiver headers, and header tuple patterns are not current forms. As remains working notation for the single optional name; colon is an earlier candidate, not an automatically accepted synonym.
+The old as item, count, previous and as _, _, acc lists, repeated receiver-slot shadowing, seeded receiver headers, and header tuple patterns are not current forms. As is the selected separator for the single optional name. The earlier colon separator is retired rather than accepted as a synonym.
 
 Related: [loop value](loop-value.md), [tags](tags-and-contexts.md), [loops](loops.md), [patterns](pattern-contexts.md), and [examples](loop-examples.md).

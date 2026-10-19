@@ -16,7 +16,7 @@ loop optional_users as candidate {
 }
 ```
 
-optional_users is the source collection, candidate is its current Option<User> item, and user is the payload bound only when Some matches. The source name does not silently change meaning. The loop receiver separator is still provisional as documented in [loop receivers](loop-receivers.md).
+optional_users is the source collection, candidate is its current Option<User> item, and user is the payload bound only when Some matches. The source name does not silently change meaning. As is now selected for the single optional item name; the receiver-pattern forms below remain historical.
 
 Match works in the same location and can explicitly skip a contribution:
 

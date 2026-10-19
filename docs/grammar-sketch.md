@@ -237,11 +237,11 @@ loop_completion := "then" block
 finally_clause := "finally" ["(" pattern ")"] block
 ```
 
-As is provisional spelling for a single optional item name. There is no header count/value receiver list, tuple-pattern receiver, or completion receiver. Destructuring and refutable selection belong in the body; no header mismatch behavior is implied.
+As is selected spelling for a single optional item name; the earlier colon alternative is retired. There is no header count/value receiver list, tuple-pattern receiver, or completion receiver. Destructuring and refutable selection belong in the body; no header mismatch behavior is implied.
 
 Every loop owns .item, .index, .count, and typed .value metadata, subject to phase availability. Index is zero-based traversal position; count is entered-iteration count. Value is zero-initialized before iteration and internally replaced by a completed tail expression or continue value. Plain continue/break preserve it. The old .acc/Option accumulator and previous-value slots are retired. See [loop value](loop-value.md) for typing and zero rules.
 
-Source type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production. Count and value can be read in a condition; item requires an active entry, and index's condition/completion contract remains open.
+Source type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production. Count and value can be read before the first condition, in the body, and in then. Item/index are restricted to active iterations by the baseline; completion retention is separately proposed.
 
 Then retains the same owning loop context, including on untagged loops, and follows ordinary final-expression rules. Separate loop empty-else/finally and completion-receiver forms are superseded. All-exit cleanup and body-wide recovery remain [deferred](deferred-cleanup-and-resources.md); external whole-loop error handlers remain retired.
 
@@ -270,7 +270,7 @@ continue_exit := "continue" [expression]
                | "continue" "@" identifier [expression]
 ```
 
-`break value` and labeled contribution-bearing continuation are shown as possibilities whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
+Break value is selected and returns the nearest loop's final result directly, bypassing then. Bare break preserves .value and follows normal completion. Labeled contribution-bearing continuation remains a possibility whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
 The [throw proposal](error-return-sugar.md) considers throw expression as shorthand for return .err(expression), with a required operand and the nearest function/closure as its target. This is not yet an adopted exit production; it would not introduce dynamic handler search or a tagged-throw form.
 

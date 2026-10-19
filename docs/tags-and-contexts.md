@@ -79,7 +79,7 @@ The earlier prohibition on active tag shadowing is superseded.
 
 ## Availability and implementation
 
-Count and the typed zero-initialized value exist before the first condition check. Index is zero-based traversal position during an active entry, not an original source index/key; its condition/completion availability remains open. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
+Count and the typed zero-initialized value exist before the first condition check. Index is zero-based traversal position during an active entry, not an original source index/key; the selected baseline permits item/index reads only during an active iteration. Count/value are also readable in conditions and then. A current item is not available before successful advance. Result metadata cannot expose a result still being computed.
 
 At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not retain a current item or iteration-local references automatically, grant metadata writes, or allow a tag to escape its construct.
 

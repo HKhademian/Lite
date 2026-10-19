@@ -12,14 +12,15 @@ sum := loop numbers as number {
 }
 ```
 
-For Int elements, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The working normal-result rule without then is the final .value, including its initialized zero when the loop produces nothing. Full inference, including expected-type propagation, remains to formalize.
+For Int elements, addition constrains T to Int and its initial value is 0. A completed tail expression replaces .value; the next iteration sees that committed value. The selected normal-result rule without then is the final .value, including its initialized zero when the loop produces nothing. Full inference, including expected-type propagation, remains to formalize.
 
 ## Updates and exits
 
 - Normal body completion: commit the tail expression as the next T value.
-- continue value: commit the explicitly supplied T value and advance; this early-value form remains the established working proposal.
+- continue value: commit the explicitly supplied T value and advance; this early-value form is selected.
 - Plain continue: advance without changing .value.
 - Bare break: stop without changing .value, then run normal completion processing.
+- Break result: supply the final result of the nearest loop directly and bypass then; retained for untagged loops.
 - Return @loop result: supply the final construct result directly and bypass normal completion, as before.
 
 The old acc/previous receiver slots and .acc field are retired. .value is loop-owned read-only metadata; these rules describe its internal commits, not a new permission to assign to metadata.
@@ -64,7 +65,7 @@ For an empty or all-skipped Int-valued loop, .value remains 0. A loop that actua
 ## Open contracts
 
 - Full inference for circular .value uses, action paths, and loops with only targeted exits.
-- Exact no-then result typing and optional-search inference.
+- Complete typing algorithms for the selected no-then .value result and optional-search inference.
 - Explicit nonzero seeds and complete generic/result inference under universal zero initialization.
 - Ownership, replacement cleanup, moves, and borrowing of .value across iterations/completion.
 - Any future contribution-count or completion-reason metadata.

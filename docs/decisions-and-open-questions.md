@@ -129,13 +129,14 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - One `if` form works for actions and values; branch braces establish ownership.
 - One `loop` keyword handles Boolean, iterable, and unconditional sources.
 - Remove post-condition loop syntax; use inner conditions and explicit exits.
-- Loop headers allow one optional item identifier. Count/value receiver lists, receiver-slot shadowing, and header tuple patterns are retired. The item name denotes the same current element as .item; destructuring and refutable selection belong inside the body. See [item naming](loop-receivers.md).
-- Loop metadata supplies .item, .index, .count, and .value. Index is zero-based traversal position, independent of source keys/positions and reversal/step. Count counts entered iterations. Index availability outside active bodies remains a phase contract.
+- Loop headers allow one optional item identifier introduced by as; colon and header patterns are retired. Count/value receiver lists, receiver-slot shadowing, and header tuple patterns are retired. The item name denotes the same current element as .item; destructuring and refutable selection belong inside the body. See [item naming](loop-receivers.md).
+- Loop metadata supplies .item, .index, .count, and .value. Index is zero-based traversal position, independent of source keys/positions and reversal/step. Count counts entered iterations. The baseline restricts item/index to active iterations; count/value are available before the first condition, in the body, and in then. Last-item/index completion access is separately proposed.
 - Loop .value replaces .acc and automatic Option accumulators. It has a static body-result type and is zero-initialized before iteration; tail completion or continue value commits, plain continue/break preserve. No value_or helper or previous receiver is required. See [loop value](loop-value.md).
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
-- Plain `continue` and bare `break` contribute nothing.
+- Plain continue preserves .value and advances; continue value commits early and advances. Bare break preserves .value and runs then. Break value returns a nearest-loop final result directly, bypassing then; return @tag value is the named direct exit.
 - Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .value are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
+- Without then, normal completion returns final .value; with then it returns that block's tail expression, and then {} returns Unit.
 - Concise optional search loops should not require redundant `None` bodies or `else { None }`.
 
 ### Tags
@@ -151,7 +152,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and omitted-hook behavior remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
+- [Unified loop completion](unified-loop-completion.md) now uses the selected single receiverless then block. Entered count and typed zero-initialized value come from the owning loop context, with no done/result binding or dummy receiver. Full typing, additional metadata, nonzero initialization, and optional-search inference remain open. Full cleanup on escaping returns/errors/panics stays deferred; targeted-return semantics are unchanged.
 
 - **Deferred by the user:** body-wide special sections will be reviewed together with future defer and scoped resource management, including TypeScript using/await using as comparison material. The [body-section examples](body-recovery.md#concrete-body-section-proposal) are retained as candidates, including the unselected semicolon delimiter. Syntax, activation scope, body-finally placement, initialization, values, and cleanup failures await the [joint review](deferred-cleanup-and-resources.md); explicit inner Result handling and ! targets are unchanged.
 
@@ -225,7 +226,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - Full method notation, combined caller grants, access inference and conversions, capture permissions, and aliasing rules remain open. Separate mut/var call grants are selected; local-only var parameter headers are retired. Affected receiver/parameter bindings use `mut`, without an additional function-level mutation marker; see [mutability](mutability.md).
 - Identifiers use `XID_Start` plus `_` initially and `XID_Continue` thereafter, with case-sensitive lookup; pin the Unicode version and settle normalization separately.
 - Counter value zero before the first condition, then one-based body-entry counts.
-- Boolean and unconditional item payloads use `Unit`.
+- A uniform item interface for Boolean/unconditional loops is supported for generalization; Unit is the proposed payload, not yet selected.
 - Loop metadata is read-only; the one optional item name follows its eventual ownership/access contract.
 - Count and typed value metadata exist before the first loop condition; old count/previous receiver names are retired.
 - Iterable expressions evaluate once; Boolean sources are reevaluated through static mode selection.
@@ -240,19 +241,19 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 
 ### 1. Loop contribution and construct-result inference
 
-Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. Complete inference for last-value loops, Unit actions, circular .value reads, targeted-result-only search loops, and optional results without nested wrapping. Formalize the working no-then result rule and any future nonzero initialization mechanism.
+Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. Complete inference for last-value loops, Unit actions, circular .value reads, targeted-result-only search loops, and optional results without nested wrapping. Implement a coherent inference specification for the selected no-then .value rule and any future nonzero initialization mechanism.
 
 ### 2. Completion hooks and abrupt exits
 
-The single receiverless then resolves the old then-versus-empty-else composition question. Complete its result inference and omitted-hook behavior; do not reintroduce receiver-presence value modes. Count and typed value remain available from the owning context.
+The single receiverless then resolves the old then-versus-empty-else composition question. Complete the inference algorithm for the selected result rules; do not reintroduce receiver-presence value modes. Count and typed value remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 
-Confirm whether `break value` remains alongside `return @tag value`, and whether labeled contribution-bearing `continue` is accepted.
+Break value is selected alongside return @tag value; labeled contribution-bearing continue remains open.
 
 ### 3. Optional item naming and initialization
 
-Choose the separator spelling for one optional item name; as remains working notation. There is no remaining count/value receiver list or header tuple pattern. Define any future nonzero value initialization without reviving the retired receiver/seed forms accidentally.
+As is selected for one optional item name, with colon retired. There is no remaining count/value receiver list or header tuple pattern. Define any future nonzero value initialization without reviving the retired receiver/seed forms accidentally.
 
 ### 4. Context phase rules
 

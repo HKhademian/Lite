@@ -27,7 +27,7 @@ then { Unit }               /* Unit */
 then {}                     /* Unit */
 ```
 
-These are clause fragments. A Unit tail does not silently preserve an earlier value. Trailing semicolons do not discard expression values. Without then, the working normal-completion result is .value; the exact inference rules remain to formalize.
+These are clause fragments. A Unit tail does not silently preserve an earlier value. Trailing semicolons do not discard expression values. Without then, the selected normal-completion result is .value; the exact inference rules remain to formalize.
 
 ## Empty, skipped, and zero-valued loops
 
@@ -57,11 +57,11 @@ Assume score returns Int and format_score returns String. All-skipped nonempty i
 
 An explicit @name tag remains readable through then. Nested if/match/loop constructs own their own current contexts; leading-dot lookup never searches outward. Use a tag or captured local for outer metadata.
 
-The final .value stays alive while then computes its result. .item and the optional item name require an active iteration; retaining the tag does not keep a last item alive. Index is the zero-based active iteration position; its condition/completion-phase contract still needs formalization. No invalid last item/index is fabricated for empty input. Count and value are initialized before the first condition.
+The final .value stays alive while then computes its result. The selected baseline makes .item, .index, and the optional item name available during active iterations only; retaining a tag does not automatically retain the last item. Count and value are available before the first condition, in the body, and in then. Last-item/index access in then is separately proposed, not selected.
 
 ## Exits and cleanup
 
-The current completion direction runs then after source exhaustion, a false condition, or bare break. Continue stays in iteration. Return @loop result supplies the final construct result directly and bypasses then. Unqualified return, forwarded errors via !, and panics are not normal loop completion. Break value remains unconfirmed shorthand.
+Then runs after source exhaustion, a false condition, or bare break. Continue stays in iteration. Return @loop result supplies the final construct result directly and bypasses then. Unqualified return, forwarded errors via !, and panics are not normal loop completion. Break result is also selected: it returns the nearest loop's final result directly and bypasses then, just like a tagged direct result without requiring a tag.
 
 Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, disposal, finally placement, and cleanup failures remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
 

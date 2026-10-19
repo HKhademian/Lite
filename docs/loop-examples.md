@@ -1,6 +1,6 @@
 # Loop examples: metadata-only state
 
-Status: **updated to the one-item-name and typed .value direction, 2026-10-19; design examples, not compiler-verified execution**. As, adapter names, continue value retention, and full inference remain working contracts. Print, format_total, parse_int, and other helpers stand for separately defined operations.
+Status: **updated to the one-item-name and typed .value direction, 2026-10-19; design examples, not compiler-verified execution**. As, continue value, bare/value break, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
 ## Full worked loop
 
@@ -52,7 +52,7 @@ loop users as user {
 }
 ```
 
-There are no count/previous/accumulator receiver slots. The working normal result without then is the final .value. Item names are ordinary read-only bindings; no mutable access is granted by naming an item. Destructure inside the body:
+There are no count/previous/accumulator receiver slots. The selected normal result without then is final .value. Item names are ordinary read-only bindings; no mutable access is granted by naming an item. Destructure inside the body:
 
 ```text
 loop pairs as pair {
@@ -90,7 +90,7 @@ loop {
 }
 ```
 
-Count and typed value are initialized before the first condition. A current item is not available until an entry exists. Index is the zero-based active traversal position; condition/completion access still needs its own phase rule. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
+Count and typed value are initialized before the first condition. A current item is not available until an entry exists. Index is the zero-based active traversal position; the selected baseline restricts item/index to active iterations. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
 
 ## Direction, stride, keys, and entries
 
@@ -124,7 +124,7 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 }
 ```
 
-Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value remains unconfirmed shorthand.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value is selected as a direct nearest-loop final result, bypassing then.
 
 Every nested if/match/loop has its own current context. Use named tags or captured locals to read outer metadata; leading-dot lookup never searches outward. The optional item name is useful for lexical access inside such nested bodies.
 
@@ -174,6 +174,6 @@ Local recovery skips a failed parse without committing a new value. Postfix ! fo
 
 ## Not finalized by these examples
 
-Full .value type inference and zero representation, no-then result typing, optional-search inference, nonzero initialization, item/index completion availability, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
+Full .value type inference and zero representation, optional-search inference, nonzero initialization, optional last-item/index retention, and ownership/cleanup remain separate contracts. No seeded header, extra receivers, automatic Option wrapper, or whole-loop external recovery is selected.
 
 Related: [loops](loops.md), [item name](loop-receivers.md), [value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [deferred cleanup](deferred-cleanup-and-resources.md).

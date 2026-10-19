@@ -13,7 +13,7 @@ Examples use `text` fences because no LiteScript syntax highlighter exists in th
 
 Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See [temporary generic notation](generic-notation.md).
 
-`as` is used for loop receivers in current examples. The discussion also considered and provisionally accepted `:`; the final separator remains open. See [loop receivers](loop-receivers.md).
+As is selected for a loop's one optional item name; the earlier colon separator, receiver lists, and header destructuring are retired. See [loop receivers](loop-receivers.md).
 
 ## Foundations
 

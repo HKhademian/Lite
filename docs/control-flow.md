@@ -1,6 +1,6 @@
 # Control-flow exits
 
-Status: **targeted-return syntax established; some loop shorthand decisions remain open**.
+Status: **targeted returns and bare/value loop exits selected; labeled contribution syntax remains open**.
 
 ## Templates
 
@@ -10,6 +10,7 @@ return value;
 return @tag;
 return @tag value;
 break;
+break value;
 continue;
 continue value;
 continue @loop;
@@ -46,6 +47,7 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `continue`: move to the next iteration without a contribution.
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
+- `break value`: finish the nearest loop directly with final result type R, bypassing then; no tag is required.
 - `return @loop value`: finish the loop directly with final result type `R`, bypassing ordinary then completion processing.
 
 ```text
@@ -62,7 +64,18 @@ The intended exhaustion result is `None`. `return @search;` would instead explic
 
 `continue @loop` was retained for explicitly advancing an enclosing loop. A target that is an `if` or ordinary block cannot continue.
 
-`break value` was previously proposed as an explicit final result for the nearest loop. After introducing general targeted returns, its retention needs confirmation. The named form `break @tag value` was recommended to be removed in favor of `return @tag value`; accepting both is not established current grammar.
+Break value is explicitly retained by the user for untagged loops. It supplies the nearest loop's final result type R, not a new body contribution T, and bypasses then. Bare break remains distinct: preserve .value and run then. The named break @tag value form is not selected; use return @tag value for a named direct exit. Contribution-bearing continue @tag value remains separate open syntax.
+
+```text
+status := loop numbers as number {
+    if number < 0 { break "Stopped"; }
+    number
+} then {
+    "Finished"
+}
+```
+
+The body value is Int while the construct result is String. A negative item returns Stopped directly; normal completion returns Finished. No tag or wrapper function is needed.
 
 ## Cleanup
 

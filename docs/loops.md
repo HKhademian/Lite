@@ -10,7 +10,7 @@ Status: **one keyword, three source modes, one optional item name, and metadata-
 } [then { completion_body }]
 ```
 
-Brackets are optional grammar notation, not literal characters. As is provisional spelling for one optional item identifier. There are no positional receiver lists or completion receivers. Destructure/select inside the body. See [item naming](loop-receivers.md).
+Brackets are optional grammar notation, not literal characters. As is the selected spelling for one optional item identifier. There are no positional receiver lists or completion receivers. Destructure/select inside the body. See [item naming](loop-receivers.md).
 
 ## Source modes
 
@@ -64,7 +64,7 @@ An omitted source means unconditional iteration. There is no while keyword, requ
 - .count: number of entered iterations. It starts at zero before the first check, is one-based in the body, includes skipped entries, and remains readable in completion.
 - .value: last committed body result of static type T, initialized to T's language-defined all-zero value. A completed tail expression or continue value commits; plain continue and break preserve it.
 
-Item requires an active iteration. Index availability in conditions/completion remains a phase question; empty sources must not invent a last item/index. Unit as the item payload for Boolean/unconditional sources remains a proposal. See [loop value](loop-value.md) for inference and universal zero rules.
+Item and index are available during an active iteration, not in source/condition evaluation or completion under the selected baseline. Count and value are available before the first condition, in the body, and in then. Optional last-item/index access in then is a separate proposal. The user supports a uniform item interface in Boolean/unconditional modes; Unit remains the proposed payload. See [loop value](loop-value.md) for inference and universal zero rules.
 
 Leading-dot access uses only the current construct; named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
@@ -79,7 +79,7 @@ sum := loop numbers as number {
 }
 ```
 
-Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. The working result direction without then is the final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](loop-completion.md).
+Then shares the owning loop context, tagged or untagged. Its tail expression produces the final result; then {} produces Unit. Without then, the selected normal result is final .value, including initialized zero for an empty/all-skipped loop. Complete inference remains open. See [completion](loop-completion.md).
 
 ## Direction and step
 
