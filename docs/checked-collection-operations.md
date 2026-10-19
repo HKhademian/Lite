@@ -2,6 +2,8 @@
 
 Status: **design proposal, 2026-10-19**. The user wants individual collection accesses to support explicit recovery/propagation and successful destructuring bindings to remain at the surrounding scope. This document proposes operation contracts and a new checked-binding extension; neither indexing fallibility nor that extension is selected grammar yet.
 
+The later [fault-policy review](checked-fault-policy.md) compares this fallible-default indexing model with ordinary asserting access plus explicit typed checked operations. Neither default has been selected. Examples below retain their original fallible-default interpretation; they must not silently be read as general panic-capture syntax.
+
 ## Checked indexing
 
 Proposed dynamic indexing returns a typed recoverable outcome, conceptually T ! BoundsError:

@@ -1,0 +1,78 @@
+# Bounds, arithmetic, and checked fault policy
+
+Status: **alternative-policy review, 2026-10-19; no default selected**. The user is reconsidering whether bounds and arithmetic faults should require typed handling or use a default fault path with explicit local capture. Earlier fallible-default indexing examples remain proposals. Arithmetic classification and general panic recovery remain open.
+
+## Keep two design questions separate
+
+Which collection supports an operation is a static contract question. What happens when a supported operation receives an invalid index is a failure-policy question. Making indexing more convenient does not require bundling traversal, indexing, size, and contiguity in every parameter type.
+
+Only declared recoverable errors escape through T ! E, T!, and the proposed throw shorthand. A separate panic/fault channel already exists as a design direction. Choosing an operation's default channel is still a decision; math operations have not already been assigned one.
+
+## Alternative A: recoverable outcomes by default
+
+```text
+value := users[index] else { fallback_user() }
+value := users[index]!;
+```
+
+Here ordinary checked indexing produces User ! BoundsError. Handling, propagation, or retaining the Result is explicit. This follows the existing [checked-indexing proposal](checked-collection-operations.md).
+
+The model is uniform and works well when a bad index is an expected input condition. It also adds source-level handling wherever the operation's error cannot be discharged under a language-defined proof rule. Applying the same default to all checked arithmetic creates a larger annotation/propagation burden. Compiler optimization can remove checks but does not independently erase source-level Result contracts or declared errors.
+
+An error result does not inherently allocate memory or imply a large runtime. Successful access can still need the same bounds comparison under either policy; return representation and propagation are separate costs. Do not claim one default is faster without comparing equivalent checks and compiled code.
+
+## Alternative B: asserting operations plus checked operations
+
+Ordinary indexing would mean that the programmer requires this position to be valid:
+
+```text
+value := users[index]; /* proposed alternative: value or bounds fault */
+```
+
+Under a corresponding arithmetic policy, ordinary bounded arithmetic would require a representable result. Detect violations before invalid memory access or invalid value use, and report a safe fault with useful source information. This review does not adopt unchecked memory access, undefined behavior, wrapping arithmetic, or build-mode-dependent removal of safety guarantees.
+
+An explicitly checked operation instead returns a typed outcome for expected recovery. A short checked context is one possible surface; the following spelling is deliberately unselected:
+
+```text
+outcome := checked {
+    users[index]
+}
+
+value := outcome else {
+    fallback_user()
+}
+```
+
+The same candidate boundary could request checked arithmetic for a + b. Compiler-defined local checks would branch to a failure result rather than enter the ordinary fault path. This is an explicit operation mode, not a different return type chosen by the destination annotation.
+
+Such a boundary must be a defined language form: an ordinary function receiving users[index] as an argument would evaluate that argument before entering the callee. Its supported checks, typed error payloads, evaluation order, result construction, cleanup, and exact scope need specification.
+
+It must not automatically capture arbitrary panics inside called functions. Calls with declared Result errors retain their explicit handling rules. A limited lexical checked transformation can be defined before optimization so inlining does not change which failures it captures. Transforming failure behavior across calls would require additional explicit effect/implementation contracts; it is not supplied by this sketch.
+
+Custom index providers also need a coherent contract, potentially a checked primitive and an asserting adapter. Do not silently unwrap every Result-returning function as an assertion or let operator mode guess at a provider's undeclared effects.
+
+## Interaction with the existing short forms
+
+If ordinary users[index] produces a plain User under alternative B, users[index]! cannot retain its earlier meaning without a distinct explicitly selected capture rule. Postfix ! is already Result extraction/propagation; it is not a general panic-capture operator.
+
+Likewise, users[index] else { fallback } would require a new, explicitly defined checked-intrinsic sugar if ordinary indexing does not return a Result. That could be convenient, but it would not be ordinary recovery on a plain User or a handler for every panic in a surrounding expression. The exact syntax must be chosen together with the default policy.
+
+The current recoverable-failure throw proposal remains shorthand for return .err(error). It does not trigger or capture a panic. A checked outcome propagated with ! still requires its enclosing function's declared error contract.
+
+## General panic capture is a larger commitment
+
+Catching a panic through arbitrary calls needs a specified transfer mechanism and cleanup/invariant policy. It need not use hardware exceptions, but choosing return-like faults, stack unwinding, abort boundaries, or generated effect propagation has real consequences. Recovery does not roll back mutations already performed.
+
+Rust separates direct indexing's possible panic from get returning Option. Its catch_unwind documentation discourages general try/catch use and states that aborting panics cannot be caught by that mechanism. Sources: [Rust Index](https://doc.rust-lang.org/std/ops/trait.Index.html), [slice get](https://doc.rust-lang.org/std/primitive.slice.html#method.get), and [catch_unwind](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
+
+Zig 0.15.1 demonstrates bounds safety failures separately from typed error unions; its build-mode safety behavior is not adopted here. Source: [Zig bounds failures](https://ziglang.org/documentation/0.15.1/#Index-out-of-Bounds).
+
+These comparisons show separate asserting and checked operations as a viable design pattern. They do not establish that arbitrary faults are always catchable or inexpensive. LiteScript should define local typed capture and broad panic observation as separate features.
+
+## Recommendation to evaluate
+
+For concise scripting, evaluate ordinary safety-checked assertions for bounds and arithmetic, together with an explicit concise typed checked form for recoverable use. Keep genuinely recoverable API failures declared and explicit. Preserve a single safe semantic policy across normal build modes and discharge checks when proved unnecessary.
+
+If universal explicit handling is the stronger goal, alternative A remains coherent; its syntax burden is a real design cost. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. Confirm the policy and its checked surface before migrating earlier examples.
+
+Related: [panics](panics.md), [Result](result-and-errors.md), [operation contracts](collection-operation-contracts.md), [division](division.md), and [signature ergonomics](collection-signature-ergonomics.md).

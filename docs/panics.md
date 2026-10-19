@@ -36,6 +36,8 @@ Integer division by zero, overflow, and unrepresentable quotients can be detecte
 
 The design still requires local arithmetic recovery without a verbose named helper as the ordinary interface. A policy that makes arithmetic faults unconditionally unhandleable would need to reconcile that requirement, rather than silently override it. No wrapping, undefined behavior, implicit Result conversion, or build-dependent semantics are selected here.
 
+The [bounds/arithmetic policy review](checked-fault-policy.md) evaluates ordinary asserting operations plus explicit typed checked capture as an alternative to Result-returning operations by default. It distinguishes limited compiler-defined local capture from recovering arbitrary panics through calls. Both the default classification and the checked-form syntax remain open; math has not already selected a capturable-panic policy.
+
 ## Cleanup and state
 
 Returned recoverable errors follow the language's structured-exit cleanup rules. Panic behavior is not yet specified: the existence of a separate path does not establish whether it unwinds or terminates immediately, or whether `finally` runs.
