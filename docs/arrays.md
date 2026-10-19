@@ -40,6 +40,8 @@ Fixed length does not imply fixed elements. Mut array access could permit elemen
 
 Both array forms should be able to lend a read-only slice of initialized elements without copying them. A writable view requires existing writable access and an explicit grant. Automatic function-argument coercion versus explicit slice formation is still open.
 
+Consumer APIs should request the minimum [collection capability](collection-capabilities.md), rather than a particular array type or extent unless required. A traversal-only operation can accept other compatible providers too; an operation requiring contiguous storage can request that ability and obtain a slice. The array's N can remain available to specialization without appearing in the public consumer signature.
+
 Known N can support exact destructuring, compile-time size checks, and specialization. A runtime length needs a checked proof before conversion to an exact-size contract. No unchecked reinterpretation of a runtime array as `Array<T, N>` is selected.
 
 ## Later library forms

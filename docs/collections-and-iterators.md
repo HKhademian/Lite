@@ -4,7 +4,7 @@ Status: **iteration capabilities required; collection and iterator protocols ope
 
 ## Purpose
 
-Keep direction, stepping, keys, and entry views outside the loop keyword set while allowing one iteration syntax.
+Build consumer APIs around required collection abilities while allowing one iteration syntax. Compatible providers should not need conversion to a standard List or exposure of their static size merely to supply elements. Keep direction, stepping, keys, and entry views outside the loop keyword set. See [consumer abstractions](collection-abstractions.md) and [proposed capabilities](collection-capabilities.md).
 
 ## Templates and examples
 

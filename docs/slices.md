@@ -18,17 +18,17 @@ This proposes zero-based indices for each view and a half-open range: include th
 
 Copying a view still refers to the same source region. An independent owning copy requires a separate copy/clone operation. A view's copied references retain their permissions; shallow-copying a read-only view cannot manufacture writable access to its source.
 
-## Common function inputs
+## Inputs that actually require contiguity
 
 ```text
-sum := fn(values: Slice<Int>): Int {
-    var total := 0;
-    loop values as value { total += value; }
-    total
+upload_pixels := fn(pixels: Contiguous<Pixel>) {
+    upload_region(pixels.as_slice());
 }
 ```
 
-The proposed type lets the same operation inspect initialized regions of arrays and lists without requiring a new owner or element copy. Read access is the default. Whether owners convert automatically at a call or require an explicit full slice is still open. This is a scoped access contract, not permission for a returned slice to outlive its source.
+This is conceptual capability notation; the helper and view-acquisition method are proposals. An algorithm needing one contiguous region can request a Contiguous capability and obtain a slice from any compatible provider. A boundary specifically requiring the slice representation may accept Slice itself. Read access is the default, and no element copy or new owner is inherently required.
+
+An operation such as summing or rendering that only traverses elements should request the broader Iterable capability. Requiring Slice would otherwise exclude sets, chunked collections, and generators unnecessarily. Exact constraints, view acquisition, conversions, and lifetime rules remain open. See [consumer abstractions](collection-abstractions.md) and [collection capabilities](collection-capabilities.md).
 
 ## Mut and var describe different effects
 

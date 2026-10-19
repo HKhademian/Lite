@@ -34,6 +34,8 @@ Kotlin distinguishes fixed-size arrays from lists; its collection APIs distingui
 
 Start from the Odin/Rust separation of roles: fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. Let beginner code infer ordinary lists. Distinguish compile-time fixed length from runtime fixed length within the array family, without calling both stack arrays. Consider bounded-capacity lists and type-level slice lengths later as library/specialization features.
 
+The subsequent [consumer-abstraction direction](collection-abstractions.md) keeps those roles on the provider side. Public algorithms should request traversal or another required capability instead of universally requiring List or Slice. Rust IntoIterator and C++ ranges provide relevant behavioral models; exact LiteScript protocols remain proposals.
+
 Keep empty sequences valid without universal nullability. Keep slice creation distinct from copying elements. Before selecting owner copy behavior, resolve whether an owning list transfers, clones, shares, or uses copy-on-write; the selected shallow record copy cannot by itself create two independent owners of one allocation.
 
 Related: [collections and iterators](collections-and-iterators.md), [record copies](local-shadowing-and-copies.md), [reserved storage](reserved-storage.md), and [memory and performance](memory-and-performance.md).

@@ -21,6 +21,7 @@ The record keyword and typed-field surface are selected; see [records](records.m
 
 - Prefer composed fields over superclass state.
 - Interfaces describe required behavior.
+- Collection consumers request minimal behavioral capabilities; standard/user collection types provide them without a required superclass representation, primitive-wrapper family, or conversion to one concrete container. Protocol names and complete conformance/dispatch rules remain open; see [collection abstractions](collection-abstractions.md).
 - Implementation should be explicit.
 - Generic constraints should allow static dispatch where possible.
 - Dynamic interface dispatch should be an explicit capability or value representation.

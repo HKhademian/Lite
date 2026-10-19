@@ -4,6 +4,8 @@ Status: **growable List as the default bracket-literal family selected, 2026-10-
 
 ## Three roles
 
+These are provider/storage roles. The user's later [abstraction-first API direction](collection-abstractions.md) places behavioral requirements at consumer boundaries: a traversal-only operation should accept a compatible element source regardless of whether the provider is a List, array, set, iterator, or custom collection. Slice is a contiguous view, not a universal input abstraction for every collection.
+
 - Array: owns a contiguous sequence whose length does not change after construction.
 - List: owns a contiguous sequence whose length can grow or shrink.
 - Slice: views a contiguous region of existing initialized elements; it does not own or grow their storage.
@@ -24,7 +26,7 @@ Without a more specific expected sequence type, a bracket literal such as [10, 2
 
 Adding mut or observing an append later must not change the inferred collection family. Expected typing comes from an established type context rather than guesses from future mutations. Empty and heterogeneous literals need their own inference rules, without an implicit Any type.
 
-Teach literals, indexing, and loop iteration first. Introduce fixed layout when a program needs it, then slices when functions or subranges should avoid element copies. There is no requirement to teach ownership notation in the first example, but the semantics must exist before an implementation can safely infer representation.
+Teach literals, indexing, and loop iteration first. Introduce fixed layout when a program needs it, capability-based function inputs for provider independence, and slices for contiguous views/subranges without element copies. There is no requirement to teach ownership notation in the first example, but the semantics must exist before an implementation can safely infer representation.
 
 ## Copying and access
 

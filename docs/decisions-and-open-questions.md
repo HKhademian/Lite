@@ -7,6 +7,7 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 ### Audience and defaults
 
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
+- Collection consumers depend on required behavioral capabilities, not a fixed List/Set/array provider or static extent unless the operation needs it. Compatible user/standard providers should work without forced materialization or a common boxed-object superclass. Primitive values and records must be supported through unified element-typed APIs without a mandatory primitive-wrapper collection split. Names, generic syntax, specialization/erasure, conformance, and ownership mechanisms remain open. See [consumer abstractions](collection-abstractions.md).
 - A bracket literal without a more specific expected sequence type defaults to growable List: numbers := [1, 2, 3] infers `List<Int>`. Var/mut changes permissions, not collection family; growth still requires mutable access. An explicit expected array type may select fixed layout under its eventual construction contract. Empty/heterogeneous literal inference, complete collection type syntax, owner representation, and copy/lifetime rules remain open. See [lists](lists.md) and [sequence storage families](sequence-types.md).
 - [Immutability by default](immutability-by-default.md) is a language design goal: start with fixed bindings and read-only access; make mutation an explicit, practical capability through var/mut. Writable access adds authority, not a wider set of admissible stored values. This does not select deep freezing, purity, implicit copying, or an ownership model.
 - Bindings are fixed and provide read-only access by default. Var permits binding reassignment; mut permits held-data updates. Inferred var mut x := expression grants both, with var x: mut T = expression as its annotated form.
@@ -139,6 +140,8 @@ Snapshot: **2026-10-19**. Source: the language-design discussion in this chat. N
 - `return @tag [value]` exits a named construct; omitted payload is `Unit`.
 
 ## Working proposals requiring confirmation or formalization
+
+- The [collection-capability proposal](collection-capabilities.md) decomposes traversal, cheap exact size, repeatability/order, indexing, contiguity, reversal, membership, and output abilities. A traversal input alone does not promise size, replayability, or a Slice. Interface names, refinement/law/cost rules, cursor consumption and yielded access, fallible/async protocols, dispatch, and conformance/coherence remain open. Existing mut/var grants do not create unsupported operations or authorize hidden iterator consumption.
 
 - Generic source syntax is explicitly deferred. Angle-bracket examples such as `Array<Float, 3>`, `List<Int>`, `Option<User>`, and `Result<T, E>` describe concepts only; they select neither declaration/application grammar nor a generic parameter mechanism. Type inputs and compile-time values are distinct concerns for the future review. Existing literal defaults and selected T ! E fallibility syntax retain their independent status. See [temporary generic notation](generic-notation.md).
 

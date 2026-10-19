@@ -1,0 +1,48 @@
+# Proposed collection capabilities
+
+Status: **protocol decomposition proposal, 2026-10-19**. Capability-based consumer APIs are selected as a direction. The names below, method requirements, refinement graph, complexity laws, and generic syntax are not selected.
+
+## Traversal is the minimum
+
+`Iterable<T>` provisionally means that an operation can obtain one forward traversal of T elements under an explicit access/consumption contract. Iterator/cursor state is separate from a reusable collection. A borrowed collection can often create local traversal state without mutating its elements; an existing one-shot cursor needs defined consumption or writable access.
+
+Do not require a length, indexes, a common allocation, or a reusable source for this minimum contract. Yielded owned values versus borrowed read access must remain typed and lifetime-correct. Neither a large element copy nor a heap iterator object follows merely from the abstraction.
+
+## Independent extra abilities
+
+- Sized: obtain an exact size under a documented cheap-cost requirement, without exhausting the source. A traversal estimate is a different operation. Collection length and a cursor's remaining count need distinct definitions.
+- Repeatable: create independent traversals while the source remains valid under its access contract. This does not promise a frozen snapshot across external mutation.
+- Ordered: promise the ordering property the algorithm needs, rather than relying on incidental provider traversal order. Its exact meaning must be specified.
+- `Indexed<T>`: access a valid logical index with a specified complexity contract. Linked-list indexing must not pretend to have constant-time random access.
+- `Contiguous<T>`: provide an appropriate bounded view over physically consecutive initialized elements. This would refine relevant size/index requirements; the exact graph remains open.
+- Reversible: traverse in reverse without silently buffering a one-shot stream. Its relationship to repeatability and cursor movement needs definition.
+- `Membership<T>`: answer a membership query under specified equality semantics, potentially using a provider's efficient lookup.
+- Insertion/output capabilities: accept elements into an appropriate destination. Ordered append, set insertion, indexed replacement, and arbitrary element mutation are different operations with different laws.
+
+These are composable requirements, not a proposed class-inheritance tree or a list of methods every collection must implement. For example, a set can be traversable and cheaply sized without being indexable or contiguous. A chunked sequence can provide fast logical indexing without one contiguous element region. A packed-bit representation need not expose addressable Bool slots merely because it supports logical indexing.
+
+## Consumer examples
+
+```text
+render_icons := fn(icons: Iterable<Icon>) {
+    loop icons as icon { render(icon); }
+}
+```
+
+This needs traversal only. A two-pass layout algorithm would additionally require repeatability; a preallocation algorithm needing a cheap exact count would require Sized as well. Requirement-composition syntax is intentionally not sketched yet, because generic and interface syntax are deferred.
+
+Do not count a one-shot source by traversing it and then quietly assume it can be restarted. Do not allocate a List merely to make an implementation pass a stronger signature unless the conversion is explicit in the API.
+
+## Conformance needs semantic and cost laws
+
+An implementation must satisfy behavior, element type/access, failure handling, and any stated cost promises. Providing methods with matching names is insufficient. A capability does not imply ownership of the elements or permission to mutate them. Exact method signatures and whether constraints carry complexity guarantees must be reviewed together.
+
+No blanket covariance of mutable or contiguous element storage follows from these interfaces. Plain-union value widening does not justify writing a new alternative into a narrower source or reinterpreting a different element stride. A logical adapting iterator might support conversions that a direct Slice cannot, under a separately defined conversion contract.
+
+## Integration with loops and providers
+
+List, array, slice, set, range, generated sources, and user implementations should conform to whichever contracts they can honestly provide. Existing loop source modes remain distinct: obtaining a collection traversal does not turn a Boolean guard into a stored sequence. Reverse/step adapters should preserve capabilities they can prove rather than force a standard provider representation.
+
+The Rust IntoIterator/Iterator distinction and C++ range refinements are useful references for separating traversal acquisition and stronger abilities. LiteScript's vocabulary and rules remain its own design. Sources: [Rust IntoIterator](https://doc.rust-lang.org/std/iter/trait.IntoIterator.html), [Rust Iterator](https://doc.rust-lang.org/std/iter/trait.Iterator.html), and [C++ range requirements](https://eel.is/c++draft/range.req).
+
+Related: [consumer abstractions](collection-abstractions.md), [collections and iterators](collections-and-iterators.md), [interfaces](composition-and-interfaces.md), and [sequence storage families](sequence-types.md).
