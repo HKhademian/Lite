@@ -70,6 +70,39 @@ Inference must respect explicit provider conformance, access, and lifetime rules
 
 Mutating caller data still requires declared mut access and an explicit caller grant; replacing caller storage still requires var. All escaping recoverable errors still need a declared error contract and explicit propagation. Traversing an existing one-shot cursor must obey its consumption contract. Parameter omission grants none of these effects automatically.
 
+## Inferred indexing for small scripts
+
+The user's beginner goal also applies to indexed operations. Names such as Indexed, Iterable, or Contiguous are design vocabulary and possible advanced contracts, not prerequisites for authoring an ordinary script.
+
+```text
+third_or_zero := fn(values) {
+    values[2] else {
+        0
+    }
+}
+
+third_or_zero([10, 20, 30]); /* 30 */
+third_or_zero([10]);         /* 0 */
+```
+
+Under the proposed generic requirement inference, values[2] establishes that this input needs supported positional indexing. The else handles the proposed recoverable bounds failure locally, so this function needs no escaping error declaration. For the illustrated Int inputs the result is Int. More generally, recovery retains the selected union of the element success type and fallback type; an omitted annotation does not force every provider's elements to become Int merely because the fallback is 0.
+
+A propagating version can declare only its result contract while leaving the input requirement inferred:
+
+```text
+third_required := fn(values): Int! {
+    values[2]!
+}
+```
+
+Here the declared success type additionally constrains the returned element to Int, and the declared general Error contract must cover the indexing error. Parameter omission does not infer an undeclared escaping error. The ordinary explicit grant rules still apply to any caller mutation or replacement.
+
+Compatible arrays, lists, slices, and custom indexable providers can satisfy the inferred input requirement. A traversal-only set or generator is rejected at the call with a concrete diagnostic such as "This argument does not support positional indexing." Do not silently enumerate, sort, buffer, or copy it to make indexing available. No particular index complexity follows from hiding a requirement name; cost laws still need their contract.
+
+The earlier conversation's Indexed<Int> example expressed the semantic requirement, not a mandatory beginner annotation. A body that only loops infers a weaker traversal requirement and can still accept suitable sets. The required operations are derived from the definition and checked at each call, rather than inferred as one concrete List type from its first caller.
+
+This proposal does not silently strengthen an explicitly complete public traversal-only contract when its implementation adds indexing. Inferred generic functions, expected callable types, explicit complete constraints, and public-signature stability still require a generalization policy. The [T] shorthand's meaning also remains open; this example requires no new indexable keyword or capability punctuation.
+
 ## Could a short collection annotation help?
 
 An element-oriented annotation is a useful alternative to evaluate:

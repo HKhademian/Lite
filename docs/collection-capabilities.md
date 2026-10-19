@@ -2,6 +2,8 @@
 
 Status: **protocol decomposition proposal, 2026-10-19**. Capability-based consumer APIs are selected as a direction. The names below, method requirements, refinement graph, complexity laws, and generic syntax are not selected.
 
+These names explain semantic requirements, not mandatory annotations for beginner scripts. The [inferred-indexing proposal](collection-inference.md#inferred-indexing-for-small-scripts) derives positional-access requirements from ordinary values[index] syntax in an unannotated function parameter. Explicit published contracts and inference boundaries remain separate decisions.
+
 ## Traversal is the minimum
 
 `Iterable<T>` provisionally means that an operation can obtain one forward traversal of T elements under an explicit access/consumption contract. Iterator/cursor state is separate from a reusable collection. A borrowed collection can often create local traversal state without mutating its elements; an existing one-shot cursor needs defined consumption or writable access.
