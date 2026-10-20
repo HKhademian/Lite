@@ -71,6 +71,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [optional lambda signatures](functions.md#optional-lambda-signatures): `(n: Int): Int { ... }` and independently optional annotations under context, with fully annotated named inputs/results providing an independent signature. Retain contextual empty-header semantics; independent empty-header arity and broader inference remain open. Typed lambdas overlap with full `fn` syntax; no removal of that form is selected.
 
+- Began [context capture review](closures.md#capture-review), with official Rust/V/Odin documentation and Zig sorting source checked on 2026-10-21. No capture mode or notation is selected. Review the scalar snapshot/live-access probe first, then mutation, nonescape/lifetime guarantees, owned escaping environments, and callable storage. Inferred read-only names plus explicit authority/lifetime changes are a recommendation only. Keep temporary `mut`/`var` grants and tag control capabilities from silently escaping.
+
 ## Plan links
 
 | Relation | Plan / file |
