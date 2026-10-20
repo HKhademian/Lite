@@ -211,7 +211,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 | Loop completion | A single receiverless `then` is the selected direction; `.count` and `.value` come from the owning loop context. |
 | Loop value | Typed, zero-initialized `.value`; no-contributor T defaults to Unit unless an expected type overrides it; automatic Option accumulator and `.acc`/previous receivers are retired. |
 | Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Abrupt-exit behavior and multi-branch `.condition` metadata remain open. |
-| Exits | Plain `continue`, `continue value`, `break`, and `break value` have distinct recorded rules; tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
+| Exits | Plain `continue`, `continue value`, `break`, and `break value` have distinct recorded rules. `break @tag [value]` explicitly targets an enclosing loop; untagged break still targets the nearest loop whether tagged or not. Tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
 | Initialization | All-zero storage is selected as a valid value for every type; exact mappings remain open. |
 | Lifecycle | Body-wide recovery, `defer`, resource scopes, and cleanup ordering are deferred. |
 

@@ -1,6 +1,6 @@
 # Control-flow exits
 
-Status: **tagged returns run the named target's completion and skip exited inner completion; bare/value loop exits selected; failure transfer and labeled contribution syntax remain open**.
+Status: **tagged returns run the named target's completion and skip exited inner completion; bare/value and explicitly targeted loop exits selected; failure transfer and labeled contribution-bearing continue remain open**.
 
 ## Templates
 
@@ -11,6 +11,8 @@ return @tag;
 return @tag value;
 break;
 break value;
+break @loop;
+break @loop value;
 continue;
 continue value;
 continue @loop;
@@ -48,6 +50,7 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
 - `break value`: commit a body value of type T, stop the nearest loop, and run then if present. No tag is required.
+- `break @loop [value]`: the same stop-and-complete operation, targeting the explicitly named enclosing loop. Adding a tag to a loop does not require changing an untagged `break`; it still targets the nearest loop.
 - `return @loop value`: commit a body value `T` to the named loop, stop it, and run that loop's `then` if present. Any inner constructs exited on the way skip their own `then` blocks.
 
 ```text
@@ -114,13 +117,13 @@ An operation-level handler inside a conditional branch can turn a returned error
 
 Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. These cases distinguish `then` result processing from cleanup, but do not settle transfer and cleanup behavior: panic unwinding and `finally` execution on failure remain open. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
 
-## Labeled continuation and break shorthand
+## Explicit loop targets
 
-`continue @loop` was retained for explicitly advancing an enclosing loop. A target that is an `if` or ordinary block cannot continue.
+`continue @loop` explicitly advances a named enclosing loop. A target that is an `if` or ordinary block cannot continue. `break @loop [value]` explicitly stops a named enclosing loop; an untagged `break` keeps targeting the nearest loop whether or not it has a tag.
 
 Break value commits its operand to .value, stops the nearest loop, and enters normal completion. Its operand has the body value type T, just like continue value; then may transform T into final result type R. Without then, the committed .value is the final result. Bare break performs the same stop/completion without replacing .value.
 
-The earlier documentation incorrectly made break value bypass then; that behavior is removed. A tagged return runs the named target's then, while constructs exited on the way skip their own then. The named break @tag value and contribution-bearing continue @tag value forms remain unselected.
+The earlier documentation incorrectly made break value bypass then; that behavior is removed. A tagged return runs the named target's then, while constructs exited on the way skip their own then. For a loop target, tagged `break` and tagged `return` both stop that loop and enter its completion; `break` is loop-specific, while `return` can target other supported constructs too. Whether `continue @tag value` commits to the named loop before advancing remains open.
 
 ```text
 status := loop numbers as number {

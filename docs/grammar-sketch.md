@@ -266,12 +266,12 @@ The tag scope includes its header, so a loop condition may reference initialized
 
 ```text
 return_exit := "return" ["@" identifier] [expression]
-break_exit := "break" [expression]
+break_exit := "break" ["@" identifier] [expression]
 continue_exit := "continue" [expression]
                | "continue" "@" identifier [expression]
 ```
 
-Break value commits a value of body type T, stops the nearest loop, and runs then if present. Bare break preserves .value and follows normal completion. Labeled contribution-bearing continuation remains a possibility whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
+Break value commits a value of body type T, stops the nearest loop, and runs then if present. Bare break preserves .value and follows normal completion. An optional `@tag` selects an enclosing loop explicitly; without it, break targets the nearest loop, tagged or untagged. A break target that is not a loop is invalid. Labeled contribution-bearing continuation remains a possibility whose final retention needs confirmation. The established targeted exit is `return @tag [value]`. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
 The [throw proposal](error-return-sugar.md) considers throw expression as shorthand for return .err(expression), with a required operand and the nearest function/closure as its target. This is not yet an adopted exit production; it would not introduce dynamic handler search or a tagged-throw form.
 

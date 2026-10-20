@@ -1,6 +1,6 @@
 # Loop examples: metadata-only state
 
-Status: **updated to the one-item-name, typed .value, and tagged-return completion rules, 2026-10-20; design examples, not compiler-verified execution**. As, continue value, bare/value break, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
+Status: **updated to the one-item-name, typed .value, and tagged-return completion rules, 2026-10-20; design examples, not compiler-verified execution**. As, continue value, bare/value break, explicitly targeted break, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
 ## Full worked loop
 
@@ -117,14 +117,14 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 @rows loop grid as row {
     @cells loop row as cell {
         if cell < 0 { continue @rows; }
-        if cell == 0 { break; }
+        if cell == 0 { break @rows; }
         visit(cell);
         report_position(@rows.index, @cells.index);
     }
 }
 ```
 
-Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result supplies T to the named construct and runs that target's then if present; any inner then blocks exited on the way are skipped. A target without then returns T directly. Plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops the nearest loop; `break @rows` stops the named outer loop. Both follow the selected loop's normal completion, and adding a tag to a loop does not change which loop bare break targets. Return @tag result supplies T to the named construct and runs that target's then if present; any inner then blocks exited on the way are skipped. A target without then returns T directly. Plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand and stops the selected loop before normal completion.
 
 Nested conditionals have their own result context; read-only conditional `.value` requires an explicit tag and is available only in that conditional's attached `then`. Use an explicit loop tag or captured local for outer metadata inside a conditional; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search. The optional item name is useful for lexical access inside such nested bodies.
 
