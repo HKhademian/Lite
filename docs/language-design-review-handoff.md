@@ -8,7 +8,7 @@ todos:
     status: completed
   - id: loop-inference
     content: Formalize loop body type T, result type R, and zero-initialized .value inference
-    status: in_progress
+    status: completed
   - id: conditional-context
     content: Formalize if result context, typed zero fallback, branch typing, conditional then syntax and result access, abrupt exits, and multi-branch condition metadata
     status: in_progress
@@ -20,7 +20,7 @@ todos:
     status: completed
   - id: next-foundation
     content: Review arithmetic fault boundaries: typed panic channel and typed else filters selected; exact triggers and target boundary remain open
-    status: in_progress
+    status: completed
 plans:
   requires: []
   blocks: []
@@ -41,6 +41,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - The user asked to keep `return @tag value` completion semantics open and compare more cases. The comparison now covers no `then`, same-type `then` with effects, T-to-R transformation, a transfer to an outer loop, and a non-loop target in [`control-flow.md`](control-flow.md).
 - The no-`then` search case shows that tagged-return candidates agree when `T = R`; its non-match path now uses the conditional's zero fallback.
 - The user selected the loop no-contributor policy: T defaults to `Unit`, and an expected type can override it. A `then` result independent of `.value` determines R but leaves T at its default.
+- Loop inference now distinguishes no-contributor paths from a circular `.value`-only contribution. With no `then`, the expected loop type constrains T; with `then`, the expected final type R reaches T only through a `.value` dependency. An independent `then` result determines R while a no-contributor T defaults to `Unit`. Full operator, generic, and targeted-result-only inference details remain open in [`loop-type-inference.md`](loop-type-inference.md).
 - Every conditional has a typed result initialized to zero; without a final `else`, no match returns zero(T). The search example therefore has no trailing `continue`; its unmatched `if` contributes `Option<User>.None` to the loop. Conditional result-field exposure as `.value` remains open. If conditional metadata is exposed, the selected lookup rule requires explicit `@tag.field`; untagged conditionals do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected instead of falling through to an outer context.
 - The user selected the conditional no-contributor default: when no normally completing arm constrains T, it defaults to `Unit`, and an expected type can override it.
 - The conditional review records a key interaction: a branch result flows to its parent expression. If the `if` ends a loop body, the loop commits that result. This fallback is a real branch value, not loop skip behavior; a false `if` can replace an earlier accumulator with zero. The user sees no ordinary use for exposing the conditional result as `.value` in a condition or branch, and proposes comparing the loop's `then` with a post-selection conditional result phase. Whether the clause exists, exposes `@tag.value`, or runs on abrupt exits remains open; `finally` still means lifecycle cleanup in the separate deferred review.
@@ -48,7 +49,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Since `Unit` has one inhabitant, the selected all-zero-valid rule makes `zero(Unit) = Unit`. The user proposes zero-sized physical representation; physical layout and foreign ABI lowering remain separate open details.
 - Steps 4 and 5 reconciled the loop metadata choices with current examples, grammar, decision ledger, and historical receiver pages. A local-link scan found no missing targets across the README and documentation pages.
 - Corrected the historical loop-recovery note so it no longer presents tagged-return bypass or all-exit cleanup as selected in [`loop-recovery.md`](loop-recovery.md).
-- The current working copy contains uncommitted edits to the control-flow, conditional, tag/context, loop-inference, pattern-context, decision-ledger, recovery, and handoff docs. Preserve them if continuing in a separate checkout.
+- The typed-filter recovery contract was reconciled and committed atomically as `eb41ba5`; the current checkout was clean before the loop-inference follow-up.
 
 ## Plan links
 

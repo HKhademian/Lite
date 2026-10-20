@@ -250,7 +250,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 
 ### 1. Loop contribution and construct-result inference
 
-Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. Complete inference for last-value loops, Unit actions, circular .value reads, targeted-result-only search loops, and optional results without nested wrapping. Implement a coherent inference specification for the selected no-then .value rule and any future nonzero initialization mechanism.
+Define body-result type T and final construct-result type R independently. The .value storage has T and is zero-initialized; it is not automatically Option<T>. A body whose only value-producing path is `.value` is circular and remains ambiguous without an independent type constraint; the no-contributor `Unit` default does not resolve it. Complete inference for last-value loops, Unit actions, targeted-result-only search loops, and optional results without nested wrapping. Implement a coherent inference specification for the selected no-then .value rule and any future nonzero initialization mechanism.
 
 When a loop has no contributing path and nothing else constrains T, T defaults to Unit; an expected type can override that default. Plain continue and bare break do not themselves contribute Unit; an action body that normally completes with Unit does. A `then` result independent of `.value` determines R but leaves T at its default. See [noncontributing loop paths](loop-type-inference.md#loops-with-no-contributing-path).
 

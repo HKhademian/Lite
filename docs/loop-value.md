@@ -46,6 +46,8 @@ For ordinary numeric T this gives 0, for String empty text, for Unit its unique 
 
 Zero initialization still needs a known T. A .value-only body can be typed from its destination, such as x: Long = loop source { .value }. Without a destination hint or another independent constraint, reading .value alone does not establish T; the compiler must not guess a type or union member. Representation mapping is type-directed, not an arbitrary runtime default choice.
 
+A `.value`-only body is a circular value-producing path, so the no-contributor `Unit` default does not resolve it. By contrast, a body whose reachable paths only use plain `continue` or bare `break` has no value-producing path; its `T` defaults to `Unit` unless an expected type reaches `T` through the loop result or a `.value` read in `then`.
+
 ## Completion and result types
 
 ```text

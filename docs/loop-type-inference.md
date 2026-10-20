@@ -1,6 +1,6 @@
 # Loop type inference from both directions
 
-Status: **destination-side expected types and body-side constraints selected by the user, 2026-10-19; full numeric/operator and inference algorithms open**.
+Status: **body type `T`, final result type `R`, destination-side expectations, and the no-contributor `Unit` default are selected; full numeric/operator and inference algorithms remain open**.
 
 ## Body and destination cooperate
 
@@ -28,6 +28,8 @@ The destination supplies the missing type: .value is Long, its initial value is 
 
 With no independent constraint, x := loop source { .value } remains ambiguous. Knowing that every type has a zero does not decide which type the programmer meant. Require ordinary type information rather than inventing a type or choosing an arbitrary union alternative.
 
+This is a circular contribution (`T` is constrained only by an expression whose type is also `T`), not a no-contributor loop. The `Unit` default applies only when there is no value-producing path; it must not silently resolve a self-referential `.value` tail.
+
 ## Completion can have a different result type
 
 ```text
@@ -41,6 +43,16 @@ label: String = loop numbers as number {
 Assume numbers has Int elements and format_total accepts Int and returns String. Here the body's value type T is Int while the final result R is String. The destination constrains R; then and its operations can transmit constraints to T. A String destination does not force an unrelated body accumulator to become String.
 
 When then simply returns .value, T and R are directly connected and the destination can constrain both. When then returns a constant unrelated to .value, the body still needs its own T constraints.
+
+The expected type reaches the type variable it constrains:
+
+```text
+body_value: Long = loop items { continue }
+then_value: Long = loop items { continue } then { .value }
+finished: String = loop items { continue } then { "Finished" }
+```
+
+In the first example there is no `then`, so the expected loop result constrains `T`. In the second, `then` reads `.value`, connecting `R` back to `T`. In the third, the expected type constrains only `R`; since the body has no contribution, `T` remains its `Unit` default. An independent `then` result must not choose the hidden `.value` type.
 
 ## Search loops and noncontributing paths
 
