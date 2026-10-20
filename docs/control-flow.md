@@ -123,7 +123,7 @@ then remains result processing, not an all-exit cleanup guarantee. A return to a
 
 An operation-level handler inside a conditional branch can turn a returned error or matching typed panic into a fallback value. If the handler and the rest of the branch complete with `T`, the conditional has its ordinary branch result and its selected `then` processes that result. For example, a failed `read_text()` recovered locally to `""` still gives a string result for a following normalization `then`.
 
-Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. Neither path runs the conditional's result-processing `then`; panic unwinding and `finally` execution on failure remain open. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
+Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. Neither path runs the conditional's result-processing `then`; during panic propagation, applicable `finally` blocks in exited scopes run before an outer matching handler. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
 
 ## Explicit loop targets
 
@@ -146,11 +146,11 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 ## Cleanup
 
-When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, or propagated recoverable error; it has no receiver for that outcome and does not transform it. The intended nested-cleanup order is from exited inner constructs toward the target. Which scopes attach `finally`, whether it runs during panic transfer, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
+When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. During language-managed panic propagation, exited scopes run their applicable `finally` blocks inner-to-outer before an outer matching handler. Which scopes attach `finally`, hard-abort behavior, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
 
 Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
 
-The [finally example](finally.md) proposes integrating cleanup with typed panic transfer while retaining inner-to-outer structured-exit cleanup. That extension and cleanup-failure precedence remain unselected. These structured-exit rules do not establish cleanup behavior during a panic. The separate [panic path](panics.md) still needs termination versus unwinding and cleanup guarantees.
+The [finally example](finally.md) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation, hard-abort behavior, and cleanup-failure precedence remain open. These rules do not require cleanup after a hard process abort.
 
 ## Notes
 

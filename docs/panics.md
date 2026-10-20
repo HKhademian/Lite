@@ -1,6 +1,6 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category; exact scope, triggers, execution behavior, and cleanup guarantees open**.
+Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. Language-managed panic propagation unwinds entered scopes and runs applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Exact scope, triggers, hard-abort behavior, and cleanup-failure precedence remain open**.
 
 ## Purpose
 
@@ -25,7 +25,7 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 ## Separate channels
 
 - Every escaping recoverable error must be covered by the function's declared error contract, including errors forwarded by postfix `!`.
-- Panics propagate implicitly through calls until an applicable recovery boundary or the unhandled-fault policy is reached. No ! or recoverable-error declaration is required for that transfer. The transfer mechanism and cleanup contract remain open.
+- Panics propagate implicitly through calls until an applicable recovery boundary or the unhandled-fault policy is reached. During language-managed propagation, each exited scope's applicable `finally` runs before transfer reaches the next outer matching handler. No ! or recoverable-error declaration is required for that transfer; implementation mechanism remains open.
 - Panics are not implicitly included in every recoverable error declaration.
 - The broad shorthand `T!` means `T ! Error` and still excludes the separate panic channel.
 - Postfix `!` extracts a Result or forwards its recoverable error; it does not assert success, trigger a panic, or catch a panic.
@@ -43,7 +43,7 @@ The [bounds/arithmetic policy review](checked-fault-policy.md) retains ordinary 
 
 ## Cleanup and state
 
-Returned recoverable errors follow the language's structured-exit cleanup rules. Panic behavior is not yet specified: the existence of a separate path does not establish whether it unwinds or terminates immediately, or whether `finally` runs.
+Returned recoverable errors follow the language's structured-exit cleanup rules. When a language-managed typed panic propagates toward an outer matching handler, it unwinds exited scopes and runs each applicable `finally` from inner to outer before reaching that handler. The cleanup extent and outcome when no panic handler matches remain open. A hard process abort is outside this guarantee. Precedence when cleanup itself fails while a panic is pending remains open.
 
 Recoverable errors do not imply automatic rollback of earlier mutations. Transactional recovery or state-restoration facilities would require separate contracts.
 
@@ -51,7 +51,7 @@ Recoverable errors do not imply automatic rollback of earlier mutations. Transac
 
 - Which invariant violations, arithmetic faults, and allocation failures can panic.
 - Explicit panic-trigger syntax and any payload type.
-- Termination, unwinding, and guarantees for `finally` or other cleanup.
+- The unhandled-fault policy when no typed panic handler matches, and cleanup-failure precedence while a panic is pending.
 - Whether an expression recovery boundary includes all executed arguments/callees or only operation-specific faults, and how safe recovery is guaranteed.
 - Interaction with foreign code, host runners, threads, and process termination.
 

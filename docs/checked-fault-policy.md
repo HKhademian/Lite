@@ -69,7 +69,7 @@ swap_if_out_of_order := fn(values: mut [Int], i: Int, j: Int) {
 
 This is a sorting step, not a complete sorting algorithm. Reads and writes use ordinary syntax without a Result marker on every access. Its public input visibly requests writable indexed-sequence access; the final conditional's normally completing assignment produces Unit, so its unmatched zero result is Unit too. The [Int] indexed-sequence direction is now accepted, and mut [Int] needs an actual writable indexed refinement supplied by the provider, not a fabricated setter. It does not require growth, contiguous storage, or one concrete List type.
 
-Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Applicable panic termination/capture/cleanup rules still need definition.
+Invalid i or j triggers the proposed safe bounds fault before invalid memory use. This is not a recoverable failure returned from this routine, so an ordinary successful Unit result needs no error annotation. A nonfallible result contract promises no escaping recoverable Result error; it is not a universal guarantee that the routine cannot fault. Language-managed typed panics unwind exited scopes and run applicable finally blocks before outer matching handlers; exact capture boundaries, hard aborts, and cleanup-failure precedence remain open.
 
 Algorithm invariants and range-based traversal can make indexes valid; a compiler can eliminate checks when proved safe. The source does not gain or lose ! markers depending on optimization success. Expected invalid positions, such as user-supplied requests that a program intends to recover from, should use the separately explicit checked operation. The later shared-recovery direction chooses attached else for local recovery, while its scope and transfer mechanism remain open. Result ! is unchanged.
 
@@ -89,7 +89,7 @@ The current recoverable-failure throw proposal remains shorthand for return .err
 
 ## General panic capture is a larger commitment
 
-Catching a panic through arbitrary calls needs a specified transfer mechanism and cleanup/invariant policy. It need not use hardware exceptions, but choosing return-like faults, stack unwinding, abort boundaries, or generated effect propagation has real consequences. Recovery does not roll back mutations already performed.
+Catching a panic through arbitrary calls needs an implementation transfer mechanism and an invariant policy. The selected language behavior unwinds entered scopes and runs applicable finally blocks before an outer matching handler. Implementations could use return-like faults, native stack unwinding, or generated effect propagation; each has real consequences. Recovery does not roll back mutations already performed.
 
 Rust separates direct indexing's possible panic from get returning Option. Its catch_unwind documentation discourages general try/catch use and states that aborting panics cannot be caught by that mechanism. Sources: [Rust Index](https://doc.rust-lang.org/std/ops/trait.Index.html), [slice get](https://doc.rust-lang.org/std/primitive.slice.html#method.get), and [catch_unwind](https://doc.rust-lang.org/std/panic/fn.catch_unwind.html).
 

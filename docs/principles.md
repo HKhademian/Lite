@@ -13,7 +13,7 @@ Provide a language that students can begin using without learning type annotatio
 - No universal `null`, `nil`, or `undefined` value.
 - Optional data through `Option`; recoverable failure through `Result`.
 - Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
-- A separate panic path, with its execution and cleanup contract still open.
+- A separate typed panic path that unwinds exited scopes and runs applicable `finally` blocks before outer matching handlers; no-handler policy, hard aborts, and cleanup-failure precedence remain open.
 - Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).
 - Minimal visibility and capability exposure by default.
 - Infer derived access type structure, keeping mathematical summaries such as A | var B | C out of routine code. Explicit type-side var in a function header declares caller replacement; local-only var belongs in the body. See [var access](var-access-qualifier.md) and [access ergonomics](slot-ergonomics.md).

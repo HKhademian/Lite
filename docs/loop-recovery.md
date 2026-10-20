@@ -81,7 +81,7 @@ The selected bare-break rule stops iteration without contribution and routes pre
 
 A panic during a local handler or operation finally is not handled again by that same operation handler. It may reach the surrounding iteration handler. A panic in iteration recovery or its finally may reach outer recovery; that outer handler abandons the loop rather than silently resuming it. A panic in outer recovery/finally travels farther outward. These examples assume no cleanup failure is competing with an already pending failure.
 
-Panic cleanup and cross-call capture still require their final contracts. Cleanup failure, partial construction, and dropped/retained contributions during abnormal cleanup remain open. `finally` has no pending-outcome receiver or transformation; when cleanup completes normally, it preserves the pending outcome. No rollback, automatic retry, or cleanup after a hard process abort is promised.
+Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler. Cross-call capture details, cleanup failure, partial construction, and dropped/retained contributions during abnormal cleanup remain open. `finally` has no pending-outcome receiver or transformation; when cleanup completes normally, it preserves the pending outcome. No rollback, automatic retry, or cleanup after a hard process abort is promised.
 
 ## Historical empty-hook proposal
 

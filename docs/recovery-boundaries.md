@@ -1,6 +1,6 @@
 # Whole-call and argument-level recovery
 
-Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the final panic-boundary rule remains under review. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
+Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the exact panic-capture boundary remains under review. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
 
 ## Result arguments require their own handling
 

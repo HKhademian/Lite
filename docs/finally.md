@@ -1,6 +1,6 @@
 # Finally: cleanup after completion or exit
 
-Status: **cleanup-only `finally` selected, 2026-10-20**. It has no pending-outcome receiver or transformation. When it runs and cleanup completes normally, the pending normal result, control-flow exit, or propagated recoverable error is preserved. Attachment grammar, panic cleanup, and cleanup-failure behavior remain open. The example below uses only Unit cleanup.
+Status: **cleanup-only `finally` and panic unwinding selected, 2026-10-20**. It has no pending-outcome receiver or transformation. When it runs and cleanup completes normally, the pending result, control-flow exit, propagated recoverable error, or typed panic is preserved. During language-managed panic propagation toward an outer matching handler, exited scopes' applicable `finally` blocks run inner-to-outer. Attachment grammar, no-handler policy, hard-abort behavior, and cleanup-failure behavior remain open. The example below uses only Unit cleanup.
 
 Body-wide special cleanup sections are now explicitly deferred for a joint [defer and resource-management review](deferred-cleanup-and-resources.md). The illustrations here do not finalize that feature or its syntax.
 
@@ -18,7 +18,7 @@ operation() else(failure) {
 }
 ```
 
-The proposed sequence is protected evaluation, optional recovery, then finally. When a finally hook runs and completes normally, it preserves the pending normal result, control-flow exit, or propagated recoverable error. It has no implicit receiver for that outcome and cannot transform it into another value or exit. Cleanup can still refer to ordinary lexical names in scope. Whether finally runs during panic transfer remains open.
+The proposed sequence is protected evaluation, optional recovery, then finally. When a finally hook runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic. It has no implicit receiver for that outcome and cannot transform it into another value or exit. Cleanup can still refer to ordinary lexical names in scope. Under this proposed same-scope ordering, a handler recovers before that scope's `finally`; if a panic escapes to an outer handler, exited inner scopes run their applicable `finally` blocks first. The handler's scope runs its own `finally` when that scope later exits.
 
 For reading or transforming a conditional's selected branch/zero result, the selected contract reuses loop `then`. Reserve `finally` for cleanup when leaving a scope. These clauses have different jobs: `then` can produce the construct's final result, while `finally` has no pending-outcome receiver and preserves the outcome when cleanup completes normally. Attachment and failure rules remain open. Whether both clauses may attach to one conditional, and in which order, remains open.
 
@@ -90,13 +90,13 @@ Each entered construct runs its own finally once when it is left, provided clean
 - Normal import: finish_quantity_read, finish_import, then finish_run.
 - Returned ReadError from read_quantity with successful local recovery: report, replacement quantity 1, finish_quantity_read, remaining import work, finish_import, then finish_run.
 - Panic in calculate_total with successful branch recovery: report_import_failure, finish_import, then finish_run. The operation's earlier finally has already run; it does not run again.
-- Panic from report_import_failure: finish_import while leaving that region, report_remaining_failure at the outer conditional boundary, then finish_run, under the proposed whole-conditional capture and panic-cleanup rules.
+- Panic from report_import_failure: finish_import while leaving that region, then the example's outer recovery, followed by finish_run. The whole-conditional recovery tail is historical and superseded; this trace illustrates the selected cleanup before an outer matching handler.
 - Normal preview: finish_preview, then finish_run. Import/help cleanup never runs.
-- Panic in preview after read_text recovery has completed: finish_preview while leaving the region, report_remaining_failure, then finish_run, under that same proposed scope/cleanup policy.
+- Panic in preview after read_text recovery has completed: finish_preview while leaving the region, then the example's outer recovery, followed by finish_run. The whole-conditional recovery tail is historical and superseded; inner-to-outer panic cleanup is selected.
 - Panic while evaluating a condition, before any branch region begins: report_remaining_failure, then finish_run. No branch cleanup is active.
 - Early function return or explicit Result ! propagation inside an entered branch: run entered inner cleanup and finish_run while leaving; failure handlers do not intercept these return exits.
 
-The structured-return cleanup intent already exists. Running finally during language-managed panic transfer is a proposed extension requiring a transfer/cleanup implementation; the trace must not be read as a currently selected guarantee for every panic or abort.
+Language-managed typed panics run applicable `finally` blocks for exited scopes before reaching an outer matching handler. The transfer implementation remains open. Hard process aborts are outside this cleanup guarantee.
 
 ## Full loop counterpart
 
@@ -114,7 +114,7 @@ Cleanup is not rollback: it does not undo earlier successful writes or side effe
 
 The user selected cleanup-only behavior: `finally` has no implicit receiver or completion descriptor and cannot transform the pending outcome. When cleanup completes normally, the protected expression's value, control-flow exit, or propagated recoverable error remains pending. The quantity binding therefore receives the successful/read-recovery Int, not the cleanup's Unit. Ordinary lexical names remain available to cleanup.
 
-If cleanup itself exits abruptly or fails while another outcome is pending, precedence remains open. Panic cleanup and attachment syntax also remain unresolved; the cleanup-only decision does not imply a panic-unwinding guarantee.
+If cleanup itself exits abruptly or fails while another outcome is pending, precedence remains open. Attachment syntax and behavior on hard process abort also remain unresolved.
 
 Any Result-producing operation inside cleanup still requires its own explicit handling or valid forwarding under the eventual cleanup policy. Neither finally nor a surrounding outer handler automatically unwraps an ignored Result.
 

@@ -114,7 +114,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): selected typed filtering, unmatched-channel behavior, and open broad receiver representation.
-- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, pending evaluation scope, broad receiver typing, cleanup, and runtime design.
+- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, pending evaluation scope, broad receiver typing, no-handler policy, cleanup-failure behavior, and runtime design.
 - [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, and cleanup policies.
 - [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, and cleanup still open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
@@ -146,7 +146,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
 - [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
-- [Finally](finally.md): selected cleanup-only behavior with preserved pending outcomes, plus open attachment, panic, and cleanup-failure rules.
+- [Finally](finally.md): selected cleanup-only behavior and inner-to-outer cleanup before an outer matching panic handler, plus open attachment, no-handler, hard-abort, and cleanup-failure rules.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
 - [Loop completion](loop-completion.md): receiverless `then`, its result and metadata, and its distinction from deferred cleanup.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.

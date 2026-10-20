@@ -205,7 +205,7 @@ The final `Unit` represents success without data.
 
 ## Failure boundaries
 
-Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
+Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Language-managed typed-panic propagation unwinds exited scopes and runs applicable `finally` blocks before an outer matching handler. Exact triggers, capture boundaries, hard-abort behavior, and cleanup-failure precedence remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
 
 Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The selected target-level `else` can recover a matching typed panic at the operation. Unmatched panics still propagate implicitly; returned errors still require explicit handling or `!`. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width `%` minimum-value/`-1` case. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
 

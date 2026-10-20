@@ -63,7 +63,7 @@ inspect_file := fn(path: String) {
 }
 ```
 
-Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; finally placement and panic-cleanup behavior remain under review.
+Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; finally placement remains under review. During language-managed panic propagation, applicable `finally` blocks run for exited scopes before an outer matching handler.
 
 ### How it executes
 
@@ -72,9 +72,9 @@ Assume read_text returns String ! ReadError and all other shown helpers return U
 3. If work completes normally, skip the body recovery section.
 4. If a supported typed panic escapes an operation-local handler while the work region is active, stop remaining work and enter the body recovery section once.
 5. After work or recovery finishes, run the proposed body-owned finally. Structured early exits run applicable cleanup without being intercepted as failures.
-6. A new panic in recovery/finally goes outward; these sections do not catch themselves. Cleanup failure competing with an existing failure still needs a separate policy.
+6. A new panic in recovery/finally goes outward; these sections do not catch themselves. Applicable `finally` blocks in exited scopes run before an outer matching handler. Cleanup failure competing with an existing failure still needs a separate policy.
 
-If prepare panics, the read and inspect do not execute. If the read returns .err, its local fallback supplies "Unavailable" and inspect still runs. If inspect panics, the body handler runs. In each ordinary trace, finally follows under the proposed cleanup rule. No retry or rollback occurs.
+If prepare panics, the read and inspect do not execute. If the read returns .err, its local fallback supplies "Unavailable" and inspect still runs. If inspect panics, the body handler runs after applicable inner-scope cleanup. No retry or rollback occurs.
 
 ### The same body layout in an if branch
 
@@ -131,6 +131,6 @@ For a literal body-only region, the condition/header/source/subject is evaluated
 
 A loop body-owned handler naturally raises a per-iteration versus whole-loop question. An iteration failure must not silently continue, break, discard accumulator state, or retry; the handler's normal completion/explicit exit needs a defined contribution rule. Whole-function recovery would be active once per invocation rather than once per loop entry. These scopes and active-handler entry points still require confirmation.
 
-The user correction names recovery placement. It does not independently move or retire finally hooks or specify panic cleanup. Cleanup-only `finally` has no pending-outcome receiver or transformation; placement, ordering, cleanup failures, and Result-forwarding interactions remain separate decisions.
+The user correction names recovery placement. It does not independently move or retire `finally` hooks. Cleanup-only `finally` has no pending-outcome receiver or transformation; language-managed panic propagation runs applicable exited-scope `finally` blocks before outer recovery. Placement, ordering beyond that rule, cleanup failures, and Result-forwarding interactions remain separate decisions.
 
 Related: [operation recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [Result handling](result-and-errors.md), [conditionals](conditionals.md), [loops](loops.md), [match](match.md), and [finally](finally.md).

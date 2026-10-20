@@ -19,7 +19,7 @@ Panics propagate implicitly without ! or a Result error declaration, as explicit
 
 Typed panic information remains separate from a returned T ! E outcome. It does not automatically add every possible panic category to every function's declared recoverable error type. The proposed throw error continues to mean return .err(error), not a panic trigger.
 
-Typed target-level `else` filters are selected for local panic recovery. A matching handler handles only its named category; unmatched panics propagate implicitly. The supported evaluation scope, transfer mechanism, cleanup, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
+Typed target-level `else` filters are selected for local panic recovery. A matching handler handles only its named category; unmatched panics propagate implicitly and run applicable exited-scope `finally` blocks before an outer matching handler. The supported evaluation scope, transfer implementation, no-handler policy, cleanup-failure rules, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
 
 If a checked operation converts a selected fault into a returned error, the resulting Result and any outward propagation obey the existing explicitly declared error contract. Which panic information is retained by such conversion remains open.
 

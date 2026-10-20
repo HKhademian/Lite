@@ -107,7 +107,7 @@ label: String = @notice if should_warn {
 
 Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; `then` sees that result and produces the final `String`. The explicit tag is required for conditional metadata access.
 
-`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result; cleanup behavior remains in the lifecycle review. Keep `finally` for cleanup when leaving a scope. Its exact placement and failure rules remain deferred, including whether both clauses may attach to one conditional and their ordering.
+`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result, so its result-processing `then` is skipped. During language-managed panic propagation, applicable `finally` blocks in exited scopes run inner-to-outer before an outer matching handler. Exact attachment and cleanup-failure rules remain deferred, including whether both clauses may attach to one conditional and their ordering.
 
 ### Interaction with loop bodies
 

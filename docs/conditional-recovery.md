@@ -138,7 +138,7 @@ A similar nested region could appear in an else-if or false body. An ordinary ca
 
 A recovery body can contain ordinary operation-level recovery too. If its own operation failure is handled locally, it can continue; otherwise a panic travels farther outward. It never restarts the same recovery body automatically.
 
-The [full finally example](finally.md#full-conditional-example) adds operation, selected-branch, and whole-conditional cleanup. Proposed ordering is protected evaluation, optional recovery, then finally; cleanup preserves the pending result/exit when it completes normally. Cleanup-only behavior with no pending-outcome receiver is selected. Panic cleanup, cleanup failure, ordering, and attachment remain open. The conditional's final handler does not protect its own handler or finally body.
+The [full finally example](finally.md#full-conditional-example) adds operation, selected-branch, and whole-conditional cleanup. Proposed ordering is protected evaluation, optional recovery, then finally; cleanup preserves the pending result/exit when it completes normally. Cleanup-only behavior with no pending-outcome receiver is selected. Applicable `finally` blocks run inner-to-outer when a language-managed panic propagates toward an outer matching handler. Cleanup failure, attachment, and other ordering details remain open. The conditional's final handler does not protect its own handler or finally body.
 
 ## Result errors remain explicit
 

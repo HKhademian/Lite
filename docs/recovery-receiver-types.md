@@ -127,6 +127,6 @@ A public receiver contract must remain stable across inlining and separate compi
 - Direct E | Panic versus a tagged Failure<E> wrapper as the public receiver.
 - The typed Panic carrier/category model and any failure-origin metadata API.
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
-- Panic boundary scope, cleanup, transfer mechanism, and any explicit resume operation.
+- Panic boundary scope, transfer mechanism, cleanup-failure policy, and any explicit resume operation; language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.
 
 Related: [shared expression recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [typed panics](typed-panics.md), [Result errors](result-and-errors.md), [receiver clauses](receiver-clauses.md), and [union matching](union-patterns.md).
