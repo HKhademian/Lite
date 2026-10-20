@@ -1,6 +1,6 @@
 # Tags and contexts
 
-Status: **prefix position, explicit access, shadowing, no-fallback loop context, and explicit-tag conditional result access restricted to its attached `then` selected 2026-10-20; multi-branch condition metadata remains open**.
+Status: **prefix position, explicit access, shadowing, no-fallback loop context, and explicit-tag conditional result access restricted to its attached `then` selected 2026-10-20; conditional condition metadata is not exposed**.
 
 ## Purpose
 
@@ -67,9 +67,9 @@ The explicit `@users.count` addresses the loop from inside the conditional. Body
 
 Loop tags expose `.item`, `.index`, `.count`, and `.value`, and identify loop exits or continuation targets. Conditional tags identify the conditional context and can identify an exit target, but do not expose loop counters or allow continuation. A tagged conditional's read-only `.value` is available only inside its attached `then`; it is not available in conditions or branch bodies.
 
-For a simple conditional, `.condition` denotes the already evaluated condition. It does not reevaluate a function call. Multi-branch condition metadata is still open.
+Conditional tags do not expose condition metadata. This applies to simple conditions and `else if` chains; `then` can read the selected result through `@tag.value` but cannot inspect or reevaluate the tests.
 
-The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. This result-processing clause is not an all-exit cleanup guarantee; abrupt-exit behavior and multi-branch `.condition` metadata remain open.
+The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. This result-processing clause is not an all-exit cleanup guarantee; abrupt-exit behavior remains open.
 
 ## Scope and shadowing
 
@@ -85,7 +85,7 @@ The earlier prohibition on active tag shadowing is superseded.
 
 ## Availability and implementation
 
-Count and the typed zero-initialized loop value exist before the first condition check. A conditional's zero-initialized result likewise exists before its first condition is evaluated, but it is readable only in an attached `then` through explicit `@tag.value`. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then. After zero entries, then exposes typed zero placeholders for item/index with count 0. Item/index are not available in source/condition evaluation before an entry. Loop count/value are also readable in conditions and then. Abrupt-exit behavior for conditional `then` and multi-branch `.condition` metadata remain open.
+Count and the typed zero-initialized loop value exist before the first condition check. A conditional's zero-initialized result likewise exists before its first condition is evaluated, but it is readable only in an attached `then` through explicit `@tag.value`. Conditional condition metadata is not exposed. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then. After zero entries, then exposes typed zero placeholders for item/index with count 0. Item/index are not available in source/condition evaluation before an entry. Loop count/value are also readable in conditions and then. Abrupt-exit behavior for conditional `then` remains open.
 
 At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not by itself retain an item or iteration-local references, grant metadata writes, or allow a tag to escape its construct. Reading last-item metadata in then requires that used item to remain valid.
 

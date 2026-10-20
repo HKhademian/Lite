@@ -10,7 +10,7 @@ todos:
     content: Formalize loop body type T, result type R, and zero-initialized .value inference
     status: completed
   - id: conditional-context
-    content: Review conditional then behavior on abrupt exits and define multi-branch condition metadata
+    content: Review conditional then behavior on abrupt exits; keep condition metadata hidden
     status: in_progress
   - id: uniform-loop-context
     content: Review .item and .index behavior for Boolean and unconditional loops
@@ -66,7 +66,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - [`README.md`](README.md) — document status and reading order.
 - [`decisions-and-open-questions.md`](decisions-and-open-questions.md) — current selected rules and priority open contracts.
 - [control-flow.md](control-flow.md) — selected tagged-return completion and loop exits.
-- [`conditionals.md`](conditionals.md) and [`tags-and-contexts.md`](tags-and-contexts.md) — selected conditional result/zero rules and `then` read phase, with abrupt exits and multi-branch `.condition` metadata still open.
+- [`conditionals.md`](conditionals.md) and [`tags-and-contexts.md`](tags-and-contexts.md) — selected conditional result/zero rules and `then` read phase; condition metadata is hidden, and abrupt exits remain open.
 - [`loop-value.md`](loop-value.md) and [`loop-type-inference.md`](loop-type-inference.md) — T/R inference questions.
 - [`zero-initialization.md`](zero-initialization.md) — selected all-zero-valid-value direction and unresolved mappings.
 - [`deferred-cleanup-and-resources.md`](deferred-cleanup-and-resources.md) — lifecycle topics explicitly deferred for a joint review.
@@ -128,12 +128,13 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Keep the no-match zero result distinct from `continue`; show that a final unmatched conditional in a loop body can overwrite its accumulator.
 - Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep the expected-type and missing-`else` fallback rules coherent.
 - Preserve the selected explicit-tag lookup rule: conditional `.value` requires `@tag.value` and is readable only inside the attached `then`; untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
-- Apply the selected target-completion rule to conditional targets. Keep propagated errors and panics separate, do not assert implementation behavior, reserve finally for cleanup, and define how .condition represents else-if chains without treating unevaluated conditions as false.
+- Apply the selected target-completion rule to conditional targets. Keep propagated errors and panics separate, do not assert implementation behavior, and reserve finally for cleanup. Preserve the choice to hide condition metadata; do not reevaluate conditions in then.
 
 **Acceptance:**
 
 - The normal result, unmatched path, expected type, explicit `else`, and context field availability have one coherent contract.
 - The selected `then` transforms the branch/zero result T to R, and conditional `@tag.value` is inaccessible outside that block.
+- No condition metadata is exposed for simple conditions or `else if` chains.
 - Tagged-return documentation consistently states that the payload supplies T, the named target's then produces R when present, and exited inner then blocks are skipped.
 - Examples distinguish conditional zero fallback from skipped loop contributions and do not imply automatic `Option` wrapping.
 
@@ -211,7 +212,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 | Unit | One inhabitant and `zero(Unit) = Unit` follow the selected rules; the user proposes zero-sized physical storage. ABI lowering remains open. |
 | Loop completion | A single receiverless `then` is the selected direction; `.count` and `.value` come from the owning loop context. |
 | Loop value | Typed, zero-initialized `.value`; no-contributor T defaults to Unit unless an expected type overrides it; automatic Option accumulator and `.acc`/previous receivers are retired. |
-| Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Abrupt-exit behavior and multi-branch `.condition` metadata remain open. |
+| Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Condition metadata is hidden; abrupt-exit behavior remains open. |
 | Exits | Plain `continue`, `continue value`, `continue @tag [value]`, `break`, `break value`, and `break @tag [value]` target the nearest or explicitly named loop. Contributions commit to that loop before advancing/stopping. Tagged return also targets ifs, general result blocks, or functions; plain return targets the nearest function. Tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
 | Initialization | All-zero storage is selected as a valid value for every type; exact mappings remain open. |
 | Lifecycle | Body-wide recovery, `defer`, resource scopes, and cleanup ordering are deferred. |

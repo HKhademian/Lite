@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; abrupt-exit behavior and multi-branch condition metadata remain open**.
+Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden, and abrupt-exit behavior remains open**.
 
 ## Template
 
@@ -272,14 +272,13 @@ The earlier [conditional recovery investigation](conditional-recovery.md) is ret
 
 ```text
 @access if permitted() {
-    audit(@access.condition);
     grant_access()
 } else {
     deny_access()
 }
 ```
 
-The tag names the entire conditional. `.condition` denotes its evaluated condition in the simple case and must not call it again. Metadata for an `else if` chain needs a more precise definition because not all conditions are evaluated.
+The tag names the entire conditional chain and can identify a tagged exit target. No `.condition` metadata is exposed, either for a simple condition or an `else if` chain. Conditions are evaluated only as needed for branch selection and are not reevaluated by `then`. If later logic needs branch identity, include that identity in the branch result `T`.
 
 The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. An attached `then` transforms that result to final type `R`; read-only access to `T` is available there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
 
