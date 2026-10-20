@@ -65,6 +65,16 @@ Multiple typed filters on one target are processed in declaration order. Each cl
 
 When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. For `A & B`, A then B gives `R2`, while B then A gives `R1`. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates.
 
+This is sequential recovery over the previous expression's outcome:
+
+```text
+x1 := op();                              // T ! (A | B)
+x2 := x1 else (A) { R1 };               // (T | R1) ! B
+x3 := x2 else (B) { R2 };               // T | R1 | R2
+```
+
+The chained spelling `op() else (A) { R1 } else (B) { R2 }` has the same left-to-right effect. If the pending failure contains both A and B, the first recovery consumes A but leaves B pending; the second recovery consumes B, so `R2` is the final value. Reversing the clauses leaves A for the last recovery, so `R1` is final.
+
 If a typed filter does not match the current remainder, its body does not run and the next typed filter is considered. After the chain, an unmatched panic follows the default implicit propagation rule. An unmatched returned error remains subject to explicit handling: keep it as a `Result` when the target is used as outcome data, handle it with another defined form, or propagate it with postfix `!`. For example:
 
 ```text
