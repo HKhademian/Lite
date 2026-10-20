@@ -10,7 +10,7 @@ todos:
     content: Formalize loop body type T, result type R, and zero-initialized .value inference
     status: completed
   - id: conditional-context
-    content: Formalize if result context, typed zero fallback, branch typing, conditional then syntax and result access, abrupt exits, and multi-branch condition metadata
+    content: Review conditional then behavior on abrupt exits and define multi-branch condition metadata
     status: in_progress
   - id: uniform-loop-context
     content: Review .item and .index behavior for Boolean and unconditional loops
@@ -42,9 +42,9 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - The no-`then` search case shows that tagged-return candidates agree when `T = R`; its non-match path now uses the conditional's zero fallback.
 - The user selected the loop no-contributor policy: T defaults to `Unit`, and an expected type can override it. A `then` result independent of `.value` determines R but leaves T at its default.
 - Loop inference now distinguishes no-contributor paths from a circular `.value`-only contribution. With no `then`, the expected loop type constrains T; with `then`, the expected final type R reaches T only through a `.value` dependency. An independent `then` result determines R while a no-contributor T defaults to `Unit`. Full operator, generic, and targeted-result-only inference details remain open in [`loop-type-inference.md`](loop-type-inference.md).
-- Every conditional has a typed result initialized to zero; without a final `else`, no match returns zero(T). The search example therefore has no trailing `continue`; its unmatched `if` contributes `Option<User>.None` to the loop. Conditional result-field exposure as `.value` remains open. If conditional metadata is exposed, the selected lookup rule requires explicit `@tag.field`; untagged conditionals do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected instead of falling through to an outer context.
+- Every conditional has a typed result initialized to zero; without a final `else`, no match returns zero(T). The search example therefore has no trailing `continue`; its unmatched `if` contributes `Option<User>.None` to the loop. The user selected a post-selection `then` that receives the branch/zero result T and produces final R; read-only `@tag.value` is available only inside that `then`. Untagged conditionals do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected instead of falling through to an outer context.
 - The user selected the conditional no-contributor default: when no normally completing arm constrains T, it defaults to `Unit`, and an expected type can override it.
-- The conditional review records a key interaction: a branch result flows to its parent expression. If the `if` ends a loop body, the loop commits that result. This fallback is a real branch value, not loop skip behavior; a false `if` can replace an earlier accumulator with zero. The user sees no ordinary use for exposing the conditional result as `.value` in a condition or branch, and proposes comparing the loop's `then` with a post-selection conditional result phase. Whether the clause exists, exposes `@tag.value`, or runs on abrupt exits remains open; `finally` still means lifecycle cleanup in the separate deferred review.
+- The conditional review records a key interaction: a branch result flows to its parent expression. If the `if` ends a loop body, the loop commits that result. This fallback is a real branch value, not loop skip behavior; a false `if` can replace an earlier accumulator with zero. Conditional `then` and its `@tag.value` read phase are selected; whether tagged returns, propagated errors, or panics enter or bypass it remains open. `finally` still means lifecycle cleanup in the separate deferred review.
 - The user selected the uniform loop-item interface: active-body `.item` is `Unit` for Boolean and unconditional loops. If no body ran, `then` exposes typed zero placeholders for `.item` and `.index == 0`, with `.count == 0` distinguishing them. Source/condition evaluation still cannot read an item before a body entry.
 - Since `Unit` has one inhabitant, the selected all-zero-valid rule makes `zero(Unit) = Unit`. The user proposes zero-sized physical representation; physical layout and foreign ABI lowering remain separate open details.
 - Steps 4 and 5 reconciled the loop metadata choices with current examples, grammar, decision ledger, and historical receiver pages. A local-link scan found no missing targets across the README and documentation pages.
@@ -64,7 +64,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - [`README.md`](README.md) — document status and reading order.
 - [`decisions-and-open-questions.md`](decisions-and-open-questions.md) — current selected rules and priority open contracts.
 - [`control-flow.md`](control-flow.md) — tagged-return comparison and selected break distinctions.
-- [`conditionals.md`](conditionals.md) and [`tags-and-contexts.md`](tags-and-contexts.md) — selected conditional result/zero rules, proposed shared `then` spelling, open result-field read phase, abrupt exits, and multi-branch `.condition` contract.
+- [`conditionals.md`](conditionals.md) and [`tags-and-contexts.md`](tags-and-contexts.md) — selected conditional result/zero rules and `then` read phase, with abrupt exits and multi-branch `.condition` metadata still open.
 - [`loop-value.md`](loop-value.md) and [`loop-type-inference.md`](loop-type-inference.md) — T/R inference questions.
 - [`zero-initialization.md`](zero-initialization.md) — selected all-zero-valid-value direction and unresolved mappings.
 - [`deferred-cleanup-and-resources.md`](deferred-cleanup-and-resources.md) — lifecycle topics explicitly deferred for a joint review.
@@ -120,16 +120,17 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 **Actions:**
 
-- Preserve the selected rule: every conditional has a result context, optionally named by `@tag`, with a typed zero-initialized result. Whether that result is exposed as `.value` metadata remains open.
+- Preserve the selected rule: every conditional has a result context, optionally named by `@tag`, with a typed zero-initialized result. Its attached `then` transforms T to final R, and read-only `@tag.value` is available only inside that block.
 - Compare simple false conditions, pattern mismatch, guarded `else if` chains, explicit final `else`, `Option<T>` zero, Unit action bodies, and branches that exit abruptly.
 - Keep the no-match zero result distinct from `continue`; show that a final unmatched conditional in a loop body can overwrite its accumulator.
 - Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep the expected-type and missing-`else` fallback rules coherent.
-- Preserve the selected explicit-tag lookup rule if conditional metadata is exposed: fields require `@tag.field`, untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
-- Compare keeping the conditional result internal with exposing it as `.value` only to an attached post-selection clause. The review recommends reusing loop `then` for normal result processing and reserving `finally` for cleanup, but the conditional clause, field exposure, read phase, and abrupt-exit behavior remain open. Define how `.condition` represents an `else if` chain without claiming that unevaluated conditions were false.
+- Preserve the selected explicit-tag lookup rule: conditional `.value` requires `@tag.value` and is readable only inside the attached `then`; untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
+- Compare tagged returns, propagated errors, and panics against the selected conditional `then` contract without asserting unverified behavior. Reserve `finally` for cleanup. Define how `.condition` represents an `else if` chain without claiming that unevaluated conditions were false.
 
 **Acceptance:**
 
 - The normal result, unmatched path, expected type, explicit `else`, and context field availability have one coherent contract.
+- The selected `then` transforms the branch/zero result T to R, and conditional `@tag.value` is inaccessible outside that block.
 - Examples distinguish conditional zero fallback from skipped loop contributions and do not imply automatic `Option` wrapping.
 
 ### Step 4 — uniform-loop-context
@@ -206,7 +207,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 | Unit | One inhabitant and `zero(Unit) = Unit` follow the selected rules; the user proposes zero-sized physical storage. ABI lowering remains open. |
 | Loop completion | A single receiverless `then` is the selected direction; `.count` and `.value` come from the owning loop context. |
 | Loop value | Typed, zero-initialized `.value`; no-contributor T defaults to Unit unless an expected type overrides it; automatic Option accumulator and `.acc`/previous receivers are retired. |
-| Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` is proposed as a possible result read/transform phase; whether it exists, exposes tagged `.value`, or handles abrupt exits remains open. Multi-branch `.condition` metadata remains open. |
+| Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Abrupt-exit behavior and multi-branch `.condition` metadata remain open. |
 | Exits | Plain `continue`, `continue value`, `break`, and `break value` have distinct recorded rules; tagged-return interaction with `then` remains open. |
 | Initialization | All-zero storage is selected as a valid value for every type; exact mappings remain open. |
 | Lifecycle | Body-wide recovery, `defer`, resource scopes, and cleanup ordering are deferred. |

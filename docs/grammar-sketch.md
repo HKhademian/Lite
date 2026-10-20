@@ -173,7 +173,8 @@ This is a type-inference/default rule, not a complete sequence production. Empty
 conditional := [tag] "if" condition block
                { "else" "if" condition block }
                [ "else" block ]
-               [ finally_clause ]
+               [ conditional_then ]
+conditional_then := "then" block
 
 condition := boolean_expression | and_condition
 and_condition := condition_operand { "and" condition_operand }
@@ -190,7 +191,7 @@ typed_binding_pattern := identifier ":" type
 
 The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Bare .Some in a pattern is now selected to test only the tag with no payload binding; arbitrary refutable receiver patterns still need a mismatch contract. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
-The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). The selected conditional grammar has no trailing `then` or `endif`; reusing loop `then` after the complete chain is under review as a post-selection result phase, not a selected production.
+The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). The selected `then` follows the complete chain and receives the selected branch or zero result of type `T`; its tail expression yields final type `R`. A tagged conditional's `.value` is readable only inside this block. The relative placement of an attached `finally`, abrupt-exit behavior, and multi-branch `.condition` metadata remain open; `endif` is superseded.
 
 The selected and chain evaluates operands in order and exposes successful pattern bindings to later operands and the body, never the failed branch. The condition operand placeholders exclude ungrouped top-level logical separators; nested grouping can contain ordinary Boolean and/or expressions. In `Some(user) := find_user(id) and user.age > 14`, the pattern source ends before and. Full productions remain incomplete; binding-producing or/not, rebinding across separate operands, and general type-test precedence are not selected here. Repeated names within each individual pattern use selected ordered shadowing. See [conditional pattern chains](condition-chains.md).
 
@@ -255,7 +256,7 @@ context_access := "." field
                 | "@" identifier "." field
 ```
 
-Named tags are prefixes on the construct. Leading-dot metadata shorthand applies to the current loop context and never searches outward; inside a conditional, use an explicit loop tag. Any conditional metadata that is exposed requires `@tag.field`; the result-field exposure decision remains open. Ambiguous leading-dot metadata reads are rejected. Body braces belong to their construct and do not add another wrapper context.
+Named tags are prefixes on the construct. Leading-dot metadata shorthand applies to the current loop context and never searches outward; inside a conditional, use an explicit loop tag. Conditional result `.value` requires `@tag.value` and is readable only inside the attached `then`; ambiguous leading-dot metadata reads are rejected. Body braces belong to their construct and do not add another wrapper context.
 
 Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; pattern_list and full enum productions remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
 

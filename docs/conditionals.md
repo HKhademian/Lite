@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, and explicit-tag conditional metadata lookup selected 2026-10-19; a conditional `then` clause, result-field exposure, abrupt-exit behavior, and multi-branch condition metadata remain open**.
+Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; abrupt-exit behavior and multi-branch condition metadata remain open**.
 
 ## Template
 
@@ -11,10 +11,12 @@ if condition {
     other_body
 } else {
     fallback_body
+} then {
+    result_body
 }
 ```
 
-All branch bodies require braces. The selected conditional form has no trailing `then` or `endif`. Reusing loop `then` after a complete conditional is a proposal for post-selection result processing; its grammar is not selected. The old `endif` and unblocked single-statement forms are superseded.
+All branch bodies require braces. A `then` block may follow the complete conditional chain, after its optional final `else`; it processes the selected branch result or the missing-`else` zero result. The old `endif` and unblocked single-statement forms are superseded.
 
 ## Action example
 
@@ -51,7 +53,7 @@ price := if premium {
 
 - Ordinary expression conditions require `Bool`; pattern and type-test conditions succeed by matching. There is no implicit truthiness.
 - Normally completing value branches must produce compatible types.
-- Every conditional owns a result context, whether tagged or untagged. Its result has type `T` and begins as `zero(T)` before branch selection. Whether that result is exposed as `.value` metadata remains open; if exposed, conditional metadata requires an explicit tag, and an untagged conditional does not participate in unqualified `.field` lookup. A possible conditional `then` would be the only proposed read phase for `@tag.value`; it would not imply general branch or condition access.
+- Every conditional owns a result context, whether tagged or untagged. Its branch/zero result has type `T` and begins as `zero(T)` before branch selection. If the conditional has an attached `then`, that block produces the final result of type `R`; without `then`, the conditional produces `T`. Read-only `@tag.value` access to `T` is available only inside that conditional's attached `then`. It requires an explicit tag and does not expose branch or condition metadata.
 - A normally completing selected branch supplies the conditional result. If the chain has no final `else` and no branch matches, the result is the initial zero value of `T`.
 - This fallback does not form `Option<T>` or handle an error. For example, a conditional expected as `Option<User>` returns that type's zero state, `.None`, when no pattern matches.
 - A conditional whose normally completing branches produce `Unit` remains `Unit` on the unmatched path too. A non-`Unit` branch makes a missing-`else` conditional a value-producing expression, including when it is the final item of a loop body.
@@ -85,15 +87,15 @@ found: Option<User> = @lookup if .Some(user) := find_user(id) {
 }
 ```
 
-On pattern mismatch, `found` is the zero value of `Option<User>`, `.None`; no explicit `.None` branch is needed. The expected type establishes `T` here. `@lookup` names the conditional context, but does not by itself settle which result metadata fields are exposed. Case-specific zero mappings beyond the selected `Option` rule remain in [zero initialization](zero-initialization.md).
+On pattern mismatch, `found` is the zero value of `Option<User>`, `.None`; no explicit `.None` branch is needed. The expected type establishes `T` here. `@lookup` names the conditional context; its `.value` is readable only in an attached `then`. Case-specific zero mappings beyond the selected `Option` rule remain in [zero initialization](zero-initialization.md).
 
-The conditional's expression result is supplied by the selected branch or by the zero fallback. This result exists independently of whether the language exposes it as a readable `.value` field. The user sees no ordinary use for reading such a field in the condition or branch. The user proposes comparing the existing loop `then` with a post-selection conditional clause that can read the completed result. Whether it exists, exposes `@tag.value`, or runs for any abrupt exit remains open.
+The conditional's normal result is supplied by the selected branch or by the zero fallback. The attached `then` runs after that result is selected and may transform `T` into `R`; only its body can read the original result as `@tag.value`. Neither conditions nor branch bodies can read the conditional's `.value` metadata.
 
-The missing-`else` case still has a normal result: if no branch matches, it is `zero(T)`. This internal result does not require an exposed metadata field.
+If the chain has no final `else` and nothing matches, `then` receives the zero value `zero(T)` just as it receives a selected branch's result.
 
-### Recommendation: conditional `then`, with `finally` kept for cleanup
+### Result processing with conditional `then`
 
-`then` is the clearer name for normal result processing after a complete conditional chain. It already names normal completion processing after a loop, so sharing it makes the same distinction across constructs: the body/result completes normally, then a following clause may inspect the result and produce `R`. The proposed conditional `then` would run after a branch completes normally or after a missing-final-`else` path supplies `zero(T)`. Its body could inspect `@tag.value` and its tail expression could transform the conditional's body/result type `T` into a final type `R`, paralleling loop `then`.
+The selected `then` spelling reuses the loop's result-processing clause for a conditional. It follows the complete chain, receives the branch/zero result of type `T`, and its tail expression produces the conditional expression's final type `R`. The conditional tag's `.value` is readable only in this block, using explicit `@tag.value` access.
 
 ```text
 label: String = @notice if should_warn {
@@ -103,13 +105,13 @@ label: String = @notice if should_warn {
 }
 ```
 
-Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; the proposed `then` still sees that result. The explicit tag follows the selected rule that exposed conditional metadata requires `@tag.field`.
+Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; `then` sees that result and produces the final `String`. The explicit tag is required for conditional metadata access.
 
-This is a normal-completion/result-processing proposal, not an all-exit cleanup guarantee. Whether a tagged return, propagated error, or panic bypasses the conditional `then` needs an explicit rule. Keep `finally` for cleanup when leaving a scope, including the intended early-exit/failure cases; using it to transform the conditional result would blur cleanup with ordinary result production. Its exact placement and failure rules remain in the deferred lifecycle review. If both clauses are allowed, their ordering also needs a rule. This is a naming recommendation, not selected conditional syntax: the suffix grammar and whether `.value` is visible only in this phase remain open.
+`then` is result processing, not an all-exit cleanup guarantee. Whether a tagged return, propagated error, or panic enters or bypasses it remains open; the tagged-return interaction is still under review. Keep `finally` for cleanup when leaving a scope. Its exact placement and failure rules remain in the deferred lifecycle review, including whether both clauses may attach to one conditional and their ordering.
 
 ### Interaction with loop bodies
 
-The selected branch's final expression is the `if` expression's result. That result flows to its parent expression; when the `if` is the loop body's final item, the loop commits it as the next `.value`. Inside the conditional, use the loop tag to read the outer accumulator explicitly.
+Without `then`, the selected branch's final expression is the `if` expression's result. With `then`, the `then` block's final expression is the conditional's result. That result flows to its parent expression; when the `if` is the loop body's final item, the loop commits it as the next `.value`. Inside the conditional, use the loop tag to read the outer accumulator explicitly.
 
 This no-`else` version has type `Int`, but it is still the wrong summation:
 
@@ -139,7 +141,7 @@ The `if` now returns either the updated total or the previous total, and the loo
 
 ### Conditional metadata requires explicit tags
 
-The conditional still owns its branch result and zero fallback. Any conditional metadata that is exposed has no implicit leading-dot target: an untagged `if` does not shadow the enclosing loop, and leading-dot access does not fall through to that loop. In a conditional nested in a loop, name the intended context explicitly; reject ambiguous leading-dot metadata reads rather than guessing or searching outward. Whether the result itself is exposed as `@tag.value` remains open.
+The conditional still owns its branch result and zero fallback. Its `.value` is readable only in its attached `then`, through explicit `@tag.value`. Conditional metadata has no implicit leading-dot target: an untagged `if` does not shadow the enclosing loop, and leading-dot access does not fall through to that loop. In a conditional nested in a loop, name the intended context explicitly; reject ambiguous leading-dot metadata reads rather than guessing or searching outward.
 
 For example, both the updated and unchanged paths explicitly read the loop accumulator:
 
@@ -153,7 +155,7 @@ total: Int = @sum loop numbers as number {
 }
 ```
 
-The conditional result remains an ordinary expression value. No read of `@check.value` is needed to produce a branch result; whether to expose that field, perhaps only in a proposed conditional `then`, remains open.
+The conditional result remains an ordinary expression value. No read of `@check.value` is needed to produce a branch result; when a `then` is attached, `@check.value` is available only inside that block.
 
 ## Existing-name type tests
 
@@ -279,9 +281,9 @@ The earlier [conditional recovery investigation](conditional-recovery.md) is ret
 
 The tag names the entire conditional. `.condition` denotes its evaluated condition in the simple case and must not call it again. Metadata for an `else if` chain needs a more precise definition because not all conditions are evaluated.
 
-The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. Whether the result is exposed as `.value` metadata is unresolved. If exposed, it requires an explicit tag such as `@access.value`; conditional metadata has no implicit leading-dot target. A post-selection `then` reusing the loop keyword is a proposal for reading or transforming this result.
+The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. An attached `then` transforms that result to final type `R`; read-only access to `T` is available there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
 
-A conditional `then` would follow the complete branch chain, not separate a condition from its body. It is not selected syntax and does not by itself promise cleanup on every exit. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
+A conditional `then` follows the complete branch chain, not separate a condition from its body. It processes the selected branch or zero result; its treatment of abrupt exits remains open. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
 
 ## Related concepts and references
 

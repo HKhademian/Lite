@@ -126,7 +126,7 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 
 Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present. Whether return @tag result bypasses then is now unresolved; do not treat the older direct-result policy as selected.
 
-Nested conditionals have their own result context; any conditional metadata exposed requires an explicit tag. Use an explicit loop tag or captured local for outer metadata inside a conditional; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search. The optional item name is useful for lexical access inside such nested bodies.
+Nested conditionals have their own result context; read-only conditional `.value` requires an explicit tag and is available only in that conditional's attached `then`. Use an explicit loop tag or captured local for outer metadata inside a conditional; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search. The optional item name is useful for lexical access inside such nested bodies.
 
 ## Completion results
 

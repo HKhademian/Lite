@@ -55,7 +55,7 @@ Assume score returns Int and format_score returns String. All-skipped nonempty i
 
 ## Scope and availability
 
-An explicit @name tag remains readable through then. Use a tag or captured local for outer metadata inside nested conditionals. Conditional metadata, if exposed, requires an explicit conditional tag, and ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search.
+An explicit @name tag remains readable through then. Use a tag or captured local for outer metadata inside nested conditionals. Conditional `.value` requires an explicit conditional tag and is readable only in that conditional's attached `then`; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search.
 
 The final .value stays alive while then computes its result. Count/value are also available before the first condition. Item/index are readable during active iterations and as the last entered iteration in then if one exists; the optional as item binding itself remains iteration-local. With zero entries, then receives a type-directed zero `.item` and `.index == 0`, with `.count == 0` distinguishing placeholders from an actual first entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
 

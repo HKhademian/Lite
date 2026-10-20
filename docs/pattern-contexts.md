@@ -88,7 +88,7 @@ if .Some(user) := find_user(id) {
 }
 ```
 
-Refutable matching is selected. A successful whole pattern introduces its new bindings only in the matched branch. Mismatch selects the next branch; if a chain has no final `else`, exhausting its conditions returns the conditional's zero-initialized result. The source resolves before shadow bindings and is evaluated once for that condition. For an action conditional whose result type is `Unit`, this remains a `Unit` result. Whether that result is exposed as `.value` metadata is a separate open question. See [conditional result rules](conditionals.md#missing-final-else).
+Refutable matching is selected. A successful whole pattern introduces its new bindings only in the matched branch. Mismatch selects the next branch; if a chain has no final `else`, exhausting its conditions returns the conditional's zero-initialized result. The source resolves before shadow bindings and is evaluated once for that condition. For an action conditional whose result type is `Unit`, this remains a `Unit` result. If a tagged conditional has an attached `then`, its read-only `.value` is available there as `@tag.value`; it is not available in the condition or branch. See [conditional result rules](conditionals.md#missing-final-else).
 
 An existing-name type test, `if person: User`, narrows the existing value instead of declaring a name. It needs stability rules; it is distinct from `if user: User = expression`. Literal/payload constraints test matching, not the Boolean value of a bound payload. `Some(false)` matches `Some(flag)`.
 

@@ -37,7 +37,7 @@ sum := @sum loop numbers as number {
 }
 ```
 
-The tag names the same loop context as direct .field access. It remains lexically available through completion and is useful inside nested conditionals when outer metadata must be explicit. Conditional metadata, if exposed, requires an explicit conditional tag, and ambiguous leading-dot metadata reads are rejected rather than resolved by shadowing or outward search. An untagged loop can capture metadata into ordinary locals before entering a nested context.
+The tag names the same loop context as direct .field access. It remains lexically available through completion and is useful inside nested conditionals when outer metadata must be explicit. Conditional `.value` requires an explicit conditional tag and is readable only in that conditional's attached `then`; ambiguous leading-dot metadata reads are rejected rather than resolved by shadowing or outward search. An untagged loop can capture metadata into ordinary locals before entering a nested context.
 
 Metadata is read-only. The final .value has body type T while then computes final result R; reading .value is not reading an unfinished R. Keeping the tag available does not automatically retain all item storage, iteration-local references, or iterator resources. Completion observes last-item/index fields through use-based retention; unused item state need not survive for then. Tags are not accepted first-class escaping values and need not be allocated objects.
 

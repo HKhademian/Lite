@@ -68,7 +68,7 @@ During an active iteration, `.item` and `.index` describe that entry. In `then`,
 
 See [last-item/index access](loop-last-item.md) for zero/empty behavior and field-sensitive retention.
 
-For loops, leading-dot access uses the loop context without searching outward; inside a conditional, use an explicit loop tag for loop metadata. Conditional metadata, if exposed, requires `@tag.field`, and ambiguous leading-dot metadata reads are rejected. Named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
+For loops, leading-dot access uses the loop context without searching outward; inside a conditional, use an explicit loop tag for loop metadata. A conditional's `.value` requires its own explicit tag and is readable only in its attached `then`; ambiguous leading-dot metadata reads are rejected. Named @tag access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
 ## Normal result and completion
 

@@ -23,7 +23,7 @@ loop users as user {
 }
 ```
 
-Leaving out the item name introduces no implicit ordinary identifier such as it. Metadata remains accessible through the loop context or an explicit @tag. The item name also provides convenient lexical access inside nested conditionals. Use an explicit loop tag or captured local for outer metadata inside a conditional; conditional metadata, if exposed, requires its own explicit tag.
+Leaving out the item name introduces no implicit ordinary identifier such as it. Metadata remains accessible through the loop context or an explicit @tag. The item name also provides convenient lexical access inside nested conditionals. Use an explicit loop tag or captured local for outer metadata inside a conditional; conditional `.value` requires its own explicit tag and is readable only in that conditional's attached `then`.
 
 ## Destructuring and selection belong in the body
 
