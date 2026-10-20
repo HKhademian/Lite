@@ -127,7 +127,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, aggregate representation/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
 - [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, aggregate representation, duplicate-member behavior, and no-handler policy still open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
-- [Functions](functions.md): full and contextual `fn` implementations, optional trailing semicolons, callable types and reassignment, default-or-zero omitted arguments, zero callables, and a sourced Rust/Zig/Odin/V comparison; additional lambda shorthand remains under review.
+- [Functions](functions.md): full typed `fn` definitions and contextual arrow-free lambdas, optional trailing semicolons, callable types and reassignment, default-or-zero omitted arguments, zero callables, and a sourced Rust/Zig/Odin/V comparison; the redundant contextual `fn` shorthand is retired and complete lambda grammar remains open.
 - [Closures](closures.md): function values, capture questions, and return boundaries.
 - [Composition and interfaces](composition-and-interfaces.md): records, explicit capabilities, and reuse.
 - [Visibility](visibility.md): private defaults and explicitly expanded abilities.

@@ -12,7 +12,7 @@ transform := fn(x: Int): Int {
 }
 ```
 
-The contextually typed form `fn(x) { ... }` is selected when a binding, method signature, or callback contract supplies the parameter and result types. Full typed definitions remain independent of an expected type. Both forms use brace bodies and permit optional trailing item semicolons. Additional lambda shorthand, including `(x) { ... }` without an arrow, remains under review; see [functions](functions.md#compact-implementations-under-review).
+Use `(x) { ... }` when a binding, method signature, or callback contract supplies parameter and result types. Full typed `fn` definitions remain independent of an expected type. Both forms use brace bodies and permit optional trailing item semicolons. The intermediate contextual `fn(x) { ... }` spelling is retired as redundant. Complete lambda parsing, standalone inference, and capture rules remain open; see [functions](functions.md#compact-implementations-under-review).
 
 ## Result behavior
 

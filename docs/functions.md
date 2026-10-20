@@ -1,6 +1,6 @@
 # Functions
 
-Status: **binding syntax, explicit function types, full and contextually typed `fn` implementations, optional trailing semicolons, colon result types, tail results, early-return direction, and zero-result callable behavior established; lambda shorthand under review**.
+Status: **full typed `fn` definitions and contextual arrow-free lambdas are the surface direction; the redundant contextual `fn` shorthand is retired. Complete lambda parsing, captures, and callable representation remain open. Optional trailing semicolons, colon result types, tail results, and zero-result callable behavior are established**.
 
 ## Template
 
@@ -53,7 +53,7 @@ This settles ordinary value parameters. Default-expression syntax, evaluation ti
 
 ## Compact implementations under review
 
-Two forms are selected for the same kind of function: a normal definition with explicit types, and `fn(parameters) { body }` without repeated annotations when an existing contract supplies the types. A separate function-type declaration is not required before a normal definition. Additional lambda shorthand remains under review.
+Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Broader body-based inference proposals remain separate; retiring this shorthand does not settle them.
 
 ### Two scenarios: full definition and contextual implementation
 
@@ -70,16 +70,25 @@ The initializer establishes `x`'s callable contract independently of an expected
 **2. A replacement supplies only its parameter header and body.**
 
 ```text
-x = fn(a) {
+x = (a) {
     "replacement"
 }
 ```
 
 Here the existing callable contract supplies the parameter type `Int` and result type `String`. The implementation names its local parameters and provides the body without repeating those types. Omitting annotations does not change the established contract; the replacement must satisfy it. The function body also ends this assignment's item, so its trailing semicolon is optional and allowed. The body above returns a string literal to keep the example focused on function syntax.
 
-The same contextual implementation can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn(a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. The selected contextual `fn` form is separate from the additional lambda spelling discussed below. See [item boundaries](blocks-and-results.md#item-boundaries).
+The same contextual lambda can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn(a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. See [item boundaries](blocks-and-results.md#item-boundaries).
 
-For the declared `var myfn: fn(a: Int): Int!;`, the implementation can infer the parameter's `Int` type and check its body against `Int ! Error`. The candidates differ in how they identify the function and bind its local parameter names.
+For an imaginary map API expecting `fn(item: Int): Int`, the full and contextual forms are:
+
+```text
+doubled := map(numbers, fn(n: Int): Int { n * 2 });
+doubled := map(numbers, (n) { n * 2 });
+```
+
+These illustrate alternative implementations. Do not add `fn(n) { n * 2 }` as an intermediate contextual spelling.
+
+For the declared `var myfn: fn(a: Int): Int!;`, a contextual lambda gets the parameter's `Int` type and checks its body against `Int ! Error`. The comparison below retains earlier alternatives as review history; C is the current lambda direction, and B is retired.
 
 ### Solutions in the modern reference languages
 
@@ -138,7 +147,7 @@ positive := filter(numbers, n => n > 0);
 
 A single local parameter name precedes the arrow; parentheses would support zero or multiple parameters, as in `() => 42` and `(a, b) => a + b`. Both expression and block bodies are possible. Parameter bindings and the start of a function are visible at the implementation site. This introduces an arrow token and needs expression-boundary/precedence rules.
 
-### B. Contextually typed fn (selected)
+### B. Contextually typed fn (retired)
 
 ```text
 myfn = fn(a) { a + 1 }
@@ -146,9 +155,9 @@ doubled := map(numbers, fn(n) { n * 2 });
 positive := filter(numbers, fn(n) { n > 0 });
 ```
 
-This selected form retains the existing function keyword and body shape while inferring parameter and result types from the expected contract. It needs no arrow spelling and keeps a clear function boundary. The complete brace body makes a trailing item semicolon optional; braces inside a callback argument do not end the enclosing call item. Broader standalone parameter inference remains separate.
+This was previously selected, then retired as a redundant contextual shorthand. It repeats the job of `(parameters) { body }` while adding the `fn` keyword. Use the full typed `fn` form for an explicitly provided contract and the lambda form when the contract comes from context. Broader standalone/body-based inference remains a separate open design question.
 
-### C. Arrow-free lambda: parameter list followed by a block (requested review)
+### C. Arrow-free lambda: parameter list followed by a block (current direction)
 
 ```text
 myfn = (a) { a + 1 }
@@ -156,7 +165,7 @@ doubled := map(numbers, (n) { n * 2 });
 positive := filter(numbers, (n) { n > 0 });
 ```
 
-The user asks whether the lambda form can omit `=>` completely. Yes, this is a viable surface proposal if the grammar reserves a parameter-list-plus-block shape for lambdas in ordinary expression positions. It keeps local parameter bindings explicit and removes both the keyword and arrow. It always uses a brace body. A direct assignment ending in that body would permit an optional trailing semicolon, like the selected `fn` forms.
+The current direction omits `=>` completely and reserves a parameter-list-plus-block shape for contextual lambdas in ordinary expression positions. It keeps local parameter bindings explicit and removes both the keyword and arrow. It always uses a brace body. A direct assignment ending in that body permits an optional trailing semicolon, like the full `fn` form. Complete parsing and integration with other headers remain to be formalized.
 
 Proposed grammar boundary, not yet a selected complete production:
 
@@ -184,7 +193,7 @@ x = () {
 }
 ```
 
-In the proposed lambda syntax, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
+In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
 
 The empty header `()` retains the entire expected callable signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header; the header alone does not determine callable arity.
 
@@ -197,7 +206,7 @@ Calls retain their normal input evaluation, passing, permission, and cleanup con
 - Parsing must depend on tokens and syntactic position, not whitespace, expected types, or whether `a` resolves to a type. This reserves `(T) { ... }` for the lambda reading in an ordinary expression position too; it cannot also mean construction through a grouped record type. Existing `T { ... }` construction and grouping the entire construction, `(T { ... })`, retain their separate forms. See [record boundaries](record-literal-boundaries.md).
 - Inside a call argument, the lambda body does not close the enclosing call item. Argument commas and ordinary call-item separators still apply. This proposal does not add trailing-block call arguments.
 
-The expected callable supplies parameter and result types; the header still creates local parameter bindings. The body is deferred until invocation and uses ordinary function result/return rules. Omitting the arrow does not choose capture representation, allocation, or a different calling convention. Recommendation: use this as the primary lambda proposal alongside the selected contextual `fn`, and settle these grammar boundaries before selecting it. Arrow and pipe alternatives remain comparisons.
+The expected callable supplies parameter and result types; a nonempty header creates local parameter bindings. The body is deferred until invocation and uses ordinary function result/return rules. Omitting the arrow does not choose capture representation, allocation, or a different calling convention. Complete the grammar boundaries above for this direction. Arrow and pipe alternatives remain unselected comparisons.
 
 ### D. Arrow inheriting parameter names from the signature
 
@@ -221,7 +230,7 @@ positive := filter(numbers, |n| n > 0);
 
 This follows the visible shape used by Rust and V, with Rust's ability to use it for assignment as well as callback arguments. It offers one parameter-list shape for one or several names, without a new arrow token. A zero-parameter spelling such as `|| 42` needs review against existing tokens. LiteScript already uses `|` in type unions, so typed parameter syntax, delimiters, and expression precedence need a precise grammar. Local names remain explicit; expected types do not inject names into scope.
 
-Contextually typed `fn` is selected. A, C, D, and E remain comparisons for additional lambda shorthand; adopting `fn(a) { ... }` does not select an arrow or pipe form. Keep local parameter names visible in the ordinary contextual form. V-style implicit `it` can be evaluated separately if collection-specific shorthand is needed; it does not by itself solve general function assignment. The illustrative map/filter APIs provide expected callback contracts; their library and generic declarations are not selected by these examples.
+The current pair is full typed `fn` plus contextual arrow-free lambda C. B is retired; A, D, and E remain unselected comparisons. V-style implicit `it` can be evaluated separately if collection-specific shorthand is needed; it does not by itself solve general function assignment. The illustrative map/filter APIs provide expected callback contracts; their library and generic declarations are not selected by these examples.
 
 All candidates are intended to use ordinary function result and return rules, with type information supplied by the expected callable contract. They propose no separate runtime abstraction. Captures, lifetime and representation, broader standalone inference, and complete compact-expression grammar remain open.
 
