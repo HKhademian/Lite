@@ -156,7 +156,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- **Priority uncertainty, 2026-10-19:** the user is not convinced return @tag value should bypass then. Its target syntax/lexical scope remain selected; completion execution and payload T/R interaction are open. See [tagged-return note](control-flow.md#tagged-return-and-completion-unresolved). Bare break and break value still reach then.
+- **Priority uncertainty, 2026-10-19:** the user is not convinced `return @tag value` should bypass `then`. Target syntax and lexical scope remain selected; whether a targeted loop or conditional runs its `then`, and whether the payload has type `T` or final type `R`, remain open. The conditional comparison covers equal types with differing effects and distinct `T`/`R` payload types. See [tagged-return note](control-flow.md#tagged-return-and-completion-unresolved). Bare `break` and `break value` still reach loop `then`.
 
 - [Last-item/index completion access](loop-last-item.md) has selected use-based retention: .item/.index describe the last entered body in then, including skipped/broken entries. After zero entries, then exposes typed zero placeholders for .item/.index and count 0; an unobserved item needs no retention. Reading only count/index/value or declaring a tag does not retain every field. Generic ownership/borrowing and lowering remain shared implementation contracts.
 

@@ -92,7 +92,34 @@ Here the body state has type T = `User`, while `then` produces R = `String`. Und
 - **Commit and complete:** the payload has body type T, replaces the target loop's `.value`, stops that loop, and runs its `then` to produce R. This lets the completion block observe an early exit, but makes `return @loop value` behave like a labeled contribution-bearing break. Intermediate exited loops and other tagged targets need explicit rules.
 - **Separate the spellings:** preserve `return @tag value` as a direct target result and consider a labeled `break @loop value` for commit-and-complete. That adds syntax; the labeled break form is not selected.
 
-Do not use `then` as a cleanup guarantee in any model. Its current contract is ordinary loop completion; early returns, propagated errors, and panics belong to the deferred cleanup/resource review.
+Do not use `then` as a cleanup guarantee in any model. Loop `then` processes loop completion; conditional `then` processes the branch/zero result. Whether targeted returns, propagated errors, or panics enter or bypass those clauses remains open. Cleanup belongs to the separate `finally`/lifecycle review.
+
+### Return to a conditional with `then`
+
+The selected conditional contract now gives a tagged `if` a post-selection `then`: the branch or missing-`else` zero produces `T`, and `then` may produce final result `R`. A tagged return to that conditional creates the same unresolved direct-versus-completion distinction:
+
+- **Direct target result:** the return payload satisfies `R` and supplies the conditional's final result; its `then` is skipped.
+- **T input followed by completion:** the payload satisfies `T`, becomes the conditional result read as `@tag.value`, and the attached `then` runs to produce `R`.
+
+When `T = R`, the result can be identical while the effect differs:
+
+```text
+outcome := @choose if use_choice {
+    if early_exit {
+        return @choose "early"
+    }
+    "normal"
+} then {
+    record_choice(@choose.value)
+    @choose.value
+}
+```
+
+The direct-result model returns `"early"` without calling `record_choice`; the T-input model passes `"early"` through `then` and calls it. Both can return the same string.
+
+When `T` and `R` differ, the payload type separates the models. For example, branches may produce `String` and `then` may return its length as `Int`. The direct-result model requires an `Int` payload and skips the conversion; the T-input model accepts a `String` payload and converts it in `then`. The language has not selected either contract.
+
+This comparison concerns a tagged return to the conditional that owns the `then`. Returning to an outer conditional from inside a loop also leaves the loop; whether the abandoned loop runs its own `then` is a separate open transfer rule. Error propagation and panic transfer remain separate from this value-payload comparison. No parser or interpreter implementation is present in this checkout, so these are candidate semantics, not verified runtime behavior.
 
 ## Labeled continuation and break shorthand
 
