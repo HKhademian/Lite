@@ -63,7 +63,7 @@ The final .value stays alive while then computes its result. Count/value are als
 
 ## Exits and cleanup
 
-Then runs after source exhaustion, a false condition, bare break, or break value. Continue stays in iteration. Whether return @loop result should run or bypass then is explicitly unresolved. Unqualified return, forwarded errors via !, and panics are not normal loop completion. Break value commits a value of body type T and then runs normal completion; bare break preserves the existing value. The earlier tagged-return bypass rule is a candidate, not a selected contrast with break.
+Then runs after source exhaustion, a false condition, bare `break`, `break value`, or a tagged return to this loop. `continue` stays in iteration. A `return @loop result` commits T and runs this loop's `then` to produce R; if it targets an outer construct instead, this loop's `then` is skipped. Unqualified `return`, forwarded errors via `!`, and panics leave without supplying a loop T. `break value` commits a value of body type T and then runs normal completion; bare `break` preserves the existing value.
 
 Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, disposal, finally placement, and cleanup failures remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
 

@@ -68,7 +68,7 @@ The explicit destination types the loop result and `.value` as `Option<User>`. A
 
 This is a deliberate value contribution, not a skip. If the loop already held a nonzero value, an unmatched conditional would replace it with zero. Use `continue` for a noncontributing loop path that must preserve `.value`, or write an explicit `else` that returns the desired existing value.
 
-Tagged-result-only search is separate. With no `then`, its direct-result and completion-directed interpretations can agree when the destination establishes `T = R`; the example in [control-flow](control-flow.md#loop-distinction) shows this case. Unannotated inference from a tagged exit alone remains open, especially when `then` transforms T into R or does not read `.value`.
+A tagged return contributes its payload as the target's T. With no then, T is also the target's result type; with then, the target's then determines R from the committed T. The example in [control flow](control-flow.md#loop-distinction) shows a targeted search without then. Exact unannotated inference for targeted-result-only searches remains formalization work, especially when zero(T) and an independent then result are involved.
 
 ## Loops with no contributing path
 
@@ -84,15 +84,15 @@ status := loop items {
 
 Here `then` establishes R as `String`, but it does not constrain T because it never reads `.value`. The type of the zero-initialized storage is unobservable in this example. If `then` instead returns `.value`, T and R become connected: without an expected type, T defaults to `Unit` and R follows; with an expected type, that constraint can override the default. With no `then`, the loop result is `.value`, so a context such as `status: Int = loop items { continue }` can provide T.
 
-In the example above, T is `Unit` and R is `String`. The same default applies when paths end only in bare `break`; the unresolved targeted-return rule must still be analyzed separately.
+In the example above, T is `Unit` and R is `String`. The same default applies when paths end only in bare `break`. A targeted return is different: its payload contributes a T value, and the named target's `then` runs if present.
 
 ## All paths must agree with their contracts
 
 - Body tail expressions, continue value, and break value must satisfy the selected body type T.
-- Then tail expressions must satisfy final result R. The earlier return @loop value : R rule is a candidate under review together with whether that exit runs then; do not finalize its T/R relationship independently.
+- Then tail expressions must satisfy final result R. A `return @loop value` must satisfy T; the named loop's `then` produces R when present, and without `then` T is the loop result.
 - Bare break and plain continue preserve .value without inventing new value types. Break value commits before completion; it is not a direct R-return path.
 - Assignment/declaration tails produce Unit; a Long destination does not silently turn such a body into a numeric sum.
 - Conditional/match branches retain their ordinary type/union rules; inference cannot erase incompatible operations.
 - Types and zero representations are determined at compile time, before runtime source checks or body execution.
 
-Full overload resolution, literal polymorphism, numeric promotion, unions, ownership, and targeted-result-only search inference remain separate formalization work. See [numbers](numbers.md), [loop value](loop-value.md), [completion](loop-completion.md), and [general inference](types-and-inference.md).
+Full overload resolution, literal polymorphism, numeric promotion, unions, ownership, and the inference algorithm for targeted-result-only searches remain separate formalization work. See [numbers](numbers.md), [loop value](loop-value.md), [completion](loop-completion.md), and [general inference](types-and-inference.md).

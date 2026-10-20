@@ -4,7 +4,7 @@ status: in_progress
 created: 2026-10-19
 todos:
   - id: tagged-return
-    content: Compare more tagged-return cases; keep completion semantics open until the user selects a rule
+    content: Record selected target completion and target-only then execution; keep failure transfer separate
     status: completed
   - id: loop-inference
     content: Formalize loop body type T, result type R, and zero-initialized .value inference
@@ -29,7 +29,7 @@ plans:
 
 # Agent Handoff: LiteScript language-design review
 
-> **For the next agent.** Continue the documentation-led design review from the conditional zero-result context and unresolved tagged-return interaction; preserve user-selected rules, label proposals clearly, and do not implement a compiler.
+> **For the next agent.** Continue the documentation-led design review from the selected tagged-return rule and remaining error/panic and multi-branch metadata questions; preserve user-selected rules, label proposals clearly, and do not implement a compiler.
 
 ## Mission
 
@@ -38,19 +38,19 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 ## Done
 
 - Read the referenced design discussion and current repository state. The prior checkout was clean at `b1ca30d` before this review.
-- The user asked to keep `return @tag value` completion semantics open and compare more cases. The comparison now covers no `then`, same-type `then` with effects, T-to-R transformation, a transfer to an outer loop, and a non-loop target in [`control-flow.md`](control-flow.md).
-- The no-`then` search case shows that tagged-return candidates agree when `T = R`; its non-match path now uses the conditional's zero fallback.
+- After comparing same-target and outer-target cases, the user selected that a tagged return supplies T to its named target and runs that target's then; inner constructs exited on the way skip their own then. The examples and type consequences are recorded in control-flow.md.
+- The no-then search case demonstrates that the payload supplies T and, without a then, T is also the loop result; the non-match path uses the conditional zero fallback.
 - The user selected the loop no-contributor policy: T defaults to `Unit`, and an expected type can override it. A `then` result independent of `.value` determines R but leaves T at its default.
 - Loop inference now distinguishes no-contributor paths from a circular `.value`-only contribution. With no `then`, the expected loop type constrains T; with `then`, the expected final type R reaches T only through a `.value` dependency. An independent `then` result determines R while a no-contributor T defaults to `Unit`. Full operator, generic, and targeted-result-only inference details remain open in [`loop-type-inference.md`](loop-type-inference.md).
 - Every conditional has a typed result initialized to zero; without a final `else`, no match returns zero(T). The search example therefore has no trailing `continue`; its unmatched `if` contributes `Option<User>.None` to the loop. The user selected a post-selection `then` that receives the branch/zero result T and produces final R; read-only `@tag.value` is available only inside that `then`. Untagged conditionals do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected instead of falling through to an outer context.
 - The user selected the conditional no-contributor default: when no normally completing arm constrains T, it defaults to `Unit`, and an expected type can override it.
-- The conditional review records a key interaction: a branch result flows to its parent expression. If the `if` ends a loop body, the loop commits that result. This fallback is a real branch value, not loop skip behavior; a false `if` can replace an earlier accumulator with zero. Conditional `then` and its `@tag.value` read phase are selected; whether tagged returns, propagated errors, or panics enter or bypass it remains open. `finally` still means lifecycle cleanup in the separate deferred review.
-- The tagged-return comparison now includes conditional targets: with `T = R`, direct result and T-input completion can return the same value but differ in `then` effects; with `T != R`, the payload must satisfy either final `R` or pre-then `T`. Both remain candidates in [`control-flow.md`](control-flow.md); no return behavior is selected.
+- The conditional review records a key interaction: a branch result flows to its parent expression. If the if ends a loop body, the loop commits that result. This fallback is a real branch value, not loop skip behavior; a false if can replace an earlier accumulator with zero. Conditional then and its @tag.value read phase are selected. A return targeting the conditional runs its then; a return to an outer target skips it. Propagated errors and unhandled panics provide no conditional result, while panic cleanup remains open. finally remains lifecycle cleanup in the separate deferred review.
+- Tagged return to a conditional supplies its T and runs its then, producing R; a return to an outer target skips the conditional's then. The nested loop example records this target-only rule in [control-flow.md](control-flow.md).
 - Failure paths are compared separately: a local handler that completes a branch with `T` feeds conditional `then`; `!` forwarding and an unhandled panic provide no conditional result. Panic unwinding and cleanup remain open.
 - The user selected the uniform loop-item interface: active-body `.item` is `Unit` for Boolean and unconditional loops. If no body ran, `then` exposes typed zero placeholders for `.item` and `.index == 0`, with `.count == 0` distinguishing them. Source/condition evaluation still cannot read an item before a body entry.
 - Since `Unit` has one inhabitant, the selected all-zero-valid rule makes `zero(Unit) = Unit`. The user proposes zero-sized physical representation; physical layout and foreign ABI lowering remain separate open details.
 - Steps 4 and 5 reconciled the loop metadata choices with current examples, grammar, decision ledger, and historical receiver pages. A local-link scan found no missing targets across the README and documentation pages.
-- Corrected the historical loop-recovery note so it no longer presents tagged-return bypass or all-exit cleanup as selected in [`loop-recovery.md`](loop-recovery.md).
+- Updated the historical loop-recovery note to reflect selected target-only then execution while keeping cleanup rules deferred in [loop-recovery.md](loop-recovery.md).
 - The typed-filter recovery contract was reconciled and committed atomically as `eb41ba5`; the current checkout was clean before the loop-inference follow-up.
 
 ## Plan links
@@ -65,7 +65,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - [`README.md`](README.md) — document status and reading order.
 - [`decisions-and-open-questions.md`](decisions-and-open-questions.md) — current selected rules and priority open contracts.
-- [`control-flow.md`](control-flow.md) — tagged-return comparison and selected break distinctions.
+- [control-flow.md](control-flow.md) — selected tagged-return completion and loop exits.
 - [`conditionals.md`](conditionals.md) and [`tags-and-contexts.md`](tags-and-contexts.md) — selected conditional result/zero rules and `then` read phase, with abrupt exits and multi-branch `.condition` metadata still open.
 - [`loop-value.md`](loop-value.md) and [`loop-type-inference.md`](loop-type-inference.md) — T/R inference questions.
 - [`zero-initialization.md`](zero-initialization.md) — selected all-zero-valid-value direction and unresolved mappings.
@@ -75,7 +75,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 ## Implementation order
 
-### Step 1 — tagged-return
+### Step 1 — tagged-return (selected)
 
 **Depends on:** none
 
@@ -83,15 +83,15 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 **Actions:**
 
-- Keep the behavior unresolved while comparing realistic searches, observable `then` effects, `then` transformations from body type T to result type R, nested transfers to an outer loop, and targets that are not loops.
-- Distinguish direct-result semantics (payload has R and skips `then`) from completion-directed semantics (payload has T, commits `.value`, and lets `then` produce R).
-- Compare whether a third spelling, such as a labeled contribution-bearing break, would make the distinction clearer; do not add it without an explicit selection.
+- Apply the selected contract: a tagged-return payload has type T, reaches the named target's pre-then value, and runs that target's then to produce R when present.
+- A return to an outer target skips then blocks on inner constructs it exits; a target without then returns T directly.
+- Keep labeled contribution-bearing break/continue spellings as separate unselected questions.
 - Keep `then` as ordinary completion, not an all-exit cleanup guarantee. Leave cleanup, `defer`, and scoped resource behavior in their deferred review.
-- Ask the user only when the cases expose a genuine design choice; do not silently select a model.
+- Keep propagated-error, panic-unwinding, and cleanup behavior separate; then is result processing, not all-exit cleanup.
 
 **Acceptance:**
 
-- The selected behavior, if any, is recorded with its payload type and `then` behavior; otherwise the uncertainty and missing decision are explicit in both the relevant concept page and the ledger.
+- The selected payload type, target then behavior, and skipped intermediate then behavior are recorded in the concept pages and decision ledger.
 - Examples do not claim incompatible loop result types or cleanup guarantees.
 
 ### Step 2 — loop-inference
@@ -127,13 +127,13 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Keep the no-match zero result distinct from `continue`; show that a final unmatched conditional in a loop body can overwrite its accumulator.
 - Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep the expected-type and missing-`else` fallback rules coherent.
 - Preserve the selected explicit-tag lookup rule: conditional `.value` requires `@tag.value` and is readable only inside the attached `then`; untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
-- Keep conditional tagged-return candidates open: compare the `T = R` effect case and the `T != R` payload-type case, and retain the open question about a loop exited on the way to an outer conditional. Do not assert implementation behavior; no parser or interpreter is present in this checkout. Treat propagated errors and panics as separate transfer cases. Reserve `finally` for cleanup. Define how `.condition` represents an `else if` chain without claiming that unevaluated conditions were false.
+- Apply the selected target-completion rule to conditional targets. Keep propagated errors and panics separate, do not assert implementation behavior, reserve finally for cleanup, and define how .condition represents else-if chains without treating unevaluated conditions as false.
 
 **Acceptance:**
 
 - The normal result, unmatched path, expected type, explicit `else`, and context field availability have one coherent contract.
 - The selected `then` transforms the branch/zero result T to R, and conditional `@tag.value` is inaccessible outside that block.
-- Tagged-return documentation distinguishes T-input completion from direct R results through observable effects and payload types, while preserving the unresolved status.
+- Tagged-return documentation consistently states that the payload supplies T, the named target's then produces R when present, and exited inner then blocks are skipped.
 - Examples distinguish conditional zero fallback from skipped loop contributions and do not imply automatic `Option` wrapping.
 
 ### Step 4 — uniform-loop-context
@@ -162,7 +162,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 **Actions:**
 
-- Search for retired receiver lists, `.acc`, automatic `Option` accumulation, old `then(receiver)` forms, tagged-return bypass claims, and cleanup guarantees accidentally attached to `then`.
+- Search for retired receiver lists, `.acc`, automatic `Option` accumulation, old `then(receiver)` forms, stale tagged-return bypass claims, and cleanup guarantees accidentally attached to `then`.
 - Keep historical examples labeled as historical and link them to the current contract.
 - Check local Markdown links and ensure the README reading order points to the current source-of-truth pages.
 
@@ -211,7 +211,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 | Loop completion | A single receiverless `then` is the selected direction; `.count` and `.value` come from the owning loop context. |
 | Loop value | Typed, zero-initialized `.value`; no-contributor T defaults to Unit unless an expected type overrides it; automatic Option accumulator and `.acc`/previous receivers are retired. |
 | Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Abrupt-exit behavior and multi-branch `.condition` metadata remain open. |
-| Exits | Plain `continue`, `continue value`, `break`, and `break value` have distinct recorded rules; tagged-return interaction with `then` remains open. |
+| Exits | Plain `continue`, `continue value`, `break`, and `break value` have distinct recorded rules; tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
 | Initialization | All-zero storage is selected as a valid value for every type; exact mappings remain open. |
 | Lifecycle | Body-wide recovery, `defer`, resource scopes, and cleanup ordering are deferred. |
 

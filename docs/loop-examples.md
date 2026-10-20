@@ -1,6 +1,6 @@
 # Loop examples: metadata-only state
 
-Status: **updated to the one-item-name and typed .value direction, 2026-10-19; design examples, not compiler-verified execution**. As, continue value, bare/value break, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
+Status: **updated to the one-item-name, typed .value, and tagged-return completion rules, 2026-10-20; design examples, not compiler-verified execution**. As, continue value, bare/value break, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
 ## Full worked loop
 
@@ -11,7 +11,7 @@ numbers := [3, -2, 0, 5, -1, 99];
 
 summary := @scan loop numbers as number {
     if number == -999 {
-        return @scan "Cancelled";
+        return @scan 0;
     }
     if number == -1 { break; }
     if number < 0 { continue; }
@@ -31,7 +31,7 @@ summary := @scan loop numbers as number {
 }
 ```
 
-The intended trace enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. The earlier return @scan example assumes a direct String exit that bypasses then; that tagged-return completion policy is now explicitly unresolved, so this path is illustrative only.
+The shown input enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. If an input reaches the cancellation branch, return @scan 0 supplies the loop's Int T and the loop's then runs format_total(0); the old String payload was invalid for this body type.
 
 An empty source or all-skipped source leaves Int value 0. Count distinguishes no entries from some entries; value cannot distinguish no commit from a genuine result of zero. A skipped last entry preserves the prior value. No Option is automatically inserted.
 
@@ -124,7 +124,7 @@ Reversal and stepping still yield index 0, 1, 2, etc., independent of original s
 }
 ```
 
-Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result exits the named construct directly; plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present. Whether return @tag result bypasses then is now unresolved; do not treat the older direct-result policy as selected.
+Continue @rows abandons remaining inner work and advances the outer loop without an outer value commit. Bare break stops only the nearest loop and follows that loop's normal completion. Return @tag result supplies T to the named construct and runs that target's then if present; any inner then blocks exited on the way are skipped. A target without then returns T directly. Plain return exits the nearest function/closure. Transfers cannot cross a function/closure boundary. Break value commits its T operand, stops the nearest loop, and runs then if present.
 
 Nested conditionals have their own result context; read-only conditional `.value` requires an explicit tag and is available only in that conditional's attached `then`. Use an explicit loop tag or captured local for outer metadata inside a conditional; ambiguous leading-dot metadata access is rejected rather than resolved by shadowing or outward search. The optional item name is useful for lexical access inside such nested bodies.
 
