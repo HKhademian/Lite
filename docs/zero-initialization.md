@@ -1,6 +1,6 @@
 # Universal zero initialization
 
-Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19**. This replaces the earlier valid-zero eligibility/zeroability restriction. The user explicitly includes function values: zero initialization is not permission to create an invalid callable and panic merely because it is zero. Concrete mappings for all type categories still need design.
+Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero is `.ok(zero(T))` for `T ! E`, selected 2026-10-20**. This replaces the earlier valid-zero eligibility/zeroability restriction. The user explicitly includes function values: zero initialization is not permission to create an invalid callable and panic merely because it is zero. Concrete mappings for the remaining type categories still need design.
 
 ## Core distinction
 
@@ -60,7 +60,7 @@ Option's zero is its explicit .None state. A loop value of type T starts as zero
 
 Some mappings require further decisions:
 
-- Functions: proposed zero function ignores its arguments, performs no work, and returns zero of its declared result type. For a fallible result, the existing implicit-success rule suggests a zero success payload. These invocation/result mappings are proposals, not selected callable grammar or ABI.
+- Functions: proposed zero function ignores its arguments, performs no work, and returns zero of its declared result type. Under that proposed invocation rule, a fallible result would use the selected Result zero mapping `.ok(zero(T))`. Zero-function invocation behavior, callable grammar, and ABI remain open.
 - Enums and unions: choose a zero case/mapping consistent with exhaustive matching, backing values, nominal identity, and order-independent union normalization. Do not silently pick the first written union member or invent an unnamed enum case.
 - References and writable access: provide meaningful zero behavior without dereferencing an invalid machine address or silently choosing an aliasing/ownership model.
 - Resources and constrained domains: specify the valid zero state, its allowed operations, cleanup, and relation to construction/validation invariants. Zero initialization does not conjure an external resource.
@@ -83,7 +83,18 @@ Value: Type = ? requests storage without zeroing or default construction. It is 
 
 ## Result and error boundaries
 
-An ordinary success expression 0 in an Int ! E function remains implicit success with numeric zero. It is not an explicit .err or a demand to reinterpret foreign Result bits. The full zero representation of stored Result types must be specified consistently with the selected .ok/.err distinction and universal zero rule; it is not yet an arbitrary tag-layout assumption.
+The selected zero value of a fallible outcome is success with a zero-initialized payload:
+
+```text
+zero(T ! E) = .ok(zero(T))
+
+attempt: Int ! ReadError; // .ok(0)
+explicit_zero: Int ! ReadError = 0; // .ok(0)
+```
+
+An ordinary success expression `0` in an `Int ! E` function likewise remains implicit success with numeric zero. A stored zero outcome has no error payload to handle. Recursive zero initialization preserves outcome boundaries: the zero of `(T ! E1) ! E2` is `.ok(.ok(zero(T)))`.
+
+This mapping also applies wherever a conditional's missing-else path or a loop's value context uses zero of a fallible type. Representation, tag layout, and FFI adaptation must honor this semantic mapping and remain to be specified.
 
 ## Grammar and runtime boundaries
 
