@@ -61,7 +61,7 @@ target else (Panic) { recover_any_panic() }
 
 The first two forms match only `BoundPanic`; the binding form exposes the narrowed value, while the type-only form does not bind it. `Panic` is the broad panic type and matches panic categories, not returned `Result` errors. A specific returned-error type can be handled with the same typed-filter rule.
 
-Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause sees only the remainder. Thus an aggregate `A & B` reaches both matching clauses in `else (A) { R1 } else (B) { R2 }`, in that order. Reversing the clauses processes B before A. This is ordered handling, not a set of interchangeable alternatives, so changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
+Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause receives the preceding recovery expression's outcome, including any remaining members or a new failure raised by its handler. Thus an aggregate `A & B` reaches both matching clauses in `else (A) { R1 } else (B) { R2 }`, in that order. Reversing the clauses processes B before A. Changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
 
 When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. For `A & B`, A then B gives `R2`, while B then A gives `R1`. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates.
 
@@ -73,7 +73,11 @@ x2 := x1 else (A) { R1 };               // (T | R1) ! B
 x3 := x2 else (B) { R2 };               // T | R1 | R2
 ```
 
-The chained spelling `op() else (A) { R1 } else (B) { R2 }` has the same left-to-right effect. If the pending failure contains both A and B, the first recovery consumes A but leaves B pending; the second recovery consumes B, so `R2` is the final value. Reversing the clauses leaves A for the last recovery, so `R1` is final.
+The chained spelling `op() else (A) { R1 } else (B) { R2 }` composes these recovery expressions from left to right. If the pending failure contains both A and B, the first recovery consumes A but leaves B pending; the second recovery consumes B, so `R2` is the final value. Reversing the clauses leaves A for the last recovery, so `R1` is final.
+
+Each later `else` wraps the whole preceding recovery expression, including its handler body. In `(op() else (A) { R1 }) else (B) { R2 }`, a new B failure raised while evaluating `R1` can therefore be caught by the outer B recovery. It does not re-enter the A handler. The outer recovery is active while its target is evaluated; if `R2` itself fails, that failure needs a further enclosing recovery.
+
+The separate assignments above demonstrate stored Result processing and type changes. They are not a general runtime expansion for panics: if evaluating the standalone `x2` statement panics, control unwinds before the later `x3` statement can execute. The chained expression establishes the outer recovery before evaluating the inner expression. Existing explicit Result handling still applies: a Result stored as ordinary payload data is not recursively extracted, and postfix `!` remains a function/closure exit that an outer `else` does not intercept. The selected handler-body coverage does not settle general argument/callee panic capture below.
 
 If a typed filter does not match the current remainder, its body does not run and the next typed filter is considered. After the chain, an unmatched panic follows the default implicit propagation rule. An unmatched returned error remains subject to explicit handling: keep it as a `Result` when the target is used as outcome data, handle it with another defined form, or propagate it with postfix `!`. For example:
 
@@ -114,7 +118,7 @@ Two materially different meanings remain under review:
 
 The first is the recommended interpretation for general panic recovery because its evaluation boundary is stable and understandable. It requires a real cross-call fault-transfer mechanism. The second is a narrower checked-operation facility and must not be advertised as general panic catch. The user requests investigation of the two forms rather than selecting a scope. The [outcome comparison](recovery-boundaries.md) traces whole-call and argument-level fallbacks; neither scope is adopted by this document.
 
-The handler itself is outside its own recovery boundary. Its failure must go to an enclosing applicable boundary or remain unhandled; do not retry the failing operation or recursively re-enter the same fallback. Evaluate executed operands once in the selected left-to-right order.
+The handler itself is outside its own recovery boundary. Its failure goes to an enclosing applicable boundary or remains unhandled; a later `else` in the composed chain is such an enclosing recovery and can catch a matching failure from the earlier handler. Do not retry the failing operation or recursively re-enter the same fallback. Evaluate executed operands once in the selected left-to-right order.
 
 ## Typed handler inputs
 
@@ -145,7 +149,7 @@ The user retires the proposed external if/loop/match recovery tails. These const
 - Handler precedence and grouping under the selected block-item continuation rule.
 - Indexed assignment recovery: assignment is an item, not a general value expression. In values[index] = replacement else { ... }, attachment to the write versus its RHS cannot be guessed. No production for that spelling is selected here.
 - The broad receiver contract and origin information when returned errors and panics can reach one untyped handler.
-- How a handler body that itself fails affects remaining members in the chain, plus the aggregate carrier and duplicate-member consumption rules.
+- How a new handler failure combines with an already pending remainder, plus the aggregate carrier and duplicate-member consumption rules. Matching that new failure with a later enclosing `else` is selected.
 - Any first-class capture-as-Result operation without a fallback; a second helper family is not required by the examples above.
 
 Related: [Result and errors](result-and-errors.md), [panics](panics.md), [typed panics](typed-panics.md), [fault-policy history](checked-fault-policy.md), [sequence end operations](sequence-end-operations.md), and [evaluation order](evaluation-order.md).

@@ -108,6 +108,8 @@ Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a
 
 This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending members. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. An unmatched panic propagates implicitly after the chain. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The aggregate carrier and duplicate-member consumption rules remain open. See [ordered member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
 
+Each later filter wraps the preceding recovery expression, including its handler body. A matching failure raised by an earlier handler can be caught by that later recovery; the earlier handler does not catch its own failure. See the [sequential recovery example](expression-recovery.md#match-all-failures-or-filter-by-type) for the distinction between nested active recovery and separate eager assignments.
+
 The filter does not distinguish a returned payload from a panic solely because their payload types overlap. Preserve channel origin in the eventual carrier/context where required; see the following section.
 
 ## Runtime and representation boundaries

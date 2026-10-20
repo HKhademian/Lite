@@ -54,6 +54,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Updated the historical loop-recovery note to reflect selected target-only then execution while keeping cleanup rules deferred in [loop-recovery.md](loop-recovery.md).
 - The typed-filter recovery contract was reconciled and committed atomically as `eb41ba5`; the current checkout was clean before the loop-inference follow-up.
 
+- Recovery chains are nested expressions: each later `else` can catch a matching failure raised by an earlier handler, which is outside its own recovery boundary. The staged assignments show Result type changes; actual separate statements cannot catch a panic from an earlier statement. Chained outer recovery is active during inner evaluation. How a new handler failure combines with an existing remainder remains open, and explicit Result handling / function-targeted `!` are unchanged.
+
 ## Plan links
 
 | Relation | Plan / file |

@@ -140,6 +140,8 @@ Possible designs include an ordinary library aggregate type for same-channel err
 
 The user selected **declaration-ordered member-wise handling** (a "munching" model) for an aggregate such as `A & B`: each typed handler consumes matching pending members, and the next clause sees the remainder. A partial match must never mark the whole aggregate handled. Both `else (A) { R1 } else (B) { R2 }` and its reverse can run both handlers for `A & B`, but in different orders; clause order is semantically observable. If a remainder survives the chain, it still propagates. When all matching handlers complete normally, the last matching handler's value becomes the recovered value (`R2` for A then B, `R1` for B then A). The aggregate carrier and duplicate-member consumption remain open.
 
+A later recovery wraps the entire preceding recovery expression and can also catch a matching new failure raised by its handler. How such a new failure combines with an already pending remainder remains open; see [sequential recovery](expression-recovery.md#match-all-failures-or-filter-by-type).
+
 ## Attachment shape
 
 The selected hook order can be sketched for loops and complete conditional chains as:
