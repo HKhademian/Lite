@@ -27,6 +27,8 @@ These paragraphs describe returned-Result recovery. The later shared else direct
 
 An operation with success type `T` and a normally completing fallback with type `D` produces `T | D`. Equal alternatives collapse. A fallback that explicitly exits adds no local value alternative.
 
+A fallible handler with outward outcome `R ! E2`, handling all of `E1` from `T1 ! E1`, produces `(T1 | R) ! E2`. If only part of the original error type is handled, the outgoing error types also include the unhandled remainder. A later recovery can handle `E2`; the handler cannot catch its own newly produced failure. See [fallible handler outcomes](expression-recovery.md#fallible-handler-outcomes) for the type derivation and the distinction from Results carried as successful payload data.
+
 ```text
 value := load_user(id) else {
     "Unavailable"

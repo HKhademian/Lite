@@ -171,6 +171,8 @@ On success, the expression supplies the successful payload without executing the
 
 For an operation with success type `T` and a normally completing recovery block with result type `D`, the recovery expression has type `T | D`. This is a statically known union, not dynamic typing. Identical alternatives collapse: a `User` success and a `User` fallback yield `User`.
 
+If the recovery block instead has outward outcome `R ! E2` and handles all original errors `E1`, recovering `T1 ! E1` produces `(T1 | R) ! E2`. Partial recovery also retains the unhandled original error types. This composes the handler's outward failure channel; it does not recursively flatten a Result deliberately stored as successful payload data. See [fallible handler outcomes](expression-recovery.md#fallible-handler-outcomes).
+
 ```text
 message := load_user(id) else {
     "Unavailable"

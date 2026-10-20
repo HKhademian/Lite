@@ -95,6 +95,22 @@ Else can offer one recovery surface for both without merging their contracts. On
 
 A stored Result remains ordinary data until this recovery operation is explicitly requested. A handler does not search inside records, nested Result payloads, or intermediate calls for unhandled .err values. Returned errors inside a callee must still be handled or explicitly forwarded by that callee. Normal return, tagged return, break, and continue are control-flow exits, not failures for else to intercept.
 
+## Fallible handler outcomes
+
+When a handler has outward outcome type `R ! E2` and handles the entire original error type `E1`, recovery composes the successful alternatives and preserves the handler's new error channel:
+
+```text
+input outcome:     T1 ! E1
+handler outcome:   R ! E2
+recovered outcome: (T1 | R) ! E2
+```
+
+The original success supplies `T1`; successful recovery supplies `R`; failed recovery supplies `E2`. The clause consumes the original `E1` failures, but does not catch its own `E2` failures. A later enclosing `else(E2)` can recover that new outward outcome. The example is a type sketch; `R ! E2` describes the handler's outcome rather than an expression spelling.
+
+For partial handling, if the original error types are `H | U` and the handler consumes `H`, the resulting type is `(T1 | R) ! (U | E2)`. Equal alternatives collapse; a type consumed from the original outcome can reappear if the handler introduces it again. This type union does not settle how a new failure combines with an already pending member or how duplicates are represented.
+
+This rule composes the handler's outward outcome at the explicit recovery boundary. A Result deliberately carried inside a successful payload remains data; recovery does not recursively flatten that payload. Postfix `!` inside the handler still exits its nearest function/closure rather than producing a local handler outcome. Typed panics retain their separate implicit channel and are not added to `E2` merely because they can occur.
+
 ## Argument Result handling is independent of panic scope
 
 The user explicitly requires each Result-producing argument to be handled or extracted before it is used as an ordinary parameter value. If exp1 returns A ! E1 and op expects A, op(exp1()) else { fallback_result() } is rejected. The outer handler does not implicitly extract the argument, observe its .err as a panic, or supply an A fallback for it.
