@@ -1,6 +1,15 @@
 # Language documentation
 
-Design snapshot: **2026-10-19**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-20**. Stage: **planning; no implementation**.
+
+## Start here
+
+1. [LiteScript white paper](white-paper.md): the foundational philosophy, intended audience, and criteria for every design decision.
+2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
+3. [Current decisions and open questions](decisions-and-open-questions.md): selected contracts and work still to settle.
+4. [Provisional grammar sketch](grammar-sketch.md): the current syntax outline and its remaining boundaries.
+
+The detailed reference below develops these foundations one concept at a time.
 
 ## How to read this reference
 

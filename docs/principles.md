@@ -2,16 +2,22 @@
 
 Status: **established goals; several implementation choices remain open**.
 
+The [LiteScript white paper](white-paper.md) is the foundational statement of the language's philosophy and design criteria. This page condenses those goals and their current consequences.
+
 ## Purpose
 
-Provide a language that students can begin using without learning type annotations, while retaining static types and a path to precise library and systems contracts.
+Let people and programming agents focus on problem solving through concise, readable programs with clear contracts. Students should be able to begin without learning type annotations, while retaining static types and a path to precise library and systems contracts.
 
 ## Design goals
 
+- Keep ceremony low and make programs easy to read, write, and reason about.
+- Make consequential behavior explicit through concise operations, including failure handling and caller mutation grants.
+- Evaluate convenience together with its semantic and runtime costs; ordinary abstractions should support efficient implementation with modest runtime machinery.
 - Static, strong typing with inference for ordinary code.
 - Functions, conditions, loops, modules, and packages.
 - No universal `null`, `nil`, or `undefined` value.
 - Optional data through `Option`; recoverable failure through `Result`.
+- Express ordinary source programs through values and explicit access permissions without requiring a raw pointer vocabulary; memory and foreign-interface contracts remain to be designed.
 - Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
 - A separate typed panic path that unwinds exited scopes and runs applicable `finally` blocks before outer matching handlers; cleanup preserves any already pending failure as primary if cleanup also fails. Typed recovery filters consume matching aggregate members in declaration order. No-handler policy, hard aborts, aggregate representation/inspection, and duplicate-member handling remain open.
 - Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).

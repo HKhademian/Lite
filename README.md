@@ -1,11 +1,12 @@
 # LiteScript
 
-LiteScript is a language-design project exploring a small, statically typed language with a scripting experience, beginner-friendly defaults, immutability by default with explicit mutation capabilities, explicit failure values, and native compilation as a performance goal.
+LiteScript is a language-design project for readable, strongly typed programs with scripting convenience. It aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Native execution with modest runtime support is a performance goal.
 
-The project is currently **planning only**. These documents record the design discussion through **2026-10-19**. They are not an implemented compiler specification, and the examples have not been compiled.
+**Start with the [LiteScript white paper](docs/white-paper.md)** for the language's philosophy, goals, and design criteria.
 
-Start with the [language documentation](docs/README.md).
+The project is currently **planning only**. These documents record the design discussion through **2026-10-20**. They are not an implemented compiler specification, and the examples have not been compiled.
 
+- [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)

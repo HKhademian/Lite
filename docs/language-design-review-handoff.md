@@ -67,6 +67,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 ## Read first
 
+- [`white-paper.md`](white-paper.md) — foundational philosophy: readable source, little ceremony, useful defaults, explicit consequential behavior, and efficient implementation goals for people and programming agents.
 - [`README.md`](README.md) — document status and reading order.
 - [`decisions-and-open-questions.md`](decisions-and-open-questions.md) — current selected rules and priority open contracts.
 - [control-flow.md](control-flow.md) — selected tagged-return completion and loop exits.

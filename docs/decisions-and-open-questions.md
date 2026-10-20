@@ -6,6 +6,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 
 ### Audience and defaults
 
+- The [LiteScript white paper](white-paper.md) is the foundational philosophy: keep ceremony low, make programs simple to read and reason about, and let people and programming agents focus on problem solving. Useful defaults and concise explicit operations should preserve strong contracts and support efficient implementation with modest runtime machinery. Native performance remains a goal requiring implementation and measurement.
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
 - Beginner array algorithms such as sorting should use ordinary indexed comparisons and assignments rather than explicit Result handling at every read and write. The user accepts direct positional operations with typed faults and requests attached else for recovery; full capture scope and transfer/cleanup remain open; see [ordinary algorithm code](checked-fault-policy.md#ordinary-algorithm-code-must-remain-direct).
 - Written library contracts must make collection requirements such as positional indexing visible in source. Requiring readers to inspect the body or an IDE is insufficient. Omitted inputs may still use deliberately inferred contracts; an explicit complete contract must not silently gain stronger requirements. Exact contract spellings remain open; see [signature visibility](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations).
