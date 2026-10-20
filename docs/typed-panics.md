@@ -1,6 +1,6 @@
 # Future strongly typed panics
 
-Status: **strongly typed panic information requested and the panic channel selected for basic arithmetic faults, 2026-10-19**. Panic/fault events should carry typed categories and appropriate structured information. Local arithmetic recovery is required, but its syntax is unresolved. Capture scope, transfer mechanism, exact operation triggers, payload details, and ABI remain future work.
+Status: **strongly typed panic information requested, the panic channel selected for basic arithmetic faults, and typed target-level `else` recovery selected, 2026-10-20**. Panic/fault events should carry typed categories and appropriate structured information. Capture scope, transfer mechanism, exact operation triggers, payload details, and ABI remain future work.
 
 ## Intended categories
 
@@ -19,7 +19,7 @@ Panics propagate implicitly without ! or a Result error declaration, as explicit
 
 Typed panic information remains separate from a returned T ! E outcome. It does not automatically add every possible panic category to every function's declared recoverable error type. The proposed throw error continues to mean return .err(error), not a panic trigger.
 
-Typing alone did not select recovery. The later else direction requests typed panic recovery, while its supported scope, transfer mechanism, cleanup, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
+Typed target-level `else` filters are selected for local panic recovery. A matching handler handles only its named category; unmatched panics propagate implicitly. The supported evaluation scope, transfer mechanism, cleanup, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
 
 If a checked operation converts a selected fault into a returned error, the resulting Result and any outward propagation obey the existing explicitly declared error contract. Which panic information is retained by such conversion remains open.
 
@@ -31,6 +31,6 @@ Define detection before an invalid access where possible. An arbitrary foreign-c
 
 ## Numeric details remain specific
 
-Integer zero division and fixed-width overflow use the panic channel when their operation contract defines them as faults; they do not produce `Result` errors. Floating-point non-finite results and explicitly requested wrapping/saturating operations may have different contracts. The selected channel does not define every operator's fault cases or build-mode behavior. Local recovery syntax remains unresolved; see [arithmetic fault boundaries](arithmetic-faults.md).
+Integer zero division and fixed-width overflow use the panic channel when their operation contract defines them as faults; they do not produce `Result` errors. Floating-point non-finite results and explicitly requested wrapping/saturating operations may have different contracts. The selected channel does not define every operator's fault cases or build-mode behavior. Exact category names and panic payloads remain open; see [arithmetic fault boundaries](arithmetic-faults.md).
 
 Related: [panics](panics.md), [bounds and arithmetic policy](checked-fault-policy.md), [Result](result-and-errors.md), [memory](memory-and-performance.md), and [division](division.md).

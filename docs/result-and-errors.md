@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract open; arithmetic uses typed panics with local recovery syntax unresolved**.
+Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract open; arithmetic uses typed panics and target-level typed `else` recovery**.
 
 ## Purpose
 
@@ -123,7 +123,7 @@ Here `attempt` retains the typed success-or-error outcome for storage, passing t
 
 ## Recovery at a single operation
 
-A programmer must be able to inspect and handle the failure of an individual fallible operation, such as a function call returning `T ! E`. Arithmetic has a separate selected contract: a basic arithmetic fault is a typed panic, not a returned `Result` error. The user also requires local recovery of an individual arithmetic operation; its syntax is not selected. See [arithmetic fault boundaries](arithmetic-faults.md).
+A programmer must be able to inspect and handle the failure of an individual fallible operation, such as a function call returning `T ! E`. Arithmetic has a separate selected contract: a basic arithmetic fault is a typed panic, not a returned `Result` error. The target-level `else` filter can recover a matching panic at an individual operation; unmatched panic and returned-error behavior remain distinct. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 - Local recovery must be available at the operation's expression, without requiring the surrounding function or a larger computation to be used as the recovery boundary.
 - A requested local capture or recovery must observe the operation's outcome without a prior implicit unwrap or automatic propagation.
@@ -144,7 +144,7 @@ if .err(error) := attempt {
 }
 ```
 
-The user later selected the panic channel for basic arithmetic faults, so this candidate is superseded for those faults. An expected `Result` type does not capture or convert an arithmetic panic. Local arithmetic recovery remains required, with its syntax unresolved. The example is retained only as design history.
+The user later selected the panic channel for basic arithmetic faults, so this candidate is superseded for those faults. An expected `Result` type does not capture or convert an arithmetic panic. Local arithmetic recovery uses target-level `else` with a matching typed filter; the example is retained only as design history.
 
 ### Expression-local recovery
 
@@ -186,11 +186,11 @@ Union alternatives can be narrowed by matching their type. This applies both to 
 - This is a selected union-forming boundary for Result recovery. It does not automatically make unrelated `if` or `match` branches infer unions.
 - General union syntax, narrowing, conversions, layout, and ownership rules remain open. `T | D` records the type relationship without settling all type grammar.
 
-This Result recovery form is selected. It does not introduce dynamic handler lookup through arbitrary callees or catch a panic. Full precedence and evaluation scope for nested operands remain open. The separate loop-completion hook's rule that a missing receiver denotes action-only behavior does not apply to Result recovery.
+This Result recovery form is selected. The same target-level `else` syntax can filter typed panics. A filter handles only its matching type: unmatched panics propagate implicitly, while unmatched returned errors remain a `Result` obligation and may be explicitly propagated with postfix `!`. Full precedence and evaluation scope for nested operands remain open. The separate loop-completion hook's rule that a missing receiver denotes action-only behavior does not apply to Result recovery.
 
 [Recovery receivers and fallback types](recovery-and-fallbacks.md) compares this optional receiver and union result rule with the reference languages. A precise union still requires narrowing before variant-specific use.
 
-Applying the same form to `(a + b) else(fault) { ... }` is not selected arithmetic syntax. Basic arithmetic faults use the panic channel, and local recovery remains required; the Result-recovery rule does not define how that syntax attaches.
+An arithmetic target can use a typed `else` filter to recover a matching panic. It does not become a `Result` error, and an expected `Result` type does not capture it. Exact arithmetic panic categories and the recovery boundary around operands/calls remain open.
 
 ## Unit success
 
@@ -207,7 +207,7 @@ The final `Unit` represents success without data.
 
 Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Which conditions panic, how a panic is triggered, termination versus unwinding, and panic cleanup guarantees remain open; see [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
 
-Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The user requires local recovery for an individual operation, but the language has not selected syntax exposing that recovery. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width `%` minimum-value/`-1` case. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
+Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The selected target-level `else` can recover a matching typed panic at the operation. Unmatched panics still propagate implicitly; returned errors still require explicit handling or `!`. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width `%` minimum-value/`-1` case. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 ### Reference-language distinction
 

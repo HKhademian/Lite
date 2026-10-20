@@ -136,9 +136,9 @@ value := operation() else(error) {
 }
 ```
 
-The receiver gets the failed outcome's error payload, not the whole Result or its successful payload. Omitting the receiver introduces no implicit name. These are selected recovery rules.
+For a Result-only recovery target, the receiver gets the failed outcome's error payload, not the whole Result or its successful payload. Omitting the receiver introduces no implicit name. The same target-level `else` can receive typed panics when its target permits them.
 
-**Recommendation:** ordinary error receivers bind irrefutably. A future selective error pattern needs explicit handling or propagation of every unmatched error; do not swallow it or convert it into successful Unit. A broad error union can already be matched inside the handler. A receiver type constraint that excludes some declared errors cannot be treated as an exhaustive handler merely because one block was written.
+Typed receiver patterns are selected as filters: `else (p: BoundPanic)` binds only a matching panic, while `else (BoundPanic)` matches it without binding. An untyped name matches all supported failures; receiverless `else` also matches all but binds no value. `_` is an ordinary readable untyped binding and matches all. An unmatched panic propagates implicitly. An unmatched returned error must remain as `Result`, be handled by another defined form, or use `!` for explicit propagation; it cannot be silently discarded or converted into successful Unit.
 
 Success/failure distinction remains explicit for a stored Result even when success and error payload types overlap. Use the selected lowercase .ok(value) and .err(error) patterns; tag-only .ok and .err are also available. A recovery receiver already receives only the error payload, so it does not match another outer .err unless that payload itself is a Result.
 

@@ -33,7 +33,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
 - [Division](division.md): fractional `/`, integer floor `//`, paired `%`, compound updates, and numeric fault cases.
-- [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, required local recovery, and unresolved recovery syntax and fault cases.
+- [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, local typed-`else` recovery, and unresolved fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 
 ## Types and values
@@ -113,10 +113,10 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Recovery receivers and fallback types](recovery-and-fallbacks.md): optional error naming, lazy fallbacks, union results, narrowing, and reference-language comparisons.
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
-- [Recovery receiver types](recovery-receiver-types.md): proposed direct E | Panic versus tagged wrappers, optional typed filtering, overlap, and returned-error coverage.
-- [Shared expression recovery](expression-recovery.md): selected else surface for returned errors and typed panics, pending evaluation scope, receiver typing, cleanup, and runtime design.
+- [Recovery receiver types](recovery-receiver-types.md): selected typed filtering, unmatched-channel behavior, and open broad receiver representation.
+- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, pending evaluation scope, broad receiver typing, cleanup, and runtime design.
 - [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, and cleanup policies.
-- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture and propagation still open.
+- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, and cleanup still open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
 - [Functions](functions.md): uniform bindings, `:` result annotations, closures, and early returns.
 - [Closures](closures.md): function values, capture questions, and return boundaries.

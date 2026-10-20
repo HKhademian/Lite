@@ -1,6 +1,6 @@
 # Bounds, arithmetic, and checked fault policy
 
-Status: **policy history with later selected sequence and arithmetic directions, 2026-10-19**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; individual-operation recovery is required but its syntax is unresolved. The [shared recovery document](expression-recovery.md) records the sequence surface. Alternatives below preserve the earlier review rather than competing current meanings.
+Status: **policy history with selected sequence and arithmetic directions, 2026-10-20**. Ordinary sequence access/removal uses typed faults with attached local recovery. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` filters support local recovery of matching types. The [shared recovery document](expression-recovery.md) records the recovery surface. Alternatives below preserve the earlier review rather than competing current meanings.
 
 ## Keep two design questions separate
 
@@ -99,8 +99,8 @@ These comparisons show separate asserting and checked operations as a viable des
 
 ## Historical recommendation
 
-The earlier recommendation was to evaluate ordinary safety-checked assertions for bounds and arithmetic, together with an explicit concise typed checked form for recoverable use. The user has since selected the typed panic channel for basic arithmetic, with local recovery still required and its spelling open. Keep genuinely recoverable API failures declared and explicit. Preserve a single safe semantic policy across normal build modes and discharge checks when proved unnecessary.
+The earlier recommendation was to evaluate ordinary safety-checked assertions for bounds and arithmetic, together with an explicit concise typed checked form for recoverable use. The user has since selected the typed panic channel for basic arithmetic and target-level typed `else` filters for local recovery. Keep genuinely recoverable API failures declared and explicit. Preserve a single safe semantic policy across normal build modes and discharge checks when proved unnecessary.
 
-Alternative A remains a coherent historical comparison but is superseded for basic arithmetic faults. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. The sequence decision selects direct access/removal plus attached else; arithmetic uses typed panics and still needs an individual recovery spelling. Confirm the remaining evaluation scope before migrating unrelated examples.
+Alternative A remains a coherent historical comparison but is superseded for basic arithmetic faults. Do not adopt both meanings for an undecorated operation or promise a universally capturable panic as a shortcut. The sequence decision selects direct access/removal plus attached else; arithmetic uses typed panics and target-level typed filters. Confirm the remaining evaluation scope before migrating unrelated examples.
 
 Related: [panics](panics.md), [Result](result-and-errors.md), [operation contracts](collection-operation-contracts.md), [division](division.md), and [signature ergonomics](collection-signature-ergonomics.md).

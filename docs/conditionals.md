@@ -281,7 +281,7 @@ The tag names the entire conditional. `.condition` denotes its evaluated conditi
 
 The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. Whether the result is exposed as `.value` metadata is unresolved. If exposed, it requires an explicit tag such as `@access.value`; conditional metadata has no implicit leading-dot target. A post-selection `then` reusing the loop keyword is a proposal for reading or transforming this result.
 
-A conditional `then` would follow the complete branch chain, not separate a condition from its body. It is not selected syntax and does not by itself promise cleanup on every exit. All-exit cleanup remains a separate `finally`/lifecycle question. General typed receiver clauses are exploratory, not required conditional grammar.
+A conditional `then` would follow the complete branch chain, not separate a condition from its body. It is not selected syntax and does not by itself promise cleanup on every exit. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
 
 ## Related concepts and references
 

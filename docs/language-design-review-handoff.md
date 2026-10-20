@@ -19,7 +19,7 @@ todos:
     content: Reconcile current loop docs, examples, grammar, and decision ledger
     status: completed
   - id: next-foundation
-    content: Review arithmetic fault boundaries: typed panic channel selected; local recovery syntax and exact triggers remain open
+    content: Review arithmetic fault boundaries: typed panic channel and typed else filters selected; exact triggers and target boundary remain open
     status: in_progress
 plans:
   requires: []
@@ -173,14 +173,14 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 **Actions:**
 
-- Review the user's selected policy that basic arithmetic faults use typed panics, not returned `Result` errors, while local recovery remains possible for each individual operation without an established syntax.
+- Review the user's selected policy that basic arithmetic faults use typed panics, not returned `Result` errors, and matching panic types can be recovered with target-level typed `else` filters.
 - Define the scope of “basic arithmetic fault” against fixed-width overflow, integer division, remainder, and floating-point edge cases. Keep normal non-finite floating-point values distinct from faults until their contract is selected.
-- Compare recovery boundaries without inventing source grammar. Preserve explicit `Result` handling for declared function errors and the existing concise arithmetic goal.
+- Define target behavior when a typed filter matches or misses: unmatched panics propagate implicitly, while remaining returned errors require explicit handling or postfix `!`. Preserve explicit `Result` handling for declared function errors and the existing concise arithmetic goal.
 - Save selected policy and remaining questions in the ledger and a focused concept page; do not start compiler implementation from a planning discussion.
 
 **Acceptance:**
 
-- The review identifies exact arithmetic fault cases, their typed panic channel, and a local recovery contract without claiming an unselected syntax or runtime mechanism.
+- The review keeps exact arithmetic fault cases and target boundaries open while preserving the selected typed panic channel, typed filter behavior, and channel-specific default for unmatched failures.
 
 ## Do not change
 

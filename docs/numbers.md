@@ -36,7 +36,7 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 ## Representation proposal
 
-A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the representation is not selected. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Local recovery at an individual operation is required, but its syntax remains open; see [arithmetic fault boundaries](arithmetic-faults.md).
+A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the representation is not selected. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 ## Division
 
@@ -77,7 +77,7 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, exact arithmetic fault triggers and payloads, wrapping operations, and range bounds all remain open.
 
-Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The local recovery syntax and exact fault cases remain open; see [arithmetic fault boundaries](arithmetic-faults.md).
+Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The selected local surface is target-level `else` with typed filters; exact fault cases remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 ## Related concepts and references
 

@@ -1,12 +1,14 @@
 # Arithmetic fault boundaries
 
-Status: **basic arithmetic faults use the typed panic channel, not returned `Result` errors; local recovery of an individual operation is required, but its syntax is unresolved, 2026-10-19**.
+Status: **basic arithmetic faults use the typed panic channel, not returned `Result` errors; target-level `else` with typed filters supports individual recovery, 2026-10-20**.
 
 ## Selected channel
 
 When a basic arithmetic operation has a language-defined fault, it raises a typed panic. The operation does not return `T ! ArithmeticError` merely because the arithmetic can fail. Ordinary declared function errors remain separate: a function may still return `T ! E`, and callers handle or propagate that `Result` explicitly.
 
-An unhandled arithmetic panic propagates through calls under the existing panic direction. The user also requires the ability to recover from each individual arithmetic operation. No syntax currently exposes that local arithmetic recovery, so this requirement does not select an `else` attachment, a checked block, an expected-`Result` conversion, or a named helper API. In particular, the selected shared `else` surface for sequence faults does not by itself establish how it attaches to arithmetic.
+An unhandled arithmetic panic propagates through calls under the existing panic direction. The user selects target-level `else` for operation and block targets, with typed filtering for a specific panic category. This lets a programmer recover an individual arithmetic panic without turning it into a returned `Result`. An expected-`Result` conversion is not selected.
+
+An untyped target handler catches every failure supported by its target. Receiverless `else` binds nothing; `_` and an untyped name such as `failure` are readable bindings that also match every supported failure. A typed filter handles only matching failures. For example, `Panic` matches the panic family, while `BoundPanic` matches that specific category. The broad receiver type when returned errors and panics are both possible remains open.
 
 This channel decision does not define which floating-point outcomes are faults. If an operation is defined to fault, that fault uses the panic channel; whether a floating-point edge case instead produces a valid non-finite value is a separate numeric rule.
 
@@ -32,9 +34,17 @@ The same rule applies to other basic math operators when their numeric contract 
 
 ## Individual recovery remains a requirement
 
-Recovery must be local to the operation whose arithmetic fault the programmer wants to handle. A larger surrounding function or unrelated computation should not be the only possible recovery boundary. The operation and its operands must execute once, and a recovery handler must receive enough typed information to distinguish relevant fault cases.
+Recovery can be local to the operation whose arithmetic fault the programmer wants to handle:
 
-These are required semantics, not a source example: the local recovery spelling, receiver type, fallback typing, behavior when the recovery code faults, and whether operands/callees are included in the recovery boundary all remain open. Do not write an arithmetic `else` example as if it were already valid grammar.
+```text
+sum := left + right else (p: OverflowPanic) {
+    recover_overflow(p)
+}
+```
+
+`OverflowPanic` is an illustrative category name, not a selected declaration. A matching typed handler runs; a nonmatching panic propagates implicitly. If the target can also return a `Result` error, that error remains explicit and can be forwarded with `!` after the typed handler. A larger surrounding function or unrelated computation need not be the only recovery boundary.
+
+The selected form does not settle the exact recovery boundary around evaluated operands/callees, the broad mixed-channel receiver type, fallback typing for panic recovery, behavior when recovery code faults, or panic transfer/cleanup.
 
 ## Decisions still open
 
@@ -42,7 +52,7 @@ These are required semantics, not a source example: the local recovery spelling,
 - The arithmetic panic categories, payloads, and source information.
 - Whether floating-point division by zero produces non-finite values or a typed panic; define other floating-point edge cases separately.
 - The independent result of `min % -1` for fixed-width signed integers.
-- Syntax for recovering one arithmetic operation and its result type.
+- Exact arithmetic panic type names and the result type of a panic fallback.
 - The boundary around evaluated operands and calls, transfer mechanism, cleanup, and handling of a second panic.
 - Explicit wrapping/saturating operations and conversion behavior.
 

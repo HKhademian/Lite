@@ -85,7 +85,7 @@ This has the same tokens and meaning as the spaced example. Ordinary and raw blo
 
 ## Open numeric contracts
 
-- Arithmetic faults use the typed panic channel, not returned `Result` errors. The user requires local recovery for each individual operation, but no syntax for recovering arithmetic faults is selected. The shared `else` surface does not yet define an arithmetic attachment. See [arithmetic fault boundaries](arithmetic-faults.md).
+- Arithmetic faults use the typed panic channel, not returned `Result` errors. Individual operations can be recovered through target-level `else` with a typed filter; exact category names and target boundary remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
 - Define division by zero and unrepresentable results, including the signed minimum divided by `-1` for fixed-width integers.
 - Define arithmetic panic categories and payloads. The channel does not settle which floating-point cases are faults or make operators return `Result`.
 - Choose floating-point result representations, large-integer precision handling, and mixed numeric operand rules.

@@ -298,18 +298,23 @@ Plain-union [normalization](union-normalization.md) is selected independently of
 ## Recoverable error expressions and shared recovery direction
 
 ```text
-result_expression!
-result_expression else(error_pattern) { recovery_body }
-result_expression else { recovery_body }
+target!
+target else { recovery_body }
+target else (failure) { recovery_body }
+target else (_) { recovery_body }
+target else (name: FailureType) { recovery_body }
+target else (FailureType) { recovery_body }
 ```
 
 These are selected surface templates, not complete productions. Postfix `!` extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. It participates in left-to-right postfix chaining, so `load_user(id)!.load_profile()!.name` needs no grouping around each extraction. `!.` is the `!` token followed by the ordinary `.` token, not a nullable-access token; token-separating whitespace changes no meaning.
 
+Receiverless `else`, an untyped readable binding such as `failure` or `_`, and a typed receiver pattern have distinct binding behavior. The first three untyped forms match every failure supported by the target. `_` remains an ordinary readable binding and can be used in the handler. A typed receiver pattern matches only its named failure type: `BoundPanic` handles that panic category, while `Panic` matches the panic family and does not match returned Result errors. An unmatched panic propagates implicitly; an unmatched returned error remains an explicit Result obligation and can be propagated with `!`. Exact grammar precedence, mixed-channel broad receiver typing, nested-operand scope, and cleanup remain open.
+
 Type checking each call argument precedes any claim that an outer recovery clause makes a call valid. If a parameter expects A, an argument of A ! E requires its own explicit recovery/extraction; an outer else does not unwrap it. Passing intact Result data to a Result-accepting parameter remains valid. This does not select panic-capture scope.
 
-The attached `else` form, with an optional error receiver, supplies a fallback or explicitly exits. Success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
+The attached `else` form supplies a fallback for every supported failure or filters for one typed failure. When the handler matches, success type `T` and normally completing fallback type `D` form result type `T | D`; omitting the receiver does not suppress the block's result. An ordinary Result expression remains data without implicit extraction. Every escaping recoverable error must be covered by the function's declared contract.
 
-Complete postfix productions, full precedence, nested-operand evaluation scope, and general union typing rules remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. Panics remain separate from returned Result data. The later [shared recovery direction](expression-recovery.md) requests expression else(...) { ... } for typed panic recovery too; complete scope, mixed-channel receiver typing, and assignment attachment are pending. This is a recovery boundary, not implicit Result conversion. See [propagation and call chaining](propagation-and-chaining.md).
+Complete postfix productions, full precedence, nested-operand evaluation scope, and general union typing rules remain open. The recovery clause must be distinguished from conditional and loop `else` through grammar rather than line breaks. Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No capture marker is required; Option propagation remains separate. The selected shared [recovery direction](expression-recovery.md) lets target-level `else` filter typed panics while keeping panic propagation distinct from returned Result data. Complete scope, mixed-channel receiver typing, and assignment attachment remain pending. This is a recovery boundary, not implicit Result conversion. See [propagation and call chaining](propagation-and-chaining.md).
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 

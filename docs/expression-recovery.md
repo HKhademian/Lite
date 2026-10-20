@@ -1,6 +1,6 @@
 # Shared expression recovery with else
 
-Status: **user-selected surface direction, 2026-10-19; scope and implementation contracts pending**. Ordinary indexed reads/writes and pops should remain direct, with implicit faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
+Status: **target-level `else` recovery and typed filtering selected, 2026-10-20; evaluation boundary, mixed receiver type, and implementation contracts pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
 
 ## Direct use and local recovery
 
@@ -37,7 +37,37 @@ user := load_user(id) else(error) {
 
 Ordinary fallible calls still return Result values unless explicitly inspected, recovered, or propagated. Using shared recovery syntax does not make every call implicitly unwrap, or turn every panic into a returned .err. Postfix ! remains Result extraction and declared-error propagation; it does not capture panics.
 
-The user later selected typed panics, not returned `Result` errors, for basic arithmetic faults and requires individual-operation recovery. This shared `else` direction does not yet define arithmetic attachment syntax; do not assume `a + b else { ... }` is valid grammar. See [arithmetic fault boundaries](arithmetic-faults.md).
+The user selected typed panics, not returned `Result` errors, for basic arithmetic faults and requires individual-operation recovery. The existing target-level `else` applies to operation targets; typed filters let the handler recover only a matching panic. The exact arithmetic fault type and the evaluation boundary around operands/calls remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
+
+## Match all failures or filter by type
+
+An operation or block target can use receiverless or untyped `else` to match every failure supported by that recovery target:
+
+```text
+target else { recover_any_failure() }
+target else (_) { report(_); fallback() }
+target else (failure) { report(failure); fallback() }
+```
+
+Omitting the receiver catches without binding. An untyped name matches all supported failures and binds a broad failure value. `_` also matches all and is an ordinary readable binding, so it can be used in the handler or left unused without a warning; it is not a special nonbinding wildcard. When both returned errors and panics can reach the target, the exact static type and origin representation of that broad value remain open.
+
+A typed pattern filters the failures by type:
+
+```text
+target else (p: BoundPanic) { recover_bound_panic(p) }
+target else (BoundPanic) { recover_without_binding() }
+target else (Panic) { recover_any_panic() }
+```
+
+The first two forms match only `BoundPanic`; the binding form exposes the narrowed value, while the type-only form does not bind it. `Panic` is the broad panic type and matches panic categories, not returned `Result` errors. A specific returned-error type can be handled with the same typed-filter rule.
+
+If a typed filter does not match, its body does not run. An unmatched panic follows the default implicit propagation rule. An unmatched returned error remains subject to explicit handling: keep it as a `Result` when the target is used as outcome data, handle it with another defined form, or propagate it with postfix `!`. For example:
+
+```text
+target else (p: BoundPanic) { recover_bound_panic(p) }!
+```
+
+Here `!` explicitly propagates any remaining returned `Result` error; it does not catch or propagate panics. A nonmatching panic still propagates implicitly. This filtered form must not silently discard either channel.
 
 ## Shared syntax, distinct failure channels
 
@@ -74,7 +104,7 @@ The handler itself is outside its own recovery boundary. Its failure must go to 
 
 ## Typed handler inputs
 
-The [receiver-type review](recovery-receiver-types.md) compares a direct E | Panic receiver with a tagged Failure<E> wrapper, and proposes optional typed receiver filtering. These remain proposals; a combined handler cannot be assumed to receive only E.
+Typed receiver filtering is selected: a filter handles only its matching type. The [receiver-type review](recovery-receiver-types.md) still compares a direct `E | Panic` receiver with a tagged `Failure<E>` wrapper for untyped handlers. A combined handler cannot be assumed to receive only E.
 
 For returned-error handling alone, the receiver retains the operation's declared E. A known intrinsic fault can have a precise fault category. If arbitrary called code can panic without public panic-effect declarations, a general boundary needs a defined typed panic carrier or another explicit typing mechanism; it cannot claim to know a finite precise union merely by looking at T ! E.
 
@@ -100,7 +130,8 @@ The user retires the proposed external if/loop/match recovery tails. These const
 - Distinguishing recovery else from a conditional branch or loop completion clause without whitespace-dependent parsing.
 - Handler precedence and grouping under the selected block-item continuation rule.
 - Indexed assignment recovery: assignment is an item, not a general value expression. In values[index] = replacement else { ... }, attachment to the write versus its RHS cannot be guessed. No production for that spelling is selected here.
-- The typed receiver contract when both returned errors and panics can reach one boundary.
+- The broad receiver contract and origin information when returned errors and panics can reach one untyped handler.
+- Whether multiple typed filters can chain on one target, plus coverage and ordering rules.
 - Any first-class capture-as-Result operation without a fallback; a second helper family is not required by the examples above.
 
 Related: [Result and errors](result-and-errors.md), [panics](panics.md), [typed panics](typed-panics.md), [fault-policy history](checked-fault-policy.md), [sequence end operations](sequence-end-operations.md), and [evaluation order](evaluation-order.md).

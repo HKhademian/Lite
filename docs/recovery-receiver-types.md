@@ -1,6 +1,6 @@
 # Types received by recovery handlers
 
-Status: **next-step proposal, 2026-10-19**. Shared else recovery is selected, but its combined Result/panic receiver type is not. This review assumes a boundary that can receive both channels; it does not choose the remaining panic-evaluation scope. Panic, Failure, and generic notation below are explanatory names, not final declarations or ABI.
+Status: **typed failure filtering selected, 2026-10-20; broad mixed-channel receiver representation remains open**. Shared else can match all failures or filter for one type. This review assumes a boundary that can receive both channels; it does not choose the remaining panic-evaluation scope. Panic, Failure, and generic notation below are explanatory names, not final declarations or ABI.
 
 ## The question
 
@@ -68,24 +68,47 @@ If the eventual error-type rules permit returning a Panic carrier as an ordinary
 
 Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling, context scope, and resume syntax remain open. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
 
-## Optional typed receiver filtering
+## Selected typed receiver filtering
 
-A further proposal reuses a typed binding pattern:
+The user selects a typed filter that reuses binding/type-pattern syntax:
 
 ```text
-/* Proposed filter; read_text declares exactly ReadError. */
-text := read_text(path) else(error: ReadError) {
-    recover_read(error)
-}
+/* A target can return ReadError and can raise BoundPanic. */
+text := read_text(path) else(p: BoundPanic) {
+    recover_bound_panic(p)
+}!
 ```
 
-Under this proposed rule, the pattern selects matching failures. It handles the declared ReadError and supplies a String fallback; a nonmatching panic continues outward implicitly. A bare receiver or omitted receiver would remain unfiltered over the boundary's supported channels.
+This handles only the matching `BoundPanic`. The suffix `!` explicitly forwards a remaining returned `ReadError`; it does not alter panic handling. Any panic category that does not match `BoundPanic` continues outward implicitly. If the target has no returned `Result` error, this filter needs no `!` for panic propagation.
 
-This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. It requires explicitly extending the existing receiver policy; it is not already selected grammar. It also does not distinguish a returned payload from a panic merely because their types overlap.
+The type-only spellings distinguish matching from binding:
 
-Most importantly, unmatched returned errors cannot acquire implicit propagation. If read_text instead declares ReadError | DecodeError, handling only ReadError is insufficient to supply a plain String. Recommend rejecting that incomplete plain-value recovery unless the programmer handles the remaining Result errors through another explicit, defined form. A match inside an unfiltered handler can already cover both. This proposal adds neither residual-Result inference nor automatic forwarding of DecodeError.
+```text
+target else (BoundPanic) { recover_without_binding() }
+target else (Panic) { recover_any_panic() }
+```
 
-A panic-only filter on an operation with unhandled Result errors has the same obligation: it cannot make the returned error disappear. Chained selective else clauses, guards, general payload patterns, and their coverage algorithm remain separate proposals.
+`BoundPanic` matches that panic category without binding a name. `Panic` matches the broad panic family and does not match returned errors. An analogous filter can handle one returned-error type:
+
+```text
+text := read_text(path) else(e: BoundError) {
+    recover_bound_error(e)
+}!
+```
+
+This handles `BoundError`; other returned errors remain subject to explicit handling or `!` propagation. An untyped handler matches all failure types supported by its target:
+
+```text
+target else { recover_without_binding() }
+target else (_) { report(_) ; recover() }
+target else (failure) { report(failure); recover() }
+```
+
+Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.
+
+This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles its matching failure and only that failure. Unmatched panics propagate implicitly. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. Chaining multiple typed filters on one target and their coverage/ordering rules remain open.
+
+The filter does not distinguish a returned payload from a panic solely because their payload types overlap. Preserve channel origin in the eventual carrier/context where required; see the following section.
 
 ## Runtime and representation boundaries
 
@@ -103,7 +126,7 @@ A public receiver contract must remain stable across inlining and separate compi
 
 - Direct E | Panic versus a tagged Failure<E> wrapper as the public receiver.
 - The typed Panic carrier/category model and any failure-origin metadata API.
-- Whether typed receiver patterns filter failures, with explicit coverage of returned errors.
+- The exact type relationships and coverage diagnostics for selected typed receiver patterns.
 - Panic boundary scope, cleanup, transfer mechanism, and any explicit resume operation.
 
 Related: [shared expression recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [typed panics](typed-panics.md), [Result errors](result-and-errors.md), [receiver clauses](receiver-clauses.md), and [union matching](union-patterns.md).
