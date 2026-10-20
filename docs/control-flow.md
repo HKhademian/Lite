@@ -43,7 +43,14 @@ use(price);
 
 The targeted return exits `@pricing`, not the enclosing function. Its payload supplies the target's pre-then value type `T`. For a loop, this commits the payload to `.value`; for a conditional, it supplies the conditional's tagged `.value`. If the target has an attached `then`, that target's `then` runs once and produces final type `R`. If the target has no `then`, `T` is the target's result type. A missing payload means `Unit` and is valid only when the target accepts `Unit` as its pre-then value.
 
-Targets must be lexically enclosing. Control-flow transfers cannot jump across function or closure boundaries. A target's kind controls which operations are permitted.
+Targets must be lexically enclosing. Control-flow transfers cannot jump across function or closure boundaries. Operation support is sparse:
+
+- Loops accept `break`, `continue`, and tagged `return`.
+- Tagged `if` and general result blocks accept `return`.
+- Functions accept plain `return` to the nearest function, and tagged `return` when explicitly targeted.
+- `break` and `continue` cannot target an `if`, general block, or function. Unsupported operation–target pairs are invalid.
+
+For a tagged `return`, the target's kind determines how its supplied `T` completes: a target with `then` runs it once to produce `R`; a function target returns its function result to its caller.
 
 ## Loop distinction
 

@@ -86,6 +86,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 - Apply the selected contract: a tagged-return payload has type T, reaches the named target's pre-then value, and runs that target's then to produce R when present.
 - A return to an outer target skips then blocks on inner constructs it exits; a target without then returns T directly.
 - Keep explicit loop targeting for break and continue; either operation without a tag targets the nearest loop. Both accept an optional T contribution, committed to the selected loop before stopping or advancing.
+- Keep operation support sparse: break/continue target loops; tagged return can target loops, ifs, general result blocks, or functions; plain return targets the nearest function/closure. Reject unsupported operation–target pairs.
 - Keep `then` as ordinary completion, not an all-exit cleanup guarantee. Leave cleanup, `defer`, and scoped resource behavior in their deferred review.
 - Keep propagated-error, panic-unwinding, and cleanup behavior separate; then is result processing, not all-exit cleanup.
 
@@ -211,7 +212,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 | Loop completion | A single receiverless `then` is the selected direction; `.count` and `.value` come from the owning loop context. |
 | Loop value | Typed, zero-initialized `.value`; no-contributor T defaults to Unit unless an expected type overrides it; automatic Option accumulator and `.acc`/previous receivers are retired. |
 | Conditional value | Every `if` has a result context; absent final `else` returns zero(T) on no-match; unconstrained T defaults to Unit unless an expected type overrides it. A shared conditional `then` transforms T to final R, and tagged `.value` is readable only there. Abrupt-exit behavior and multi-branch `.condition` metadata remain open. |
-| Exits | Plain `continue`, `continue value`, `continue @tag [value]`, `break`, `break value`, and `break @tag [value]` target the nearest or explicitly named loop. Contributions commit to that loop before advancing/stopping. Tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
+| Exits | Plain `continue`, `continue value`, `continue @tag [value]`, `break`, `break value`, and `break @tag [value]` target the nearest or explicitly named loop. Contributions commit to that loop before advancing/stopping. Tagged return also targets ifs, general result blocks, or functions; plain return targets the nearest function. Tagged returns run only the named target's `then`, and exited inner constructs skip theirs. |
 | Initialization | All-zero storage is selected as a valid value for every type; exact mappings remain open. |
 | Lifecycle | Body-wide recovery, `defer`, resource scopes, and cleanup ordering are deferred. |
 
