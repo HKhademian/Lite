@@ -166,6 +166,30 @@ contextual_lambda := "(" [identifier {"," identifier}] ")" block
 
 This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under corresponding expected callable contracts. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
 
+#### Named, underscore, and empty headers
+
+The user compares three implementation headers under the existing `x: fn(a: Int): String` contract:
+
+```text
+x = (a) {
+    "replacement"
+}
+
+x = (_) {
+    "replacement"
+}
+
+x = () {
+    "replacement"
+}
+```
+
+In the proposed lambda syntax, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
+
+The empty header needs a separate decision: does it retain the expected one-input signature while binding none of its inputs locally, or declare a zero-parameter implementation? Under the latter reading it would not satisfy this one-input contract by merely omitting the header name. Do not conflate absent local bindings with default-initialized omitted arguments at a call site. Keep this case open until the user chooses; the comparison does not yet select general arity adaptation or partial parameter-list omission.
+
+#### Parsing boundaries
+
 - In an ordinary expression position, `(a) { ... }` is one lambda expression. `(a)` alone remains grouping; this proposal does not reinterpret every parenthesized expression as parameters. A grouped value followed by a separate executable block needs an item separator: `(a); { ... }`.
 - A construct's own header/body delimiters take precedence: `if (condition) { ... }` remains a conditional and `loop (source) { ... }` remains a loop. The eventual expression grammar must stop these header expressions before their owner's body instead of consuming that body as a lambda. This restriction needs explicit integration in other brace-owning headers as well.
 - Parsing must depend on tokens and syntactic position, not whitespace, expected types, or whether `a` resolves to a type. This reserves `(T) { ... }` for the lambda reading in an ordinary expression position too; it cannot also mean construction through a grouped record type. Existing `T { ... }` construction and grouping the entire construction, `(T { ... })`, retain their separate forms. See [record boundaries](record-literal-boundaries.md).
