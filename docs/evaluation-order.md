@@ -42,6 +42,8 @@ For a method-call expression, evaluate the receiver as part of evaluating the ca
 
 Argument order does not determine whether arguments move, copy, or borrow, or when borrow permissions become active. Those are separate contracts. Syntax and evaluation rules for any future default or named arguments still need specification.
 
+Zero-initialized callables follow the same order. Their zero-result behavior does not skip argument evaluation or required argument cleanup. If an argument expression exits before invocation, the zero callable is not invoked. See [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
+
 ## Short-circuiting and selected branches
 
 Left-to-right order does not force evaluation of skipped expressions:

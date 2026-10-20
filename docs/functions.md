@@ -1,6 +1,6 @@
 # Functions
 
-Status: **binding syntax, colon result types, tail results, and early-return direction established**.
+Status: **binding syntax, colon result types, tail results, early-return direction, and zero-result callable behavior established**.
 
 ## Template
 
@@ -25,6 +25,14 @@ Use `:` for result annotations, matching other type annotations. The earlier `->
 ## Call evaluation order
 
 Evaluate the callee expression first, then the supplied argument expressions from left to right in source order, then invoke the callable. A function argument is not evaluated before an earlier supplied argument merely because of parameter type, dispatch, or optimization. This does not choose move/copy/borrow rules or temporary lifetimes; see [evaluation order](evaluation-order.md).
+
+## Zero-initialized callables
+
+A zero-initialized function performs no user-body work and returns zero of its declared result type. For example, a callable declared to return `Int` returns `0`; one returning `T ! E` returns `.ok(zero(T))`.
+
+In `callback(make_value())`, if `callback` is zero-initialized, `make_value()` still evaluates before invocation. The ordinary callee/argument evaluation order and required ownership/cleanup rules apply. The zero callable itself makes no updates through granted `mut` or `var` parameters. Argument evaluation or required cleanup can still have effects or failures.
+
+This selects invocation semantics. Complete callable type grammar, ownership and cleanup details, representation, and ABI remain open; see [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
 
 ## Collection input requirements
 

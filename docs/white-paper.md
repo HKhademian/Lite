@@ -62,7 +62,7 @@ configured: Profile = {};
 
 `zeroed` contains an empty name and zero points. `configured` applies the declared defaults, producing `"Guest"` and `10`. The source chooses the initialization operation; zero initialization consistently bypasses declared field defaults.
 
-The same principle applies to other values. `Unit` is a valid value with one inhabitant. An `Option` zero is `.None`. A zero-initialized `T ! E` contains `.ok(zero(T))`. Mappings for remaining categories, including plain unions and resource values, still require design.
+The same principle applies to other values. `Unit` is a valid value with one inhabitant. An `Option` zero is `.None`. A zero-initialized `T ! E` contains `.ok(zero(T))`. A zero-initialized function is callable and returns zero of its declared result without user-body work, while preserving ordinary argument evaluation and required cleanup. Mappings for remaining categories, including plain unions and resource values, still require design.
 
 Ordinary values have no universal `null`, `nil`, or `undefined` state. Absence is expressed through `Option`, where it belongs in the contract. Ordinary programs use values and access permissions without a raw pointer vocabulary. Address management belongs behind the implementation and foreign-interface boundaries, whose precise contracts remain open.
 

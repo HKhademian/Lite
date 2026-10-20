@@ -1,6 +1,6 @@
 # Universal zero initialization
 
-Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero is `.ok(zero(T))` for `T ! E`, selected 2026-10-20**. This replaces the earlier valid-zero eligibility/zeroability restriction. The user explicitly includes function values: zero initialization is not permission to create an invalid callable and panic merely because it is zero. Concrete mappings for the remaining type categories still need design.
+Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction. Concrete mappings for the remaining type categories still need design.
 
 ## Core distinction
 
@@ -60,12 +60,19 @@ Option's zero is its explicit .None state. A loop value of type T starts as zero
 
 Some mappings require further decisions:
 
-- Functions: proposed zero function ignores its arguments, performs no work, and returns zero of its declared result type. Under that proposed invocation rule, a fallible result would use the selected Result zero mapping `.ok(zero(T))`. Zero-function invocation behavior, callable grammar, and ABI remain open.
 - Enums and unions: choose a zero case/mapping consistent with exhaustive matching, backing values, nominal identity, and order-independent union normalization. Do not silently pick the first written union member or invent an unnamed enum case.
 - References and writable access: provide meaningful zero behavior without dereferencing an invalid machine address or silently choosing an aliasing/ownership model.
 - Resources and constrained domains: specify the valid zero state, its allowed operations, cleanup, and relation to construction/validation invariants. Zero initialization does not conjure an external resource.
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
+
+## Zero-initialized functions
+
+A zero-initialized function is callable. Its invocation performs no user-body work and returns `zero(R)`, where `R` is its declared result type. An `Int` result is `0`, a `String` result is empty, and a `Unit` result is `Unit`. If the declared result is `T ! E`, it returns `.ok(zero(T))` under the selected Result zero rule.
+
+Normal call evaluation still applies: evaluate the callee, then each reached argument expression from left to right, then invoke the zero callable. Ignoring the evaluated argument values does not skip their evaluation or effects. An exit during argument evaluation follows its ordinary rules and can prevent invocation. Required argument ownership and cleanup behavior still applies; ignoring a value does not exempt it from that contract.
+
+The zero callable performs no updates through `mut` or `var` parameter grants. This does not make the entire call expression free of effects: argument evaluation and required cleanup can have observable behavior. Complete ownership/cleanup timing, callable type grammar, representation, and ABI remain open. See [function calls](functions.md#zero-initialized-callables) and [evaluation order](evaluation-order.md#function-calls).
 
 ## Defaults versus partial zero initialization
 

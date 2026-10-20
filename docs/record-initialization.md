@@ -195,7 +195,7 @@ Omission is supported for simple typed bindings and uses the same universally va
 
 All-zero storage must represent a valid value of every type. This replaces the earlier zero-eligibility restriction. Numeric zero, false, empty String, Unit, recursively zeroed fields, and empty collection states require representations consistent with that rule. Option's zero is its explicit .None state.
 
-Functions, references, enums, unions, resource wrappers, and constrained domains also require defined zero mappings. A zero function must have meaningful callable behavior, not be rejected as an invalid target. Exact mappings remain design work; no particular first enum/union alternative is silently chosen here. See [universal zero initialization](zero-initialization.md).
+A zero-initialized function is callable and returns zero of its declared result type without user-body work. Ordinary argument evaluation and required cleanup still apply. References, enums, unions, resource wrappers, and constrained domains still require concrete zero mappings; no particular first enum/union alternative is silently chosen here. See [universal zero initialization](zero-initialization.md).
 
 Declared-default construction is separate: = {} uses field defaults, whereas omitted initialization and = 0 bypass them. Required-field syntax, cross-field validation, and default evaluation remain separate contracts; they must respect the universal zero rule rather than introduce types with no zero representation.
 
