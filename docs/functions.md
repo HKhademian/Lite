@@ -148,15 +148,30 @@ positive := filter(numbers, fn(n) { n > 0 });
 
 This selected form retains the existing function keyword and body shape while inferring parameter and result types from the expected contract. It needs no arrow spelling and keeps a clear function boundary. The complete brace body makes a trailing item semicolon optional; braces inside a callback argument do not end the enclosing call item. Broader standalone parameter inference remains separate.
 
-### C. Parameter list followed by a block
+### C. Arrow-free lambda: parameter list followed by a block (requested review)
 
 ```text
-myfn = (a) { a + 1 };
+myfn = (a) { a + 1 }
 doubled := map(numbers, (n) { n * 2 });
 positive := filter(numbers, (n) { n > 0 });
 ```
 
-This keeps local parameter bindings explicit and removes both the keyword and arrow. It requires a new grammar rule distinguishing a parameter list followed by a function body from a grouped expression followed by a block. That distinction must come from syntax, without depending on whitespace. The shown form always uses a block body.
+The user asks whether the lambda form can omit `=>` completely. Yes, this is a viable surface proposal if the grammar reserves a parameter-list-plus-block shape for lambdas in ordinary expression positions. It keeps local parameter bindings explicit and removes both the keyword and arrow. It always uses a brace body. A direct assignment ending in that body would permit an optional trailing semicolon, like the selected `fn` forms.
+
+Proposed grammar boundary, not yet a selected complete production:
+
+```text
+contextual_lambda := "(" [identifier {"," identifier}] ")" block
+```
+
+This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under corresponding expected callable contracts. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
+
+- In an ordinary expression position, `(a) { ... }` is one lambda expression. `(a)` alone remains grouping; this proposal does not reinterpret every parenthesized expression as parameters. A grouped value followed by a separate executable block needs an item separator: `(a); { ... }`.
+- A construct's own header/body delimiters take precedence: `if (condition) { ... }` remains a conditional and `loop (source) { ... }` remains a loop. The eventual expression grammar must stop these header expressions before their owner's body instead of consuming that body as a lambda. This restriction needs explicit integration in other brace-owning headers as well.
+- Parsing must depend on tokens and syntactic position, not whitespace, expected types, or whether `a` resolves to a type. This reserves `(T) { ... }` for the lambda reading in an ordinary expression position too; it cannot also mean construction through a grouped record type. Existing `T { ... }` construction and grouping the entire construction, `(T { ... })`, retain their separate forms. See [record boundaries](record-literal-boundaries.md).
+- Inside a call argument, the lambda body does not close the enclosing call item. Argument commas and ordinary call-item separators still apply. This proposal does not add trailing-block call arguments.
+
+The expected callable supplies parameter and result types; the header still creates local parameter bindings. The body is deferred until invocation and uses ordinary function result/return rules. Omitting the arrow does not choose capture representation, allocation, or a different calling convention. Recommendation: use this as the primary lambda proposal alongside the selected contextual `fn`, and settle these grammar boundaries before selecting it. Arrow and pipe alternatives remain comparisons.
 
 ### D. Arrow inheriting parameter names from the signature
 

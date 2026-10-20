@@ -255,6 +255,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 - Ownership, deterministic cleanup, and explicit shared ownership as a candidate memory model.
 
 - Beyond the selected contextual `fn` form, additional lambda spellings remain under review: `a => expression`, `(a) { ... }`, `=> expression` with signature-inherited names, and `|a| expression`. The sourced comparison covers Rust's inferred closures, V's callback lambdas and array `it`, Odin's procedure literals, and Zig's function declarations/pointers. No additional lambda spelling is selected; parsing, captures, and costs remain under review. See [compact implementations](functions.md#compact-implementations-under-review).
+- The user requests reviewing `(a) { ... }` with the arrow omitted. It is the primary lambda proposal alongside selected contextual `fn`: reserve a parameter-list-plus-block shape in ordinary expression positions, preserve construct-owned headers such as `if (condition) { ... }`, and avoid a competing grouped-type record-construction reading. A completed outer lambda body would allow an optional trailing semicolon. Expected callable types check the implementation without deciding its parse. Zero/multiple parameters, complete header integration, and parameter patterns/annotations still need formalization; see [arrow-free lambdas](functions.md#c-arrow-free-lambda-parameter-list-followed-by-a-block-requested-review).
 
 ## Contracts to settle next
 

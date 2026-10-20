@@ -65,6 +65,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [two function forms](functions.md#two-scenarios-full-definition-and-contextual-implementation): independently typed full definitions, and contextual `fn(a) { ... }` implementations containing local parameters and a body under an expected callable contract. Both permit optional trailing item semicolons. A separate signature-only declaration is optional. Additional lambda syntax remains open; the user asks whether `(a) { ... }` can omit the arrow.
 
+- Reviewed [arrow-free lambdas](functions.md#c-arrow-free-lambda-parameter-list-followed-by-a-block-requested-review) as the primary additional proposal. `(parameters) { body }` is viable with an expression-position reservation, explicit header/body boundaries for `if`/`loop` and other owning constructs, and no competing `(T) { ... }` grouped-type record construction. Direct lambda-body assignments permit optional trailing semicolons; callback bodies do not terminate enclosing calls. The arrow-free spelling remains proposed pending selection.
+
 ## Plan links
 
 | Relation | Plan / file |
