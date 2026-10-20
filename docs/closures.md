@@ -45,6 +45,60 @@ Status: **comparison and recommendation, not a selected capture contract; 2026-1
 - **Odin** supports noncapturing procedure literals, not closures over surrounding local variables. Its FAQ explicitly rejects automatically managed capture environments as contrary to its philosophy. See [Odin closures](https://odin-lang.org/docs/faq/#does-odin-have-closures).
 - **Zig** offers an explicit-context approach in its standard sorting API: `heap` and `insertion` receive `context` separately and pass it to the comparator. This is a documented library solution to stateful callbacks, not a capture-list feature. See [Zig sort source](https://github.com/ziglang/zig/blob/master/lib/std/sort.zig).
 
+### Further references: C++, Swift, Go, and JavaScript/TypeScript
+
+Checked against official documentation on 2026-10-21. These fragments belong inside an enclosing function and use an integer to isolate binding capture from object aliasing. They are explanatory examples, not locally compiled fixtures.
+
+**C++: choose value or reference explicitly.**
+
+```cpp
+int offset = 10;
+auto snapshot = [offset](int n) { return n + offset; };
+auto live = [&offset](int n) { return n + offset; };
+offset = 20;
+snapshot(1); // 11
+live(1);     // 21
+```
+
+`[offset]` copies this integer; `[&offset]` refers to the original variable. `[=]` and `[&]` establish default modes for referenced outer names. `mutable` permits changes to a captured value copy, not writeback to its source. Reference capture does not extend a local's lifetime, so escape safety needs separate care. See [Microsoft C++ lambda documentation](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170).
+
+**Swift: shared outer variables by default; capture lists can save a value.**
+
+```swift
+var offset = 10
+let live: (Int) -> Int = { n in n + offset }
+let snapshot: (Int) -> Int = { [offset] n in n + offset }
+offset = 20
+snapshot(1) // 11
+live(1)     // 21
+```
+
+The list initializes a new captured constant at closure creation. Capturing a class value still refers to that object, not a deep clone. Swift manages captured state; strong captures involving objects can form reference cycles, with `weak`/`unowned` capture options. Its parameter contracts also distinguish escaping from nonescaping closures. See [Swift capture lists](https://docs.swift.org/latest/documentation/the-swift-programming-language/expressions/#Capture-Lists) and [closures](https://docs.swift.org/latest/documentation/the-swift-programming-language/closures/).
+
+**Go: captured variables are shared and survive while accessible.**
+
+```go
+offset := 10
+add := func(n int) int { return n + offset }
+offset = 20
+answer := add(1) // 21
+```
+
+For a snapshot of this integer, introduce a separate binding first, such as `saved := offset`, and have the closure read `saved`. This is a copy into a new variable rather than a capture-mode annotation. See [Go function literals](https://go.dev/ref/spec#Function_literals).
+
+**JavaScript/TypeScript: lexical variable bindings remain accessible.**
+
+```typescript
+let offset = 10;
+const add = (n: number): number => n + offset;
+offset = 20;
+const answer = add(1); // 21
+```
+
+For this scalar snapshot, write `const saved = offset` before creating a closure that reads `saved`. An object saved in another binding still refers to the same object. Type annotations do not introduce a different capture mechanism. See the [TypeScript handbook's capture explanation](https://www.typescriptlang.org/docs/handbook/variable-declarations.html#var-declarations).
+
+For LiteScript, these are separate design tools to consider: explicit value/reference modes, capture-time initializers, escape contracts, and explicit shared-lifetime management. Copying a value, sharing a location, keeping it alive, and permitting writes must each have a contract; concise punctuation does not settle them.
+
 ### Decide observable behavior before notation
 
 ```text
