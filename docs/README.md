@@ -114,9 +114,9 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): selected typed filtering, unmatched-channel behavior, and open broad receiver representation.
-- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, pending evaluation scope, broad receiver typing, no-handler policy, cleanup-failure aggregation/handling, and runtime design; primary/secondary precedence is selected.
-- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, aggregate handling, and no-handler policies; cleanup-failure precedence is selected.
-- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, aggregate matching, and no-handler policy still open.
+- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, declaration-ordered member-wise handling, pending evaluation scope, broad receiver typing, no-handler policy, aggregate representation, and runtime design; primary/secondary precedence is selected.
+- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, aggregate representation/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
+- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, aggregate representation, duplicate-member behavior, and no-handler policy still open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
 - [Functions](functions.md): uniform bindings, `:` result annotations, closures, and early returns.
 - [Closures](closures.md): function values, capture questions, and return boundaries.
@@ -146,7 +146,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
 - [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
-- [Finally](finally.md): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching panic handler, and primary/secondary cleanup-failure precedence; aggregate representation/inspection, attachment scope, no-handler policy, and hard-abort behavior remain open.
+- [Finally](finally.md): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching panic handler, primary/secondary cleanup-failure precedence, and declaration-ordered member-wise handling; aggregate representation/inspection, duplicate-member behavior, attachment scope, no-handler policy, and hard-abort behavior remain open.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
 - [Loop completion](loop-completion.md): receiverless `then`, its result and metadata, and its distinction from deferred cleanup.
 - [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.

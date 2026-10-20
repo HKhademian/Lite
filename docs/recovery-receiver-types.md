@@ -106,7 +106,7 @@ target else (failure) { report(failure); recover() }
 
 Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.
 
-This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles its matching failure and only that failure. Unmatched panics propagate implicitly. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. Chaining multiple typed filters on one target and their coverage/ordering rules remain open.
+This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending members. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. An unmatched panic propagates implicitly after the chain. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The aggregate carrier and duplicate-member consumption rules remain open. See [ordered member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
 
 The filter does not distinguish a returned payload from a panic solely because their payload types overlap. Preserve channel origin in the eventual carrier/context where required; see the following section.
 

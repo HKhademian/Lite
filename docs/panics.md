@@ -1,6 +1,6 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. A same-scope matching typed-panic handler recovers before its owning scope's `finally`; escaped panics unwind entered scopes and run applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Exact scope, triggers, and hard-abort behavior remain open. Cleanup-failure precedence is selected; aggregate representation and member-wise handling remain open**.
+Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. A same-scope matching typed-panic handler recovers before its owning scope's `finally`; escaped panics unwind entered scopes and run applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Exact scope, triggers, and hard-abort behavior remain open. Cleanup-failure precedence and declaration-ordered member-wise handling are selected; aggregate representation and duplicate-member behavior remain open**.
 
 ## Purpose
 
@@ -43,7 +43,7 @@ The [bounds/arithmetic policy review](checked-fault-policy.md) retains ordinary 
 
 ## Cleanup and state
 
-Returned recoverable errors follow the language's structured-exit cleanup rules. When a language-managed typed panic propagates toward an outer matching handler, it unwinds exited scopes and runs each applicable `finally` from inner to outer before reaching that handler. The cleanup extent and outcome when no panic handler matches remain open. A hard process abort is outside this guarantee. If cleanup also fails, any already pending failure stays primary and cleanup failures are retained as secondary; the aggregate and matching rules remain open.
+Returned recoverable errors follow the language's structured-exit cleanup rules. When a language-managed typed panic propagates toward an outer matching handler, it unwinds exited scopes and runs each applicable `finally` from inner to outer before reaching that handler. The cleanup extent and outcome when no panic handler matches remain open. A hard process abort is outside this guarantee. If cleanup also fails, any already pending failure stays primary and cleanup failures are retained as secondary; the aggregate carrier, inspection, and duplicate-member rules remain open.
 
 Recoverable errors do not imply automatic rollback of earlier mutations. Transactional recovery or state-restoration facilities would require separate contracts.
 

@@ -1,6 +1,6 @@
 # Shared expression recovery with else
 
-Status: **target-level `else` recovery and typed filtering selected, 2026-10-20; evaluation boundary, mixed receiver type, and implementation contracts pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
+Status: **target-level `else` recovery, typed filtering, and declaration-ordered member-wise filter chains selected, 2026-10-20; evaluation boundary, mixed receiver type, aggregate representation, and implementation contracts pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
 
 ## Direct use and local recovery
 
@@ -61,7 +61,11 @@ target else (Panic) { recover_any_panic() }
 
 The first two forms match only `BoundPanic`; the binding form exposes the narrowed value, while the type-only form does not bind it. `Panic` is the broad panic type and matches panic categories, not returned `Result` errors. A specific returned-error type can be handled with the same typed-filter rule.
 
-If a typed filter does not match, its body does not run. An unmatched panic follows the default implicit propagation rule. An unmatched returned error remains subject to explicit handling: keep it as a `Result` when the target is used as outcome data, handle it with another defined form, or propagate it with postfix `!`. For example:
+Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause sees only the remainder. Thus an aggregate `A & B` reaches both matching clauses in `else (A) { R1 } else (B) { R2 }`, in that order. Reversing the clauses processes B before A. This is ordered handling, not a set of interchangeable alternatives, so changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
+
+For `A & B` where both handlers complete normally, the direct scalar-result rule would make the last matching handler's value the target's recovered value: A then B gives `R2`, while B then A gives `R1`. This value-composition rule remains to be confirmed; the selected rule here is the declaration-ordered consumption and execution of matching clauses.
+
+If a typed filter does not match the current remainder, its body does not run and the next typed filter is considered. After the chain, an unmatched panic follows the default implicit propagation rule. An unmatched returned error remains subject to explicit handling: keep it as a `Result` when the target is used as outcome data, handle it with another defined form, or propagate it with postfix `!`. For example:
 
 ```text
 target else (p: BoundPanic) { recover_bound_panic(p) }!
@@ -131,7 +135,7 @@ The user retires the proposed external if/loop/match recovery tails. These const
 - Handler precedence and grouping under the selected block-item continuation rule.
 - Indexed assignment recovery: assignment is an item, not a general value expression. In values[index] = replacement else { ... }, attachment to the write versus its RHS cannot be guessed. No production for that spelling is selected here.
 - The broad receiver contract and origin information when returned errors and panics can reach one untyped handler.
-- Whether multiple typed filters can chain on one target, plus coverage and ordering rules.
+- How a handler body that itself fails affects remaining members in the chain, plus the aggregate carrier and duplicate-member consumption rules.
 - Any first-class capture-as-Result operation without a fallback; a second helper family is not required by the examples above.
 
 Related: [Result and errors](result-and-errors.md), [panics](panics.md), [typed panics](typed-panics.md), [fault-policy history](checked-fault-policy.md), [sequence end operations](sequence-end-operations.md), and [evaluation order](evaluation-order.md).
