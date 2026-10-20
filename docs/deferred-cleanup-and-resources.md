@@ -7,7 +7,7 @@ Status: **explicitly deferred by the user, 2026-10-19**. The body-wide special-s
 - Recovery for a construct belongs inside its body; external error-catching tails on whole if/loop/match constructs remain retired.
 - Operation-level `operation() else { fallback() }` and `operation() else(failure) { ... }` remain available.
 - Returned Results still require explicit handling or propagation. Postfix ! retains its function/closure target; panics propagate implicitly.
-- Cleanup-only `finally` has no receiver, recovery behavior, or transformation; when applicable cleanup completes normally, it preserves the pending outcome. For construct-level loop/conditional hooks, `then` precedes `finally` on normal completion. During language-managed typed-panic propagation, applicable `finally` blocks run inner-to-outer before an outer matching handler. Body-wide attachment, hard-abort behavior, and failure precedence remain deferred.
+- Cleanup-only `finally` has no receiver, recovery behavior, or transformation; when applicable cleanup completes normally, it preserves the pending outcome. For construct-level loop/conditional hooks, `then` precedes `finally` on normal completion. During language-managed typed-panic propagation, applicable `finally` blocks run inner-to-outer before an outer matching handler. Construct-level cleanup failure preserves any already pending failure as primary and retains cleanup failures as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. Body-wide attachment, whether this precedence applies to other cleanup mechanisms, and hard-abort behavior remain deferred. Aggregate representation and member-wise handler behavior remain open.
 - Ordinary branch selection, loop completion hooks, and exhaustive match arms keep their existing roles.
 
 ## Questions to revisit together
@@ -16,7 +16,7 @@ Status: **explicitly deferred by the user, 2026-10-19**. The body-wide special-s
 - Deferred actions: registration order, when captured expressions are evaluated, and which exits execute them.
 - Scoped resources: acquisition, ownership, disposal, partial initialization, and invalidation after cleanup. Async disposal belongs to a future async design; it is not introduced here.
 - Interaction with function returns, tagged returns, break/continue, propagated errors, and panics.
-- Cleanup ordering across nested bodies/resources, and what happens when recovery or cleanup itself fails while an earlier result or failure is pending.
+- Cleanup ordering across nested bodies/resources, and whether the selected construct-level failure precedence also governs proposed body-wide cleanup, defer, and resource-disposal mechanisms.
 - Definite initialization, accessible bindings, and implementation costs consistent with the language's small-runtime goal.
 
 Review these as one lifecycle design before selecting syntax. Do not independently finalize the body-wide semicolon proposal or infer automatic collection of inner Results from these examples.

@@ -68,7 +68,7 @@ A separate deliberately optional query/removal may return Option<T>. This expres
 
 This proposal unifies the choice of failure mode, not all error payloads or mutation contracts. A successful read returns an element under its read/access contract; a successful write returns Unit; a successful pop removes and returns an element. The removed value is not a borrowed view into the vacated slot, and its transfer/copy rules must follow the eventual ownership contract.
 
-An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. General panic capture boundaries and cleanup-failure behavior remain separate decisions; language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](checked-fault-policy.md).
+An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. General panic capture boundaries and cleanup-failure aggregation/inspection remain separate decisions; cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes). Language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](checked-fault-policy.md).
 
 ## Costs depend on storage
 

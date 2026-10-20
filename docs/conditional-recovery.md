@@ -138,7 +138,7 @@ A similar nested region could appear in an else-if or false body. An ordinary ca
 
 A recovery body can contain ordinary operation-level recovery too. If its own operation failure is handled locally, it can continue; otherwise a panic travels farther outward. It never restarts the same recovery body automatically.
 
-The [full finally example](finally.md#full-conditional-example) records operation, selected-branch, and whole-conditional cleanup. For a conditional with both result-processing `then` and cleanup `finally`, `then` completes first on normal completion; `finally` itself does not recover failures. When a typed panic matches a handler in the same scope, recovery runs first and that scope's `finally` runs once as it exits. An escaping panic runs applicable exited-scope `finally` blocks inner-to-outer before reaching an outer matching handler. Cleanup preserves the pending result/exit when it completes normally and has no pending-outcome receiver. Exact attachment syntax/scope and cleanup-failure behavior remain open. The historical conditional handler does not protect its own handler or finally body.
+The [full finally example](finally.md#full-conditional-example) records operation, selected-branch, and whole-conditional cleanup. For a conditional with both result-processing `then` and cleanup `finally`, `then` completes first on normal completion; `finally` itself does not recover failures. When a typed panic matches a handler in the same scope, recovery runs first and that scope's `finally` runs once as it exits. An escaping panic runs applicable exited-scope `finally` blocks inner-to-outer before reaching an outer matching handler. Cleanup preserves the pending result/exit when it completes normally and has no pending-outcome receiver. Cleanup-failure precedence is selected; exact attachment syntax/scope and aggregate handling remain open. The historical conditional handler does not protect its own handler or finally body.
 
 ## Result errors remain explicit
 
@@ -179,7 +179,7 @@ conditional_core := "if" condition block
 conditional_recovery := "else" "(" receiver_pattern ")" block
 ```
 
-This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, while exact attachment scope/grammar and cleanup failure remain open. Complete receiver-pattern policy, precedence with condition-local recovery, handler typing, and any filter semantics also remain open.
+This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, and cleanup-failure precedence is recorded in [the finally contract](finally.md#pending-outcomes). Exact attachment scope/grammar and aggregate handling remain open. Complete receiver-pattern policy, precedence with condition-local recovery, handler typing, and any filter semantics also remain open.
 
 No newline, indentation, capitalization, or type-checking guess chooses between a false branch and a recovery clause. Parse else if, else followed by a body, and else followed by a receiver header as distinct forms. Existing mandatory braces retain unambiguous nesting.
 

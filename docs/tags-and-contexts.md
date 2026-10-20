@@ -69,7 +69,7 @@ Loop tags expose `.item`, `.index`, `.count`, and `.value`, and identify loop ex
 
 Conditional tags do not expose condition metadata. This applies to simple conditions and `else if` chains; `then` can read the selected result through `@tag.value` but cannot inspect or reevaluate the tests.
 
-The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. A tagged return to the conditional supplies `T` and runs this `then`; a return to an outer target skips it. Propagated errors and unhandled panics supply no `T`, so they skip result processing. When attached, cleanup-only `finally` follows `then` on normal completion and runs during scope exit on abrupt paths; exact attachment scope and cleanup-failure behavior remain open.
+The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. A tagged return to the conditional supplies `T` and runs this `then`; a return to an outer target skips it. Propagated errors and unhandled panics supply no `T`, so they skip result processing. When attached, cleanup-only `finally` follows `then` on normal completion and runs during scope exit on abrupt paths; exact attachment scope remains open. Cleanup-failure precedence is selected; aggregate handling remains open.
 
 ## Scope and shadowing
 

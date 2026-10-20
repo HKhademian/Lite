@@ -38,7 +38,7 @@ Assume AgeError supplies the illustrated case. The final age supplies implicit s
 - Exit the nearest function or closure with its failure outcome. Ordinary nested blocks do not become error-return boundaries.
 - A plain T-returning function cannot use throw to escape with an undeclared recoverable error. An outer fallible function does not make a nested nonfallible closure fallible.
 - A throw does not complete locally with a value; it has the same control-flow status as an early return. It can therefore occupy an exiting branch without adding Unit or another alternative to that branch's normal result.
-- Run the same applicable structured cleanup as the equivalent return. Pending-exit and cleanup-error policies remain governed by the existing open cleanup contract.
+- Run the same applicable structured cleanup as the equivalent return. Cleanup-failure precedence follows the selected [finally contract](finally.md#pending-outcomes); aggregate inspection and the extension to proposed cleanup mechanisms remain open.
 - Require an operand initially. No bare rethrow, implicit current-error binding, or throw @tag form is proposed.
 
 When success and error payload types overlap, choose the outcome side explicitly through the operation: a plain compatible success value uses return; a failure uses throw or return .err. An error-like payload type alone must not make a plain return select failure.

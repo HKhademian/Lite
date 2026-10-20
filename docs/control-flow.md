@@ -75,7 +75,7 @@ On a match, the tagged exit supplies `Some(user)` as the loop's `T`; since this 
 
 The tagged return reaches the named target's completion phase. Its payload has type T and becomes the target's pre-then value. If the target has an attached then, that target's then runs once to produce R. If the target has no then, T is the target's result. For a loop, the payload commits to .value; for a conditional, it becomes the conditional's tagged .value.
 
-Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. Applicable `finally` cleanup still runs as each exited scope is left. When a construct has both hooks on normal completion, `then` runs before `finally`; cleanup itself does not recover failures. Exact attachment scope and cleanup-failure rules remain open.
+Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. Applicable `finally` cleanup still runs as each exited scope is left. When a construct has both hooks on normal completion, `then` runs before `finally`; cleanup itself does not recover failures. Exact attachment scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. Aggregate representation and inspection remain open; see [failure aggregation](finally.md#failure-aggregation-and-open-design).
 
 ### The target's then runs
 
@@ -146,11 +146,11 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 ## Cleanup
 
-When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally`, hard-abort behavior, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
+When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally` and hard-abort behavior remain open. Cleanup failure follows the primary/secondary rule in [finally](finally.md#pending-outcomes); the aggregate's type and handling behavior remain open.
 
 Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
 
-The [finally example](finally.md) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation, hard-abort behavior, and cleanup-failure precedence remain open. These rules do not require cleanup after a hard process abort.
+The [finally example](finally.md) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation and hard-abort behavior remain open. Cleanup-failure precedence is selected, with aggregate representation and inspection still open. These rules do not require cleanup after a hard process abort.
 
 ## Notes
 

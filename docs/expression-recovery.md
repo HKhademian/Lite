@@ -114,7 +114,7 @@ Handling a panic does not require listing it in every function's Result error de
 
 ## State, cleanup, and runtime
 
-An invalid index or empty pop must be detected before that operation performs invalid access or changes the collection. Recovery does not roll back earlier successful mutations or argument effects. General cross-call recovery must define cleanup, partially constructed values, mutable access after failure, and the policy for a second fault during cleanup.
+An invalid index or empty pop must be detected before that operation performs invalid access or changes the collection. Recovery does not roll back earlier successful mutations or argument effects. General cross-call recovery must define cleanup, partially constructed values, and mutable access after failure. Cleanup-failure precedence is selected, while aggregate representation and typed-handler inspection remain open.
 
 This is expression-scoped exception handling for panics, even though its source syntax reuses else. Its implementation might use exception-style unwinding or explicit compiler/runtime fault transport; that mechanism and its ABI must be designed. A local intrinsic handler can often compile to a check and branch. That does not establish the costs of arbitrary cross-call capture or prove C-level performance. No mechanism, cost-free unwinding, or absence of runtime support is claimed.
 

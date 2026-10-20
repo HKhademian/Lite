@@ -44,7 +44,7 @@ sum := left + right else (p: OverflowPanic) {
 
 `OverflowPanic` is an illustrative category name, not a selected declaration. A matching typed handler runs; a nonmatching panic propagates implicitly. If the target can also return a `Result` error, that error remains explicit and can be forwarded with `!` after the typed handler. A larger surrounding function or unrelated computation need not be the only recovery boundary.
 
-The selected form does not settle the exact recovery boundary around evaluated operands/callees, the broad mixed-channel receiver type, fallback typing for panic recovery, or behavior when recovery code faults. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; capture scope, hard aborts, and cleanup-failure precedence remain open.
+The selected form does not settle the exact recovery boundary around evaluated operands/callees, the broad mixed-channel receiver type, fallback typing for panic recovery, or behavior when recovery code faults. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; capture scope, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes).
 
 ## Decisions still open
 
