@@ -130,4 +130,4 @@ conditional_with_hooks := conditional_core
 
 A grouped block or ordinary operation could expose the same final cleanup position. A receiverless recovery on a call keeps its meaning; bare else on a conditional remains false selection under the current conditional proposal. These fragments do not complete precedence, receiver typing, or the general expression grammar.
 
-Related: [conditional recovery](conditional-recovery.md), [structured exits](control-flow.md#cleanup), [loop completion](loop-completion.md#finally), [receiver clauses](receiver-clauses.md), [shared recovery](expression-recovery.md), and [panics](panics.md).
+Related: [conditional recovery](conditional-recovery.md), [structured exits](control-flow.md#cleanup), [loop completion](loop-completion.md#exits-and-cleanup), [receiver clauses](receiver-clauses.md), [shared recovery](expression-recovery.md), and [panics](panics.md).
