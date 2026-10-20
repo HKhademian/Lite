@@ -146,7 +146,7 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 ## Cleanup
 
-When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. During language-managed panic propagation, exited scopes run their applicable `finally` blocks inner-to-outer before an outer matching handler. Which scopes attach `finally`, hard-abort behavior, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
+When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally`, hard-abort behavior, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
 
 Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
 

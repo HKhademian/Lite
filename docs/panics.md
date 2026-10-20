@@ -1,6 +1,6 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. Language-managed panic propagation unwinds entered scopes and runs applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Exact scope, triggers, hard-abort behavior, and cleanup-failure precedence remain open**.
+Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. A same-scope matching typed-panic handler recovers before its owning scope's `finally`; escaped panics unwind entered scopes and run applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Exact scope, triggers, hard-abort behavior, and cleanup-failure precedence remain open**.
 
 ## Purpose
 
@@ -25,7 +25,7 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 ## Separate channels
 
 - Every escaping recoverable error must be covered by the function's declared error contract, including errors forwarded by postfix `!`.
-- Panics propagate implicitly through calls until an applicable recovery boundary or the unhandled-fault policy is reached. During language-managed propagation, each exited scope's applicable `finally` runs before transfer reaches the next outer matching handler. No ! or recoverable-error declaration is required for that transfer; implementation mechanism remains open.
+- Panics propagate implicitly through calls until an applicable recovery boundary or the unhandled-fault policy is reached. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed propagation to an outer matching handler, each exited inner scope's applicable `finally` runs before transfer reaches that handler. No ! or recoverable-error declaration is required for that transfer; implementation mechanism remains open.
 - Panics are not implicitly included in every recoverable error declaration.
 - The broad shorthand `T!` means `T ! Error` and still excludes the separate panic channel.
 - Postfix `!` extracts a Result or forwards its recoverable error; it does not assert success, trigger a panic, or catch a panic.
