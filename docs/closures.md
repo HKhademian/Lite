@@ -1,6 +1,6 @@
 # Closures
 
-Status: **function-value direction established; captures and lifetimes open**.
+Status: **explicit capture headers, value capture, and `var` capture of original storage are selected directions. Complete callable context types, ownership, aliasing, lifetimes, and representation remain open**.
 
 ## Purpose and template
 
@@ -29,14 +29,42 @@ transform := fn(x: Int): Int {
 
 ```text
 offset := 3;
-shifted := map(numbers, (n) { n + offset });
+shifted := map(numbers, [offset](n) { n + offset });
 ```
 
-The lambda uses `offset` from its lexical surroundings rather than receiving it as a parameter. Making that value available is capture. The map API is illustrative; this sketch does not select capture inference, copy, move, borrow, or shared-reference semantics.
+The lambda uses `offset` from its lexical surroundings rather than receiving it as a parameter. The capture header explicitly lists that context. The map API is illustrative; its library signature remains open.
+
+## Explicit context in the callable signature
+
+The selected direction declares captured context explicitly before the parameter list. Use LiteScript's ordinary `name: Type` parameter notation:
+
+```text
+var offset: Int = 10;
+
+snapshot := [offset](n: Int): Int {
+    n + offset
+}
+
+live := [var offset](n: Int): Unit {
+    offset += n
+}
+```
+
+- `[offset]` captures its value when the closure is created. For this `Int`, the closure holds `10`; later replacement of the source variable does not replace that captured value. The capture introduces a fixed, read-only local binding. General value ownership/copy eligibility remains to be formalized; it must not silently mean deep cloning every reachable object.
+- `[var offset]` explicitly grants access to the original writable storage. Assignment and compound updates through the captured name replace that source location's content. This is not a mutable captured copy. The source must already permit the corresponding replacement; capture cannot upgrade a fixed outer binding.
+- `var` in a capture list is a capture grant. It does not revive the retired local-only parameter header modifier or change type-side `var` parameter notation.
+- Outer local values used by a body must be declared in its capture list. No implicit read capture or capture-all default is selected. A missing list means no captured local context; `[]` may state that explicitly. Resolving statically available type/module/function declarations is separate from capturing an outer local value.
+- An empty parameter header still leaves the expected call inputs unnamed. It does not remove explicitly declared context: `[offset]() { ... }` can use its captured `offset` under a suitable expected callable contract.
+
+Captured context is part of the callable's signature/contract, not an invisible implementation detail. Its fields, access permissions, ownership, and lifetime requirements must be retained when the callable is passed, stored, or assigned. Type inference may derive a capture's value type from its source without repeating it in the header; explicit context does not require users to duplicate all inferred types.
+
+This selects the capture-header direction and semantics above. The written grammar for context-bearing callable types and full `fn` capture headers still needs review. Whether field names affect type identity, how callback types admit different environments, and how context contracts compose must not be assumed from the simple `fn(n: Int): Int` input/result notation. In particular, a matching input/result shape alone must not silently erase writable access or lifetime requirements. This does not mandate a runtime context object, dynamic lookup, or heap allocation.
+
+`var` capture introduces a relationship to source storage, not a freely escaping public pointer. Complete nonescape, aliasing, reentrancy, cleanup, and owned-escape rules remain open. Temporary caller grants must not silently become longer-lived handles. Context-bearing callable types must also receive a valid zero mapping under universal zero initialization; a dangling or null storage handle is not an acceptable default.
 
 ## Capture review
 
-Status: **comparison and recommendation, not a selected capture contract; 2026-10-21**.
+Status: **reference comparison and earlier probes, 2026-10-21. Explicit capture headers above supersede the earlier inferred-name recommendation; lifetime and representation comparisons remain relevant**.
 
 ### Modern reference-language solutions
 
@@ -99,7 +127,7 @@ For this scalar snapshot, write `const saved = offset` before creating a closure
 
 For LiteScript, these are separate design tools to consider: explicit value/reference modes, capture-time initializers, escape contracts, and explicit shared-lifetime management. Copying a value, sharing a location, keeping it alive, and permitting writes must each have a contract; concise punctuation does not settle them.
 
-### Decide observable behavior before notation
+### Earlier observable-behavior probe
 
 ```text
 var offset: Int = 10;
@@ -108,22 +136,22 @@ offset = 20;
 answer := add(1);
 ```
 
-This is a design probe, not a claim that it is currently valid executable LiteScript:
+This historical probe predates explicit capture lists and is not valid current capture syntax as written. Its alternatives explain the decision:
 
 - Snapshot capture of the scalar gives `11`: the environment holds the captured `10`.
 - Live access to the outer location could give `21` if lifetime and alias rules permit the reassignment. A borrowing model may reject reassignment while that capture remains live instead.
 - Ownership transfer may make later use or replacement of the source invalid, depending on the eventual ownership rules.
 
-Inferred versus listed names is separate from snapshot versus live access. An explicit capture list alone does not determine either timing or ownership. Likewise, a read-only capture does not imply an immutable deep snapshot.
+Inferred versus listed names is separate from snapshot versus live access. LiteScript now selects listed names, value capture with `[offset]`, and original writable-storage access with `[var offset]`. A read-only captured value still does not imply a deep snapshot of every reachable object.
 
 ### Writable captures need an explicit authority contract
 
 ```text
 var total: Int = 0;
-each(numbers, (n) { total += n });
+each(numbers, [var total](n) { total += n });
 ```
 
-The imaginary `each` call illustrates a second probe. Updating the original total requires access to its original storage; updating an owned captured copy would have a different result. The outer `var` grants replacement in that outer scope, but does not yet define how a lambda obtains that authority. Capturing writable record data and replacing a captured variable must respect the existing `mut`/`var` distinction. No capture-grant syntax is selected.
+The imaginary `each` call explicitly grants the closure replacement access to the original total. Updating an owned captured copy would have a different result. Capturing writable record data and replacing a captured variable must respect the existing `mut`/`var` distinction: `var` alone grants no payload-field mutation. Payload-mutation capture notation, aliasing, and lifetime contracts remain open.
 
 ### Lifetime and representation
 
@@ -135,7 +163,7 @@ Existing temporary `mut`/`var` parameter grants cannot silently become escaping 
 
 ### Recommendation for the next decisions
 
-Aim for inferred read-only capture names for ordinary callbacks, while making writes to outer storage and ownership/lifetime changes explicit. First settle snapshot versus borrowed access for the scalar example. Then settle capture of records/resources, mutation authority, nonescape guarantees, and owned escaping environments. Capture-list punctuation can follow those contracts. This recommendation does not yet choose a default mode or extend temporary caller grants.
+The earlier inferred-read-name recommendation is superseded by explicit capture lists. Next define context-bearing callable type signatures, record/resource ownership, read-only live access if needed, payload mutation, nonescape guarantees, and owned escaping environments. Preserve the selected value-versus-original-storage distinction without extending temporary caller grants implicitly.
 
 ## Tags and control-flow boundaries
 
@@ -144,7 +172,7 @@ A closure must not perform a targeted return or continuation into a construct in
 ```text
 @users loop users {
     count := @users.count;
-    callback := fn(): Int { count }
+    callback: fn(): Int = [count]() { count }
     use_callback(callback)
 }
 ```
@@ -153,7 +181,7 @@ The callback and ownership details remain illustrative, but copying a value is d
 
 ## Open decisions
 
-Capture inference and modifiers, mutable captures, escaping closures, allocation, callback effects, generic function values, calling conventions, and self-recursive closures.
+Context-bearing callable type grammar, payload-mutation and read-only live captures, ownership/copy/move eligibility, aliasing, escaping lifetimes, context zero mappings, allocation, callback effects, generic function values, calling conventions, and self-recursive closures.
 
 ## Related concepts and references
 

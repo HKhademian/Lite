@@ -170,10 +170,15 @@ The current direction omits `=>` completely and reserves a parameter-list-plus-b
 Proposed grammar boundary, not yet a selected complete production:
 
 ```text
-contextual_lambda := "(" [identifier {"," identifier}] ")" block
+lambda := [capture_list] "(" [lambda_parameters] ")" [":" type] block
+capture_list := "[" [capture_item {"," capture_item}] "]"
+capture_item := ["var"] identifier
+lambda_parameter := identifier [":" type]
 ```
 
 This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts. The user selected the empty header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
+
+Explicit captured context prefixes the parameter list: `[offset](n) { n + offset }` captures a value; `[var offset](n) { offset += n }` grants replacement access to the original writable storage. Context is part of the callable signature/contract; unlisted outer local values are not implicitly captured. A missing list means no captured local context. The outline omits full list/pattern/type productions and disambiguation of a capture header from other bracket expressions; see [explicit context](closures.md#explicit-context-in-the-callable-signature) for selected semantics and open callable-type/lifetime rules.
 
 #### Optional lambda signatures
 
@@ -260,7 +265,7 @@ This follows the visible shape used by Rust and V, with Rust's ability to use it
 
 The current pair is full typed `fn` plus contextual arrow-free lambda C. B is retired; A, D, and E remain unselected comparisons. V-style implicit `it` can be evaluated separately if collection-specific shorthand is needed; it does not by itself solve general function assignment. The illustrative map/filter APIs provide expected callback contracts; their library and generic declarations are not selected by these examples.
 
-All candidates are intended to use ordinary function result and return rules, with type information supplied by the expected callable contract. They propose no separate runtime abstraction. Captures, lifetime and representation, broader standalone inference, and complete compact-expression grammar remain open.
+All candidates use ordinary function result and return rules. Lambda annotations may provide their own types, or an expected callable contract supplies omitted types. Explicit capture headers are selected separately; context-bearing callable types, lifetime and representation, broader standalone inference, and complete compact-expression grammar remain open.
 
 ## Call evaluation order
 
@@ -354,7 +359,7 @@ double := fn(x: Int) {
 }
 ```
 
-The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Capture modes and escaping lifetime rules depend on the memory model.
+The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Captured context is explicitly declared with value or `var` capture headers; complete ownership and escaping lifetime rules depend on the memory model. See [explicit context](closures.md#explicit-context-in-the-callable-signature).
 
 ## Recursion and inference
 
