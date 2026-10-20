@@ -57,6 +57,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Recovery chains are nested expressions: each later `else` can catch a matching failure raised by an earlier handler, which is outside its own recovery boundary. The staged assignments show Result type changes; actual separate statements cannot catch a panic from an earlier statement. Chained outer recovery is active during inner evaluation. A new handler failure preserves and joins an existing remainder: consuming A from A+B and failing with C leaves B+C. A later B recovery leaves C outward despite producing a recovery value. The aggregate carrier and duplicate-member policy remain open, and explicit Result handling / function-targeted `!` are unchanged.
 
+- Explicit function-type syntax and literal reassignment are selected: `var myfn: fn(a: Int): Int!;` starts as the zero callable and `myfn = fn(a: Int): Int! { a + 1 };` replaces it. The result annotation belongs to the callable, so this example returns `Int ! Error`. Broader callable compatibility, captures, and complete grammar remain open. See [functions](functions.md#function-types-literals-and-reassignment).
+
 ## Plan links
 
 | Relation | Plan / file |

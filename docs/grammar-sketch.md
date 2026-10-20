@@ -86,11 +86,15 @@ assignment := assignable "=" expression
 
 function := "fn" "(" [parameters] ")" [":" type] block
 
+function_type := "fn" "(" [typed_parameters] ")" ":" type
+
 typed_parameter := pattern ":" type
 
 mut_qualified_type := "mut" type_operand
 var_qualified_access := "var" type_operand
 ```
+
+The explicit function-type template uses named typed parameters, as in `fn(a: Int): Int!`, with no executable body. The final `type` is the callable's result type, so this example returns `Int ! Error`. A `function` literal is an expression and can appear on an ordinary assignment's right-hand side, as in `myfn = fn(a: Int): Int! { a + 1 };`, when `myfn` is a compatible `var` binding. These templates do not settle parameter-name identity, full callable variance/capture rules, or the complete recursive type grammar; see [functions](functions.md#function-types-literals-and-reassignment).
 
 inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 

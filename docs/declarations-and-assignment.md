@@ -79,6 +79,8 @@ score = 20;       /* rejected: immutable binding */
 
 The second example isolates type safety; the third isolates immutability.
 
+Function values follow the same declaration and replacement rules. `var myfn: fn(a: Int): Int!;` starts as the zero callable. `myfn = fn(a: Int): Int! { a + 1 };` replaces it with a function literal fitting that contract. An initialized binding without `var` cannot be replaced this way. See [function types and reassignment](functions.md#function-types-literals-and-reassignment).
+
 ## Held-data updates versus binding updates
 
 ```text

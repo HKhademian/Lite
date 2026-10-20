@@ -1,6 +1,6 @@
 # Functions
 
-Status: **binding syntax, colon result types, tail results, early-return direction, and zero-result callable behavior established**.
+Status: **binding syntax, explicit function types, function-literal assignment, colon result types, tail results, early-return direction, and zero-result callable behavior established**.
 
 ## Template
 
@@ -21,6 +21,28 @@ double := fn(x: Int): Int {
 ```
 
 Use `:` for result annotations, matching other type annotations. The earlier `->` spelling is superseded.
+
+## Function types, literals, and reassignment
+
+An explicitly written function type uses the signature without a body: `fn(a: Int): Int!`. The type after the signature's result colon is the callable's result type; here `Int!` means `Int ! Error`. A function literal uses the same signature followed by its executable body. It is a value expression usable in an initializer or an assignment.
+
+```text
+var myfn: fn(a: Int): Int!;
+
+_ := myfn(5); // zero callable returns .ok(0)
+
+myfn = fn(a: Int): Int! {
+    a + 1
+};
+
+_ := myfn(5); // replacement returns .ok(6)
+```
+
+The declaration immediately initializes `myfn` to the callable type's zero value. Ordinary `=` replaces that value because the binding is declared `var`; the assigned function must fit the binding's declared callable contract. The example uses the same parameter and result types on both sides. `mut` is not required for whole-binding replacement and does not substitute for `var`.
+
+The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Supplied arguments follow the ordinary call contract; the zero callable's defined behavior does not itself create optional parameters.
+
+The explicit signature form and function-literal assignment are selected. Parameter-name identity in function types, broader callable compatibility/variance, captures, ownership, and complete recursive type grammar remain to be specified.
 
 ## Call evaluation order
 
