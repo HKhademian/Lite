@@ -7,7 +7,7 @@ Status: **explicitly deferred by the user, 2026-10-19**. The body-wide special-s
 - Recovery for a construct belongs inside its body; external error-catching tails on whole if/loop/match constructs remain retired.
 - Operation-level `operation() else { fallback() }` and `operation() else(failure) { ... }` remain available.
 - Returned Results still require explicit handling or propagation. Postfix ! retains its function/closure target; panics propagate implicitly.
-- Cleanup-only `finally` has no pending-outcome receiver or transformation; when applicable cleanup completes normally, it preserves the pending outcome. During language-managed typed-panic propagation, applicable `finally` blocks run inner-to-outer before an outer matching handler. Attachment, hard-abort behavior, and failure precedence remain deferred.
+- Cleanup-only `finally` has no receiver, recovery behavior, or transformation; when applicable cleanup completes normally, it preserves the pending outcome. For construct-level loop/conditional hooks, `then` precedes `finally` on normal completion. During language-managed typed-panic propagation, applicable `finally` blocks run inner-to-outer before an outer matching handler. Body-wide attachment, hard-abort behavior, and failure precedence remain deferred.
 - Ordinary branch selection, loop completion hooks, and exhaustive match arms keep their existing roles.
 
 ## Questions to revisit together

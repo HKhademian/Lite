@@ -122,7 +122,7 @@ The capture promise concerns language-defined faults with valid transfer/cleanup
 
 ## Body-local construct ownership
 
-The user retires the proposed external if/loop/match recovery tails. These constructs own recovery inside their bodies, analogously to fn. Operation() else { ... } remains valid inside those bodies. Body-wide special sections, including delimiter and scope design, are explicitly deferred for the joint cleanup/resource review; see [body-owned recovery](body-recovery.md). The earlier grouped construct workarounds are not current recommendations. Finally placement, ! propagation targets, and returned-Result handling are not implicitly changed.
+The user retires the proposed external if/loop/match recovery tails. These constructs own recovery inside their bodies, analogously to fn. Operation() else { ... } remains valid inside those bodies. Body-wide special sections, including delimiter and scope design, are explicitly deferred for the joint cleanup/resource review; see [body-owned recovery](body-recovery.md). The earlier grouped construct workarounds are not current recommendations. Construct-level `then`-before-`finally` order is selected separately; body-wide cleanup placement, ! propagation targets, and returned-Result handling are not implicitly changed.
 
 ## Grammar still to specify
 

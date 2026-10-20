@@ -63,7 +63,7 @@ inspect_file := fn(path: String) {
 }
 ```
 
-Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; finally placement remains under review. During language-managed panic propagation, applicable `finally` blocks run for exited scopes before an outer matching handler.
+Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; body-wide `finally` placement remains under review. For construct-level loop/conditional hooks, the selected normal order is `then` followed by cleanup `finally`. During language-managed panic propagation, applicable `finally` blocks run for exited scopes before an outer matching handler.
 
 ### How it executes
 
@@ -131,6 +131,6 @@ For a literal body-only region, the condition/header/source/subject is evaluated
 
 A loop body-owned handler naturally raises a per-iteration versus whole-loop question. An iteration failure must not silently continue, break, discard accumulator state, or retry; the handler's normal completion/explicit exit needs a defined contribution rule. Whole-function recovery would be active once per invocation rather than once per loop entry. These scopes and active-handler entry points still require confirmation.
 
-The user correction names recovery placement. It does not independently move or retire `finally` hooks. Cleanup-only `finally` has no pending-outcome receiver or transformation; language-managed panic propagation runs applicable exited-scope `finally` blocks before outer recovery. Placement, ordering beyond that rule, cleanup failures, and Result-forwarding interactions remain separate decisions.
+The user correction names recovery placement. It does not independently move or retire `finally` hooks. Cleanup-only `finally` has no receiver, recovery behavior, or transformation; language-managed panic propagation runs applicable exited-scope `finally` blocks before outer recovery. Construct-level `then`-before-`finally` order is selected, while body-wide placement, cleanup failures, and Result-forwarding interactions remain separate decisions.
 
 Related: [operation recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [Result handling](result-and-errors.md), [conditionals](conditionals.md), [loops](loops.md), [match](match.md), and [finally](finally.md).

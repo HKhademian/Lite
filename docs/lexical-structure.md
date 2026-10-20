@@ -23,7 +23,7 @@ Whitespace can separate tokens. It does not insert separators or choose block bo
 - There is no automatic semicolon insertion.
 - A semicolon does not suppress the preceding expression's result.
 - A trailing comma before the closing delimiter of a comma-separated list is optional and allowed. A trailing semicolon before a block close, end of file, or after a complete block item is likewise optional and allowed.
-- An attached `else`, `then`, or `finally` belongs to the same construct; it is not separated from that construct by `;`.
+- An attached `else`, `then`, or `finally` belongs to the same construct; it is not separated from that construct by `;`. When both `then` and `finally` are attached, `then` comes first and `finally` is cleanup after completion.
 
 Only the trailing separator is optional: commas between list elements and semicolons between ordinary adjacent items still separate them. Line breaks do not supply missing separators. This rule does not interchange comma and semicolon contexts or settle the separate singleton-tuple/grouping grammar.
 

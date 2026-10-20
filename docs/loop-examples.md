@@ -170,7 +170,7 @@ sum_text := fn(texts: [String]): Int! {
 }
 ```
 
-Local recovery skips a failed parse without committing a new value. Postfix ! forwards an error from the nearest function/closure and does not enter normal loop completion. Panics retain their implicit failure path. Body-wide handlers, defer, resources, and all-exit cleanup remain deferred.
+Local recovery skips a failed parse without committing a new value. Postfix ! forwards an error from the nearest function/closure and does not enter normal loop completion. Panics retain their implicit failure path. Construct-level `finally` follows `then` and performs cleanup without recovering failures. Body-wide handlers/cleanup, defer, and resource scopes remain deferred.
 
 ## Not finalized by these examples
 

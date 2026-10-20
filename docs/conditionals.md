@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior for normal completion, targeted returns, outer exits, and propagated failures is selected; all-exit cleanup remains open**.
+Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior and `then`-before-`finally` cleanup order are selected; exact cleanup attachment scope and failure behavior remain open**.
 
 ## Template
 
@@ -107,7 +107,7 @@ label: String = @notice if should_warn {
 
 Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; `then` sees that result and produces the final `String`. The explicit tag is required for conditional metadata access.
 
-`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result, so its result-processing `then` is skipped. During language-managed panic propagation, applicable `finally` blocks in exited scopes run inner-to-outer before an outer matching handler. Exact attachment and cleanup-failure rules remain deferred, including whether both clauses may attach to one conditional and their ordering.
+`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result, so its result-processing `then` is skipped. If this conditional has both hooks, `then` completes before `finally` performs cleanup as the conditional exits. On an outer-target return, error, or panic, applicable `finally` cleanup still runs while leaving even though this conditional's `then` is skipped. `finally` does not recover failures; recovery is a separate construct. Exact attachment syntax/scope and cleanup-failure rules remain open.
 
 ### Interaction with loop bodies
 
@@ -266,7 +266,7 @@ Braces establish which conditional owns `else`; indentation is irrelevant.
 
 The user rejects an external error-catching else(failure) attached to the whole conditional. Recovery belongs inside fn/if/loop/match bodies; ordinary else retains false-selection meaning. Operation-level handlers inside each branch remain valid with optional receivers. Body-wide handler syntax and coverage are deferred for the joint cleanup/resource review; see [body-owned recovery](body-recovery.md).
 
-The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target, implicitly unwrap inner Results, or settle finally placement.
+The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target or implicitly unwrap inner Results. When conditional `then` and construct-level `finally` are both attached, `then` precedes cleanup; exact attachment syntax/scope and cleanup-failure rules remain open.
 
 ## Tags and completion
 
@@ -282,7 +282,7 @@ The tag names the entire conditional chain and can identify a tagged exit target
 
 The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. An attached `then` transforms that result to final type `R`; read-only access to `T` is available there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
 
-A conditional `then` follows the complete branch chain, not a separate condition or branch body. Normal branch completion, including the missing-`else` zero path, supplies `T` to `then`. A tagged return to this conditional also supplies `T` and runs its `then`; a return to an outer target skips it. A propagated error or unhandled panic supplies no `T`, so conditional result processing does not run. A locally recovered failure can still lead to a normal branch value and `then`. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
+A conditional `then` follows the complete branch chain, not a separate condition or branch body. Normal branch completion, including the missing-`else` zero path, supplies `T` to `then`. A tagged return to this conditional also supplies `T` and runs its `then`; a return to an outer target skips it. A propagated error or unhandled panic supplies no `T`, so conditional result processing does not run. A locally recovered failure can still lead to a normal branch value and `then`. When an applicable construct-level `finally` is attached, it follows `then` on normal completion and runs during scope exit on abrupt paths; it performs cleanup only and does not recover failures. Exact attachment scope and cleanup-failure behavior remain open. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
 
 ## Related concepts and references
 

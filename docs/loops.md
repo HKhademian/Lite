@@ -104,6 +104,6 @@ Index counts traversal position; reversal/step do not turn it into an original s
 
 ## Recovery and cleanup
 
-Operation-local recovery remains available inside bodies. Returned Results still require explicit handling/propagation. External whole-loop error handlers are retired; body-wide recovery/cleanup, defer, and resource-management syntax remain [deferred](deferred-cleanup-and-resources.md). Then is normal completion processing, not an all-exit cleanup promise.
+Operation-local recovery remains available inside bodies. Returned Results still require explicit handling/propagation. External whole-loop error handlers are retired; body-wide recovery/cleanup, defer, and resource-management syntax remain [deferred](deferred-cleanup-and-resources.md). `then` is normal result processing, not cleanup; an attached construct-level `finally` runs afterward and does not replace the loop result.
 
 Related: [full examples](loop-examples.md), [item naming](loop-receivers.md), [loop value](loop-value.md), [completion](loop-completion.md), [tags](tags-and-contexts.md), [exits](control-flow.md), and [historical accumulator](loop-accumulator.md).

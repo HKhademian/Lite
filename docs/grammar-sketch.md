@@ -174,6 +174,7 @@ conditional := [tag] "if" condition block
                { "else" "if" condition block }
                [ "else" block ]
                [ conditional_then ]
+               [ finally_clause ]
 conditional_then := "then" block
 
 condition := boolean_expression | and_condition
@@ -191,7 +192,7 @@ typed_binding_pattern := identifier ":" type
 
 The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Bare .Some in a pattern is now selected to test only the tag with no payload binding; arbitrary refutable receiver patterns still need a mismatch contract. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
-The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). The selected `then` follows the complete chain and receives the selected branch or zero result of type `T`; its tail expression yields final type `R`. A tagged conditional's `.value` is readable only inside this block; `.condition` metadata is not exposed for simple conditions or chains. Targeted-return and propagated-failure behavior is selected; the relative placement of an attached `finally` remains open. `endif` is superseded.
+The existing-name test resolves a name already in scope and refines knowledge about its value without introducing a binding. The declaration-shaped forms reuse declarations without `let`; they evaluate their source once and bind new names only on a successful match. `Some(value)` illustrates refutable destructuring; `name: Type` illustrates union narrowing. Plain Boolean conditions still require `Bool`. Policy for irrefutable conditional patterns and modifiers remains open. Existing-name test precedence and broader logical flow remain open; see [type tests and narrowing](type-tests-and-narrowing.md). The selected `then` follows the complete chain and receives the selected branch or zero result of type `T`; its tail expression yields final type `R`. A tagged conditional's `.value` is readable only inside this block; `.condition` metadata is not exposed for simple conditions or chains. Targeted-return and propagated-failure behavior is selected. If attached, cleanup-only `finally` runs after `then`; it has no receiver and does not recover failures. Exact attachment syntax/scope and cleanup-failure behavior remain open. `endif` is superseded.
 
 The selected and chain evaluates operands in order and exposes successful pattern bindings to later operands and the body, never the failed branch. The condition operand placeholders exclude ungrouped top-level logical separators; nested grouping can contain ordinary Boolean and/or expressions. In `Some(user) := find_user(id) and user.age > 14`, the pattern source ends before and. Full productions remain incomplete; binding-producing or/not, rebinding across separate operands, and general type-test precedence are not selected here. Repeated names within each individual pattern use selected ordered shadowing. See [conditional pattern chains](condition-chains.md).
 
@@ -228,14 +229,13 @@ The [pattern context review](pattern-contexts.md) distinguishes shared pattern f
 ## Loops
 
 ```text
-loop := [tag] "loop" [source] [item_binding] block [loop_completion]
+loop := [tag] "loop" [source] [item_binding] block [loop_completion] [finally_clause]
 
 item_binding := "as" identifier
 
 loop_completion := "then" block
 
-/* Shared cleanup candidate used above; not a loop completion clause. */
-finally_clause := "finally" ["(" pattern ")"] block
+finally_clause := "finally" block
 ```
 
 As is selected spelling for a single optional item name; the earlier colon alternative is retired. There is no header count/value receiver list, tuple-pattern receiver, or completion receiver. Destructuring and refutable selection belong in the body; no header mismatch behavior is implied.
@@ -244,7 +244,7 @@ Every loop owns .item, .index, .count, and typed .value metadata, subject to pha
 
 Source type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production. Count and value can be read before the first condition, in the body, and in then. Item/index are available during active iterations and as last-visited metadata in then, not in source/condition evaluation. With zero body entries, then exposes typed zero placeholders for item/index and count 0; completion retention is field-sensitive, so unused last-item state need not be retained.
 
-Then retains the same owning loop context, including on untagged loops, and follows ordinary final-expression rules. Separate loop empty-else/finally and completion-receiver forms are superseded. All-exit cleanup and body-wide recovery remain [deferred](deferred-cleanup-and-resources.md); external whole-loop error handlers remain retired.
+Then retains the same owning loop context, including on untagged loops, and follows ordinary final-expression rules. When both completion and cleanup hooks are present, `then` finishes before `finally`; cleanup preserves the result and does not recover failures. Exact attachment syntax/scope and cleanup-failure behavior remain open. Separate loop empty-else and completion-receiver forms are superseded. Body-wide recovery/cleanup sections remain [deferred](deferred-cleanup-and-resources.md); external whole-loop error handlers remain retired.
 
 ## Tags and contexts
 

@@ -75,7 +75,7 @@ On a match, the tagged exit supplies `Some(user)` as the loop's `T`; since this 
 
 The tagged return reaches the named target's completion phase. Its payload has type T and becomes the target's pre-then value. If the target has an attached then, that target's then runs once to produce R. If the target has no then, T is the target's result. For a loop, the payload commits to .value; for a conditional, it becomes the conditional's tagged .value.
 
-Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. This is distinct from finally, whose cleanup role and failure rules remain in the deferred lifecycle review.
+Constructs exited between the return site and its named target do not run their own then blocks. Only the named target receives the payload and runs its completion hook. Returning to an outer block likewise skips any inner loop or conditional then; an ordinary block with no then simply receives its final value. Applicable `finally` cleanup still runs as each exited scope is left. When a construct has both hooks on normal completion, `then` runs before `finally`; cleanup itself does not recover failures. Exact attachment scope and cleanup-failure rules remain open.
 
 ### The target's then runs
 
@@ -117,7 +117,7 @@ summary: String = @outer loop users as user {
 
 The outer loop's body value T is Int, and its then produces String. If should_stop is true, return @outer 1 exits the nested if and inner loop. The inner loop's then is skipped; the target outer loop's then runs with @outer.value equal to 1. If the return instead targeted an inner construct, that construct's own then would run.
 
-then remains result processing, not an all-exit cleanup guarantee. A return to an outer function, propagated error, or unhandled panic does not supply T to an inner construct's then. Error/panic handling and cleanup remain separate from this selected targeted-return rule.
+`then` remains result processing, not cleanup. A return to an outer function, propagated error, or unhandled panic does not supply T to an inner construct's `then`; applicable `finally` cleanup still runs as exited scopes are left. Error/panic handling and cleanup remain separate from this selected targeted-return rule.
 
 ### Locally recovered failure versus propagation
 

@@ -65,10 +65,10 @@ The final .value stays alive while then computes its result. Count/value are als
 
 Then runs after source exhaustion, a false condition, bare `break`, `break value`, or a tagged return to this loop. `continue` stays in iteration. A `return @loop result` commits T and runs this loop's `then` to produce R; if it targets an outer construct instead, this loop's `then` is skipped. Unqualified `return`, forwarded errors via `!`, and panics leave without supplying a loop T. `break value` commits a value of body type T and then runs normal completion; bare `break` preserves the existing value.
 
-Then is not an all-exit cleanup guarantee. Body-wide recovery, defer, disposal, finally placement, and cleanup failures remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
+Then is not an all-exit cleanup guarantee. When a loop has both `then` and construct-level `finally`, `then` runs first and `finally` cleans up as the loop exits; the cleanup block does not replace the loop result or recover failures. Applicable cleanup still runs on exits that skip `then`. Exact attachment syntax/scope and cleanup-failure behavior remain open. Body-wide recovery/cleanup sections, defer, and disposal remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
 
 ## Historical forms
 
-Separate then/empty-else/finally clauses, completion receivers, action-preservation modes, optional accumulators, and previous-value receiver slots are superseded for loops. General Option/Result values and error receivers are unchanged.
+Separate loop empty-else and completion-receiver clauses, action-preservation modes, optional accumulators, and previous-value receiver slots are superseded. The selected `finally` is the cleanup-only hook described above; general Option/Result values and error receivers are unchanged.
 
 Related: [unified completion](unified-loop-completion.md), [loop value](loop-value.md), [item naming](loop-receivers.md), [examples](loop-examples.md), and [exits](control-flow.md).
