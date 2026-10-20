@@ -258,7 +258,7 @@ For conditionals, when no normally completing branch constrains T, T defaults to
 
 ### 2. Completion hooks and abrupt exits
 
-The single receiverless `then` is selected for loops and complete conditional chains. A conditional `then` processes the selected branch/zero result T into final R, with read-only `@tag.value` available only in that block. `then` names result processing; reserve `finally` for cleanup that preserves a pending result or exit. A return targeting a conditional supplies T and runs that conditional's `then`; a return to an outer target skips the inner conditional's `then`. Propagated errors and unhandled panics provide no conditional T; cleanup behavior remains open. Loop count and typed value remain available from the owning context.
+The single receiverless `then` is selected for loops and complete conditional chains. A conditional `then` processes the selected branch/zero result T into final R, with read-only `@tag.value` available only in that block. `then` names result processing; reserve `finally` for cleanup that preserves a pending result or exit. Normal completion and a return targeting the conditional supply T and run its `then`; a return to an outer target skips the inner conditional's `then`. Propagated errors and unhandled panics provide no conditional T and skip result processing; cleanup behavior remains open. Loop count and typed value remain available from the owning context.
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 

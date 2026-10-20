@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden, and abrupt-exit behavior remains open**.
+Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior for normal completion, targeted returns, outer exits, and propagated failures is selected; all-exit cleanup remains open**.
 
 ## Template
 
@@ -282,7 +282,7 @@ The tag names the entire conditional chain and can identify a tagged exit target
 
 The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. An attached `then` transforms that result to final type `R`; read-only access to `T` is available there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
 
-A conditional `then` follows the complete branch chain, not separate a condition from its body. It processes the selected branch or zero result; its treatment of abrupt exits remains open. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
+A conditional `then` follows the complete branch chain, not a separate condition or branch body. Normal branch completion, including the missing-`else` zero path, supplies `T` to `then`. A tagged return to this conditional also supplies `T` and runs its `then`; a return to an outer target skips it. A propagated error or unhandled panic supplies no `T`, so conditional result processing does not run. A locally recovered failure can still lead to a normal branch value and `then`. All-exit cleanup remains a separate `finally`/lifecycle question. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
 
 ## Related concepts and references
 

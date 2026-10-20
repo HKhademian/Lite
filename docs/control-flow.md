@@ -123,7 +123,7 @@ then remains result processing, not an all-exit cleanup guarantee. A return to a
 
 An operation-level handler inside a conditional branch can turn a returned error or matching typed panic into a fallback value. If the handler and the rest of the branch complete with `T`, the conditional has its ordinary branch result and its selected `then` processes that result. For example, a failed `read_text()` recovered locally to `""` still gives a string result for a following normalization `then`.
 
-Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. These cases distinguish `then` result processing from cleanup, but do not settle transfer and cleanup behavior: panic unwinding and `finally` execution on failure remain open. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
+Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. Neither path runs the conditional's result-processing `then`; panic unwinding and `finally` execution on failure remain open. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
 
 ## Explicit loop targets
 

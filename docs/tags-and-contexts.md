@@ -69,7 +69,7 @@ Loop tags expose `.item`, `.index`, `.count`, and `.value`, and identify loop ex
 
 Conditional tags do not expose condition metadata. This applies to simple conditions and `else if` chains; `then` can read the selected result through `@tag.value` but cannot inspect or reevaluate the tests.
 
-The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. This result-processing clause is not an all-exit cleanup guarantee; abrupt-exit behavior remains open.
+The conditional's branch/zero result has type `T`. An attached `then` receives that result and produces final type `R`; without `then`, the conditional returns `T`. Read-only `@tag.value` is available only within that conditional's `then`. A tagged return to the conditional supplies `T` and runs this `then`; a return to an outer target skips it. Propagated errors and unhandled panics supply no `T`, so they skip result processing. All-exit cleanup remains a separate `finally` question.
 
 ## Scope and shadowing
 
@@ -85,7 +85,7 @@ The earlier prohibition on active tag shadowing is superseded.
 
 ## Availability and implementation
 
-Count and the typed zero-initialized loop value exist before the first condition check. A conditional's zero-initialized result likewise exists before its first condition is evaluated, but it is readable only in an attached `then` through explicit `@tag.value`. Conditional condition metadata is not exposed. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then. After zero entries, then exposes typed zero placeholders for item/index with count 0. Item/index are not available in source/condition evaluation before an entry. Loop count/value are also readable in conditions and then. Abrupt-exit behavior for conditional `then` remains open.
+Count and the typed zero-initialized loop value exist before the first condition check. A conditional's zero-initialized result likewise exists before its first condition is evaluated, but it is readable only in an attached `then` through explicit `@tag.value`. Conditional condition metadata is not exposed. Index is zero-based traversal position during an active entry, not an original source index/key; item/index can be read during an active iteration and as last-visited metadata in then. After zero entries, then exposes typed zero placeholders for item/index with count 0. Item/index are not available in source/condition evaluation before an entry. Loop count/value are also readable in conditions and then. Conditional `then` runs only when the conditional completes with a `T` result, including a tagged return to that conditional; outer-target returns, propagated errors, and unhandled panics skip it. All-exit cleanup remains open.
 
 At loop completion, the tag refers to the completed iteration state while the completion block computes the whole-loop result. Keeping the tag in scope does not by itself retain an item or iteration-local references, grant metadata writes, or allow a tag to escape its construct. Reading last-item metadata in then requires that used item to remain valid.
 
