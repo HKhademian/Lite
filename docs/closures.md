@@ -12,7 +12,7 @@ transform := fn(x: Int): Int {
 }
 ```
 
-There is no selected second shorthand syntax requiring `=>`. Earlier arrow-bodied function suggestions are not required by the current mandatory-brace direction.
+The contextually typed form `fn(x) { ... }` is selected when a binding, method signature, or callback contract supplies the parameter and result types. Full typed definitions remain independent of an expected type. Both forms use brace bodies and permit optional trailing item semicolons. Additional lambda shorthand, including `(x) { ... }` without an arrow, remains under review; see [functions](functions.md#compact-implementations-under-review).
 
 ## Result behavior
 
