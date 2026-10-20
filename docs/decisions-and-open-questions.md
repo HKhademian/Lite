@@ -137,7 +137,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 - Loop .value replaces .acc and automatic Option accumulators. It has a static body-result type and is zero-initialized before iteration; tail completion, continue value, or break value commits; plain continue and bare break preserve. No value_or helper or previous receiver is required. See [loop value](loop-value.md).
 - Do not inject implicit ordinary names such as `it` or `acc`.
 - Direction and stepping should be source/range capabilities rather than more loop keywords.
-- Plain continue preserves .value and advances; continue value commits early and advances. Bare break preserves .value and runs then. Break value commits its T operand, stops the nearest loop, and runs then. `break @tag [value]` applies the same loop exit to an explicitly named enclosing loop, while untagged break still targets the nearest loop even if it has a tag. A tagged return supplies T to its named target and runs that target's then if present; constructs exited on the way skip their own then blocks.
+- Plain continue preserves .value and advances; continue value commits early and advances. `continue @tag [value]` applies the same rule to an explicitly named enclosing loop, committing to that loop before advancing when a value is supplied. Bare break preserves .value and runs then. Break value commits its T operand, stops the nearest loop, and runs then. `break @tag [value]` applies the same loop exit to an explicitly named enclosing loop, while untagged break still targets the nearest loop even if it has a tag. A tagged return supplies T to its named target and runs that target's then if present; constructs exited on the way skip their own then blocks.
 - Loop completion uses receiverless then { ... }. Its current context is the owning loop, tagged or untagged: .count and .value are available directly. The tail expression supplies the completion result, including Unit; the earlier completion-receiver and action-preservation distinction is superseded. Nested contexts retain no outward field search.
 - Without then, normal completion returns final .value; with then it returns that block's tail expression, and then {} returns Unit.
 - Loop type inference uses body constraints and destination-side expected types. A Long destination can constrain .value, including a body consisting only of .value. With then, expected final type R constrains body type T only through actual type relationships. Numeric promotion/casts remain the arithmetic contract; see [loop inference](loop-type-inference.md).
@@ -254,7 +254,7 @@ Define body-result type T and final construct-result type R independently. The .
 
 When a loop has no contributing path and nothing else constrains T, T defaults to Unit; an expected type can override that default. Plain continue and bare break do not themselves contribute Unit; an action body that normally completes with Unit does. A `then` result independent of `.value` determines R but leaves T at its default. See [noncontributing loop paths](loop-type-inference.md#loops-with-no-contributing-path).
 
-For conditionals, when no normally completing branch constrains T, T defaults to Unit; an expected type can override it. The missing-final-else path returns zero(T). That is a real conditional result: when the `if` is the final expression in a loop body, the loop commits it and may replace its previous `.value`. `continue` remains the distinct skip operation. Inside the `if`, use an explicit loop tag to read the enclosing loop's `.value`.
+For conditionals, when no normally completing branch constrains T, T defaults to Unit; an expected type can override it. The missing-final-else path returns zero(T). That is a real conditional result: when the `if` is the final expression in a loop body, the loop commits it and may replace its previous `.value`. This differs from `continue`, which advances the loop without contributing. Inside the `if`, use an explicit loop tag to read the enclosing loop's `.value`.
 
 ### 2. Completion hooks and abrupt exits
 
@@ -262,7 +262,7 @@ The single receiverless `then` is selected for loops and complete conditional ch
 
 Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
 
-Break value is selected as commit-and-stop followed by normal completion. Tagged-return behavior is selected: its payload satisfies T and the named target's `then` produces R when present; intermediate `then` hooks are skipped. Labeled contribution-bearing continue remains open.
+Break value is selected as commit-and-stop followed by normal completion. Tagged-return behavior is selected: its payload satisfies T and the named target's `then` produces R when present; intermediate `then` hooks are skipped. Labeled continue is selected: an optional value commits to the named loop before it advances; intervening constructs skip their `then` blocks.
 
 ### 3. Optional item naming and initialization
 

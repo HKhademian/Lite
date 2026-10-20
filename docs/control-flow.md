@@ -1,6 +1,6 @@
 # Control-flow exits
 
-Status: **tagged returns run the named target's completion and skip exited inner completion; bare/value and explicitly targeted loop exits selected; failure transfer and labeled contribution-bearing continue remain open**.
+Status: **tagged returns run the named target's completion and skip exited inner completion; bare/value and explicitly targeted loop exits selected; failure transfer remains open**.
 
 ## Templates
 
@@ -16,9 +16,10 @@ break @loop value;
 continue;
 continue value;
 continue @loop;
+continue @loop value;
 ```
 
-Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, with an optional trailing semicolon. Optional operand forms need a complete grammar, including any future labeled continuation contribution.
+Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, with an optional trailing semicolon.
 
 ## Plain return
 
@@ -119,11 +120,11 @@ Postfix `!` forwards a returned error from the nearest function or closure; it i
 
 ## Explicit loop targets
 
-`continue @loop` explicitly advances a named enclosing loop. A target that is an `if` or ordinary block cannot continue. `break @loop [value]` explicitly stops a named enclosing loop; an untagged `break` keeps targeting the nearest loop whether or not it has a tag.
+`continue @loop [value]` explicitly advances a named enclosing loop. With a payload, it commits a value of type `T` to that loop before advancing; without one, it preserves the loop's current `.value`. Any inner constructs exited to reach the target skip their own `then`; the target loop advances, so its `then` does not run. A target that is an `if` or ordinary block cannot continue. `break @loop [value]` explicitly stops a named enclosing loop; an untagged `break` keeps targeting the nearest loop whether or not it has a tag.
 
 Break value commits its operand to .value, stops the nearest loop, and enters normal completion. Its operand has the body value type T, just like continue value; then may transform T into final result type R. Without then, the committed .value is the final result. Bare break performs the same stop/completion without replacing .value.
 
-The earlier documentation incorrectly made break value bypass then; that behavior is removed. A tagged return runs the named target's then, while constructs exited on the way skip their own then. For a loop target, tagged `break` and tagged `return` both stop that loop and enter its completion; `break` is loop-specific, while `return` can target other supported constructs too. Whether `continue @tag value` commits to the named loop before advancing remains open.
+The earlier documentation incorrectly made break value bypass then; that behavior is removed. A tagged return runs the named target's then, while constructs exited on the way skip their own then. For a loop target, tagged `break` and tagged `return` both stop that loop and enter its completion; `break` is loop-specific, while `return` can target other supported constructs too.
 
 ```text
 status := loop numbers as number {
