@@ -175,6 +175,34 @@ contextual_lambda := "(" [identifier {"," identifier}] ")" block
 
 This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts. The user selected the empty header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
 
+#### Optional lambda signatures (proposal)
+
+The user asks whether lambdas can also supply parameter types and a result signature. Proposed answer: yes. Being a lambda does not require omitting annotations. Reuse the ordinary colon notation, with optional annotations on each named parameter and after the closing parameter parenthesis:
+
+```text
+/* Expected callback contract: fn(item: Int): Int */
+map(numbers, (n) { n * 2 });
+map(numbers, (n: Int) { n * 2 });
+map(numbers, (n): Int { n * 2 });
+map(numbers, (n: Int): Int { n * 2 });
+```
+
+The expected callable contract supplies omitted types. Explicit annotations must satisfy that contract; they do not change an existing binding or callback parameter's declared type. Complete variance and callable compatibility remain open. An explicit fallible result uses the same `T ! E` notation as a full `fn` definition.
+
+With all named input types and the result annotated, the lambda can provide its own signature without an expected callable type:
+
+```text
+double := (n: Int): Int {
+    n * 2
+}
+```
+
+This is a proposal pending selection. It does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Independently typed empty-header lambdas need their own arity rule before formalization.
+
+Typed lambdas would overlap with full typed `fn` expressions too: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` would provide the same visible input/result contract. Whether keeping the keyword form is useful remains a separate surface-syntax review; this proposal does not remove it.
+
+Rust provides a direct reference for optional closure signatures: `|n: i32| -> i32 { n * 2 }`, with parameter annotations and an optional result annotation. See [Rust closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html), checked 2026-10-21. LiteScript's proposed delimiters and result colon retain its own notation.
+
 #### Named, underscore, and empty headers
 
 The user compares three implementation headers under the existing `x: fn(a: Int): String` contract:
