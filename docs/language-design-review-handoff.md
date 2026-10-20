@@ -63,6 +63,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - The user requested modern reference-language solutions before selecting compact function syntax. [Functions](functions.md#compact-implementations-under-review) records official Rust, V, Odin, and Zig sources checked on 2026-10-20, then compares arrows, contextual `fn`, parameter-list blocks, signature-inherited names, and pipes. Arrows, contextual `fn`, and pipes are the primary candidates; no compact form is selected. V's documented pipe lambdas are callback-only, unlike Rust's assignment-capable form. Keep this choice separate from omitted-argument default initialization.
 
+- Clarified the compact-function request as [two scenarios](functions.md#two-scenarios-full-definition-and-contextual-implementation): a normal definition with explicit parameter/result types, and a replacement containing only local parameters and a body under that existing contract. A separate signature-only declaration is optional. `fn(a) { ... }` and `(a) => { ... }` illustrate alternatives; the spelling remains open.
+
 ## Plan links
 
 | Relation | Plan / file |

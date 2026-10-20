@@ -53,7 +53,31 @@ This settles ordinary value parameters. Default-expression syntax, evaluation ti
 
 ## Compact implementations under review
 
-The user requests short implementations whose types come from a declared callable, method signature, or expected callback contract. The following forms are candidates for comparison; none of these compact spellings has been selected. The full `fn(a: Int): Int! { ... }` form remains available.
+The user requests two ways to write the same kind of function: a normal definition with explicit types, and an implementation with only local parameters and a body when an existing contract supplies the types. This does not require declaring a separate function type before every normal definition. The compact spellings below remain candidates; none has been selected.
+
+### Two scenarios: full definition and contextual implementation
+
+**1. A normal definition includes its parameter and result types.**
+
+```text
+var x := fn(a: Int): String {
+    "original"
+};
+```
+
+The initializer establishes `x`'s callable contract. `var` allows replacing the function value later.
+
+**2. A replacement supplies only its parameter header and body.**
+
+```text
+// Alternative spellings under review:
+x = fn(a) { "replacement" };
+x = (a) => { "replacement" };
+```
+
+Here the existing callable contract supplies the parameter type `Int` and result type `String`. The implementation names its local parameters and provides the body without repeating those types. Omitting annotations does not change the established contract; the replacement must satisfy it. The body above returns a string literal to keep the example focused on function syntax.
+
+The same contextual implementation can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn(a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. Selecting the compact spelling is separate from this full-versus-contextual distinction.
 
 For the declared `var myfn: fn(a: Int): Int!;`, the implementation can infer the parameter's `Int` type and check its body against `Int ! Error`. The candidates differ in how they identify the function and bind its local parameter names.
 
