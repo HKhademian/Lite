@@ -146,7 +146,7 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 ## Cleanup
 
-Structured exits run applicable `finally` blocks while unwinding. The intended order is from exited inner constructs toward the target. Detailed interactions with cleanup errors, receiving `finally` transformations, and control-flow attempts from inside cleanup remain open. Cleanup must not silently override a pending early return or propagated error.
+When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, or propagated recoverable error; it has no receiver for that outcome and does not transform it. The intended nested-cleanup order is from exited inner constructs toward the target. Which scopes attach `finally`, whether it runs during panic transfer, and how cleanup's own abrupt exit or failure interacts with a pending outcome remain open.
 
 Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
 

@@ -166,7 +166,7 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 
 - The [loop recovery example](loop-recovery.md) is historical where it attaches recovery outside a grouped loop. Body-local ownership supersedes that workaround; normal accumulator/completion rules remain, while internal iteration/run recovery scope and cleanup require review.
 
-- The [finally review](finally.md) responds to the missing cleanup in the full example, adding operation, entered branch-region, and whole-conditional finally hooks. Its external construct-handler placement is superseded; its cleanup review proposes protected evaluation, optional recovery, then Unit cleanup that preserves pending values/exits, proceeding inner to outer. Existing structured-exit intent is retained; panic cleanup, secondary failures, receiver transformations, and full attachment grammar remain unselected.
+- The [finally review](finally.md) responds to the missing cleanup in the full example, adding operation, entered branch-region, and whole-conditional finally hooks. Its external construct-handler placement is superseded; cleanup-only `finally` with no pending-outcome receiver is selected. When it runs and completes normally, it preserves the pending normal result, control-flow exit, or propagated recoverable error. Existing structured-exit intent is retained; panic cleanup, secondary failures, ordering, and full attachment grammar remain unselected.
 
 - The [external conditional recovery investigation](conditional-recovery.md) is superseded by the user's [body-local ownership rule](body-recovery.md). Operation-local recovery remains valid; internal whole-body handler syntax, entry scope, and finally placement are not finalized.
 
@@ -260,7 +260,7 @@ For conditionals, when no normally completing branch constrains T, T defaults to
 
 The single receiverless `then` is selected for loops and complete conditional chains. A conditional `then` processes the selected branch/zero result T into final R, with read-only `@tag.value` available only in that block. `then` names result processing; reserve `finally` for cleanup that preserves a pending result or exit. Normal completion and a return targeting the conditional supply T and run its `then`; a return to an outer target skips the inner conditional's `then`. Propagated errors and unhandled panics provide no conditional T and skip result processing; cleanup behavior remains open. Loop count and typed value remain available from the owning context.
 
-Define receiving `finally` inputs and normal-result transformations. It must be possible to perform cleanup during early returns or propagated errors without inventing a successful result or suppressing the pending exit.
+The user selected cleanup-only `finally`: no implicit pending-outcome receiver or result/exit transformation. If cleanup completes normally, preserve the pending normal result, control-flow exit, or propagated recoverable error. Still define which scopes can attach `finally`, whether it runs during panic transfer, ordering across nested cleanups, and precedence if cleanup itself exits or fails while another outcome is pending.
 
 Break value is selected as commit-and-stop followed by normal completion. Tagged-return behavior is selected: its payload satisfies T and the named target's `then` produces R when present; intermediate `then` hooks are skipped. Labeled continue is selected: an optional value commits to the named loop before it advances; intervening constructs skip their `then` blocks.
 

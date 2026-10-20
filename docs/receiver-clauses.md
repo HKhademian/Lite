@@ -16,7 +16,7 @@ then(value) { transformed_value }
 then(_) { replacement_value }
 ```
 
-Related receiver forms for `else` and `finally` were requested as well. Their inputs differ by phase and cannot be assumed to be ordinary iteration values.
+Receivers for `else` and `finally` were considered historically. The user selected cleanup-only `finally` with no pending-outcome receiver or transformation; recovery receivers remain separate from completion metadata.
 
 Result recovery has selected forms `operation() else(error) { fallback }` and `operation() else { fallback }`. When a Result-only handler includes a receiver, it receives the operation's statically typed recoverable error. Omitting the receiver introduces no implicit error binding. Both forms produce values: success type `T` and normal fallback type `D` form `T | D`. An explicitly exiting recovery branch adds no local alternative. This differs from the loop completion hooks below: omitting a Result recovery receiver does not select action-only behavior. The later shared else direction also supports typed panic capture. Its combined receiver type and selective typed patterns remain proposals in [recovery receiver types](recovery-receiver-types.md); general dispatch chains remain separate. See [Result and errors](result-and-errors.md).
 
@@ -74,7 +74,7 @@ This is not accepted grammar. If adopted, it would require decisions about:
 
 The [pattern context review](pattern-contexts.md#7-completion-hook-receivers) recommends ordinary receivers bind irrefutably. A selective hook or Result error pattern needs an explicit unmatched-input policy; one pattern-bearing clause must not silently swallow an error or omit required cleanup. This recommendation does not select the explored typed dispatch chains.
 
-Current loop `then` has no receiver: it reads the owning context's `.value`, `.count`, and phase-valid item/index metadata. A zero-entry loop exposes selected typed zero placeholders for `.item`/`.index`, distinguished by `.count == 0`. `finally` handling early returns and errors needs completion information, not just optional successful data. Defining those input types is required before making typed receiver clauses a general feature.
+Current loop `then` has no receiver: it reads the owning context's `.value`, `.count`, and phase-valid item/index metadata. A zero-entry loop exposes selected typed zero placeholders for `.item`/`.index`, distinguished by `.count == 0`. Cleanup-only `finally` likewise has no receiver; it does not receive or transform the pending outcome. This decision does not settle attachment syntax or cleanup-failure precedence.
 
 ## Related concepts and references
 

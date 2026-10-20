@@ -131,6 +131,6 @@ For a literal body-only region, the condition/header/source/subject is evaluated
 
 A loop body-owned handler naturally raises a per-iteration versus whole-loop question. An iteration failure must not silently continue, break, discard accumulator state, or retry; the handler's normal completion/explicit exit needs a defined contribution rule. Whole-function recovery would be active once per invocation rather than once per loop entry. These scopes and active-handler entry points still require confirmation.
 
-The user correction names recovery placement. It does not independently move or retire finally hooks, specify panic cleanup, or finalize receiving cleanup transformations. Finally placement, ordering, cleanup failures, and Result-forwarding interactions remain separate decisions.
+The user correction names recovery placement. It does not independently move or retire finally hooks or specify panic cleanup. Cleanup-only `finally` has no pending-outcome receiver or transformation; placement, ordering, cleanup failures, and Result-forwarding interactions remain separate decisions.
 
 Related: [operation recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [Result handling](result-and-errors.md), [conditionals](conditionals.md), [loops](loops.md), [match](match.md), and [finally](finally.md).

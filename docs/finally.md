@@ -1,6 +1,6 @@
 # Finally: cleanup after completion or exit
 
-Status: **existing structured-cleanup intent with a full conditional example, 2026-10-19**. The user requests finally in the recovery example. Attachment grammar, panic transfer, cleanup-failure behavior, and receiving-finally transformations remain proposals. The example below uses only Unit cleanup that preserves the pending result or exit.
+Status: **cleanup-only `finally` selected, 2026-10-20**. It has no pending-outcome receiver or transformation. When it runs and cleanup completes normally, the pending normal result, control-flow exit, or propagated recoverable error is preserved. Attachment grammar, panic cleanup, and cleanup-failure behavior remain open. The example below uses only Unit cleanup.
 
 Body-wide special cleanup sections are now explicitly deferred for a joint [defer and resource-management review](deferred-cleanup-and-resources.md). The illustrations here do not finalize that feature or its syntax.
 
@@ -18,9 +18,9 @@ operation() else(failure) {
 }
 ```
 
-The proposed sequence is protected evaluation, optional recovery, then finally. On successful cleanup, preserve the determined value or pending control-flow exit. A nonreceiving finally is an action hook; it does not replace an Int result with Unit merely because cleanup returns Unit.
+The proposed sequence is protected evaluation, optional recovery, then finally. When a finally hook runs and completes normally, it preserves the pending normal result, control-flow exit, or propagated recoverable error. It has no implicit receiver for that outcome and cannot transform it into another value or exit. Cleanup can still refer to ordinary lexical names in scope. Whether finally runs during panic transfer remains open.
 
-For reading or transforming a conditional's selected branch/zero result, the selected contract reuses loop `then`. Reserve `finally` for cleanup when leaving a scope, including the intended early-exit/failure cases. These clauses have different jobs: `then` can produce the construct's final result, while `finally` preserves the pending result or exit when cleanup completes. The selection does not settle `finally` attachment and failure rules. Whether both clauses may attach to one conditional, and in which order, remains open.
+For reading or transforming a conditional's selected branch/zero result, the selected contract reuses loop `then`. Reserve `finally` for cleanup when leaving a scope. These clauses have different jobs: `then` can produce the construct's final result, while `finally` has no pending-outcome receiver and preserves the outcome when cleanup completes normally. Attachment and failure rules remain open. Whether both clauses may attach to one conditional, and in which order, remains open.
 
 The same cleanup shape can be proposed for an explicit inner block expression and for the complete conditional. It is not a finally after each individual loop iteration unless that iteration creates its own protected region. A construct-level loop finally runs when that loop is left.
 
@@ -110,11 +110,11 @@ These ordinary outward rules assume no preexisting failure is being replaced. If
 
 Cleanup is not rollback: it does not undo earlier successful writes or side effects automatically. Forced process termination and hard implementation aborts are outside an ordinary structured-cleanup promise.
 
-## Values and receivers
+## Pending outcomes
 
-All finally bodies above produce Unit. The protected expression's value or pending exit payload is determined before cleanup, and preserved when cleanup completes. The quantity binding therefore receives the successful/read-recovery Int, not the cleanup's Unit.
+The user selected cleanup-only behavior: `finally` has no implicit receiver or completion descriptor and cannot transform the pending outcome. When cleanup completes normally, the protected expression's value, control-flow exit, or propagated recoverable error remains pending. The quantity binding therefore receives the successful/read-recovery Int, not the cleanup's Unit. Ordinary lexical names remain available to cleanup.
 
-Receiving finally blocks were also requested as a possible value transformation. Their input must describe normal completion, return, returned-error forwarding, or panic rather than fabricate a successful value on every path. Completion descriptor types, allowed replacement of normal results, restrictions on control flow from cleanup, and failure precedence remain open. The example does not retire or finalize that feature.
+If cleanup itself exits abruptly or fails while another outcome is pending, precedence remains open. Panic cleanup and attachment syntax also remain unresolved; the cleanup-only decision does not imply a panic-unwinding guarantee.
 
 Any Result-producing operation inside cleanup still requires its own explicit handling or valid forwarding under the eventual cleanup policy. Neither finally nor a surrounding outer handler automatically unwraps an ignored Result.
 
