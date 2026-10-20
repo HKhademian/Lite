@@ -1,0 +1,12 @@
+/* A meal costs 19.99 euros before 8 percent tax and a 15 percent tip.
+   Both percentages use the meal price before tax. Round each to the nearest cent. */
+
+meal_cents := 1999;
+tax_percent := 8;
+tip_percent := 15;
+
+/* Adding 50 before division rounds half a cent upward. */
+tax_cents := ((meal_cents * tax_percent) + 50) // 100; /* 160 cents */
+tip_cents := ((meal_cents * tip_percent) + 50) // 100; /* 300 cents */
+
+total_cents := (meal_cents + tax_cents) + tip_cents;   /* 2459 cents = 24.59 euros */

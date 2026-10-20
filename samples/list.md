@@ -1,12 +1,12 @@
 # LiteScript single-file problem catalog
 
-520 planned scripts, ordered from first expressions to small applications. Each entry names one future file and describes its problem; this catalog does not create the `.lite` files.
+520 exercises, ordered from first expressions to small applications. Each entry names its `.lite` file and describes its problem. Exercises 001–020 have written solutions, **implemented but unverified**; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
 
 ## Starting conditions
 
 The repository is currently a language-design workspace, with no implemented compiler, runtime, or standard library. The syntax and contracts in the [language reference](../docs/README.md) include open proposals. These are learning and design experiments, not claims that the programs can run today. In particular, do not assume existing printing, input, string indexing, collection methods, math functions, filesystem APIs, or generic syntax.
 
-- Keep every script self-contained: literal fixtures, local helpers, solution, and representative checks in the same file. No manifest, imports from other samples, or third-party dependencies should be necessary.
+- Keep every script self-contained: supplied inputs, any local helpers, and a solution. Use a short problem statement and expected answers to make it readable. Keep verification and design notes separate from the lesson. No manifest, imports from other samples, or third-party dependencies should be necessary.
 - Begin with fixed inputs and a computed result. Console input and printing are optional extensions once host I/O exists; they are not prerequisites for arithmetic lessons.
 - Implement the algorithm being studied locally. For supporting operations, use the smallest local helper possible; record an absent primitive as a blocker rather than pretending a standard API exists.
 - For text exercises, use ASCII unless the entry explicitly requests Unicode. Choose byte, scalar, or grapheme behavior deliberately; do not silently treat a string as an indexable list.
@@ -18,7 +18,7 @@ Difficulty is approximate: stages increase prerequisite knowledge and implementa
 
 ## How to work through an entry
 
-Choose a small input/output example, state the accepted inputs, and solve the smallest useful version first. Add ordinary, boundary, and invalid cases where relevant; collection tasks should consider empty, singleton, and duplicate inputs. Keep checks inline until a test facility exists. Use exact integer units for money and small bounded integers where numeric limits are not yet settled.
+Choose a small input/output example and solve the smallest useful version first. Write the problem in everyday language, name the supplied values clearly, and show expected answers beside the calculation. Check ordinary, boundary, and invalid cases separately; collection tasks should consider empty, singleton, and duplicate inputs. Use exact integer units for money and small bounded integers where numeric limits are not yet settled.
 
 For each attempt, record: **what worked; language or type-system ambiguity; missing library or host operation; confusing diagnostic; smallest reproducer; next design decision**. Separate an inconvenient helper from an actual language limitation. Never turn unspecified behavior into an assumed rule simply to finish a sample.
 
@@ -29,6 +29,8 @@ Stage notes identify likely dependencies and design pressure. They are capabilit
 ## 01 — Literal values and arithmetic (001–020)
 
 Needs: numeric values, bindings, expressions. Design pressure: inferred numeric types, division, rounding, and expression results. All inputs can be literals.
+
+Status: **implemented but unverified** for all 20 files below. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
 
 1. `samples/001_add_two_numbers.lite` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
 2. `samples/002_arithmetic_operations.lite` — **Four arithmetic operations:** Compute sum, difference, product, and fractional quotient for two numbers with a nonzero divisor.
@@ -678,8 +680,8 @@ Needs: coherent domain models, commands, validation, and reports. Keep the state
 
 ## Completion and gap tracking
 
-The initial state of all 520 entries is **planned**. Add a script only when working on its subject; do not create hundreds of empty placeholder files.
+Current state: **001–020 implemented but unverified; 021–520 planned**. Add a script only when working on its subject; do not create hundreds of empty placeholder files.
 
-When attempting a script, put its problem statement, fixtures, expected outcomes, supported input bounds, and current status in comments at the top. Suggested statuses are **draft**, **blocked by design**, **blocked by library/host support**, **implemented but unverified**, and **verified**. Verification requires an actual available toolchain and observed results; documentation examples alone do not qualify.
+When attempting a script, keep its problem statement short and put expected answers next to the solution. Track supported input bounds, extra verification cases, and current status in the [contributor notes](NOTES.md). Suggested statuses are **draft**, **blocked by design**, **blocked by library/host support**, **implemented but unverified**, and **verified**. Verification requires an actual available toolchain and observed results; documentation examples alone do not qualify.
 
 Keep a short gap note with the smallest reproducer and a link to the relevant design document when possible. A lesson may reveal several different needs: a language rule, a type-system rule, a diagnostic improvement, a library primitive, or a host capability. Record those separately so the catalog guides language growth without making every convenience a new language feature.

@@ -1,0 +1,8 @@
+/* Three days had 4, 5, and 8 hours of sunshine. Find the daily average. */
+
+first_day := 4;
+second_day := 5;
+third_day := 8;
+
+total_hours := (first_day + second_day) + third_day;
+average_hours := total_hours / 3; /* About 5.67 hours per day */

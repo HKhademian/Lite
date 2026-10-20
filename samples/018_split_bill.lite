@@ -1,0 +1,8 @@
+/* Three friends split a 10 euro bill in whole cents.
+   Find the equal share and any cents left to allocate. */
+
+bill_cents := 1000;
+friends := 3;
+
+share_cents := bill_cents // friends; /* 333 cents each */
+leftover_cents := bill_cents % friends; /* 1 cent still to allocate */

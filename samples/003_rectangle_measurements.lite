@@ -1,0 +1,8 @@
+/* A garden is 8 meters wide and 3 meters long.
+   How much ground does it cover, and how much fence goes around it? */
+
+width := 8;
+length := 3;
+
+area := width * length;              /* 24 square meters */
+perimeter := 2 * (width + length);    /* 22 meters of fence */

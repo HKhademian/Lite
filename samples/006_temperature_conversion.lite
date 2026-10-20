@@ -1,0 +1,8 @@
+/* A warm day is 25 degrees Celsius. What is that in Fahrenheit?
+   Then convert 77 degrees Fahrenheit back to Celsius. */
+
+celsius := 25.0;
+fahrenheit := ((celsius * 9.0) / 5.0) + 32.0; /* 77 degrees Fahrenheit */
+
+fahrenheit_to_convert := 77.0;
+celsius_again := ((fahrenheit_to_convert - 32.0) * 5.0) / 9.0; /* 25 degrees Celsius */

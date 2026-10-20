@@ -1,0 +1,12 @@
+/* A cyclist covers 150 meters in 12 seconds. Find the speed.
+   At 12 meters per second, how far can they go in 5 seconds,
+   and how long would 150 meters take? */
+
+distance_meters := 150;
+seconds := 12;
+speed := distance_meters / seconds; /* 12.5 meters per second */
+
+meters_per_second := 12;
+travel_seconds := 5;
+distance := meters_per_second * travel_seconds; /* 60 meters */
+time := distance_meters / meters_per_second;    /* 12.5 seconds */

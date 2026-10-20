@@ -1,0 +1,16 @@
+/* Three scores are 80, 90, and 100. They count for 2, 3, and 5 shares
+   of the final grade, so the last score has the most influence. */
+
+first_score := 80;
+second_score := 90;
+third_score := 100;
+
+first_weight := 2;
+second_weight := 3;
+third_weight := 5;
+
+weighted_total := ((first_score * first_weight) + (second_score * second_weight))
+    + (third_score * third_weight);
+total_weight := (first_weight + second_weight) + third_weight;
+
+final_grade := weighted_total / total_weight; /* 93 */

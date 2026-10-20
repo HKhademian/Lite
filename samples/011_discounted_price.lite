@@ -1,0 +1,10 @@
+/* A 19.99 euro item is 15 percent off. What do you pay?
+   Work in cents, rounding the discount to the nearest cent; half a cent rounds up. */
+
+price_cents := 1999;
+discount_percent := 15;
+
+discount_hundredths := price_cents * discount_percent;
+/* Adding 50 before whole-number division rounds to the nearest cent. */
+discount_cents := (discount_hundredths + 50) // 100; /* 300 cents saved */
+pay_cents := price_cents - discount_cents;         /* 1699 cents = 16.99 euros */

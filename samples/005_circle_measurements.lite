@@ -1,0 +1,8 @@
+/* A circular pond has a radius of 4 meters.
+   Find the distance around it and the area it covers, using approximate pi. */
+
+radius := 4.0;
+pi := 3.14159;
+
+circumference := (2.0 * pi) * radius; /* About 25.13 meters */
+area := (pi * radius) * radius;      /* About 50.27 square meters */

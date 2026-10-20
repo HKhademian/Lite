@@ -1,0 +1,6 @@
+/* Two baskets hold 7 apples and 5 apples. How many apples altogether? */
+
+first_basket := 7;
+second_basket := 5;
+
+apples := first_basket + second_basket; /* 12 apples */

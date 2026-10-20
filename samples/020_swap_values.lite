@@ -1,0 +1,11 @@
+/* Swap the numbers in two boxes without losing either number.
+   Keep the first number in a temporary place while moving the second. */
+
+var first_box := 7;
+var second_box := 3;
+
+temporary := first_box;
+first_box = second_box;
+second_box = temporary;
+
+/* Now first_box holds 3, and second_box holds 7. */

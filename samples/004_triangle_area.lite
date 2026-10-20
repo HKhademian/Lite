@@ -1,0 +1,7 @@
+/* A triangle is 5 meters across its base and 3 meters tall.
+   Its area is half the area of a rectangle with the same base and height. */
+
+base := 5;
+height := 3;
+
+area := (base * height) / 2; /* 7.5 square meters */

@@ -1,0 +1,9 @@
+/* A slider goes from 10 to 30. Find its value a quarter of the way along.
+   A fraction of 0.0 means the start; 1.0 means the end. */
+
+start := 10.0;
+end := 30.0;
+fraction := 0.25;
+
+difference := end - start;
+value := start + (difference * fraction); /* 15 */

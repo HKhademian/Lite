@@ -1,0 +1,10 @@
+/* Exchange 105 cents using an example rate: 8 source cents buy 9 target cents.
+   Round to the nearest target cent; half a cent rounds up. */
+
+source_cents := 105;
+rate_from := 8;
+rate_to := 9;
+
+scaled_cents := source_cents * rate_to;
+rounding_offset := rate_from // 2;
+target_cents := (scaled_cents + rounding_offset) // rate_from; /* 118 target cents */

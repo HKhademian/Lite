@@ -1,0 +1,10 @@
+/* You finished 3 of 8 tasks. What percentage is done?
+   Also find how many tasks make up 25 percent of the total. */
+
+finished := 3;
+total := 8;
+
+percent_done := (finished * 100) / total; /* 37.5 percent */
+
+percent := 25;
+tasks := (total * percent) / 100;        /* 2 tasks */
