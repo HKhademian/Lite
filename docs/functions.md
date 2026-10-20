@@ -164,7 +164,7 @@ Proposed grammar boundary, not yet a selected complete production:
 contextual_lambda := "(" [identifier {"," identifier}] ")" block
 ```
 
-This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under corresponding expected callable contracts. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
+This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts. The user selected the empty header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
 
 #### Named, underscore, and empty headers
 
@@ -186,7 +186,9 @@ x = () {
 
 In the proposed lambda syntax, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
 
-The empty header needs a separate decision: does it retain the expected one-input signature while binding none of its inputs locally, or declare a zero-parameter implementation? Under the latter reading it would not satisfy this one-input contract by merely omitting the header name. Do not conflate absent local bindings with default-initialized omitted arguments at a call site. Keep this case open until the user chooses; the comparison does not yet select general arity adaptation or partial parameter-list omission.
+The empty header `()` retains the entire expected callable signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header; the header alone does not determine callable arity.
+
+Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. The decision concerns contextual lambda headers; it does not revise explicitly declared callable parameter lists, choose standalone inference without an expected contract, or select partial omission from a nonempty lambda header.
 
 #### Parsing boundaries
 

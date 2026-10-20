@@ -67,6 +67,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Reviewed [arrow-free lambdas](functions.md#c-arrow-free-lambda-parameter-list-followed-by-a-block-requested-review) as the primary additional proposal. `(parameters) { body }` is viable with an expression-position reservation, explicit header/body boundaries for `if`/`loop` and other owning constructs, and no competing `(T) { ... }` grouped-type record construction. Direct lambda-body assignments permit optional trailing semicolons; callback bodies do not terminate enclosing calls. The arrow-free spelling remains proposed pending selection.
 
+- Selected [empty contextual lambda headers](functions.md#named-underscore-and-empty-headers): `x = () { "replacement" }` retains `x`'s full expected signature, including any inputs, but binds no inputs locally. `(a)` and `(_)` bind the expected input as ordinary readable local names, with `_` permitting nonuse. Preserve normal call input evaluation, permissions, and cleanup. Empty local bindings do not mean a zero-parameter signature; partial nonempty header omission and standalone inference remain open.
+
 ## Plan links
 
 | Relation | Plan / file |
