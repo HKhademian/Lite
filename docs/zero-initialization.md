@@ -26,7 +26,7 @@ Selected forms:
 - value: Type = 0 explicitly selects the same zero initialization.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
-Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations or omitted required function arguments.
+Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. An omitted ordinary function argument follows its separate default-initialization rule: use the declared parameter default, or zero of its type when no default is specified. See [omitted value arguments](functions.md#omitted-value-arguments).
 
 ## Universal type rule
 

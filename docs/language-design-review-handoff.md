@@ -59,6 +59,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Explicit function-type syntax and literal reassignment are selected: `var myfn: fn(a: Int): Int!;` starts as the zero callable and `myfn = fn(a: Int): Int! { a + 1 };` replaces it. The result annotation belongs to the callable, so this example returns `Int ! Error`. Broader callable compatibility, captures, and complete grammar remain open. See [functions](functions.md#function-types-literals-and-reassignment).
 
+- Omitted ordinary value arguments use their declared parameter default; an unspecified default is zero of the parameter type. Thus the user's `myfn()` calls are valid for `a: Int`, with `a = 0`. Default-expression syntax, evaluation scope/timing, signature-versus-implementation defaults, and caller-access parameter omission remain open. See [functions](functions.md#omitted-value-arguments).
+
 ## Plan links
 
 | Relation | Plan / file |

@@ -29,20 +29,27 @@ An explicitly written function type uses the signature without a body: `fn(a: In
 ```text
 var myfn: fn(a: Int): Int!;
 
-_ := myfn(5); // zero callable returns .ok(0)
+_ := myfn(); // a defaults to 0; zero callable returns .ok(0)
 
 myfn = fn(a: Int): Int! {
     a + 1
 };
 
-_ := myfn(5); // replacement returns .ok(6)
+_ := myfn(); // a defaults to 0; replacement returns .ok(1)
+_ := myfn(5); // supplied a = 5; replacement returns .ok(6)
 ```
 
 The declaration immediately initializes `myfn` to the callable type's zero value. Ordinary `=` replaces that value because the binding is declared `var`; the assigned function must fit the binding's declared callable contract. The example uses the same parameter and result types on both sides. `mut` is not required for whole-binding replacement and does not substitute for `var`.
 
-The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Supplied arguments follow the ordinary call contract; the zero callable's defined behavior does not itself create optional parameters.
+The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Omitted ordinary value arguments follow the default-initialization rule below.
 
 The explicit signature form and function-literal assignment are selected. Parameter-name identity in function types, broader callable compatibility/variance, captures, ownership, and complete recursive type grammar remain to be specified.
+
+## Omitted value arguments
+
+An omitted ordinary value argument is default-initialized. Use its declared parameter default when one is specified; otherwise its default is zero of its type. Thus an `a: Int` parameter without a specified default receives `0` in `myfn()`, both before and after replacing the callable. A supplied argument takes precedence over that default.
+
+This settles ordinary value parameters. Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns still need formalization. Omission of caller-access parameters must be reviewed with their `mut`/`var` permission and location contracts. See [initialization](zero-initialization.md) and [evaluation order](evaluation-order.md#function-calls).
 
 ## Call evaluation order
 
