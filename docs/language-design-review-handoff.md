@@ -69,7 +69,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [empty contextual lambda headers](functions.md#named-underscore-and-empty-headers): `x = () { "replacement" }` retains `x`'s full expected signature, including any inputs, but binds no inputs locally. `(a)` and `(_)` bind the expected input as ordinary readable local names, with `_` permitting nonuse. Preserve normal call input evaluation, permissions, and cleanup. Empty local bindings do not mean a zero-parameter signature; partial nonempty header omission and standalone inference remain open.
 
-- The user asks whether lambdas can supply types/signatures. [Optional lambda signatures](functions.md#optional-lambda-signatures-proposal) proposes `(n: Int): Int { ... }` and independently optional annotations under context, with fully annotated named inputs/results providing an independent signature. This is proposed, not selected. Retain contextual empty-header semantics; independent empty-header arity and broader inference remain open. The proposal also exposes overlap with full `fn` syntax; no removal of that form is selected.
+- Selected [optional lambda signatures](functions.md#optional-lambda-signatures): `(n: Int): Int { ... }` and independently optional annotations under context, with fully annotated named inputs/results providing an independent signature. Retain contextual empty-header semantics; independent empty-header arity and broader inference remain open. Typed lambdas overlap with full `fn` syntax; no removal of that form is selected.
 
 ## Plan links
 

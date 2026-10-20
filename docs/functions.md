@@ -175,9 +175,9 @@ contextual_lambda := "(" [identifier {"," identifier}] ")" block
 
 This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts. The user selected the empty header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. Patterns, annotations, and trailing commas need integration with the eventual parameter-list grammar.
 
-#### Optional lambda signatures (proposal)
+#### Optional lambda signatures
 
-The user asks whether lambdas can also supply parameter types and a result signature. Proposed answer: yes. Being a lambda does not require omitting annotations. Reuse the ordinary colon notation, with optional annotations on each named parameter and after the closing parameter parenthesis:
+Lambda parameter and result annotations are optional; this direction is selected. Being a lambda does not require omitting annotations. Reuse the ordinary colon notation, with optional annotations on each named parameter and after the closing parameter parenthesis:
 
 ```text
 /* Expected callback contract: fn(item: Int): Int */
@@ -197,9 +197,9 @@ double := (n: Int): Int {
 }
 ```
 
-This is a proposal pending selection. It does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Independently typed empty-header lambdas need their own arity rule before formalization.
+This does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Independently typed empty-header lambdas need their own arity rule before formalization.
 
-Typed lambdas would overlap with full typed `fn` expressions too: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` would provide the same visible input/result contract. Whether keeping the keyword form is useful remains a separate surface-syntax review; this proposal does not remove it.
+Typed lambdas overlap with full typed `fn` expressions too: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` provide the same visible input/result contract. Whether keeping the keyword form is useful remains a separate surface-syntax review; this decision does not remove it.
 
 Rust provides a direct reference for optional closure signatures: `|n: i32| -> i32 { n * 2 }`, with parameter annotations and an optional result annotation. See [Rust closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html), checked 2026-10-21. LiteScript's proposed delimiters and result colon retain its own notation.
 
