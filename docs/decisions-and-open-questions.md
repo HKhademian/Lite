@@ -253,6 +253,8 @@ Snapshot: **2026-10-20**. Source: the language-design discussion in this chat. N
 - Native compilation/caching behind a run command.
 - Ownership, deterministic cleanup, and explicit shared ownership as a candidate memory model.
 
+- Compact function implementations are requested for declared callable/method signatures and map/filter callbacks. Compare `a => expression`, `fn(a) { ... }`, `(a) { ... }`, `=> expression` with signature-inherited names, and `|a| expression`. No compact spelling is selected. The sourced comparison covers Rust's inferred closures, V's callback lambdas and array `it`, Odin's procedure literals, and Zig's function declarations/pointers. Arrows, contextual `fn`, and pipes are the primary candidates; expected types, visible bindings, parsing, captures, and costs remain under review. See [compact implementations](functions.md#compact-implementations-under-review).
+
 ## Contracts to settle next
 
 ### 1. Loop contribution and construct-result inference

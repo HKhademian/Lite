@@ -61,6 +61,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Omitted ordinary value arguments use their declared parameter default; an unspecified default is zero of the parameter type. Thus the user's `myfn()` calls are valid for `a: Int`, with `a = 0`. Default-expression syntax, evaluation scope/timing, signature-versus-implementation defaults, and caller-access parameter omission remain open. See [functions](functions.md#omitted-value-arguments).
 
+- The user requested modern reference-language solutions before selecting compact function syntax. [Functions](functions.md#compact-implementations-under-review) records official Rust, V, Odin, and Zig sources checked on 2026-10-20, then compares arrows, contextual `fn`, parameter-list blocks, signature-inherited names, and pipes. Arrows, contextual `fn`, and pipes are the primary candidates; no compact form is selected. V's documented pipe lambdas are callback-only, unlike Rust's assignment-capable form. Keep this choice separate from omitted-argument default initialization.
+
 ## Plan links
 
 | Relation | Plan / file |
