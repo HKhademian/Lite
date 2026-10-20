@@ -284,7 +284,7 @@ success_type!
 
 These are selected surface templates, not complete type productions. `T!` expands exactly to `T ! Error`; an explicitly supplied error operand permits a refined contract. `!T` is not a selected spelling. The type context and valid type boundaries distinguish an omitted error operand from a supplied one; spaces and newlines cannot make that decision. An annotation `T` declares no recoverable error channel.
 
-General type precedence, union grouping and composition, complete type-expression grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md).
+In type declarations, union `|` binds more tightly than binary fallible type `!`: `A|B|C!D|E|F` is valid and means `(A | B | C) ! (D | E | F)`. Official reference documentation prefers the explicitly grouped form for unions on either side. A union of complete outcomes groups the fallible operands, as in `(A ! D) | (B ! E)`. Precedence with other constructors, associativity of repeated `!`, complete type-expression grammar, and the full definition of `Error` remain open. See [fallible types and error composition](fallible-types-and-error-composition.md#grouping).
 
 ### Selected alias form
 

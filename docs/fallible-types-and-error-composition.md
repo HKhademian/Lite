@@ -1,6 +1,6 @@
 # Fallible types and error composition
 
-Status: **`T ! E` fallible types, `T!` shorthand for `T ! Error`, and Alias := type TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
+Status: **`T ! E` fallible types, union `|` binding more tightly than binary type `!`, `T!` shorthand for `T ! Error`, and Alias := type TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
 
 ## Purpose
 
@@ -100,7 +100,9 @@ Plain-union exact-member admission and [exact-member union widening](union-widen
 
 ## Grouping
 
-Prefer explicit grouping whenever a union occurs on either side:
+In type declarations, union `|` binds more tightly than binary fallible type `!`. Thus `A|B|C!D|E|F` means `(A | B | C) ! (D | E | F)`: the left union is the success type and the right union is the error type. This precedence does not depend on whitespace.
+
+Official reference documentation prefers explicit grouping whenever a union occurs on either side:
 
 ```text
 (User | Guest) ! LoadError
@@ -108,7 +110,7 @@ User ! (ReadError | ParseError)
 (User | Guest) ! (ReadError | ParseError)
 ```
 
-The proposal rejects an ungrouped mixture such as `User ! ReadError | ParseError` until a single type grammar is selected. That prevents readers from guessing whether the union belongs to the success or error side.
+The ungrouped spelling is valid for users, developers, and all other code; grouping is a reference-documentation preference. The grouped spelling makes both sides immediately visible and distinguishes the outcome from `A | B | (C ! D) | E | F`, which is a different type: a union whose only fallible member is `C ! D`. A union of complete fallible types groups those operands, for example `(User ! LoadError) | (Guest ! GuestError)`.
 
 In type position, `!` joins success and error types. In value position, postfix `!` extracts an outcome or propagates its failure. The parser distinguishes those contexts without relying on spaces or newlines.
 
@@ -139,7 +141,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 - Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
 - Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Subtype relations, flow-refinement validity, and complete Result compatibility remain open. See [union normalization](union-normalization.md) and [union widening](union-widening.md).
 - Define generic error-family parameters and explicit conversion/mapping notation.
-- Set type-expression precedence and grouping consistently with other type constructors.
+- Complete precedence with other type constructors and associativity for repeated fallible type operators; the relative precedence of `|` and binary `!` is selected above.
 - Preserve the distinction between transparent aliases and new nominal error types.
 - Resolve nested Result success construction and compatible Result passthrough without automatic flattening.
 - Decide unused-outcome diagnostics and public error-family compatibility rules.

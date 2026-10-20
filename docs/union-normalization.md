@@ -85,7 +85,7 @@ Equivalent semantic types do not make source declaration order a stable runtime 
 
 - Member admission and [exact-member union widening](union-widening.md) are selected. Subtype membership and capability/ownership compatibility remain open.
 - Subtyping/interface overlap and absorption. Exact identity duplicate removal is selected; a rule such as reducing Subtype | Interface to Interface needs the actual type-relation contract.
-- General type precedence and explicit grouping around fallible operands. This document does not relax the current grouped-union recommendation for mixtures of | and !.
+- Precedence with other type constructors and associativity of repeated fallible type operators. Union `|` binds more tightly than binary type `!`; ungrouped code is valid, while official reference documentation prefers explicitly grouped union operands on both sides. See [type grouping](fallible-types-and-error-composition.md#grouping).
 - Generic normalization, recursive aliases, and legal recursive nominal boundaries.
 - Bottom/top types, if exposed, and their union laws. Do not select public Never or Any by example.
 - [Common field reads](union-field-reads.md) use normalized unions after confirming availability on every alternative. [Field writes](union-field-writes.md) must fit every possible target's field type, rather than merely the projected read union. Methods, explicit access notation, ownership/capability combination, runtime layout, ABI, and complete diagnostics remain open.

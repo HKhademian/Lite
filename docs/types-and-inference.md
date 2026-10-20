@@ -71,6 +71,8 @@ Explicit signatures at public library boundaries were recommended to prevent imp
 
 Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by postfix `!`. `T ! E` declares a refined outcome type; `T!` means `T ! Error` and deliberately declares the general recoverable error contract. A plain `T` declares no recoverable error channel. Inference must not silently add such failures to a function promising an ordinary nonfallible result. The general Error definition, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).
 
+Type declarations give union `|` higher precedence than binary fallible type `!`. Ungrouped code is valid; official reference documentation prefers `(A | B | C) ! (D | E | F)` with both union sides grouped. This selects their relative precedence while leaving other type constructors and repeated-`!` associativity for the full type grammar; see [type grouping](fallible-types-and-error-composition.md#grouping).
+
 ## Results and control flow
 
 Reachable completion paths must fit the enclosing type contract. Result recovery has a selected union-forming rule: success type `T` and normally completing fallback type `D` produce `T | D`, whether or not the error receiver is named. This does not establish automatic union inference for unrelated conditional or match branches. Union syntax, narrowing, conversions, ownership, and layout remain open; see [Result and errors](result-and-errors.md#recovery-result-type).

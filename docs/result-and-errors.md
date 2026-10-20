@@ -9,6 +9,7 @@ Represent recoverable failure in a function's return type and support ordinary c
 ## Recoverable failure contract
 
 - A fallible function explicitly declares a recoverable error contract with `T ! E`. The shorthand `T!` means exactly `T ! Error`, selecting the predefined general recoverable error contract. `Result<T, E>` remains explanatory notation for the conceptual outcome type.
+- In type declarations, `|` binds more tightly than binary `!`. Ungrouped code is valid; official reference documentation prefers explicit union grouping, as in `(A | B | C) ! (D | E | F)`, so the success and error sides are visible. See [type grouping](fallible-types-and-error-composition.md#grouping).
 - To obtain the successful payload, a caller must explicitly inspect/handle the outcome, provide a fallback, or propagate the failure. A fallible call does not automatically supply its payload and silently return from the enclosing function on error.
 - An outcome can remain a `Result` value for storage or later handling. Keeping an outcome does not unwrap it; exact diagnostics and rules preventing an ignored recoverable failure still need formalization.
 - Implicit success means constructing a successful result from a compatible ordinary return value. It does not mean automatic success extraction or automatic error propagation at every call.
