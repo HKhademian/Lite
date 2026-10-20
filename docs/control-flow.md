@@ -121,6 +121,12 @@ When `T` and `R` differ, the payload type separates the models. For example, bra
 
 This comparison concerns a tagged return to the conditional that owns the `then`. Returning to an outer conditional from inside a loop also leaves the loop; whether the abandoned loop runs its own `then` is a separate open transfer rule. Error propagation and panic transfer remain separate from this value-payload comparison. No parser or interpreter implementation is present in this checkout, so these are candidate semantics, not verified runtime behavior.
 
+### Locally recovered failure versus propagation
+
+An operation-level handler inside a conditional branch can turn a returned error or matching typed panic into a fallback value. If the handler and the rest of the branch complete with `T`, the conditional has its ordinary branch result and its selected `then` processes that result. For example, a failed `read_text()` recovered locally to `""` still gives a string result for a following normalization `then`.
+
+Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. These cases distinguish `then` result processing from cleanup, but do not settle transfer and cleanup behavior: panic unwinding and `finally` execution on failure remain open. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
+
 ## Labeled continuation and break shorthand
 
 `continue @loop` was retained for explicitly advancing an enclosing loop. A target that is an `if` or ordinary block cannot continue.
