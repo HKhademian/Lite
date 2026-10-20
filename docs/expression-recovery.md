@@ -107,7 +107,15 @@ recovered outcome: (T1 | R) ! E2
 
 The original success supplies `T1`; successful recovery supplies `R`; failed recovery supplies `E2`. The clause consumes the original `E1` failures, but does not catch its own `E2` failures. A later enclosing `else(E2)` can recover that new outward outcome. The example is a type sketch; `R ! E2` describes the handler's outcome rather than an expression spelling.
 
-For partial handling, if the original error types are `H | U` and the handler consumes `H`, the resulting type is `(T1 | R) ! (U | E2)`. Equal alternatives collapse; a type consumed from the original outcome can reappear if the handler introduces it again. This type union does not settle how a new failure combines with an already pending member or how duplicates are represented.
+For partial handling, if the original error types are `H | U` and the handler consumes `H`, the resulting type is `(T1 | R) ! (U | E2)`. Equal type alternatives collapse; a type consumed from the original outcome can reappear if the handler introduces it again. When that new failure occurs while an unhandled remainder is still pending, preserve both: the handler's failure joins the remainder rather than replacing it.
+
+```text
+pending failure: A + B
+after the A handler fails with C: B + C
+after the B handler produces R2: C
+```
+
+Here `+` illustrates simultaneous failure members, not a selected source operator. A stays consumed when its handler fails with C. The following B recovery can still run, but its `R2` cannot become a successful expression result while C remains unhandled. A later C recovery can consume that remaining failure. The aggregate carrier and treatment of multiple runtime members with the same type remain open; collapsing duplicate alternatives in a static type union does not itself discard failure instances.
 
 This rule composes the handler's outward outcome at the explicit recovery boundary. A Result deliberately carried inside a successful payload remains data; recovery does not recursively flatten that payload. Postfix `!` inside the handler still exits its nearest function/closure rather than producing a local handler outcome. Typed panics retain their separate implicit channel and are not added to `E2` merely because they can occur.
 
@@ -165,7 +173,7 @@ The user retires the proposed external if/loop/match recovery tails. These const
 - Handler precedence and grouping under the selected block-item continuation rule.
 - Indexed assignment recovery: assignment is an item, not a general value expression. In values[index] = replacement else { ... }, attachment to the write versus its RHS cannot be guessed. No production for that spelling is selected here.
 - The broad receiver contract and origin information when returned errors and panics can reach one untyped handler.
-- How a new handler failure combines with an already pending remainder, plus the aggregate carrier and duplicate-member consumption rules. Matching that new failure with a later enclosing `else` is selected.
+- The aggregate carrier and duplicate-member consumption rules. A new handler failure preserves and joins the already pending remainder; later enclosing `else` clauses can handle matching members from either source.
 - Any first-class capture-as-Result operation without a fallback; a second helper family is not required by the examples above.
 
 Related: [Result and errors](result-and-errors.md), [panics](panics.md), [typed panics](typed-panics.md), [fault-policy history](checked-fault-policy.md), [sequence end operations](sequence-end-operations.md), and [evaluation order](evaluation-order.md).
