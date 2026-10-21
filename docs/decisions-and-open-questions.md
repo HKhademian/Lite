@@ -269,6 +269,8 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 - [Union zero-member selection](union-zero.md#member-selection-possibilities-open-review) compares first-written order, a language-specified canonical type order, and explicit designation. The user selected exploring canonical order for inferred order-independent unions; no concrete ordering, primitive priority, or nominal-type tie-break is selected. Explicit designation needs identity and inferred-union fallback rules; first-written order revisits identity. Widening preserves the active source member, so a widened source zero need not equal the destination union zero.
 
+- [Unit priority for union zero](union-zero.md#unit-priority-open-review) is the next open canonical rule: recommend selecting Unit whenever it is an explicitly listed normalized member, independently of written order. Never add Unit, unwrap Option/Result, reinterpret nominal empty records, or change the active source member during widening. Other type priorities and the nominal tie-break remain open. No choice selected.
+
 ## Deferred context design
 
 [Pinned context ideas](deferred-contexts.md) preserve allocator/environment context, explicit capture headers, context in callable signatures, caller-supplied versus private stored state, and lifetime/ownership alternatives. The user postponed these topics on 2026-10-21 because of their complexity at the current language stage. The earlier clarification and capture-lifetime recommendation are parked, not pending choices for the next review. Resume on explicit request. Detailed reference comparisons remain in [closures](closures.md).

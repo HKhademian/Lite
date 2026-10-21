@@ -114,6 +114,27 @@ Two declarations admitting the same A | B but choosing different zero members ca
 
 This option is useful for explicitly designed domain types, but is not a complete replacement for plain inferred-union zero selection by itself. Rust's named-enum Default selection is a precedent for author choice, not a direct solution to an order-independent inferred union or a promise of all-zero payloads.
 
+## Unit priority (open review)
+
+The first concrete canonical-order question is whether Unit ranks before every other member when it is explicitly present in the normalized union.
+
+```text
+zeroOf(Int | Unit)          /* Proposed: Unit */
+zeroOf(Unit | Int)          /* Proposed: Unit */
+zeroOf(String | Int | Unit) /* Proposed: Unit */
+zeroOf(Int | String)        /* Still needs a different ordering rule */
+```
+
+Recommendation: prefer Unit when it is a listed member. It has one inhabitant and no payload information to choose, so all-zero metadata can identify that member while the payload storage stays zeroed. This introduces no runtime selection or new allocation. Exact layout and ABI remain separate.
+
+Normalize transparent aliases and nested plain unions first. A transparent alias of Unit counts as Unit; an independently declared nominal empty record or an Option containing a None case does not become Unit. Unit priority never adds Unit to a union that did not list it, unwraps another type, or changes an explicitly stored Int zero into Unit.
+
+Adding Unit to the set of allowed alternatives would make the expanded type's own zero Unit under this proposal. Membership and widening still preserve the source's active value; widening an Int zero to Int | Unit remains Int. Missing conditional else continues to use zero(T), and an explicit empty branch contributes Unit through the separately selected inference rule.
+
+The alternative gives Unit no special priority and uses the future general ordering for every member. That avoids a dedicated preference but can select a payload-bearing member even when Unit is explicitly available. Neither choice settles Int versus String, arbitrary nominal-type keys, or other primitive priorities. No choice is selected yet.
+
+Reference comparison checked 2026-10-21: C++ permits [monostate](https://eel.is/c++draft/variant.monostate) as a first alternative to make a variant default-constructible, and its [default constructor](https://eel.is/c++draft/variant.ctor) selects the first alternative. Unlike this LiteScript proposal, C++ does not promote monostate regardless of position. Rust's [derived enum Default](https://doc.rust-lang.org/std/default/trait.Default.html#enums) requires explicitly marking a unit variant; it does not automatically prefer one or guarantee an all-zero representation.
+
 ## Widening preserves values, not zero encoding
 
 The selected widening rule retains the active member and payload. Suppose a canonical rule selects A for A | B. Widening zero(B) into A | B must still produce a B value, even though the destination's own zero is A. The widened B may therefore have nonzero metadata. If the source is itself a union, its discriminant may need remapping during widening.

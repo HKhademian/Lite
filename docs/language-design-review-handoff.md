@@ -93,6 +93,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - The user requested [zero-member possibilities](union-zero.md#member-selection-possibilities-open-review): first-written member, canonical normalized-type order, or explicit designation. The user selected exploring canonical order to retain current order independence and inferred unions without annotations. The next review should compare concrete ordering rules; no primitive priority, Unit preference, stable nominal-type key, or complete algorithm is selected. Explain identity/fallback costs of the other choices and that value-preserving widening need not preserve an all-zero encoding. No new syntax or public zeroOf API is selected.
 
+- Next concrete review: [Unit priority](union-zero.md#unit-priority-open-review). Recommend zero(Int | Unit) and reordered equivalents select Unit, only when Unit is an explicitly listed normalized member. No choice selected. This does not add Unit, unwrap Option/Result, pick zero(Int | String), or alter value-preserving widening. C++ monostate and Rust unit-variant defaults are comparisons with different selection/initialization contracts.
+
 ## Plan links
 
 | Relation | Plan / file |
