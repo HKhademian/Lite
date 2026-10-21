@@ -4,7 +4,7 @@ Status: **metadata plus overlapping payload model clarified by the user, 2026-10
 
 ## Latest selected construction restriction
 
-The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; omitted union declarations and implicit zero-result sites need reconciliation with this source restriction.
+The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; bare multi-member union locals require an initializer or explicit = ?; implicit zero-result sites still need reconciliation with this source restriction.
 
 ## Latest initialization-policy alternatives
 
@@ -160,7 +160,7 @@ number := 0
 present: (Int | Unit) = number
 ```
 
-Historical comparison only: the latest selected rule now rejects the bare-zero explicit_zero initializer, and omitted union declarations remain under review. The first two were considered as union-zero requests under the earlier initialization policy. Unit-first would make both Unit; ranking Int before Unit would make both Int(0), described here as a typed value rather than selected constructor syntax. Inferred number is Int, so present contains Int zero under either policy. That is ordinary member admission, not destination-type zero construction. This distinction follows from literal 0's contextual-zero meaning and should be visible in the decision.
+Historical comparison only: the latest selected rule now rejects the bare-zero explicit_zero initializer, and bare multi-member union locals without an initializer are also rejected. The first two were considered as union-zero requests under the earlier initialization policy. Unit-first would make both Unit; ranking Int before Unit would make both Int(0), described here as a typed value rather than selected constructor syntax. Inferred number is Int, so present contains Int zero under either policy. That is ordinary member admission, not destination-type zero construction. This distinction follows from literal 0's contextual-zero meaning and should be visible in the decision.
 
 #### Conditional fallback with a real Unit contributor
 

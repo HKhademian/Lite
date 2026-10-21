@@ -4,7 +4,7 @@ Status: **all-zero storage is a valid language-defined value for every type, exp
 
 ## Plain-union construction restriction
 
-Latest selected rule, 2026-10-21: [x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) when normalization leaves multiple distinct union alternatives. Bare zero cannot select a member. Explicit reservation and an initialized member expression remain available; member-qualified A{0} is proposed syntax for zeroing A, while A{} already expresses declared-default record construction where valid. This restriction qualifies earlier universal source-level zero construction. Omitted union declarations and implicit/recursive union-zero sites still need reconciliation; do not use the broad rule below to silently choose a member. Other type categories retain their selected zero contracts.
+Latest selected rule, 2026-10-21: [x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) when normalization leaves multiple distinct union alternatives. Bare zero cannot select a member. Explicit reservation and an initialized member expression remain available; member-qualified A{0} is proposed syntax for zeroing A, while A{} already expresses declared-default record construction where valid. This restriction qualifies earlier universal source-level zero construction. Local multi-member union declarations require an initialized expression or explicit = ?. Implicit/recursive union-zero sites still need reconciliation; do not use the broad rule below to silently choose a member. Other type categories retain their selected zero contracts.
 
 ## Core distinction
 
@@ -32,7 +32,7 @@ Selected forms:
 
 Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. An omitted ordinary function argument follows its separate default-initialization rule: use the declared parameter default, or zero of its type when no default is specified. See [omitted value arguments](functions.md#omitted-value-arguments).
 
-The [union declaration-policy review](union-initialization-policy.md) separately considers requiring explicit initialization or making union locals uninitialized by default. These are open alternatives to bare-declaration zero initialization. Neither alone supplies the universal zero mapping needed for explicit union zero, recursive aggregate zero, or implicit zero-result sites.
+The selected [union-local declaration policy](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? for normalized multi-member plain unions. Omission is rejected, not default-uninitialized. This does not supply the zero mapping needed for recursive aggregate zero or implicit zero-result sites.
 
 ## Universal type rule
 

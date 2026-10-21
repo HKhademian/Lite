@@ -2,7 +2,7 @@
 
 Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
 
-The later [union-initialization proposal](union-initialization-policy.md#default-uninitialized-union-locals) considers omitted union-local initializers as reserved storage, reusing these no-read-before-initialization rules. That exception is not selected; the current omitted-initializer zero rule remains in force.
+The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? when normalization leaves several distinct union members. Bare omission is rejected, not implicit reservation. Other ordinary typed locals retain their selected omitted-initializer policy. Explicitly reserved union storage reuses the no-read-before-initialization rules below.
 
 ## Reserved storage already exists
 

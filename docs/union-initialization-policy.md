@@ -1,6 +1,6 @@
 # Union construction and omitted initialization
 
-Status: **undirected multi-member union literal-zero initialization rejected, selected 2026-10-21; omitted declaration policy and member-qualified zero-constructor grammar remain under review**. The user requires a visible member choice rather than an implicit leftmost/canonical selection for x: A | B = 0. Existing explicit reservation and ordinary expression admission remain available. Earlier alternatives are retained below as review history.
+Status: **undirected multi-member union literal-zero initialization rejected, selected 2026-10-21; local multi-member union declarations require an initializer or = ?, selected 2026-10-21; member-qualified zero-constructor grammar remains under review**. The user requires a visible member choice rather than an implicit leftmost/canonical selection for x: A | B = 0. Existing explicit reservation and ordinary expression admission remain available. Earlier alternatives are retained below as review history.
 
 ## Selected rejection and explicit member choice
 
@@ -37,19 +37,19 @@ number := 0
 x: (Int | B) = number /* admits the existing Int value */
 ```
 
-The user has not yet settled bare x: A | B without an initializer: rejection versus default-uninitialized storage remains a separate decision. The previous implicit-zero declaration rule must not silently choose a union member here. Likewise, the source ban qualifies earlier universal source-level zero construction; recursively zeroed union fields and other implicit zero-result sites need explicit reconciliation, not hidden member selection. This page does not automatically choose a new policy for those sites.
+A local x: A | B without an initializer is rejected. Require an initialized compatible expression or explicit = ?; omission is neither implicit zero nor implicit reservation for a normalized multi-member union. Likewise, the source ban qualifies earlier universal source-level zero construction; recursively zeroed union fields and other implicit zero-result sites need explicit reconciliation, not hidden member selection. This page does not automatically choose a new policy for those sites.
 
-## Bare local declarations (open review)
+## Bare local declarations
 
-The next concrete decision is the meaning of a local declaration without an initializer when its normalized type has several distinct plain-union members:
+Selected rule: reject a local declaration without an initializer when its normalized type has several distinct plain-union members:
 
 ```text
 x: (A | B)
 ```
 
-Do not infer a zero member: the selected bare-zero rejection rules out using implicit = 0 to conceal that choice. Two alternatives remain:
+Do not infer a zero member or reserve implicitly. The selected bare-zero rejection also rules out using implicit = 0 to conceal a member choice.
 
-### Require an initializer or explicit reservation (recommended)
+### Require an initializer or explicit reservation (selected)
 
 Reject the bare declaration. The author writes an initialized compatible expression or the existing = ? marker:
 
@@ -65,9 +65,9 @@ use(x)
 
 This records deferred initialization visibly. The existing path-sensitive first-write rule permits exactly one initialization per reaching path without var; later replacement needs var. A path reaching use(x) without initializing x is rejected. The tradeoff is the required = ? marker when the author wants to supply the value later.
 
-### Reserve by default
+### Reserve by default (not chosen)
 
-Accept the bare declaration as an implicit = ? for union locals. It has the same no-read-before-initialization rules, not a readable empty state:
+The alternative was to accept the bare declaration as an implicit = ? for union locals. It has the same no-read-before-initialization rules, not a readable empty state:
 
 ```text
 x: (A | B)
@@ -80,9 +80,9 @@ This avoids the marker. Omitted initialization would then mean zero for ordinary
 
 ### Shared boundaries
 
-No choice is selected. Recommendation is the explicit initializer-or-reservation rule because = ? already names the intended deferred state. Both alternatives preserve ordinary value-passing and member-only exhaustive matching after initialization. Neither automatically selects A{0} grammar, gives a default to a union, or settles implicit union-zero result sites.
+The user selected the explicit initializer-or-reservation rule. The deferred state is visible through = ?. Ordinary value-passing and member-only exhaustive matching after initialization remain intact. This does not select A{0} grammar, give a default to a union, or settle implicit union-zero result sites.
 
-Apply any eventual rule after transparent-alias resolution and normalization; a spelling alias cannot bypass it. A | A normalizes to A and follows that type's declaration policy. Var controls subsequent replacement, not whether a value has been initialized. This review is about local value declarations, not incoming parameter headers, record-field declarations, globals, or an output-construction API; those contexts need their own policies.
+Apply the selected rule after transparent-alias resolution and normalization; a spelling alias cannot bypass it. A | A normalizes to A and follows that type's declaration policy. Var controls subsequent replacement, not whether a value has been initialized. This review is about local value declarations, not incoming parameter headers, record-field declarations, globals, or an output-construction API; those contexts need their own policies.
 
 Reference comparison checked 2026-10-21: [Rust permits declaration before initialization](https://doc.rust-lang.org/rust-by-example/variable_bindings/declare.html) and rejects use before a value is installed. [Zig requires an initializer](https://ziglang.org/documentation/master/#Assignment) and offers undefined for unspecified storage; that facility is not the same guarantee as LiteScript's selected definite-initialization checks. These provide contrasting declaration styles without selecting a LiteScript policy.
 
@@ -117,9 +117,9 @@ However, this is distinct from one type-defined all-zero byte representation. In
 
 Thus a source-directed construction policy is viable if its relationship to physical zero, literal 0, and defaults is revised explicitly. It needs a rule for transparent aliases, inferred unions with no written member list, nested unions, zero-result callables, and missing conditional/loop results. Passing an existing value avoids fresh selection at that call; it does not resolve those creation sites. The current universal all-zero contract is not silently relaxed by this review.
 
-## Requiring an explicit declaration choice
+## Explicit declaration choice
 
-Another proposal is to reject an omitted initializer for union locals and require a valid initializer or explicit reservation:
+The explicit initializer-or-reservation rule is selected above. For example:
 
 ```text
 x: (A | B) = make_a() /* initialized member A */
@@ -129,11 +129,11 @@ y = make_b()          /* first complete initialization */
 
 The existing first-initialization direction already supports = ? and a first whole-value assignment using =. Later replacement requires var. A zero/default request can be another explicit initializer only after its union member-selection rule is defined; writing 0 or a default marker does not by itself solve that question. In particular, record-shaped {} is not automatically a selected union-default constructor.
 
-This makes the choice visible but changes the selected rule that bare typed declarations immediately produce zero values. The scope of any union exception must be stated, rather than inferred from generic source syntax.
+This is the selected exception to the earlier general rule that bare typed declarations immediately produce zero values. Its scope is local values with normalized multi-member plain-union types; other declaration contexts require their own contracts.
 
 ## Default-uninitialized union locals
 
-The user's latest suggestion is that an omitted initializer for a union local means reserved storage:
+Historical alternative, not chosen: an omitted initializer for a union local would mean reserved storage. The bare declaration below is now rejected:
 
 ```text
 var x: (A | B)       /* proposed: uninitialized */
@@ -153,7 +153,7 @@ Relative to requiring = ?, this removes a marker but makes omitted initializatio
 
 Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, omitted argument defaults without a declared value, missing-else results, loop state, and zero callable results. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
 
-The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. Undirected union literal-zero initialization is now rejected. The remaining alternatives are under review; omitted declarations, implicit zero-result sites, and complete representation rules are not silently migrated.
+The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. Undirected union literal-zero initialization and omitted initializers on multi-member union locals are rejected. Constructor grammar, implicit zero-result sites, and complete representation rules remain under review.
 
 ## Reference comparison
 

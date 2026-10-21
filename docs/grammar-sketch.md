@@ -2,7 +2,7 @@
 
 Status: **descriptive outline, deliberately incomplete and not implementation-ready**.
 
-The selected [union initialization restriction](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) rejects x: A | B = 0 for multiple distinct normalized members. Explicit = ? and initialized member expressions remain available. A{0}/B{0} are proposed member-qualified whole-zero constructor markers, requiring a grammar decision; they are not positional record-field lists. A{}/B{} retain default-construction meaning for valid record members. Bare union declaration behavior remains open.
+The selected [union initialization restriction](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) rejects x: A | B = 0 for multiple distinct normalized members. Explicit = ? and initialized member expressions remain available. A{0}/B{0} are proposed member-qualified whole-zero constructor markers, requiring a grammar decision; they are not positional record-field lists. A{}/B{} retain default-construction meaning for valid record members. Bare local declarations of normalized multi-member unions require an initialized expression or explicit = ?; omission is rejected.
 
 ## Purpose
 
