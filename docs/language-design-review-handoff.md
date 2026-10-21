@@ -79,6 +79,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Next open review is [capture lifetime](closures.md#next-decision-outliving-captured-storage): return a `[var total](n: Int): Int` lambda from its local storage's creating function. Compare checked borrowing, explicit owned/shared state, and automatic lifetime extension. Recommend checking `[var]` against source lifetime with a separate explicit ownership mechanism for escaping state; no policy is selected yet. Official Rust E0373, C++ capture docs, and Go spec support the comparison.
 
+- User steers the review toward [two contexts](closures.md#two-context-roles-under-discussion): one supplied by a caller, another hidden/stored beside the function. Clarification requested on whether caller context means ordinary arguments, a separate per-call context, or creation-time binding. Treat private callable-owned state separately from borrowed outer storage and per-call locals. Odin's execution context and V's private captured copies are sourced comparisons; no new passing, lifetime, or storage policy is selected.
+
 ## Plan links
 
 | Relation | Plan / file |

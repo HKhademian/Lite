@@ -62,6 +62,21 @@ This selects the capture-header direction and semantics above. The written gramm
 
 `var` capture introduces a relationship to source storage, not a freely escaping public pointer. Complete nonescape, aliasing, reentrancy, cleanup, and owned-escape rules remain open. Temporary caller grants must not silently become longer-lived handles. Context-bearing callable types must also receive a valid zero mapping under universal zero initialization; a dangling or null storage handle is not an acceptable default.
 
+## Two context roles under discussion
+
+The user proposes two contexts: one supplied by the caller, and another potentially hidden beside the function. The exact meaning of caller-supplied context is under clarification: ordinary arguments, a distinct execution context supplied on each invocation, or values bound when creating the callable. Do not select among those readings implicitly.
+
+The useful distinction is between externally supplied state/access and state owned by the callable itself:
+
+- A caller-supplied context can describe resources, configuration, or writable locations provided by another owner. Its supply time, permission grants, and retention contract must be explicit. It is not necessarily ordinary positional arguments, and it is not automatically stored permanently.
+- A callable-owned context can hold captured values or private persistent state alongside that particular callable value. Its fields need not become public call parameters merely because the compiler stores them with the code. Such state is distinct from fresh local variables created on every invocation.
+
+For a model with separate per-call context, the conceptual invocation has three inputs: the callable's stored environment, the context supplied for this invocation, and ordinary arguments. This is an explanatory model, not selected LiteScript syntax or a required ABI. All three need defined contracts even if the private environment's representation is hidden from consumers. Keeping the capture declaration explicit does not require exposing its physical layout.
+
+This distinction could support a private persistent counter owned by a returned callable without borrowing a variable left in the creating call's frame. It does not by itself fix the earlier `[var total]` example: storing an access descriptor next to the function does not make the externally owned target live longer. Private ownership/initialization, closure-copy identity, sharing between callable values, cleanup, and allocation policy remain open.
+
+Two reference mechanisms help separate these roles. Odin supplies a distinct execution `context` through its calling convention, including allocator/logging facilities; see [Odin's implicit context system](https://odin-lang.org/docs/overview/#implicit-context-system). V's closure-owned captured copies can retain private mutable state between calls; see [V closures](https://docs.vlang.io/functions-2.html#closures). These demonstrate different mechanisms, not a claim that Odin supports lexical capturing closures or that LiteScript has selected implicit context passing.
+
 ## Capture review
 
 Status: **reference comparison and earlier probes, 2026-10-21. Explicit capture headers above supersede the earlier inferred-name recommendation; lifetime and representation comparisons remain relevant**.
