@@ -53,7 +53,7 @@ This settles ordinary value parameters. Default-expression syntax, evaluation ti
 
 ## Compact implementations under review
 
-Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Broader body-based inference proposals remain separate; retiring this shorthand does not settle them.
+Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Local lambda result inference is selected below; unknown-input and recursive result inference remain separate.
 
 ### Two scenarios: full definition and contextual implementation
 
@@ -155,7 +155,7 @@ doubled := map(numbers, fn(n) { n * 2 });
 positive := filter(numbers, fn(n) { n > 0 });
 ```
 
-This was previously selected, then retired as a redundant contextual shorthand. It repeats the job of `(parameters) { body }` while adding the `fn` keyword. Use the full typed `fn` form for an explicitly provided contract and the lambda form when the contract comes from context. Broader standalone/body-based inference remains a separate open design question.
+This was previously selected, then retired as a redundant contextual shorthand. It repeats the job of `(parameters) { body }` while adding the `fn` keyword. Use the full typed `fn` form for an explicitly provided contract and the lambda form when the contract comes from context. Local lambda result inference is selected below; unknown-input and recursive result inference remain open.
 
 ### C. Arrow-free lambda: parameter list followed by a block (current direction)
 
@@ -200,35 +200,35 @@ double := (n: Int): Int {
 }
 ```
 
-This does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Without an expected callable type, an empty header declares zero inputs; see [independent empty headers](#empty-headers-without-an-expected-callable).
+Clear local result inference is selected below; inference of unknown input types from arbitrary body operations remains open. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Without an expected callable type, an empty header declares zero inputs; see [independent empty headers](#empty-headers-without-an-expected-callable).
 
 Typed lambdas overlap with full typed `fn` expressions too: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` provide the same visible input/result contract. Whether keeping the keyword form is useful remains a separate surface-syntax review; this decision does not remove it.
 
 Rust provides a direct reference for optional closure signatures: `|n: i32| -> i32 { n * 2 }`, with parameter annotations and an optional result annotation. See [Rust closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html), checked 2026-10-21. LiteScript's proposed delimiters and result colon retain its own notation.
 
-#### Independent lambda result inference (open review)
+#### Independent lambda result inference
 
-Parameter and result annotations can already be omitted when an expected callable contract supplies their types. The next question is whether an independent local lambda can infer its result from the body once all input types are known.
+Selected rule: a nonrecursive local lambda can infer its unambiguous result type from the body once all input types are known. An expected callable contract can also supply omitted parameter and result types.
 
 ```text
 double := (n: Int) { n * 2 }
-/* Proposed signature: fn(n: Int): Int */
+/* Inferred signature: fn(n: Int): Int */
 
 constant := () { 42 }
-/* Proposed signature: fn(): Int */
+/* Inferred signature: fn(): Int */
 
 greeting := () { "hello" }
-/* Proposed signature: fn(): String */
+/* Inferred signature: fn(): String */
 
 empty := () {}
-/* Proposed signature: fn(): Unit */
+/* Inferred signature: fn(): Unit */
 ```
 
-Recommendation: permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. This does not select arbitrary union formation for incompatible completion paths.
+Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. This does not select arbitrary union formation for incompatible completion paths.
 
 Keep the scope narrow: input types must already be established by annotations or an expected callable. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
 
-The alternative requires an expected result type or a written result annotation for independent lambdas. Recommendation is body-derived local results; no choice is selected yet.
+Requiring an expected result type or a written result annotation for every independent local lambda was considered and not chosen.
 
 Rust supports closure result-type inference, for example `let double = |n: i32| { n * 2 };`; see [inferring closure types](https://doc.rust-lang.org/book/ch13-01-closures.html#inferring-and-annotating-closure-types). Zig's ordinary function declarations explicitly write a return type, such as `fn double(n: i32) i32 { return n * 2; }`; see [Zig functions](https://ziglang.org/documentation/master/#Functions). These are contrasting annotation policies, not a claim that Zig has LiteScript-style lambda syntax.
 
@@ -270,7 +270,7 @@ ignore_input: fn(n: Int): Int = (): Int { 42 }
 
 `constant()` returns 42, while `ignore_input(7)` accepts its Int input and returns 42. These are fixed input contracts, not a variadic callable or a runtime decision about how many arguments to accept. Ordinary omitted-argument defaults remain separate. General compatibility/conversion of already-created callable values is not decided here.
 
-Requiring an expected callable type for every empty-header lambda was considered and not chosen. The selected zero-input rule does not choose general body-result inference. Nonempty contextual header omission has its own selected rule below.
+Requiring an expected callable type for every empty-header lambda was considered and not chosen. Local body-result inference has its own selected rule above; unknown input types and recursive result inference remain open. Nonempty contextual header omission has its own selected rule below.
 
 Rust's zero-input closure spelling is `|| { 42 }`, with an explicitly empty parameter list; see [Rust closure syntax](https://doc.rust-lang.org/reference/expressions/closure-expr.html). LiteScript's already selected contextual `()` rule is a separate convenience that preserves expected inputs.
 
@@ -324,7 +324,7 @@ This follows the visible shape used by Rust and V, with Rust's ability to use it
 
 The current pair is full typed `fn` plus contextual arrow-free lambda C. B is retired; A, D, and E remain unselected comparisons. V-style implicit `it` can be evaluated separately if collection-specific shorthand is needed; it does not by itself solve general function assignment. The illustrative map/filter APIs provide expected callback contracts; their library and generic declarations are not selected by these examples.
 
-All candidates use ordinary function result and return rules. Lambda annotations may provide their own types, or an expected callable contract supplies omitted types. Callable/environment context design is [postponed](deferred-contexts.md); broader standalone inference and complete compact-expression grammar remain open.
+All candidates use ordinary function result and return rules. Lambda annotations may provide their own types, or an expected callable contract supplies omitted types. Callable/environment context design is [postponed](deferred-contexts.md); unknown-input inference, recursive result inference, and complete compact-expression grammar remain open.
 
 ## Call evaluation order
 
