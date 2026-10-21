@@ -206,6 +206,32 @@ Typed lambdas overlap with full typed `fn` expressions too: `fn(n: Int): Int { n
 
 Rust provides a direct reference for optional closure signatures: `|n: i32| -> i32 { n * 2 }`, with parameter annotations and an optional result annotation. See [Rust closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html), checked 2026-10-21. LiteScript's proposed delimiters and result colon retain its own notation.
 
+#### Independent lambda result inference (open review)
+
+Parameter and result annotations can already be omitted when an expected callable contract supplies their types. The next question is whether an independent local lambda can infer its result from the body once all input types are known.
+
+```text
+double := (n: Int) { n * 2 }
+/* Proposed signature: fn(n: Int): Int */
+
+constant := () { 42 }
+/* Proposed signature: fn(): Int */
+
+greeting := () { "hello" }
+/* Proposed signature: fn(): String */
+
+empty := () {}
+/* Proposed signature: fn(): Unit */
+```
+
+Recommendation: permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. This does not select arbitrary union formation for incompatible completion paths.
+
+Keep the scope narrow: input types must already be established by annotations or an expected callable. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
+
+The alternative requires an expected result type or a written result annotation for independent lambdas. Recommendation is body-derived local results; no choice is selected yet.
+
+Rust supports closure result-type inference, for example `let double = |n: i32| { n * 2 };`; see [inferring closure types](https://doc.rust-lang.org/book/ch13-01-closures.html#inferring-and-annotating-closure-types). Zig's ordinary function declarations explicitly write a return type, such as `fn double(n: i32) i32 { return n * 2; }`; see [Zig functions](https://ziglang.org/documentation/master/#Functions). These are contrasting annotation policies, not a claim that Zig has LiteScript-style lambda syntax.
+
 #### Named, underscore, and empty headers
 
 The user compares three implementation headers under the existing `x: fn(a: Int): String` contract:

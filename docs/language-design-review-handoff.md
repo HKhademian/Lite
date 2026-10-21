@@ -79,6 +79,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [partially named lambda inputs](functions.md#partially-named-input-headers): bind a positional prefix of expected inputs and omit trailing names. Use underscore bindings for earlier positions when naming a later input. Reject more header positions than expected inputs; preserve the complete expected signature and argument evaluation/permission/passing/cleanup contracts. Keep stored-callable conversion and deferred context work separate.
 
+- Next review is [independent lambda result inference](functions.md#independent-lambda-result-inference-open-review): infer an unambiguous nonrecursive local result from the body when input types are already known. Recommend allowing `(n: Int) { n * 2 }`, `() { 42 }`, and `() {}` to infer Int/Int/Unit. No choice selected yet. Keep explicit error contracts, recursive/public signature policy, unknown-input inference, and deferred context work separate.
+
 ## Plan links
 
 | Relation | Plan / file |
