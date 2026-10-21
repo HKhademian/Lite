@@ -83,6 +83,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [mixed local result types](functions.md#mixed-local-result-types): infer the normalized plain union of completion payloads for nonrecursive local lambdas with known inputs and no explicit/expected result contract. An Int return plus a String tail infers Int | String. Explicit/expected result contracts remain enforced; escaping errors are never silently added. General conditional/match joins remain the follow-up consistency question. Keep recursive inference and deferred context work separate.
 
+- Next review is [conditional and match result inference](branch-result-inference.md): recommend inferring normalized unions of normally completing results without an expected contract, matching selected local-lambda completion inference. No choice selected. Keep explicit result/error contracts, missing-else zero semantics, real Unit alternatives, then T/R separation, and exhaustiveness. Multi-member union zero needs a separate contract; do not use branch/member order to choose it.
+
 ## Plan links
 
 | Relation | Plan / file |

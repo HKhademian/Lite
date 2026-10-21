@@ -90,6 +90,8 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
+The [branch-result inference review](branch-result-inference.md) proposes automatically joining mixed arm results as a normalized plain union, consistent with local-lambda completion inference. This extension remains open; it does not yet replace the result compatibility rules above.
+
 ## Type-only arms and remaining coverage proposals
 
 Type-only arms and the three base pattern operations are selected. Every match must now be exhaustive. The separate else fallback spelling remains a recommendation; detailed coverage proofs/diagnostics remain open. See [pattern primitives](pattern-bindings-and-tests.md) and the [reference comparison](pattern-syntax-comparison.md#match-specific-comparison-and-recommendations).

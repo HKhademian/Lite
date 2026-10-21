@@ -61,6 +61,8 @@ price := if premium {
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
 - No arbitrary implicit union is introduced merely to accept incompatible branches.
 
+The [branch-result inference review](branch-result-inference.md) proposes extending selected local-lambda union inference to conditional branches and match arms. It is not selected yet; the compatibility rules above remain current.
+
 ## Missing final `else`
 
 ```text
