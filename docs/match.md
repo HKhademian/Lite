@@ -2,6 +2,8 @@
 
 Status: **five pattern families, and-chained arm tests/matches, and pattern-and-brace bodies selected; exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
 
+Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
+
 ## Purpose and template
 
 Select behavior by variant, type, or destructured data. The same match syntax works for actions and values.
@@ -86,11 +88,11 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 - Evaluate the input once.
 - Bind payload names only inside the selected arm.
 - Require exhaustive coverage for every match, including action-only selection; an explicit catch-all can handle ignored cases.
-- Check normally completing arms against a compatible result type; matching does not automatically form a union to accept unrelated result types.
+- Check normally completing arms against an expected result contract when present; otherwise infer their normalized plain union, collapsing duplicate type identities.
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
 
-The [branch-result inference review](branch-result-inference.md) proposes automatically joining mixed arm results as a normalized plain union, consistent with local-lambda completion inference. This extension remains open; it does not yet replace the result compatibility rules above.
+The selected [branch-result inference rule](branch-result-inference.md) joins mixed arm results as a normalized plain union when no expected result contract supplies the type. Explicit/expected contracts remain constraints; matching still requires exhaustive coverage.
 
 ## Type-only arms and remaining coverage proposals
 
@@ -143,7 +145,7 @@ An integer or open-interface subject needs a catch-all unless the coverage check
 
 The selected guard form is `pattern and condition { body }`, including additional explicit pattern bindings as later operands. The earlier pattern-if candidate is superseded. Mutation restrictions, ownership commitment, and evaluation with alternative patterns need formal rules; see [match arm chains](match-guards.md).
 
-All normally completing arms must satisfy a compatible result contract. Giving one arm String and another Int must not silently introduce a new union-inference policy. An explicit exit is checked against its own target. Braces, final-expression values, and optional trailing semicolons follow the same rules for actions and values.
+All normally completing arms must satisfy an expected result contract when present. Otherwise, a String arm and an Int arm infer String | Int under the selected union-inference rule. An explicit exit is checked against its own target. Braces, final-expression values, and optional trailing semicolons follow the same rules for actions and values.
 
 ## Notes and open questions
 

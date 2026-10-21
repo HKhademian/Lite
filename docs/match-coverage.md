@@ -53,7 +53,7 @@ label: String = match status {
 };
 ```
 
-A result contract that explicitly admits Unit can permit an empty result branch under the eventual compatible-type rules. This does not introduce automatic union inference for unrelated match-arm results. A return/propagation exit provides no local continuation value and is checked against its exit target instead.
+An expected result contract must admit Unit to accept an empty result branch. Without an expected result contract, a genuine Unit arm participates in the normalized result union under selected [branch-result inference](branch-result-inference.md). A return/propagation exit provides no local continuation value and is checked against its exit target instead.
 
 ## Coverage boundaries
 

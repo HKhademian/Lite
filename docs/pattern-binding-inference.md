@@ -21,7 +21,7 @@ Here str stands for a known string type or alias. The typed component b must mat
 
 Every binding, including `_`, receives its own inferred local type. Ordered shadowing chooses which same-named binding is visible after a successful match; it does not merge their types or erase constraints on hidden components. An underscore-prefixed name may be left unused without a warning. See [pattern binding and shadowing](pattern-shadowing.md).
 
-This is input narrowing and projection, not a rule that arbitrarily unions unrelated arm result expressions. A single matching arm can bind several union-typed names while its final expression still obeys the ordinary compatible-result contract.
+This is input narrowing and projection. A single matching arm can bind several union-typed names; its final expression follows the separately selected [branch-result inference](branch-result-inference.md): satisfy an expected result contract, or infer a normalized union across normally completing arms.
 
 ## Example: one constraint, several inferred bindings
 

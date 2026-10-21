@@ -2,6 +2,8 @@
 
 Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior, `then`-before-`finally` cleanup order, and cleanup-failure precedence are selected; exact cleanup attachment scope and aggregate handling remain open**.
 
+Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
+
 ## Template
 
 ```text
@@ -52,16 +54,16 @@ price := if premium {
 ## Type rules
 
 - Ordinary expression conditions require `Bool`; pattern and type-test conditions succeed by matching. There is no implicit truthiness.
-- Normally completing value branches must produce compatible types.
+- Normally completing value branches must satisfy an expected result contract when one exists. Otherwise infer their normalized plain union, collapsing duplicate type identities.
 - Every conditional owns a result context, whether tagged or untagged. Its branch/zero result has type `T` and begins as `zero(T)` before branch selection. If the conditional has an attached `then`, that block produces the final result of type `R`; without `then`, the conditional produces `T`. Read-only `@tag.value` access to `T` is available only inside that conditional's attached `then`. It requires an explicit tag and does not expose branch or condition metadata.
 - A normally completing selected branch supplies the conditional result. If the chain has no final `else` and no branch matches, the result is the initial zero value of `T`.
 - This fallback does not form `Option<T>` or handle an error. For example, a conditional expected as `Option<User>` returns that type's zero state, `.None`, when no pattern matches.
 - A conditional whose normally completing branches produce `Unit` remains `Unit` on the unmatched path too. A non-`Unit` branch makes a missing-`else` conditional a value-producing expression, including when it is the final item of a loop body.
 - Zero initialization does not infer `T` by itself. Normally completing branch values and the surrounding expected type constrain `T`. When no normally completing branch constrains `T`, it defaults to `Unit`; an expected type can override that default.
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
-- No arbitrary implicit union is introduced merely to accept incompatible branches.
+- Mixed branch results infer a plain union without inventing conversions or an escaping error channel. Explicit/expected result contracts remain constraints.
 
-The [branch-result inference review](branch-result-inference.md) proposes extending selected local-lambda union inference to conditional branches and match arms. It is not selected yet; the compatibility rules above remain current.
+The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. Missing else still supplies zero(T), without adding Unit. The exact zero alternative for a multi-member union remains unresolved.
 
 ## Missing final `else`
 

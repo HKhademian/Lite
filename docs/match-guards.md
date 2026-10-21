@@ -53,7 +53,7 @@ Nested destructuring also works directly in that chain, for example `and (first,
 - Bindings are available only after their own successful match, to later operands and the selected body. They do not leak into later arms or following code. A binding source resolves before its new names are introduced.
 - False or mismatch skips the rest of this arm's tests. Side effects already performed are not rolled back.
 - Explicit return or Result propagation in an operand keeps its ordinary control-flow meaning; it is not converted into a false guard or a request to try another arm. Ordinary Results are not implicitly unwrapped by matching or guarding.
-- The body's normal result obeys the existing compatible-arm result contract. Binding inference may preserve unions without introducing automatic unions of unrelated arm results.
+- The body's normal result must satisfy an expected result contract when present; otherwise normally completing arms infer a normalized plain union under selected [branch-result inference](branch-result-inference.md). Input binding inference remains a separate rule.
 - A guarded pattern does not alone prove coverage of every value admitted by its structural pattern. Provide complete coverage where required; the exact coverage algorithm and action-match policy remain open.
 
 ## Remaining rules
