@@ -161,6 +161,36 @@ Conceptually a capturing closure combines executable code with the required envi
 
 Existing temporary `mut`/`var` parameter grants cannot silently become escaping capture handles. Reusing a resource in an escaping closure requires a defined ownership/lifetime mechanism, not merely access to its lexical name. Tags still cannot escape as control-transfer capabilities.
 
+### Next decision: outliving captured storage
+
+Status: **open review; no escape policy selected**.
+
+```text
+make_adder := fn() {
+    var total: Int = 0;
+
+    [var total](n: Int): Int {
+        total += n;
+        total
+    }
+}
+
+add := make_adder();
+answer := add(1);
+```
+
+This is a lifetime probe. The returned closure accesses total's original storage after the creating call has ended. An input/result signature alone cannot establish whether that storage still exists.
+
+Three policies can satisfy memory safety:
+
+1. **Lifetime-checked access to original storage.** Permit `[var total]` only while the compiler can establish that the source storage outlives the closure's permitted use. Reject this returned-local example. A callback need not be invoked immediately: storing it within a proven shorter lifetime can be valid. This policy does not silently extend storage lifetime or introduce shared ownership.
+2. **Explicitly owned or shared context for escape.** Offer a separate explicit storage/ownership mechanism when state must survive the creating call. Returning a closure can then be valid under that mechanism. The exact syntax, retention, sharing, cleanup, and allocation contracts are not selected. This can complement policy 1 rather than replace it.
+3. **Automatic lifetime extension for captured variables.** Keep the original captured location alive as long as necessary, preserving shared-location behavior across every closure and outer access. This is not equivalent to copying its value at return. It needs a managed retention/cleanup strategy and may require allocation or other lifetime machinery; optimization can remove costs only where observable behavior is preserved.
+
+Rust rejects closures whose borrowed captures may outlive their source and offers ownership capture as a distinct route; see [Rust E0373](https://doc.rust-lang.org/error_codes/E0373.html). C++ reference captures do not extend a local's lifetime, leaving the programmer responsible; see [C++ capture lifetimes](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170). Go explicitly keeps shared captured variables alive while accessible; see [Go function literals](https://go.dev/ref/spec#Function_literals). The previously reviewed Swift model also manages surviving captured state. C++'s unchecked dangling-access possibility does not satisfy LiteScript's intended safe-storage contract.
+
+Recommendation: policy 1 for `[var name]`, with policy 2 available for separate design if escaping shared state is needed. Reject escaping beyond the source storage's lifetime, not every returned or stored callback indiscriminately. This preserves explicit capture and avoids making `[var name]` silently select automatic lifetime extension. It remains a recommendation pending user choice; full context types, aliasing, zero mappings, and lifetime proof rules still need formalization.
+
 ### Recommendation for the next decisions
 
 The earlier inferred-read-name recommendation is superseded by explicit capture lists. Next define context-bearing callable type signatures, record/resource ownership, read-only live access if needed, payload mutation, nonescape guarantees, and owned escaping environments. Preserve the selected value-versus-original-storage distinction without extending temporary caller grants implicitly.

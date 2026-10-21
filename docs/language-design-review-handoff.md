@@ -77,6 +77,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [explicit context in callable signatures](closures.md#explicit-context-in-the-callable-signature): `[offset](n: Int): Int { n + offset }` captures a value at creation; `[var offset](n: Int): Unit { offset += n }` grants replacement access to the original writable location. Unlisted outer local values are not implicitly captured; missing/empty capture lists mean no captured local context. Context fields, permissions, ownership, and lifetime requirements must remain in the callable contract when passed/stored/assigned. Prefix `var` is a capture grant, not a local-only parameter modifier or public pointer. Context-bearing callable type syntax, full `fn` placement, zero mappings, noncopyable values, payload mutation, aliases, and escapes remain open.
 
+- Next open review is [capture lifetime](closures.md#next-decision-outliving-captured-storage): return a `[var total](n: Int): Int` lambda from its local storage's creating function. Compare checked borrowing, explicit owned/shared state, and automatic lifetime extension. Recommend checking `[var]` against source lifetime with a separate explicit ownership mechanism for escaping state; no policy is selected yet. Official Rust E0373, C++ capture docs, and Go spec support the comparison.
+
 ## Plan links
 
 | Relation | Plan / file |
