@@ -103,6 +103,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Latest selected change: [reject x: A | B = 0](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) as ambiguous for a normalized multi-member union, including aliases and unions listing Int. The user proposes = ?, = expr, A{0}/B{0}, and A{}/B{}. Reservation and initialized expression admission already fit existing rules; A{} applies declared defaults for a valid record member. Treat A{0} as proposed whole-member-zero grammar, not a selected positional field list or automatic whole-wrapper memzero. Bare declarations and implicit/recursive union-zero sites remain unresolved; no silent canonical/leftmost selection or empty-state adoption.
 
+- Next concrete choice is [bare local union declaration policy](union-initialization-policy.md#bare-local-declarations-open-review): recommend rejecting x: A | B without an initializer, requiring an initialized expression or existing = ?. Alternative: omission means implicit reservation, with type tests and all reads rejected until definite initialization. No choice selected. This concerns normalized multi-member union locals; do not apply it automatically to parameters/fields/globals or claim it resolves implicit zero-result sites.
+
 ## Plan links
 
 | Relation | Plan / file |

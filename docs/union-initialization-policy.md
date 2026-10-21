@@ -39,6 +39,53 @@ x: (Int | B) = number /* admits the existing Int value */
 
 The user has not yet settled bare x: A | B without an initializer: rejection versus default-uninitialized storage remains a separate decision. The previous implicit-zero declaration rule must not silently choose a union member here. Likewise, the source ban qualifies earlier universal source-level zero construction; recursively zeroed union fields and other implicit zero-result sites need explicit reconciliation, not hidden member selection. This page does not automatically choose a new policy for those sites.
 
+## Bare local declarations (open review)
+
+The next concrete decision is the meaning of a local declaration without an initializer when its normalized type has several distinct plain-union members:
+
+```text
+x: (A | B)
+```
+
+Do not infer a zero member: the selected bare-zero rejection rules out using implicit = 0 to conceal that choice. Two alternatives remain:
+
+### Require an initializer or explicit reservation (recommended)
+
+Reject the bare declaration. The author writes an initialized compatible expression or the existing = ? marker:
+
+```text
+x: (A | B) = ?
+if choose_a {
+    x = make_a()
+} else {
+    x = make_b()
+}
+use(x)
+```
+
+This records deferred initialization visibly. The existing path-sensitive first-write rule permits exactly one initialization per reaching path without var; later replacement needs var. A path reaching use(x) without initializing x is rejected. The tradeoff is the required = ? marker when the author wants to supply the value later.
+
+### Reserve by default
+
+Accept the bare declaration as an implicit = ? for union locals. It has the same no-read-before-initialization rules, not a readable empty state:
+
+```text
+x: (A | B)
+if x: A { use_a(x) } /* rejected: uninitialized read */
+x = make_a()
+use(x)               /* permitted after initialization */
+```
+
+This avoids the marker. Omitted initialization would then mean zero for ordinary eligible non-union locals but reserved storage for multi-member union locals. A reader must know the resolved type, including aliases, to know which applies. This is statically checkable; it does not imply a runtime initialization flag or permit reading unspecified bytes.
+
+### Shared boundaries
+
+No choice is selected. Recommendation is the explicit initializer-or-reservation rule because = ? already names the intended deferred state. Both alternatives preserve ordinary value-passing and member-only exhaustive matching after initialization. Neither automatically selects A{0} grammar, gives a default to a union, or settles implicit union-zero result sites.
+
+Apply any eventual rule after transparent-alias resolution and normalization; a spelling alias cannot bypass it. A | A normalizes to A and follows that type's declaration policy. Var controls subsequent replacement, not whether a value has been initialized. This review is about local value declarations, not incoming parameter headers, record-field declarations, globals, or an output-construction API; those contexts need their own policies.
+
+Reference comparison checked 2026-10-21: [Rust permits declaration before initialization](https://doc.rust-lang.org/rust-by-example/variable_bindings/declare.html) and rejects use before a value is installed. [Zig requires an initializer](https://ziglang.org/documentation/master/#Assignment) and offers undefined for unspecified storage; that facility is not the same guarantee as LiteScript's selected definite-initialization checks. These provide contrasting declaration styles without selecting a LiteScript policy.
+
 ## Receiving an existing value
 
 For the member-only model, an ordinary parameter receives an already initialized A | B value. It preserves the supplied active member and payload; it does not choose the leftmost member of its own annotation.
