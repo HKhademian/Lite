@@ -148,6 +148,8 @@ A function taking one tuple remains distinct from a function taking two paramete
 
 ## Other grammar and type questions
 
+Named tuple annotations can now infer component types with a retained colon, (l:, r:); bare (l, r) is not a label-only shortcut. The user's proposed unnamed typed form (:Int, :Int) would give a uniform colon-based component grammar. Its replacement-versus-alternative relationship to (Int, Int) remains open. See [component annotation cases](named-input-routing.md#named-components-with-inferred-types--selected).
+
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
 - Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, numeric access, complete recursive grammar, and full name-identity/conversion policy remain open. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.

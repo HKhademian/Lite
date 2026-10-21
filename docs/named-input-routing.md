@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon; named components may retain their colon and infer their type, as in (l:, r:). Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
 ## 1. Selected rule: written order is execution order
 
@@ -248,6 +248,44 @@ Here left is 1 and right is 2. An unannotated fresh literal instead infers writt
 ```
 
 Named binding can explicitly select either source order without converting the whole stored value. A whole-tuple type annotation still checks the source contract before the pattern is applied; a named pattern cannot bypass a stored tuple order mismatch.
+
+### Named components with inferred types — selected
+
+The user requests omitting component types and selects a retained colon to identify each component name:
+
+```text
+(left, right): (l:, r:) = (1, 2);
+(left, right): (l:, r:) = (l = 1, r = 2);
+(left, right): (l:, r:) = (r = 2, l = 1);
+(left = l, right = r): (l:, r:) = (l = 1, r = 2);
+```
+
+Each annotated initializer establishes l, r order, with Int types inferred from the corresponding source expressions. All four examples bind left = 1 and right = 2. A partial annotation such as (l:, r: Int) infers l while checking r against its explicit type. A component's name is a static label; inferred types come from static source/expected contracts, without evaluating values to choose their types.
+
+The shorter (l, r) is not a label-only shortcut. Retaining each colon distinguishes named components with omitted types from the existing positional tuple type form (Int, Int), whose entries are types. If l and r themselves name types, the existing positional type interpretation is a different meaning from the user's requested named schema.
+
+Omitting component types does not omit or default their values. It does not allow a differently ordered stored tuple to fit the annotated order. For stored epx in l, r order, (left, right): (l:, r:) = epx infers its component types and binds by position; a stored r, l tuple still needs explicit reconstruction. If neither the source nor an applicable expected contract determines a missing type, report an inference error rather than assuming Int, Unit, Any, or a runtime-dynamic type.
+
+### Type-only component spelling — new proposal
+
+The user additionally proposes (:Int, :Int) as a more uniform spelling for an unnamed tuple type. The three forms would be:
+
+```text
+(l: Int, r: Int) /* named components, explicit types */
+(l:, r:)        /* named components, inferred types */
+(:Int, :Int)    /* unnamed components, explicit types; proposed */
+```
+
+This follows the existing pattern primitive : Type for a type constraint without a binding name, while keeping the syntactic roles distinct: inside a tuple type it describes a component; inside a pattern it tests one. Underscore remains an ordinary name, so _: Int would be a named component rather than an unnamed placeholder.
+
+Under the proposed type-only spelling, these declarations would describe an unnamed Int pair and positional bindings:
+
+```text
+pair: (:Int, :Int) = (1, 2);
+(left, right): (:Int, :Int) = (1, 2);
+```
+
+Recommend one uniform component form with a colon and optional name/type, requiring at least one of them. Whether :Type replaces the previously valid bare positional Type spelling or becomes an additional preferred spelling still needs user confirmation. The suggestion does not yet retire (Int, Int), select a bare-colon component, or change empty/singleton tuple syntax. Named l: type inference is selected independently of that spelling decision.
 
 ## 7. Callables, nested inputs, and permissions
 

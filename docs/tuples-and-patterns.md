@@ -113,6 +113,8 @@ The [named arguments and named tuples review](named-arguments-and-tuples.md) com
 
 ## Notes and open decisions
 
+Named tuple binding annotations may omit a component type while retaining its colon: (left, right): (l:, r:) = expr. Infer types from the static source/expected contract and preserve the annotation's l, r order. A bare (l, r) does not stand for omitted component types. The additional unnamed type spelling (:Int, :Int) is under review; its relationship to existing (Int, Int) syntax is not selected. See [component annotations](named-input-routing.md#named-components-with-inferred-types--selected).
+
 For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
 Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
