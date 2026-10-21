@@ -49,6 +49,8 @@ The selected omission rule still applies: every unfilled input needs an applicab
 
 Evaluate the callee first, then supplied argument expressions once each in written order, consistent with the existing evaluation contract. In resize(height = read_height(), width = read_width()), read_height runs first even though width is the first parameter. Mapping names to input positions must not reorder side effects. Transfer and permission activation remain subject to the shared memory contract.
 
+The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Validity of the proposed (left, right): (l, r) binding syntax, tuple name routing, and reordered named calls remain open; source-order evaluation does not decide them. A contextual named initializer could route by destination names separately from the order identity of independently inferred tuples.
+
 Names can be resolved statically. This feature need not require a runtime name dictionary, reflection, or heap allocation. Exact passing and ABI remain separate.
 
 ## Public names and implementation-local names

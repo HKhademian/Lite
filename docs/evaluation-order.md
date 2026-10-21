@@ -44,6 +44,30 @@ Argument order does not determine whether arguments move, copy, or borrow, or wh
 
 Zero-initialized callables follow the same order. Their zero-result behavior does not skip argument evaluation or required argument cleanup. If an argument expression exits before invocation, the zero callable is not invoked. See [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
 
+## Named inputs and destination order
+
+The user asks about this proposed binding shape:
+
+```text
+(left, right): (l, r) = (r = op1(), l = op2());
+```
+
+Its exact binding/type syntax is not selected. If l and r are type names, the colon has the usual type-annotation role and does not itself express routing by field name. If the intended meaning is left receives l and right receives r, that label-mapping form needs its own grammar. Named tuple compatibility and reordering are also still open; do not assert that this complete declaration is already valid.
+
+For any admitted named construction or call, preserve the existing source-order contract: evaluate op1 first for the written r entry, then op2 for the written l entry. Each executed occurrence runs once. Mapping evaluated values to destination fields or signature positions must not reorder observable expression evaluation.
+
+Under the proposed name-routing interpretation, the resulting bindings would be left = op2's result and right = op1's result. These are descriptions of routed values, not instructions to call the operations again. Source order determines computation order; the mapping contract determines where the results go.
+
+The corresponding proposed reordered function call is:
+
+```text
+consume(r = op1(), l = op2());
+```
+
+For a signature declaring l before r, recommend accepting named arguments in this written order. Reordering remains a proposal pending user confirmation. When such a call is admitted, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
+
+Named tuple type order and contextual construction are separate design choices. Even if independently inferred tuple types preserve field order, a contextual initializer could be specified to populate known destination fields by name. That construction policy is not selected by this example. See [named arguments and tuples](named-arguments-and-tuples.md).
+
 ## Short-circuiting and selected branches
 
 Left-to-right order does not force evaluation of skipped expressions:
