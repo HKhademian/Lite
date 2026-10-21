@@ -89,6 +89,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Latest clarification resolves storage: [metadata plus overlapping payload](union-zero.md#current-storage-model). Max-member size is payload capacity, with metadata and alignment/padding in the full value. Type tests retain member identity; no need to revisit that guarantee. Zero initialization clears metadata too, so the remaining semantic question is what zero metadata denotes. Exact encoding/ABI and optimizations remain open.
 
+- The user requested modern references for this model. [Union storage comparison](union-storage-reference-comparison.md) records official Rust/Zig/Odin/V/C++ contracts checked 2026-10-21. Rust repr(C) payload enums explicitly use a tag-plus-payload-union struct. Distinguish logical tagged semantics from stable layout, and default construction from bytewise zero. V concrete sum-type layout/default-zero encoding was not established by the inspected public docs; no measurements or layout tests were run.
+
 ## Plan links
 
 | Relation | Plan / file |

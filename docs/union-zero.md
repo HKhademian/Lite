@@ -79,6 +79,8 @@ No member policy is recommended yet. First choose whether zero remains an existi
 
 Every type has a valid all-zero value. Plain unions ignore order, flatten nested unions, and eliminate exact duplicates after alias resolution. Equivalent type identities must have one coherent zero mapping. Option and Result retain their own boundaries: zero(Option<T>) is .None, while zero(T ! E) is .ok(zero(T)). Neither mapping defines which member a plain A | B selects. This review does not change those decisions or introduce a nullable pointer feature.
 
+The expanded [modern-language storage comparison](union-storage-reference-comparison.md) covers Rust, Zig, Odin, V, and C++, including raw versus tagged constructs, layout guarantees, and zero/default differences.
+
 ## Modern reference languages
 
 Checked 2026-10-21:
