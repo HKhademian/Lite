@@ -14,7 +14,7 @@ op(a = 1, b = 2, c = 3);
 op(1, 2, c = 3);
 ```
 
-All three supply the same three inputs. LiteScript additionally selects named suffix permutations, static invalid-input checks, fresh named initializer reordering, ordered stored tuples with explicit reconstruction, and positional/named destructuring. Its type components use name: Type, bare inferred labels, or :Type. Stored name identity, callable compatibility, call spreading, and unknown-input type inference remain open. Reference-language examples below retain their native syntax; see the [current LiteScript rules](named-input-routing.md).
+All three supply the same three inputs. LiteScript additionally selects named suffix permutations, static invalid-input checks, fresh named initializer reordering, ordered stored tuples with explicit reconstruction, and positional/named destructuring. Its type components use name: Type, bare inferred labels, or :Type. Different stored tuple labels require explicit reconstruction. Identical-shape structural identity, stored named/unnamed conversions, callable compatibility, call spreading, and unknown-input type inference remain open. Reference-language examples below retain their native syntax; see the [current LiteScript rules](named-input-routing.md).
 
 ## Odin
 
@@ -142,7 +142,7 @@ point = Point(*size)
 
 Constructing Point gives the positions new field names. Plain point = size would retain the Size object and its width/height attributes; assignment does not rename fields. Runtime rebinding is not a static compatibility check. The typing specification separately defines typed NamedTuple classes and their tuple behavior. Sources: [namedtuple classes](https://docs.python.org/3/library/collections.html#collections.namedtuple), [NamedTuple typing](https://typing.python.org/en/latest/spec/namedtuples.html).
 
-LiteScript has since selected its component forms, contextual named initializer reordering, and the stored-order boundary. The remaining width/height-to-x/y name-identity choice stays open; this comparison does not settle it. Stored unnamed-to-named admission is a separate conversion question, while fresh positional literals can already initialize a known named tuple contract.
+LiteScript has since selected its component forms, contextual named initializer reordering, and the stored-order boundary. The user subsequently selected rejection of width/height-to-x/y stored assignment without explicit reconstruction. Stored unnamed-to-named admission is a separate conversion question, while fresh positional literals can already initialize a known named tuple contract.
 
 ## Consequences for the LiteScript review
 
@@ -154,6 +154,6 @@ The references support several independent choices:
 - Named tuples do not have one shared meaning: TypeScript labels document positions; C# also provides named member access; Swift and Scala give labels type-level meaning; Dart's named record fields participate in an unordered structural shape; Python constructs a named tuple class.
 - Static label resolution and name-sensitive types do not inherently require runtime lookup by name. Scala explicitly erases named-tuple labels. This does not establish any LiteScript ABI, allocation, or performance result.
 
-The current LiteScript reference selects named suffix reordering, positional prefixes, duplicate/unknown/missing/excess/type diagnostics, the four contextual tuple construction forms, and positional/named destructuring. Stored tuple order remains fixed and changes require explicit reconstruction. Component annotations use name: Type, bare inferred labels, or :Type. Remaining choices include stored name identity/conversions, callable label compatibility, full recursive grammar, and call spreading. Every omitted function argument still requires an applicable explicitly declared default. See the [concrete routing reference](named-input-routing.md).
+The current LiteScript reference selects named suffix reordering, positional prefixes, duplicate/unknown/missing/excess/type diagnostics, the four contextual tuple construction forms, and positional/named destructuring. Stored tuple order remains fixed and changes require explicit reconstruction. Component annotations use name: Type, bare inferred labels, or :Type. Different stored tuple labels require explicit reconstruction. Remaining choices include identical-shape structural identity, stored named/unnamed conversions, callable label compatibility, full recursive grammar, and call spreading. Every omitted function argument still requires an applicable explicitly declared default. See the [concrete routing reference](named-input-routing.md).
 
 Related: [named arguments and tuples](named-arguments-and-tuples.md), [functions](functions.md), [records](records.md), and [tuples and patterns](tuples-and-patterns.md).

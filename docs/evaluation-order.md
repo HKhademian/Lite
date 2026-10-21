@@ -66,7 +66,7 @@ consume(r = op1(), l = op2());
 
 For a signature declaring l before r, named arguments may appear in this written order. The user selected named suffix reordering. For an admitted call, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
 
-The user selected the distinction between contextual construction and stored tuple order: a fresh named initializer may populate destination fields in any written order, while an already stored tuple with a different component order requires explicit reconstruction. Source expression order is preserved in both cases. Name identity and complete tuple/pattern grammar remain open. See [concrete named routing](named-input-routing.md) and [named arguments and tuples](named-arguments-and-tuples.md).
+The user selected the distinction between contextual construction and stored tuple order: a fresh named initializer may populate destination fields in any written order, while an already stored tuple with a different component order requires explicit reconstruction. Source expression order is preserved in both cases. Different stored tuple labels likewise require explicit reconstruction. Identical-shape structural identity, stored named/unnamed conversions, and complete tuple/pattern grammar remain open. See [concrete named routing](named-input-routing.md) and [named arguments and tuples](named-arguments-and-tuples.md).
 
 ## Short-circuiting and selected branches
 

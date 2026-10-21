@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Complete recursive grammar, identical-shape structural identity, stored named/unnamed conversions, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
 ## 1. Selected rule: written order is execution order
 
@@ -174,17 +174,27 @@ The second declaration reads the already produced fields; it does not invoke op1
 
 A literal and a stored value are different syntactic inputs to construction. Merely writing a stored value where a literal was accepted does not enable contextual rerouting. More elaborate expected-type propagation through branches, generic calls, or overloads must not silently erase the stored-value boundary.
 
-### Complete the type policy explicitly — recommendation
+### Label compatibility — selected
 
-Recommend that a named tuple's ordered label/type sequence defines its structural tuple contract. Repeated identical tuple type expressions can then describe the same tuple type, while separately declared records retain their selected nominal identities. Labels differing at a position require reconstruction:
+Selected by the user, 2026-10-21: different component labels prevent direct stored-tuple compatibility, even when the component types agree. This applies to assignment and tuple-valued function inputs. Labels differing at a position require explicit reconstruction:
 
 ```text
 size := (width = 640, height = 480);
-point: (x: Int, y: Int) = size; /* proposed rejection: names differ */
+point: (x: Int, y: Int) = size; /* rejected: names differ */
 point := (x = size.width, y = size.height); /* explicit renaming */
 ```
 
-This name-identity completion still awaits confirmation. The selected stored-order restriction does not alone select every name-identity/conversion policy. Stored unnamed-to-named and named-to-unnamed conversions likewise remain open; recommend explicit reconstruction initially.
+The user emphasized that cake/tea and fruit/chocolate describe different roles. Naming those roles prevents accidental interchange of equally typed components. Positional destructuring remains valid and only chooses local binding names:
+
+```text
+(width, height) := size; /* valid: binds the stored positions */
+```
+
+Fresh positional literals can still populate a known named tuple contract, and fresh named literals can still route into its destination order. Those construction rules do not allow a differently labeled stored tuple to be silently renamed. Type aliases do not bypass the label check.
+
+### Remaining type policy — recommendation
+
+Recommend that a named tuple's ordered label/type sequence defines its structural tuple contract, so repeated identical tuple type expressions describe the same tuple type. This structural-identity completion still awaits confirmation; selecting label-sensitive compatibility alone does not select it. Separately declared records retain their selected nominal identities. Stored unnamed-to-named and named-to-unnamed conversions likewise remain open; recommend explicit reconstruction initially.
 
 For initial inference, recommend fully positional or fully named literals. An inferred mixed tuple such as mixed := (10, r = 20) lacks names for its positional prefix; reject it initially unless an expected complete named tuple contract supplies that schema. This is a proposed restriction, not a new rule for existing positional tuples. Empty and singleton tuple syntax remains separate.
 

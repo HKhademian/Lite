@@ -71,7 +71,7 @@ Bare entries in type context are labels; a colon requires a following type. The 
 (left, right): (l, r) = (r = 2, l = 1);
 ```
 
-The initializer supplies values by name into l, r order, infers both component types as Int, and binds left = 1 and right = 2 positionally. Expressions execute in written order. A stored tuple with another order requires explicit reconstruction. Core construction, named/positional destructuring, and named argument routing are selected; name identity, stored conversion policies, complete recursive grammar, and empty/singleton tuple details remain open. See [concrete tuple routing](named-input-routing.md).
+The initializer supplies values by name into l, r order, infers both component types as Int, and binds left = 1 and right = 2 positionally. Expressions execute in written order. A stored tuple with another order requires explicit reconstruction. Core construction, named/positional destructuring, and named argument routing are selected; different stored tuple labels require explicit reconstruction. Identical-shape structural identity, stored named/unnamed conversions, complete recursive grammar, and empty/singleton tuple details remain open. See [concrete tuple routing](named-input-routing.md).
 
 ## Inferred functions
 

@@ -1,6 +1,6 @@
 # Named arguments and named tuples
 
-Status: **named call permutations and validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Complete recursive grammar, tuple name identity, callable label compatibility, and explicitly marked extensions remain open**.
+Status: **named call permutations and validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Tuple label compatibility is also selected: differently labeled stored tuples require explicit reconstruction. Complete recursive grammar, identical-shape structural identity, stored named/unnamed conversions, callable label compatibility, and explicitly marked extensions remain open**.
 
 The [concrete routing case catalogue](named-input-routing.md) records the selected mapping algorithm and construction/storage boundary with valid and rejected examples. Remaining recommendations are explicitly marked.
 
@@ -32,7 +32,7 @@ size := (width = 640, height = 480);
 typed_size: (width: Int, height: Int) = (width = 640, height = 480);
 ```
 
-The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Core component, construction, access, and binding forms are selected. Complete recursive grammar and name-identity policy remain open. Existing record declarations remain nominal; this review does not give record types structural compatibility.
+The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Core component, construction, access, and binding forms are selected. Labels now affect compatibility. Complete recursive grammar, identical-shape structural identity, and stored named/unnamed conversion policy remain open. Existing record declarations remain nominal; this review does not give record types structural compatibility.
 
 For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
@@ -96,28 +96,28 @@ Label propagation through inference, branches, unions, generic APIs, and tuple s
 
 A width/height tuple would not automatically fit a left/top tuple, even when both contain two Int values. Explicit reconstruction could rename components. This protects meaning conveyed by labels but introduces additional compatibility rules alongside nominal record declarations.
 
-The initial comparison offered ordered tuple contracts and unordered named shapes. The user now selected explicit reconstruction for a stored tuple whose component order differs from the destination. Fresh named initializers may still list entries in any written order and route into the known destination order. Whether different labels with the same positional types are compatible remains a separate open choice.
+The initial comparison offered ordered tuple contracts and unordered named shapes. The user now selected explicit reconstruction for a stored tuple whose component order differs from the destination. Fresh named initializers may still list entries in any written order and route into the known destination order. The user also selected rejection of different labels, even when positional types agree.
 
-### Next decision: should names affect compatibility?
+### Selected: names affect compatibility
 
-Separate name identity from component ordering. Consider this proposed named-tuple assignment:
+Selected by the user, 2026-10-21: component labels carry meaning and affect compatibility. Equal positional types do not permit implicit relabeling:
 
 ```text
 size := (width = 640, height = 480);
-point: (x: Int, y: Int) = size;
+point: (x: Int, y: Int) = size; /* rejected: labels differ */
 ```
 
-Under access-label-only semantics, this succeeds by position: point.x is 640 and point.y is 480. Under name-sensitive semantics, it is rejected because width/height do not match x/y. An explicit reconstruction would express the intended renaming:
+The assignment is rejected because width/height do not match x/y. Explicit reconstruction expresses the intended renaming:
 
 ```text
 point := (x = size.width, y = size.height);
 ```
 
-Recommend exploring name-sensitive compatibility: names communicate the roles of equally typed components, and the type checker can check them statically. This recommendation is not selected. It does not by itself make named tuples nominal records or settle compatibility between separately written identical named shapes.
+The user emphasized that cake/tea and fruit/chocolate express different roles, even when their component types agree. Check labels statically for stored tuple assignments and parameter passing. This does not by itself make named tuples nominal records or settle compatibility between separately written identical named shapes.
 
-The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. Keep this decision open; asking for the comparison is not acceptance of the recommendation.
+The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. The subsequent user confirmation selects name-sensitive compatibility for LiteScript.
 
-Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Positional destructuring of named tuples is selected and follows stored component order. Name identity, stored unlabeled-tuple admission, and explicit name removal remain open. The [concrete routing reference](named-input-routing.md) separates those remaining recommendations from selected binding rules. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
+Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Positional destructuring of named tuples is selected and follows stored component order. Identical-shape structural identity, stored unlabeled-tuple admission, and explicit name removal remain open. The [concrete routing reference](named-input-routing.md) separates those remaining recommendations from selected binding rules. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
 
 ### C. Keep tuples positional and use records for named values
 
@@ -133,7 +133,7 @@ size := Size { width = 640, height = 480 }
 
 Record field declarations require a semicolon between adjacent ordinary fields. Newlines, tabs, and spaces do not supply separators. The final field separator is optional; the complete record declaration ends its outer item without requiring a semicolon. The equivalent compact declaration is Size := record { width: Int; height: Int }. Supplied record-value fields instead use commas. See [lexical structure](lexical-structure.md#separators).
 
-These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; tuple name identity, complete recursive grammar, and the specifically marked pattern extensions remain open. Named argument support remains a separate capability.
+These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; identical-shape structural identity, stored named/unnamed conversions, complete recursive grammar, and the specifically marked pattern extensions remain open. Named argument support remains a separate capability.
 
 ## A tuple argument versus spreading arguments
 
@@ -152,7 +152,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
-- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, numeric access, complete recursive grammar, and full name-identity/conversion policy remain open. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
+- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, numeric access, complete recursive grammar, and identical-shape identity and stored named/unnamed conversion policy remain open. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 
