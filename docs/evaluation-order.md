@@ -46,13 +46,13 @@ Zero-initialized callables follow the same order. Their zero-result behavior doe
 
 ## Named inputs and destination order
 
-The user asks about this proposed binding shape:
+The user's binding shape uses the selected inferred named annotation:
 
 ```text
 (left, right): (l, r) = (r = op1(), l = op2());
 ```
 
-The user clarified this as (left, right): (l: Int, r: Int) = expr: the annotation is a named tuple type, followed by positional binding into left/right. Explicit field binding uses (left = l, right = r) := expr. Those binding directions are selected. Bare names after the colon must not be interpreted as source selectors by name lookup. Complete recursive annotation grammar remains to be formalized.
+This now uses the selected inferred named tuple annotation: (l, r) supplies labels, with component types inferred from the static initializer contract. The explicit version is (l: Int, r: Int). Both establish l, r destination order before positional binding into left/right, so left receives op2's result and right receives op1's result. Explicit field binding uses (left = l, right = r) := expr. The source expressions still execute op1 then op2. Bare labels in this annotation are not type-name lookups or source-selector expressions. Complete recursive annotation grammar remains to be formalized.
 
 For any admitted named construction or call, preserve the existing source-order contract: evaluate op1 first for the written r entry, then op2 for the written l entry. Each executed occurrence runs once. Mapping evaluated values to destination fields or signature positions must not reorder observable expression evaluation.
 

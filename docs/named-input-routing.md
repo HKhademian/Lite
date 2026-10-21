@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon; named components may retain their colon and infer their type, as in (l:, r:). Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
 ## 1. Selected rule: written order is execution order
 
@@ -10,7 +10,7 @@ pair: (l: Int, r: Int) = (r = op1(), l = op2());
 
 Assume op1 and op2 complete with compatible Int values. Execute op1 for r first, then op2 for l. Each executed occurrence runs once. The initialized pair has the destination's l, r order: pair.l holds the second result and pair.r holds the first. Name routing does not run either producer again.
 
-The proposed named tuple type/literal spellings illustrate the selected semantic rule; their complete grammar still needs formalization. Newlines, tabs, and spaces do not provide separators. Semicolons separate ordinary adjacent items; commas separate tuple components and arguments. A completed outer function or record body can end its item under the existing block-boundary rule.
+The examples illustrate the selected tuple construction and component forms; complete recursive grammar still needs formalization. Newlines, tabs, and spaces do not provide separators. Semicolons separate ordinary adjacent items; commas separate tuple components and arguments. A completed outer function or record body can end its item under the existing block-boundary rule.
 
 For function calls, evaluate the callee first, supplied expressions in written order, and invoke only after successful argument preparation. If the first expression exits outward, do not evaluate later expressions or invoke the callee. A returned intact Result is an ordinary value when the receiving contract accepts it; it does not automatically exit or unwrap. An argument's own local recovery can finish normally and allow later arguments to run.
 
@@ -251,41 +251,52 @@ Named binding can explicitly select either source order without converting the w
 
 ### Named components with inferred types — selected
 
-The user requests omitting component types and selects a retained colon to identify each component name:
+The latest user clarification replaces the earlier retained-colon omission form. Bare names are component labels in tuple type annotations; their types are inferred from the static initializer/expected contract:
 
 ```text
-(left, right): (l:, r:) = (1, 2);
-(left, right): (l:, r:) = (l = 1, r = 2);
-(left, right): (l:, r:) = (r = 2, l = 1);
-(left = l, right = r): (l:, r:) = (l = 1, r = 2);
+(left, right): (l, r) = (1, 2);
+(left, right): (l, r) = (l = 1, r = 2);
+(left, right): (l, r) = (r = 2, l = 1);
+(left = l, right = r): (l, r) = (l = 1, r = 2);
 ```
 
-Each annotated initializer establishes l, r order, with Int types inferred from the corresponding source expressions. All four examples bind left = 1 and right = 2. A partial annotation such as (l:, r: Int) infers l while checking r against its explicit type. A component's name is a static label; inferred types come from static source/expected contracts, without evaluating values to choose their types.
+Each annotated initializer establishes l, r order, with Int types inferred from the corresponding source expressions. All four examples bind left = 1 and right = 2. Partial annotations such as (l, r: Int) infer l while checking r against its explicit type. Labels are static names; inferred types do not depend on runtime values.
 
-The shorter (l, r) is not a label-only shortcut. Retaining each colon distinguishes named components with omitted types from the existing positional tuple type form (Int, Int), whose entries are types. If l and r themselves name types, the existing positional type interpretation is a different meaning from the user's requested named schema.
+Omitting component types does not omit or default their values. For stored epx in l, r order, (left, right): (l, r) = epx infers component types and binds by position; a stored r, l tuple still requires explicit reconstruction. Missing inference evidence is an error, without assuming Int, Unit, Any, or a dynamic type. Bare label-only schemas are not complete standalone aliases/signatures unless an applicable static contract determines their missing types.
 
-Omitting component types does not omit or default their values. It does not allow a differently ordered stored tuple to fit the annotated order. For stored epx in l, r order, (left, right): (l:, r:) = epx infers its component types and binds by position; a stored r, l tuple still needs explicit reconstruction. If neither the source nor an applicable expected contract determines a missing type, report an inference error rather than assuming Int, Unit, Any, or a runtime-dynamic type.
+### Selected tuple type component grammar
 
-### Type-only component spelling — new proposal
-
-The user additionally proposes (:Int, :Int) as a more uniform spelling for an unnamed tuple type. The three forms would be:
+Use exactly these three component forms:
 
 ```text
 (l: Int, r: Int) /* named components, explicit types */
-(l:, r:)        /* named components, inferred types */
-(:Int, :Int)    /* unnamed components, explicit types; proposed */
+(l, r)          /* named components, inferred types */
+(:Int, :Int)    /* unnamed components, explicit types */
 ```
 
-This follows the existing pattern primitive : Type for a type constraint without a binding name, while keeping the syntactic roles distinct: inside a tuple type it describes a component; inside a pattern it tests one. Underscore remains an ordinary name, so _: Int would be a named component rather than an unnamed placeholder.
+A descriptive component production is:
 
-Under the proposed type-only spelling, these declarations would describe an unnamed Int pair and positional bindings:
+```text
+tuple_type_component := identifier ":" type
+                      | identifier
+                      | ":" type
+```
+
+The bare identifier production supplies a label, never a positional type selected by capitalization or name lookup. Thus (Int, Int) no longer spells a pair of unnamed Int types; bare entries would be labels and duplicate labels are rejected. Write (:Int, :Int). The former (l:, r:) spelling is removed: a written colon requires a following type. A component containing only : is likewise invalid. Ordinary identifier and tuple-shape rules still apply.
+
+These declarations are now valid in the selected direction:
 
 ```text
 pair: (:Int, :Int) = (1, 2);
 (left, right): (:Int, :Int) = (1, 2);
+NameAge := type (:String, :Int);
 ```
 
-Recommend one uniform component form with a colon and optional name/type, requiring at least one of them. Whether :Type replaces the previously valid bare positional Type spelling or becomes an additional preferred spelling still needs user confirmation. The suggestion does not yet retire (Int, Int), select a bare-colon component, or change empty/singleton tuple syntax. Named l: type inference is selected independently of that spelling decision.
+The entry forms follow the existing type-only : Type convention while retaining context-specific meaning. In a tuple type, :Int describes an unnamed component. In a pattern, :Int tests a component without binding. A named _: Int component is not an unnamed placeholder; underscore remains an ordinary identifier.
+
+The enclosing syntactic context establishes the role of parentheses. In a type annotation, (l, r) is a named schema with inferred types. In a value expression, (l, r) constructs a tuple from lexical values. In a binding pattern, (l, r) introduces positional bindings. Type-name lookup and capitalization must not choose among these parses. Full integration of the separate proposed whole-value colon pattern remains open.
+
+All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Empty/singleton tuple syntax, mixing named and unnamed components in one tuple type, variadic types, and complete recursive productions remain separate decisions. The choice does not rename public function parameters or select unknown-input lambda inference.
 
 ## 7. Callables, nested inputs, and permissions
 

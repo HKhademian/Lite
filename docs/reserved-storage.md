@@ -18,10 +18,10 @@ The expected type supplies the intended layout. The final form is a construction
 ```text
 x: User = reserve();
 x: {u1: User, u2: User} = reserve();
-x: (User, User, Teacher, Student) = reserve();
+x: (:User, :User, :Teacher, :Student) = reserve();
 ```
 
-These preserve the user's earlier function-shaped sketches. The expected annotation supplies the intended layout type to the generic operation. The reserve() name, anonymous-record spelling, generic declaration/call grammar, and allocation policy are not finalized by these examples. No explicit generic argument spelling or synonymous reserve() operation is selected.
+These preserve the user's earlier function-shaped sketches, with tuple component types updated to the selected colon spelling. The expected annotation supplies the intended layout type to the generic operation. The reserve() name, anonymous-record spelling, generic declaration/call grammar, and allocation policy are not finalized by these examples. No explicit generic argument spelling or synonymous reserve() operation is selected.
 
 Records, anonymous record aggregates, and tuples motivate the same operation: reserve enough correctly aligned storage for the complete aggregate. Inline nested records contribute to its layout. Reference-valued fields occupy representation storage but do not cause allocation of their targets.
 

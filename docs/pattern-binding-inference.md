@@ -25,12 +25,12 @@ This is input narrowing and projection. A single matching arm can bind several u
 
 ## Example: one constraint, several inferred bindings
 
-Suppose input admits these three type shapes. This is explanatory type notation; the complete tuple-type declaration grammar remains open:
+Suppose input admits these three type shapes. This is explanatory type notation using the selected colon form for each unnamed component; complete recursive tuple grammar remains open:
 
 ```text
-A = (Int,    (Bool,  String, Int),  Bool,   Int)
-B = (Float,  (Int,   String, Int),  String, Bool)
-C = (String, (Float, Int,    Bool), Bool,   Float)
+A = (:Int,    :(:Bool,  :String, :Int),  :Bool,   :Int)
+B = (:Float,  :(:Int,   :String, :Int),  :String, :Bool)
+C = (:String, :(:Float, :Int,    :Bool), :Bool,   :Float)
 ```
 
 Match with str denoting String:
@@ -46,8 +46,8 @@ x    : Int | Float
 a    : Bool | Int
 b    : String
 c    : Int
-y    : (Bool, String, Int) | (Int, String, Int)
-rest : (Bool, Int) | (String, Bool)
+y    : (:Bool, :String, :Int) | (:Int, :String, :Int)
+rest : (:Bool, :Int) | (:String, :Bool)
 ```
 
 c remains Int because every compatible possibility supplies Int. C contributes nothing to the types of x, a, c, y, or rest. Matching does not convert C's Int component into text.
@@ -56,7 +56,7 @@ For a single statically possible input shape, every binding instead receives the
 
 ## Composite types retain their alternatives
 
-rest is a union of complete remaining tuple shapes. Do not replace it with `(Bool | String, Int | Bool)`: that product admits combinations neither A nor B supplied. The same principle applies to y and other composite bindings. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
+rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to y and other composite bindings. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
 
 Projecting individual bindings naturally gives each its own union type. Further narrowing one extracted binding and automatically refining its siblings requires explicit correlation and mutation rules; that broader flow feature is not selected merely by this initial inference requirement. Preserve the compatible composite alternatives without claiming arbitrary cross-binding dependent typing.
 

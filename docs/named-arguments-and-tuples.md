@@ -148,7 +148,7 @@ A function taking one tuple remains distinct from a function taking two paramete
 
 ## Other grammar and type questions
 
-Named tuple annotations can now infer component types with a retained colon, (l:, r:); bare (l, r) is not a label-only shortcut. The user's proposed unnamed typed form (:Int, :Int) would give a uniform colon-based component grammar. Its replacement-versus-alternative relationship to (Int, Int) remains open. See [component annotation cases](named-input-routing.md#named-components-with-inferred-types--selected).
+The selected component forms are name: Type, bare name with an inferred type, and :Type without a name. Thus (l, r) is an inferred named schema in type context and (:Int, :Int) is an unnamed typed tuple. Bare (Int, Int) is no longer an unnamed type spelling; the earlier dangling-colon (l:, r:) form is removed. Ordinary tuple value expressions and binding patterns retain their existing roles. See [component annotation cases](named-input-routing.md#selected-tuple-type-component-grammar).
 
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.

@@ -1,6 +1,6 @@
 # Type aliases and explicit type context
 
-Status: **explicit Alias := type TypeExpression selected 2026-10-18 for named transparent aliases**. Direct type binding without the prefix was evaluated and not selected as an alternate alias spelling. Record declaration identity is selected separately. Tuple, generic, and function-type examples below are candidate grammar, not additional selected syntax.
+Status: **explicit Alias := type TypeExpression selected 2026-10-18 for named transparent aliases**. Direct type binding without the prefix was evaluated and not selected as an alternate alias spelling. Record declaration identity is selected separately. Tuple type component forms are selected separately; complete recursive tuple, generic, and function-type grammar remains to be formalized.
 
 ## Reviewed spellings
 
@@ -12,7 +12,7 @@ Person := User | Guest;
 LoadError := ReadError | ParseError;
 Outcome := (User | Guest) ! LoadError;
 AnyOutcome := User!;
-NameAge := (String, Int);
+NameAge := (:String, :Int);
 Users := List<User>;
 Formatter := fn(Int): String;
 ```
@@ -27,7 +27,7 @@ Person := type User | Guest;
 LoadError := type ReadError | ParseError;
 Outcome := type (User | Guest) ! LoadError;
 AnyOutcome := type User!;
-NameAge := type (String, Int);
+NameAge := type (:String, :Int);
 Users := type List<User>;
 Formatter := type fn(Int): String;
 ```
@@ -41,7 +41,7 @@ The first block records the rejected alternative; the second uses the selected p
 - **Existing named type:** Member := User is concise and readily resolvable when User denotes a type. The explicit form advertises the declaration's role before the reader resolves User.
 - **Union:** both are compact. The explicit form fixes | in type context. The short form can also be unambiguous through defined operand-kind rules; it is not inherently unparsable. Any value-level bitwise meaning of | would need a separate operator contract, not silent guessing.
 - **Fallible type:** User! is the selected shorthand for User ! Error in type context, while outcome! extracts or propagates in value context. The explicit prefix establishes which grammar applies. The short form must resolve whether its operand denotes a type or an outcome value.
-- **Tuple type:** (String, Int) needs a rule distinguishing a tuple type from a possible compile-time tuple containing type values. The explicit form permits type grammar to answer directly; the short form needs an explicit kind/composition policy. No type-value tuple feature is selected by this comparison.
+- **Tuple type:** (:String, :Int) uses the selected unnamed typed component form. Bare entries such as (name, age) in tuple type context instead supply labels with inferred component types; they require a static inference source. In ordinary expression context, a tuple can contain ordinary values. The explicit type prefix establishes type context; this comparison does not introduce runtime type values or a second alias spelling.
 - **Generic application:** List<User> needs a type-application grammar; < and > cannot depend on whitespace or capitalized naming conventions to separate them from comparison expressions. An explicit type context helps reuse annotation grammar. The short form remains feasible with proper type-expression rules.
 - **Function type:** type fn(Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Both designs still need rules for parameter names, mut capabilities, fallibility, and closures.
 
