@@ -65,6 +65,8 @@ price := if premium {
 
 The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. Missing else still supplies zero(T), without adding Unit. The exact zero alternative for a multi-member union remains unresolved.
 
+The [union fallback review](conditional-union-fallback.md) proposes requiring an explicit fallback when the resolved branch-result type is a multi-member plain union. It also refines result storage for exhaustive chains to construct the chosen member without an initial undirected union zero. This remains open; the general zero descriptions here need that reconciliation before union-valued missing-else examples have complete semantics.
+
 ## Missing final `else`
 
 ```text
