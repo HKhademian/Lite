@@ -200,7 +200,7 @@ double := (n: Int): Int {
 }
 ```
 
-This does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Independently typed empty-header lambdas need their own arity rule before formalization.
+This does not choose broader inference from arbitrary body operations. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Without an expected callable type, an empty header declares zero inputs; see [independent empty headers](#empty-headers-without-an-expected-callable).
 
 Typed lambdas overlap with full typed `fn` expressions too: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` provide the same visible input/result contract. Whether keeping the keyword form is useful remains a separate surface-syntax review; this decision does not remove it.
 
@@ -226,25 +226,25 @@ x = () {
 
 In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
 
-The empty header `()` retains the entire expected callable signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header; the header alone does not determine callable arity.
+With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
 
 Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. The decision concerns contextual lambda headers; it does not revise explicitly declared callable parameter lists, choose standalone inference without an expected contract, or select partial omission from a nonempty lambda header.
 
-#### Empty headers without an expected callable (open review)
+#### Empty headers without an expected callable
 
-The remaining case is an independent lambda with an empty header. Proposed rule: preserve the expected input contract when one exists; otherwise an empty header declares zero inputs.
+Selected rule: preserve the expected input contract when one exists; otherwise an empty header declares zero inputs.
 
 ```text
 constant := (): Int { 42 }
-/* Proposed independent signature: fn(): Int */
+/* Independent signature: fn(): Int */
 
 ignore_input: fn(n: Int): Int = (): Int { 42 }
 /* Established contextual rule: one Int input, no local input binding */
 ```
 
-Under the proposal, `constant()` returns 42, while `ignore_input(7)` accepts its Int input and returns 42. These are fixed input contracts, not a variadic callable or a runtime decision about how many arguments to accept. Ordinary omitted-argument defaults remain separate. General compatibility/conversion of already-created callable values is not decided here.
+`constant()` returns 42, while `ignore_input(7)` accepts its Int input and returns 42. These are fixed input contracts, not a variadic callable or a runtime decision about how many arguments to accept. Ordinary omitted-argument defaults remain separate. General compatibility/conversion of already-created callable values is not decided here.
 
-An alternative is to require an expected callable type for every empty-header lambda. That keeps the empty header solely as unnamed-input syntax, but requires an explicit `fn(): Int` target type even for a simple independent constant function. Recommendation: use the zero-input default when there is no expected callable. This is proposed, not selected, and does not choose general body-result inference or partial nonempty header omission.
+Requiring an expected callable type for every empty-header lambda was considered and not chosen. The selected zero-input rule does not choose general body-result inference or partial nonempty header omission.
 
 Rust's zero-input closure spelling is `|| { 42 }`, with an explicitly empty parameter list; see [Rust closure syntax](https://doc.rust-lang.org/reference/expressions/closure-expr.html). LiteScript's already selected contextual `()` rule is a separate convenience that preserves expected inputs.
 
