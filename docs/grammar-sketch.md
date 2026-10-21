@@ -134,7 +134,7 @@ Standalone `_` is an ordinary binding identifier, not a separate wildcard produc
 
 ## Named calls and tuples under review
 
-The [named-call and named-tuple proposal](named-arguments-and-tuples.md) considers call entries name = expression and tuple value entries with the same spelling, with name: Type in tuple types. These are not selected grammar productions. Assignment expressions, typed patterns, singleton/grouping forms, contextual lambda headers, and call-spread syntax must retain explicit syntactic boundaries. Named inputs would preserve supplied-expression source order and the selected declared-default requirement for omission.
+The [named-call review](named-arguments-and-tuples.md) has selected name = expression call entries, positional calls, and positional prefixes followed by named arguments for simple identifier parameters. Full call grammar, argument reordering, additional mapping rules, and callable label compatibility remain open. Tuple value entries with the same spelling and name: Type in tuple types are still proposals. Assignment expressions, typed patterns, singleton/grouping forms, contextual lambda headers, and call-spread syntax must retain explicit syntactic boundaries. Named inputs preserve supplied-expression source order and the selected declared-default requirement for omission.
 
 ## Caller mutation grants
 

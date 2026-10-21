@@ -1,6 +1,20 @@
 # Named arguments and named tuples
 
-Status: **open review requested by the user, 2026-10-21; examples and recommendations below are proposals, not selected syntax or compatibility rules**.
+Status: **positional calls, named arguments using =, and positional prefixes followed by named arguments selected by the user, 2026-10-21. Argument reordering, further mapping rules, callable label compatibility, and named tuples remain open**.
+
+## Selected basic call forms
+
+```text
+op := fn(a: Int, b: Int, c: Int): Int { a + b + c }
+
+op(1, 2, 3)
+op(a = 1, b = 2, c = 3)
+op(1, 2, c = 3)
+```
+
+These forms supply the same three inputs to the same callable. Naming an argument does not turn the call into a single record or tuple argument. No extra named-parameter declaration marker is required for these simple identifier parameters. The user's abbreviated fn(a,b,c) sketch describes the call shape; it does not select independent inference of unknown function input types. Omission still requires an applicable explicitly declared default.
+
+The comparison of all twelve established reference languages, plus supplemental C#, is in [named calls and tuples across the reference languages](named-arguments-reference-comparison.md).
 
 ## Shared spelling to consider
 
@@ -16,16 +30,16 @@ size := (width = 640, height = 480)
 typed_size: (width: Int, height: Int) = (width = 640, height = 480)
 ```
 
-The call supplies two inputs. The tuple expression produces one value with two components. A named tuple type, named access such as size.width, and these construction forms all require confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
+The call supplies two inputs. The proposed tuple expression produces one value with two components. Named tuple types, named access such as size.width, and named tuple construction all require confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
 
-Colon-value alternatives, such as resize(width: 640, height: 480), are also possible. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
+For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
-## Named calls: recommended starting rules
+## Named calls: further rules to consider
 
 ```text
 resize(640, 480)
 resize(width = 640, height = 480)
-resize(height = 480, width = 640)
+resize(height = 480, width = 640) /* reordering remains a proposal */
 resize(640, height = 480)
 ```
 

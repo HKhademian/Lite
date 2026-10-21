@@ -78,6 +78,8 @@ These sources were consulted during the design discussion. They support comparis
 
 ## Local source of design decisions
 
+The [named argument and tuple comparison](named-arguments-reference-comparison.md) checks all twelve reference languages used by the type-category review, plus supplemental C#, for native argument labels, named product alternatives, and tuple name compatibility. The selected LiteScript positional/named/mixed call forms are recorded separately from open named-tuple rules.
+
 The primary source for LiteScript-specific choices is the design conversation through 2026-10-18. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.
 
 ## Enum and type-category comparison

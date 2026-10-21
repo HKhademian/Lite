@@ -177,7 +177,7 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
-- [Named arguments and named tuples](named-arguments-and-tuples.md) are under review. Proposed name = value call labels map through the public callable contract; lambda-local names remain positional bindings. Compare tuple labels as access conveniences, labels as part of compatibility, or records as the sole named product. No syntax, tuple label identity/order, callable name compatibility, or call-spread rule is selected yet; all omitted arguments still require applicable explicitly declared defaults.
+- [Named calls](named-arguments-and-tuples.md#selected-basic-call-forms) have selected positional, name = value, and positional-prefix-plus-named forms: op(1,2,3), op(a=1,b=2,c=3), op(1,2,c=3). All omitted arguments still require applicable explicitly declared defaults. Further mapping and reordering rules, callable public-name compatibility, named tuple syntax/identity/order, and call spreading remain open; lambda header bindings retain their selected positional meaning.
 
 - **Failure transfer remains partly open:** tagged return completion is selected: payload T reaches the named target's then, while inner constructs exited on the way skip their then. Propagated errors and unhandled panics provide no conditional T. During language-managed typed-panic propagation, applicable exited-scope `finally` blocks run inner-to-outer before an outer matching handler; recoverable-error cleanup coverage remains open, while cleanup-failure precedence is selected under [completion hooks](#2-completion-hooks-and-abrupt-exits). See [tagged return](control-flow.md#tagged-return-and-completion).
 

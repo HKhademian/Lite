@@ -55,7 +55,7 @@ Default-expression syntax, evaluation timing and scope, defaults in callable sig
 
 ## Named arguments under review
 
-The [named arguments and named tuples review](named-arguments-and-tuples.md) proposes name = value at call sites, positional inputs before named inputs, and labels resolved from the caller-visible callable contract. Supplied expressions would retain written evaluation order; omitted inputs would still need explicitly declared defaults. Public labels and contextual lambda-local names must be distinguished. This is an open proposal: label identity, stored-callable compatibility, complete call grammar, and tuple argument spreading are not selected by it.
+The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. Further mapping rules, argument reordering, public label identity versus contextual lambda-local names, stored-callable compatibility, complete call grammar, and tuple argument spreading remain open. See [named arguments and named tuples](named-arguments-and-tuples.md).
 
 ## Compact implementations under review
 
