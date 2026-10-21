@@ -228,7 +228,7 @@ In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)
 
 With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
 
-Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. The decision concerns contextual lambda headers; it does not revise explicitly declared callable parameter lists, choose standalone inference without an expected contract, or select partial omission from a nonempty lambda header.
+Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. Nonempty lambda headers may likewise leave trailing inputs unnamed, as specified below. These rules do not revise explicitly declared callable parameter lists or choose general standalone inference without an expected contract.
 
 #### Empty headers without an expected callable
 
@@ -244,11 +244,11 @@ ignore_input: fn(n: Int): Int = (): Int { 42 }
 
 `constant()` returns 42, while `ignore_input(7)` accepts its Int input and returns 42. These are fixed input contracts, not a variadic callable or a runtime decision about how many arguments to accept. Ordinary omitted-argument defaults remain separate. General compatibility/conversion of already-created callable values is not decided here.
 
-Requiring an expected callable type for every empty-header lambda was considered and not chosen. The selected zero-input rule does not choose general body-result inference or partial nonempty header omission.
+Requiring an expected callable type for every empty-header lambda was considered and not chosen. The selected zero-input rule does not choose general body-result inference. Nonempty contextual header omission has its own selected rule below.
 
 Rust's zero-input closure spelling is `|| { 42 }`, with an explicitly empty parameter list; see [Rust closure syntax](https://doc.rust-lang.org/reference/expressions/closure-expr.html). LiteScript's already selected contextual `()` rule is a separate convenience that preserves expected inputs.
 
-#### Partially named input headers (open review)
+#### Partially named input headers
 
 An expected callable may have more inputs than the lambda body needs:
 
@@ -257,16 +257,13 @@ An expected callable may have more inputs than the lambda body needs:
 combine: fn(left: Int, right: Int): Int = (left) { left * 2 }
 ```
 
-Two policies are under comparison:
+Selected rule: allow omitted trailing names. A nonempty header binds a positional prefix of the expected inputs. Here left binds the first Int; the second input remains unnamed. `()` is the zero-name case of the same principle. The callable still has the expected two-input signature. Writing `(left, _) { left * 2 }` is also legal, but naming the trailing position is not required.
 
-1. **Allow omitted trailing names.** The nonempty header binds a positional prefix of the expected inputs. Here left binds the first Int; the second input remains unnamed. `()` is the already selected zero-name case of the same principle. The callable still has the expected two-input signature.
-2. **Require every position in a nonempty header.** Write `(left, _) { left * 2 }`. The already selected empty `()` form would remain the special case that leaves every input unnamed.
+Use `(_, right) { right * 2 }` when the second input is needed and the first is unused. Parameter bindings are positional; a lone `(right)` does not select the expected parameter by matching its name. `_` remains the ordinary readable name with permitted nonuse, not a discard wildcard. More binding positions than the expected input count are rejected.
 
-Under either policy, use `(_, right) { right * 2 }` when the second input is needed and the first is unused. Parameter bindings are positional; a lone `(right)` does not select the expected parameter by matching its name. `_` remains the ordinary readable name with permitted nonuse, not a discard wildcard. More binding positions than expected cannot silently create additional call inputs.
+All expected inputs retain their argument evaluation, permission, passing, and cleanup contracts. This does not remove inputs from the public signature or decide compatibility of already-created callables. Complete parameter patterns, stored-function adaptation, and general type compatibility remain separate. Requiring every nonempty-header position was considered and not chosen.
 
-Recommendation: permit omitted trailing names, extending the accepted `()` behavior to positional prefixes. All expected inputs retain their argument evaluation, permission, passing, and cleanup contracts. This does not remove inputs from the public signature or decide compatibility of already-created callables. Complete parameter patterns, stored-function adaptation, and general type compatibility remain separate. This recommendation is not selected yet.
-
-TypeScript permits callbacks with fewer declared parameters than the target signature, explicitly motivated by APIs that provide extra inputs such as indices; see [comparing functions](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#comparing-two-functions). Rust requires matching argument counts for its callable-trait contracts; see [E0593](https://doc.rust-lang.org/error_codes/E0593.html). LiteScript's proposed header-prefix rule would apply while constructing a lambda under an expected contract and does not import all TypeScript function-assignment rules.
+TypeScript permits callbacks with fewer declared parameters than the target signature, explicitly motivated by APIs that provide extra inputs such as indices; see [comparing functions](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#comparing-two-functions). Rust requires matching argument counts for its callable-trait contracts; see [E0593](https://doc.rust-lang.org/error_codes/E0593.html). LiteScript's header-prefix rule applies while constructing a lambda under an expected contract and does not import all TypeScript function-assignment rules.
 
 #### Parsing boundaries
 
