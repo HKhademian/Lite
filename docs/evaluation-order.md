@@ -40,7 +40,7 @@ choose_handler()(first(), second());
 
 For a method-call expression, evaluate the receiver as part of evaluating the callee before the other supplied arguments. The complete method/dispatch notation remains open; this order does not choose static or dynamic dispatch.
 
-Argument order does not determine whether arguments move, copy, or borrow, or when borrow permissions become active. Those are separate contracts. An argument may be omitted only with an applicable explicitly declared default; without one, the call is rejected regardless of parameter type. Syntax, scope, and exact evaluation timing of declared default expressions, plus named-argument rules, still need specification; see [omitted value arguments](functions.md#omitted-value-arguments).
+Argument order does not determine whether arguments move, copy, or borrow, or when borrow permissions become active. Those are separate contracts. An argument may be omitted only with an applicable explicitly declared default; without one, the call is rejected regardless of parameter type. Syntax, scope, and exact evaluation timing of declared default expressions, plus callable public-label compatibility, still need specification. Core named-call routing and validation are selected; see [omitted value arguments](functions.md#omitted-value-arguments).
 
 Zero-initialized callables follow the same order. Their zero-result behavior does not skip argument evaluation or required argument cleanup. If an argument expression exits before invocation, the zero callable is not invoked. See [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
 

@@ -66,7 +66,7 @@ Unit is neither None nor an error. A missing match arm must not manufacture any 
 
 The selected two-element form is `(first, second)`, and typed/literal/value subpatterns compose in its positions. Recommend treating pair as the two-element tuple shape, without a second intrinsic pair-pattern syntax. A separately declared nominal Pair would instead use its exposed record/schema contract.
 
-Recommend exact arity unless a rest pattern is written. Tuple rest capture, empty/singleton tuple spelling, and grouping are detailed as proposals in [sequence patterns](sequence-patterns.md). Do not decide whether () equals Unit through an example: existing Unit spelling and ordinary readable names still apply.
+Ordinary fixed-tuple positional binding follows stored order. Named tuple patterns use destination = sourceField, with exact initial coverage and no unknown/duplicate source selectors. Tuple type components use name: Type, inferred bare labels, or :Type; see [tuple routing](named-input-routing.md). Tuple rest capture, empty/singleton tuple spelling, and grouping remain proposals in [sequence patterns](sequence-patterns.md). Do not decide whether () equals Unit through an example: existing Unit spelling and ordinary readable names still apply.
 
 ## 4. Records
 

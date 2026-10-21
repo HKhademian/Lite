@@ -34,7 +34,7 @@ Local variable initialization, record-field construction defaults, conditional f
 
 ## Remaining default-expression decisions
 
-Complete syntax, expression eligibility, evaluation scope/timing, named-argument grammar, and defaults in callable signatures versus implementations are not selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
+Complete syntax, expression eligibility, evaluation scope/timing, complete recursive named-call grammar, and defaults in callable signatures versus implementations remain to be formalized. Core named-call routing and validation are already selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
 
 ## Modern references
 

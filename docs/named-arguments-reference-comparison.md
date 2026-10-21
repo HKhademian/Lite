@@ -14,7 +14,7 @@ op(a = 1, b = 2, c = 3);
 op(1, 2, c = 3);
 ```
 
-All three supply the same three inputs. Do not infer named-tuple compatibility, argument reordering, automatic tuple spreading, or unknown-input type inference from these examples.
+All three supply the same three inputs. LiteScript additionally selects named suffix permutations, static invalid-input checks, fresh named initializer reordering, ordered stored tuples with explicit reconstruction, and positional/named destructuring. Its type components use name: Type, bare inferred labels, or :Type. Stored name identity, callable compatibility, call spreading, and unknown-input type inference remain open. Reference-language examples below retain their native syntax; see the [current LiteScript rules](named-input-routing.md).
 
 ## Odin
 
@@ -56,7 +56,7 @@ Dart records provide positional and named fields. Example: (width: 640, height: 
 
 Native calls use equals and support all three requested forms. Named arguments can be reordered; its mixing rules are more permissive than a blanket ban on positional arguments after named ones. Source: [named arguments](https://docs.scala-lang.org/tour/named-arguments.html).
 
-Since Scala 3.7, named tuples use (width = 640, height = 480), with type (width: Int, height: Int), and field selection such as size.width. Names and their order matter for compatibility. Mixing named and unnamed components and duplicate names is rejected. Expected named tuple types can accept ordinary positional tuples; conversion back can forget names. Names are erased at runtime and the representation is the ordinary tuple representation. This is the closest checked precedent for the proposed LiteScript named-tuple spelling, but its conversions and compatibility need independent decisions. Source: [named tuples](https://docs.scala-lang.org/scala3/reference/other-new-features/named-tuples.html).
+Since Scala 3.7, named tuples use (width = 640, height = 480), with type (width: Int, height: Int), and field selection such as size.width. Names and their order matter for compatibility. Mixing named and unnamed components and duplicate names is rejected. Expected named tuple types can accept ordinary positional tuples; conversion back can forget names. Names are erased at runtime and the representation is the ordinary tuple representation. Its value spelling matches LiteScript named construction. LiteScript now has its own selected component syntax, contextual reordering, and stored-order boundary; Scala conversions do not establish LiteScript conversion rules. Source: [named tuples](https://docs.scala-lang.org/scala3/reference/other-new-features/named-tuples.html).
 
 ## TypeScript / JavaScript call convention
 
@@ -142,7 +142,7 @@ point = Point(*size)
 
 Constructing Point gives the positions new field names. Plain point = size would retain the Size object and its width/height attributes; assignment does not rename fields. Runtime rebinding is not a static compatibility check. The typing specification separately defines typed NamedTuple classes and their tuple behavior. Sources: [namedtuple classes](https://docs.python.org/3/library/collections.html#collections.namedtuple), [NamedTuple typing](https://typing.python.org/en/latest/spec/namedtuples.html).
 
-No LiteScript tuple rule is selected by this comparison. The user's question keeps the choice open. In particular, rejecting mismatched explicit names and allowing an unlabeled tuple to acquire expected names are independent policies, as Swift and Scala demonstrate.
+LiteScript has since selected its component forms, contextual named initializer reordering, and the stored-order boundary. The remaining width/height-to-x/y name-identity choice stays open; this comparison does not settle it. Stored unnamed-to-named admission is a separate conversion question, while fresh positional literals can already initialize a known named tuple contract.
 
 ## Consequences for the LiteScript review
 
@@ -154,6 +154,6 @@ The references support several independent choices:
 - Named tuples do not have one shared meaning: TypeScript labels document positions; C# also provides named member access; Swift and Scala give labels type-level meaning; Dart's named record fields participate in an unordered structural shape; Python constructs a named tuple class.
 - Static label resolution and name-sensitive types do not inherently require runtime lookup by name. Scala explicitly erases named-tuple labels. This does not establish any LiteScript ABI, allocation, or performance result.
 
-Keep the selected basic call forms. Review reordering and duplicate/unknown input diagnostics separately, then decide tuple label identity and order before selecting named tuple construction or call spreading. All LiteScript omitted arguments continue to require applicable explicitly declared defaults.
+The current LiteScript reference selects named suffix reordering, positional prefixes, duplicate/unknown/missing/excess/type diagnostics, the four contextual tuple construction forms, and positional/named destructuring. Stored tuple order remains fixed and changes require explicit reconstruction. Component annotations use name: Type, bare inferred labels, or :Type. Remaining choices include stored name identity/conversions, callable label compatibility, full recursive grammar, and call spreading. Every omitted function argument still requires an applicable explicitly declared default. See the [concrete routing reference](named-input-routing.md).
 
 Related: [named arguments and tuples](named-arguments-and-tuples.md), [functions](functions.md), [records](records.md), and [tuples and patterns](tuples-and-patterns.md).

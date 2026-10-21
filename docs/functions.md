@@ -51,7 +51,7 @@ An argument may be omitted only when an applicable explicitly declared parameter
 
 This supersedes the earlier default-or-zero argument rule. For fn(a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
 
-Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns remain open. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
+Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, and integration with parameter patterns remain open. Core named-call omission is selected: every unfilled parameter requires an applicable declared default. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
 
 ## Named arguments under review
 

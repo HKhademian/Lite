@@ -97,7 +97,7 @@ op(a = "one", b = 2, c = 3);      /* incompatible a value */
 op(a = 1, b = 2, c = ?);          /* reserved storage marker is not a value */
 ```
 
-Unknown, duplicate, or incompatible named inputs must not fall back to positional matching. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside this initial routing proposal.
+Unknown, duplicate, or incompatible named inputs must not fall back to positional matching. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
 
 ## 3. Omissions, defaults, and underscore
 
@@ -153,7 +153,7 @@ pair: (l: Int, r: Int) = (l = 10, unknown = 20); /* unknown label */
 pair: (l: Int, r: Int) = (l = 10, r = "twenty"); /* incompatible r */
 ```
 
-Missing components are also rejected; an empty/singleton spelling is not introduced merely to illustrate that diagnostic. This proposal does not define named tuple zero/default construction or relax the selected union initialization restrictions.
+Missing components are also rejected; an empty/singleton spelling is not introduced merely to illustrate that diagnostic. The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
 
 ## 5. Inference and stored tuples: selected order boundary
 
@@ -323,15 +323,15 @@ The actual signatures and source locations must already permit those grants. A n
 
 ## 8. Spreading and remaining boundaries
 
-Tuple construction spread does not automatically establish call spread. In particular, op(tuple_value) supplies one value and cannot silently fill several parameters. A future op(...tuple_value) needs an explicit positional-versus-named mapping policy. The initial routing proposal neither accepts named spreading nor allows it to bypass duplicate, missing, type, permission, or evaluation checks.
+Tuple construction spread does not automatically establish call spread. In particular, op(tuple_value) supplies one value and cannot silently fill several parameters. A future op(...tuple_value) needs an explicit positional-versus-named mapping policy. The selected routing core does not establish named spreading or allow it to bypass duplicate, missing, type, permission, or evaluation checks.
 
 Aliases cannot hide an order mismatch; normalized tuple contracts decide it. Named-field selectors must be statically available and accessible on the source. Union-valued components retain their existing member/widening contracts; naming a field does not unwrap Result/Option or choose a union member. Generic expected-schema discovery and full source grammar remain open.
 
-This case catalogue covers the structural success/failure classes for the proposed mapping: positional, fully named, mixed, reordered, missing, excess, unknown, duplicate, incompatible type/access, contextual versus stored, inferred versus expected, nested calls, shadowing, and outward exits. It is a design audit, not a claim that a LiteScript parser or runtime has executed these examples.
+This case catalogue covers the structural success/failure classes for the selected routing and explicitly marked extensions: positional, fully named, mixed, reordered, missing, excess, unknown, duplicate, incompatible type/access, contextual versus stored, inferred versus expected, nested calls, shadowing, and outward exits. It is a design audit, not a claim that a LiteScript parser or runtime has executed these examples.
 
 ## Review evidence and limits
 
-An independent finite routing model was evaluated for this proposal on 2026-10-21. It enumerated 781 abstract call-entry shapes for three parameters, including positional entries, known labels, an unknown label, missing entries, excess entries, and duplicate selections. Its ten accepted complete shapes exactly match the ten listed above. Giving b an explicit default admits thirteen shapes. A corresponding two-component contextual tuple model enumerated 85 entry shapes and admitted the four listed construction forms.
+An independent finite routing model was evaluated for the routing algorithm on 2026-10-21. It enumerated 781 abstract call-entry shapes for three parameters, including positional entries, known labels, an unknown label, missing entries, excess entries, and duplicate selections. Its ten accepted complete shapes exactly match the ten listed above. Giving b an explicit default admits thirteen shapes. A corresponding two-component contextual tuple model enumerated 85 entry shapes and admitted the four listed construction forms.
 
 The model checks static position/name routing only. Types, permissions, defaults with effects, pattern ownership, source parsing, and runtime execution were reviewed as contract boundaries, not executed as LiteScript. These counts do not constitute compiler or runtime verification.
 

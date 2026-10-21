@@ -66,7 +66,7 @@ Only adjacent plain union composition flattens. Do not discard or redistribute u
 - A Result's .ok/.err distinction remains, even when its success and failure payload types are identical. T ! T is not T.
 - A union of two Result types is not automatically rewritten into one Result with unioned success/error operands. Such a conversion could erase which source outcome contract applied.
 - Enum cases retain their distinct names/tags even when payload types coincide. A plain T | T cannot express two separately named cases; an enum can.
-- A union of complete tuple or record alternatives retains those alternatives. Do not replace correlated components with independent per-field unions. Tuple type grammar remains a separate proposal.
+- A union of complete tuple or record alternatives retains those alternatives. Do not replace correlated components with independent per-field unions. Tuple component forms and core construction/binding rules are selected separately; complete recursive grammar and tuple name identity remain open. See [tuple component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
 - Unit remains a real alternative when combined with a distinct type. It is not absent data and must not be erased like a duplicate.
 
 These preserve already selected pattern inference and explicit Option/Result handling. Normalization introduces no None, null, automatic unwrap, or generated conversion.

@@ -18,7 +18,7 @@ These forms supply the same three inputs to the same callable. Naming an argumen
 
 The comparison of all twelve established reference languages, plus supplemental C#, is in [named calls and tuples across the reference languages](named-arguments-reference-comparison.md).
 
-## Shared spelling to consider
+## Construction spelling
 
 Use colon for a type and equals for a supplied value, following existing record construction:
 
@@ -32,7 +32,7 @@ size := (width = 640, height = 480);
 typed_size: (width: Int, height: Int) = (width = 640, height = 480);
 ```
 
-The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Complete named tuple type/literal/access grammar and name-identity policy still need confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
+The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Core component, construction, access, and binding forms are selected. Complete recursive grammar and name-identity policy remain open. Existing record declarations remain nominal; this review does not give record types structural compatibility.
 
 For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
@@ -65,7 +65,7 @@ result := area(width = 640, height = 480);
 
 Recommend obtaining public labels from the caller-visible callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
 
-For a full independently inferred fn definition, its header is a candidate source of both public labels and local parameter bindings. This needs explicit rules for repeated parameter names, patterns, and underscore names. Underscore is an ordinary readable identifier in LiteScript; this review must not silently turn it into an unnamed-input marker.
+A full definition such as fn(width: Int, height: Int): Int { ... } supplies the identifier labels used by its selected named calls. Public-label compatibility across stored callable assignment remains open, as do broader parameter-pattern and repeated-name declaration rules. Underscore is an ordinary readable identifier in LiteScript; this review must not silently turn it into an unnamed-input marker.
 
 Two policies for stored callable compatibility remain open:
 
@@ -117,7 +117,7 @@ Recommend exploring name-sensitive compatibility: names communicate the roles of
 
 The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. Keep this decision open; asking for the comparison is not acceptance of the recommendation.
 
-Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Name identity, stored unlabeled-tuple admission, positional destructuring of named tuples, and explicit name removal still need their own policies. The [concrete proposal](named-input-routing.md) makes recommendations for those cases without treating them as accepted. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
+Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Positional destructuring of named tuples is selected and follows stored component order. Name identity, stored unlabeled-tuple admission, and explicit name removal remain open. The [concrete routing reference](named-input-routing.md) separates those remaining recommendations from selected binding rules. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
 
 ### C. Keep tuples positional and use records for named values
 
@@ -133,7 +133,7 @@ size := Size { width = 640, height = 480 }
 
 Record field declarations require a semicolon between adjacent ordinary fields. Newlines, tabs, and spaces do not supply separators. The final field separator is optional; the complete record declaration ends its outer item without requiring a semicolon. The equivalent compact declaration is Size := record { width: Int; height: Int }. Supplied record-value fields instead use commas. See [lexical structure](lexical-structure.md#separators).
 
-These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; complete tuple name identity, grammar, and pattern rules remain open. Named argument support remains a separate capability.
+These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; tuple name identity, complete recursive grammar, and the specifically marked pattern extensions remain open. Named argument support remains a separate capability.
 
 ## A tuple argument versus spreading arguments
 
@@ -158,7 +158,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 ## Reference languages
 
-- **Odin:** native named arguments use name=value; named arguments can be reordered, with positional arguments before named ones. Named results are a separate procedure facility. This is a close precedent for the proposed call surface. Sources: [named arguments](https://odin-lang.org/docs/overview/#named-arguments), [named results](https://odin-lang.org/docs/overview/#named-results).
+- **Odin:** native named arguments use name=value; named arguments can be reordered, with positional arguments before named ones. Named results are a separate procedure facility. This is a close precedent for the selected call surface. Sources: [named arguments](https://odin-lang.org/docs/overview/#named-arguments), [named results](https://odin-lang.org/docs/overview/#named-results).
 - **Zig:** anonymous struct literals supply named fields, while tuples are anonymous structs with numbered fields. Its examples distinguish named data from positional tuple data. These are useful product representations without implying LiteScript should turn a call into a single anonymous-struct input. Sources: [anonymous struct literals](https://ziglang.org/documentation/master/#Anonymous-Struct-Literals), [tuples](https://ziglang.org/documentation/master/#Tuples).
 - **V:** its docs explicitly use trailing struct-literal syntax as the alternative to native named/default arguments. A call that looks named can be construction of the final struct argument. Source: [trailing struct literal arguments](https://docs.vlang.io/structs.html#trailing-struct-literal-arguments).
 - **Rust:** ordinary call grammar lists argument expressions, and tuple fields are positional, numbered from zero. These contracts keep call inputs and tuple values distinct. Sources: [call expressions](https://doc.rust-lang.org/reference/expressions/call-expr.html), [tuple types](https://doc.rust-lang.org/reference/types/tuple.html).

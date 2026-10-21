@@ -20,6 +20,8 @@ The detailed reference below develops these foundations one concept at a time.
 
 Examples use `text` fences because no LiteScript syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
 
+Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see [component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
+
 Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See [temporary generic notation](generic-notation.md).
 
 As is selected for a loop's one optional item name; the earlier colon separator, receiver lists, and header destructuring are retired. See [loop receivers](loop-receivers.md).
@@ -102,9 +104,9 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.
 - [Comparison patterns](comparison-patterns.md): proposed direct ordering tests, selected Boolean guards, and the boundary between pattern alternatives and Boolean or.
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
-- [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
+- [Tuples and patterns](tuples-and-patterns.md): selected positional and named bindings, typed/inferred tuple annotations, and remaining nested/rest grammar.
 - [Named arguments and named tuples](named-arguments-and-tuples.md): selected positional/named/mixed call forms; open public names versus lambda-local bindings, tuple label compatibility, and modern reference-language comparisons.
-- [Concrete named input routing](named-input-routing.md): selected written evaluation order and fresh-versus-stored tuple behavior; proposed argument mapping, invalid cases, named destructuring, defaults, and permission composition.
+- [Concrete named input routing](named-input-routing.md): selected argument mapping, invalid-input checks, named destructuring, tuple component forms, written evaluation order, and fresh-versus-stored tuple behavior; open callable, default-timing, and permission-composition details.
 - [Named calls and tuples across the reference languages](named-arguments-reference-comparison.md): all twelve established references plus C#, distinguishing native argument labels, named product values, tuple labels, and compatibility.
 - [Tuple spread and rest](tuple-spread-and-rest.md): requested construction spreading and typed pattern capture, known shapes, evaluation order, and unresolved empty/singleton tuple details.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.

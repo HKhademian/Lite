@@ -6,12 +6,12 @@ These sources were consulted during the design discussion. They support comparis
 
 - [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html): final expressions, unit results, and control-flow boundaries. LiteScript's semicolons deliberately do not suppress a preceding final result.
 - [If expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html): mandatory braced branches, value selection, and restrictions needed around certain condition expressions.
-- [Loops and breakable expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html): loop forms, lexical labels, and explicit exits. LiteScript's accumulator and generalized targeted return are separate proposals.
+- [Loops and breakable expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html): loop forms, lexical labels, and explicit exits. LiteScript's selected accumulator, targeted completion, and loop payload rules have their own [control-flow contract](control-flow.md), with implementation and memory details still open.
 - [Tuple types and unit](https://doc.rust-lang.org/reference/types/tuple.html): the singleton unit type and tuple values.
 - [Option](https://doc.rust-lang.org/std/option/index.html): explicit absence, pattern handling, and representation guarantees for particular types. This does not imply every `Option<T>` in a new language has no representation cost.
-- [Recoverable errors with Result](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html): typed failures and propagation. LiteScript proposes implicit ordinary success instead of mandatory construction of success wrappers.
+- [Recoverable errors with Result](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html): typed failures and propagation. LiteScript selects implicit ordinary success construction while keeping explicit failure handling and propagation; see [Result and errors](result-and-errors.md).
 - [Ownership](https://doc.rust-lang.org/stable/book/ch04-01-what-is-ownership.html): an established ownership-based memory model. LiteScript's ownership rules remain unchosen.
-- [References and borrowing](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html): read/write access and constraints on simultaneous aliases; comparison material for the separate mutability proposal.
+- [References and borrowing](https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html): read/write access and constraints on simultaneous aliases; comparison material for the selected [var/mut access contracts](mutability.md) and the remaining ownership/lifetime design.
 
 ## C++
 
@@ -78,9 +78,9 @@ These sources were consulted during the design discussion. They support comparis
 
 ## Local source of design decisions
 
-The [named argument and tuple comparison](named-arguments-reference-comparison.md) checks all twelve reference languages used by the type-category review, plus supplemental C#, for native argument labels, named product alternatives, and tuple name compatibility. The selected LiteScript positional/named/mixed call forms are recorded separately from open named-tuple rules.
+The [named argument and tuple comparison](named-arguments-reference-comparison.md) checks all twelve reference languages used by the type-category review, plus supplemental C#, for native argument labels, named product alternatives, and tuple name compatibility. The [current routing reference](named-input-routing.md) records selected call permutations and validation, tuple component syntax, contextual construction, stored order, and positional/named destructuring. Name identity, callable compatibility, and full recursive grammar remain open; native reference-language syntax is not rewritten into LiteScript syntax.
 
-The primary source for LiteScript-specific choices is the design conversation through 2026-10-18. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.
+The primary source for LiteScript-specific choices is the design conversation through 2026-10-21. No independent external specification, implementation, or benchmark currently establishes those choices. The [decision ledger](decisions-and-open-questions.md) identifies retained direction, working proposals, and unresolved contracts.
 
 ## Enum and type-category comparison
 
