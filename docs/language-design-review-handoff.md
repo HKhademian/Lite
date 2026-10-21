@@ -91,7 +91,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - The user requested modern references for this model. [Union storage comparison](union-storage-reference-comparison.md) records official Rust/Zig/Odin/V/C++ contracts checked 2026-10-21. Rust repr(C) payload enums explicitly use a tag-plus-payload-union struct. Distinguish logical tagged semantics from stable layout, and default construction from bytewise zero. V concrete sum-type layout/default-zero encoding was not established by the inspected public docs; no measurements or layout tests were run.
 
-- The user requested [zero-member possibilities](union-zero.md#member-selection-possibilities-open-review): first-written member, canonical normalized-type order, or explicit designation. Recommend pursuing canonical order to retain current order independence and inferred unions without annotations; no policy or algorithm is selected. Explain identity/fallback costs of the other choices and that value-preserving widening need not preserve an all-zero encoding. No new syntax or public zeroOf API is selected.
+- The user requested [zero-member possibilities](union-zero.md#member-selection-possibilities-open-review): first-written member, canonical normalized-type order, or explicit designation. The user selected exploring canonical order to retain current order independence and inferred unions without annotations. The next review should compare concrete ordering rules; no primitive priority, Unit preference, stable nominal-type key, or complete algorithm is selected. Explain identity/fallback costs of the other choices and that value-preserving widening need not preserve an all-zero encoding. No new syntax or public zeroOf API is selected.
 
 ## Plan links
 

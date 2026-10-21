@@ -78,7 +78,7 @@ The earlier proposal for a distinguished zero state outside the alternatives is 
 
 ## Member-selection possibilities (open review)
 
-All candidates must map the metadata's all-zero pattern to the chosen member and leave its payload zeroed. Selection can happen when the compiler forms the union type; no runtime search for a zero member is needed. Which policy to use is not selected.
+All candidates must map the metadata's all-zero pattern to the chosen member and leave its payload zeroed. Selection can happen when the compiler forms the union type; no runtime search for a zero member is needed. The user selected canonical ordering as the direction to explore; the concrete ordering and complete member-selection contract remain open.
 
 ### 1. First written member
 
@@ -120,11 +120,11 @@ The selected widening rule retains the active member and payload. Suppose a cano
 
 Consequently, zero(source) widened to destination is not generally zero(destination). Demanding that equation for every source member would force both A and B to be the same active zero member, contradicting their preserved identities. This is not a new conversion exception: it follows from the already selected value-preserving membership/widening rules. See [union widening](union-widening.md).
 
-## Recommendation and boundaries
+## Chosen review direction and boundaries
 
-For plain inferred unions under the current rules, pursue a specified canonical member-selection order. This is a recommendation, not a selected policy or complete ordering algorithm. Use an explicitly designed nominal type if the domain needs a chosen zero alternative that a general canonical order cannot express.
+The user selected exploring canonical ordering for plain inferred unions on 2026-10-21. Preserve the current order-independent identity and annotation-free inferred unions while comparing concrete member orders. This chooses the investigation direction, not a complete ordering algorithm. No primitive priority, Unit preference, alphabetic key, size priority, hash, or nominal-type tie-break is selected. Explicitly designed nominal types remain a possible separate mechanism for domain-chosen zero alternatives.
 
-First-written-member remains an option if the user wants to revise order-independent identity. Explicit designation remains an option if its identity and inferred-union fallback are designed. An extra none/invalid state, several active members at once, or rejection of zero construction is outside the selected contract.
+First-written-member and explicit designation remain comparison history rather than the current investigation direction; revisiting them would require their identity and inferred-union contracts. An extra none/invalid state, several active members at once, or rejection of zero construction is outside the selected contract.
 
 ## Constraints already selected
 
