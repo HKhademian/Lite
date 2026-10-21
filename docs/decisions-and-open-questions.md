@@ -267,6 +267,8 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 - [Plain-union zero](union-zero.md) remains open: recommend zero(A | B) hold zero of one listed member, preserving exhaustive A/B matching without an extra zero state. Exact member selection is a separate unresolved decision. Compare canonical type ordering, explicit designation with inferred-union/alias rules, and source ordering only if revisiting union identity. Odin, Rust, and C++ provide contrasting reference policies. No new rule selected.
 
+- The user confirms bytewise zeroing of plain union storage and requests size(A | B) = max(size(A), size(B)). The [storage-rule review](union-zero.md#users-storage-rule-and-the-remaining-conflict) records an information-capacity conflict if this is total independent storage while preserving arbitrary member values and active identity. Payload-versus-total size remains unresolved; no hidden metadata, untagged semantics, or zero-member selection is implied.
+
 ## Deferred context design
 
 [Pinned context ideas](deferred-contexts.md) preserve allocator/environment context, explicit capture headers, context in callable signatures, caller-supplied versus private stored state, and lifetime/ownership alternatives. The user postponed these topics on 2026-10-21 because of their complexity at the current language stage. The earlier clarification and capture-lifetime recommendation are parked, not pending choices for the next review. Resume on explicit request. Detailed reference comparisons remain in [closures](closures.md).

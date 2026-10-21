@@ -66,7 +66,7 @@ Some mappings require further decisions:
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
 
-The [plain-union zero review](union-zero.md) compares a zero value belonging to one listed member with an additional zero state, then separates that choice from canonical, designated, or source-ordered member selection. No union-zero mapping is selected yet.
+The [plain-union zero review](union-zero.md) compares a zero value belonging to one listed member with an additional zero state, then separates that choice from canonical, designated, or source-ordered member selection. The user confirms zeroing all union storage bytes and requests max-member size; the exact total-size reading conflicts with general member discrimination, so the payload-versus-total interpretation remains unresolved. No active zero-member mapping is selected yet.
 
 ## Zero-initialized functions
 

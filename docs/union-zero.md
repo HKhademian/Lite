@@ -1,6 +1,6 @@
 # Zero values of plain unions
 
-Status: **open review, 2026-10-21**. Universal valid all-zero initialization and order-independent plain-union identity are selected. The active value of a zero-initialized multi-member union is not selected.
+Status: **open review, 2026-10-21**. Universal valid all-zero initialization and order-independent plain-union identity are selected. The user explicitly confirms zeroing all union storage bytes and requests size(A | B) = max(size(A), size(B)). That exact total-size requirement conflicts with general active-member identity unless another representation or semantic rule supplies the missing information. Total versus payload size and zero-member meaning remain unresolved.
 
 ## Concrete case
 
@@ -13,6 +13,29 @@ value := if number_mode {
 ```
 
 Selected branch inference gives T = Int | String, and the missing-else path supplies zero(T). Its exact active member remains unresolved when neither condition matches. An explicit final else can supply a known result now, but requiring one everywhere would not define zero for stored unions or zero-result callables.
+
+## User's storage rule and the remaining conflict
+
+The user specifies:
+
+```text
+size(A | B) = max(size(A), size(B))
+zero(A | B) = zero every byte of that storage
+```
+
+Zeroing every byte is confirmed and agrees with universal zero initialization. It does not by itself select the active member, or decide whether a zero state is one member or a separate state. The preceding question about that semantic boundary therefore remains unanswered.
+
+The size formula is recorded as requested. Do not silently reinterpret size as payload size, promise a complete implementation, or add an unmentioned tag allocation. Under the total inline-size reading, it cannot hold for every union while preserving all member values and their active nominal identities.
+
+For a concrete capacity argument, suppose A and B each occupy one byte and each admits all 256 bit patterns. Their identities remain distinct, so A | B must distinguish 512 values: A's 256 and B's 256. One byte has only 256 states. At least nine bits of information are needed; an independently stored byte-addressed value needs more than one byte unless information lives elsewhere. Zero(A) and zero(B) having the same payload bytes is one collision, not the entire issue.
+
+Possible directions to clarify:
+
+- If max size describes only the overlapping payload region, preserve it as the payload goal and separately account for active-member information, alignment, and padding. Exact total storage is not generally payload size plus one byte; it depends on the layout contract.
+- If max size is a strict total-size guarantee, some other guarantee must change or additional information must live elsewhere. An untagged interpretation cannot generally recover the stored member from overlapping bit patterns. External metadata has storage, copying, aliasing, and cleanup costs and is not selected by the formula.
+- Spare bit patterns can encode the member for some unions; static knowledge can eliminate member information in some uses. Neither technique proves a universal max-size representation for arbitrary independently stored unions. Conditional provenance cannot recover an unknown member after arbitrary storage and transfer unless it is preserved as information.
+
+No direction is selected. All-zero bytes remain a valid value, but the interpretation of those bytes and the complete union representation still need a contract.
 
 ## First boundary to choose
 
