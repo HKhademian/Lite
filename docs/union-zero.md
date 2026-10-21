@@ -1,6 +1,6 @@
 # Zero values of plain unions
 
-Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero-tag meaning remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; which valid value zero metadata denotes remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
+Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
 
 ## Current storage model
 
@@ -18,7 +18,7 @@ struct AB {
 
 Metadata carries the information needed to identify the active member. The payload members overlap. Thus payload capacity is max(size(A), size(B)); total storage also accounts for metadata, alignment, and padding. This is compatible with selected active-member identity and checked narrowing. It does not require boxing or a separately allocated metadata table.
 
-All-zero initialization clears the complete value, including metadata. The metadata's zero pattern must have a valid language meaning, but the sketch does not decide which member or state that means. Member numbering, metadata width/position, ownership/drop support, and union-zero selection remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
+All-zero initialization clears the complete value, including metadata. The metadata's zero pattern must identify one listed member; which member is not yet decided. Member numbering, metadata width/position, ownership/drop support, and union-zero selection remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
 
 ## Concrete case
 
@@ -59,21 +59,32 @@ The current direction is metadata plus overlapping payload. Earlier suggestions 
 
 Sources checked 2026-10-21: [Microsoft's C union storage documentation](https://learn.microsoft.com/en-us/cpp/c-language/storage-of-unions?view=msvc-170) describes shared addresses and overwritten storage. Its [x64 union layout specification](https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-aggregate-and-union-layout) explicitly accounts for alignment padding. The [C working draft N3550](https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3550.pdf), section 6.7.3.2, specifies storage sufficient for the largest member rather than a runtime discriminator.
 
-## First boundary to choose
+## Selected membership of union zero
 
-Recommendation: zero(A | B) should hold the zero value of exactly one listed member, preserving the ordinary tagged-union model. A match covering A and B remains exhaustive, including for a zero-initialized value. No additional empty, absent, invalid, or multi-active union state would be introduced. This boundary is a proposal, not a completed member-selection rule.
+The user rules out a zero value outside the listed alternatives. For distinct normalized member types A and B:
 
-The alternative is a distinguished valid zero state outside the listed alternatives. This can simplify zero-filled representation, but then A and B no longer cover every value of A | B. Matching, narrowing, common field reads, equality, and cleanup would need rules for that state. Giving it another name would not remove that semantic cost. A shared zero that matches several members is another change to the tagged-union model; matching order and member identity would need a separate contract.
+```text
+x := zeroOf(A | B)
+/* Static type: A | B; active member: exactly one of A or B. */
+```
+
+The zeroOf spelling illustrates the user's question; it does not select a new standard-library function or override existing zero-initializer syntax.
+
+Zero metadata must identify a valid listed member, with its zero payload. A match covering A and B therefore remains exhaustive, including for a zero-initialized union. A hidden none/empty state, invalid tag, or state matching several active member identities is rejected. An explicitly listed optional type or Unit remains an ordinary allowed member; this rule introduces no additional absence alternative.
+
+This selects the membership boundary, not the chosen member. It is not yet correct to claim that zero(A | B) is specifically A or specifically B. A language-defined choice must make the complete all-zero representation valid while remaining consistent across equivalent order-independent union types. A runtime panic on reading zero would not satisfy that requirement.
+
+The earlier proposal for a distinguished zero state outside the alternatives is not chosen. Clearing bytes alone is insufficient until the metadata's zero pattern is assigned a listed member.
 
 ## Member-selection directions still to compare
 
-If the listed-member boundary is selected, at least one further rule is required:
+With the listed-member boundary selected, a member-selection rule is still required:
 
 - Canonical selection from normalized type identities. Preserve A | B = B | A and choose the same member zero for equivalent unions. A complete rule must handle arbitrary nominal records, aliases, nesting, and generic instantiations. Compiler discovery/link order or an undocumented hash is not a language contract. A fixed priority such as Unit before Int before String would still need a complete ordering for all other types, and adding a new member could change the zero member.
 - Explicit zero-member designation. Let a programmer declare the zero member for a union. A declaration-only mechanism does not cover automatically inferred or inline unions by itself. Conflicting designations through transparent aliases of the same union need resolution; treating the designated zero as part of identity or introducing a nominal wrapper would change the model. Ordinary declared defaults cannot silently replace the all-zero mapping, because zero initialization bypasses defaults.
 - Source-ordered union identity/defaults. Pick the first member's zero, as in some reference languages. This is simple to explain but would require revisiting selected order-independent identity and normalization. The same semantic union cannot acquire different zero values merely because an alias writes its members in another order.
 
-No member policy is recommended yet. First choose whether zero remains an existing member; then compare concrete policies. Rejecting zero construction for some unions would contradict selected universal zero initialization rather than solve its mapping.
+No specific member-selection policy is selected yet. Compare concrete policies for which listed member zero metadata identifies. Rejecting zero construction for some unions would contradict selected universal zero initialization rather than solve its mapping.
 
 ## Constraints already selected
 

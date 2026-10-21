@@ -79,7 +79,7 @@ Exhaustiveness is checked against normalized alternatives under the eventual cov
 
 There is no first union member to use as an implicit default. Contextual 0 cannot arbitrarily select one of several possible zeroable alternatives. Expected-type and literal rules must reject unresolved ambiguity or use an independently defined valid zero contract.
 
-The [union-zero review](union-zero.md) recommends preserving an existing member as the zero value, while leaving both that boundary and the exact member-selection rule open. Source order cannot choose the zero member under the current identity rule.
+The selected [union-zero membership rule](union-zero.md#selected-membership-of-union-zero) requires zero to hold the zero value of one listed member, with no hidden none/invalid state. Which listed member is chosen remains open. Source order cannot choose the zero member under the current identity rule.
 
 The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model): max-member size applies to payload capacity, while full storage includes metadata and alignment. This supports distinguishable active member identities. The zero metadata interpretation must remain coherent across order-independent equivalent union types; exact tag encoding and ABI remain open.
 

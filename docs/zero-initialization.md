@@ -66,7 +66,7 @@ Some mappings require further decisions:
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
 
-The [plain-union zero review](union-zero.md) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. The valid member/state denoted by zero metadata remains unresolved.
+The [plain-union zero review](union-zero.md) records the clarified metadata-plus-overlapping-payload model. Zero initialization clears both metadata and payload; total wrapper storage includes metadata and alignment beyond max-member payload capacity. Zero metadata must identify one listed member and its zero payload; a hidden none/invalid state is rejected. Which listed member it identifies remains unresolved.
 
 ## Zero-initialized functions
 
