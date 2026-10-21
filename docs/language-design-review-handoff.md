@@ -107,6 +107,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [missing conditional else with union T](conditional-union-fallback.md): require an explicit fallback for normally reachable unmatched multi-member union completion; preserve single-type zero. Exhaustive conditional chains construct the chosen member without a prerequisite undirected union-zero value, since their metadata is hidden until then. Conditional then receives valid T and cannot repair an absent T after the fact. A wider destination alone is not the criterion: check resolved T. Loop state, arguments, callable zero, and aggregate fields remain separate pending sites.
 
+- Next review is [omitted arguments for union parameters](union-parameter-defaults.md): recommend a supplied argument or applicable declared default that yields an initialized member/compatible union. No choice selected. An unused parameter or zero callable still requires a valid input; no = ? argument or automatic Unit choice. Keep non-union zero defaults, default syntax/timing/placement, caller-access parameters, record fields, loops, and zero-callable results separate.
+
 ## Plan links
 
 | Relation | Plan / file |

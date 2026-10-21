@@ -100,7 +100,7 @@ consume := fn(value: A | B): Unit {
 
 Assume the input is a stable closed union with distinct A/B alternatives and no extra empty state. The final path is logically unreachable; exact diagnostic/flow analysis remains separate. The example is not a claim that this code has been implemented or executed. If the empty-zero alternative is adopted, A/B-only coverage instead needs a nonempty proof.
 
-Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments are a separate creation case: the selected parameter-default/zero rule still needs to create a valid value, and cannot silently supply uninitialized storage. Explicit output-only construction would require its own contract.
+Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments are a separate creation case: the selected parameter-default/zero rule still needs to create a valid value, and cannot silently supply uninitialized storage. The [union-parameter review](union-parameter-defaults.md) proposes requiring a supplied argument or an applicable declared default; that exception remains open. Explicit output-only construction would require its own contract.
 
 ## Leftmost member as a construction rule
 

@@ -51,6 +51,8 @@ An omitted ordinary value argument is default-initialized. Use its declared para
 
 This settles ordinary value parameters. Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns still need formalization. Omission of caller-access parameters must be reviewed with their `mut`/`var` permission and location contracts. See [initialization](zero-initialization.md) and [evaluation order](evaluation-order.md#function-calls).
 
+The [union-parameter default review](union-parameter-defaults.md) proposes requiring an argument for a normalized multi-member plain-union parameter unless an applicable declared default supplies an initialized compatible value. It remains open; the general zero-default wording above must not silently choose a union member. Single-type defaults and callable default-placement/timing questions stay separate.
+
 ## Compact implementations under review
 
 Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Local lambda result inference is selected below; unknown-input and recursive result inference remain separate.
