@@ -16,6 +16,10 @@ No cast or named case wrapper is needed. The destination permits more alternativ
 
 The destination type must be established by context. destination := source keeps the source's inferred type; it does not choose a larger union automatically. Apply the same compatibility rule wherever a destination plain union is already required, subject to the eventual ownership and capability rules.
 
+### Zero values under widening
+
+Widening a zero-valued member preserves that member, even when the destination union's own zero selects a different member. A source zero can therefore acquire nonzero destination metadata. Union-to-union widening may remap a discriminant. There is no general equation requiring widened zero(source) to equal zero(destination); see [zero-member selection](union-zero.md#widening-preserves-values-not-zero-encoding). The exact zero-member policy remains open.
+
 ## Exact membership after normalization
 
 Resolve transparent aliases, flatten nested plain unions, and remove duplicate identities before comparing the alternatives. Widening succeeds exactly when the normalized source alternatives are a subset of the destination alternatives. A single-member source follows the already selected [member admission rule](union-membership.md).

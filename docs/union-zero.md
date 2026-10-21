@@ -76,15 +76,55 @@ This selects the membership boundary, not the chosen member. It is not yet corre
 
 The earlier proposal for a distinguished zero state outside the alternatives is not chosen. Clearing bytes alone is insufficient until the metadata's zero pattern is assigned a listed member.
 
-## Member-selection directions still to compare
+## Member-selection possibilities (open review)
 
-With the listed-member boundary selected, a member-selection rule is still required:
+All candidates must map the metadata's all-zero pattern to the chosen member and leave its payload zeroed. Selection can happen when the compiler forms the union type; no runtime search for a zero member is needed. Which policy to use is not selected.
 
-- Canonical selection from normalized type identities. Preserve A | B = B | A and choose the same member zero for equivalent unions. A complete rule must handle arbitrary nominal records, aliases, nesting, and generic instantiations. Compiler discovery/link order or an undocumented hash is not a language contract. A fixed priority such as Unit before Int before String would still need a complete ordering for all other types, and adding a new member could change the zero member.
-- Explicit zero-member designation. Let a programmer declare the zero member for a union. A declaration-only mechanism does not cover automatically inferred or inline unions by itself. Conflicting designations through transparent aliases of the same union need resolution; treating the designated zero as part of identity or introducing a nominal wrapper would change the model. Ordinary declared defaults cannot silently replace the all-zero mapping, because zero initialization bypasses defaults.
-- Source-ordered union identity/defaults. Pick the first member's zero, as in some reference languages. This is simple to explain but would require revisiting selected order-independent identity and normalization. The same semantic union cannot acquire different zero values merely because an alias writes its members in another order.
+### 1. First written member
 
-No specific member-selection policy is selected yet. Compare concrete policies for which listed member zero metadata identifies. Rejecting zero construction for some unions would contradict selected universal zero initialization rather than solve its mapping.
+```text
+zeroOf(A | B)  /* zero A */
+zeroOf(B | A)  /* zero B */
+```
+
+This is easy to explain and gives authors control through ordering. It resembles C++ variant default construction and Odin's no-nil union default, although their default contracts are not LiteScript's universal bytewise zero.
+
+It requires revisiting selected order-independent union identity or defining a new order-sensitive zero policy as part of the contract. The same type cannot have different all-zero meanings through reordered transparent aliases. Flattening nested unions, duplicates, and branch-result inference would need an ordered policy too; moving an arm could otherwise change a default. Do not quietly introduce declaration or compiler discovery order as a substitute.
+
+### 2. Canonical order of normalized type identities
+
+Define a language-specified order and choose the earliest member in that order. For illustration only, assume A ranks before B:
+
+```text
+zeroOf(A | B)  /* zero A */
+zeroOf(B | A)  /* zero A */
+```
+
+This preserves order-independent identity, aliases, flattening, duplicate removal, and automatic inference without extra annotations. A compiler can assign the selected member the zero metadata encoding.
+
+The choice can feel arbitrary to the author. A complete order must cover primitives, nominal types from different modules, anonymous/local type identities, and generic instantiations. Sorting short display names, using an undocumented hash, or relying on linking order is not a complete policy. Renaming/moving a nominal definition or adding a new earlier-ranked member may change the zero choice under the eventual key; stability boundaries need documentation. No concrete ordering algorithm is selected.
+
+A preferred-category rule, such as Unit when explicitly present, then a fixed primitive ordering, is an extension of this option. It still needs a canonical fallback for arbitrary nominal members and must never add Unit to a union that did not list it. Size-based priority is another possible order, but needs tie-breaking and can make zero-member identity target-dependent; it is not recommended as the semantic foundation.
+
+### 3. Explicit zero-member designation
+
+A union contract declares which listed member is zero. Schematic example, with no syntax selected: AB admits A | B and designates A. Metadata zero then means A, and the payload is zero(A). This is visible and lets domain authors choose meaningful defaults.
+
+Two declarations admitting the same A | B but choosing different zero members cannot remain interchangeable transparent aliases with one identical all-zero mapping. The designation must participate in a distinct contract/type identity, use a nominal wrapper, or be governed by one coherent shared policy. Required per-union declarations also fail to cover inline and automatically inferred unions without an additional fallback rule. Ordinary field/parameter default expressions cannot solve this, since bytewise zero bypasses declared defaults.
+
+This option is useful for explicitly designed domain types, but is not a complete replacement for plain inferred-union zero selection by itself. Rust's named-enum Default selection is a precedent for author choice, not a direct solution to an order-independent inferred union or a promise of all-zero payloads.
+
+## Widening preserves values, not zero encoding
+
+The selected widening rule retains the active member and payload. Suppose a canonical rule selects A for A | B. Widening zero(B) into A | B must still produce a B value, even though the destination's own zero is A. The widened B may therefore have nonzero metadata. If the source is itself a union, its discriminant may need remapping during widening.
+
+Consequently, zero(source) widened to destination is not generally zero(destination). Demanding that equation for every source member would force both A and B to be the same active zero member, contradicting their preserved identities. This is not a new conversion exception: it follows from the already selected value-preserving membership/widening rules. See [union widening](union-widening.md).
+
+## Recommendation and boundaries
+
+For plain inferred unions under the current rules, pursue a specified canonical member-selection order. This is a recommendation, not a selected policy or complete ordering algorithm. Use an explicitly designed nominal type if the domain needs a chosen zero alternative that a general canonical order cannot express.
+
+First-written-member remains an option if the user wants to revise order-independent identity. Explicit designation remains an option if its identity and inferred-union fallback are designed. An extra none/invalid state, several active members at once, or rejection of zero construction is outside the selected contract.
 
 ## Constraints already selected
 
