@@ -52,7 +52,7 @@ The user asks about this proposed binding shape:
 (left, right): (l, r) = (r = op1(), l = op2());
 ```
 
-Its exact binding/type syntax is not selected. If l and r are type names, the colon has the usual type-annotation role and does not itself express routing by field name. If the intended meaning is left receives l and right receives r, that label-mapping form needs its own grammar. Fresh named initializer reordering and explicit reconstruction for differently ordered stored tuples are now selected, but the original label-binding syntax is not; do not assert that this complete declaration is already valid.
+The user clarified this as (left, right): (l: Int, r: Int) = expr: the annotation is a named tuple type, followed by positional binding into left/right. Explicit field binding uses (left = l, right = r) := expr. Those binding directions are selected. Bare names after the colon must not be interpreted as source selectors by name lookup. Complete recursive annotation grammar remains to be formalized.
 
 For any admitted named construction or call, preserve the existing source-order contract: evaluate op1 first for the written r entry, then op2 for the written l entry. Each executed occurrence runs once. Mapping evaluated values to destination fields or signature positions must not reorder observable expression evaluation.
 
@@ -64,7 +64,7 @@ The corresponding proposed reordered function call is:
 consume(r = op1(), l = op2());
 ```
 
-For a signature declaring l before r, recommend accepting named arguments in this written order. Reordering remains a proposal pending user confirmation. When such a call is admitted, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
+For a signature declaring l before r, named arguments may appear in this written order. The user selected named suffix reordering. For an admitted call, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
 
 The user selected the distinction between contextual construction and stored tuple order: a fresh named initializer may populate destination fields in any written order, while an already stored tuple with a different component order requires explicit reconstruction. Source expression order is preserved in both cases. Name identity and complete tuple/pattern grammar remain open. See [concrete named routing](named-input-routing.md) and [named arguments and tuples](named-arguments-and-tuples.md).
 

@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **concrete design review, 2026-10-21; not an implemented parser/runtime**. The user selected written evaluation order, fresh named initializer reordering, and explicit reconstruction when a stored tuple has a different component order. Basic positional/named/mixed calls and declared-default-only omission were selected earlier. The remaining rules below complete a proposed model and are marked as recommendations until confirmed.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Complete recursive grammar, name identity, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
 ## 1. Selected rule: written order is execution order
 
@@ -16,7 +16,7 @@ For function calls, evaluate the callee first, supplied expressions in written o
 
 This contract does not choose copying, moving, borrowing, access activation, rollback, or destruction order. Those operations must preserve the selected observable expression order while obeying their own permission/lifetime rules.
 
-## 2. Function calls: concrete routing proposal
+## 2. Function calls: selected routing
 
 ```text
 op := fn(a: Int, b: Int, c: Int): Int {
@@ -30,7 +30,7 @@ op(1, 2, c = 3);
 
 Those three call shapes are selected. All supply a = 1, b = 2, c = 3, giving the mathematical result 123 for this illustrative body.
 
-Recommend accepting any permutation of the named suffix:
+Named suffix entries may appear in any permutation:
 
 ```text
 op(c = 3, a = 1, b = 2);
@@ -48,7 +48,7 @@ Executes third(), first(), second(), then op. The producer names do not change t
 
 ### Every complete call shape for three inputs
 
-With these three required inputs, no spread/defaults, and the fixed mapping a = 1, b = 2, c = 3, the proposed prefix/suffix rule admits exactly ten positional-versus-named orderings:
+With these three required inputs, no spread/defaults, and the fixed mapping a = 1, b = 2, c = 3, the selected prefix/suffix rule admits exactly ten positional-versus-named orderings:
 
 ```text
 op(1, 2, 3);
@@ -67,7 +67,7 @@ A positional prefix of length zero leaves six named permutations; length one lea
 
 ### Static routing algorithm
 
-Recommend this bounded algorithm for a known public signature:
+For a known public signature, use this routing algorithm:
 
 1. Require unambiguous public labels for parameters addressable by name.
 2. Accept a positional prefix of length k and map it to the first k signature positions. A positional argument does not search for the next unfilled slot after a named entry.
@@ -81,7 +81,7 @@ The routing invariant is simple: positional and named inputs select disjoint pos
 
 Labels are static selectors, not expressions. A local variable named b does not change what op(b = expression) selects. Parentheses/grouping must not cause the parser to guess between an argument label and ordinary assignment according to whether type checking succeeds. Complete assignment-expression grammar remains separate.
 
-### Invalid call cases under this proposal
+### Selected invalid call cases
 
 Each line below is an independent rejected example for the same op signature:
 
@@ -121,7 +121,7 @@ pair: (l: Int, r: Int) = (r = 20, l = 10);
 (left, right) := pair;
 ```
 
-The initialized tuple has l = 10, r = 20 in that order. Under the proposed retention of ordinary positional tuple destructuring, left is 10 and right is 20.
+The initialized tuple has l = 10, r = 20 in that order. Ordinary positional tuple destructuring follows that stored order, so left is 10 and right is 20.
 
 This also applies to a known tuple-valued function input. For a function with one input pair of type (l: Int, r: Int), recommend:
 
@@ -131,7 +131,7 @@ take_pair((r = op1(), l = op2()));
 
 There is one tuple-valued argument. Its known expected type supplies the destination schema. Evaluate the callee, then op1, then op2, then invoke take_pair. This does not supply two separate function arguments.
 
-### Fresh construction forms to include in the proposal
+### Four selected fresh construction forms
 
 ```text
 pair: (l: Int, r: Int) = (10, 20);
@@ -140,11 +140,11 @@ pair: (l: Int, r: Int) = (r = 20, l = 10);
 pair: (l: Int, r: Int) = (10, r = 20);
 ```
 
-All initialize the same l, r destination in this proposed completion of the selected reordering rule. A contextual literal can mix a positional prefix and named suffix by the same routing algorithm as a call. Tuple components have no newly introduced defaults; require every component to be supplied.
+All initialize the same l, r destination under the selected construction rule. A contextual literal can mix a positional prefix and named suffix by the same routing algorithm as a call. Tuple components have no newly introduced defaults; require every component to be supplied.
 
-For two required components these are all four positional/named ordering shapes under the proposed prefix/suffix rule: two fully named permutations, one mixed form, and one fully positional form.
+For two required components these are all four positional/named ordering shapes under the selected prefix/suffix rule: two fully named permutations, one mixed form, and one fully positional form.
 
-Under that proposal, reject:
+Apply the same duplicate, unknown, ordering, and type checks:
 
 ```text
 pair: (l: Int, r: Int) = (r = 20, 10);          /* positional after named */
@@ -190,9 +190,9 @@ For initial inference, recommend fully positional or fully named literals. An in
 
 ## 6. Destructuring and the user's original form
 
-The original (left, right): (l, r) form does not yet have a label-routing grammar. After a colon, existing syntax expects types; l and r cannot sometimes mean types and sometimes source-field selectors according to name lookup.
+The user clarified the intended annotation as (l: Int, r: Int): a named tuple type. The colon after a binding pattern supplies the source/initializer tuple contract; it does not list source-field selectors.
 
-Recommend extending the existing destination-first named-field clause to tuple patterns:
+Named tuple patterns use the selected destination-first field clause:
 
 ```text
 pair: (l: Int, r: Int) = (r = 20, l = 10);
@@ -206,11 +206,11 @@ By comparison, positional destructuring follows the stored tuple order:
 
 ```text
 stored := (r = 20, l = 10);
-(first, second) := stored; /* proposed: first = 20, second = 10 */
-(left = l, right = r) := stored; /* proposed: left = 10, right = 20 */
+(first, second) := stored; /* first = 20, second = 10 */
+(left = l, right = r) := stored; /* left = 10, right = 20 */
 ```
 
-Recommend exact component coverage in the initial named tuple pattern: reject unknown or duplicate source selectors, omitted components, and mixed positional/named patterns. Named rest/partial extraction needs a separate rule. This restriction is for the proposed tuple pattern, not a change to existing record-pattern questions.
+The initial named tuple pattern requires exact component coverage: reject unknown or duplicate source selectors, omitted components, and mixed positional/named patterns. Named rest/partial extraction needs a separate rule. This tuple-pattern rule does not decide the separate record-pattern omission questions.
 
 Repeated destination bindings retain the already selected written-order shadowing rule:
 
@@ -219,7 +219,35 @@ Repeated destination bindings retain the already selected written-order shadowin
 (_ = r, _ = l) := pair;         /* final readable _ binds l */
 ```
 
-These select different source components, despite repeating a binding name. By contrast, (left = l, right = l) selects l twice and is rejected by the initial duplicate-source proposal. Binding order must not silently duplicate ownership, authorize overlapping writes, or specify user-defined getter/destructor effects; those remain governed by the shared pattern/memory rules.
+These select different source components, despite repeating a binding name. By contrast, (left = l, right = l) selects l twice and is rejected by the initial duplicate-source rule. Binding order must not silently duplicate ownership, authorize overlapping writes, or specify user-defined getter/destructor effects; those remain governed by the shared pattern/memory rules.
+
+### The five declaration forms clarified
+
+Assume epx is an initialized tuple whose contract is (l: Int, r: Int). The examples are independent declarations:
+
+```text
+(left, right): (l: Int, r: Int) = epx;
+(left, right) := epx;
+(left, right) := (l = 1, r = 2);
+(left, right): (l: Int, r: Int) = (l = 1, r = 2);
+(left = l, right = r): (l: Int, r: Int) = (l = 1, r = 2);
+```
+
+All are valid under the selected tuple direction. The first uses an explicit tuple type and positional binding; the second infers the stored tuple contract and binds by position. The third infers a fresh tuple in written l, r order. The fourth uses the annotated expected tuple type for construction. The fifth additionally selects fields by name in its binding pattern. In the last three examples, left is 1 and right is 2.
+
+For a reversed fresh initializer, an explicit expected type establishes destination order:
+
+```text
+(left, right): (l: Int, r: Int) = (r = 2, l = 1);
+```
+
+Here left is 1 and right is 2. An unannotated fresh literal instead infers written component order:
+
+```text
+(left, right) := (r = 2, l = 1); /* left = 2, right = 1 */
+```
+
+Named binding can explicitly select either source order without converting the whole stored value. A whole-tuple type annotation still checks the source contract before the pattern is applied; a named pattern cannot bypass a stored tuple order mismatch.
 
 ## 7. Callables, nested inputs, and permissions
 

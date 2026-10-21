@@ -1,8 +1,8 @@
 # Named arguments and named tuples
 
-Status: **basic positional/named/mixed calls, written evaluation order, fresh named initializer reordering, and explicit reconstruction for differently ordered stored tuples selected by the user, 2026-10-21. Full named tuple grammar, name identity, further call mapping rules, callable label compatibility, and named patterns remain open**.
+Status: **named call permutations and validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Complete recursive grammar, tuple name identity, callable label compatibility, and explicitly marked extensions remain open**.
 
-The [concrete routing case catalogue](named-input-routing.md) records the selected construction/storage boundary and a complete proposed mapping algorithm with valid and rejected examples. Its further recommendations are not silently selected by this status update.
+The [concrete routing case catalogue](named-input-routing.md) records the selected mapping algorithm and construction/storage boundary with valid and rejected examples. Remaining recommendations are explicitly marked.
 
 ## Selected basic call forms
 
@@ -36,22 +36,22 @@ The call supplies two inputs; the tuple expression illustrates one value with tw
 
 For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
-## Named calls: further rules to consider
+## Selected named call routing
 
 ```text
 resize(640, 480);
 resize(width = 640, height = 480);
-resize(height = 480, width = 640); /* reordering remains a proposal */
+resize(height = 480, width = 640);
 resize(640, height = 480);
 ```
 
-Propose positional arguments first, followed by named arguments in any written order. A positional argument occupies its next signature position; a named argument identifies one public parameter. Reject unknown names, ambiguous labels, supplying one input twice, and positional arguments after a named argument. For example, resize(640, width = 800, height = 480) supplies width twice.
+Use positional arguments first, followed by named arguments in any written order. A positional argument occupies its next signature position; a named argument identifies one public parameter. Reject unknown names, ambiguous labels, supplying one input twice, and positional arguments after a named argument. For example, resize(640, width = 800, height = 480) supplies width twice.
 
-The selected omission rule still applies: every unfilled input needs an applicable explicitly declared default. Named calls would let a programmer supply a later input while omitting an earlier defaulted one. They would not add automatic zero arguments. Default declaration syntax, evaluation timing, and where defaults belong remain open.
+The selected omission rule still applies: every unfilled input needs an applicable explicitly declared default. Named calls let a programmer supply a later input while omitting an earlier defaulted one. They do not add automatic zero arguments. Default declaration syntax, evaluation timing, and where defaults belong remain open.
 
 Evaluate the callee first, then supplied argument expressions once each in written order, consistent with the existing evaluation contract. In resize(height = read_height(), width = read_width()), read_height runs first even though width is the first parameter. Mapping names to input positions must not reorder side effects. Transfer and permission activation remain subject to the shared memory contract.
 
-The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Fresh contextual named initializers may route by destination names; differently ordered stored tuples require explicit reconstruction. The original (left, right): (l, r) label-binding syntax and further function-call routing rules remain open. See the [concrete cases](named-input-routing.md).
+The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Fresh contextual named initializers may route by destination names; differently ordered stored tuples require explicit reconstruction. The user clarified the annotated binding as (left, right): (l: Int, r: Int), with a tuple type after the colon. Core call mapping and named tuple patterns are now selected; complete recursive grammar and callable compatibility remain open. See the [concrete cases](named-input-routing.md).
 
 Names can be resolved statically. This feature need not require a runtime name dictionary, reflection, or heap allocation. Exact passing and ABI remain separate.
 
@@ -150,7 +150,7 @@ A function taking one tuple remains distinct from a function taking two paramete
 
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
-- Mixing named and unnamed tuple components, numeric access, repeated names, label inference, and named destructuring need decisions.
+- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, numeric access, complete recursive grammar, and full name-identity/conversion policy remain open. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 

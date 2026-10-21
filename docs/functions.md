@@ -55,9 +55,9 @@ Default-expression syntax, evaluation timing and scope, defaults in callable sig
 
 ## Named arguments under review
 
-The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. Further mapping rules, argument reordering, public label identity versus contextual lambda-local names, stored-callable compatibility, complete call grammar, and tuple argument spreading remain open. See [named arguments and named tuples](named-arguments-and-tuples.md).
+The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. Named suffix permutations and the positional-prefix rule are selected. Reject duplicate, unknown, excess, missing-without-default, incompatible, and positional-after-named inputs statically. Public label identity versus contextual lambda-local names, stored-callable compatibility, complete recursive call grammar, and tuple argument spreading remain open. See [named arguments and named tuples](named-arguments-and-tuples.md).
 
-The [concrete named routing review](named-input-routing.md) proposes named argument permutations, duplicate/unknown checks, positional prefixes, expected tuple-valued inputs, and composition with mut/var caller grants. Written argument evaluation order and declared-default-only omission are already selected; further call grammar and callable label compatibility remain open.
+The [concrete named routing review](named-input-routing.md) records selected named argument permutations, duplicate/unknown checks, and positional prefixes, plus expected tuple-valued inputs and proposed composition with mut/var caller grants. Written argument evaluation order and declared-default-only omission are already selected; complete recursive call grammar and callable label compatibility remain open.
 
 ## Compact implementations under review
 
