@@ -77,6 +77,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [independent empty-header lambdas](functions.md#empty-headers-without-an-expected-callable): zero inputs for `(): Int { 42 }` without an expected callable; preserve all expected inputs when a signature exists. Requiring an expected callable every time was not chosen. Keep general body inference, callable conversions, partial nonempty header omission, and deferred context topics separate.
 
+- Next review is [partially named lambda inputs](functions.md#partially-named-input-headers-open-review): allow a positional prefix and omit trailing names, or require every nonempty-header position with underscore names for nonuse. Recommend prefix omission as consistent with accepted `()`, while retaining the full expected call contract. No choice is selected yet. TypeScript permits fewer callback parameters; Rust requires matching callable argument counts. Keep stored-callable conversion and deferred context work separate.
+
 ## Plan links
 
 | Relation | Plan / file |
