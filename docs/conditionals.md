@@ -55,17 +55,17 @@ price := if premium {
 
 - Ordinary expression conditions require `Bool`; pattern and type-test conditions succeed by matching. There is no implicit truthiness.
 - Normally completing value branches must satisfy an expected result contract when one exists. Otherwise infer their normalized plain union, collapsing duplicate type identities.
-- Every conditional owns a result context, whether tagged or untagged. Its branch/zero result has type `T` and begins as `zero(T)` before branch selection. If the conditional has an attached `then`, that block produces the final result of type `R`; without `then`, the conditional produces `T`. Read-only `@tag.value` access to `T` is available only inside that conditional's attached `then`. It requires an explicit tag and does not expose branch or condition metadata.
-- A normally completing selected branch supplies the conditional result. If the chain has no final `else` and no branch matches, the result is the initial zero value of `T`.
+- Every conditional owns a result context, whether tagged or untagged. Its result has type `T`, constructed from the selected branch or, where allowed, the missing-else zero fallback. Exhaustive union-valued chains do not require an initial undirected `zero(T)` before selecting a member. If the conditional has an attached `then`, that block produces the final result of type `R`; without `then`, the conditional produces `T`. Read-only `@tag.value` access to `T` is available only inside that conditional's attached `then`. It requires an explicit tag and does not expose branch or condition metadata.
+- A normally completing selected branch supplies the conditional result. If the chain has no final `else` and no branch matches, an allowed single-type zero fallback supplies `zero(T)`. When resolved `T` is a normalized multi-member plain union, require an explicit fallback if selection can normally complete without a contributor.
 - This fallback does not form `Option<T>` or handle an error. For example, a conditional expected as `Option<User>` returns that type's zero state, `.None`, when no pattern matches.
 - A conditional whose normally completing branches produce `Unit` remains `Unit` on the unmatched path too. A non-`Unit` branch makes a missing-`else` conditional a value-producing expression, including when it is the final item of a loop body.
 - Zero initialization does not infer `T` by itself. Normally completing branch values and the surrounding expected type constrain `T`. When no normally completing branch constrains `T`, it defaults to `Unit`; an expected type can override that default.
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
 - Mixed branch results infer a plain union without inventing conversions or an escaping error channel. Explicit/expected result contracts remain constraints.
 
-The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. Missing else still supplies zero(T), without adding Unit. The exact zero alternative for a multi-member union remains unresolved.
+The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. An allowed missing-else path supplies zero(T), without adding Unit. A normally reachable unmatched multi-member union result requires an explicit fallback.
 
-The [union fallback review](conditional-union-fallback.md) proposes requiring an explicit fallback when the resolved branch-result type is a multi-member plain union. It also refines result storage for exhaustive chains to construct the chosen member without an initial undirected union zero. This remains open; the general zero descriptions here need that reconciliation before union-valued missing-else examples have complete semantics.
+The selected [union fallback rule](conditional-union-fallback.md) requires an explicit fallback when resolved T is a multi-member plain union and selection can normally finish without a contributor. Exhaustive chains construct their chosen member directly; conditional then receives a valid T. This supersedes unconditional pre-selection zero initialization of conditional result storage.
 
 ## Missing final `else`
 
@@ -97,7 +97,7 @@ On pattern mismatch, `found` is the zero value of `Option<User>`, `.None`; no ex
 
 The conditional's normal result is supplied by the selected branch or by the zero fallback. The attached `then` runs after that result is selected and may transform `T` into `R`; only its body can read the original result as `@tag.value`. Neither conditions nor branch bodies can read the conditional's `.value` metadata.
 
-If the chain has no final `else` and nothing matches, `then` receives the zero value `zero(T)` just as it receives a selected branch's result.
+For an allowed missing-else zero fallback, `then` receives `zero(T)` just as it receives a selected branch's result. An unmatched multi-member union path requires an explicit fallback first; `then` cannot repair a missing T after the fact.
 
 ### Result processing with conditional `then`
 

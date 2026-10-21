@@ -105,7 +105,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [bare local union declaration policy](union-initialization-policy.md#bare-local-declarations): reject x: A | B without an initializer, requiring an initialized compatible expression or existing = ?. Default-uninitialized omission was not chosen. Apply after alias resolution/normalization; explicitly reserved values obey definite-initialization rules. Keep parameters/fields/globals, constructor grammar, and implicit zero-result sites separate.
 
-- Next review is [missing conditional else with union T](conditional-union-fallback.md). Recommend an explicit fallback for normally reachable unmatched multi-member union completion; preserve single-type zero. Exhaustive conditional chains should construct the chosen member without a prerequisite undirected union-zero value, since their metadata is hidden until then. No choice selected. A wider destination alone is not the criterion: check resolved T. Loop state, arguments, callable zero, and aggregate fields remain separate pending sites.
+- Selected [missing conditional else with union T](conditional-union-fallback.md): require an explicit fallback for normally reachable unmatched multi-member union completion; preserve single-type zero. Exhaustive conditional chains construct the chosen member without a prerequisite undirected union-zero value, since their metadata is hidden until then. Conditional then receives valid T and cannot repair an absent T after the fact. A wider destination alone is not the criterion: check resolved T. Loop state, arguments, callable zero, and aggregate fields remain separate pending sites.
 
 ## Plan links
 

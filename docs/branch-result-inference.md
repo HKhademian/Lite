@@ -49,7 +49,7 @@ An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` i
 
 For a conditional with then, this inference determines the pre-then value type T. The then body still produces final type R. An expected R does not by itself force the branch type T to equal R.
 
-Multiple distinct branch types without a final else still require zero(T) on the unmatched path. The exact zero value for a multi-member plain union remains unresolved; union member order cannot select its zero alternative. This selection does not choose a first-member default or abandon universal valid zero initialization. The [conditional union-fallback review](conditional-union-fallback.md) now recommends an explicit fallback, consistent with rejecting undirected union zero; it remains open. Such examples do not yet have a fully specified unmatched value. See [union initialization](union-normalization.md#ordering-coverage-and-initialization).
+The selected [conditional union-fallback rule](conditional-union-fallback.md) requires an explicit fallback when resolved T is a normalized multi-member plain union and selection can normally complete without a contributor. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). Single-type zero fallbacks remain available; a wider destination alone does not force a union fallback.
 
 ## Alternatives and tradeoff
 
