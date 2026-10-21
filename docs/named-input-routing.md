@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Complete recursive grammar, identical-shape structural identity, stored named/unnamed conversions, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
 ## 1. Selected rule: written order is execution order
 
@@ -192,9 +192,20 @@ The user emphasized that cake/tea and fruit/chocolate describe different roles. 
 
 Fresh positional literals can still populate a known named tuple contract, and fresh named literals can still route into its destination order. Those construction rules do not allow a differently labeled stored tuple to be silently renamed. Type aliases do not bypass the label check.
 
-### Remaining type policy — recommendation
+### Structural tuple identity — selected
 
-Recommend that a named tuple's ordered label/type sequence defines its structural tuple contract, so repeated identical tuple type expressions describe the same tuple type. This structural-identity completion still awaits confirmation; selecting label-sensitive compatibility alone does not select it. Separately declared records retain their selected nominal identities. Stored unnamed-to-named and named-to-unnamed conversions likewise remain open; recommend explicit reconstruction initially.
+Selected by the user, 2026-10-21: the same ordered component labels and resolved component types describe the same tuple type wherever written. Repeating a tuple type expression does not create a fresh nominal identity:
+
+```text
+first: (cake: Int, tea: Int) = (1, 2);
+second: (cake: Int, tea: Int) = first; /* valid: same tuple type */
+```
+
+Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. A different component label, order, or resolved type describes a different tuple type; general assignability between different component types remains a separate type-system rule. The selected same-shape rule does not permit implicit stored-tuple relabeling or permutation. Separately declared records retain their selected nominal identities.
+
+### Remaining conversion and inference policy — recommendation
+
+Stored unnamed-to-named and named-to-unnamed conversions remain open; recommend explicit reconstruction initially.
 
 For initial inference, recommend fully positional or fully named literals. An inferred mixed tuple such as mixed := (10, r = 20) lacks names for its positional prefix; reject it initially unless an expected complete named tuple contract supplies that schema. This is a proposed restriction, not a new rule for existing positional tuples. Empty and singleton tuple syntax remains separate.
 
