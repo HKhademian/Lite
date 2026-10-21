@@ -81,6 +81,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [independent lambda result inference](functions.md#independent-lambda-result-inference): infer an unambiguous nonrecursive local result from the body when input types are already known. `(n: Int) { n * 2 }`, `() { 42 }`, and `() {}` infer Int/Int/Unit. Require an annotation for ambiguous results. Keep explicit error contracts, recursive/public signature policy, unknown-input inference, and deferred context work separate.
 
+- Next review is [mixed local result types](functions.md#mixed-local-result-types-open-review): a guard returning Int followed by a String tail could require an explicit/expected Int | String contract or infer that union automatically. Recommend the explicit-contract boundary to preserve current conditional/match rules. No choice selected; an already-union expression can still infer normally. Keep explicit error contracts, recursive inference, and deferred context work separate.
+
 ## Plan links
 
 | Relation | Plan / file |

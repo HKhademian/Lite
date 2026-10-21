@@ -232,6 +232,37 @@ Requiring an expected result type or a written result annotation for every indep
 
 Rust supports closure result-type inference, for example `let double = |n: i32| { n * 2 };`; see [inferring closure types](https://doc.rust-lang.org/book/ch13-01-closures.html#inferring-and-annotating-closure-types). Zig's ordinary function declarations explicitly write a return type, such as `fn double(n: i32) i32 { return n * 2; }`; see [Zig functions](https://ziglang.org/documentation/master/#Functions). These are contrasting annotation policies, not a claim that Zig has LiteScript-style lambda syntax.
 
+#### Mixed local result types (open review)
+
+Clear local result inference is selected above. A remaining case is a local lambda with distinct result types on different completion paths:
+
+```text
+choose := (flag: Bool) {
+    if flag { return 1 }
+    "none"
+}
+```
+
+The explicit return supplies Int to the lambda, while normal completion supplies String. The guard's exiting branch does not itself produce a local conditional value. Two policies remain under review:
+
+- Require a result annotation or an expected callable result that accepts both types. With no such contract, diagnose the incompatible result candidates. This preserves the existing conditional/match policy against automatically inventing a union for incompatible branches.
+- Infer the normalized plain union Int | String from the lambda's completion payloads. This reduces annotation but can make a changed return path silently widen a local callable's inferred result. It would require a consistent follow-up decision for equivalent conditional/match bodies rather than making inferred signatures depend on guard-versus-tail spelling.
+
+Recommendation: retain the explicit-contract boundary for distinct incompatible result types. The programmer can write:
+
+```text
+choose := (flag: Bool): (Int | String) {
+    if flag { return 1 }
+    "none"
+}
+```
+
+Both payloads are admitted by the existing exact-member union rule. An expected callable returning Int | String can supply that result contract too. A single result type that is already a union can still be inferred normally; this question concerns forming a new union from separate incompatible candidates. Existing numeric compatibility rules remain separate.
+
+No choice is selected yet. Neither option silently adds escaping recoverable errors, changes the missing-else zero fallback, or makes an explicitly narrower expected result widen. Genuine Unit results still need to satisfy the result contract. Recursive inference, context/capture work, union layout, and general branch-join rules remain separate.
+
+Reference comparison, checked 2026-10-21: [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) must have one type across their outcomes; Rust does not form a plain Int | String union for mismatched branches. [TypeScript's inference documentation](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#return-type-annotations) describes inferred function results, and its [union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) include an inferred number[] | string result. These illustrate different policies; LiteScript's existing exact-member unions do not by themselves decide when inference should create one.
+
 #### Named, underscore, and empty headers
 
 The user compares three implementation headers under the existing `x: fn(a: Int): String` contract:
