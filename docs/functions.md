@@ -224,7 +224,7 @@ empty := () {}
 /* Inferred signature: fn(): Unit */
 ```
 
-Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. This does not select arbitrary union formation for incompatible completion paths.
+Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. Distinct completion payload types form a normalized plain union under the selected rule below.
 
 Keep the scope narrow: input types must already be established by annotations or an expected callable. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
 
@@ -232,23 +232,23 @@ Requiring an expected result type or a written result annotation for every indep
 
 Rust supports closure result-type inference, for example `let double = |n: i32| { n * 2 };`; see [inferring closure types](https://doc.rust-lang.org/book/ch13-01-closures.html#inferring-and-annotating-closure-types). Zig's ordinary function declarations explicitly write a return type, such as `fn double(n: i32) i32 { return n * 2; }`; see [Zig functions](https://ziglang.org/documentation/master/#Functions). These are contrasting annotation policies, not a claim that Zig has LiteScript-style lambda syntax.
 
-#### Mixed local result types (open review)
+#### Mixed local result types
 
-Clear local result inference is selected above. A remaining case is a local lambda with distinct result types on different completion paths:
+Selected rule: when a nonrecursive local lambda has known input types and no explicit or expected result contract, infer the normalized plain union of its completion payload types.
 
 ```text
 choose := (flag: Bool) {
     if flag { return 1 }
     "none"
 }
+/* Inferred signature: fn(flag: Bool): (Int | String) */
 ```
 
-The explicit return supplies Int to the lambda, while normal completion supplies String. The guard's exiting branch does not itself produce a local conditional value. Two policies remain under review:
+The explicit return supplies Int to the lambda, while normal completion supplies String. Both contribute to its inferred result. The guard's exiting branch does not itself produce a local conditional value. Returns belonging to a nested callable do not contribute to the enclosing lambda's result.
 
-- Require a result annotation or an expected callable result that accepts both types. With no such contract, diagnose the incompatible result candidates. This preserves the existing conditional/match policy against automatically inventing a union for incompatible branches.
-- Infer the normalized plain union Int | String from the lambda's completion payloads. This reduces annotation but can make a changed return path silently widen a local callable's inferred result. It would require a consistent follow-up decision for equivalent conditional/match bodies rather than making inferred signatures depend on guard-versus-tail spelling.
+Use the existing plain-union normalization: duplicate types disappear and nested plain unions flatten. Int and Int therefore infer Int; Int and String infer Int | String. Preserve composite structure, nominal identity, and Result boundaries; this does not merge Result layers or infer a new escaping error channel. Numeric compatibility remains governed by its separate rules.
 
-Recommendation: retain the explicit-contract boundary for distinct incompatible result types. The programmer can write:
+Explicit and expected result contracts remain constraints. An expected Int result rejects a String completion rather than widening to Int | String. The programmer may still write the union explicitly:
 
 ```text
 choose := (flag: Bool): (Int | String) {
@@ -257,11 +257,11 @@ choose := (flag: Bool): (Int | String) {
 }
 ```
 
-Both payloads are admitted by the existing exact-member union rule. An expected callable returning Int | String can supply that result contract too. A single result type that is already a union can still be inferred normally; this question concerns forming a new union from separate incompatible candidates. Existing numeric compatibility rules remain separate.
+Genuine Unit completion payloads participate like other types. A missing conditional else still supplies zero(T), not an added Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Escaping recoverable errors still require an explicitly declared error contract, directly or through the expected callable.
 
-No choice is selected yet. Neither option silently adds escaping recoverable errors, changes the missing-else zero fallback, or makes an explicitly narrower expected result widen. Genuine Unit results still need to satisfy the result contract. Recursive inference, context/capture work, union layout, and general branch-join rules remain separate.
+Requiring an explicit or expected union for distinct local completion payloads was considered and not chosen. A changed completion payload can change the inferred local result; an annotation can pin the contract. This decision concerns lambda completion payloads. Inferring unions within conditional/match result expressions remains a follow-up consistency question; no general branch-join rule is selected here. Recursive inference, context/capture work, and union representation remain separate.
 
-Reference comparison, checked 2026-10-21: [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) must have one type across their outcomes; Rust does not form a plain Int | String union for mismatched branches. [TypeScript's inference documentation](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#return-type-annotations) describes inferred function results, and its [union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) include an inferred number[] | string result. These illustrate different policies; LiteScript's existing exact-member unions do not by themselves decide when inference should create one.
+Reference comparison, checked 2026-10-21: [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) must have one type across their outcomes; Rust does not form a plain Int | String union for mismatched branches. [TypeScript's inference documentation](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#return-type-annotations) describes inferred function results, and its [union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) include an inferred number[] | string result. LiteScript selects union formation for the local lambda completion case described above.
 
 #### Named, underscore, and empty headers
 

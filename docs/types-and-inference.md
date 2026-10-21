@@ -63,6 +63,8 @@ double := fn(x) {
 }
 ```
 
+Nonrecursive local lambdas with established input types have selected [body-result inference](functions.md#independent-lambda-result-inference). Without an explicit or expected result contract, distinct completion payload types form a [normalized plain union](functions.md#mixed-local-result-types): an Int return and String tail infer Int | String. Explicit/expected result types remain constraints, and escaping recoverable errors require an explicit contract. This does not settle unknown-input generic inference or union formation within conditional/match expressions.
+
 One proposal is constrained generic inference: the function is valid for types supporting an appropriate addition operation. Alternatives include requiring parameter annotations in more situations. Recursive and ambiguous definitions need a specified inference boundary.
 
 The [collection-inference proposal](collection-inference.md) applies this question to simple collection functions: infer a reusable traversal requirement rather than locking an omitted input annotation to List from one call. It also explores propagating known element types into nested record literals. Neither proposal selects structural record compatibility, automatic caller mutation, inferred escaping errors, or new generic syntax.
