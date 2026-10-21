@@ -264,6 +264,8 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 [Pinned context ideas](deferred-contexts.md) preserve allocator/environment context, explicit capture headers, context in callable signatures, caller-supplied versus private stored state, and lifetime/ownership alternatives. The user postponed these topics on 2026-10-21 because of their complexity at the current language stage. The earlier clarification and capture-lifetime recommendation are parked, not pending choices for the next review. Resume on explicit request. Detailed reference comparisons remain in [closures](closures.md).
 
+Conceptual clarification: public context requirements describe dependencies supplied by an invoking caller; implementation captures can remain private and already bound. Captured field names are not automatically part of the public call signature. The C++ example `[offset](int n) { return n + offset; }` still has an integer input/result call shape. Concrete environment storage, callable compatibility, and lifetime checking remain deferred; see [public signature versus implementation](deferred-contexts.md#public-signature-and-private-implementation).
+
 ## Contracts to settle next
 
 ### 1. Loop contribution and construct-result inference

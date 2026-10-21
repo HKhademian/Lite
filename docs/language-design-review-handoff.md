@@ -73,6 +73,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - **Context design postponed at the user's request, 2026-10-21.** Preserve [the pinned ideas](deferred-contexts.md): environment context such as allocators, explicit captures, context in signatures, caller-supplied context versus private stored state, and lifetime alternatives. Earlier capture choices are deferred design history, not current language requirements. The previous caller-context clarification is parked too. Keep existing fn/lambda syntax and optional annotations; resume context design on explicit request.
 
+- Subsequent conceptual clarification separates [public context requirements from implementation captures](deferred-contexts.md#public-signature-and-private-implementation). Callers supply declared dependencies; a closure's captured names/state can remain private and already bound. Supersede the earlier claim that every capture field belongs in the public callable signature. Concrete closure types, representations, and safety constraints still need future design. This clarification does not resume feature implementation.
+
 ## Plan links
 
 | Relation | Plan / file |

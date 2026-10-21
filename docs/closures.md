@@ -34,9 +34,9 @@ shifted := map(numbers, [offset](n) { n + offset });
 
 The lambda uses `offset` from its lexical surroundings rather than receiving it as a parameter. The capture header explicitly lists that context. The map API is illustrative; its library signature remains open.
 
-## Explicit context in the callable signature
+## Implementation captures (deferred)
 
-The earlier favored direction declared captured context explicitly before the parameter list; it is now deferred. Use LiteScript's ordinary `name: Type` parameter notation:
+The earlier favored syntax declared captures before the implementation's parameter list; it is now deferred. These are implementation-bound captures, not extra context that an invoking caller must provide. Use LiteScript's ordinary `name: Type` parameter notation:
 
 ```text
 var offset: Int = 10;
@@ -56,15 +56,15 @@ live := [var offset](n: Int): Unit {
 - Outer local values used by a body must be declared in its capture list. No implicit read capture or capture-all default is selected. A missing list means no captured local context; `[]` may state that explicitly. Resolving statically available type/module/function declarations is separate from capturing an outer local value.
 - An empty parameter header still leaves the expected call inputs unnamed. It does not remove explicitly declared context: `[offset]() { ... }` can use its captured `offset` under a suitable expected callable contract.
 
-Captured context is part of the callable's signature/contract, not an invisible implementation detail. Its fields, access permissions, ownership, and lifetime requirements must be retained when the callable is passed, stored, or assigned. Type inference may derive a capture's value type from its source without repeating it in the header; explicit context does not require users to duplicate all inferred types.
+The capture list belongs to this implementation. Captured names and field layout can remain private; they do not automatically become caller-required context in the public call signature. For snapshot, that input/result shape is `fn(n: Int): Int`. The caller supplies n and receives the result without supplying offset. The compiler and eventual callable representation must still account for retained state, permissions, ownership, and lifetime restrictions internally.
 
-The capture-header direction and semantics above are pinned ideas, postponed for later review. The written grammar for context-bearing callable types and full `fn` capture headers still needs review. Whether field names affect type identity, how callback types admit different environments, and how context contracts compose must not be assumed from the simple `fn(n: Int): Int` input/result notation. In particular, a matching input/result shape alone must not silently erase writable access or lifetime requirements. This does not mandate a runtime context object, dynamic lookup, or heap allocation.
+The capture-header direction and semantics above are pinned ideas, postponed for later review. Public context-requirement grammar, concrete closure types, callback compatibility, and full `fn` capture placement still need review. The earlier claim that capture fields must be exposed in every public signature is superseded by the [public/private distinction](deferred-contexts.md#public-signature-and-private-implementation). Matching call shapes do not settle storage or lifetime safety, and private state does not mandate a heap allocation or dynamic lookup.
 
 `var` capture introduces a relationship to source storage, not a freely escaping public pointer. Complete nonescape, aliasing, reentrancy, cleanup, and owned-escape rules remain open. Temporary caller grants must not silently become longer-lived handles. Context-bearing callable types must also receive a valid zero mapping under universal zero initialization; a dangling or null storage handle is not an acceptable default.
 
 ## Two context roles under discussion
 
-The user proposes two contexts: one supplied by the caller, and another potentially hidden beside the function. The exact meaning of caller-supplied context was not settled before postponement: ordinary arguments, a distinct execution context supplied on each invocation, or values bound when creating the callable. Do not select among those readings implicitly.
+The user distinguishes context required in a public signature from captures bound by an implementation and potentially hidden beside it. An invoking caller supplies declared context dependencies; implementation captures are already bound. Exact LiteScript syntax, supply timing, storage, and lifetime policy remain deferred.
 
 The useful distinction is between externally supplied state/access and state owned by the callable itself:
 

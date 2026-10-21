@@ -12,8 +12,8 @@ Environment context, such as allocators, is a separate useful idea to retain. It
 
 - **Environment context:** facilities such as allocation and logging supplied to execution. Supply time, explicit versus implicit passing, scope, permissions, and defaults remain undecided.
 - **Explicit capture headers:** the earlier favored `[offset](n) { ... }` value capture and `[var offset](n) { ... }` original-storage access. Keep the distinction as design history, not an active language feature commitment.
-- **Context in signatures:** captured permissions, ownership, and lifetime requirements should be reviewable if the feature returns. Its exact type grammar was not completed.
-- **Two context roles:** caller-supplied context versus private state stored alongside a callable. The clarification about whether caller context means ordinary arguments, per-invocation environment, or creation-time binding is postponed too.
+- **Context in signatures:** dependencies declared as public context requirements are supplied by callers. Their exact LiteScript type grammar remains deferred. Implementation captures do not automatically become public context requirements.
+- **Two context roles:** caller-supplied dependencies versus private state bound by a callable implementation. A caller invoking the finished callable need not provide or know the captured field names. Ownership/lifetime safety and representation remain separate deferred work.
 - **Lifetime choices:** checked access to existing storage, explicitly owned/shared state, and automatic retention were compared; no escape policy was selected.
 - **Representation:** private state might live inline or elsewhere, but no layout, heap allocation, sharing, cleanup, or zero-mapping mechanism was chosen.
 
@@ -25,6 +25,18 @@ Conceptual comparison added on 2026-10-21; LiteScript feature design remains pos
 - **Context requirement:** a declaration requires dependencies supplied for a call. Kotlin writes `context(logger: Logger)`, using a keyword rather than an `@context` annotation. It resolves matching context values at the call site by type and rejects ambiguous matches at the same scope level. See [Kotlin context parameters](https://kotlinlang.org/docs/context-parameters.html). Its [context scope function](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/context.html) makes supplied values available for resolution.
 
 These mechanisms can coexist: a function can require caller-supplied services and create a closure capturing one of them. Declaration visibility, argument-supply syntax, retained state, ownership, and lifetime remain separate choices. This comparison does not select Kotlin-style implicit resolution or resume LiteScript context implementation.
+
+### Public signature and private implementation
+
+The user's clarification is the intended conceptual distinction:
+
+```cpp
+auto add = [offset](int n) { return n + offset; };
+```
+
+Calling add requires an integer and produces an integer. The capture is bound when this implementation is created; the invoking caller does not supply offset or need its name in a public context requirement. C++ gives the closure a concrete type carrying its state, while its public call operator has the declared input/result shape. See the [C++ closure type definition](https://eel.is/c++draft/expr.prim.lambda.closure).
+
+Keep that distinction when returning, passing, or storing callables: captured field layout/names can remain private while the compiler and eventual storage/lifetime rules handle their environment. This does not imply that capturing closures and raw function pointers have the same representation, or that all differently captured implementations have the same concrete type. The earlier claim that capture fields must appear in every public callable signature conflated implementation state with caller-required context and is superseded.
 
 ## Resuming the topic
 
