@@ -94,6 +94,25 @@ A width/height tuple would not automatically fit a left/top tuple, even when bot
 
 This option has a further choice: preserve tuple positions as part of identity, or make the named portion an unordered shape. For an ordered model, (width: Int, height: Int) and (height: Int, width: Int) would differ. For an unordered model, names route values and positional destructuring of named fields needs its own explicit policy. Selecting name sensitivity alone does not settle order.
 
+### Next decision: should names affect compatibility?
+
+Separate name identity from component ordering. Consider this proposed named-tuple assignment:
+
+```text
+size := (width = 640, height = 480);
+point: (x: Int, y: Int) = size;
+```
+
+Under access-label-only semantics, this succeeds by position: point.x is 640 and point.y is 480. Under name-sensitive semantics, it is rejected because width/height do not match x/y. An explicit reconstruction would express the intended renaming:
+
+```text
+point := (x = size.width, y = size.height);
+```
+
+Recommend exploring name-sensitive compatibility: names communicate the roles of equally typed components, and the type checker can check them statically. This recommendation is not selected. It does not by itself make named tuples nominal records or settle compatibility between separately written identical named shapes.
+
+If name sensitivity is selected, next decide whether the same names in a different order describe the same type. Admission of unlabeled tuples through an expected named type, positional destructuring, and explicit name removal remain separate. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
+
 ### C. Keep tuples positional and use records for named values
 
 Named calls are already selected independently. A Size record already supports named fields, contextual construction, and named extraction. This avoids another named product category but needs a record declaration for reusable named data. Inferred standalone record types are not selected by this alternative.
