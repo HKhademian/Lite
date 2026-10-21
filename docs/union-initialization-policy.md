@@ -1,6 +1,43 @@
 # Union construction and omitted initialization
 
-Status: **alternatives proposed by the user, open review 2026-10-21**. The user compares leftmost-member initialization, explicit initialization/reservation, and making uninitialized storage the default for union declarations. None is adopted yet. Separate these questions from the earlier empty-but-readable union proposal and the selected universal all-zero value requirement.
+Status: **undirected multi-member union literal-zero initialization rejected, selected 2026-10-21; omitted declaration policy and member-qualified zero-constructor grammar remain under review**. The user requires a visible member choice rather than an implicit leftmost/canonical selection for x: A | B = 0. Existing explicit reservation and ordinary expression admission remain available. Earlier alternatives are retained below as review history.
+
+## Selected rejection and explicit member choice
+
+```text
+x: (A | B) = 0 /* rejected: bare zero does not identify a member */
+```
+
+Apply this to a destination that remains a plain union of multiple distinct member identities after normalization, including through transparent aliases. Do not silently choose the leftmost/canonical member or insert a readable empty state. This is a source-construction rule, not permission to expose invalid or uninitialized values. A | A normalizes to A, so this particular multi-member ambiguity does not arise there; any other initialization constraints still apply.
+
+The user proposes the following declaration forms:
+
+```text
+x: (A | B) = ?
+x: (A | B) = expr
+x: (A | B) = A{0}
+x: (A | B) = B{0}
+x: (A | B) = A{}
+x: (A | B) = B{}
+```
+
+Their intended roles are distinct:
+
+- = ? reserves storage without a readable value; every path reaching a read must first initialize it. This reuses selected reservation and first-initialization rules.
+- = expr supplies an initialized value whose type is admitted by the union, including an existing compatible union value whose active identity is preserved.
+- A{0} and B{0} explicitly name the desired member and propose zero construction of that member, bypassing its declared defaults. This compact sole-zero constructor marker is new grammar under review, not already supported named-field record syntax or positional field initialization.
+- A{} and B{} explicitly name the member and, for record types with valid default construction, apply that member's declared-default policy. The name chooses the member before union admission. These forms do not imply that every possible non-record type admits brace construction.
+
+Every chosen member must itself be validly constructed; the destination union does not bypass visibility, nested-field initialization, ownership, or permission rules. Constructing zero of a chosen member does not require all union metadata bytes to be zero: the wrapper records the selected identity. No additional tag width, layout, ABI, or public constructor API is selected.
+
+A bare literal 0 in a multi-member union initializer is rejected even if Int is a member; it must not silently choose between contextual union zero and an Int payload. An already typed Int zero remains an ordinary admissible value:
+
+```text
+number := 0
+x: (Int | B) = number /* admits the existing Int value */
+```
+
+The user has not yet settled bare x: A | B without an initializer: rejection versus default-uninitialized storage remains a separate decision. The previous implicit-zero declaration rule must not silently choose a union member here. Likewise, the source ban qualifies earlier universal source-level zero construction; recursively zeroed union fields and other implicit zero-result sites need explicit reconciliation, not hidden member selection. This page does not automatically choose a new policy for those sites.
 
 ## Receiving an existing value
 
@@ -20,7 +57,7 @@ Uninitialized storage cannot be passed to this ordinary parameter. Omitted argum
 
 ## Leftmost member as a construction rule
 
-The user suggests selecting the leftmost member when initializing a new union. For illustration:
+Historical alternative: the user considered selecting the leftmost member when initializing a new union. The following bare-zero forms are now rejected by the selected rule above; they are not current accepted examples:
 
 ```text
 x: (A | B) = 0 /* proposed construction: A with zero payload */
@@ -67,9 +104,9 @@ Relative to requiring = ?, this removes a marker but makes omitted initializatio
 
 ## What declaration policy does not settle
 
-Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The current universal zero requirement still covers explicit union zero construction, recursively zeroed aggregate fields, omitted argument defaults without a declared value, missing-else results, loop state, and zero callable results. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
+Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, omitted argument defaults without a declared value, missing-else results, loop state, and zero callable results. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
 
-The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. The latest proposals are under review and do not yet replace the selected bare-declaration zero rule or universal all-zero rule.
+The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. Undirected union literal-zero initialization is now rejected. The remaining alternatives are under review; omitted declarations, implicit zero-result sites, and complete representation rules are not silently migrated.
 
 ## Reference comparison
 

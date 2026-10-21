@@ -2,6 +2,10 @@
 
 Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
 
+## Latest selected construction restriction
+
+The user now requires [x: A | B = 0 to be rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) for a multi-member normalized union: it does not visibly choose a member. = ? reserves unreadable storage; = expr preserves an initialized source member. A{0}/B{0} are proposed compact member-zero constructors; A{}/B{} select declared-default record construction where valid. No canonical or leftmost member is silently selected. The older zero-member and empty-state discussions below are retained as history; omitted union declarations and implicit zero-result sites need reconciliation with this source restriction.
+
 ## Latest initialization-policy alternatives
 
 The user now compares [leftmost-member construction, explicit initialization, and default-uninitialized union locals](union-initialization-policy.md). These remain open. An ordinary parameter can preserve a supplied active member. Leftmost source-directed construction can preserve order-independent type identity if separated from the complete all-zero representation; earlier claims that it must always change type identity were too broad. Default-uninitialized storage forbids even type tests until initialization; it is distinct from a readable tag-zero empty state. Declaration policy alone does not define universal union zero at other creation sites.
@@ -156,7 +160,7 @@ number := 0
 present: (Int | Unit) = number
 ```
 
-The first two select zero of the union under the existing typed-declaration initialization rules. Unit-first would make both Unit; ranking Int before Unit would make both Int(0), described here as a typed value rather than selected constructor syntax. Inferred number is Int, so present contains Int zero under either policy. That is ordinary member admission, not destination-type zero construction. This distinction follows from literal 0's contextual-zero meaning and should be visible in the decision.
+Historical comparison only: the latest selected rule now rejects the bare-zero explicit_zero initializer, and omitted union declarations remain under review. The first two were considered as union-zero requests under the earlier initialization policy. Unit-first would make both Unit; ranking Int before Unit would make both Int(0), described here as a typed value rather than selected constructor syntax. Inferred number is Int, so present contains Int zero under either policy. That is ordinary member admission, not destination-type zero construction. This distinction follows from literal 0's contextual-zero meaning and should be visible in the decision.
 
 #### Conditional fallback with a real Unit contributor
 

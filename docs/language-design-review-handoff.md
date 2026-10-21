@@ -101,6 +101,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Latest proposals are [union construction and omitted initialization](union-initialization-policy.md): choose source-leftmost on creation, require explicit initializer or = ?, or default union locals to uninitialized storage. Treat as alternatives under review. Correct the earlier overstatement: source-directed construction can create different members of the same order-independent type, but may write nonzero metadata instead of producing a whole all-zero value. Parameter admission preserves a supplied member; omitted arguments are fresh construction. An uninitialized type test is a compile error, not false. After definite initialization, member-only A/B coverage is exhaustive. Keep bare-declaration policy separate from zero(A | B), recursive zero, and implicit-zero result sites.
 
+- Latest selected change: [reject x: A | B = 0](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) as ambiguous for a normalized multi-member union, including aliases and unions listing Int. The user proposes = ?, = expr, A{0}/B{0}, and A{}/B{}. Reservation and initialized expression admission already fit existing rules; A{} applies declared defaults for a valid record member. Treat A{0} as proposed whole-member-zero grammar, not a selected positional field list or automatic whole-wrapper memzero. Bare declarations and implicit/recursive union-zero sites remain unresolved; no silent canonical/leftmost selection or empty-state adoption.
+
 ## Plan links
 
 | Relation | Plan / file |

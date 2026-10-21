@@ -2,6 +2,8 @@
 
 Status: **overview updated 2026-10-19; omitted typed initializers and = 0 select zero initialization; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
 
+The user's later [union-construction review](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
+
 ## 1. Declare a record and its defaults
 
 ```text

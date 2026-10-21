@@ -18,6 +18,10 @@ var name: mut Type = initializer;
 name = replacement;
 ```
 
+## Multi-member union initialization
+
+[x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice): an undirected zero request must not choose among distinct normalized members. Use = ? for explicit reservation, or supply an initialized compatible expression. A{} names a record member and applies its defaults; the proposed A{0} spelling would name and zero that member. Bare union declarations remain under review; the general omitted-initializer rule below must not silently choose their member.
+
 ## Rules
 
 - `:=` declares a binding and infers its type.
