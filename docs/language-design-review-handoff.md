@@ -75,6 +75,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Subsequent conceptual clarification separates [public context requirements from implementation captures](deferred-contexts.md#public-signature-and-private-implementation). Callers supply declared dependencies; a closure's captured names/state can remain private and already bound. Supersede the earlier claim that every capture field belongs in the public callable signature. Concrete closure types, representations, and safety constraints still need future design. This clarification does not resume feature implementation.
 
+- Next non-context review is [independent empty-header lambdas](functions.md#empty-headers-without-an-expected-callable-open-review). Recommend zero inputs for an independent `(): Int { 42 }` without an expected callable, while preserving all expected inputs when an expected signature exists. Requiring an expected callable every time is the alternative. No rule selected yet; keep general body inference, callable conversions, and deferred context topics separate.
+
 ## Plan links
 
 | Relation | Plan / file |

@@ -230,6 +230,24 @@ The empty header `()` retains the entire expected callable signature and binds n
 
 Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. The decision concerns contextual lambda headers; it does not revise explicitly declared callable parameter lists, choose standalone inference without an expected contract, or select partial omission from a nonempty lambda header.
 
+#### Empty headers without an expected callable (open review)
+
+The remaining case is an independent lambda with an empty header. Proposed rule: preserve the expected input contract when one exists; otherwise an empty header declares zero inputs.
+
+```text
+constant := (): Int { 42 }
+/* Proposed independent signature: fn(): Int */
+
+ignore_input: fn(n: Int): Int = (): Int { 42 }
+/* Established contextual rule: one Int input, no local input binding */
+```
+
+Under the proposal, `constant()` returns 42, while `ignore_input(7)` accepts its Int input and returns 42. These are fixed input contracts, not a variadic callable or a runtime decision about how many arguments to accept. Ordinary omitted-argument defaults remain separate. General compatibility/conversion of already-created callable values is not decided here.
+
+An alternative is to require an expected callable type for every empty-header lambda. That keeps the empty header solely as unnamed-input syntax, but requires an explicit `fn(): Int` target type even for a simple independent constant function. Recommendation: use the zero-input default when there is no expected callable. This is proposed, not selected, and does not choose general body-result inference or partial nonempty header omission.
+
+Rust's zero-input closure spelling is `|| { 42 }`, with an explicitly empty parameter list; see [Rust closure syntax](https://doc.rust-lang.org/reference/expressions/closure-expr.html). LiteScript's already selected contextual `()` rule is a separate convenience that preserves expected inputs.
+
 #### Parsing boundaries
 
 - In an ordinary expression position, `(a) { ... }` is one lambda expression. `(a)` alone remains grouping; this proposal does not reinterpret every parenthesized expression as parameters. A grouped value followed by a separate executable block needs an item separator: `(a); { ... }`.
