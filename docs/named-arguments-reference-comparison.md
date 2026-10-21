@@ -80,6 +80,70 @@ Native named arguments use colon, for example Op(a: 1, b: 2, c: 3). Positional c
 
 Named tuple values use (width: 640, height: 480), with dot access such as size.width. Assignments match by position and compatible types; field names are ignored for tuple assignment and equality. A destination can expose different names for the same positions. This is an access-label precedent, rather than name-sensitive compatibility. Source: [tuple field names](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-tuples#tuple-field-names).
 
+## Focused comparison: width/height assigned to x/y
+
+This answers the user's follow-up about named-tuple compatibility directly. The snippets use each reference language's own syntax. They are documentation-based examples, not executed compiler checks.
+
+### C#: accepted, destination names replace access labels
+
+```csharp
+(int width, int height) size = (640, 480);
+(int x, int y) point = size;
+```
+
+Assignment matches positions and compatible component types, ignoring field names. point.x denotes the first value, 640. Source: [tuple assignment](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-tuples#tuple-assignment-and-deconstruction).
+
+### TypeScript: accepted, labels document positions
+
+```typescript
+const size: [width: number, height: number] = [640, 480];
+const point: [x: number, y: number] = size;
+```
+
+The labels do not affect type checking or introduce dot-access properties. Read point[0], not point.x. Source: [labeled tuple elements](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-0.html#labeled-tuple-elements).
+
+### Swift: differently labeled assignment rejected
+
+```swift
+let size = (width: 640, height: 480)
+let point: (x: Int, y: Int) = size // rejected: names differ
+```
+
+Tuple names belong to the type. Explicitly reconstructing (x: size.width, y: size.height) expresses the renaming. An unlabeled literal (640, 480) can acquire labels from an expected named type; that does not permit direct assignment of incompatible explicit labels. Source: [tuple types](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Types.md#tuple-type).
+
+### Scala 3: differently named assignment rejected
+
+```scala
+val size = (width = 640, height = 480)
+val point: (x: Int, y: Int) = size // rejected: names differ
+```
+
+Named tuples retain names and positions in their type contract. Ordinary tuples can fit an expected named type, and .toTuple can forget names. Those conversion rules are distinct from direct compatibility between differently named tuples. Source: [conformance and convertibility](https://docs.scala-lang.org/scala3/reference/other-new-features/named-tuples.html#conformance-and-convertibility).
+
+### Dart: differently named fields rejected, reordered named fields compatible
+
+```dart
+var size = (width: 640, height: 480);
+({int x, int y}) point = size; // rejected: names differ
+({int height, int width}) reordered = size; // compatible named shape
+```
+
+Named fields are part of structural identity, while their written order is not. Dart also permits documentary names on positional fields; those are a separate case. Source: [record syntax and types](https://dart.dev/language/records).
+
+### Python: a named tuple is a class instance
+
+```python
+from collections import namedtuple
+Size = namedtuple("Size", "width height")
+Point = namedtuple("Point", "x y")
+size = Size(640, 480)
+point = Point(*size)
+```
+
+Constructing Point gives the positions new field names. Plain point = size would retain the Size object and its width/height attributes; assignment does not rename fields. Runtime rebinding is not a static compatibility check. The typing specification separately defines typed NamedTuple classes and their tuple behavior. Sources: [namedtuple classes](https://docs.python.org/3/library/collections.html#collections.namedtuple), [NamedTuple typing](https://typing.python.org/en/latest/spec/namedtuples.html).
+
+No LiteScript tuple rule is selected by this comparison. The user's question keeps the choice open. In particular, rejecting mismatched explicit names and allowing an unlabeled tuple to acquire expected names are independent policies, as Swift and Scala demonstrate.
+
 ## Consequences for the LiteScript review
 
 The references support several independent choices:

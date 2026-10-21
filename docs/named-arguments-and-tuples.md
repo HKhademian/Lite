@@ -111,6 +111,8 @@ point := (x = size.width, y = size.height);
 
 Recommend exploring name-sensitive compatibility: names communicate the roles of equally typed components, and the type checker can check them statically. This recommendation is not selected. It does not by itself make named tuples nominal records or settle compatibility between separately written identical named shapes.
 
+The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. Keep this decision open; asking for the comparison is not acceptance of the recommendation.
+
 If name sensitivity is selected, next decide whether the same names in a different order describe the same type. Admission of unlabeled tuples through an expected named type, positional destructuring, and explicit name removal remain separate. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
 
 ### C. Keep tuples positional and use records for named values
