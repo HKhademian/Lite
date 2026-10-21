@@ -109,7 +109,7 @@ Loop headers now take only one optional item name; body-local tuple patterns ret
 
 ## Named tuples under review
 
-The [named arguments and named tuples review](named-arguments-and-tuples.md) compares positional tuples with optional access labels, tuples whose labels affect compatibility, and using existing records for named values. The proposed (width = 640, height = 480) does not yet select syntax, structural identity, order, named destructuring, or call spreading. Nominal record identity remains selected independently.
+The [named arguments and named tuples review](named-arguments-and-tuples.md) compares positional tuples with optional access labels, tuples whose labels affect compatibility, and using existing records for named values. The user selected fresh named initializer reordering and explicit reconstruction for stored tuples with a different component order. Complete type/literal/pattern grammar, name identity, structural compatibility, and call spreading remain open. The [concrete routing catalogue](named-input-routing.md) proposes destination = sourceField tuple patterns while preserving existing positional binding and shadowing rules. Nominal record identity remains selected independently.
 
 ## Notes and open decisions
 

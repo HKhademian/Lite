@@ -104,6 +104,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
 - [Tuples and patterns](tuples-and-patterns.md): binding versus destructuring the same value.
 - [Named arguments and named tuples](named-arguments-and-tuples.md): selected positional/named/mixed call forms; open public names versus lambda-local bindings, tuple label compatibility, and modern reference-language comparisons.
+- [Concrete named input routing](named-input-routing.md): selected written evaluation order and fresh-versus-stored tuple behavior; proposed argument mapping, invalid cases, named destructuring, defaults, and permission composition.
 - [Named calls and tuples across the reference languages](named-arguments-reference-comparison.md): all twelve established references plus C#, distinguishing native argument labels, named product values, tuple labels, and compatibility.
 - [Tuple spread and rest](tuple-spread-and-rest.md): requested construction spreading and typed pattern capture, known shapes, evaluation order, and unresolved empty/singleton tuple details.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, inferred unions, and preserved composite shapes.

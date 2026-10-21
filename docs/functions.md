@@ -57,6 +57,8 @@ Default-expression syntax, evaluation timing and scope, defaults in callable sig
 
 The user selected positional calls, name = value at call sites, and a positional prefix followed by named inputs: op(1,2,3), op(a=1,b=2,c=3), and op(1,2,c=3). Simple identifier parameters need no additional named-parameter declaration marker. Supplied expressions retain written evaluation order; omitted inputs still need explicitly declared defaults. Further mapping rules, argument reordering, public label identity versus contextual lambda-local names, stored-callable compatibility, complete call grammar, and tuple argument spreading remain open. See [named arguments and named tuples](named-arguments-and-tuples.md).
 
+The [concrete named routing review](named-input-routing.md) proposes named argument permutations, duplicate/unknown checks, positional prefixes, expected tuple-valued inputs, and composition with mut/var caller grants. Written argument evaluation order and declared-default-only omission are already selected; further call grammar and callable label compatibility remain open.
+
 ## Compact implementations under review
 
 Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Local lambda result inference is selected below; unknown-input and recursive result inference remain separate.

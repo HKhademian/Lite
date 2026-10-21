@@ -1,6 +1,8 @@
 # Named arguments and named tuples
 
-Status: **positional calls, named arguments using =, and positional prefixes followed by named arguments selected by the user, 2026-10-21. Argument reordering, further mapping rules, callable label compatibility, and named tuples remain open**.
+Status: **basic positional/named/mixed calls, written evaluation order, fresh named initializer reordering, and explicit reconstruction for differently ordered stored tuples selected by the user, 2026-10-21. Full named tuple grammar, name identity, further call mapping rules, callable label compatibility, and named patterns remain open**.
+
+The [concrete routing case catalogue](named-input-routing.md) records the selected construction/storage boundary and a complete proposed mapping algorithm with valid and rejected examples. Its further recommendations are not silently selected by this status update.
 
 ## Selected basic call forms
 
@@ -30,7 +32,7 @@ size := (width = 640, height = 480);
 typed_size: (width: Int, height: Int) = (width = 640, height = 480);
 ```
 
-The call supplies two inputs. The proposed tuple expression produces one value with two components. Named tuple types, named access such as size.width, and named tuple construction all require confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
+The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Complete named tuple type/literal/access grammar and name-identity policy still need confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
 
 For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
@@ -49,7 +51,7 @@ The selected omission rule still applies: every unfilled input needs an applicab
 
 Evaluate the callee first, then supplied argument expressions once each in written order, consistent with the existing evaluation contract. In resize(height = read_height(), width = read_width()), read_height runs first even though width is the first parameter. Mapping names to input positions must not reorder side effects. Transfer and permission activation remain subject to the shared memory contract.
 
-The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Validity of the proposed (left, right): (l, r) binding syntax, tuple name routing, and reordered named calls remain open; source-order evaluation does not decide them. A contextual named initializer could route by destination names separately from the order identity of independently inferred tuples.
+The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Fresh contextual named initializers may route by destination names; differently ordered stored tuples require explicit reconstruction. The original (left, right): (l, r) label-binding syntax and further function-call routing rules remain open. See the [concrete cases](named-input-routing.md).
 
 Names can be resolved statically. This feature need not require a runtime name dictionary, reflection, or heap allocation. Exact passing and ABI remain separate.
 
@@ -94,7 +96,7 @@ Label propagation through inference, branches, unions, generic APIs, and tuple s
 
 A width/height tuple would not automatically fit a left/top tuple, even when both contain two Int values. Explicit reconstruction could rename components. This protects meaning conveyed by labels but introduces additional compatibility rules alongside nominal record declarations.
 
-This option has a further choice: preserve tuple positions as part of identity, or make the named portion an unordered shape. For an ordered model, (width: Int, height: Int) and (height: Int, width: Int) would differ. For an unordered model, names route values and positional destructuring of named fields needs its own explicit policy. Selecting name sensitivity alone does not settle order.
+The initial comparison offered ordered tuple contracts and unordered named shapes. The user now selected explicit reconstruction for a stored tuple whose component order differs from the destination. Fresh named initializers may still list entries in any written order and route into the known destination order. Whether different labels with the same positional types are compatible remains a separate open choice.
 
 ### Next decision: should names affect compatibility?
 
@@ -115,7 +117,7 @@ Recommend exploring name-sensitive compatibility: names communicate the roles of
 
 The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. Keep this decision open; asking for the comparison is not acceptance of the recommendation.
 
-If name sensitivity is selected, next decide whether the same names in a different order describe the same type. Admission of unlabeled tuples through an expected named type, positional destructuring, and explicit name removal remain separate. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
+Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Name identity, stored unlabeled-tuple admission, positional destructuring of named tuples, and explicit name removal still need their own policies. The [concrete proposal](named-input-routing.md) makes recommendations for those cases without treating them as accepted. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
 
 ### C. Keep tuples positional and use records for named values
 
@@ -131,7 +133,7 @@ size := Size { width = 640, height = 480 }
 
 Record field declarations require a semicolon between adjacent ordinary fields. Newlines, tabs, and spaces do not supply separators. The final field separator is optional; the complete record declaration ends its outer item without requiring a semicolon. The equivalent compact declaration is Size := record { width: Int; height: Int }. Supplied record-value fields instead use commas. See [lexical structure](lexical-structure.md#separators).
 
-These tuple options are open. Named argument support does not require any one of them.
+These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; complete tuple name identity, grammar, and pattern rules remain open. Named argument support remains a separate capability.
 
 ## A tuple argument versus spreading arguments
 
