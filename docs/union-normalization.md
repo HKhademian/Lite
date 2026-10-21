@@ -81,7 +81,7 @@ There is no first union member to use as an implicit default. Contextual 0 canno
 
 The [union-zero review](union-zero.md) recommends preserving an existing member as the zero value, while leaving both that boundary and the exact member-selection rule open. Source order cannot choose the zero member under the current identity rule.
 
-The user requests union size equal to the largest member and confirms zeroing all storage bytes. The [storage-rule analysis](union-zero.md#users-storage-rule-and-the-remaining-conflict) records why exact total max-size storage cannot generally preserve distinguishable member identities without additional information. Payload-versus-total meaning remains open; this does not authorize dropping identity or hiding metadata costs.
+The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model): max-member size applies to payload capacity, while full storage includes metadata and alignment. This supports distinguishable active member identities. The zero metadata interpretation must remain coherent across order-independent equivalent union types; exact tag encoding and ABI remain open.
 
 Equivalent semantic types do not make source declaration order a stable runtime tag-number or ABI contract. The compiler's eventual representation and public compatibility rules remain separate.
 

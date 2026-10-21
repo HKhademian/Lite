@@ -16,7 +16,7 @@ The destination union must already be established. person := user infers User un
 
 Type compatibility alone does not settle copying, moving, borrowing, lifetime, allocation, or permissions. A union representation may require a tag and payload storage even though source code needs no wrapper syntax.
 
-The user subsequently clarified a [C-style union storage model](union-zero.md#clarification-the-user-means-c-union-storage): overlapping payload without an automatic runtime discriminator. That storage request remains to be reconciled with the active-identity and checked-narrowing semantics selected here. An ordinary C union does not by itself provide runtime member tests; neither a tagged layout nor removal of these guarantees is selected by that clarification.
+The user subsequently clarified [metadata plus C-style overlapping payload](union-zero.md#current-storage-model). Metadata identifies the active member while the payload stores one alternative, supporting the checked narrowing selected here. Max-member size applies to payload capacity; the full value also accounts for metadata and alignment. Exact encoding, ABI, and zero-tag meaning remain open.
 
 ## Identity checks
 

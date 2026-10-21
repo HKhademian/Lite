@@ -87,9 +87,7 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Next review is [plain-union zero](union-zero.md). Recommend the boundary that zero is zero of exactly one listed member, so matching all listed alternatives remains exhaustive; an extra nil/zero state is an alternative requiring broader contract changes. No choice selected. Canonical member selection, explicit designation, and source ordering each need follow-up; first-written-member conflicts with selected order-independent union identity. Keep universal zero and Option/Result mappings intact.
 
-- The user answered the union-zero question with a storage rule: size(A | B) = max(size(A), size(B)), zero all those bytes. Record bytewise zeroing as confirmed, but do not treat that answer as choosing an active zero member. The [capacity argument](union-zero.md#users-storage-rule-and-the-remaining-conflict) shows why total max-size storage cannot universally preserve arbitrary member values and active identities without more information. Next clarify whether max applies to payload only or total storage. Exact layout, metadata strategy, and zero-member meaning remain unresolved.
-
-- Latest clarification: the user means [C union storage](union-zero.md#clarification-the-user-means-c-union-storage), with members overlapping and no automatic discriminator. Explain that this is feasible storage, but it alone cannot answer selected runtime type tests or preserve arbitrary active-member identity. Reconcile the requested storage model with those selected semantics before picking zero-member meaning or layout. No reconciliation is selected yet.
+- Latest clarification resolves storage: [metadata plus overlapping payload](union-zero.md#current-storage-model). Max-member size is payload capacity, with metadata and alignment/padding in the full value. Type tests retain member identity; no need to revisit that guarantee. Zero initialization clears metadata too, so the remaining semantic question is what zero metadata denotes. Exact encoding/ABI and optimizations remain open.
 
 ## Plan links
 

@@ -19,9 +19,9 @@ Make a convenient language compatible with predictable data representation and a
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
 
-## Union storage request
+## Union storage model
 
-The user requests size(A | B) = max(size(A), size(B)), with all union bytes zeroed for zero initialization. The [union-zero analysis](union-zero.md#users-storage-rule-and-the-remaining-conflict) distinguishes this requested total-size constraint from a max-member payload region. Arbitrary distinct member identities cannot always fit in that region without additional information; spare-bit encodings and static elimination can help particular cases but do not establish a universal guarantee. Clarify total versus payload size before choosing layout. No external metadata allocation, boxing, unchecked reinterpretation, or complete ABI is selected.
+The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model). Payload capacity is max(size(A), size(B)); the complete value also includes active-member metadata and alignment/padding. This resolves the earlier total-versus-payload ambiguity and supports checked type narrowing. Zero initialization clears both metadata and payload; zero-tag meaning remains open. The conceptual inline wrapper does not require boxing or an external metadata allocation. Metadata format, exact ABI, and equivalent optimized encodings remain open.
 
 ## Candidate execution experience
 

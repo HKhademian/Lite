@@ -1,6 +1,24 @@
 # Zero values of plain unions
 
-Status: **open review, 2026-10-21**. Universal valid all-zero initialization and order-independent plain-union identity are selected. The user explicitly confirms zeroing all union storage bytes and requests size(A | B) = max(size(A), size(B)). That exact total-size requirement conflicts with general active-member identity unless another representation or semantic rule supplies the missing information. Total versus payload size and zero-member meaning remain unresolved.
+Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero-tag meaning remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; which valid value zero metadata denotes remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
+
+## Current storage model
+
+The user's latest sketch is conceptual C-style pseudocode:
+
+```text
+struct AB {
+    metadata;
+    union {
+        A a;
+        B b;
+    }
+}
+```
+
+Metadata carries the information needed to identify the active member. The payload members overlap. Thus payload capacity is max(size(A), size(B)); total storage also accounts for metadata, alignment, and padding. This is compatible with selected active-member identity and checked narrowing. It does not require boxing or a separately allocated metadata table.
+
+All-zero initialization clears the complete value, including metadata. The metadata's zero pattern must have a valid language meaning, but the sketch does not decide which member or state that means. Member numbering, metadata width/position, ownership/drop support, and union-zero selection remain open. This is a conceptual representation direction, not a fixed foreign ABI or a prohibition on equivalent optimized layouts.
 
 ## Concrete case
 
@@ -16,26 +34,9 @@ Selected branch inference gives T = Int | String, and the missing-else path supp
 
 ## User's storage rule and the remaining conflict
 
-The user specifies:
+The earlier shorthand was size(A | B) = max(size(A), size(B)), with every byte zeroed. The later metadata-wrapper sketch above resolves the payload-versus-total ambiguity: max size applies to the overlapping payload, while metadata is part of the full value. The earlier concern about fitting arbitrary active identity into only the payload bytes no longer applies to this clarified model.
 
-```text
-size(A | B) = max(size(A), size(B))
-zero(A | B) = zero every byte of that storage
-```
-
-Zeroing every byte is confirmed and agrees with universal zero initialization. It does not by itself select the active member, or decide whether a zero state is one member or a separate state. The preceding question about that semantic boundary therefore remains unanswered.
-
-The size formula is recorded as requested. Do not silently reinterpret size as payload size, promise a complete implementation, or add an unmentioned tag allocation. Under the total inline-size reading, it cannot hold for every union while preserving all member values and their active nominal identities.
-
-For a concrete capacity argument, suppose A and B each occupy one byte and each admits all 256 bit patterns. Their identities remain distinct, so A | B must distinguish 512 values: A's 256 and B's 256. One byte has only 256 states. At least nine bits of information are needed; an independently stored byte-addressed value needs more than one byte unless information lives elsewhere. Zero(A) and zero(B) having the same payload bytes is one collision, not the entire issue.
-
-Possible directions to clarify:
-
-- If max size describes only the overlapping payload region, preserve it as the payload goal and separately account for active-member information, alignment, and padding. Exact total storage is not generally payload size plus one byte; it depends on the layout contract.
-- If max size is a strict total-size guarantee, some other guarantee must change or additional information must live elsewhere. An untagged interpretation cannot generally recover the stored member from overlapping bit patterns. External metadata has storage, copying, aliasing, and cleanup costs and is not selected by the formula.
-- Spare bit patterns can encode the member for some unions; static knowledge can eliminate member information in some uses. Neither technique proves a universal max-size representation for arbitrary independently stored unions. Conditional provenance cannot recover an unknown member after arbitrary storage and transfer unless it is preserved as information.
-
-No direction is selected. All-zero bytes remain a valid value, but the interpretation of those bytes and the complete union representation still need a contract.
+For historical context, two distinct one-byte member types with 256 valid values each require 512 distinguishable typed values. A one-byte payload alone cannot encode that distinction; the user's wrapper provides the missing member information. Exact total layout remains a separate design task.
 
 ## Clarification: the user means C union storage
 
@@ -52,9 +53,9 @@ This describes overlapping, untagged storage: the members share their starting a
 
 The member access `u.a` names the interpretation; it is not a test proving that A was last stored. C does not provide a general runtime question equivalent to LiteScript's selected `if value: A` for such a union. Access through another member has C-specific representation and validity rules; it must not be described as generally safe typed narrowing. Zeroing the shared bytes likewise does not record which member was written. C initialization rules and LiteScript's universal valid all-zero rule are separate contracts.
 
-The storage intuition is therefore understood. The unresolved issue is its relationship to LiteScript's already selected preservation of active nominal member identity, checked type narrowing, and exhaustive type matching. The capacity argument above concerns preserving that information, not the feasibility of an ordinary C union.
+This untagged example was followed by the metadata-wrapper sketch above. The wrapper reconciles overlapping payload storage with LiteScript's selected active-member identity, checked narrowing, and exhaustive type matching.
 
-Possible paths are to retain type-safe alternatives with overlapping payload plus member information, use untagged storage with a different access/proof contract, or provide distinct constructs for the two purposes. The user's clarification does not select one reconciliation, a tag representation, unsafe reads, or external metadata allocation. Do not silently replace the C storage request with a tagged layout or remove the existing type-test guarantees.
+The current direction is metadata plus overlapping payload. Earlier suggestions to drop type tests or add a separate raw-union feature are unselected alternatives. The user has not selected unsafe reads, a fixed tag encoding, or external metadata allocation.
 
 Sources checked 2026-10-21: [Microsoft's C union storage documentation](https://learn.microsoft.com/en-us/cpp/c-language/storage-of-unions?view=msvc-170) describes shared addresses and overwritten storage. Its [x64 union layout specification](https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-aggregate-and-union-layout) explicitly accounts for alignment padding. The [C working draft N3550](https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3550.pdf), section 6.7.3.2, specifies storage sufficient for the largest member rather than a runtime discriminator.
 
