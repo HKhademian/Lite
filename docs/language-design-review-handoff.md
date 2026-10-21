@@ -97,6 +97,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - The user answered Unit priority with "Keep open; compare more cases." The [case expansion](union-zero.md#more-unit-priority-cases-requested-by-the-user) compares Unit-first against indicated payload-first orders. Key observable difference: a typed union declaration initialized by contextual 0 can become Unit, while an existing Int-zero value admitted into that union stays Int. Compare missing-else fallbacks, Option/Result alternatives, newly added Unit, and nominal empty records. No new priority is selected; do not repeatedly ask the same binary choice before addressing these tradeoffs.
 
+- Latest user proposal reopens the foundation: [tag-zero empty unions](union-empty-zero-proposal.md), with neither A nor B tests matching zero. Treat as an exploratory alternative, not accepted migration. It is coherent if empty is a valid initialized union state, but changes exhaustive matching, negative narrowing, direct operations, cleanup, explicit Unit/Option/Result distinctions, and singleton normalization. Successful narrowing observes an existing member; it does not choose one. Compare this proposal before continuing canonical zero-member ranking.
+
 ## Plan links
 
 | Relation | Plan / file |

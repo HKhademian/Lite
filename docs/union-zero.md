@@ -2,6 +2,10 @@
 
 Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
 
+## Latest alternative under review
+
+The user now proposes [empty union zero](union-empty-zero-proposal.md): tag zero means no active member, and both A/B type tests fail. This would replace the selected member-only zero boundary and remove the need to rank members for union zero. It remains an exploratory alternative; compare coverage, direct operations, Unit/Option/Result distinctions, and single-member normalization before adopting it. The selected rule below is retained pending that decision.
+
 ## Current storage model
 
 The user's latest sketch is conceptual C-style pseudocode:
