@@ -1,10 +1,10 @@
 # Closures
 
-Status: **explicit capture headers, value capture, and `var` capture of original storage are selected directions. Complete callable context types, ownership, aliasing, lifetimes, and representation remain open**.
+Status: **callable context and capture design postponed at the user's request on 2026-10-21**. The capture proposals, earlier favored directions, probes, and reference comparisons below are retained as deferred review history, not active language feature commitments. See the [pinned context ideas](deferred-contexts.md), including environment context such as allocators.
 
 ## Purpose and template
 
-Use the ordinary function expression as a reusable value that may capture surrounding values.
+Use ordinary function and lambda expressions as reusable values. Their context/capture mechanism is deferred.
 
 ```text
 transform := fn(x: Int): Int {
@@ -12,7 +12,7 @@ transform := fn(x: Int): Int {
 }
 ```
 
-Use `(x) { ... }` when a binding, method signature, or callback contract supplies parameter and result types. Optional lambda annotations such as `(x: Int): Int { ... }` can also supply an independent signature. Both lambda and full `fn` forms use brace bodies and permit optional trailing item semicolons. The intermediate contextual `fn(x) { ... }` spelling is retired as redundant. Complete lambda parsing and capture rules remain open; see [functions](functions.md#compact-implementations-under-review).
+Use `(x) { ... }` when a binding, method signature, or callback contract supplies parameter and result types. Optional lambda annotations such as `(x: Int): Int { ... }` can also supply an independent signature. Both lambda and full `fn` forms use brace bodies and permit optional trailing item semicolons. The intermediate contextual `fn(x) { ... }` spelling is retired as redundant. Complete lambda parsing remains open; capture design is postponed; see [functions](functions.md#compact-implementations-under-review).
 
 ## Result behavior
 
@@ -36,7 +36,7 @@ The lambda uses `offset` from its lexical surroundings rather than receiving it 
 
 ## Explicit context in the callable signature
 
-The selected direction declares captured context explicitly before the parameter list. Use LiteScript's ordinary `name: Type` parameter notation:
+The earlier favored direction declared captured context explicitly before the parameter list; it is now deferred. Use LiteScript's ordinary `name: Type` parameter notation:
 
 ```text
 var offset: Int = 10;
@@ -58,13 +58,13 @@ live := [var offset](n: Int): Unit {
 
 Captured context is part of the callable's signature/contract, not an invisible implementation detail. Its fields, access permissions, ownership, and lifetime requirements must be retained when the callable is passed, stored, or assigned. Type inference may derive a capture's value type from its source without repeating it in the header; explicit context does not require users to duplicate all inferred types.
 
-This selects the capture-header direction and semantics above. The written grammar for context-bearing callable types and full `fn` capture headers still needs review. Whether field names affect type identity, how callback types admit different environments, and how context contracts compose must not be assumed from the simple `fn(n: Int): Int` input/result notation. In particular, a matching input/result shape alone must not silently erase writable access or lifetime requirements. This does not mandate a runtime context object, dynamic lookup, or heap allocation.
+The capture-header direction and semantics above are pinned ideas, postponed for later review. The written grammar for context-bearing callable types and full `fn` capture headers still needs review. Whether field names affect type identity, how callback types admit different environments, and how context contracts compose must not be assumed from the simple `fn(n: Int): Int` input/result notation. In particular, a matching input/result shape alone must not silently erase writable access or lifetime requirements. This does not mandate a runtime context object, dynamic lookup, or heap allocation.
 
 `var` capture introduces a relationship to source storage, not a freely escaping public pointer. Complete nonescape, aliasing, reentrancy, cleanup, and owned-escape rules remain open. Temporary caller grants must not silently become longer-lived handles. Context-bearing callable types must also receive a valid zero mapping under universal zero initialization; a dangling or null storage handle is not an acceptable default.
 
 ## Two context roles under discussion
 
-The user proposes two contexts: one supplied by the caller, and another potentially hidden beside the function. The exact meaning of caller-supplied context is under clarification: ordinary arguments, a distinct execution context supplied on each invocation, or values bound when creating the callable. Do not select among those readings implicitly.
+The user proposes two contexts: one supplied by the caller, and another potentially hidden beside the function. The exact meaning of caller-supplied context was not settled before postponement: ordinary arguments, a distinct execution context supplied on each invocation, or values bound when creating the callable. Do not select among those readings implicitly.
 
 The useful distinction is between externally supplied state/access and state owned by the callable itself:
 
@@ -151,7 +151,7 @@ offset = 20;
 answer := add(1);
 ```
 
-This historical probe predates explicit capture lists and is not valid current capture syntax as written. Its alternatives explain the decision:
+This historical probe predates the explicit-capture proposal. Its alternatives explain the earlier discussion; none is an active capture contract during postponement:
 
 - Snapshot capture of the scalar gives `11`: the environment holds the captured `10`.
 - Live access to the outer location could give `21` if lifetime and alias rules permit the reassignment. A borrowing model may reject reassignment while that capture remains live instead.
@@ -176,9 +176,9 @@ Conceptually a capturing closure combines executable code with the required envi
 
 Existing temporary `mut`/`var` parameter grants cannot silently become escaping capture handles. Reusing a resource in an escaping closure requires a defined ownership/lifetime mechanism, not merely access to its lexical name. Tags still cannot escape as control-transfer capabilities.
 
-### Next decision: outliving captured storage
+### Deferred decision: outliving captured storage
 
-Status: **open review; no escape policy selected**.
+Status: **postponed; no escape policy selected**.
 
 ```text
 make_adder := fn() {
@@ -206,9 +206,9 @@ Rust rejects closures whose borrowed captures may outlive their source and offer
 
 Recommendation: policy 1 for `[var name]`, with policy 2 available for separate design if escaping shared state is needed. Reject escaping beyond the source storage's lifetime, not every returned or stored callback indiscriminately. This preserves explicit capture and avoids making `[var name]` silently select automatic lifetime extension. It remains a recommendation pending user choice; full context types, aliasing, zero mappings, and lifetime proof rules still need formalization.
 
-### Recommendation for the next decisions
+### Notes for a future review
 
-The earlier inferred-read-name recommendation is superseded by explicit capture lists. Next define context-bearing callable type signatures, record/resource ownership, read-only live access if needed, payload mutation, nonescape guarantees, and owned escaping environments. Preserve the selected value-versus-original-storage distinction without extending temporary caller grants implicitly.
+The earlier inferred-read-name recommendation gave way to explicit capture lists before the topic was postponed. On explicit resumption, review context-bearing callable type signatures, record/resource ownership, read-only live access if needed, payload mutation, nonescape guarantees, and owned escaping environments. Retain the previously favored value-versus-original-storage distinction as an idea without extending temporary caller grants implicitly.
 
 ## Tags and control-flow boundaries
 
@@ -224,7 +224,7 @@ A closure must not perform a targeted return or continuation into a construct in
 
 The callback and ownership details remain illustrative, but copying a value is distinct from capturing the ability to jump back into a loop.
 
-## Open decisions
+## Deferred decisions
 
 Context-bearing callable type grammar, payload-mutation and read-only live captures, ownership/copy/move eligibility, aliasing, escaping lifetimes, context zero mappings, allocation, callback effects, generic function values, calling conventions, and self-recursive closures.
 
