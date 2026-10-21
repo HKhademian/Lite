@@ -9,9 +9,9 @@ Cover the twelve languages used by the existing [type-category review](type-cate
 The user's selected LiteScript call surface is:
 
 ```text
-op(1, 2, 3)
-op(a = 1, b = 2, c = 3)
-op(1, 2, c = 3)
+op(1, 2, 3);
+op(a = 1, b = 2, c = 3);
+op(1, 2, c = 3);
 ```
 
 All three supply the same three inputs. Do not infer named-tuple compatibility, argument reordering, automatic tuple spreading, or unknown-input type inference from these examples.

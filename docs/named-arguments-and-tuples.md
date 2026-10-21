@@ -7,9 +7,9 @@ Status: **positional calls, named arguments using =, and positional prefixes fol
 ```text
 op := fn(a: Int, b: Int, c: Int): Int { a + b + c }
 
-op(1, 2, 3)
-op(a = 1, b = 2, c = 3)
-op(1, 2, c = 3)
+op(1, 2, 3);
+op(a = 1, b = 2, c = 3);
+op(1, 2, c = 3);
 ```
 
 These forms supply the same three inputs to the same callable. Naming an argument does not turn the call into a single record or tuple argument. No extra named-parameter declaration marker is required for these simple identifier parameters. The user's abbreviated fn(a,b,c) sketch describes the call shape; it does not select independent inference of unknown function input types. Omission still requires an applicable explicitly declared default.
@@ -25,9 +25,9 @@ resize := fn(width: Int, height: Int): Int {
     width * height
 }
 
-area := resize(width = 640, height = 480)
-size := (width = 640, height = 480)
-typed_size: (width: Int, height: Int) = (width = 640, height = 480)
+area := resize(width = 640, height = 480);
+size := (width = 640, height = 480);
+typed_size: (width: Int, height: Int) = (width = 640, height = 480);
 ```
 
 The call supplies two inputs. The proposed tuple expression produces one value with two components. Named tuple types, named access such as size.width, and named tuple construction all require confirmation. Existing record declarations remain nominal; this review does not give record types structural compatibility.
@@ -37,10 +37,10 @@ For calls, the user selected equals; colon-value call syntax is not the selected
 ## Named calls: further rules to consider
 
 ```text
-resize(640, 480)
-resize(width = 640, height = 480)
-resize(height = 480, width = 640) /* reordering remains a proposal */
-resize(640, height = 480)
+resize(640, 480);
+resize(width = 640, height = 480);
+resize(height = 480, width = 640); /* reordering remains a proposal */
+resize(640, height = 480);
 ```
 
 Propose positional arguments first, followed by named arguments in any written order. A positional argument occupies its next signature position; a named argument identifies one public parameter. Reject unknown names, ambiguous labels, supplying one input twice, and positional arguments after a named argument. For example, resize(640, width = 800, height = 480) supplies width twice.
@@ -56,7 +56,7 @@ Names can be resolved statically. This feature need not require a runtime name d
 ```text
 var area: fn(width: Int, height: Int): Int;
 area = (w, h) { w * h }
-result := area(width = 640, height = 480)
+result := area(width = 640, height = 480);
 ```
 
 Recommend obtaining public labels from the caller-visible callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
@@ -75,9 +75,9 @@ Do not make implementation-local lambda names part of the public contract under 
 Start with the common example:
 
 ```text
-size := (width = 640, height = 480)
-w := size.width
-(a, b) := size
+size := (width = 640, height = 480);
+w := size.width;
+(a, b) := size;
 ```
 
 There are materially different contracts behind that spelling.
@@ -96,15 +96,25 @@ This option has a further choice: preserve tuple positions as part of identity, 
 
 ### C. Keep tuples positional and use records for named values
 
-Named calls could still exist independently. A Size record already supports named fields, contextual construction, and named extraction. This avoids another named product category but needs a record declaration for reusable named data. Inferred standalone record types are not selected by this alternative.
+Named calls are already selected independently. A Size record already supports named fields, contextual construction, and named extraction. This avoids another named product category but needs a record declaration for reusable named data. Inferred standalone record types are not selected by this alternative.
 
-These options are open. Do not assume that named argument support requires any one of them.
+```text
+Size := record {
+    width: Int;
+    height: Int
+}
+size := Size { width = 640, height = 480 }
+```
+
+Record field declarations require a semicolon between adjacent ordinary fields. Newlines, tabs, and spaces do not supply separators. The final field separator is optional; the complete record declaration ends its outer item without requiring a semicolon. The equivalent compact declaration is Size := record { width: Int; height: Int }. Supplied record-value fields instead use commas. See [lexical structure](lexical-structure.md#separators).
+
+These tuple options are open. Named argument support does not require any one of them.
 
 ## A tuple argument versus spreading arguments
 
 ```text
-resize(size)     /* one supplied argument */
-resize(...size)  /* possible future call-spread form */
+resize(size);     /* one supplied argument */
+resize(...size);  /* possible future call-spread form */
 ```
 
 The first form does not silently turn one product value into two inputs. Call spreading is a separate proposal: current tuple construction spread does not establish it. Positional spread could map components by position; named spread could route by labels. Choosing between them matters when a named tuple's written order differs from the signature. Duplicate inputs, mixed spreads, evaluation order, permissions, and ownership must be settled before accepting either form.
