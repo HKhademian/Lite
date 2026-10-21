@@ -269,6 +269,8 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 - The user confirms bytewise zeroing of plain union storage and requests size(A | B) = max(size(A), size(B)). The [storage-rule review](union-zero.md#users-storage-rule-and-the-remaining-conflict) records an information-capacity conflict if this is total independent storage while preserving arbitrary member values and active identity. Payload-versus-total size remains unresolved; no hidden metadata, untagged semantics, or zero-member selection is implied.
 
+- The user clarifies that union storage means a C union with overlapping A/B members. The [C union clarification](union-zero.md#clarification-the-user-means-c-union-storage) records that C supplies no automatic runtime discriminator, whereas LiteScript already selects active-identity preservation and checked narrowing. Reconciliation is open: preserve safe alternatives with member information, design a different untagged access/proof contract, or separate the constructs. No tag layout, unsafe reads, or removal of type-test guarantees is selected.
+
 ## Deferred context design
 
 [Pinned context ideas](deferred-contexts.md) preserve allocator/environment context, explicit capture headers, context in callable signatures, caller-supplied versus private stored state, and lifetime/ownership alternatives. The user postponed these topics on 2026-10-21 because of their complexity at the current language stage. The earlier clarification and capture-lifetime recommendation are parked, not pending choices for the next review. Resume on explicit request. Detailed reference comparisons remain in [closures](closures.md).

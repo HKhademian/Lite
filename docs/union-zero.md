@@ -37,6 +37,27 @@ Possible directions to clarify:
 
 No direction is selected. All-zero bytes remain a valid value, but the interpretation of those bytes and the complete union representation still need a contract.
 
+## Clarification: the user means C union storage
+
+The user clarifies the intended mental model with:
+
+```c
+union AB {
+    A a;
+    B b;
+};
+```
+
+This describes overlapping, untagged storage: the members share their starting address, and writing a member overwrites the shared region. The object must be large and aligned enough for every member; alignment/padding means the C standard does not universally guarantee the exact max-size equation. No separate runtime discriminator is automatically stored by a C union.
+
+The member access `u.a` names the interpretation; it is not a test proving that A was last stored. C does not provide a general runtime question equivalent to LiteScript's selected `if value: A` for such a union. Access through another member has C-specific representation and validity rules; it must not be described as generally safe typed narrowing. Zeroing the shared bytes likewise does not record which member was written. C initialization rules and LiteScript's universal valid all-zero rule are separate contracts.
+
+The storage intuition is therefore understood. The unresolved issue is its relationship to LiteScript's already selected preservation of active nominal member identity, checked type narrowing, and exhaustive type matching. The capacity argument above concerns preserving that information, not the feasibility of an ordinary C union.
+
+Possible paths are to retain type-safe alternatives with overlapping payload plus member information, use untagged storage with a different access/proof contract, or provide distinct constructs for the two purposes. The user's clarification does not select one reconciliation, a tag representation, unsafe reads, or external metadata allocation. Do not silently replace the C storage request with a tagged layout or remove the existing type-test guarantees.
+
+Sources checked 2026-10-21: [Microsoft's C union storage documentation](https://learn.microsoft.com/en-us/cpp/c-language/storage-of-unions?view=msvc-170) describes shared addresses and overwritten storage. Its [x64 union layout specification](https://learn.microsoft.com/en-us/cpp/build/x64-software-conventions?view=msvc-170#x64-aggregate-and-union-layout) explicitly accounts for alignment padding. The [C working draft N3550](https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3550.pdf), section 6.7.3.2, specifies storage sufficient for the largest member rather than a runtime discriminator.
+
 ## First boundary to choose
 
 Recommendation: zero(A | B) should hold the zero value of exactly one listed member, preserving the ordinary tagged-union model. A match covering A and B remains exhaustive, including for a zero-initialized value. No additional empty, absent, invalid, or multi-active union state would be introduced. This boundary is a proposal, not a completed member-selection rule.
