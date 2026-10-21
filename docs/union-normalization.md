@@ -79,6 +79,8 @@ Exhaustiveness is checked against normalized alternatives under the eventual cov
 
 There is no first union member to use as an implicit default. Contextual 0 cannot arbitrarily select one of several possible zeroable alternatives. Expected-type and literal rules must reject unresolved ambiguity or use an independently defined valid zero contract.
 
+The [union-zero review](union-zero.md) recommends preserving an existing member as the zero value, while leaving both that boundary and the exact member-selection rule open. Source order cannot choose the zero member under the current identity rule.
+
 Equivalent semantic types do not make source declaration order a stable runtime tag-number or ABI contract. The compiler's eventual representation and public compatibility rules remain separate.
 
 ## Boundaries still to settle

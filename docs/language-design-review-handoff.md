@@ -85,6 +85,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Selected [conditional and match result inference](branch-result-inference.md): infer normalized unions of normally completing results without an expected contract, matching selected local-lambda completion inference. Keep explicit result/error contracts, missing-else zero semantics, real Unit alternatives, then T/R separation, and exhaustiveness. Multi-member union zero needs a separate contract; do not use branch/member order to choose it.
 
+- Next review is [plain-union zero](union-zero.md). Recommend the boundary that zero is zero of exactly one listed member, so matching all listed alternatives remains exhaustive; an extra nil/zero state is an alternative requiring broader contract changes. No choice selected. Canonical member selection, explicit designation, and source ordering each need follow-up; first-written-member conflicts with selected order-independent union identity. Keep universal zero and Option/Result mappings intact.
+
 ## Plan links
 
 | Relation | Plan / file |

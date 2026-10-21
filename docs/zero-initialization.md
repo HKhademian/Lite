@@ -66,6 +66,8 @@ Some mappings require further decisions:
 
 These are representation/semantic design tasks, not exceptions permitting types with no zero. A zero value is not necessarily an identity for every operator: for example, zero initialization alone does not make a product fold start at 1.
 
+The [plain-union zero review](union-zero.md) compares a zero value belonging to one listed member with an additional zero state, then separates that choice from canonical, designated, or source-ordered member selection. No union-zero mapping is selected yet.
+
 ## Zero-initialized functions
 
 A zero-initialized function is callable. Its invocation performs no user-body work and returns `zero(R)`, where `R` is its declared result type. An `Int` result is `0`, a `String` result is empty, and a `Unit` result is `Unit`. If the declared result is `T ! E`, it returns `.ok(zero(T))` under the selected Result zero rule.
