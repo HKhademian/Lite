@@ -135,6 +135,53 @@ The alternative gives Unit no special priority and uses the future general order
 
 Reference comparison checked 2026-10-21: C++ permits [monostate](https://eel.is/c++draft/variant.monostate) as a first alternative to make a variant default-constructible, and its [default constructor](https://eel.is/c++draft/variant.ctor) selects the first alternative. Unlike this LiteScript proposal, C++ does not promote monostate regardless of position. Rust's [derived enum Default](https://doc.rust-lang.org/std/default/trait.Default.html#enums) requires explicitly marking a unit variant; it does not automatically prefer one or guarantee an all-zero representation.
 
+### More Unit-priority cases, requested by the user
+
+The user keeps Unit priority open and requests more cases. The following compares Unit-first with a candidate order in which the indicated payload type ranks before Unit. The payload-first outcomes are illustrative competing policies, not the behavior of every order without Unit priority.
+
+#### Explicit zero initialization versus an existing numeric zero
+
+```text
+empty: (Int | Unit)
+explicit_zero: (Int | Unit) = 0
+number := 0
+present: (Int | Unit) = number
+```
+
+The first two select zero of the union under the existing typed-declaration initialization rules. Unit-first would make both Unit; ranking Int before Unit would make both Int(0), described here as a typed value rather than selected constructor syntax. Inferred number is Int, so present contains Int zero under either policy. That is ordinary member admission, not destination-type zero construction. This distinction follows from literal 0's contextual-zero meaning and should be visible in the decision.
+
+#### Conditional fallback with a real Unit contributor
+
+```text
+value := if ready {
+    7
+} else if intentionally_empty {
+    Unit
+}
+```
+
+The inferred type is Int | Unit. On the unmatched path, Unit-first returns Unit; an Int-first ordering returns an Int zero. The ready branch remains Int(7) and the intentionally_empty branch remains Unit under both policies. No priority changes a value that an actual branch produced.
+
+Contrast the already selected `if ready { 7 }`, which infers Int and returns zero(Int) when unmatched, with `if ready { 7 } else {}`, which infers Int | Unit and explicitly returns Unit when false. Their false outcomes are fixed by their branches/types, independently of how the union's own zero is chosen.
+
+#### Unit alongside an explicit optional value
+
+For Unit | Option<User>, Unit-first selects Unit. A policy placing Option<User> first selects that member's zero, .None inside Option<User>. Both are valid listed members, but their active types differ: a Unit match catches the former, and an Option<User> match catches the latter. Do not merge the states or infer that Option<User> is Unit. Generic angle-bracket notation remains explanatory under the existing generic-notation policy.
+
+Likewise, Unit | (Int ! E) can distinguish Unit from an ordinary Result success containing Int zero. The selected zero-success mapping applies only after the Result member is selected; Unit priority would not enter that member or fabricate an error.
+
+#### Adding Unit to an inferred result
+
+Changing a String-only set of completion results to String | Unit by adding an empty branch changes the inferred type. Unit-first also changes the expanded type's own zero from empty String to Unit. Preferring String preserves empty String as that expanded union's zero, while retaining Unit as a possible explicit branch result. Both retain existing String values during widening. An explicit expected String result rejects the newly added Unit branch under either policy.
+
+#### Transparent aliases and nominal empty records
+
+A transparent alias of Unit remains Unit after normalization. A separately declared Empty record remains a nominal type even if it has no fields or ends up with no payload bytes. Unit-first would choose Unit for Empty | Unit; the rule alone says nothing about Empty | Int. A zero-sized-layout heuristic would be a different policy, with its own ties, target/layout dependencies, and identity questions.
+
+#### What these cases establish
+
+Unit-first makes union zero use the explicitly admitted no-payload alternative, but an explicit contextual 0 initializer may then contain Unit rather than a numeric zero. Payload-first retains a typed payload zero in those examples but needs the general order to select it. Neither is more valid, and neither is a physical zeroing shortcut: both can assign their chosen member the metadata zero pattern with the same conceptual storage shape. The decision is about observable default-member meaning. The recommendation to explore Unit-first remains provisional; the user has selected neither priority.
+
 ## Widening preserves values, not zero encoding
 
 The selected widening rule retains the active member and payload. Suppose a canonical rule selects A for A | B. Widening zero(B) into A | B must still produce a B value, even though the destination's own zero is A. The widened B may therefore have nonzero metadata. If the source is itself a union, its discriminant may need remapping during widening.

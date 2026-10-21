@@ -95,6 +95,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Next concrete review: [Unit priority](union-zero.md#unit-priority-open-review). Recommend zero(Int | Unit) and reordered equivalents select Unit, only when Unit is an explicitly listed normalized member. No choice selected. This does not add Unit, unwrap Option/Result, pick zero(Int | String), or alter value-preserving widening. C++ monostate and Rust unit-variant defaults are comparisons with different selection/initialization contracts.
 
+- The user answered Unit priority with "Keep open; compare more cases." The [case expansion](union-zero.md#more-unit-priority-cases-requested-by-the-user) compares Unit-first against indicated payload-first orders. Key observable difference: a typed union declaration initialized by contextual 0 can become Unit, while an existing Int-zero value admitted into that union stays Int. Compare missing-else fallbacks, Option/Result alternatives, newly added Unit, and nominal empty records. No new priority is selected; do not repeatedly ask the same binary choice before addressing these tradeoffs.
+
 ## Plan links
 
 | Relation | Plan / file |
