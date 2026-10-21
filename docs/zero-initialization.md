@@ -28,6 +28,8 @@ Selected forms:
 
 Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. An omitted ordinary function argument follows its separate default-initialization rule: use the declared parameter default, or zero of its type when no default is specified. See [omitted value arguments](functions.md#omitted-value-arguments).
 
+The [union declaration-policy review](union-initialization-policy.md) separately considers requiring explicit initialization or making union locals uninitialized by default. These are open alternatives to bare-declaration zero initialization. Neither alone supplies the universal zero mapping needed for explicit union zero, recursive aggregate zero, or implicit zero-result sites.
+
 ## Universal type rule
 
 Every type must have a meaningful zero value represented by all-zero storage. A compiler must not reject zero construction because a type lacks a valid zero. Designing a type includes defining this mapping; raw foreign representations cannot silently invalidate the language rule.

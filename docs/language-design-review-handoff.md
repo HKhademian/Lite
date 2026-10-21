@@ -99,6 +99,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 - Latest user proposal reopens the foundation: [tag-zero empty unions](union-empty-zero-proposal.md), with neither A nor B tests matching zero. Treat as an exploratory alternative, not accepted migration. It is coherent if empty is a valid initialized union state, but changes exhaustive matching, negative narrowing, direct operations, cleanup, explicit Unit/Option/Result distinctions, and singleton normalization. Successful narrowing observes an existing member; it does not choose one. Compare this proposal before continuing canonical zero-member ranking.
 
+- Latest proposals are [union construction and omitted initialization](union-initialization-policy.md): choose source-leftmost on creation, require explicit initializer or = ?, or default union locals to uninitialized storage. Treat as alternatives under review. Correct the earlier overstatement: source-directed construction can create different members of the same order-independent type, but may write nonzero metadata instead of producing a whole all-zero value. Parameter admission preserves a supplied member; omitted arguments are fresh construction. An uninitialized type test is a compile error, not false. After definite initialization, member-only A/B coverage is exhaustive. Keep bare-declaration policy separate from zero(A | B), recursive zero, and implicit-zero result sites.
+
 ## Plan links
 
 | Relation | Plan / file |

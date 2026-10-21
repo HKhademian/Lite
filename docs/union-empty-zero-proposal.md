@@ -2,6 +2,8 @@
 
 Status: **new alternative proposed by the user, open review 2026-10-21**. This would revise the previously selected rule that union zero belongs to exactly one listed member. It is not yet adopted. Metadata-plus-overlapping-payload storage and universal valid bytewise zero remain selected.
 
+The subsequent [initialization-policy review](union-initialization-policy.md) considers preserving member-only readable values while making union locals explicitly or implicitly uninitialized before a first write. That is a separate alternative: an uninitialized type test is rejected, whereas this page's readable empty value makes both tests return false. Neither revision is adopted yet.
+
 ## Proposed behavior
 
 ```text

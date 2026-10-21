@@ -2,6 +2,10 @@
 
 Status: **metadata plus overlapping payload model clarified by the user, 2026-10-21; zero must be a listed member, exact member choice remains open**. The full value includes member-identification metadata alongside a C-style payload union. Max-member size describes payload capacity, not the total wrapper. Zero initialization clears metadata and payload; zero metadata must identify one listed member, but which member it selects remains unresolved. Exact metadata format, alignment, ABI, and optimizations are not selected.
 
+## Latest initialization-policy alternatives
+
+The user now compares [leftmost-member construction, explicit initialization, and default-uninitialized union locals](union-initialization-policy.md). These remain open. An ordinary parameter can preserve a supplied active member. Leftmost source-directed construction can preserve order-independent type identity if separated from the complete all-zero representation; earlier claims that it must always change type identity were too broad. Default-uninitialized storage forbids even type tests until initialization; it is distinct from a readable tag-zero empty state. Declaration policy alone does not define universal union zero at other creation sites.
+
 ## Latest alternative under review
 
 The user now proposes [empty union zero](union-empty-zero-proposal.md): tag zero means no active member, and both A/B type tests fail. This would replace the selected member-only zero boundary and remove the need to rank members for union zero. It remains an exploratory alternative; compare coverage, direct operations, Unit/Option/Result distinctions, and single-member normalization before adopting it. The selected rule below is retained pending that decision.
@@ -93,7 +97,7 @@ zeroOf(B | A)  /* zero B */
 
 This is easy to explain and gives authors control through ordering. It resembles C++ variant default construction and Odin's no-nil union default, although their default contracts are not LiteScript's universal bytewise zero.
 
-It requires revisiting selected order-independent union identity or defining a new order-sensitive zero policy as part of the contract. The same type cannot have different all-zero meanings through reordered transparent aliases. Flattening nested unions, duplicates, and branch-result inference would need an ordered policy too; moving an arm could otherwise change a default. Do not quietly introduce declaration or compiler discovery order as a substitute.
+As a type-defined complete all-zero mapping, this requires revisiting order-independent identity or defining an order-sensitive representation contract. As a source-directed construction/default rule, it can create different values of the same type if the compiler writes the chosen member tag; see the [construction-policy distinction](union-initialization-policy.md#leftmost-member-as-a-construction-rule). The same shared all-zero representation still cannot have different active-member meanings through reordered transparent aliases. Flattening nested unions, duplicates, and branch-result inference would need an ordered policy too; moving an arm could otherwise change a default. Do not quietly introduce declaration or compiler discovery order as a substitute.
 
 ### 2. Canonical order of normalized type identities
 
