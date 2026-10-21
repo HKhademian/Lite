@@ -17,6 +17,15 @@ Environment context, such as allocators, is a separate useful idea to retain. It
 - **Lifetime choices:** checked access to existing storage, explicitly owned/shared state, and automatic retention were compared; no escape policy was selected.
 - **Representation:** private state might live inline or elsewhere, but no layout, heap allocation, sharing, cleanup, or zero-mapping mechanism was chosen.
 
+## Captures versus context requirements
+
+Conceptual comparison added on 2026-10-21; LiteScript feature design remains postponed.
+
+- **Capture:** a callable retains a value or access to a binding from its defining environment. C++ makes capture declarations visible in a list; JavaScript/TypeScript uses lexical free-variable access implicitly. A captured binding can hold changing data, so capture does not universally mean a creation-time deep snapshot. See [C++ captures](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170) and [TypeScript variable capture](https://www.typescriptlang.org/docs/handbook/variable-declarations.html#var-declarations).
+- **Context requirement:** a declaration requires dependencies supplied for a call. Kotlin writes `context(logger: Logger)`, using a keyword rather than an `@context` annotation. It resolves matching context values at the call site by type and rejects ambiguous matches at the same scope level. See [Kotlin context parameters](https://kotlinlang.org/docs/context-parameters.html). Its [context scope function](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/context.html) makes supplied values available for resolution.
+
+These mechanisms can coexist: a function can require caller-supplied services and create a closure capturing one of them. Declaration visibility, argument-supply syntax, retained state, ownership, and lifetime remain separate choices. This comparison does not select Kotlin-style implicit resolution or resume LiteScript context implementation.
+
 ## Resuming the topic
 
 Resume when explicitly requested, with the memory/resource model and callable representation as context. Start by distinguishing environment services from lexical capture and persistent private state. The existing function/lambda surface syntax, optional type annotations, and unnamed-input rule have their own decisions; this deferral does not reopen them.
