@@ -276,6 +276,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 ## Constraints
 
+Latest open review, 2026-10-21: [named arguments and named tuples](named-arguments-and-tuples.md). The user requested both topics after selecting declared defaults for all omitted arguments. Call-label spelling, public callable labels versus local lambda bindings, callable compatibility, tuple label identity/order, and call spreading are proposals only. Existing nominal records and selected positional lambda-header bindings must be preserved. The reference comparison covers Odin, Zig, V, Rust, C++, C#, and Dart.
+
 - Preserve simple, explicit syntax and strong static contracts; do not use null/undefined as an implicit absence model.
 - Do not promote a suggestion to a selected rule without user confirmation.
 - Keep any performance statement as a goal until measured.

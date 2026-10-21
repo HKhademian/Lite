@@ -53,6 +53,10 @@ This supersedes the earlier default-or-zero argument rule. For fn(a: Int): Int! 
 
 Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns remain open. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
 
+## Named arguments under review
+
+The [named arguments and named tuples review](named-arguments-and-tuples.md) proposes name = value at call sites, positional inputs before named inputs, and labels resolved from the caller-visible callable contract. Supplied expressions would retain written evaluation order; omitted inputs would still need explicitly declared defaults. Public labels and contextual lambda-local names must be distinguished. This is an open proposal: label identity, stored-callable compatibility, complete call grammar, and tuple argument spreading are not selected by it.
+
 ## Compact implementations under review
 
 Keep two surface forms: a normal `fn` definition with explicit types, and `(parameters) { body }` when an expected callable contract supplies the types. A separate function-type declaration is not required before a normal definition. The previously selected `fn(parameters) { body }` contextual shorthand is retired because it duplicates the lambda form. Local lambda result inference is selected below; unknown-input and recursive result inference remain separate.

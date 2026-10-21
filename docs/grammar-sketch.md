@@ -132,6 +132,10 @@ Sequential ordinary local declarations may shadow earlier names in the same bloc
 
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
+## Named calls and tuples under review
+
+The [named-call and named-tuple proposal](named-arguments-and-tuples.md) considers call entries name = expression and tuple value entries with the same spelling, with name: Type in tuple types. These are not selected grammar productions. Assignment expressions, typed patterns, singleton/grouping forms, contextual lambda headers, and call-spread syntax must retain explicit syntactic boundaries. Named inputs would preserve supplied-expression source order and the selected declared-default requirement for omission.
+
 ## Caller mutation grants
 
 ```text

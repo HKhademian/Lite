@@ -177,6 +177,8 @@ Snapshot: **2026-10-21**. Source: the language-design discussion in this chat. N
 
 ## Working proposals requiring confirmation or formalization
 
+- [Named arguments and named tuples](named-arguments-and-tuples.md) are under review. Proposed name = value call labels map through the public callable contract; lambda-local names remain positional bindings. Compare tuple labels as access conveniences, labels as part of compatibility, or records as the sole named product. No syntax, tuple label identity/order, callable name compatibility, or call-spread rule is selected yet; all omitted arguments still require applicable explicitly declared defaults.
+
 - **Failure transfer remains partly open:** tagged return completion is selected: payload T reaches the named target's then, while inner constructs exited on the way skip their then. Propagated errors and unhandled panics provide no conditional T. During language-managed typed-panic propagation, applicable exited-scope `finally` blocks run inner-to-outer before an outer matching handler; recoverable-error cleanup coverage remains open, while cleanup-failure precedence is selected under [completion hooks](#2-completion-hooks-and-abrupt-exits). See [tagged return](control-flow.md#tagged-return-and-completion).
 
 - [Last-item/index completion access](loop-last-item.md) has selected use-based retention: .item/.index describe the last entered body in then, including skipped/broken entries. After zero entries, then exposes typed zero placeholders for .item/.index and count 0; an unobserved item needs no retention. Reading only count/index/value or declaring a tag does not retain every field. Generic ownership/borrowing and lowering remain shared implementation contracts.
