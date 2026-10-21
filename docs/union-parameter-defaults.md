@@ -1,35 +1,40 @@
-# Omitted arguments for union parameters
+# Argument omission requires declared defaults
 
-Status: **open review, 2026-10-21**. Local multi-member union declarations require a value initializer or explicit reservation, and conditional union results require a fallback on unmatched paths. The general omitted-value-argument rule still needs a corresponding union exception.
+Status: **selected 2026-10-21, applying to all function argument types**. The user broadens the proposed union exception: argument omission is always rejected unless an applicable default is explicitly declared. This supersedes automatic zero argument defaults, including for Int and Unit. Default grammar, timing, and signature-versus-implementation placement remain open.
 
-## Concrete case
+## Required arguments without defaults
 
 ```text
 consume := fn(value: A | B): Unit {}
-
-consume()         /* proposed: rejected without a declared default */
+consume()         /* rejected: no declared default */
 consume(make_a())  /* supplies an initialized A */
+
+double := fn(value: Int): Int { value * 2 }
+double()          /* rejected: no declared default */
+double(0)         /* explicitly supplied zero */
 ```
 
-Assume A and B are distinct normalized members and make_a returns a valid A. The ordinary parameter accepts initialized values and preserves their active identity. Omitting it would otherwise request zero(A | B), which has no explicitly chosen member. An unused input or a zero-initialized callable does not by itself make an invalid incoming value legal.
+Assume A and B are distinct normalized members and make_a returns a valid A. A supplied union value preserves its active member. An ordinary parameter always receives an initialized compatible value; uninitialized storage is not an argument value.
 
-## Recommendation
+The same omission restriction applies to Unit, records, aliases, and generic parameters once their contracts are established. Supporting zero or declared-default construction for a type does not declare a default for each parameter of that type. A genuinely zero-input signature needs no arguments: this is not omission of a required parameter.
 
-For an ordinary value parameter whose resolved type is a normalized multi-member plain union, permit omission only when an applicable declared default supplies an initialized compatible value. Without such a default, require the caller to supply an argument. Do not choose a first/canonical member, manufacture an empty union, or pass uninitialized storage.
+## Declared defaults
 
-A declared default such as a valid A{} record construction explicitly supplies member A. An existing compatible union default can preserve whichever active member it holds. This is a semantic example, not selection of parameter-default grammar. Bare 0 cannot be used as an undirected union-default request to evade the explicit-member restriction. = ? is a declaration reservation marker, not an ordinary parameter value or implicit output-only parameter.
+An applicable explicitly declared default allows omission and must produce a valid compatible value. A supplied argument takes precedence. For a union, a valid A{} record default explicitly supplies member A; an initialized compatible union default preserves whichever member it holds. These semantic examples do not select parameter-default syntax.
 
-The supplied argument takes precedence over the default. Ordinary non-union zero defaults remain as selected: an Int parameter with no declared default can still receive integer zero when omitted. A parameter resolving to Unit has its Unit zero. A | Unit remains a multi-member union and receives no implicit Unit preference. Normalize aliases and duplicates before applying the rule; A | A follows A's resulting contract.
+No implicit first/canonical member, Unit preference, empty union, automatic zero, or uninitialized ordinary input follows from omission. Bare 0 cannot evade the selected undirected union-initialization restriction. = ? remains a declaration reservation marker, not a usable default parameter value.
 
-## Boundaries
+## Callable and initialization boundaries
 
-No choice is selected yet. Complete default-expression syntax, evaluation scope/timing, and defaults attached to callable signatures versus implementations remain open. The proposal says an applicable declared default must exist; it does not decide where the default lives or require inspecting an implementation body at runtime. Caller-access parameters, named-argument grammar, patterns, generic constraints, and output construction remain separate.
+The rule applies even when a parameter is unused, unnamed in a contextual lambda, or accepted by a zero-initialized callable. Those implementation choices do not erase the declared input contract. A zero callable still evaluates supplied arguments normally and returns its declared result zero under the separate result rule; union-valued zero-callable results remain a pending creation-policy case.
 
-Reserved local storage must be initialized before it can be supplied as an ordinary argument. A caller cannot request omission and thereby bypass that requirement. Normal callee and supplied-argument evaluation rules remain intact; this review does not define default-expression evaluation order or add an error channel.
+Reserved local storage must be initialized before it can be passed as an ordinary value. Caller-access permissions and writable-location requirements still apply. The explicit-default requirement does not independently authorize default mut/var arguments or an output-only construction API.
 
-Alternatives are to prohibit omission for every union parameter even with a declared default, or reopen automatic member selection. The recommendation retains explicitly declared useful defaults while preventing a hidden union-zero decision. The general non-union omission rule is not reopened by this review.
+Local variable initialization, record-field construction defaults, conditional fallback, and callable result initialization remain separate. The user changed function argument omission, not every use of the word default in the language.
 
-Zero-callable results, union-valued record fields, and loop accumulator initialization still need their own creation policies.
+## Remaining default-expression decisions
+
+Complete syntax, expression eligibility, evaluation scope/timing, named-argument grammar, and defaults in callable signatures versus implementations are not selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
 
 ## Modern references
 

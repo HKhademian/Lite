@@ -29,29 +29,29 @@ An explicitly written function type uses the signature without a body: `fn(a: In
 ```text
 var myfn: fn(a: Int): Int!;
 
-_ := myfn(); // a defaults to 0; zero callable returns .ok(0)
+_ := myfn(0); // supplied a = 0; zero callable returns .ok(0)
 
 myfn = fn(a: Int): Int! {
     a + 1
 };
 
-_ := myfn(); // a defaults to 0; replacement returns .ok(1)
+_ := myfn(0); // supplied a = 0; replacement returns .ok(1)
 _ := myfn(5); // supplied a = 5; replacement returns .ok(6)
 ```
 
 The declaration immediately initializes `myfn` to the callable type's zero value. Ordinary `=` replaces that value because the binding is declared `var`; the assigned function must fit the binding's declared callable contract. The example uses the same parameter and result types on both sides. `mut` is not required for whole-binding replacement and does not substitute for `var`.
 
-The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Omitted ordinary value arguments follow the default-initialization rule below.
+The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Omitted arguments require an applicable explicitly declared default, as specified below.
 
 The explicit signature form and function-literal assignment are selected. Parameter-name identity in function types, broader callable compatibility/variance, captures, ownership, and complete recursive type grammar remain to be specified.
 
 ## Omitted value arguments
 
-An omitted ordinary value argument is default-initialized. Use its declared parameter default when one is specified; otherwise its default is zero of its type. Thus an `a: Int` parameter without a specified default receives `0` in `myfn()`, both before and after replacing the callable. A supplied argument takes precedence over that default.
+An argument may be omitted only when an applicable explicitly declared parameter default supplies its value. Without such a default, omission is a compile-time error for every parameter type, including Int, Unit, records, and plain unions. A supplied argument takes precedence over the default. There is no automatic zero or declared-type default construction merely because a type supports it.
 
-This settles ordinary value parameters. Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns still need formalization. Omission of caller-access parameters must be reviewed with their `mut`/`var` permission and location contracts. See [initialization](zero-initialization.md) and [evaluation order](evaluation-order.md#function-calls).
+This supersedes the earlier default-or-zero argument rule. For fn(a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
 
-The [union-parameter default review](union-parameter-defaults.md) proposes requiring an argument for a normalized multi-member plain-union parameter unless an applicable declared default supplies an initialized compatible value. It remains open; the general zero-default wording above must not silently choose a union member. Single-type defaults and callable default-placement/timing questions stay separate.
+Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, named-argument omission, and interactions with parameter patterns remain open. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
 
 ## Compact implementations under review
 
@@ -287,7 +287,7 @@ In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)
 
 With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
 
-Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still follow their separate default-initialization policy. Nonempty lambda headers may likewise leave trailing inputs unnamed, as specified below. These rules do not revise explicitly declared callable parameter lists or choose general standalone inference without an expected contract.
+Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still require applicable explicitly declared defaults. Nonempty lambda headers may likewise leave trailing inputs unnamed, as specified below. These rules do not revise explicitly declared callable parameter lists or choose general standalone inference without an expected contract.
 
 #### Empty headers without an expected callable
 

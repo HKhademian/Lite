@@ -30,7 +30,7 @@ Selected forms:
 - value: Type = 0 explicitly selects the same zero initialization.
 - value: Type = { ... } selects record construction with declared defaults for omitted fields.
 
-Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. An omitted ordinary function argument follows its separate default-initialization rule: use the declared parameter default, or zero of its type when no default is specified. See [omitted value arguments](functions.md#omitted-value-arguments).
+Zero initialization bypasses declared defaults at every depth. It creates a readable value immediately, not reserved/uninitialized storage awaiting a first assignment. No var/mut permission follows from initialization mode. Omitted initialization is selected for simple typed declarations, not source-free inferred declarations. A function argument may be omitted only with an applicable explicitly declared parameter default; otherwise the call is rejected. Type-level zero/default construction does not create a parameter default. See [omitted value arguments](functions.md#omitted-value-arguments).
 
 The selected [union-local declaration policy](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? for normalized multi-member plain unions. Omission is rejected, not default-uninitialized. This does not supply the zero mapping needed for recursive aggregate zero or implicit zero-result sites.
 

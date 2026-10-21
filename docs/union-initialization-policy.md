@@ -100,7 +100,7 @@ consume := fn(value: A | B): Unit {
 
 Assume the input is a stable closed union with distinct A/B alternatives and no extra empty state. The final path is logically unreachable; exact diagnostic/flow analysis remains separate. The example is not a claim that this code has been implemented or executed. If the empty-zero alternative is adopted, A/B-only coverage instead needs a nonempty proof.
 
-Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments are a separate creation case: the selected parameter-default/zero rule still needs to create a valid value, and cannot silently supply uninitialized storage. The [union-parameter review](union-parameter-defaults.md) proposes requiring a supplied argument or an applicable declared default; that exception remains open. Explicit output-only construction would require its own contract.
+Uninitialized storage cannot be passed to this ordinary parameter. Omitted arguments have a selected rule for all parameter types: require an applicable explicitly declared default, or reject the call. Such a default must supply a valid initialized value. See [argument omission](union-parameter-defaults.md); no automatic zero or uninitialized input is supplied. Explicit output-only construction would require its own contract.
 
 ## Leftmost member as a construction rule
 
@@ -151,7 +151,7 @@ Relative to requiring = ?, this removes a marker but makes omitted initializatio
 
 ## What declaration policy does not settle
 
-Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, omitted argument defaults without a declared value, loop state, and zero callable results. Conditional results are separately reconciled by [requiring explicit union fallback](conditional-union-fallback.md) and constructing exhaustive chains from the chosen member. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
+Neither explicit reservation nor default-uninitialized locals supplies a valid zero(A | B). The newly rejected undirected union-zero initializer means the earlier universal-zero construction policy needs reconciliation for recursively zeroed aggregate fields, loop state, and zero callable results. Omitted arguments without declared defaults are now rejected for all parameter types rather than creating a union zero. Conditional results are separately reconciled by [requiring explicit union fallback](conditional-union-fallback.md) and constructing exhaustive chains from the chosen member. Each must either receive a member-selection mapping or be explicitly revised. Making those hidden uninitialized reads would contradict the proposed definite-initialization boundary.
 
 The three readable-value designs remain separate: a listed zero member, source-directed construction of a listed member, or a deliberately valid empty union state. Uninitialized storage is not a fourth readable value. Undirected union literal-zero initialization and omitted initializers on multi-member union locals are rejected. Constructor grammar, implicit zero-result sites, and complete representation rules remain under review.
 

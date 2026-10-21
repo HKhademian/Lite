@@ -58,7 +58,7 @@ This is a selected semantic refinement, not a request to perform or skip particu
 - Reopen automatic member selection or a valid empty union state. Those are earlier alternatives and conflict with the latest direction requiring an explicit member choice; no such reversal is implied.
 - Supply Unit implicitly or reinterpret unmatched completion as uninitialized storage. Both would contradict selected result or initialization boundaries and are not recommended.
 
-Require an explicit fallback for normally reachable unmatched multi-member union completion, and construct exhaustive conditional results from the chosen branch. Loop accumulator initialization, omitted union arguments, zero-result callables, and zeroing aggregate union fields remain separate pending cases.
+Require an explicit fallback for normally reachable unmatched multi-member union completion, and construct exhaustive conditional results from the chosen branch. Loop accumulator initialization, zero-result callables, and zeroing aggregate union fields remain separate pending cases. Argument omission now requires an applicable explicitly declared default for every parameter type; see [argument defaults](union-parameter-defaults.md).
 
 ## Reference comparison
 
