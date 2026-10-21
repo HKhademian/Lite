@@ -14,7 +14,7 @@ Outcome := (User | Guest) ! LoadError;
 AnyOutcome := User!;
 NameAge := (:String, :Int);
 Users := List<User>;
-Formatter := fn(Int): String;
+Formatter := fn(value: Int): String;
 ```
 
 This follows the uniform binding idea most closely: the right-hand side can denote a type, just as another initializer can denote a function or ordinary value. It is shortest for simple names and unions. It requires a defined compile-time type-expression model and rules for operators on type-denoting operands; it does not inherently require runtime type objects or reflection.
@@ -29,12 +29,12 @@ Outcome := type (User | Guest) ! LoadError;
 AnyOutcome := type User!;
 NameAge := type (:String, :Int);
 Users := type List<User>;
-Formatter := type fn(Int): String;
+Formatter := type fn(value: Int): String;
 ```
 
 The type keyword gives the complete right-hand side a type-expression context through the declaration boundary. It does not mean only the first union member, a cast, or a fresh nominal wrapper. All operands of the union/fallible composition are type operands. Ordinary semicolon and completed-item boundaries still apply; whitespace and newlines never set the keyword's scope.
 
-The first block records the rejected alternative; the second uses the selected prefix. They are not interchangeable alias spellings. If User denotes a type, Member := User is not the selected way to alias it. If a name instead denotes an ordinary value, the ordinary value-binding rule still applies; capitalization never decides this. List<User>, tuple type notation, and fn(Int): String still require their full type grammar.
+The first block records the rejected alternative; the second uses the selected prefix. They are not interchangeable alias spellings. If User denotes a type, Member := User is not the selected way to alias it. If a name instead denotes an ordinary value, the ordinary value-binding rule still applies; capitalization never decides this. The examples use selected tuple component and named callable parameter forms; complete recursive type grammar and generic List<User> notation remain to be formalized.
 
 ## What changes as types become more complex
 
@@ -43,7 +43,7 @@ The first block records the rejected alternative; the second uses the selected p
 - **Fallible type:** User! is the selected shorthand for User ! Error in type context, while outcome! extracts or propagates in value context. The explicit prefix establishes which grammar applies. The short form must resolve whether its operand denotes a type or an outcome value.
 - **Tuple type:** (:String, :Int) uses the selected unnamed typed component form. Bare entries such as (name, age) in tuple type context instead supply labels with inferred component types; they require a static inference source. In ordinary expression context, a tuple can contain ordinary values. The explicit type prefix establishes type context; this comparison does not introduce runtime type values or a second alias spelling.
 - **Generic application:** List<User> needs a type-application grammar; < and > cannot depend on whitespace or capitalized naming conventions to separate them from comparison expressions. An explicit type context helps reuse annotation grammar. The short form remains feasible with proper type-expression rules.
-- **Function type:** type fn(Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Both designs still need rules for parameter names, mut capabilities, fallibility, and closures.
+- **Function type:** type fn(value: Int): String clearly asks for a callable type. Without the prefix, the grammar must distinguish that from a function literal requiring parameters and a body. Named parameter, access-qualifier, and fallible result forms are selected separately; complete recursive grammar, callable label compatibility, and capture representation remain open.
 
 These are readability and grammar-design tradeoffs, not claims that one spelling can be implemented and the other cannot. A compiler need not add runtime work for either alias form.
 

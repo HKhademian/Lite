@@ -55,6 +55,24 @@ The [type-category review](type-categories.md) separates products, named enum al
 
 Record type declarations have selected nominal identity, including unnamed inline declarations: two independently declared records remain distinct despite identical fields. Conversion requires explicit reconstruction under their visibility and ownership contracts. Contextual record construction and headless field extraction do not introduce structural assignment compatibility. Standalone inferred record literals and generic type instantiation still need contracts; see [record identity](record-type-identity.md).
 
+## Tuple type components
+
+Tuple type components use the selected three forms:
+
+```text
+(l: Int, r: Int) /* named, explicit types */
+(l, r)          /* named, inferred types */
+(:Int, :Int)    /* unnamed, explicit types */
+```
+
+Bare entries in type context are labels; a colon requires a following type. The earlier dangling name: form is removed, and bare (Int, Int) is not an unnamed typed pair. Ordinary tuple values and binding patterns keep their context-specific meanings.
+
+```text
+(left, right): (l, r) = (r = 2, l = 1);
+```
+
+The initializer supplies values by name into l, r order, infers both component types as Int, and binds left = 1 and right = 2 positionally. Expressions execute in written order. A stored tuple with another order requires explicit reconstruction. Core construction, named/positional destructuring, and named argument routing are selected; name identity, stored conversion policies, complete recursive grammar, and empty/singleton tuple details remain open. See [concrete tuple routing](named-input-routing.md).
+
 ## Inferred functions
 
 ```text

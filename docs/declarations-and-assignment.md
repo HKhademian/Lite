@@ -130,6 +130,8 @@ The record keyword and typed-field surface are selected; see [records](records.m
 
 ## Scope
 
+Selected tuple declarations include (left, right): (:Int, :Int) = (1, 2), inferred named annotations such as (left, right): (l, r) = (r = 2, l = 1), and named patterns (left = l, right = r) := tuple. A type annotation establishes the initializer contract; := infers it. See [tuple component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
+
 Destructuring declarations and possible future destructuring assignments need separate contracts: declarations introduce names, while assignments update permitted existing targets. Refutable declaration failure and tuple assignment behavior must not be inferred from match syntax. See the [pattern context review](pattern-contexts.md#1-ordinary-declarations).
 
 Sequential local declarations may shadow earlier bindings in the same block, just as nested scopes may shadow names. Resolve an ordinary initializer against the previously visible bindings before introducing its new names. Thus x := make_user(); var x := x; mut x := x; introduces three successive bindings, rather than upgrading the first binding's permissions. Duplicate parameter, record-field, and module declaration lists retain separate contracts. Recursive function initialization and hoisting remain open. See [local shadowing and copies](local-shadowing-and-copies.md).
