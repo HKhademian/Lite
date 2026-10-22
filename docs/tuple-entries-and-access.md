@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -66,7 +66,29 @@ meal.2;    /* compile error: position outside this two-component tuple */
 
 Both named and unnamed tuples expose zero-based numeric dot access in stored component order. Each position has its statically known component type; heterogeneous components need no dynamic lookup or union of all component types. The receiver is evaluated once for each access expression. Numeric access does not remove labels from the whole tuple's type and does not bypass its label-sensitive identity. Reading the same component by name or position grants the same existing access permissions.
 
-The selected syntax uses a fixed numeric position, not a runtime index expression. Dynamic tuple indexing and writes through numeric access require their own contracts; this selection does not grant mutation authority.
+### Runtime indexing rejected
+
+Selected by the user, 2026-10-22: tuples do not support runtime variable indexing. This applies to named and unnamed tuples, including tuples whose component types happen to agree:
+
+```text
+pair := (42, "tea");
+i := read_number();
+pair[i]; /* compile error: runtime tuple indexing is unsupported */
+pair.0;  /* Int */
+pair.1;  /* String */
+```
+
+This rejection does not add a union result, a bounds panic, or a recoverable bounds error. Each supported fixed position already identifies one component and its static type. Use a suitable indexed collection when the computation needs a runtime position; tuples do not implicitly convert into one.
+
+Dot followed by an identifier always selects that literal field name. It does not substitute a variable's value:
+
+```text
+i := 1;
+meal := (i = "named field", cake = 10);
+meal.i; /* "named field", not meal.1 */
+```
+
+Computed compile-time position syntax is not introduced by this decision. Writes through numeric access still need their own assignment/access contract; this selection does not grant mutation authority.
 
 ## Explicit reconstruction examples
 
@@ -85,6 +107,6 @@ These construct a new tuple explicitly. Admission of an intact stored named tupl
 - Empty/singleton tuples and their distinction from grouping remain open; named shorthand alone does not select a singleton production.
 - Mixed named/unnamed standalone inference and mixed tuple type components remain open. Known named destinations retain the selected positional-prefix/named-suffix construction rules.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
-- Union receivers without a common tuple shape, dynamic indexing, and numeric access assignment rules remain separate type/access decisions.
+- Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
 
 Related: [named input routing](named-input-routing.md), [tuple patterns](tuples-and-patterns.md), [grammar sketch](grammar-sketch.md), and [lexical structure](lexical-structure.md).

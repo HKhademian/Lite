@@ -121,7 +121,7 @@ Named tuple binding annotations may omit a component type by writing a bare labe
 
 For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Complete recursive tuple type syntax, singleton tuples, numeric-suffix scanning, dynamic tuple indexing, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Complete recursive tuple type syntax, singleton tuples, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

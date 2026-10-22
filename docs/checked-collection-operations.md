@@ -6,6 +6,8 @@ The later [fault-policy review](checked-fault-policy.md) compares this fallible-
 
 ## Checked indexing
 
+Scope: indexed collections, not tuples. The later selected [tuple access contract](tuple-entries-and-access.md#runtime-indexing-rejected) rejects runtime tuple indexing at compile time; supported tuple positions use fixed numeric dot access.
+
 Proposed dynamic indexing returns a typed recoverable outcome, conceptually T ! BoundsError:
 
 ```text
