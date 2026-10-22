@@ -60,7 +60,7 @@ All types supporting zero initialization does not make arbitrary numeric express
 
 The selected universal rule must map zero storage to meaningful values. Straightforward mappings include numeric 0, Bool false, empty String, Unit, empty variable-size collections, recursively zeroed records, and fixed-size arrays/tuples with each element zeroed. These meanings must be reconciled with actual representation, not merely assumed from C/OS conventions.
 
-Since `Unit` has one value, the selected universal zero rule makes `zero(Unit) = Unit`. The user proposes a zero-sized physical representation, with no bytes to write for that semantic value. Unit remains a valid value, not an absent or invalid state. Calling convention and foreign ABI lowering for a zero-sized value remain representation details to define separately.
+Since `Unit` has one value, the selected universal zero rule makes `zero(Unit) = Unit`. The user selected a zero-sized physical representation on 2026-10-22, with no payload bytes to write for that semantic value. Unit remains a valid value, not an absent or invalid state. Calling convention and foreign ABI lowering for a zero-sized value remain representation details to define separately.
 
 Option's zero is its explicit .None state. A loop value of type T starts as zero(T), without automatically wrapping T in Option. Typed values remain statically typed even though every type has zero.
 

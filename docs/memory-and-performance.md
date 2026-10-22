@@ -19,6 +19,40 @@ Make a convenient language compatible with predictable data representation and a
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
 
+## Empty and singleton tuple layout
+
+Status: **storage-layout contract selected by the user, 2026-10-22; not implementation or ABI verification**.
+
+The user explicitly selects identical storage layouts for a component and its one-component tuple. The following equations use schematic notation from the discussion: T denotes the component type, not a bare inferred tuple label or a new LiteScript type spelling.
+
+```text
+memoryLayout(()) = memoryLayout(Unit) = empty
+memoryLayout((T)) = memoryLayout((T,)) = memoryLayout(T)
+```
+
+Unit/() has zero payload bytes. Grouping (T) already preserves T's identity and layout. A singleton tuple containing a concrete storable T has the same size and alignment as T, with its sole component at offset zero. It adds no wrapper header, tag, padding, indirection, or allocation. A named singleton has the same rule; its field label belongs to the static type contract rather than stored per-value metadata. Nested singleton layers preserve the component layout recursively. Unit alignment and foreign calling conventions remain separate details; singleton alignment must equal its component's chosen alignment.
+
+This is a stronger selected storage guarantee than merely hoping the optimizer removes a wrapper. It does not promise that every source construction performs no instructions: evaluation, required ownership transfer, initialization, and cleanup still follow their eventual contracts. Separate variables do not become aliases just because their types have identical layouts.
+
+### Static type distinction needs no runtime discriminator
+
+```text
+scalar := 42;
+one := (42,);
+one.0;    /* statically valid */
+scalar.0; /* compile error: scalar has no tuple component */
+```
+
+The compiler knows each binding's type and can select field access and operations without storing a type tag in either value. The existing scalar/singleton type and shape distinction remains selected; equal layouts do not merge their identities or add implicit wrapping/unwrapping.
+
+If only identical payload bytes remain and neither a static contract nor runtime metadata identifies their type, runtime code cannot discover whether they came from T or its singleton. This is an information limit, not a compiler optimization problem. Do not specify a byte-inspection test that purports to recover erased type identity.
+
+An actual runtime choice between T and its singleton, such as a union containing both alternatives, still needs the existing union's member-identification mechanism. The tag belongs to the union representation, not to each ordinary scalar or singleton value. Likewise, a future erased value/reflection/dispatch facility would have to retain its required type information explicitly. Static generic specialization can preserve the distinction in generated code; its implementation and code-size costs remain open.
+
+### Layout versus calling convention
+
+Equal size, alignment, and payload layout do not alone select identical parameter/return ABI or permit arbitrary foreign reinterpretation. Those are separate contracts. As a reference precedent, Rust documents tuple layout through its default representation, while specially marked transparent wrappers can share their field's layout and ABI. Do not attribute that stronger transparent-wrapper guarantee to all Rust singleton tuples. Sources: [Rust tuple layout](https://doc.rust-lang.org/reference/type-layout.html#tuple-layout), [transparent representation](https://doc.rust-lang.org/reference/type-layout.html#the-transparent-representation).
+
 ## Union storage model
 
 The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model). Payload capacity is max(size(A), size(B)); the complete value also includes active-member metadata and alignment/padding. This resolves the earlier total-versus-payload ambiguity and supports checked type narrowing. Zero initialization clears both metadata and payload; zero metadata must identify one listed member, with the exact member-selection rule still open. The conceptual inline wrapper does not require boxing or an external metadata allocation. Metadata format, exact ABI, and equivalent optimized encodings remain open.

@@ -37,6 +37,10 @@ Underscore remains an ordinary identifier; = _ refers to its visible binding and
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
+## Storage layout selected
+
+The user selected identical component/singleton storage layouts, 2026-10-22: a singleton has exactly its component's size and alignment, with that component at offset zero and no wrapper metadata. Unit/() has zero payload bytes. Static type/shape distinctions remain; erased identical payloads cannot be distinguished at runtime without retained type information. Union alternatives still use their existing discriminator contract. See [layout rules and static versus runtime distinction](memory-and-performance.md#empty-and-singleton-tuple-layout). This storage guarantee does not by itself select parameter/return ABI, identity-erasing conversions, aliasing, or a runtime reflection mechanism.
+
 ## Empty tuple and Unit selected
 
 Selected by the user, 2026-10-22: Unit is the zero-component tuple, with () as an equivalent value/type spelling. This is identity, not a conversion or another union case. Unit | () normalizes to Unit. The singleton (Unit,) still contains one component and is a distinct product shape. Empty tuple access .0 is rejected at compile time. Call argument lists and lambda headers retain their own syntactic roles; f() passes zero arguments while f(()) explicitly passes one Unit value. A Unit parameter still needs an argument or applicable declared default. See [Unit](unit.md).
@@ -251,7 +255,7 @@ Under the selected ()/Unit identity:
 
 These shapes remain distinct except that () and Unit are the same value/type. .0 is invalid on the zero-component shape, valid on a singleton, and does not recursively flatten nested products. Label-sensitive structural identity still applies. Separately declared empty records remain nominal types; sharing a zero-payload layout is not a conversion.
 
-An implementation can erase unused payload storage while preserving static shape, observable evaluations, and required cleanup. No heap allocation is required merely by these forms, but exact size, alignment, addresses, ABI lowering, debugger representation, and measured overhead remain unverified. In particular, mathematical product identities do not select implicit conversions between a two-component T/Unit product, T itself, and a singleton containing T.
+The later selected storage contract gives Unit/() zero payload size and a singleton the same size/alignment as its component at offset zero. These are design guarantees, not implementation measurements. Static shape, observable evaluations, and required cleanup remain. Addresses, ABI lowering, debugger representation, broader aggregate layout, and measured overhead remain unverified. In particular, mathematical product identities do not select implicit conversions between a two-component T/Unit product, T itself, and a singleton containing T.
 
 ### 7. Zero/default initialization and reserved storage
 

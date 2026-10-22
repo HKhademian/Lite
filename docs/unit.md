@@ -1,6 +1,6 @@
 # Unit
 
-Status: **one value, `Unit`, its type/expression spellings, and its zero mapping selected; zero-sized physical representation proposed by the user, 2026-10-19; empty tuple identity and () as equivalent type/value syntax selected 2026-10-22; broader name-resolution and ABI details remain open**.
+Status: **one value, `Unit`, its type/expression spellings, and its zero mapping selected; zero-sized physical representation selected by the user, 2026-10-22; empty tuple identity and () as equivalent type/value syntax selected 2026-10-22; broader name-resolution and ABI details remain open**.
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Represent successful completion without useful payload data. `Unit` is not an ab
 ## Rules
 
 - The unit type has one value.
-- Since `Unit` has one value, the selected universal zero rule makes `zero(Unit) = Unit`. The user proposes representing it as a zero-sized value type, so no physical byte needs to be stored. Calling-convention and foreign ABI lowering remain separate representation questions.
+- Since `Unit` has one value, the selected universal zero rule makes `zero(Unit) = Unit`. The user selects a zero-sized representation, so no payload byte needs to be stored. Calling-convention and foreign ABI lowering remain separate representation questions.
 - Unit is the zero-component tuple. Both `Unit` and `()` are selected spellings in value and type contexts; they do not create distinct types or union alternatives.
 - Empty executable blocks, declarations, and assignments produce `Unit`. Empty record initializer braces create record data; the enclosing declaration still produces Unit, independently of the record value it binds.
 - An explicit ignored match arm can simply be `_ {}`; its empty body already returns Unit. `_ { Unit }` is equivalent but need not be written.
@@ -59,6 +59,10 @@ also_done: () = Unit;
 ```
 
 The [cross-context review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
+
+## Singleton layout does not change type identity
+
+The user selected [empty and singleton tuple layout](memory-and-performance.md#empty-and-singleton-tuple-layout), 2026-10-22: Unit/() has zero payload bytes, and a singleton has the same size/alignment as its component at offset zero. A singleton containing Unit therefore has zero payload bytes too, while retaining its one-component shape. Layout identity alone does not merge types. The compiler distinguishes statically known types without a per-value tag; runtime code cannot distinguish identical erased payloads without type information. Actual union alternatives retain their existing discriminator contract. Exact ABI and Unit alignment remain separate.
 
 ## Loop interaction
 
