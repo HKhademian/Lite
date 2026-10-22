@@ -75,7 +75,7 @@ The initializer supplies values by name into l, r order, infers both component t
 
 ### Tuple value shorthand and position types
 
-In value context, (cake, tea) constructs unnamed positional components unless an expected named destination supplies their roles. The selected (= cake, = tea) instead supplies named entries cake = cake and tea = tea. This does not change bare labels in tuple type context. Named and unnamed tuples both expose fixed zero-based numeric access (.0, .1, and so on), with the corresponding component's static type and compile-time bounds checking. See [tuple entries and access](tuple-entries-and-access.md); mixed standalone inference and intact stored named/unnamed conversions remain open.
+In value context, (cake, tea) constructs unnamed positional components unless an expected named destination supplies their roles. The selected (= cake, = tea) instead supplies named entries cake = cake and tea = tea. This does not change bare labels in tuple type context. Named and unnamed tuples both expose fixed zero-based numeric access (.0, .1, and so on), with the corresponding component's static type and compile-time bounds checking. See [tuple entries and access](tuple-entries-and-access.md); mixed standalone inference is selected: (42, = tea) infers (:Int, tea: String) when tea is String. Only explicitly named entries supply labels without an expected schema. Intact stored named/unnamed conversions remain open.
 
 ## Inferred functions
 

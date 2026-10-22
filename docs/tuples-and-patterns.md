@@ -113,7 +113,7 @@ The [named arguments and named tuples review](named-arguments-and-tuples.md) com
 
 ## Selected value shorthand and positional access
 
-In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns remain destination = sourceField and do not acquire the value-entry shorthand. Expected named tuple types still accept positional initializers. See [tuple entries and access](tuple-entries-and-access.md).
+In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns remain destination = sourceField and do not acquire the value-entry shorthand. Expected named tuple types still accept positional initializers. Standalone mixed tuple inference and the corresponding mixed type forms are selected: (42, = tea) infers (:Int, tea: String) when tea is String; .0/.1 cover both components and .tea accesses the named one. Mixed positional/named patterns remain separate from mixed value construction. See [tuple entries and access](tuple-entries-and-access.md).
 
 ## Notes and open decisions
 

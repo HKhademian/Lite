@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected and mixed named/unnamed tuples selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -33,9 +33,36 @@ meal := (cake = bake(), tea = brew()); /* explicit labels for expressions */
 meal := (= bake(), = tea);            /* rejected: bake() is not an identifier */
 ```
 
-Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Duplicate labels are rejected, including duplicates introduced by shorthand. Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) remains open.
+Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Duplicate labels are rejected, including duplicates introduced by shorthand. Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) is selected: the first component stays unnamed and the second is labeled tea.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
+
+## Mixed tuples selected
+
+Selected by the user, 2026-10-22: tuple values may combine an unnamed positional prefix with a named suffix. Without an expected destination type, preserve the written order and infer a label only for an explicitly named or shorthand entry:
+
+```text
+tea := "green";
+mixed := (42, = tea); /* inferred type: (:Int, tea: String) */
+mixed := (42, tea = "green"); /* equivalent explicit entry */
+typed: (:Int, tea: String) = (42, = tea);
+
+mixed.0;   /* Int: 42 */
+mixed.1;   /* String: "green" */
+mixed.tea; /* same component as mixed.1 */
+```
+
+The selected mixed type form combines :Type for an unnamed component with name: Type for a named component. No synthetic label is added to the unnamed position. The per-position label, or its absence, participates in the existing structural tuple identity together with the resolved component type. Fully unnamed, fully named, and mixed tuples all retain fixed numeric access; name access exists only for labeled components.
+
+Evaluate entries once from left to right. A positional entry after a named one remains rejected, and duplicate named labels remain rejected. Mixing the full and shorthand named entry spellings does not change these rules. Interleaved named/unnamed type layouts and construction into those layouts are not selected by this prefix/suffix example.
+
+Positional destructuring can bind the whole mixed tuple:
+
+```text
+(number, drink) := mixed;
+```
+
+The existing initial exact-coverage named pattern does not acquire numeric source selectors or mixed positional/named pattern clauses through this decision. Those pattern extensions remain separate.
 
 ## Expected named types still accept positional entries
 
@@ -105,7 +132,7 @@ These construct a new tuple explicitly. Admission of an intact stored named tupl
 ## Remaining grammar and inference issues
 
 - Empty/singleton tuples and their distinction from grouping remain open; named shorthand alone does not select a singleton production.
-- Mixed named/unnamed standalone inference and mixed tuple type components remain open. Known named destinations retain the selected positional-prefix/named-suffix construction rules.
+- General interleaved named/unnamed type layouts and mixed pattern extensions remain separate from the selected prefix/suffix value and type forms. Known fully named destinations retain their selected contextual routing rules.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
 

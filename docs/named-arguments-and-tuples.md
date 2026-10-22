@@ -164,7 +164,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
-- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, complete recursive grammar, and stored named/unnamed conversion policy remain open. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
+- Contextual tuple construction now permits a positional prefix and named suffix. Standalone mixed tuple inference with an unnamed prefix and named suffix is selected; (42, = tea) infers (:Int, tea: String) when tea is String. The corresponding mixed type components are selected. Complete recursive grammar, interleaved mixed type layouts, and stored named/unnamed conversion policy remain open. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 

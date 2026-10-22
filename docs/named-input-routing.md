@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuples with an unnamed prefix and named suffix are selected, including standalone inference and corresponding type components.
 
 ## Selected value shorthand and positional access
 
@@ -207,11 +207,15 @@ second: (cake: Int, tea: Int) = first; /* valid: same tuple type */
 
 Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. A different component label, order, or resolved type describes a different tuple type; general assignability between different component types remains a separate type-system rule. The selected same-shape rule does not permit implicit stored-tuple relabeling or permutation. Separately declared records retain their selected nominal identities.
 
-### Remaining conversion and inference policy — recommendation
+### Remaining conversion policy — recommendation
 
 Stored unnamed-to-named and named-to-unnamed conversions remain open; recommend explicit reconstruction initially.
 
-For initial inference, recommend fully positional or fully named literals. An inferred mixed tuple such as mixed := (10, r = 20) lacks names for its positional prefix; reject it initially unless an expected complete named tuple contract supplies that schema. This is a proposed restriction, not a new rule for existing positional tuples. Empty and singleton tuple syntax remains separate.
+### Mixed tuple inference selected
+
+Selected by the user, 2026-10-22: mixed := (10, r = 20) infers (:Int, r: Int), and mixed := (10, = r) supplies the same label structure when the visible r has type Int. The unnamed positional prefix stays unnamed without an expected destination schema. Both components have numeric access; only the named component additionally has .r access. The matching mixed tuple type components are selected. This replaces the earlier recommendation to reject standalone mixed tuples.
+
+A known fully named destination still supplies names for positional entries: pair: (l: Int, r: Int) = (10, r = 20) constructs l, r order with both labels. This expected-schema construction differs from uncontextual mixed inference. Existing positional-prefix/named-suffix validation and source-order evaluation apply in both cases. See [mixed tuple examples](tuple-entries-and-access.md#mixed-tuples-selected). Empty/singleton syntax, interleaved mixed type layouts, and pattern extensions remain separate.
 
 ## 6. Destructuring and the user's original form
 
@@ -321,7 +325,7 @@ The entry forms follow the existing type-only : Type convention while retaining 
 
 The enclosing syntactic context establishes the role of parentheses. In a type annotation, (l, r) is a named schema with inferred types. In a value expression, (l, r) constructs a tuple from lexical values. In a binding pattern, (l, r) introduces positional bindings. Type-name lookup and capitalization must not choose among these parses. Full integration of the separate proposed whole-value colon pattern remains open.
 
-All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Empty/singleton tuple syntax, mixing named and unnamed components in one tuple type, variadic types, and complete recursive productions remain separate decisions. The choice does not rename public function parameters or select unknown-input lambda inference.
+All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Empty/singleton tuple syntax, interleaved mixed type layouts, variadic types, and complete recursive productions remain separate decisions. The choice does not rename public function parameters or select unknown-input lambda inference.
 
 ## 7. Callables, nested inputs, and permissions
 
