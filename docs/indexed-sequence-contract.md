@@ -37,6 +37,14 @@ Both headers expose the same complete input requirement. This intentionally rest
 
 The user accepts direct ordinary positional access: empty input faults safely instead of creating an undeclared Result. The later [shared recovery direction](expression-recovery.md) uses values[index] else { ... } for local typed-fault recovery. Full scope, fault typing, and transfer/cleanup still need specification.
 
+## Contract versus storage layout
+
+User clarification, 2026-10-22: this collection type describes a promise/API, not a concrete backing class or owner representation. Therefore the [T] contract alone has no single concrete storage layout. That does not mean its size is zero; a layout query requires a concrete provider or a separately specified erased-value representation.
+
+A statically known provider retains its own layout under the proposed generic model. A future runtime-erased provider value would need its own explicit storage/dispatch contract; [T] does not silently select one. The contract declaration itself does not require a runtime object, container descriptor, or metadata dictionary.
+
+Keep three questions separate: the collection capability type, the concrete value/provider implementing it, and a bracket literal constructing that value. An empty value or zero-element payload does not assign a layout to the abstract contract. Bare [] as a complete element-less type spelling is not selected by this clarification; the existing [T] direction still specifies the element contract. See [memory and performance](memory-and-performance.md#collection-contracts-do-not-select-a-layout).
+
 ## Writable refinement
 
 The mut [T] refinement additionally requests permitted replacement of existing positional elements from a provider that actually supplies writable indexed access. The caller grants existing mut access explicitly. Mut does not fabricate a setter for a computed/read-only provider, and it does not grant growth or arbitrary structural changes.

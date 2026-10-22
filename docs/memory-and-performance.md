@@ -83,6 +83,16 @@ The selected [collection API direction](collection-abstractions.md) separates co
 
 Runtime-erased providers and heterogeneous element representations are separate choices with their own dispatch/ownership costs. Specialization can also cost code size and compilation time. [Generic collection performance](generic-collection-performance.md) records those tradeoffs and reference-language examples. [Provider-neutral algorithms](collection-algorithms.md) covers fast hooks and destinations; removing generic-call overhead alone does not change a linear algorithm into indexed lookup.
 
+## Collection contracts do not select a layout
+
+User clarification, 2026-10-22: a collection capability such as the selected [T] indexed-sequence contract describes a promise/API, not a concrete backing implementation. It has no single storage layout without a provider or an explicit runtime-erased representation. This is not the same as selecting size zero.
+
+The ordinary generic path can retain the provider's static type and layout without adding a mandatory descriptor or boxed interface value. A growable list implementation, inline fixed array, borrowed view, or custom provider can have different representations. These provider layouts do not become the layout of the abstract contract merely because each provider satisfies it.
+
+An empty literal is a value-construction question, distinct from its abstract expected type. Empty element storage, zero-sized fixed products, and the storage required by an actual provider must not be conflated. An executable {} already produces Unit; contextual record initialization and collection literal inference keep their separate rules. The user's equal-layout reasoning does not, by itself, select empty nominal record/Unit type identity or collapse a collection capability into Unit.
+
+See [indexed-sequence contract](indexed-sequence-contract.md#contract-versus-storage-layout), [collection abstractions](collection-abstractions.md), and [generic collection performance](generic-collection-performance.md).
+
 ## Proposed sequence representations
 
 The [sequence-family review](sequence-types.md) distinguishes compile-time inline arrays, runtime-sized fixed array owners, growable list owners, and borrowed slice views. Fixed length does not mandate stack placement. A runtime-sized owner may keep its descriptor inline while managing separately allocated elements. A slice views live initialized elements without an element allocation or copy.
