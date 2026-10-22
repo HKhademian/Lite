@@ -60,6 +60,10 @@ also_done: () = Unit;
 
 The [cross-context review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
 
+## Empty tuple pattern selected
+
+The selected pattern () matches only Unit and binds no names. Thus () := operation() is valid when the operation has a Unit result contract; it still evaluates the operation once. An ordinary declaration cannot use this pattern on a scalar, a singleton containing Unit, or a source that may have another type/shape. Conditional and match patterns retain their existing mismatch behavior. This does not give bare Unit a special constant-pattern meaning: ordinary binding-name rules still apply. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected).
+
 ## Singleton layout does not change type identity
 
 The user selected [empty and singleton tuple layout](memory-and-performance.md#empty-and-singleton-tuple-layout), 2026-10-22: Unit/() has zero payload bytes, and a singleton has the same size/alignment as its component at offset zero. A singleton containing Unit therefore has zero payload bytes too, while retaining its one-component shape. Layout identity alone does not merge types. The compiler distinguishes statically known types without a per-value tag; runtime code cannot distinguish identical erased payloads without type information. Actual union alternatives retain their existing discriminator contract. Exact ABI and Unit alignment remain separate.

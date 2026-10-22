@@ -126,7 +126,7 @@ meal := (cake = 42);
 (local = cake) := meal; /* named component: Int */
 ```
 
-Parentheses group a pattern; they do not implicitly extract. A singleton positional tuple pattern requires its comma. A named clause already marks tuple extraction. The source is evaluated once before introducing bindings. Pattern grouping and tuple shape semantics apply consistently in supported pattern contexts, while the existing declaration/conditional/match mismatch contracts remain. Full parser integration, empty tuple patterns, and new header-pattern support are separate. See [complete singleton cases](tuple-entries-and-access.md#singleton-binding-patterns-selected).
+Parentheses group a pattern; they do not implicitly extract. A singleton positional tuple pattern requires its comma. A named clause already marks tuple extraction. The source is evaluated once before introducing bindings. Pattern grouping and tuple shape semantics apply consistently in supported pattern contexts, while the existing declaration/conditional/match mismatch contracts remain. The selected empty tuple pattern () matches only Unit and introduces no bindings. Ordinary declarations require an irrefutable match; conditional/match contexts retain their mismatch rules. Full parser integration and new header-pattern support remain separate. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). See [complete singleton cases](tuple-entries-and-access.md#singleton-binding-patterns-selected).
 
 ## Notes and open decisions
 

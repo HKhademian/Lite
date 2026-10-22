@@ -174,15 +174,16 @@ inferred_named_singleton_type := "(" identifier "," ")"
 
 Thus (Int) groups a scalar type, (:Int,) is an unnamed singleton, (cake: Int) is a named singleton with an optional trailing comma, and (cake,) names a singleton component whose type must be inferred from static evidence. (:Int) is rejected: the unnamed singleton comma is required across values, types, and patterns. Bare labels remain labels in tuple type components; name lookup and expected types do not choose the parse. See [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected).
 
-Selected grouped and singleton tuple binding patterns use these descriptive fragments:
+Selected empty, grouped, and singleton tuple patterns use these descriptive fragments:
 
 ```text
+empty_tuple_pattern := "(" ")"
 grouped_pattern := "(" pattern ")"
 singleton_tuple_pattern := "(" pattern "," ")"
 named_singleton_tuple_pattern := "(" identifier "=" identifier [","] ")"
 ```
 
-The two identifiers in the final fragment mean destination binding and source field label, respectively. (local) := one groups the binding and preserves the whole tuple; (local,) := one extracts its one component; (local = label) := one extracts by name. A typed binding inside grouping constrains the whole source, while a typed component followed by the singleton comma constrains the component. Expected types do not choose the parse. These fragments do not formalize the complete recursive parser, empty tuple patterns, or new header-pattern support. See [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected).
+The two identifiers in the final fragment mean destination binding and source field label, respectively. (local) := one groups the binding and preserves the whole tuple; (local,) := one extracts its one component; (local = label) := one extracts by name. A typed binding inside grouping constrains the whole source, while a typed component followed by the singleton comma constrains the component. Expected types do not choose the parse. The selected empty tuple pattern () matches only Unit and binds no names. Its source is evaluated once. Ordinary declarations require an irrefutable match; supported conditional/match contexts use their existing mismatch rules. These fragments do not formalize the complete recursive parser or new header-pattern support. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). See [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected).
 
 ## Caller mutation grants
 

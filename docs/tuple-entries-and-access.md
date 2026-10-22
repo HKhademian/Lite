@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, the empty tuple pattern, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -94,7 +94,25 @@ The selected forms are (pattern) for grouping, (pattern,) for one positional com
 
 Evaluate the source once before introducing its bindings. Grouping preserves the complete input type and pattern behavior; it never unwraps based on the source or expected type. A singleton tuple pattern requires one component, not a scalar or a two-component tuple. For example, (value,) := 42 is rejected as a declaration shape mismatch. Typed components keep their existing meaning: (value: Int,) requires one Int component, while (value: Int) groups a typed binding for the whole input.
 
-These are pattern semantics wherever the corresponding grouped/tuple pattern is supported. Ordinary declarations still require an irrefutable match; conditional/match patterns retain their selected mismatch behavior. This does not add tuple destructuring to loop headers or lambda parameter headers that do not already support it. Complete recursive type/pattern integration, empty tuple patterns, rest ownership, and mixed named/positional pattern extensions remain separate.
+These are pattern semantics wherever the corresponding grouped/tuple pattern is supported. Ordinary declarations still require an irrefutable match; conditional/match patterns retain their selected mismatch behavior. This does not add tuple destructuring to loop headers or lambda parameter headers that do not already support it. Complete recursive type/pattern integration, rest ownership, and mixed named/positional pattern extensions remain separate.
+
+## Empty tuple pattern selected
+
+Selected by the user, 2026-10-22: () is the zero-component tuple pattern. It matches only Unit and introduces no bindings. It is not a wildcard, discard pattern, or absence test.
+
+```text
+() := ();          /* valid: no names bound */
+() := Unit;        /* same value and shape */
+() := operation(); /* valid if its result contract is Unit */
+/* rejected: () := 42; */
+/* rejected: () := (Unit,); */
+```
+
+Ordinary declarations require an irrefutable match for the static source contract; a source that may also have a different type or shape is rejected there. In supported conditional or match pattern contexts, () succeeds only for Unit and other alternatives follow the existing mismatch/arm-selection rules. A singleton containing Unit still has one component, even though both values have zero payload bytes.
+
+Evaluate the source once even though the pattern binds no names. Source effects, failures, and ordinary cleanup rules remain applicable. The pattern does not inspect uninitialized storage or turn a failed operation into Unit.
+
+This completes the selected zero/one/many positional shape boundary: () matches zero components, (item,) matches one, and (a, b) matches two; (pattern) remains grouping. Empty call parentheses and contextual lambda headers retain their existing meanings. This selection does not add new pattern support to those headers or settle tuple rest semantics.
 
 ## Current scalar boundary and deferred equivalence
 
@@ -247,7 +265,7 @@ inferred: (cake,) = (cake = 42);
 
 The user subsequently selected (pattern) for grouping, (pattern,) for one positional component, and (local = label) for named extraction. Thus (local) := one binds the complete singleton tuple, while (local,) := one extracts its component. See [singleton binding patterns](#singleton-binding-patterns-selected). Keep destination = sourceField direction; = identifier value shorthand is not a pattern shorthand. Recursive parser integration remains separate from these selected semantics.
 
-With the selected ()/Unit identity, a proposed empty tuple pattern would match only that shape/Unit. It must not become a wildcard, discard, or missing-value pattern. Ordinary declaration patterns still need to be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Empty-rest and partial-pattern ownership remain separate.
+The user also selected the [empty tuple pattern](#empty-tuple-pattern-selected): () matches only Unit and binds no names. It is not a wildcard, discard, or missing-value pattern. Ordinary declaration patterns must be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Empty-rest and partial-pattern ownership remain separate.
 
 ### 4. Calls preserve argument count
 
