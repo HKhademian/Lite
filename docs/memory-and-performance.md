@@ -45,6 +45,8 @@ scalar.0; /* compile error: scalar has no tuple component */
 
 The compiler knows each binding's type and can select field access and operations without storing a type tag in either value. The existing scalar/singleton type and shape distinction remains selected; equal layouts do not merge their identities or add implicit wrapping/unwrapping.
 
+The user subsequently reaffirmed this simple boundary: grouped T stays scalar and a one-component tuple stays a tuple. Treating the scalar as a tuple or automatically accepting its singleton in its place is deferred. The selected storage-layout equality remains in force; it is independent of that future semantic discussion. See [current boundary](tuple-entries-and-access.md#current-scalar-boundary-and-deferred-equivalence).
+
 If only identical payload bytes remain and neither a static contract nor runtime metadata identifies their type, runtime code cannot discover whether they came from T or its singleton. This is an information limit, not a compiler optimization problem. Do not specify a byte-inspection test that purports to recover erased type identity.
 
 An actual runtime choice between T and its singleton, such as a union containing both alternatives, still needs the existing union's member-identification mechanism. The tag belongs to the union representation, not to each ordinary scalar or singleton value. Likewise, a future erased value/reflection/dispatch facility would have to retain its required type information explicitly. Static generic specialization can preserve the distinction in generated code; its implementation and code-size costs remain open.

@@ -76,6 +76,19 @@ take((cake,)); /* one unnamed singleton tuple argument */
 
 Singleton type annotations and binding patterns still need their own formal spellings; this selection covers value construction and ordinary expression grouping. Empty tuple identity and () as an equivalent Unit value/type spelling are selected. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
 
+## Current scalar boundary and deferred equivalence
+
+Selected by the user, 2026-10-22: keep ordinary grouping and singleton tuple construction distinct for now. In schematic discussion notation, (T) is the scalar/grouped T and (T,) is a singleton tuple containing T. Actual value examples are:
+
+```text
+scalar := (42);
+one := (42,);
+one.0;    /* 42 */
+scalar.0; /* compile error: grouping does not add a tuple component */
+```
+
+Treating grouped T as a tuple, identifying T with its singleton, or automatically using the singleton as T is deferred for future discussion. No implicit scalar/singleton wrapping, unwrapping, or scalar .0 access follows from the selected equal-layout guarantee. The singleton retains its one-component shape, including when its component is itself a tuple. This decision settles the simple semantic boundary, not every remaining recursive type/pattern production. The selected named singleton forms and Unit/() identity continue to use their own explicit syntax.
+
 ## Mixed tuples selected
 
 Selected by the user, 2026-10-22: tuple values may combine an unnamed positional prefix with a named suffix. Without an expected destination type, preserve the written order and infer a label only for an explicitly named or shorthand entry:
