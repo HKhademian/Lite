@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value forms, singleton binding/grouped patterns, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -74,7 +74,7 @@ take(cake,);   /* one scalar argument */
 take((cake,)); /* one unnamed singleton tuple argument */
 ```
 
-Singleton type annotations remain separate. Singleton binding and grouped patterns are now selected below, alongside value construction and ordinary expression grouping. Empty tuple identity and () as an equivalent Unit value/type spelling are selected. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
+Singleton type annotations are selected in the [type boundary](#2-singleton-type-boundary-selected) below. Singleton binding and grouped patterns are now selected below, alongside value construction and ordinary expression grouping. Empty tuple identity and () as an equivalent Unit value/type spelling are selected. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
 
 ## Singleton binding patterns selected
 
@@ -218,20 +218,30 @@ An explicit constructor marker for every tuple arity could also separate tuples 
 
 There is no grouped scalar inside (): grouping needs an expression. The empty form's issue is identity and surrounding grammar, rather than collision with a scalar expression.
 
-### 2. Type syntax needs its own singleton boundary
+### 2. Singleton type boundary selected
 
-Proposed completion, not selected:
+Selected by the user, 2026-10-22:
 
 ```text
-(Int)        /* grouped type Int */
-(:Int,)     /* unnamed singleton tuple type */
-(cake: Int) /* named singleton tuple type */
-(cake,)     /* inferred-label singleton schema, where type evidence exists */
+(Int)        /* grouped scalar type Int */
+(:Int,)      /* unnamed singleton tuple type */
+(cake: Int)  /* named singleton tuple type */
+(cake,)      /* inferred-label singleton schema, where type evidence exists */
 ```
 
-The final case is significant: bare labels are selected tuple type components, but (cake) alone cannot simultaneously be ordinary type grouping and a singleton label schema. Recommend requiring a comma for the inferred-label singleton, leaving (T) as type grouping. Neither capitalization, type lookup, nor an expected type should decide which grammar was used.
+Require the comma for an unnamed singleton type: (:Int) is rejected, even though its colon could distinguish it from grouping. This keeps the unnamed singleton comma consistent across values, types, and patterns. The comma establishes tuple shape and is not an optional trailing separator in this case.
 
-The unnamed explicit type could instead permit (:Int) without a comma because its colon is already distinctive. That is an open convenience choice; it is not needed to infer singleton values. Named explicit singleton types could allow trailing commas just like their value forms. The empty type () is selected as equivalent to Unit.
+Named explicit types already have a distinctive field clause: (cake: Int) and (cake: Int,) denote the same named singleton type. An inferred-label singleton requires (cake,), because (cake) groups a type. Neither capitalization, type lookup, nor an expected type chooses the parse. The bare cake component in type context is a label, not a type operand; its type must have static evidence. Missing evidence is an inference error rather than an implicit type default.
+
+The empty type () remains equivalent to Unit. The following declarations illustrate the selected boundary without adding scalar/tuple conversions:
+
+```text
+scalar: (Int) = 42;
+one: (:Int,) = (42,);
+meal: (cake: Int) = (cake = 42);
+inferred: (cake,) = (cake = 42);
+/* rejected: bad: (:Int) = (42,); */
+```
 
 ### 3. Pattern grouping and singleton extraction selected
 
@@ -329,13 +339,13 @@ Checked against primary documentation, 2026-10-22. These are comparisons, not Li
 
 ### 12. Recommended decisions to review separately
 
-Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton binding/grouped patterns are now selected; the remaining singleton type recommendations are not adopted.
+Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton value/type forms and binding/grouped patterns are selected; the former singleton syntax recommendations are resolved above.
 
-Next settle singleton type forms, the inferred-label singleton/type-grouping boundary, complete recursive pattern integration, and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+Next settle complete recursive type/pattern integration and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
 ## Follow-up proposals and scalar versus tuple examples
 
-Status: **user proposals and requested reference comparison, 2026-10-22; ()/Unit identity and the later singleton binding/grouping rule are selected; remaining type recommendations are separate**. The distinctions below are review material, not an automatic migration of type or pattern grammar.
+Status: **user proposals and requested reference comparison, 2026-10-22; ()/Unit identity, singleton type spellings, and the later singleton binding/grouping rule are selected**. The distinctions below are review material, not an automatic migration of type or pattern grammar.
 
 ### Ways to distinguish singleton construction
 
@@ -359,9 +369,9 @@ The reference languages use the following concrete distinctions. Names such as x
 
 ### The user's proposed type distinctions
 
-The user proposes (cake) as grouped value, (:Type) as an unnamed singleton type, (= cake) as cake = cake, and a whole annotation value: (Type) as grouped type. This is coherent if syntactic type/value context establishes the role; a type marker does not become a zero-value constructor in expression context. The colon in (:Type) already distinguishes it from grouped (Type), so a mandatory comma there is not needed for parsing.
+The user originally proposed (cake) as grouped value, (:Type) as an unnamed singleton type, (= cake) as cake = cake, and a whole annotation value: (Type) as grouped type. Although the colon could distinguish (:Type) from grouping, the user subsequently selected the required comma: (:Type,) is valid and (:Type) is rejected. A type marker does not become a zero-value constructor in expression context.
 
-The label-only singleton schema still needs a marker: (cake,) in type context can provide the inferred label cake, while (cake) remains grouped type. This preserves the selected multi-component inferred-label schemas without choosing meaning by capitalization or name lookup. These singleton type completions remain proposals until confirmed.
+The selected label-only singleton schema uses (cake,) in type context to provide the inferred label cake, while (cake) remains grouped type. This preserves the selected multi-component inferred-label schemas without choosing meaning by capitalization or name lookup. See the [selected singleton type boundary](#2-singleton-type-boundary-selected).
 
 The additional (cake=) sketch has no value expression. Recommend rejecting it rather than assigning a hidden default, using the same-named variable implicitly, or adding another shorthand for (= cake). No missing-value meaning is selected.
 
@@ -381,7 +391,7 @@ The user later selected consistent grouping instead of this alternative: (local)
 
 ## Remaining grammar and inference issues
 
-- Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type spellings and complete recursive pattern integration remain open; grouped and singleton binding patterns are selected.
+- Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type spellings and grouped/singleton binding patterns are selected; complete recursive type/pattern integration remains open.
 - General interleaved named/unnamed type layouts and mixed pattern extensions remain separate from the selected prefix/suffix value and type forms. Known fully named destinations retain their selected contextual routing rules.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
