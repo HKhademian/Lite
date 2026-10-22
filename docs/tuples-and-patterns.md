@@ -26,7 +26,7 @@ The optional item name always denotes the current source element. Current header
 
 ## Refutable and irrefutable patterns
 
-The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. Singleton pattern/type spellings, empty tuples, and rest ownership remain separate.
+The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton pattern/type spellings and rest ownership remain separate.
 
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
@@ -121,7 +121,7 @@ Named tuple binding annotations may omit a component type by writing a bare labe
 
 For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Complete recursive tuple type syntax, singleton pattern/type spellings, empty tuples, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Complete recursive tuple type syntax, singleton pattern/type spellings, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

@@ -106,7 +106,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
 - [Tuples and patterns](tuples-and-patterns.md): selected positional and named bindings, typed/inferred tuple annotations, and remaining nested/rest grammar.
 - [Named arguments and named tuples](named-arguments-and-tuples.md): selected positional/named/mixed call forms and structural, label-sensitive stored tuples; open callable label compatibility and remaining tuple conversions; modern reference-language comparisons.
-- [Tuple entries and access](tuple-entries-and-access.md): selected = identifier named shorthand, unnamed and mixed value entries, inferred mixed tuple types, fixed zero-based numeric access, singleton values, and a cross-context review of empty tuples/Unit, types, patterns, calls, lambdas, initialization, and spread.
+- [Tuple entries and access](tuple-entries-and-access.md): selected = identifier named shorthand, unnamed and mixed value entries, inferred mixed tuple types, fixed zero-based numeric access, singleton values, selected ()/Unit empty tuple identity, and a cross-context review of types, patterns, calls, lambdas, initialization, and spread.
 - [Concrete named input routing](named-input-routing.md): selected argument mapping, invalid-input checks, named destructuring, tuple component forms, written evaluation order, and fresh-versus-stored tuple behavior; open callable, default-timing, and permission-composition details.
 - [Named calls and tuples across the reference languages](named-arguments-reference-comparison.md): all twelve established references plus C#, distinguishing native argument labels, named product values, tuple labels, and compatibility.
 - [Tuple spread and rest](tuple-spread-and-rest.md): requested construction spreading and typed pattern capture, known shapes, evaluation order, selected singleton value displays, and unresolved empty tuple/type/pattern details.
@@ -120,7 +120,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, selected tag-only patterns, and open representation/conversion contracts.
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
-- [Unit](unit.md): successful completion without useful data; one value, selected zero mapping, and proposed zero-sized physical representation.
+- [Unit](unit.md): successful completion without useful data; one zero-component value/type spelled Unit or (), selected zero mapping, and proposed zero-sized physical representation.
 - [Option](option.md): explicit absence without universal nullability.
 - [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
 - [Throw as an error return](error-return-sugar.md): proposed throw error shorthand for return .err(error), declared error coverage, function/closure boundaries, and unchanged caller handling.

@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; the rules below are a syntax/semantics proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Variadic tuple-type declarations, singleton type/pattern spellings, empty tuple/Unit equivalence, and ownership remain separate decisions.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; the rules below are a syntax/semantics proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Variadic tuple-type declarations, singleton type/pattern spellings and ownership remain separate decisions. The empty tuple is now selected as Unit, with () as equivalent value/type syntax.
 
 ## Two directions for the same punctuation
 
@@ -17,7 +17,7 @@ In a tuple expression, ...expression spreads an existing tuple's components into
 (A, B, C, ...rest) := (...(1, 2), 3);
 ```
 
-The right side constructs the three-component tuple (1, 2, 3). A is 1, B is 2, C is 3, and rest has the empty tuple shape. Its zero-component type is statically known; the precise relationship to Unit and its literal spelling remain open.
+The right side constructs the three-component tuple (1, 2, 3). A is 1, B is 2, C is 3, and rest has the empty tuple shape. Under the selected empty tuple identity, that zero-component shape is Unit, also spelled (). The rest operation itself remains part of this proposal.
 
 ```text
 (A, B, C, ...rest) := (...(1, 2), 3, 4);
