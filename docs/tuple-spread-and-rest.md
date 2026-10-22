@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; the rules below are a syntax/semantics proposal**. Variadic tuple-type declarations, singleton/empty spelling, and ownership remain separate decisions.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; the rules below are a syntax/semantics proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Variadic tuple-type declarations, singleton type/pattern spellings, empty tuple/Unit equivalence, and ownership remain separate decisions.
 
 ## Two directions for the same punctuation
 
@@ -23,7 +23,7 @@ The right side constructs the three-component tuple (1, 2, 3). A is 1, B is 2, C
 (A, B, C, ...rest) := (...(1, 2), 3, 4);
 ```
 
-The right side constructs (1, 2, 3, 4). A is 1, B is 2, C is 3, and rest is a one-component tuple containing Int value 4. It is not an Int scalar. A singleton display such as (4,) remains subject to the tuple grammar decision.
+The right side constructs (1, 2, 3, 4). A is 1, B is 2, C is 3, and rest is a one-component tuple containing Int value 4. It is not an Int scalar. Its value display (4,) is selected singleton construction. Singleton type/pattern spellings remain separate from that value notation.
 
 Uppercase A/B/C are ordinary binding names in these examples. They do not request type matching. Sequential redeclarations follow the existing shadowing rules.
 

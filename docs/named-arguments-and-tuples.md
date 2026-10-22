@@ -162,8 +162,8 @@ A function taking one tuple remains distinct from a function taking two paramete
 
 The selected component forms are name: Type, bare name with an inferred type, and :Type without a name. Thus (l, r) is an inferred named schema in type context and (:Int, :Int) is an unnamed typed tuple. Bare (Int, Int) is no longer an unnamed type spelling; the earlier dangling-colon (l:, r:) form is removed. Ordinary tuple value expressions and binding patterns retain their existing roles. See [component annotation cases](named-input-routing.md#selected-tuple-type-component-grammar).
 
-- Empty and singleton tuple spelling and their relationship to Unit remain open.
-- A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
+- Singleton values are selected: (value) groups, (value,) constructs an unnamed singleton, and (= value) or (label = expression) constructs a named singleton with an optional trailing comma. See [singleton values](tuple-entries-and-access.md#singleton-values-selected).
+- Empty tuple values and their relationship to Unit, plus singleton type and pattern spellings, remain open.
 - Contextual tuple construction now permits a positional prefix and named suffix. Standalone mixed tuple inference with an unnamed prefix and named suffix is selected; (42, = tea) infers (:Int, tea: String) when tea is String. The corresponding mixed type components are selected. Complete recursive grammar, interleaved mixed type layouts, and stored named/unnamed conversion policy remain open. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.

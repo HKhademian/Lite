@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected and mixed named/unnamed tuples selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples and singleton value forms selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -24,7 +24,7 @@ tuple_value_entry := expression
                    | "=" identifier
 ```
 
-This outlines entries inside an established tuple value; it does not complete grouping, singleton, spread, assignment, or recursive expression grammar. The shorthand applies to tuple values, not automatically to function arguments, records, patterns, or tuple types.
+This outlines entries inside an established tuple value; singleton value forms are selected below, while spread, assignment, and complete recursive expression grammar remain separate. The shorthand applies to tuple values, not automatically to function arguments, records, patterns, or tuple types.
 
 The shorthand requires an ordinary identifier resolving to a value. It cannot derive a label from a call, member access, grouped operand, or arbitrary expression:
 
@@ -36,6 +36,37 @@ meal := (= bake(), = tea);            /* rejected: bake() is not an identifier *
 Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Duplicate labels are rejected, including duplicates introduced by shorthand. Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) is selected: the first component stays unnamed and the second is labeled tea.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
+
+## Singleton values selected
+
+Selected by the user, 2026-10-22: an unnamed singleton needs a comma to distinguish it from grouping. An explicitly named entry already establishes a tuple, so its trailing comma is optional:
+
+```text
+cake := 10;
+scalar := (cake);            /* grouping: Int */
+one := (cake,);             /* unnamed one-component tuple */
+meal := (= cake);           /* named one-component tuple */
+meal := (cake = cake);      /* equivalent full entry */
+meal := (= cake,);          /* optional trailing comma */
+meal := (cake = cake,);     /* optional trailing comma */
+
+one.0;     /* 10 */
+meal.0;    /* 10 */
+meal.cake; /* same component as meal.0 */
+```
+
+The comma in (cake,) establishes an unnamed tuple; removing it changes the value's type. It is not an optional separator on an otherwise recognized singleton. This syntactic distinction does not depend on an expected type: grouping (cake) does not become tuple construction merely because a destination expects a singleton. A singleton tuple remains a product containing one value, not the scalar itself; there is no implicit flattening.
+
+The shorthand remains restricted to identifiers. Use (cake = bake()) to name an arbitrary expression. These value forms do not add assignment expressions: name = expression inside an established tuple entry supplies a label.
+
+Call parentheses still delimit arguments. A trailing comma in a call does not create a tuple argument:
+
+```text
+take(cake,);   /* one scalar argument */
+take((cake,)); /* one unnamed singleton tuple argument */
+```
+
+Singleton type annotations and binding patterns still need their own formal spellings; this selection covers value construction and ordinary expression grouping. Empty tuple values and their relationship to Unit remain open. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
 
 ## Mixed tuples selected
 
@@ -131,7 +162,7 @@ These construct a new tuple explicitly. Admission of an intact stored named tupl
 
 ## Remaining grammar and inference issues
 
-- Empty/singleton tuples and their distinction from grouping remain open; named shorthand alone does not select a singleton production.
+- Singleton value/grouping forms are selected above. Empty tuple values and their relationship to Unit, plus singleton type and pattern spellings, remain open.
 - General interleaved named/unnamed type layouts and mixed pattern extensions remain separate from the selected prefix/suffix value and type forms. Known fully named destinations retain their selected contextual routing rules.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
