@@ -89,3 +89,5 @@ The primary source for LiteScript-specific choices is the design conversation th
 ## Pattern matching across type categories
 
 The [all-type pattern review](pattern-type-review.md#reference-checks), [ordered sequences](sequence-patterns.md), and [set matching](set-patterns.md) compare primary Rust, Dart, Python, Swift, and Kotlin documentation consulted on 2026-10-18. They distinguish structural decomposition, equality, membership, and search; no new collection matching grammar is adopted solely because a reference language supports it.
+
+The [empty/singleton review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts), checked 2026-10-22, compares low-arity tuple construction and Unit models across the twelve established references plus C#, with primary sources linked per language. It records open LiteScript recommendations, not implementation verification.

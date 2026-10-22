@@ -160,6 +160,145 @@ meal: (cake: Int, tea: Int) = (plain.0, plain.1);
 
 These construct a new tuple explicitly. Admission of an intact stored named tuple to an unnamed destination, or the reverse, remains a separate open conversion policy.
 
+## Empty and singleton review across contexts
+
+Status: **review requested by the user, 2026-10-22; the recommendations in this section are not newly selected rules**. The selected singleton value forms above remain in force. This review does not claim parser, compiler, runtime, ABI, or performance verification.
+
+### 1. Empty tuple identity and spelling are separate choices
+
+An empty tuple has zero components and one possible value. That is compatible with the selected single-inhabitant Unit model, but equal cardinality alone does not make two types identical. The language must select the identity explicitly.
+
+- **Unit is the empty tuple, spelled only Unit in values/types:** keeps the existing spelling and supports a zero-component product model without adding a general () value expression. Tuple rest and generic operations must present their zero-component result as Unit.
+- **Unit is the empty tuple, with () as another value/type spelling:** gives conventional tuple notation, but adds a second spelling. Recommend this direction for comparison; it is not selected. Official prose can still prefer Unit for action-result annotations.
+- **The empty tuple is distinct from Unit:** preserves a separate product identity. Both could have one value and zero payload bytes; separate conversions, union cases, generic constraints, and diagnostics would be needed. Identical storage does not remove those language distinctions.
+- **Exclude low arities or collapse singleton products:** reduces some source forms, but requires special cases for generic construction and rest results. Collapsing singletons would revisit the user's selected distinction between a tuple and its component.
+
+An explicit constructor marker for every tuple arity could also separate tuples from grouping. A hypothetical tuple(value) form would need its own keyword/intrinsic, labeled-entry, type, and pattern rules. It is a larger syntax change, not a necessary consequence of empty tuples.
+
+There is no grouped scalar inside (): grouping needs an expression. The empty form's issue is identity and surrounding grammar, rather than collision with a scalar expression.
+
+### 2. Type syntax needs its own singleton boundary
+
+Proposed completion, not selected:
+
+```text
+(Int)        /* grouped type Int */
+(:Int,)     /* unnamed singleton tuple type */
+(cake: Int) /* named singleton tuple type */
+(cake,)     /* inferred-label singleton schema, where type evidence exists */
+```
+
+The final case is significant: bare labels are selected tuple type components, but (cake) alone cannot simultaneously be ordinary type grouping and a singleton label schema. Recommend requiring a comma for the inferred-label singleton, leaving (T) as type grouping. Neither capitalization, type lookup, nor an expected type should decide which grammar was used.
+
+The unnamed explicit type could instead permit (:Int) without a comma because its colon is already distinctive. That is an open convenience choice; it is not needed to infer singleton values. Named explicit singleton types could allow trailing commas just like their value forms. The empty type spelling follows whichever Unit/empty identity option is selected.
+
+### 3. Patterns need a matching boundary
+
+Proposed completion, not selected:
+
+```text
+(value,) := one;          /* extract one positional component */
+(local = cake) := meal;   /* extract the sole named cake component */
+```
+
+Recommend that (pattern) group a pattern and that (pattern,) demand a singleton product. Grouped patterns themselves still need formalization. Keep the existing destination = sourceField direction; = identifier value shorthand does not automatically become a pattern shorthand.
+
+If () is adopted as the empty tuple, an empty tuple pattern would match only that shape/Unit. It must not become a wildcard, discard, or missing-value pattern. Ordinary declaration patterns still need to be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Empty-rest and partial-pattern ownership remain separate.
+
+### 4. Calls preserve argument count
+
+Under the proposed ()/Unit identity, these call shapes remain distinct:
+
+```text
+f();          /* zero arguments */
+f(Unit);      /* one Unit argument */
+f(());        /* one Unit argument, if () is adopted */
+f((Unit,));   /* one singleton-tuple argument containing Unit */
+f(cake,);     /* one cake argument, with trailing call comma */
+f((cake,));   /* one singleton-tuple argument */
+f(cake = cake);   /* a named function argument */
+f((cake = cake)); /* one argument: a named singleton tuple */
+```
+
+These are shape comparisons, not overload declarations guaranteeing one f accepts them all. A parameter of type Unit still requires an explicitly supplied argument or an applicable declared parameter default. Zero-sized storage does not make an argument optional, and a tuple result does not silently supply multiple arguments. Call spread and call-site = identifier shorthand remain separate proposals.
+
+### 5. Arrow-free lambdas require a syntactic boundary
+
+The already selected parameter-list-plus-body form must remain recognizable:
+
+```text
+action := () { Unit } /* callable: an empty local input header */
+```
+
+If () is adopted as a value, () { ... } must retain the lambda reading in the expression positions already reserved for it. It cannot be interpreted as a Unit value followed by a block according to expected type or line breaks. Separate items still need explicit separators where required. Construct headers such as if (condition) { ... } keep their own header/body grammar.
+
+Without an expected callable, the empty lambda header declares zero inputs. With an expected callable, it leaves the expected inputs unnamed locally; that existing distinction does not depend on empty tuple identity. Singleton tuple parameters are still one input, not a new lambda-header binding convention.
+
+### 6. Shape and type identity survive zero-sized storage
+
+Under the proposed ()/Unit identity:
+
+```text
+()          /* zero components: Unit */
+(Unit,)     /* one component containing Unit */
+((Unit,),)  /* one component containing a singleton tuple */
+(done = Unit) /* named singleton */
+```
+
+These shapes remain distinct except that () and Unit would be the same value/type. .0 is invalid on the zero-component shape, valid on a singleton, and does not recursively flatten nested products. Label-sensitive structural identity still applies. Separately declared empty records remain nominal types; sharing a zero-payload layout is not a conversion.
+
+An implementation can erase unused payload storage while preserving static shape, observable evaluations, and required cleanup. No heap allocation is required merely by these forms, but exact size, alignment, addresses, ABI lowering, debugger representation, and measured overhead remain unverified. In particular, mathematical product identities do not select implicit conversions between a two-component T/Unit product, T itself, and a singleton containing T.
+
+### 7. Zero/default initialization and reserved storage
+
+Unit already has the selected zero value Unit. If the empty tuple is Unit, no additional zero-member choice is needed for that type. A singleton's zero initialization instead depends on its component's zero mapping, preserving its tuple shape and label. A tuple containing a multi-member union does not solve the existing undirected union initialization problem; the component still needs its own selected valid construction.
+
+The reserved-storage marker = ? does not become a readable Unit or empty tuple merely because no payload bytes are needed. The ordinary no-read-before-initialization rule still applies: initialization state is a semantic contract independent of how many payload bytes are stored. Default construction, zero construction, and omitted function arguments retain their existing separate contracts.
+
+### 8. Result, Option, unions, and control-flow results
+
+Under the proposed identity, Unit and () would be duplicates in a plain union. A singleton containing Unit remains distinct, so a union containing that singleton type must not collapse into Unit. Unit also remains distinct from None and from a successfully wrapped Result payload. Option<Unit> still has present and absent cases; Unit ! E still has success and failure outcomes.
+
+An empty executable block still produces Unit. Adopting an empty tuple spelling would not change tail-value rules, turn a trailing semicolon into discard, erase a real Unit branch from a union, or supply zero values for missing parameters. Loop/conditional Unit defaults and zero-callable Unit results keep their current behavior; singleton result contracts remain singleton contracts.
+
+### 9. Spread and rest expose the low-arity choice
+
+The existing spread/rest proposal preserves statically known product shape. If Unit is the empty tuple, spreading it contributes zero components; spreading a singleton contributes one; explicitly including the tuple as an ordinary entry instead contributes the tuple itself as one component. An exhausted tuple rest would have the empty tuple/Unit shape, while a one-component rest remains a singleton.
+
+This introduces a real choice: if Unit is literally the zero-component tuple, all Unit-valued expressions are potential zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
+
+Spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread may yield zero, one, or multiple components. Its expression syntax and interaction with grouping need a production of their own; the selected (value,) rule alone does not settle them. Named/mixed spread routing, duplicates, and access/ownership remain open.
+
+### 10. Diagnostics, formatting, and migration
+
+The singleton comma must survive formatting: deleting it changes type. Diagnostics should explain "scalar supplied where singleton tuple expected" rather than silently wrapping or unwrapping. Expected types must not reinterpret (value) as a tuple. A constructor with one named entry is data construction, not a parenthesized assignment expression; ordinary assignment remains an item.
+
+Tuple commas remain comma-list punctuation inside tuple syntax; this review does not select bare x, y tuple expressions outside parentheses. Numeric .0 access and ordinary field access keep their existing contracts, including runtime-index rejection. Zero-arity .0 is always out of range. A formatter/parser must preserve lambda headers, call argument lists, singleton type/pattern markers, and mandatory item separators regardless of whitespace.
+
+### 11. Reference-language checks
+
+Checked against primary documentation, 2026-10-22. These are comparisons, not LiteScript parser/runtime evidence.
+
+- **Rust:** the empty tuple is unit; singleton tuple values and types require a comma, keeping them distinct from grouping. This supports a uniform zero/one/many product model. Sources: [tuple types](https://doc.rust-lang.org/reference/types/tuple.html), [tuple expressions](https://doc.rust-lang.org/reference/expressions/tuple-expr.html).
+- **Zig:** tuple construction uses anonymous struct literals, with .{} for empty and .{value} for a singleton. The explicit .{...} marker separates product construction from parentheses. This does not establish empty-tuple/void identity for LiteScript. Source: [Zig 0.15.1 tuples](https://ziglang.org/documentation/0.15.1/#Tuples).
+- **Odin:** the documented multiple-result lists can expand directly into call arguments. That is a different contract from LiteScript's one tuple-valued result and its no-implicit-call-spread boundary. The result-list syntax does not decide LiteScript's empty/singleton first-class values. Source: [multiple results](https://odin-lang.org/docs/overview/#multiple-results).
+- **V:** the function documentation demonstrates multiple returned values with separate receiving bindings. That example is useful for result-list comparison, but does not specify LiteScript's general empty/singleton tuple syntax or Unit identity. Source: [returning multiple values](https://docs.vlang.io/functions.html#returning-multiple-values).
+- **Swift:** Void aliases the empty tuple type (); the reference excludes singleton tuple types. Its parameter-pack design unwraps one-element substitutions and explicitly discusses the matching complication. It demonstrates the tradeoff of omitting singleton products. Sources: [tuple types](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Types.md#tuple-type), [parameter packs](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0393-parameter-packs.md#single-element-pack-substitution).
+- **Kotlin:** Unit is its own single-inhabitant type; the standard products highlighted by its docs are Pair and Triple. Named data classes provide other shapes. This offers no parenthesized singleton-tuple rule to copy. Sources: [Unit](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/), [standard data classes](https://kotlinlang.org/docs/data-classes.html#standard-data-classes).
+- **Dart:** a record with one positional field requires a trailing comma; named fields have their own label syntax. Its record diagnostic rules separately cover empty records and reject a comma in a fieldless record literal. Sources: [records](https://dart.dev/language/records), [record diagnostics](https://dart.dev/tools/diagnostics).
+- **C++:** std::tuple explicitly constructs product types, including zero and one component, rather than using grouped expression syntax. The tuple constructor rules handle the singleton case explicitly. This is a constructor-marker precedent, not automatic scalar/tuple equivalence. Source: [tuple library specification](https://eel.is/c++draft/tuple).
+- **TypeScript:** tuple types describe arrays with known positional types and length, using bracket syntax such as [] or [number]. Those type annotations do not make arbitrary array literals infer tuple types, and they do not give empty tuples LiteScript's Unit identity. Source: [tuple types](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types).
+- **Python:** () constructs an empty tuple, (value,) constructs a singleton, and (value) groups. The comma determines the singleton distinction. Its iterable unpacking and runtime tuple model are separate from LiteScript's static product/ownership design. Source: [expression lists](https://docs.python.org/3/reference/expressions.html#expression-lists).
+- **Lua:** multiple-result expressions are adjusted by context; parenthesizing one forces a single result. This contrasts with preserving an intact LiteScript tuple value. Zero results must not be mistaken for a first-class empty tuple. Source: [multiple results and adjustment](https://www.lua.org/manual/5.4/manual.html#3.4.12).
+- **Scala 3:** its implementation defines a dedicated EmptyTuple and constructs a one-element tuple using Tuple1. These supply explicit low-arity product representations; they do not by themselves equate EmptyTuple with LiteScript Unit. Source: [Tuple implementation](https://github.com/scala/scala3/blob/main/library/src/scala/Tuple.scala).
+- **C# (supplemental):** ordinary tuple syntax requires at least two elements, while the ValueTuple API has zero- and one-component construction. This separates library representation from language sugar. Sources: [tuple diagnostics](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/tuple-errors), [ValueTuple API](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple).
+
+### 12. Recommended decisions to review separately
+
+Keep selected singleton values and explicit extraction. First decide whether Unit is the zero-component tuple; then separately choose whether () is accepted as a value/type spelling. A coherent direction is Unit/empty identity plus () syntax, with Unit retained as the clear action-result spelling in reference prose. This is a recommendation, not adoption.
+
+Next settle the singleton type/pattern forms, the inferred-label singleton/type-grouping boundary, and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+
 ## Remaining grammar and inference issues
 
 - Singleton value/grouping forms are selected above. Empty tuple values and their relationship to Unit, plus singleton type and pattern spellings, remain open.

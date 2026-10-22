@@ -49,6 +49,10 @@ save_student(student)   /* Result<Unit, SaveError> */
 
 The selected type name and requested expression spelling are both `Unit`: type positions refer to the type, while a value position can refer to its unique inhabitant. This is a narrow Unit rule, not a general conversion of every type name into an expression constructor. Broader type/value namespace resolution remains open.
 
+## Empty tuple equivalence under review
+
+The [cross-context empty/singleton review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts), requested 2026-10-22, compares Unit as the zero-component product with Unit as a distinct type. It separately compares retaining only the Unit spelling with adding () as equivalent value/type syntax. Neither identity nor the new spelling is selected yet. The existing Unit value, zero mapping, Option/Result distinction, and explicit argument-default rules remain selected. A singleton containing Unit remains distinct from Unit under the review's recommended model.
+
 ## Loop interaction
 
 A body that normally completes with `Unit` contributes a valid `Unit` loop value. If no path contributes and nothing else constrains the body type, that type defaults to `Unit`; an expected type can override it. Plain `continue` and bare `break` remain noncontributing paths. A loop's body type and its `then` result type are separate, so a `Unit` body may still have a non-Unit whole-loop result. See [loop value](loop-value.md) and [loop inference](loop-type-inference.md).
