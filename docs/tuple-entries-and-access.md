@@ -303,6 +303,52 @@ Unit is now selected as the zero-component tuple, with () accepted as equivalent
 
 Next settle the singleton type/pattern forms, the inferred-label singleton/type-grouping boundary, and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
+## Follow-up proposals and scalar versus tuple examples
+
+Status: **user proposals and requested reference comparison, 2026-10-22; only ()/Unit identity was newly adopted in this follow-up**. The distinctions below are review material, not an automatic migration of type or pattern grammar.
+
+### Ways to distinguish singleton construction
+
+The selected value-level rule remains (value) for grouping and (value,) for an unnamed singleton. Alternatives for review include requiring an explicit tuple constructor/marker, constructing a named singleton such as (= value), or omitting singleton tuple syntax. An explicit type annotation can check intent, but must not change the parse of (value) into a tuple.
+
+The reference languages use the following concrete distinctions. Names such as x denote scalar values in these examples; constructors and annotations remain in each language's native syntax:
+
+- **Rust:** (x) groups, (x,) constructs a singleton, and () is unit. Types distinguish T from (T,); patterns also use the comma to distinguish grouping from a one-component product. Sources: [tuple types](https://doc.rust-lang.org/reference/types/tuple.html), [tuple expressions](https://doc.rust-lang.org/reference/expressions/tuple-expr.html), [tuple patterns](https://doc.rust-lang.org/reference/patterns.html#tuple-patterns).
+- **Zig:** (x) groups; .{x} constructs a singleton tuple, .{} an empty tuple, and .{x, y} a pair. The literal's .{ opener identifies construction without needing a singleton comma. Source: [tuples](https://ziglang.org/documentation/0.15.1/#Tuples).
+- **Odin:** the documented proc() -> (int, int) { return 1, 2 } produces multiple results, received as a, b := operation(). This list can expand into another call's arguments, unlike LiteScript's intact tuple. A stored product can instead use a struct; this return-list notation does not establish a first-class (x,) literal. Source: [multiple results](https://odin-lang.org/docs/overview/#multiple-results).
+- **V:** fn operation() (int, int) { return 1, 2 } supplies two returned values, received as a, b := operation(). These documented result lists are not evidence for a general (x,) value constructor; stored structured data has its own construction syntax. Source: [returning multiple values](https://docs.vlang.io/functions.html#returning-multiple-values).
+- **Swift:** (x) groups, (x, y) is a tuple, and () is the empty tuple. The documented tuple model has no singleton tuple type; Void aliases (). Source: [tuple types](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Types.md#tuple-type).
+- **C++:** (42) groups; std::tuple<int>{42} explicitly constructs a one-component product, and std::tuple<>{} an empty one. Construction names the library type instead of interpreting a comma as tuple punctuation. Source: [tuple specification](https://eel.is/c++draft/tuple).
+- **Dart:** (x) groups; (x,) is a one-positional-field record; (label: x) is an already distinctive named record. Its singleton positional record type also requires a comma. Sources: [records](https://dart.dev/language/records), [singleton literal diagnostic](https://dart.dev/tools/diagnostics/record_literal_one_positional_no_trailing_comma), [singleton type diagnostic](https://dart.dev/tools/diagnostics/record_type_one_positional_no_trailing_comma).
+- **Python:** (x) groups, (x,) constructs a singleton tuple, and () an empty tuple. Python also permits the bare expression list x, to construct a singleton, a convenience not selected for LiteScript. Source: [expression lists](https://docs.python.org/3/reference/expressions.html#expression-lists).
+- **Scala 3:** explicit Tuple1(x), also constructed by Tuple(x), represents a singleton product; Tuple() constructs EmptyTuple. Source: [Tuple implementation](https://github.com/scala/scala3/blob/main/library/src/scala/Tuple.scala).
+- **TypeScript:** (x) groups; const one: [number] = [x] explicitly types a one-element array as a tuple. The brackets separate it from grouping, and the annotation supplies the tuple contract rather than an ordinary number[] inference. Source: [tuple types](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types).
+- **Kotlin:** documented product values use Pair/Triple or named data class construction; grouping is not a tuple constructor. Its single-inhabitant Unit remains an explicit object/type. Sources: [standard data classes](https://kotlinlang.org/docs/data-classes.html#standard-data-classes), [Unit](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/).
+- **Lua:** parentheses around a multiple-result call reduce it to one result; they do not construct a singleton product. Persistent grouped data uses a table value instead of preserving the multiple-result list. Source: [multiple results](https://www.lua.org/manual/5.4/manual.html#3.4.12).
+- **C# (supplemental):** (x) groups and ordinary tuple syntax requires two or more elements. ValueTuple.Create(x) supplies a library-level singleton representation. Sources: [tuple diagnostics](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/tuple-errors), [ValueTuple creation](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple).
+
+### The user's proposed type distinctions
+
+The user proposes (cake) as grouped value, (:Type) as an unnamed singleton type, (= cake) as cake = cake, and a whole annotation value: (Type) as grouped type. This is coherent if syntactic type/value context establishes the role; a type marker does not become a zero-value constructor in expression context. The colon in (:Type) already distinguishes it from grouped (Type), so a mandatory comma there is not needed for parsing.
+
+The label-only singleton schema still needs a marker: (cake,) in type context can provide the inferred label cake, while (cake) remains grouped type. This preserves the selected multi-component inferred-label schemas without choosing meaning by capitalization or name lookup. These singleton type completions remain proposals until confirmed.
+
+The additional (cake=) sketch has no value expression. Recommend rejecting it rather than assigning a hidden default, using the same-named variable implicitly, or adding another shorthand for (= cake). No missing-value meaning is selected.
+
+### The user's proposed singleton binding patterns
+
+The user requests evaluating these three forms for a singleton source:
+
+```text
+(local) := singleTuple;
+(local,) := singleTuple;
+(local = label) := singleTuple;
+```
+
+A coherent alternative is to make parentheses in binding-pattern position a tuple destructuring list even with one entry. Then the first two extract the sole positional component, and the third selects the sole named label. The plain local := singleTuple instead binds the whole tuple. A scalar source would not fit the tuple pattern merely because there is one local name.
+
+This differs from expression grouping, but the parser already knows whether it is reading a declaration pattern or a value expression; no type-based parse is needed. The cost is that (pattern) cannot also be transparent grouped-pattern syntax in that same pattern position. Nested patterns, match arms, and conditional patterns need a consistent scope for the rule. Keep this alternative open alongside comma-required singleton patterns; do not interpret the user's request for comparison as adoption.
+
 ## Remaining grammar and inference issues
 
 - Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type and pattern spellings remain open.
