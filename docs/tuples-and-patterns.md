@@ -111,13 +111,17 @@ Loop headers now take only one optional item name; body-local tuple patterns ret
 
 The [named arguments and named tuples review](named-arguments-and-tuples.md) compares positional tuples with optional access labels, tuples whose labels affect compatibility, and using existing records for named values. The user selected fresh named initializer reordering and explicit reconstruction for stored tuples with a different component order. The four contextual positional/named/mixed construction forms and destination = sourceField named tuple patterns are selected. Positional bindings follow stored order; initial named patterns require exact coverage and reject unknown/duplicate source selectors. A whole-tuple annotation supplies a tuple type, as in (left, right): (l: Int, r: Int) = expr; := infers the source contract. Different stored tuple labels require explicit reconstruction, even when positional types agree. Identical ordered labels and resolved component types describe the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, and call spreading remain open. See the [concrete routing catalogue](named-input-routing.md). Nominal record identity remains selected independently.
 
+## Selected value shorthand and positional access
+
+In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns remain destination = sourceField and do not acquire the value-entry shorthand. Expected named tuple types still accept positional initializers. See [tuple entries and access](tuple-entries-and-access.md).
+
 ## Notes and open decisions
 
 Named tuple binding annotations may omit a component type by writing a bare label: (left, right): (l, r) = expr. Infer component types from the static source/expected contract and preserve l, r order. Use (:Int, :Int) for unnamed typed components; a written colon requires a following type, so (l:, r:) is removed. In value or pattern context, (l, r) retains its ordinary tuple-value or positional-binding meaning. See [component annotations](named-input-routing.md#selected-tuple-type-component-grammar).
 
 For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Tuple type syntax, singleton tuples, tuple indexing, named fields, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Complete recursive tuple type syntax, singleton tuples, numeric-suffix scanning, dynamic tuple indexing, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 

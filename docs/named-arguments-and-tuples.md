@@ -74,6 +74,18 @@ Two policies for stored callable compatibility remain open:
 
 Do not make implementation-local lambda names part of the public contract under either policy. Additional separate external/local label syntax is not proposed yet. Whether a callable with no public labels supports only positional calls also needs a decision.
 
+## Selected shorthand and numeric access
+
+```text
+plain := (cake, tea);              /* unnamed */
+meal := (= cake, = tea);           /* named */
+meal := (cake = cake, tea = tea);  /* equivalent full form */
+meal.0; /* same component as meal.cake */
+plain.0;
+```
+
+The shorthand = identifier supplies the same identifier as label and value. Bare identifiers do not infer labels in tuple value context. Both named and unnamed tuples support fixed zero-based numeric dot access in stored order; reject out-of-range positions at compile time. Expected named destinations still accept positional initializers. See [tuple entries and access](tuple-entries-and-access.md) for examples, scope, and unresolved grammar edges.
+
 ## What should a named tuple mean?
 
 Start with the common example:
@@ -152,7 +164,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 - Empty and singleton tuple spelling and their relationship to Unit remain open.
 - A named singleton could be distinguishable by its entry syntax, but no singleton production is selected here.
-- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, numeric access, complete recursive grammar, and stored named/unnamed conversion policy remain open. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
+- Contextual tuple construction now permits a positional prefix and named suffix. Standalone inferred mixed tuples, complete recursive grammar, and stored named/unnamed conversion policy remain open. Fixed numeric dot access is selected; dynamic indexing and complete numeric-suffix scanning remain separate. Named destructuring uses destination = sourceField, with exact initial coverage and no duplicate source selectors.
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 

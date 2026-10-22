@@ -2,6 +2,10 @@
 
 Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, inferred mixed standalone tuples, and the explicitly marked extensions remain open.
 
+## Selected value shorthand and positional access
+
+In tuple value context, (cake, tea) remains unnamed without an expected named destination. The selected (= cake, = tea) shorthand expands to (cake = cake, tea = tea); only identifiers qualify for this shorthand. Both tuple forms expose zero-based .0, .1, and subsequent fixed positions in stored order, with out-of-range positions rejected at compile time. Existing expected named tuples still accept positional initializers. See [entry forms, access, and remaining edge cases](tuple-entries-and-access.md).
+
 ## 1. Selected rule: written order is execution order
 
 ```text

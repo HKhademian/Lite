@@ -73,6 +73,10 @@ Bare entries in type context are labels; a colon requires a following type. The 
 
 The initializer supplies values by name into l, r order, infers both component types as Int, and binds left = 1 and right = 2 positionally. Expressions execute in written order. A stored tuple with another order requires explicit reconstruction. Core construction, named/positional destructuring, and named argument routing are selected; different stored tuple labels require explicit reconstruction. Tuple identity is structural: the same ordered labels and resolved component types describe the same type wherever written. Stored named/unnamed conversions, complete recursive grammar, and empty/singleton tuple details remain open. See [concrete tuple routing](named-input-routing.md).
 
+### Tuple value shorthand and position types
+
+In value context, (cake, tea) constructs unnamed positional components unless an expected named destination supplies their roles. The selected (= cake, = tea) instead supplies named entries cake = cake and tea = tea. This does not change bare labels in tuple type context. Named and unnamed tuples both expose fixed zero-based numeric access (.0, .1, and so on), with the corresponding component's static type and compile-time bounds checking. See [tuple entries and access](tuple-entries-and-access.md); mixed standalone inference and intact stored named/unnamed conversions remain open.
+
 ## Inferred functions
 
 ```text

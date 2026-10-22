@@ -131,7 +131,7 @@ Unicode identifiers are supported. The working profile uses `XID_Start` or `_` i
 
 ## Numeric literals
 
-Fractional literals require a leading digit: `0.5` is valid spelling and `.5` is rejected. Leading-dot forms such as `.count` retain their context-access role. See [numbers and ranges](numbers.md).
+Fractional literals require a leading digit: `0.5` is valid spelling and standalone `.5` is rejected as a numeric literal. Leading-dot forms such as `.count` retain their context-access role. The selected tuple member access `tuple.5` is a fixed position, not a leading-dot literal. Complete numeric-suffix scanning, including nested `pair.0.1`, remains to be formalized; see [tuple entries and access](tuple-entries-and-access.md). See [numbers and ranges](numbers.md).
 
 ## Open lexical decisions
 
