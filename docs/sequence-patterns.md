@@ -1,6 +1,6 @@
 # Ordered sequence patterns
 
-Status: **tuples and typed positional composition are established; bracketed list/array/slice forms, pair equivalence, and rest details below are a finalization proposal**.
+Status: **tuples, typed positional composition, and positional tuple rest shape/placement/arity are selected; bracketed list/array/slice forms, pair equivalence, and list rest details remain proposals**.
 
 ## Shared component meanings
 
@@ -14,7 +14,7 @@ Each position receives exactly its corresponding component. A name binds it, : T
 (.Some(user), label: String)
 ```
 
-Recommend exact positional arity. A two-element tuple is the proposed ordinary pair representation; a nominal record named Pair would instead use its declared schema. Do not silently map tuple patterns onto a record, map entry, or unrelated loop metadata.
+For positional tuples, exact arity is selected when no rest is written. One trailing ...rest captures the remaining tuple components with their types and stored order: zero is Unit/(), one remains a singleton, and more remain a multi-component tuple. Missing required components are not supplied by rest. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected). A two-element tuple is the proposed ordinary pair representation; a nominal record named Pair would instead use its declared schema. Do not silently map tuple patterns onto a record, map entry, or unrelated loop metadata.
 
 The later [singleton value selection](tuple-entries-and-access.md#singleton-values-selected) establishes (value,) as an unnamed singleton and (value) as ordinary expression grouping; named (= value) or (label = expression) values are singleton tuples without requiring a trailing comma. Singleton types are selected: (T) groups, (:T,) is unnamed, (label: T) is named, and (label,) infers the named component type; (:T) is rejected. The user selected (pattern) as grouping, (pattern,) as a singleton positional tuple pattern, and (local = label) as named extraction. Unit and () are now selected equivalent spellings for the zero-component value/type. Grouped patterns and the empty tuple pattern are selected: () matches only Unit and binds no names. Complete recursive parsing remains separate. Tuple type components now have selected name: Type, inferred bare-label, and :Type forms. The separate whole-value/nested colon pattern still needs a boundary from inferred named schemas; see [component grammar](named-input-routing.md#selected-tuple-type-component-grammar) and [nested patterns](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 

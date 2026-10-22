@@ -4,7 +4,7 @@ Status: **review dated 2026-10-18; confirmed primitives and enum/Result rules ar
 
 ## Scope
 
-The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses selected inferred named-record patterns and contextual construction; list/rest syntax remains proposed.
+The [example walkthrough](pattern-examples.md) combines the design into simple and complex examples. It uses selected inferred named-record patterns and contextual construction; list/rest syntax remains proposed; positional tuple rest shape, placement, and arity are selected.
 
 Review records, lists, arrays, slices, sets, tuples/pairs, enums, strings, ranges, numbers, Booleans, Unit, Option, Result, maps, unions, and opaque/user-defined values as one pattern system. Supporting a type does not require automatic positional extraction or equality for every value of that type. A name can bind any admitted value; equality, type tests, and decomposition require their respective capabilities.
 
@@ -66,7 +66,7 @@ Unit is neither None nor an error. A missing match arm must not manufacture any 
 
 The selected two-element form is `(first, second)`, and typed/literal/value subpatterns compose in its positions. Recommend treating pair as the two-element tuple shape, without a second intrinsic pair-pattern syntax. A separately declared nominal Pair would instead use its exposed record/schema contract.
 
-Ordinary fixed-tuple positional binding follows stored order. Named tuple patterns use destination = sourceField, with exact initial coverage and no unknown/duplicate source selectors. Tuple type components use name: Type, inferred bare labels, or :Type; see [tuple routing](named-input-routing.md). Tuple rest capture remains a proposal in [sequence patterns](sequence-patterns.md). Empty/singleton value and type spellings, grouped patterns, and singleton extraction are selected. Unit is the empty tuple; the pattern () matches only Unit and binds no names. In declarations it must be irrefutable; conditional/match contexts retain their existing mismatch rules. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). Bare Unit in a binding position still follows the ordinary readable-name rule.
+Ordinary fixed-tuple positional binding follows stored order. Named tuple patterns use destination = sourceField, with exact initial coverage and no unknown/duplicate source selectors. Tuple type components use name: Type, inferred bare labels, or :Type; see [tuple routing](named-input-routing.md). Positional tuple patterns select one trailing ...rest capture preserving component types and order; an empty remainder is Unit/(), and a one-component remainder stays a singleton. Without rest, require exact arity; rest never fills missing required components. Named/mixed remainder labels and ownership remain separate. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected). Empty/singleton value and type spellings, grouped patterns, and singleton extraction are selected. Unit is the empty tuple; the pattern () matches only Unit and binds no names. In declarations it must be irrefutable; conditional/match contexts retain their existing mismatch rules. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). Bare Unit in a binding position still follows the ordinary readable-name rule.
 
 ## 4. Records
 

@@ -301,7 +301,13 @@ Typed component patterns are selected within destructuring, as in `(x: Int, y: S
 
 An annotation constrains its component; other binding types are inferred by narrowing the entire input against the pattern and projecting each binding's concrete type or union from the compatible portions. Composite alternatives remain intact. This is a semantic requirement, not additional syntax or a match-arm result-union rule; see [pattern binding inference](pattern-binding-inference.md).
 
-The proposed whole-value pattern `y: (a, b: str, c)` and `...rest` capture are not added as productions yet. A nested tuple pattern after colon must be distinguishable from any tuple-type annotation, independently of whitespace or identifier casing. Rest tokenization and result typing also need a contract. See [whole-value/nested/rest patterns](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
+The proposed whole-value pattern `y: (a, b: str, c)` is not added as a production yet. A nested tuple pattern after colon must be distinguishable from any tuple-type annotation, independently of whitespace or identifier casing. Positional tuple rest now has selected shape, placement, and arity:
+
+```text
+tuple_rest_capture := "..." identifier
+```
+
+At most one capture appears last in a positional tuple pattern. It preserves the remaining component types and stored order as a tuple: zero components give Unit/(), and one remains a singleton. Without rest, arity must be exact; rest cannot fill missing required components. Source evaluation occurs once, and declaration/conditional/match mismatch rules remain applicable. This fragment does not select named/mixed rest labels, rest-only pattern spelling, list rest, ownership, or the complete recursive parser. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected). See [whole-value/nested/rest patterns](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest).
 
 The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. Current loop headers bind only one optional item name; destructuring and selection belong in the body. Parameter and completion/recovery receiver mismatch policy remains proposed. A pattern placeholder does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation.
 

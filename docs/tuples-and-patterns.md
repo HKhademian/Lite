@@ -26,7 +26,7 @@ The optional item name always denotes the current source element. Current header
 
 ## Refutable and irrefutable patterns
 
-The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton type spellings and binding/grouped patterns are selected; rest ownership remains separate.
+The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape. Positional tuple patterns now select exact arity without rest and one trailing rest capture preserving remainder types and order; zero remaining components produce Unit/(), and one remains a singleton tuple. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton type spellings and binding/grouped patterns are selected; rest ownership remains separate.
 
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
@@ -60,7 +60,7 @@ The whole pattern must succeed before the branch executes. A mismatching compone
 
 ## Proposal: whole-value binding, nested patterns, and rest
 
-Rest capture belongs to the destructuring pattern. The user also requests ...tuple in construction expressions to combine tuples while preserving positional types. See [construction spread and pattern rest](tuple-spread-and-rest.md) for both directions and the remaining empty-rest, recursive pattern, and ownership questions. This does not yet introduce variadic tuple-type declarations.
+Rest capture belongs to the destructuring pattern. The user also requests ...tuple in construction expressions to combine tuples while preserving positional types. See [construction spread and pattern rest](tuple-spread-and-rest.md) for both directions and the remaining empty-rest, recursive pattern, and ownership questions. Positional tuple rest shape, placement, and arity are now [selected](tuple-spread-and-rest.md#positional-tuple-rest-selected); whole-value colon syntax, named/mixed remainder labels, rest-only spelling, and ownership remain separate. This does not introduce variadic tuple-type declarations.
 
 The proposed shape combines binding the nested value itself, destructuring its components, a typed subpattern, and a remainder capture:
 
@@ -79,11 +79,11 @@ Proposed interpretation:
 
 For example, matching `(1, (2, "hello", true), 4, 5)` with str denoting String would bind x to 1, y to `(2, "hello", true)`, a to 2, b to `"hello"`, c to true, and rest to `(4, 5)`. The components and y remain separately named in the successful branch, subject to ownership permissions.
 
-Only b is explicitly type-constrained here. Infer x, a, c, y, and rest from all input possibilities compatible with the entire pattern; each receives its concrete type or a union of remaining types. Excluded input alternatives contribute nothing. Composite bindings retain unions of whole shapes rather than a product of independently widened fields. This static inference rule is selected independently of the proposed whole-value/rest syntax; see [pattern binding inference](pattern-binding-inference.md) for a worked example.
+Only b is explicitly type-constrained here. Infer x, a, c, y, and rest from all input possibilities compatible with the entire pattern; each receives its concrete type or a union of remaining types. Excluded input alternatives contribute nothing. Composite bindings retain unions of whole shapes rather than a product of independently widened fields. This static inference rule is selected independently of the proposed whole-value colon syntax and selected positional tuple rest; see [pattern binding inference](pattern-binding-inference.md) for a worked example.
 
 ### Candidate rules
 
-Recommend allowing at most one rest capture per tuple pattern, in the final position. It accepts zero or more remaining components. For a fixed tuple, rest would be a tuple with statically determined component types; an empty rest would use the zero-element tuple/Unit relationship once that contract is formalized. List/sequence rests need their own result-type, allocation, and borrowing contracts and are not selected by this tuple example.
+Selected for positional tuple patterns: at most one rest capture, in the final position, accepts zero or more remaining components. Rest retains statically determined component types and stored order; an empty rest is Unit/(), and one component remains a singleton tuple. Named/mixed remainder labels, rest-only spelling, and ownership remain separate. List/sequence rests need their own result-type, allocation, and borrowing contracts and are not selected by this tuple rule.
 
 Read `name: Type` as a typed binding. The separate proposed `name: (subpatterns)` would bind the whole value and constrain its nested components, but its grammar still needs resolution. Tuple type components now use name: Type, inferred bare labels, or :Type; a type-only tuple is `(:A, :B)`. In a type annotation, bare `(A, B)` denotes inferred labels rather than two positional types. A shape such as `y: (a, b: str, c)` can still resemble an inferred named tuple annotation or the proposed nested pattern, so that recursive boundary remains open. Do not let capitalization, name lookup, or successful type checking choose the parse. Generalizing colon to arbitrary subpatterns is a further decision.
 

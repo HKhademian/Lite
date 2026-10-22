@@ -265,7 +265,7 @@ inferred: (cake,) = (cake = 42);
 
 The user subsequently selected (pattern) for grouping, (pattern,) for one positional component, and (local = label) for named extraction. Thus (local) := one binds the complete singleton tuple, while (local,) := one extracts its component. See [singleton binding patterns](#singleton-binding-patterns-selected). Keep destination = sourceField direction; = identifier value shorthand is not a pattern shorthand. Recursive parser integration remains separate from these selected semantics.
 
-The user also selected the [empty tuple pattern](#empty-tuple-pattern-selected): () matches only Unit and binds no names. It is not a wildcard, discard, or missing-value pattern. Ordinary declaration patterns must be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Empty-rest and partial-pattern ownership remain separate.
+The user also selected the [empty tuple pattern](#empty-tuple-pattern-selected): () matches only Unit and binds no names. It is not a wildcard, discard, or missing-value pattern. Ordinary declaration patterns must be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Positional tuple rest now selects Unit/() for an empty remainder and a singleton for one remaining component; partial-pattern ownership remains separate.
 
 ### 4. Calls preserve argument count
 
@@ -325,7 +325,7 @@ An empty executable block still produces Unit. The empty tuple spelling does not
 
 ### 9. Spread and rest expose the low-arity choice
 
-The existing spread/rest proposal preserves statically known product shape. Under the existing spread proposal and selected Unit/empty identity, spreading Unit would contribute zero components; spreading a singleton contributes one; explicitly including the tuple as an ordinary entry instead contributes the tuple itself as one component. An exhausted tuple rest would have the empty tuple/Unit shape, while a one-component rest remains a singleton.
+The existing spread/rest proposal preserves statically known product shape. Under the existing spread proposal and selected Unit/empty identity, spreading Unit would contribute zero components; spreading a singleton contributes one; explicitly including the tuple as an ordinary entry instead contributes the tuple itself as one component. Selected positional tuple rest has the empty tuple/Unit shape when exhausted, while a one-component rest remains a singleton. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected).
 
 This introduces a real choice: with Unit as the zero-component tuple, the spread proposal would make all Unit-valued expressions potential zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
 
@@ -359,7 +359,7 @@ Checked against primary documentation, 2026-10-22. These are comparisons, not Li
 
 Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton value/type forms and binding/grouped patterns are selected; the former singleton syntax recommendations are resolved above.
 
-Next settle complete recursive type/pattern integration and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+Next settle complete recursive type/pattern integration and construction spread's zero-arity behavior; positional tuple rest's zero/one/many remainder shape is selected. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
 ## Follow-up proposals and scalar versus tuple examples
 
