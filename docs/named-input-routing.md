@@ -215,9 +215,11 @@ Stored unnamed-to-named and named-to-unnamed conversions remain open; recommend 
 
 Selected by the user, 2026-10-22: mixed := (10, r = 20) infers (:Int, r: Int), and mixed := (10, = r) supplies the same label structure when the visible r has type Int. The unnamed positional prefix stays unnamed without an expected destination schema. Both components have numeric access; only the named component additionally has .r access. The matching mixed tuple type components are selected. This replaces the earlier recommendation to reject standalone mixed tuples.
 
-A known fully named destination still supplies names for positional entries: pair: (l: Int, r: Int) = (10, r = 20) constructs l, r order with both labels. This expected-schema construction differs from uncontextual mixed inference. Existing positional-prefix/named-suffix validation and source-order evaluation apply in both cases. See [mixed tuple examples](tuple-entries-and-access.md#mixed-tuples-selected). Singleton value forms are selected separately. The empty tuple is Unit, also spelled (). Singleton type/pattern spellings, interleaved mixed type layouts, and pattern extensions remain separate.
+A known fully named destination still supplies names for positional entries: pair: (l: Int, r: Int) = (10, r = 20) constructs l, r order with both labels. This expected-schema construction differs from uncontextual mixed inference. Existing positional-prefix/named-suffix validation and source-order evaluation apply in both cases. See [mixed tuple examples](tuple-entries-and-access.md#mixed-tuples-selected). Singleton value forms are selected separately. The empty tuple is Unit, also spelled (). Singleton type spellings and recursive pattern integration, interleaved mixed type layouts, and pattern extensions remain separate.
 
 ## 6. Destructuring and the user's original form
+
+The user also selected [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected): (pattern) groups the entire source binding, (pattern,) extracts one positional component, and (local = label) extracts the named component. No-comma positional extraction is not selected. Existing exact coverage, source evaluation, and ordinary irrefutability rules apply.
 
 The user clarified the intended annotation as (l: Int, r: Int): a named tuple type. The colon after a binding pattern supplies the source/initializer tuple contract; it does not list source-field selectors.
 
@@ -325,7 +327,7 @@ The entry forms follow the existing type-only : Type convention while retaining 
 
 The enclosing syntactic context establishes the role of parentheses. In a type annotation, (l, r) is a named schema with inferred types. In a value expression, (l, r) constructs a tuple from lexical values. In a binding pattern, (l, r) introduces positional bindings. Type-name lookup and capitalization must not choose among these parses. Full integration of the separate proposed whole-value colon pattern remains open.
 
-All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Singleton type/pattern spellings, interleaved mixed type layouts, variadic types, and complete recursive productions remain separate decisions. The choice does not rename public function parameters or select unknown-input lambda inference.
+All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Singleton type spellings and recursive pattern integration, interleaved mixed type layouts, variadic types, and complete recursive productions remain separate decisions. The choice does not rename public function parameters or select unknown-input lambda inference.
 
 ## 7. Callables, nested inputs, and permissions
 

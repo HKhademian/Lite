@@ -1,6 +1,6 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value forms, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value forms, singleton binding/grouped patterns, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
 
 ## Selected value entry forms
 
@@ -74,7 +74,27 @@ take(cake,);   /* one scalar argument */
 take((cake,)); /* one unnamed singleton tuple argument */
 ```
 
-Singleton type annotations and binding patterns still need their own formal spellings; this selection covers value construction and ordinary expression grouping. Empty tuple identity and () as an equivalent Unit value/type spelling are selected. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
+Singleton type annotations remain separate. Singleton binding and grouped patterns are now selected below, alongside value construction and ordinary expression grouping. Empty tuple identity and () as an equivalent Unit value/type spelling are selected. No special restriction on singleton component types is introduced beyond the ordinary value/access rules.
+
+## Singleton binding patterns selected
+
+Selected by the user, 2026-10-22: parentheses group a pattern without extracting a tuple component. A comma establishes a one-component positional tuple pattern; an explicit destination = sourceField clause establishes named tuple extraction:
+
+```text
+one := (42,);
+whole := one;          /* whole is the singleton tuple */
+(also_whole) := one;   /* grouping: also_whole is the singleton tuple */
+(value,) := one;       /* extraction: value is Int */
+
+meal := (cake = 42);
+(local = cake) := meal; /* named extraction: local is Int */
+```
+
+The selected forms are (pattern) for grouping, (pattern,) for one positional component, and (local = label) for the named component. Named forms can retain the ordinary optional trailing comma. Positional extraction works on either named or unnamed singleton tuples; named extraction requires the stated source label and the existing exact-coverage/duplicate rules. The value-entry = identifier shorthand is not a pattern shorthand.
+
+Evaluate the source once before introducing its bindings. Grouping preserves the complete input type and pattern behavior; it never unwraps based on the source or expected type. A singleton tuple pattern requires one component, not a scalar or a two-component tuple. For example, (value,) := 42 is rejected as a declaration shape mismatch. Typed components keep their existing meaning: (value: Int,) requires one Int component, while (value: Int) groups a typed binding for the whole input.
+
+These are pattern semantics wherever the corresponding grouped/tuple pattern is supported. Ordinary declarations still require an irrefutable match; conditional/match patterns retain their selected mismatch behavior. This does not add tuple destructuring to loop headers or lambda parameter headers that do not already support it. Complete recursive type/pattern integration, empty tuple patterns, rest ownership, and mixed named/positional pattern extensions remain separate.
 
 ## Current scalar boundary and deferred equivalence
 
@@ -213,16 +233,9 @@ The final case is significant: bare labels are selected tuple type components, b
 
 The unnamed explicit type could instead permit (:Int) without a comma because its colon is already distinctive. That is an open convenience choice; it is not needed to infer singleton values. Named explicit singleton types could allow trailing commas just like their value forms. The empty type () is selected as equivalent to Unit.
 
-### 3. Patterns need a matching boundary
+### 3. Pattern grouping and singleton extraction selected
 
-Proposed completion, not selected:
-
-```text
-(value,) := one;          /* extract one positional component */
-(local = cake) := meal;   /* extract the sole named cake component */
-```
-
-Recommend that (pattern) group a pattern and that (pattern,) demand a singleton product. Grouped patterns themselves still need formalization. Keep the existing destination = sourceField direction; = identifier value shorthand does not automatically become a pattern shorthand.
+The user subsequently selected (pattern) for grouping, (pattern,) for one positional component, and (local = label) for named extraction. Thus (local) := one binds the complete singleton tuple, while (local,) := one extracts its component. See [singleton binding patterns](#singleton-binding-patterns-selected). Keep destination = sourceField direction; = identifier value shorthand is not a pattern shorthand. Recursive parser integration remains separate from these selected semantics.
 
 With the selected ()/Unit identity, a proposed empty tuple pattern would match only that shape/Unit. It must not become a wildcard, discard, or missing-value pattern. Ordinary declaration patterns still need to be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Empty-rest and partial-pattern ownership remain separate.
 
@@ -316,13 +329,13 @@ Checked against primary documentation, 2026-10-22. These are comparisons, not Li
 
 ### 12. Recommended decisions to review separately
 
-Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. The remaining singleton type/pattern recommendations below are not adopted.
+Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton binding/grouped patterns are now selected; the remaining singleton type recommendations are not adopted.
 
-Next settle the singleton type/pattern forms, the inferred-label singleton/type-grouping boundary, and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+Next settle singleton type forms, the inferred-label singleton/type-grouping boundary, complete recursive pattern integration, and spread/rest's zero-arity behavior. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
 ## Follow-up proposals and scalar versus tuple examples
 
-Status: **user proposals and requested reference comparison, 2026-10-22; only ()/Unit identity was newly adopted in this follow-up**. The distinctions below are review material, not an automatic migration of type or pattern grammar.
+Status: **user proposals and requested reference comparison, 2026-10-22; ()/Unit identity and the later singleton binding/grouping rule are selected; remaining type recommendations are separate**. The distinctions below are review material, not an automatic migration of type or pattern grammar.
 
 ### Ways to distinguish singleton construction
 
@@ -364,11 +377,11 @@ The user requests evaluating these three forms for a singleton source:
 
 A coherent alternative is to make parentheses in binding-pattern position a tuple destructuring list even with one entry. Then the first two extract the sole positional component, and the third selects the sole named label. The plain local := singleTuple instead binds the whole tuple. A scalar source would not fit the tuple pattern merely because there is one local name.
 
-This differs from expression grouping, but the parser already knows whether it is reading a declaration pattern or a value expression; no type-based parse is needed. The cost is that (pattern) cannot also be transparent grouped-pattern syntax in that same pattern position. Nested patterns, match arms, and conditional patterns need a consistent scope for the rule. Keep this alternative open alongside comma-required singleton patterns; do not interpret the user's request for comparison as adoption.
+The user later selected consistent grouping instead of this alternative: (local) := singleTuple binds the whole tuple; (local,) := singleTuple extracts its component; (local = label) := singleTuple extracts the named component. The no-comma positional extraction interpretation is not selected. See [selected singleton binding patterns](#singleton-binding-patterns-selected).
 
 ## Remaining grammar and inference issues
 
-- Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type and pattern spellings remain open.
+- Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type spellings and complete recursive pattern integration remain open; grouped and singleton binding patterns are selected.
 - General interleaved named/unnamed type layouts and mixed pattern extensions remain separate from the selected prefix/suffix value and type forms. Known fully named destinations retain their selected contextual routing rules.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.

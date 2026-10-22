@@ -26,7 +26,7 @@ The optional item name always denotes the current source element. Current header
 
 ## Refutable and irrefutable patterns
 
-The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton pattern/type spellings and rest ownership remain separate.
+The [ordered-sequence review](sequence-patterns.md) proposes treating an ordinary pair as the two-element tuple shape, exact arity unless rest is written, and one trailing rest capture. It separates tuples from list/array patterns and retains the existing whole-value/type-colon questions below. The later singleton value selection distinguishes (value) grouping from (value,) tuple construction and permits named (= value) singletons. The empty tuple is now Unit, also spelled (). Singleton binding and grouped patterns are now selected; singleton type spellings and rest ownership remain separate.
 
 A declaration such as `(left, right) := pair` should use an irrefutable pattern for the known input type. Variant patterns such as `Some(value)` can fail and belong in a conditional or match construct unless a separate failure rule is introduced.
 
@@ -60,7 +60,7 @@ The whole pattern must succeed before the branch executes. A mismatching compone
 
 ## Proposal: whole-value binding, nested patterns, and rest
 
-Rest capture belongs to the destructuring pattern. The user also requests ...tuple in construction expressions to combine tuples while preserving positional types. See [construction spread and pattern rest](tuple-spread-and-rest.md) for both directions and the remaining empty tuple, singleton pattern/type, and ownership questions. This does not yet introduce variadic tuple-type declarations.
+Rest capture belongs to the destructuring pattern. The user also requests ...tuple in construction expressions to combine tuples while preserving positional types. See [construction spread and pattern rest](tuple-spread-and-rest.md) for both directions and the remaining empty tuple, singleton type, recursive pattern, and ownership questions. This does not yet introduce variadic tuple-type declarations.
 
 The proposed shape combines binding the nested value itself, destructuring its components, a typed subpattern, and a remainder capture:
 
@@ -115,13 +115,26 @@ The [named arguments and named tuples review](named-arguments-and-tuples.md) com
 
 In tuple values, (cake, tea) supplies unnamed components without inferring labels from variable names. The selected (= cake, = tea) is shorthand for (cake = cake, tea = tea). Both named and unnamed tuples expose .0, .1, and subsequent zero-based fixed positions in stored order; reject invalid positions at compile time. Named patterns remain destination = sourceField and do not acquire the value-entry shorthand. Expected named tuple types still accept positional initializers. Standalone mixed tuple inference and the corresponding mixed type forms are selected: (42, = tea) infers (:Int, tea: String) when tea is String; .0/.1 cover both components and .tea accesses the named one. Mixed positional/named patterns remain separate from mixed value construction. See [tuple entries and access](tuple-entries-and-access.md).
 
+## Singleton and grouped patterns selected
+
+```text
+one := (42,);
+whole := one;
+(also_whole) := one; /* complete tuple, like whole */
+(value,) := one;    /* one component: Int */
+meal := (cake = 42);
+(local = cake) := meal; /* named component: Int */
+```
+
+Parentheses group a pattern; they do not implicitly extract. A singleton positional tuple pattern requires its comma. A named clause already marks tuple extraction. The source is evaluated once before introducing bindings. Pattern grouping and tuple shape semantics apply consistently in supported pattern contexts, while the existing declaration/conditional/match mismatch contracts remain. Full parser integration, empty tuple patterns, and new header-pattern support are separate. See [complete singleton cases](tuple-entries-and-access.md#singleton-binding-patterns-selected).
+
 ## Notes and open decisions
 
 Named tuple binding annotations may omit a component type by writing a bare label: (left, right): (l, r) = expr. Infer component types from the static source/expected contract and preserve l, r order. Use (:Int, :Int) for unnamed typed components; a written colon requires a following type, so (l:, r:) is removed. In value or pattern context, (l, r) retains its ordinary tuple-value or positional-binding meaning. See [component annotations](named-input-routing.md#selected-tuple-type-component-grammar).
 
 For named fields, source names and destination bindings are distinct. Explicit aliases can keep both destination names accessible when ordered shadowing would hide one of them, without changing positional tuple patterns. See [pattern aliases and duplicate names](pattern-aliases.md) for the reference comparison and proposed as spelling.
 
-Complete recursive tuple type syntax, singleton pattern/type spellings, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
+Complete recursive tuple type syntax, singleton type spellings, numeric-suffix scanning, record patterns, nested patterns, guards, alternatives, typed patterns, and rest-pattern forms need formal specification. Core named tuple fields and fixed numeric dot access are selected; runtime variable tuple indexing is rejected. Dot followed by an identifier selects the literal field name, not a variable index. Ordinary underscore bindings and ordered pattern shadowing are selected. Destructuring need not imply heap allocation, but its move/borrow behavior depends on the memory model.
 
 ## Related concepts and references
 
