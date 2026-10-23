@@ -73,7 +73,15 @@ Evaluate the subject once and try alternatives left to right against that suppli
 
 Each alternative resolves free comparison-RHS names in the common pre-pattern scope, not from failed alternatives or new sibling bindings. Preserve ordinary effects and failures; they are not converted into mismatch or rolled back. The shared body's operations must be valid for the inferred union and available access. This grants no copying, moving, mutation permission, lifetime, or automatic cross-binding correlation refinements.
 
-This selects alternatives at the initial arm-pattern level. Logical alternatives nested inside component patterns, their grouping/precedence, and the behavior of a shared guard that fails after an alternative pattern succeeds remain separate decisions. The earlier proposed no-retry shared-guard rule is not selected by the payload-type example. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+This selects alternatives at the initial arm-pattern level. Logical alternatives nested inside component patterns and their grouping/precedence remain separate decisions. Shared-guard behavior is selected below. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+
+## Alternative selection before a shared guard selected
+
+An arm may contain one or more pattern alternatives, with any finite number written using or. For `A or B or C if guard { body }`, the if separates the complete pattern section from its shared guard. This is not the ordinary Boolean expression `A or B and C`, whose and operator has higher precedence than or.
+
+Evaluate the subject once and test initial patterns from left to right. Stop at the first successful pattern; do not evaluate remaining alternatives. Use that pattern section's successful bindings to evaluate the shared guard once, under the guard's ordinary internal and/or short-circuit rules. If the complete guard is false or mismatches, try the next arm; do not retry a later initial pattern in the same arm. Failures and explicit exits retain their normal meaning, and performed effects are not rolled back.
+
+Thus each arm has one shared body and at most one shared guard, but it can have many alternative initial patterns. A failure inside an or alternative within the guard may still try another guard alternative; that is distinct from retrying the initial pattern section. Nested component-pattern alternatives remain a separate feature.
 
 ## Arm chains
 
