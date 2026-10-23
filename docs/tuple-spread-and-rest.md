@@ -1,10 +1,10 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. The user also requires preservation of positions and labels and name overriding; the collision's effect on positional storage is pending clarification below. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Repeated construction labels replace their earlier slot without moving it; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Tuple construction spread selected
 
-Selected by the user, 2026-10-23: ...tuple inserts an existing tuple's components into the enclosing tuple. Preserve the components' positions relative to one another, their labels where present, and their types. Evaluate each operand once in written order. Flatten only explicitly spread tuples; a nested tuple written as an ordinary entry remains one component.
+Selected by the user, 2026-10-23: ...tuple inserts an existing tuple's components into the enclosing tuple. Process components in source order, preserving their labels where present and their types. New components append; repeated labels use the earlier slot as specified below. Evaluate each operand once in written order. Flatten only explicitly spread tuples; a nested tuple written as an ordinary entry remains one component.
 
 ```text
 pair := (10, 20);
@@ -24,11 +24,38 @@ same_shape := (...meal); /* (cake = 10, tea = 20), same labels and order */
 
 An enclosing expression with a spread entry constructs a tuple regardless of the expanded component count. The ellipsis distinguishes (...one) from grouped (one); no singleton comma is required for a spread-only expression. Ordinary optional trailing-comma rules apply. Unit/() contributes zero components, including when obtained by evaluating an action; its effects, failures, and required cleanup still apply. A Result or Option is not silently unwrapped for spreading.
 
-Require tuple operands with statically known shapes. Runtime-length collections and scalar operands other than Unit are rejected rather than implicitly converted. This does not select call spreading, list spreading, generic variadic types, interleaved named/unnamed layouts, or new ownership permissions. Fresh construction into an expected tuple contract retains the existing static routing rules where applicable; stored tuples are not silently relabeled or reordered by the spread operand itself.
+This contract is tuple-to-tuple spread and requires operands with statically known tuple shapes. Other scalar values do not qualify as tuples. Array, list, set, and other collection spreads are different operations whose contracts remain separate; this rule does not prohibit them globally. It does not select call spreading, generic variadic types, or new ownership permissions. Previously selected fresh expected-schema construction cases remain; extending their routing to newly interleaved/repeated-label inputs needs a separate review. Stored tuples are not silently relabeled or reordered by the spread operand itself.
 
-### Name overriding: positional collision rule pending
+### Append or replace by label selected
 
-The user explicitly requires name overriding in addition to preserved positions and labels. Existing tuple construction rules reject duplicate labels, so the exact replacement rule needs a revision. For (...(cake = 10, tea = 20), cake = 30), compare keeping all three positions with last-occurrence named access against replacing the original cake position and producing two components. The question is pending; neither collision layout is selected here. Preserve the accepted spread behavior for noncolliding cases while resolving this choice, including its scope for ordinary explicit duplicate fields.
+Selected by the user, 2026-10-23: construct inferred tuples from left to right, expanding each spread in source order. Apply the same insertion rule to spread components, explicit labeled entries, same-name shorthand, and ordinary unnamed entries:
+
+1. An unnamed component appends at the next free position.
+2. A previously unseen label appends at the next free position and names that slot.
+3. A label already introduced by an earlier component replaces that slot's value. Keep its position and label; do not append another component or move the slot.
+
+```text
+x := (...(cake = 10, tea = 20), cake = 30);
+/* x = (cake = 30, tea = 20) */
+x.0;    /* 30 */
+x.1;    /* 20 */
+x.cake; /* 30; x.2 is out of range */
+
+result := (1, =c, ...(=a, 9, =b), a = new, 6);
+/* result = (1, =c, a = new, 9, =b, 6) */
+/* a remains at position 2; the final unnamed 6 appends at position 5 */
+
+direct := (cake = 10, tea = 20, cake = 30);
+/* same two-component result as x */
+```
+
+Named and unnamed components may interleave in tuple values and the corresponding stored tuple layout. This supersedes the earlier positional-prefix/named-suffix restriction and duplicate-label rejection for tuple value construction. Only one slot for each label survives, at the position of that label's first introduction. A later spread may replace an earlier explicit field, and a later explicit field may replace a spread field. Unnamed components never replace an earlier position by value or by a generated label.
+
+All entry/operand expressions still evaluate once in written order, including expressions whose contributed values are later replaced. The shown equivalence describes final slots, not permission to erase earlier effects or required cleanup. Static labels and tuple shapes let the compiler determine destinations; no runtime name dictionary is required by this rule. Replacement type compatibility and cleanup/ownership of superseded values need separate rules.
+
+The former unnamed-prefix/named-suffix restriction was a uniformity choice shared with calls, not a memory-layout requirement. Interleaving itself is deterministic under this insertion algorithm. Readability requires distinguishing tuple construction from calls and patterns; later replacement must retain source-order effects. Expected-schema routing for the newly allowed construction cases remains to be reviewed.
+
+Function arguments still reject duplicate inputs and positional arguments after named arguments. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; repeated constructor labels produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
 
 ## Positional tuple rest selected
 
@@ -157,7 +184,7 @@ details := (...identity, true);
 
 The result has three positions with Int, String, and Bool types respectively. Spreading does not turn them into one homogeneous collection of union-valued elements. A rest capture likewise preserves the actual remaining positional types.
 
-Construction spread requires a tuple with a statically known shape. The selected positional rest captures a statically typed tuple remainder. An arbitrary runtime-length List, set, or generator cannot silently expand into a statically fixed tuple. Generalized iterable spread needs a separate collection-construction and consumption contract. Fixed-array-to-tuple conversion is also not selected here.
+Construction spread requires a tuple with a statically known shape. The selected positional rest captures a statically typed tuple remainder. This tuple constructor does not implicitly convert a List, set, or generator into a statically fixed tuple. Spreading those collections belongs to separate construction and consumption contracts. Fixed-array-to-tuple conversion is also not selected here.
 
 ## Evaluation and placement
 
@@ -169,7 +196,7 @@ Construction can contain multiple spreads, preserving each operand's expanded co
 combined := (0, ...left, 3, ...right, 6);
 ```
 
-Positional tuple patterns select at most one trailing rest capture. Omitting rest requires exact arity. Writing rest permits zero remaining components but never supplies missing required components. Construction spread's placement does not extend pattern rest placement. Named-label collisions and interleaved named/unnamed layouts retain the separate questions above.
+Positional tuple patterns select at most one trailing rest capture. Omitting rest requires exact arity. Writing rest permits zero remaining components but never supplies missing required components. Construction spread's placement does not extend pattern rest placement. Construction label collisions use earlier-slot replacement, and named/unnamed value components may interleave.
 
 No public heap allocation, bitwise-copy policy, deep cloning, duplicate resource ownership, or mutable aliasing permission follows from the ellipsis. The eventual copy/move/borrow contracts govern component use and simultaneous bindings.
 

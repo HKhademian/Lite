@@ -34,7 +34,7 @@ meal := (cake = bake(), tea = brew()); /* explicit labels for expressions */
 meal := (= bake(), = tea);            /* rejected: bake() is not an identifier */
 ```
 
-Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. The existing explicit-entry rule rejects duplicate labels, including duplicates introduced by shorthand; the newly requested spread name-overriding rule and its collision layout are [pending clarification](tuple-spread-and-rest.md#name-overriding-positional-collision-rule-pending). Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) is selected: the first component stays unnamed and the second is labeled tea.
+Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Tuple construction now selects [append-or-replace](tuple-spread-and-rest.md#append-or-replace-by-label-selected): unnamed entries and new labels append, while repeated labels replace their first slot without moving it. This applies equally to explicit, shorthand, and spread entries. Named/unnamed components may interleave: (= cake, tea) is now valid, with tea remaining unnamed. This supersedes the earlier tuple-construction duplicate-label rejection and prefix/suffix restriction; function-call duplicate and ordering checks are unchanged.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
@@ -130,7 +130,7 @@ Treating grouped T as a tuple, identifying T with its singleton, or automaticall
 
 ## Mixed tuples selected
 
-Selected by the user, 2026-10-22: tuple values may combine an unnamed positional prefix with a named suffix. Without an expected destination type, preserve the written order and infer a label only for an explicitly named or shorthand entry:
+Initially selected 2026-10-22 for an unnamed prefix and named suffix; extended by the user 2026-10-23 to arbitrary interleaving in tuple values and their stored layouts. Without an expected destination type, append components in written order, infer labels only for explicit/shorthand entries, and replace repeated labels in their original slots:
 
 ```text
 tea := "green";
@@ -145,7 +145,7 @@ mixed.tea; /* same component as mixed.1 */
 
 The selected mixed type form combines :Type for an unnamed component with name: Type for a named component. No synthetic label is added to the unnamed position. The per-position label, or its absence, participates in the existing structural tuple identity together with the resolved component type. Fully unnamed, fully named, and mixed tuples all retain fixed numeric access; name access exists only for labeled components.
 
-Evaluate entries once from left to right. A positional entry after a named one remains rejected, and duplicate named labels in ordinary explicit entries remain rejected under the existing rule; spread name-overriding collision layout is pending clarification. Mixing the full and shorthand named entry spellings does not change these rules. Interleaved named/unnamed type layouts and construction into those layouts are not selected by this prefix/suffix example.
+Evaluate entries once from left to right, including entries later replaced. Interleaved types use the existing component forms in their stored order, for example (cake: Int, :Int, tea: String). No runtime representation change follows merely from interleaving. Repeated construction labels replace their original slot; duplicate labels in tuple type declarations and duplicate source selectors in patterns still fail. Expected-schema routing for newly interleaved/repeated-label inputs, replacement type compatibility, and cleanup/ownership remain separate. See [insertion rules](tuple-spread-and-rest.md#append-or-replace-by-label-selected).
 
 Positional destructuring can bind the whole mixed tuple:
 
@@ -330,7 +330,7 @@ Selected basic tuple spread preserves statically known product shape and labels.
 
 With Unit as the zero-component tuple, Unit-valued expressions are zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
 
-For noncolliding inputs, spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread yields zero, one, or multiple components and explicitly establishes tuple syntax: (...empty) gives Unit/(), (...one) stays a singleton tuple, and (...pair) retains both components. Preserve operand component labels and order. The user also requires name overriding; its duplicate-label collision layout and effect on arity remain pending clarification. Interleaved named/unnamed routing, complete recursive grammar, and access/ownership remain separate.
+For noncolliding inputs, spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread yields zero, one, or multiple components and explicitly establishes tuple syntax: (...empty) gives Unit/(), (...one) stays a singleton tuple, and (...pair) retains both components. Preserve operand component labels and order. Repeated labels now replace their original slot without adding a component, so total written/expanded arity can exceed final tuple arity. Named/unnamed value components and corresponding stored layouts may interleave. Expected-schema routing for the new cases, replacement type compatibility, complete recursive grammar, and access/ownership remain separate.
 
 ### 10. Diagnostics, formatting, and migration
 
@@ -360,7 +360,7 @@ Checked against primary documentation, 2026-10-22. These are comparisons, not Li
 
 Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton value/type forms and binding/grouped patterns are selected; the former singleton syntax recommendations are resolved above.
 
-Next settle complete recursive type/pattern integration and construction spread's zero-arity behavior; positional tuple rest's zero/one/many remainder shape is selected. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+Basic tuple spread, append-or-replace construction, and positional rest's zero/one/many remainder shapes are selected. Next settle complete recursive type/pattern integration, expected-schema routing for the new construction cases, and replacement types/ownership. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
 ## Follow-up proposals and scalar versus tuple examples
 
@@ -411,7 +411,7 @@ The user later selected consistent grouping instead of this alternative: (local)
 ## Remaining grammar and inference issues
 
 - Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type spellings and grouped/singleton binding patterns are selected; complete recursive type/pattern integration remains open.
-- General interleaved named/unnamed type layouts and mixed pattern extensions remain separate from the selected prefix/suffix value and type forms. Known fully named destinations retain their selected contextual routing rules.
+- Interleaved named/unnamed tuple values and corresponding stored type layouts are selected. Mixed positional/named selector patterns remain separate. Known destinations retain their previously selected contextual construction cases; routing newly interleaved/repeated-label inputs needs a separate review.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
 

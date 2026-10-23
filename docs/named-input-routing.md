@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuples with an unnamed prefix and named suffix are selected, including standalone inference and corresponding type components.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces repeated labels in their original slots; function-call routing remains unchanged.
 
 ## Selected value shorthand and positional access
 
@@ -135,7 +135,7 @@ take_pair((r = op1(), l = op2()));
 
 There is one tuple-valued argument. Its known expected type supplies the destination schema. Evaluate the callee, then op1, then op2, then invoke take_pair. This does not supply two separate function arguments.
 
-### Four selected fresh construction forms
+### Earlier four selected contextual construction forms
 
 ```text
 pair: (l: Int, r: Int) = (10, 20);
@@ -146,18 +146,16 @@ pair: (l: Int, r: Int) = (10, r = 20);
 
 All initialize the same l, r destination under the selected construction rule. A contextual literal can mix a positional prefix and named suffix by the same routing algorithm as a call. Tuple components have no newly introduced defaults; require every component to be supplied.
 
-For two required components these are all four positional/named ordering shapes under the selected prefix/suffix rule: two fully named permutations, one mixed form, and one fully positional form.
+These were the four complete shapes under the earlier shared prefix/suffix rule. The later inferred-tuple construction decision permits interleaving and earlier-slot replacement. Applying that extension to expected-schema routing needs a separate review; the four established contextual forms remain selected.
 
-Apply the same duplicate, unknown, ordering, and type checks:
+Expected contracts still require known labels, compatible component types, and complete initialization:
 
 ```text
-pair: (l: Int, r: Int) = (r = 20, 10);          /* positional after named */
-pair: (l: Int, r: Int) = (10, l = 20);          /* duplicate l; missing r */
 pair: (l: Int, r: Int) = (l = 10, unknown = 20); /* unknown label */
 pair: (l: Int, r: Int) = (l = 10, r = "twenty"); /* incompatible r */
 ```
 
-Missing components are also rejected. Singleton value spelling is selected separately; the empty tuple is Unit, also spelled (). The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
+The previously rejected contextual cases (r = 20, 10) and (10, l = 20) need a routing review under the new insertion rule; do not claim their outcomes from call routing. Missing required destination components remain invalid. Singleton value spelling is selected separately; the empty tuple is Unit, also spelled (). The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
 
 ## 5. Inference and stored tuples: selected order boundary
 
@@ -215,7 +213,7 @@ Stored unnamed-to-named and named-to-unnamed conversions remain open; recommend 
 
 Selected by the user, 2026-10-22: mixed := (10, r = 20) infers (:Int, r: Int), and mixed := (10, = r) supplies the same label structure when the visible r has type Int. The unnamed positional prefix stays unnamed without an expected destination schema. Both components have numeric access; only the named component additionally has .r access. The matching mixed tuple type components are selected. This replaces the earlier recommendation to reject standalone mixed tuples.
 
-A known fully named destination still supplies names for positional entries: pair: (l: Int, r: Int) = (10, r = 20) constructs l, r order with both labels. This expected-schema construction differs from uncontextual mixed inference. Existing positional-prefix/named-suffix validation and source-order evaluation apply in both cases. See [mixed tuple examples](tuple-entries-and-access.md#mixed-tuples-selected). Singleton value forms are selected separately. The empty tuple is Unit, also spelled (). Recursive type/pattern integration, interleaved mixed type layouts, and pattern extensions remain separate.
+A known fully named destination still supplies names for positional entries: pair: (l: Int, r: Int) = (10, r = 20) constructs l, r order with both labels. This expected-schema construction differs from uncontextual mixed inference. Source-order evaluation applies in both cases. The earlier shared prefix/suffix limitation is superseded for inferred tuple construction; extending expected-schema routing to the new cases remains separate. See [mixed tuple examples](tuple-entries-and-access.md#mixed-tuples-selected). Singleton value forms are selected separately. The empty tuple is Unit, also spelled (). Interleaved mixed stored type layouts are selected; recursive type/pattern integration and mixed selector-pattern extensions remain separate.
 
 ## 6. Destructuring and the user's original form
 
@@ -348,7 +346,7 @@ The entry forms follow the existing type-only : Type convention while retaining 
 
 The enclosing syntactic context establishes the role of parentheses. In a type annotation, (l, r) is a named schema with inferred types. In a value expression, (l, r) constructs a tuple from lexical values. In a binding pattern, (l, r) introduces positional bindings. Type-name lookup and capitalization must not choose among these parses. Full integration of the separate proposed whole-value colon pattern remains open.
 
-All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Recursive type/pattern integration, interleaved mixed type layouts, variadic types, and complete recursive productions remain separate decisions. Singleton types use (T) for grouping, (:T,) for an unnamed component, (label: T) for a named component, and (label,) for an inferred named component; (:T) is rejected. See the [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected). The choice does not rename public function parameters or select unknown-input lambda inference.
+All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Named/unnamed components may interleave in stored tuple type layouts. Recursive type/pattern integration, variadic types, and complete recursive productions remain separate decisions. Singleton types use (T) for grouping, (:T,) for an unnamed component, (label: T) for a named component, and (label,) for an inferred named component; (:T) is rejected. See the [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected). The choice does not rename public function parameters or select unknown-input lambda inference.
 
 ## 7. Callables, nested inputs, and permissions
 
