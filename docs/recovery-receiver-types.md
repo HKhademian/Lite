@@ -84,11 +84,11 @@ This handles only the matching `BoundPanic`. The suffix `!` explicitly forwards 
 The type-only spellings distinguish matching from binding:
 
 ```text
-target else (BoundPanic) { recover_without_binding() }
-target else (Panic) { recover_any_panic() }
+target else (: BoundPanic) { recover_without_binding() }
+target else (: Panic) { recover_any_panic() }
 ```
 
-`BoundPanic` matches that panic category without binding a name. `Panic` matches the broad panic family and does not match returned errors. An analogous filter can handle one returned-error type:
+`: BoundPanic` matches that panic category without binding a name. `: Panic` matches the broad panic family and does not match returned errors. A bare identifier, including `BoundPanic`, instead binds every supported failure; capitalization and type-name lookup do not turn it into a filter. An analogous filter can handle one returned-error type:
 
 ```text
 text := read_text(path) else(e: BoundError) {

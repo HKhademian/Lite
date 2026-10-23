@@ -55,27 +55,29 @@ A typed pattern filters the failures by type:
 
 ```text
 target else (p: BoundPanic) { recover_bound_panic(p) }
-target else (BoundPanic) { recover_without_binding() }
-target else (Panic) { recover_any_panic() }
+target else (: BoundPanic) { recover_without_binding() }
+target else (: Panic) { recover_any_panic() }
 ```
 
 The first two forms match only `BoundPanic`; the binding form exposes the narrowed value, while the type-only form does not bind it. `Panic` is the broad panic type and matches panic categories, not returned `Result` errors. A specific returned-error type can be handled with the same typed-filter rule.
 
-Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause receives the preceding recovery expression's outcome, including any remaining members or a new failure raised by its handler. Thus an aggregate `A & B` reaches both matching clauses in `else (A) { R1 } else (B) { R2 }`, in that order. Reversing the clauses processes B before A. Changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
+Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause receives the preceding recovery expression's outcome, including any remaining members or a new failure raised by its handler. Thus an aggregate `A & B` reaches both matching clauses in `else (: A) { R1 } else (: B) { R2 }`, in that order. Reversing the clauses processes B before A. Changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
 
-When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. For `A & B`, A then B gives `R2`, while B then A gives `R1`. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates.
+When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. For `A & B`, A then B gives `R2`, while B then A gives `R1`. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates. Here `A & B` is illustrative notation for simultaneous pending failures, not a selected type expression or a concrete aggregate carrier. It is distinct from the alternative error payloads in `A | B`.
 
-This is sequential recovery over the previous expression's outcome:
+For an ordinary returned error union, sequential recovery processes one active alternative. Assume distinct, nonoverlapping error types A and B and normally completing handlers with result types R1 and R2:
 
 ```text
-x1 := op();                              // T ! (A | B)
-x2 := x1 else (A) { R1 };               // (T | R1) ! B
-x3 := x2 else (B) { R2 };               // T | R1 | R2
+x1 := op();                 // T ! (A | B)
+x2 := x1 else (: A) { R1 }; // (T | R1) ! B
+x3 := x2 else (: B) { R2 }; // T | R1 | R2
 ```
 
-The chained spelling `op() else (A) { R1 } else (B) { R2 }` composes these recovery expressions from left to right. If the pending failure contains both A and B, the first recovery consumes A but leaves B pending; the second recovery consumes B, so `R2` is the final value. Reversing the clauses leaves A for the last recovery, so `R1` is final.
+The chained spelling `op() else (: A) { R1 } else (: B) { R2 }` composes these recovery expressions from left to right. An original A error runs only the A handler and produces R1; an original B error runs only the B handler and produces R2. Original success runs neither handler. A returned `A | B` does not contain both errors simultaneously. With these disjoint filters and normally completing handlers, reversing the clauses does not change which original error is handled.
 
-Each later `else` wraps the whole preceding recovery expression, including its handler body. In `(op() else (A) { R1 }) else (B) { R2 }`, a new B failure raised while evaluating `R1` can therefore be caught by the outer B recovery. It does not re-enter the A handler. The outer recovery is active while its target is evaluated; if `R2` itself fails, that failure needs a further enclosing recovery.
+The separate aggregate case starts with simultaneous A and B failures, using the illustrative `A & B` notation above. Handling A leaves B pending; handling B then completes recovery with R2. Reversing those clauses completes with R1. This describes the selected member-wise handling policy while leaving the aggregate carrier, source type syntax, and duplicate-member behavior open. The ordinary `T ! (A | B)` trace is not an encoding of that aggregate.
+
+Each later `else` wraps the whole preceding recovery expression, including its handler body. In `(op() else (: A) { R1 }) else (: B) { R2 }`, a new B failure raised while evaluating `R1` can therefore be caught by the outer B recovery. It does not re-enter the A handler. The outer recovery is active while its target is evaluated; if `R2` itself fails, that failure needs a further enclosing recovery.
 
 The separate assignments above demonstrate stored Result processing and type changes. They are not a general runtime expansion for panics: if evaluating the standalone `x2` statement panics, control unwinds before the later `x3` statement can execute. The chained expression establishes the outer recovery before evaluating the inner expression. Existing explicit Result handling still applies: a Result stored as ordinary payload data is not recursively extracted, and postfix `!` remains a function/closure exit that an outer `else` does not intercept. The selected handler-body coverage does not settle general argument/callee panic capture below.
 
@@ -105,7 +107,7 @@ handler outcome:   R ! E2
 recovered outcome: (T1 | R) ! E2
 ```
 
-The original success supplies `T1`; successful recovery supplies `R`; failed recovery supplies `E2`. The clause consumes the original `E1` failures, but does not catch its own `E2` failures. A later enclosing `else(E2)` can recover that new outward outcome. The example is a type sketch; `R ! E2` describes the handler's outcome rather than an expression spelling.
+The original success supplies `T1`; successful recovery supplies `R`; failed recovery supplies `E2`. The clause consumes the original `E1` failures, but does not catch its own `E2` failures. A later enclosing `else(: E2)` can recover that new outward outcome. The example is a type sketch; `R ! E2` describes the handler's outcome rather than an expression spelling.
 
 For partial handling, if the original error types are `H | U` and the handler consumes `H`, the resulting type is `(T1 | R) ! (U | E2)`. Equal type alternatives collapse; a type consumed from the original outcome can reappear if the handler introduces it again. When that new failure occurs while an unhandled remainder is still pending, preserve both: the handler's failure joins the remainder rather than replacing it.
 

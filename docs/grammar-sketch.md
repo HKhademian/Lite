@@ -407,12 +407,12 @@ target else { recovery_body }
 target else (failure) { recovery_body }
 target else (_) { recovery_body }
 target else (name: FailureType) { recovery_body }
-target else (FailureType) { recovery_body }
+target else (: FailureType) { recovery_body }
 ```
 
 These are selected surface templates, not complete productions. Postfix `!` extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. It participates in left-to-right postfix chaining, so `load_user(id)!.load_profile()!.name` needs no grouping around each extraction. `!.` is the `!` token followed by the ordinary `.` token, not a nullable-access token; token-separating whitespace changes no meaning.
 
-Receiverless `else`, an untyped readable binding such as `failure` or `_`, and a typed receiver pattern have distinct binding behavior. The first three untyped forms match every failure supported by the target. `_` remains an ordinary readable binding and can be used in the handler. A typed receiver pattern matches only its named failure type: `BoundPanic` handles that panic category, while `Panic` matches the panic family and does not match returned Result errors. An unmatched panic propagates implicitly; an unmatched returned error remains an explicit Result obligation and can be propagated with `!`. Exact grammar precedence, mixed-channel broad receiver typing, nested-operand scope, and cleanup-failure aggregate handling remain open; cleanup-failure precedence is selected under [finally](finally.md#pending-outcomes).
+Receiverless `else`, an untyped readable binding such as `failure` or `_`, and a typed receiver pattern have distinct binding behavior. The three untyped recovery forms match every failure supported by the target. `_` remains an ordinary readable binding and can be used in the handler. A typed receiver pattern matches only its named failure type: `: BoundPanic` handles that panic category without binding, while `: Panic` matches the panic family and does not match returned Result errors. `name: FailureType` also binds the narrowed failure. A bare identifier remains a catch-all binding even when spelled like a type name. An unmatched panic propagates implicitly; an unmatched returned error remains an explicit Result obligation and can be propagated with `!`. Exact grammar precedence, mixed-channel broad receiver typing, nested-operand scope, and cleanup-failure aggregate handling remain open; cleanup-failure precedence is selected under [finally](finally.md#pending-outcomes).
 
 Type checking each call argument precedes any claim that an outer recovery clause makes a call valid. If a parameter expects A, an argument of A ! E requires its own explicit recovery/extraction; an outer else does not unwrap it. Passing intact Result data to a Result-accepting parameter remains valid. This does not select panic-capture scope.
 
