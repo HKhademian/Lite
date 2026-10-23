@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels and rest after named selectors selected 2026-10-23; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, and rest-only tuple patterns selected 2026-10-23; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Positional tuple rest selected
 
@@ -23,7 +23,7 @@ Zero remaining components produce Unit/(); one produces a singleton tuple rather
 /* (first, second) := (1, 2, 3);    extra component without rest */
 ```
 
-Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple patterns, including named/mixed source tuples with label preservation below; named selector rest is selected separately below. List rest, rest-only pattern spelling, and new header-pattern support remain separate. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
+Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple patterns, including named/mixed source tuples with label preservation below; named selector rest and rest-only patterns are selected separately below. List rest and new header-pattern support remain separate. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
 
 ## Remainder labels selected
 
@@ -77,7 +77,23 @@ Selector order determines binding order, including the existing ordered-shadowin
 
 Without rest, named extraction still requires complete component coverage. With rest, all unselected components are captured, including unnamed positions in a mixed source. Fully named, mixed, unnamed singleton, named singleton, and empty remainders retain their existing shape/type identities. Ordinary declarations must be irrefutable; supported conditional/match contexts retain their established matching rules. Rest does not supply missing fields or silently discard unselected components.
 
-This extends named-only selector patterns with a final rest; it does not select mixing positional and named selectors within one pattern, record rest, rest-only spelling, list rest, or ownership rules.
+This extends named-only selector patterns with a final rest; it does not select mixing positional and named selectors within one pattern, record rest, list rest, or ownership rules. Rest-only tuple patterns are selected below.
+
+## Rest-only tuple pattern selected
+
+Selected by the user, 2026-10-23: (...all) captures an entire tuple without consuming any prefix positions or named fields. A trailing comma is optional: (...all,) denotes the same pattern. The ellipsis establishes tuple rest syntax rather than ordinary grouping.
+
+```text
+(...all) := ();                     /* all = (), with type Unit */
+(...all) := (10,);                  /* all = (10,), with type (:Int,) */
+(...all) := (cake = 10, tea = 20);  /* labels and order preserved */
+(...all,) := (10, 20);             /* optional trailing comma */
+/* rejected: (...all) := 10; scalar source */
+```
+
+Preserve the complete tuple shape, component types, labels, and stored order. Named singletons remain named, unnamed singletons remain tuples, and mixed components retain their labels or lack of labels. Unit qualifies because it is the zero-component tuple. Other scalar values, records, and lists do not become tuples merely because a rest-only pattern is written.
+
+Unlike all := source, the rest-only pattern requires tuple shape. Evaluate the source once before introducing all. Ordinary declarations require an irrefutable match for the source contract; supported conditional/match contexts retain their existing mismatch rules. Capturing the whole tuple does not promise a copy, alias, deep clone, allocation, or new ownership permission. Loop/lambda header support, list rest, and general recursive parsing remain separate.
 
 ## Two directions for the same punctuation
 
