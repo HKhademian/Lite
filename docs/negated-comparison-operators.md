@@ -75,6 +75,8 @@ Angle-bracket generics are [temporary explanatory notation](generic-notation.md)
 
 ## Readability and alternatives
 
+User constraint, 2026-10-23: keep source operator spellings easy to type on an ordinary keyboard. Unicode mathematical symbols are excluded from the candidate set because they are not easy to type. Continue investigating the ASCII family and resolve its >! type boundary before adoption.
+
 The user's family is mechanically regular. The main human-reading question is whether >!= is reliably read as not-(>=), rather than as not-(>) with equality subsequently added. The latter intuition would give the wrong result at equality. Atomic token recognition solves machine tokenization, but a font and beginner reading study is still needed to substantiate a readability claim.
 
 Other candidates worth comparing:
@@ -82,7 +84,7 @@ Other candidates worth comparing:
 - Keep existing not (a > b), not (a >= b), and not (a == b). These already express the intended pairwise meanings; parentheses isolate one comparison from an entire chain.
 - Investigate a not > b and a not >= b as explicit negated comparison phrases. They add comparison grammar rather than punctuation tokens and do not absorb postfix !. They are not selected infix syntax.
 - Uniform suffix ! gives ==!, >!, >=!, <!, <=!. It makes whole-operator negation visible but retains the generic-close/>! boundary and needs a readability comparison with the user's insertion rule.
-- Unicode ≠, ≯, ≱, ≮, and ≰ offer mathematically named alternatives without an ASCII ! boundary. The Unicode chart identifies the characters; it does not determine LiteScript semantics or solve keyboard input, fonts, search, normalization, or accessibility. Source: [Unicode mathematical operators](https://www.unicode.org/charts/PDF/U2200.pdf).
+- Rejected for source typing by the user: Unicode ≠, ≯, ≱, ≮, and ≰. Their mathematical names remain reference material, not candidate LiteScript operator spellings. Source: [Unicode mathematical operators](https://www.unicode.org/charts/PDF/U2200.pdf).
 - Ada uses /= for inequality, but that token is already LiteScript's division update, so reusing it would conflict with an established operation. Source: [Ada relational operators](https://www.adaic.org/resources/add_content/standards/12rm/html/RM-4-5-2.html).
 - Lua uses ~= for inequality. It avoids the particular postfix-! collision, but would give LiteScript a new tilde-based comparison spelling without the user's uniform family. Source: [Lua relational operators](https://www.lua.org/manual/5.4/manual.html#3.4.4).
 
@@ -98,6 +100,6 @@ Direct comparison patterns should only be extended after the operator family and
 
 The review inspected current operators, chains, lexical direction, fallible types, and generic-notation boundaries. A finite Python longest-token model checked each of the five proposed tokens between identifiers, the five compact propagation/comparison sequences above, and two illustrative generic/fallible initializer spellings. The user family preserved the five existing expression samples and changed both future generic samples. Prefix-negated alternatives changed all five expression samples; conventional != changed the propagation/equality sample. Host-Python checks also confirmed that the five positive predicates are false against NaN and their Boolean complements true. These are bounded lexical/semantic experiments, not a complete collision audit or LiteScript implementation tests.
 
-Recommendation: keep the user's family as a serious candidate, define negative semantics as literal Boolean complements, preserve explicit not as the semantic reference, and settle the >! type boundary before selecting the punctuation. Measure whether readers distinguish >! from >!= at equality. No proposed operator, infix not phrase, Unicode alias, or comparison-pattern extension is adopted by this investigation.
+Recommendation: keep the user's ASCII family as a serious candidate, define negative semantics as literal Boolean complements, preserve explicit not as the semantic reference, and settle the >! type boundary before selecting the punctuation. Measure whether readers distinguish >! from >!= at equality. Unicode source spellings are excluded by the user's typing constraint. No proposed ASCII operator, infix not phrase, or comparison-pattern extension is adopted by this investigation.
 
 Related: [operators](operators.md), [comparison chains](comparison-chains.md), [comparison patterns](comparison-patterns.md), [fallible types](fallible-types-and-error-composition.md), and [numbers](numbers.md).
