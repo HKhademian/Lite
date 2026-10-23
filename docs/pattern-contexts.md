@@ -50,6 +50,10 @@ match find_user_age(id) {
 
 The arm patterns have the same meanings as in if. They need no := because match already supplies the subject. A later arm's additional match does supply another source explicitly, for example `and .Some(profile) := find_profile(user.id)`. The first guard operand follows if after the arm pattern; later guard operands use and. A guard such as `if age == outValAge` remains a Boolean expression, not another binding pattern.
 
+### Subjectless match uses expressions
+
+The selected `match { condition { ... } _ { ... } }` form supplies no pattern subject. Its nonfallback headers are ordinary Bool expressions: `val1 == val2` compares existing values, and `isUserSigned` reads an existing Bool. No pattern bindings are introduced. The whole `_` header marks an unconditional fallback with no captured value; it is not an underscore pattern. In the subject-based form, bare names and `_` remain bindings. This distinction is chosen syntactically by whether match has a subject; see [subjectless selection](match.md#subjectless-boolean-selection-selected).
+
 ### Declarations, parameters, and receivers
 
 - `(left, right) := pair` explicitly supplies pair to a declaration pattern. Outside a conditional, a refutable pattern still needs a failure contract; writing `.Some(age) := possibleAge` cannot silently acquire if's mismatch behavior.

@@ -6,7 +6,7 @@ Status: **equality, plain enums, payload enums, destructuring, and type matching
 
 The [all-type finalization review](pattern-type-review.md) extends this capability checklist to records, lists/arrays/slices, sets, tuples/pairs, enums, strings, range values and membership, numbers, maps, Unit, and stored Results. Confirmed primitives are retained; new collection and named-record forms are explicitly marked as proposals.
 
-One match construct must cover ordinary value selection and structured pattern matching. A separate switch construct is unnecessary for these capabilities.
+One match construct must cover ordinary value selection and structured pattern matching. A separate switch construct is unnecessary for these capabilities. The selected [subjectless form](match.md#subjectless-boolean-selection-selected) additionally handles Boolean expression headers with no pattern subject; the pattern capabilities below describe subject-based matching.
 
 ```text
 match subject {
@@ -15,7 +15,7 @@ match subject {
 }
 ```
 
-The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. Fallback syntax remains a proposal; if-introduced arm guards with and-chained conditions and additional matches are selected. Each match evaluates its subject once and uses the same action/value body form.
+The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. A separate else fallback spelling remains a proposal; if-introduced arm guards with and-chained conditions and additional matches are selected. Each subject-based match evaluates its subject once and uses the same action/value body form.
 
 ## 1. Equality
 

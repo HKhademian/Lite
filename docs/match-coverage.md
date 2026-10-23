@@ -4,9 +4,23 @@ Status: **every match must be exhaustive, including action-only matches; empty-b
 
 ## One coverage rule
 
-Every possible input admitted by the subject's contract must be handled by some arm. This applies whether the selected body supplies useful data or only Unit. If the compiler cannot establish completeness from the arms, require an explicit catch-all. Do not synthesize None, Unit, an error, or a panic for an omitted case.
+For a subject-based match, every possible input admitted by the subject's contract must be handled by some arm. For a subjectless match, every possible outcome of the Boolean tests must lead to an arm, including the all-false path when reachable. This applies whether the selected body supplies useful data or only Unit. If the compiler cannot establish completeness from the arms, require an explicit catch-all. Do not synthesize None, Unit, an error, or a panic for an omitted case.
 
 Use if for an intentionally partial condition. A complete match may intentionally ignore cases, but that choice must appear in an arm.
+
+## Subjectless fallback
+
+The selected subjectless form tests existing Boolean expressions in source order:
+
+```text
+match {
+    val1 == val2 { report_equal() }
+    isUserSigned { show_account() }
+    _            {}
+}
+```
+
+Assume valid equality/Bool inputs and Unit-producing handlers. The whole `_` header is the unconditional fallback and introduces no binding; it explicitly handles the all-false path with Unit. Without it, the match requires a supported proof that its Boolean conditions cover every outcome. The exact proof algorithm remains open. Later conditions and bodies do not run after an arm is selected, and failures do not count as false. An empty fallback in a value match must still satisfy that match's result contract. Subject-based `_` remains an ordinary binding, as described below.
 
 ## Explicit ignore
 

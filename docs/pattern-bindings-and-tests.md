@@ -6,7 +6,9 @@ Status: **bind, type-match, and value-match primitives selected on 2026-10-18; a
 
 Distinguish introducing a name from testing a matched value. A pattern should not silently become a comparison merely because an unrelated constant was imported, nor become a type test because an identifier starts with an uppercase letter.
 
-The selected base operations on a supplied value are bind, type match, and value match. They share one pattern vocabulary across match arms, conditional matching, and structural subpatterns. The enclosing construct still determines whether mismatch is permitted and what happens next.
+The selected base operations on a supplied value are bind, type match, and value match. They share one pattern vocabulary across subject-based match arms, conditional matching, and structural subpatterns. The enclosing construct still determines whether mismatch is permitted and what happens next.
+
+The selected [subjectless match](match.md#subjectless-boolean-selection-selected) has no supplied subject: its arm headers are Boolean expressions, not patterns. There, a bare isUserSigned reads an existing Bool, while a whole `_` header is a fallback without a new binding. This does not change bare-name or underscore binding semantics in pattern positions of subject-based matches.
 
 ## Three base operations
 

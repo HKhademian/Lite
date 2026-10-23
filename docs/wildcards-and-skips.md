@@ -8,6 +8,10 @@ Status: **ordinary readable `_` binding selected on 2026-10-18; replaces the non
 
 Repeated names within a pattern shadow in binding order. This applies to every name, including `_`; it is not a special exemption for underscores. See [pattern binding and shadowing](pattern-shadowing.md) for ordering, scope, and typing.
 
+## Subjectless match fallback is not a pattern
+
+The selected [subjectless match](match.md#subjectless-boolean-selection-selected) uses Boolean expression headers instead of patterns. In that form only, a header consisting solely of `_` is the unconditional fallback and introduces no binding because no subject is supplied. `_ready` and underscore names within ordinary expressions retain normal value lookup. `match value { _ { ... } }` still binds the whole subject to ordinary readable `_`; underscore pattern and unused-name rules are unchanged.
+
 ## Positional and nested destructuring
 
 ```text

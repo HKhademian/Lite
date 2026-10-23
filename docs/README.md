@@ -149,7 +149,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, and-chained guard operands, additional pattern matches, nested extraction, scope, and rejection of an arm.
-- [Match](match.md): pattern-and-brace arms for action/value selection; every match is exhaustive, with the coverage algorithm and ownership details still open.
+- [Match](match.md): subject-based pattern arms and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.

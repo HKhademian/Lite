@@ -2,6 +2,8 @@
 
 Status: **pattern-if guard separator selected on 2026-10-23; Boolean tests and additional pattern matches retain selected left-to-right and chains; alternatives, mutation effects, and ownership details open**.
 
+This page describes subject-based pattern arms. The selected [subjectless match](match.md#subjectless-boolean-selection-selected) instead uses ordinary Boolean headers directly, without a separate pattern or an additional if separator.
+
 ## Purpose and template
 
 After matching the arm's subject pattern, test conditions or match additional values using the names already unpacked. The same left-to-right rules apply as in conditional pattern chains.

@@ -1,12 +1,12 @@
 # Match and exhaustive selection
 
-Status: **five pattern families, if-introduced arm guards with and-chained tests/matches, and pattern-and-brace bodies selected; exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
+Status: **subject-based pattern matching and subjectless Boolean selection selected; subjectless form selected on 2026-10-23; if-introduced pattern-arm guards and exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
 ## Purpose and template
 
-Select behavior by variant, type, or destructured data. The same match syntax works for actions and values.
+Select behavior by variant, type, or destructured data with a subject, or by Boolean conditions without a subject. Both match forms work for actions and values.
 
 Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards introduced by if, with and-chained Boolean tests and additional pattern matches, are selected too; see [match arm chains](match-guards.md).
 
@@ -20,6 +20,40 @@ match expression {
 Each arm header, including an optional if guard, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. A trailing semicolon after a braced arm body is allowed. A completed match also permits an optional trailing semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
 
 The [keyword-placement review](match-keyword-placement.md) compares the current `match value { ... }` form with `value match { ... }`. It recommends retaining the current prefix form for consistency with if/loop and existing block boundaries. Subject-first matching remains an alternative under review, not a second accepted spelling.
+
+## Subjectless Boolean selection selected
+
+Omit the subject to select the first true Boolean condition:
+
+```text
+match {
+    val1 == val2 { report_equal() }
+    isUserSigned { show_account() }
+    _            { show_sign_in() }
+}
+```
+
+Assume compatible equality operands, an existing Bool isUserSigned, and Unit-producing handlers. Each reached condition evaluates once, in source order. False continues to the next arm. Execute only the first true arm's body, then finish the match without fallthrough; later conditions and bodies do not run. Ordinary Boolean and/or/not and comparison chains retain their expression precedence and short-circuiting. Effects already performed remain; failures and explicit exits keep their ordinary meaning instead of becoming false.
+
+The absence of a subject selects expression headers. `isUserSigned` reads an existing Bool; it does not bind a new name. `_ready` would likewise read an existing Bool. There is no implicit subject or capture binding. Binding-producing pattern-condition headers and an additional pattern-arm if separator are not added by this selection; combine ordinary Boolean tests with and/or instead.
+
+A header consisting solely of `_` is the unconditional fallback in this subjectless form. It introduces no binding because there is no supplied subject. `_` inside another expression retains ordinary identifier lookup. In subject-based matching, `match value { _ { ... } }` still binds the whole subject to readable unused-allowed `_`; its selected pattern meaning is unchanged. Put a subjectless fallback last: if it appears earlier, it selects when reached and makes later arms unreachable.
+
+Exhaustiveness remains required for actions and values. Provide a fallback when completeness of the Boolean conditions cannot be established; `_ {}` explicitly handles the all-false path with Unit. No missing-arm zero, Unit, None, or panic is synthesized. The coverage proof algorithm remains open.
+
+A subjectless match can produce a value under the same branch-result rules:
+
+```text
+label := match {
+    val1 == val2 { "equal" }
+    isUserSigned { "signed in" }
+    _            { "guest" }
+}
+```
+
+The arms here produce String. Expected result contracts still constrain every normally completing arm; otherwise infer the normalized union of their result types. Each arm body has its ordinary local scope.
+
+If the next non-comment token after match is `{`, that brace starts the subjectless arm list. A brace-starting subject expression must be grouped, for example `match ({ compute_subject() }) { ... }`. Within a Boolean arm header, an outer-level ungrouped opening brace starts its body; block/conditional/record value expressions used inside the header require grouping, while nested call arguments retain their ordinary delimiters. Thus val2 in `val1 == val2 { ... }` is an expression reference, not a record-construction head. Whitespace, capitalization, name lookup, and type checking do not choose the form. Complete recursive Boolean-header/body parsing still belongs to the unfinished expression grammar; this form does not introduce trailing-closure syntax or new record construction forms.
 
 ## Arm chains
 
@@ -85,8 +119,8 @@ Conditionals reuse declaration-shaped pattern headers; match arms reuse those pa
 
 ## Result and typing rules
 
-- Evaluate the input once.
-- Bind payload names only inside the selected arm.
+- With a subject, evaluate that input once. Without a subject, evaluate each reached Boolean arm condition once in source order.
+- Subject-based pattern bindings are arm-local; subjectless Boolean headers introduce no pattern bindings.
 - Require exhaustive coverage for every match, including action-only selection; an explicit catch-all can handle ignored cases.
 - Check normally completing arms against an expected result contract when present; otherwise infer their normalized plain union, collapsing duplicate type identities.
 - Treat early exits as exits to their explicit targets, not locally missing values.
