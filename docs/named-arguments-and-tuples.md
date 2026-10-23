@@ -112,7 +112,7 @@ The initial comparison offered ordered tuple contracts and unordered named shape
 
 ### Selected: names affect compatibility
 
-Selected by the user, 2026-10-21: component labels carry meaning and affect compatibility. Equal positional types do not permit implicit relabeling:
+Selected by the user, 2026-10-21: component labels carry meaning and affect compatibility. Clarified 2026-10-23: labels give existing positions semantic roles without changing storage; identical ordered component types retain identical size, alignment, and component offsets. There is no per-value label payload and no representation reason for names to occur only at the end. Equal positional types still do not permit implicit relabeling:
 
 ```text
 size := (width = 640, height = 480);

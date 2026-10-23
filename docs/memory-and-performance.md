@@ -55,6 +55,24 @@ An actual runtime choice between T and its singleton, such as a union containing
 
 Equal size, alignment, and payload layout do not alone select identical parameter/return ABI or permit arbitrary foreign reinterpretation. Those are separate contracts. As a reference precedent, Rust documents tuple layout through its default representation, while specially marked transparent wrappers can share their field's layout and ABI. Do not attribute that stronger transparent-wrapper guarantee to all Rust singleton tuples. Sources: [Rust tuple layout](https://doc.rust-lang.org/reference/type-layout.html#tuple-layout), [transparent representation](https://doc.rust-lang.org/reference/type-layout.html#the-transparent-representation).
 
+## Tuple labels describe positions without changing storage
+
+Selected rationale and representation contract, 2026-10-23: a tuple is an ordered product of component slots. Every slot has an implicit positional accessor; a label gives that position an additional semantic name. Labels belong to the static contract and add no per-value label strings, name dictionary, tag, wrapper, or indirection.
+
+For the same ordered concrete storable component types, adding, removing, or changing labels preserves storage size, alignment, and corresponding component offsets. The following compares representation, not implicit assignment compatibility:
+
+```text
+(:Int, :Int)
+(studentId: Int, teacherId: Int)
+(teacherId: Int, studentId: Int)
+```
+
+All three have the same ordered component types and storage layout. The labels give different semantic roles, so the existing structural identity and label-sensitive compatibility rules still distinguish their contracts. Naming a slot studentId does not create a new nominal scalar type for its Int payload. Numeric and named access to one labeled position select the same component.
+
+The user's schematic ...T1.T2.T3... describes the ordered component product. The dots are writing separators, not stored bytes or a packed-layout directive. Exact target layout and ABI remain separate; labels alone never change the chosen layout. This does not promise layout equality after changing component types or their order, or after replacement changes a slot's eventual resolved type.
+
+There is no representation reason to group labels at the end: named and unnamed positions may interleave. The former prefix/suffix rule was a syntax/routing restriction, now superseded for tuple value construction. Replacement by an existing label targets that position; it does not store another copy of the name or move the slot. Source evaluation and ownership effects retain their separate contracts. See [tuple insertion](tuple-spread-and-rest.md#append-or-replace-by-label-selected) and [label-sensitive compatibility](named-input-routing.md#label-compatibility--selected).
+
 ## Union storage model
 
 The user clarifies [metadata plus overlapping payload](union-zero.md#current-storage-model). Payload capacity is max(size(A), size(B)); the complete value also includes active-member metadata and alignment/padding. This resolves the earlier total-versus-payload ambiguity and supports checked type narrowing. Zero initialization clears both metadata and payload; zero metadata must identify one listed member, with the exact member-selection rule still open. The conceptual inline wrapper does not require boxing or an external metadata allocation. Metadata format, exact ABI, and equivalent optimized encodings remain open.
