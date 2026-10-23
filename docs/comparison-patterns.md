@@ -1,6 +1,6 @@
 # Comparison patterns and Boolean guards
 
-Status: **all ten comparison operators selected as nonbinding pattern prefixes on 2026-10-23; Boolean guards selected; complete operand parsing, comparison protocols, coverage, and ownership remain open**.
+Status: **all ten comparison operators, arithmetic/call/member right operands, and rejection of implicit-subject comparison-pattern chains selected on 2026-10-23; if guards selected; complete operand parsing, comparison protocols, coverage, and ownership remain open**.
 
 ## Selected comparison-pattern family
 
@@ -36,6 +36,33 @@ match entry {
 ```
 
 Assume Int-compatible score/passMark and a comparable second entry component/limit; the handlers in the second example return Unit. A false comparison rejects that pattern and permits the enclosing conditional/match fallback behavior. A comparison failure remains a failure, not mismatch. Literal patterns such as 42 retain concise equality semantics.
+
+## Common right operands selected
+
+Comparison-pattern right operands admit ordinary arithmetic, calls, and member access without additional grouping just because they occur in a pattern:
+
+```text
+>= minimum + margin
+== expected()
+== settings.limit
+```
+
+Each is one comparison against the supplied subject/component. The arithmetic and postfix operations retain their ordinary expression meanings and precedence. The operands must be statically valid and compatible with that comparison; calls and arithmetic retain their effects and failures. These spellings create no bindings. Existing RHS names resolve in the pre-pattern scope, and each reached RHS evaluates once under the selected comparison-pattern contract.
+
+An ungrouped comparison-pattern chain such as `>= lower < upper` is invalid. It neither repeats the implicit subject nor acquires the expression comparison-chain meaning. For an interval or another complex condition, bind the value and use an if guard:
+
+```text
+match target {
+    v if lower <= v < upper { accept(v) }
+    _                      { reject() }
+}
+```
+
+Assume compatible integer operands and Unit-producing handlers. Here v binds the subject; the guard is an ordinary Boolean comparison chain using v explicitly. A false guard tries the next arm. `_` remains a readable ordinary binding with permission for nonuse.
+
+### Grouped Boolean operand question remains open
+
+The proposed `== (left == right)` and `== (ready or retry)` forms would not bind any names: each would compare a Bool-compatible subject with the computed Bool RHS. left, right, ready, and retry would refer to existing values. They are not ways to capture the matched subject. The grouping/boundary rule for comparison or Boolean expressions on the RHS remains a separate proposal; selecting the common arithmetic/call/member forms does not finalize that recursive grammar. Use an explicit binding and if guard when the matched value needs a name.
 
 ## A direct component comparison
 

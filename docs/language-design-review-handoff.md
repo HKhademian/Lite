@@ -37,6 +37,8 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 ## Done
 
+- Selected [common comparison-pattern RHS forms](comparison-patterns.md#common-right-operands-selected), 2026-10-23: >= minimum + margin, == expected(), and == settings.limit need no extra pattern-specific grouping and bind nothing. Preserve ordinary expression/static comparison rules, pre-pattern RHS scope, effects/failures, and once-when-reached evaluation. Ungrouped implicit-subject chains such as >= lower < upper are invalid; v if lower <= v < upper is the accepted explicit binding/guard form. The proposed == (left == right) and == (ready or retry) forms would not bind names; their recursive grouping/boundary grammar is not selected. Complete operand/delimiter parsing remains open.
+
 - Selected [match-arm if guards](match-guards.md#binding-visibility-and-simple-arms), 2026-10-23: pattern if guard replaces pattern and guard. Typed/untyped initial bindings remain v: T and v; the if separator makes the binding/condition boundary visible without as. _v and _ remain readable bindings with permission for nonuse. Further guard operands retain and and explicit pattern matches; ordinary conditional chains are unchanged. Preserve source-once evaluation, arm-local scope, guard short-circuiting, failure behavior, and coverage requirements. Comparison-operand parsing, ownership, and alternative-pattern rules remain open.
 
 - Read the referenced design discussion and current repository state. The prior checkout was clean at `b1ca30d` before this review.
