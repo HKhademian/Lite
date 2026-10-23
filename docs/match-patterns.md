@@ -15,7 +15,7 @@ match subject {
 }
 ```
 
-The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. Fallback syntax remains a proposal; and-chained arm conditions and additional matches are selected. Each match evaluates its subject once and uses the same action/value body form.
+The five capabilities below are selected requirements. Where a spelling extends the selected constructor, tuple, or typed-binding examples, it is an illustrative surface candidate rather than a completed grammar. Fallback syntax remains a proposal; if-introduced arm guards with and-chained conditions and additional matches are selected. Each match evaluates its subject once and uses the same action/value body form.
 
 ## 1. Equality
 
@@ -139,7 +139,7 @@ Nested tuple destructuring uses `(x, (a, b: str, c), ...rest)`, with str denotin
 After a structural pattern succeeds, Boolean conditions and additional pattern bindings can refine selection:
 
 ```text
-Event.Click(x, y) and x >= 0 and y >= 0 { handle_click(x, y) }
+Event.Click(x, y) if x >= 0 and y >= 0 { handle_click(x, y) }
 ```
 
 If a condition is false or an additional pattern fails, selection continues to later arms. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).

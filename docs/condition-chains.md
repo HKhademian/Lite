@@ -61,7 +61,7 @@ The grammar sketch uses restricted condition-operand placeholders for this bound
 
 ## Related features
 
-The same chain rules are selected for [match arm conditions](match-guards.md), where the initial pattern already receives the match subject. These features do not automatically select refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
+The same chain rules apply inside [match arm guards](match-guards.md), introduced by if after the initial pattern that already receives the match subject. Further guard operands use and; this does not change ordinary if condition chains. These features do not automatically select refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
 
 ## References
 

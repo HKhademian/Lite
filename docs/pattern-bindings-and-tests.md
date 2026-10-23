@@ -29,7 +29,7 @@ name: Type            /* type match and bind the narrowed value */
 
 An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, not a fourth base operation. `== "ali"` spells its value test explicitly. Enum-case selection such as `.completed`, constructor heads, tuples, and future record forms supply structural or case constraints and route components to subpatterns; they are not all reduced to whole-value equality.
 
-No general inline binding-plus-equality spelling is selected by these three primitives. Use the existing and chain to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
+No general inline binding-plus-equality spelling is selected by these three primitives. Use an if guard in a match arm, or the existing and chain in a conditional, to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
 
 The surrounding construct supplies the pattern's subject: `if .Some(== outValAge) := find_user_age(id)` gives it explicitly, while `.Some(== outValAge) { ... }` receives it from match. The := source separator is not part of the pattern. Whole typed declarations and typed conditions use name : Type = source; name : Type := source is rejected. Nested typed subpatterns still compose, including `.Some(age: Int) := source` in a condition. Receivers do not gain hidden filtering; see the [cross-context audit](pattern-contexts.md#operator-placement-audit).
 
@@ -37,7 +37,7 @@ The [Student aggregate examples](aggregate-patterns.md) apply these meanings to 
 
 Named record patterns use inferred braces with destination pattern = sourceField, for example { years = age, }. The source field is selected on the right; the receiving pattern is on the left. A type-only test is { : Int = age, } and a typed alias is { years: Int = age, }. Retained conveniences field == expected compare without binding, while field: Type type-tests and binds under the same field name. These reuse the three primitives; the previous reversed field = destinationPattern mapping is superseded.
 
-The [comparison-pattern family](comparison-patterns.md) selects all ten prefixes: ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!=. Each tests its supplied component with the ordinary operator meaning and binds nothing. Runtime right operands evaluate once when the test is reached; false is mismatch and failures remain failures. RHS names resolve in the surrounding pre-pattern scope. Compound and cross-component relationships continue to use and guards; general logical subpatterns and binding-producing alternatives remain separate open features.
+The [comparison-pattern family](comparison-patterns.md) selects all ten prefixes: ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!=. Each tests its supplied component with the ordinary operator meaning and binds nothing. Runtime right operands evaluate once when the test is reached; false is mismatch and failures remain failures. RHS names resolve in the surrounding pre-pattern scope. Compound and cross-component relationships use if guards in match arms and later and operands in conditional chains; general logical subpatterns and binding-producing alternatives remain separate open features.
 
 An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
 
@@ -129,11 +129,11 @@ A qualified enum case remains a case pattern. Other qualified values such as set
 
 - Compare the matched subject/component as the left operand of ordinary equality, with the expected expression as the right operand. Require a defined compatible equality operation yielding Bool; no truthiness or unrelated implicit conversion.
 - Evaluate the match subject once. Evaluate an expected expression only when its pattern is reached, once for that occurrence, and do not run later-arm expressions after selection has succeeded.
-- Retain selected source-order arm selection and and-chain short-circuiting. Exact recursive extraction and comparison order still need their broader effect contract before claiming a complete pattern evaluation algorithm.
+- Retain selected source-order arm selection, pattern success before the if guard, and short-circuiting within its and chain. Exact recursive extraction and comparison order still need their broader effect contract before claiming a complete pattern evaluation algorithm.
 - A literal pattern is a value test, not an implicit binding, type conversion, or call to a separate pattern-matching operator. Enum-tag and structural tests do not acquire whole-value equality requirements.
 - Do not implicitly unwrap a Result used as an expected value, propagate an error, or discard an equality failure. Any recoverable equality operation must follow an explicitly chosen handling contract; overload/fallibility restrictions remain open.
 
-Parenthesize a computed equality operand when needed to keep its expression together, for example `== (base + adjustment)`. A top-level and belongs to the arm/condition chain; logical operators intended inside the expected value need grouping. Full precedence must also distinguish comparison chains in expressions from a sequence of pattern tests; this review does not add `== a == b` as a pattern-chain shorthand.
+Parenthesize a computed equality operand when needed to keep its expression together, for example `== (base + adjustment)`. In match arms, if separates the initial pattern from its guard. Within guard/conditional condition chains, top-level and separates operands; logical operators intended inside a pattern source need grouping. Complete comparison-RHS parsing remains open. Full precedence must also distinguish comparison chains in expressions from a sequence of pattern tests; this review does not add `== a == b` as a pattern-chain shorthand.
 
 These evaluation rules are proposals. They do not promise a jump table, allocation-free equality, runtime reflection, or particular performance.
 

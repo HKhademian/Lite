@@ -49,18 +49,18 @@ Assuming that positional User schema is available, match its structure, type-mat
 
 The underlying operator must be statically applicable and produce Bool. A comparison does not silently become a type test, coerce incompatible operands, or turn a recoverable error into mismatch. If broader input requires narrowing before comparing, use an explicit typed binding and a guard. Generic constraints, union applicability, operator overloads, and failure/effect contracts still need their complete rules.
 
-The right operand may be a runtime value, not only a compile-time constant. Evaluate its expression once when that comparison test is reached; a skipped test does not evaluate it. Preserve ordinary expression/operator effects and failure behavior. This does not require hoisting bounds or caching them across arms. Names resolve in the surrounding pre-pattern scope: a binding introduced elsewhere in the same pattern is not implicitly available as a comparison bound. Use a later and guard for relationships between newly extracted components.
+The right operand may be a runtime value, not only a compile-time constant. Evaluate its expression once when that comparison test is reached; a skipped test does not evaluate it. Preserve ordinary expression/operator effects and failure behavior. This does not require hoisting bounds or caching them across arms. Names resolve in the surrounding pre-pattern scope: a binding introduced elsewhere in the same pattern is not implicitly available as a comparison bound. Use an if guard in a match arm, or a later and operand in a conditional chain, for relationships between newly extracted components.
 
 The source still evaluates once under the enclosing pattern's rules. Ordinary declarations retain their irrefutability requirement; this selection adds no implicit failure behavior, parameter dispatch, or loop/lambda header support. Complete right-operand syntax, recursive pattern/arm-body boundaries, generic operator applicability, extraction effects, ownership commitment, and required Result handling remain separate contracts.
 
 ## Compound and cross-component conditions
 
-Use the selected and chain for conditions involving several tests, extracted values, calls, or relationships between components:
+Use an if guard in match arms for conditions involving several tests, extracted values, calls, or relationships between components; additional guard operands use and:
 
 ```text
 match candidate {
     User(first: Int, second: Int)
-        and minimum <= first < maximum
+        if minimum <= first < maximum
         and (second == outVal or second == fallback) {
         accept(first, second)
     }
@@ -83,17 +83,17 @@ User(first: Int, _) or Other(first)
 
 The first would need logical composition between patterns on the same component, including parsing and implicit-subject rules. The second would need alternative-pattern binding guarantees. Neither follows automatically from ordinary Boolean and/or operators or from the three base primitives.
 
-The selected form is `pattern and (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. General binding-producing or/not and pattern alternatives remain open. A successful disjunction must not expose a name supplied by only one of its alternatives.
+The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. General binding-producing or/not and pattern alternatives remain open. A successful disjunction must not expose a name supplied by only one of its alternatives.
 
 ## Reference comparison
 
 Dart directly supports equality and ordering patterns, including nested combinations with logical patterns. Its relational operands are constants, and its logical patterns have separate precedence and binding rules. LiteScript's selected runtime bounds and existing guard syntax are deliberate choices, not an adoption of all Dart semantics. [Dart relational patterns](https://dart.dev/language/pattern-types#relational).
 
-Rust match guards are Boolean tests evaluated after their pattern succeeds; a false guard permits a later arm. They supply the useful model for complex conditions without needing a new structural pattern for every predicate. LiteScript already uses and as its guard separator. [Rust match guards](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards).
+Rust match guards are Boolean tests evaluated after their pattern succeeds; a false guard permits a later arm. They supply the useful model for complex conditions without needing a new structural pattern for every predicate. LiteScript selects if as its arm guard separator and retains and between further guard operands. [Rust match guards](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards).
 
 ## Selected boundary and remaining work
 
-Use direct comparison patterns for a single component test. Use and guards, with grouped Boolean or where needed, for compound or cross-component conditions. All ten prefixes are selected; general logical subpatterns, binding-producing alternatives, and implicit-subject pattern chains are not added by this selection.
+Use direct comparison patterns for a single component test. Use if guards in match arms and later and operands in conditional chains, with grouped Boolean or where needed, for compound or cross-component conditions. All ten prefixes are selected; general logical subpatterns, binding-producing alternatives, and implicit-subject pattern chains are not added by this selection.
 
 Remaining contracts include complete operand boundaries, custom operator applicability/effects, generic constraints, extraction/ownership commitment, coverage of comparison regions, and whether logical subpatterns are worth adding later. A false comparison is mismatch, but a failure is not; right-operand evaluation is once when reached. Arbitrary comparison regions or guarded predicates do not automatically prove exhaustive coverage; retain an explicit catch-all when completeness cannot be established.
 

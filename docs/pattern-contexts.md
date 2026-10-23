@@ -48,7 +48,7 @@ match find_user_age(id) {
 }
 ```
 
-The arm patterns have the same meanings as in if. They need no := because match already supplies the subject. A later arm's additional match does supply another source explicitly, for example `and .Some(profile) := find_profile(user.id)`. An ordinary guard such as `and age == outValAge` remains a Boolean expression, not another binding pattern.
+The arm patterns have the same meanings as in if. They need no := because match already supplies the subject. A later arm's additional match does supply another source explicitly, for example `and .Some(profile) := find_profile(user.id)`. The first guard operand follows if after the arm pattern; later guard operands use and. A guard such as `if age == outValAge` remains a Boolean expression, not another binding pattern.
 
 ### Declarations, parameters, and receivers
 
@@ -103,9 +103,9 @@ match value {
 }
 ```
 
-The subject is evaluated once; arm bindings are local. Every match must be exhaustive, including action-only matching; ignored cases can use an explicit empty fallback `_ {}`. And-chained conditions and additional pattern matches are selected, with source-order first-success selection and no implicit fallthrough. A final else fallback and any explicit fallthrough feature remain unselected.
+The subject is evaluated once; arm bindings are local. Every match must be exhaustive, including action-only matching; ignored cases can use an explicit empty fallback `_ {}`. An if-introduced guard may contain and-chained conditions and additional pattern matches, with source-order first-success selection and no implicit fallthrough. A final else fallback and any explicit fallthrough feature remain unselected.
 
-A mismatch allows later arms to be tried. The and conditions run after structural success and can reject the arm; see [match arm chains](match-guards.md). Do not commit an ownership move that prevents trying the next arm after a failed subpattern or guard; the full ownership model must make this precise. This is not a general promise to roll back side effects.
+A mismatch allows later arms to be tried. The if guard runs after structural success and can reject the arm; see [match arm chains](match-guards.md). Do not commit an ownership move that prevents trying the next arm after a failed subpattern or guard; the full ownership model must make this precise. This is not a general promise to roll back side effects.
 
 ## 4. Loop receiver slots
 

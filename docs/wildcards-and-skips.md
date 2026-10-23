@@ -43,7 +43,7 @@ Both positions bind normally. The second component must match String without con
 ```text
 match find_user(id) {
     .Some(user)
-        and user.age > 14
+        if user.age > 14
         and (_, last: String) := user.name_parts {
         greet(user, last)
     }

@@ -52,7 +52,7 @@ match code {
 }
 ```
 
-true and false can cover Bool. Ordered tests work in guards, including mathematical comparison chains. All ten direct [comparison-pattern prefixes](comparison-patterns.md) are also selected: test the supplied value without binding, evaluate a runtime RHS once when reached, and preserve ordinary comparison/failure meanings. Compound and cross-component conditions retain and guards.
+true and false can cover Bool. Ordered tests work in guards, including mathematical comparison chains. All ten direct [comparison-pattern prefixes](comparison-patterns.md) are also selected: test the supplied value without binding, evaluate a runtime RHS once when reached, and preserve ordinary comparison/failure meanings. Compound and cross-component conditions use if guards in match arms and later and operands in conditional chains.
 
 Float comparison patterns use the same contracts as ordinary Float comparisons, with no approximate matching; literal value patterns remain equality tests. If IEEE-style equality is selected, detecting NaN requires an explicit predicate and signed zeros follow that contract; matching must not quietly invent different behavior. Literal precision, numeric conversions, and floating representation remain [numeric decisions](numbers.md).
 
@@ -132,7 +132,7 @@ Interval guards already work:
 
 ```text
 match age {
-    value and minimum <= value <= maximum { report_in_interval(value) }
+    value if minimum <= value <= maximum { report_in_interval(value) }
     _ { report_outside() }
 }
 ```

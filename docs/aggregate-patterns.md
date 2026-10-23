@@ -149,7 +149,7 @@ If the first component is statically known to be Int, its type test may need no 
 No new names become available to a following guard in the unbound example. To test or use the first component later, bind it explicitly:
 
 ```text
-User(first: Int, == outVal) and first >= minimum { accept(first) }
+User(first: Int, == outVal) if first >= minimum { accept(first) }
 ```
 
 This is an arm fragment assuming the User schema, compatible comparisons, and additional coverage as needed. The typed binding reuses the selected type-match-plus-bind form; the comparison is an ordinary Boolean guard.

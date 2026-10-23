@@ -22,7 +22,7 @@ This uses the existing equality pattern, assuming the set type supplies appropri
 ```text
 /* contains is an illustrative API, not selected library spelling. */
 match actualSet {
-    values and values.contains(10) and values.contains(20) {
+    values if values.contains(10) and values.contains(20) {
         report_contains_both()
     }
     _ { report_missing_required_values() }

@@ -1,6 +1,6 @@
 # Match and exhaustive selection
 
-Status: **five pattern families, and-chained arm tests/matches, and pattern-and-brace bodies selected; exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
+Status: **five pattern families, if-introduced arm guards with and-chained tests/matches, and pattern-and-brace bodies selected; exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
@@ -8,7 +8,7 @@ Branch-result union inference is selected 2026-10-21; explicit/expected result c
 
 Select behavior by variant, type, or destructured data. The same match syntax works for actions and values.
 
-Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. And-chained Boolean tests and additional pattern matches are selected too; see [match arm chains](match-guards.md).
+Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards introduced by if, with and-chained Boolean tests and additional pattern matches, are selected too; see [match arm chains](match-guards.md).
 
 ```text
 match expression {
@@ -17,7 +17,7 @@ match expression {
 }
 ```
 
-Each arm header, including any and conditions, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. A trailing semicolon after a braced arm body is allowed. A completed match also permits an optional trailing semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
+Each arm header, including an optional if guard, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. A trailing semicolon after a braced arm body is allowed. A completed match also permits an optional trailing semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
 
 The [keyword-placement review](match-keyword-placement.md) compares the current `match value { ... }` form with `value match { ... }`. It recommends retaining the current prefix form for consistency with if/loop and existing block boundaries. Subject-first matching remains an alternative under review, not a second accepted spelling.
 
@@ -25,13 +25,13 @@ The [keyword-placement review](match-keyword-placement.md) compares the current 
 
 ```text
 match find_user(id) {
-    .Some(user) and user.age > 14 { greet(user) }
+    .Some(user) if user.age > 14 { greet(user) }
     .Some(user) { report_too_young(user) }
     .None { report_missing() }
 }
 ```
 
-An additional pattern uses an explicit source, such as `and Some(profile) := find_profile(user.id)`. Operands run left to right; false or mismatch permits the next arm. Select the first fully successful arm. Names unpacked by earlier patterns are available to later operands and that arm's body only. See [match arm chains](match-guards.md).
+An if starts the guard after the initial arm pattern. An additional pattern uses an explicit source, such as `if .Some(profile) := find_profile(user.id)` as its first operand, or `and .Some(profile) := find_profile(user.id)` after an earlier guard operand. Operands run left to right; false or mismatch permits the next arm. Select the first fully successful arm. Names unpacked by earlier patterns are available to later operands and that arm's body only. See [match arm chains](match-guards.md).
 
 ## Optional value example
 
@@ -119,7 +119,7 @@ Automatic refinement applies only while the original subject name still denotes 
 
 ### One evaluated subject, one selected body
 
-Source-order selection of the first fully successful arm is selected, with no implicit fallthrough. Finishing an arm finishes selection; it does not require break. Its and conditions run after structural success; false or additional pattern mismatch permits later arms. Explicit fallthrough syntax is not selected. Unreachable-arm diagnostics remain to specify.
+Source-order selection of the first fully successful arm is selected, with no implicit fallthrough. Finishing an arm finishes selection; it does not require break. Its if guard runs after structural success; false or additional pattern mismatch permits later arms. Explicit fallthrough syntax is not selected. Unreachable-arm diagnostics remain to specify.
 
 The required pattern categories include equality values, plain enum cases, payload cases, destructuring, and type alternatives. Complete constant resolution and equality semantics before choosing their full grammar. Range patterns, alternatives in one arm, and custom matching hooks can be designed separately. Record destructuring is in scope for the destructuring requirement, with its syntax open. No additional `switch` keyword is proposed.
 
@@ -143,7 +143,7 @@ An integer or open-interface subject needs a catch-all unless the coverage check
 
 ### Guards and result types
 
-The selected guard form is `pattern and condition { body }`, including additional explicit pattern bindings as later operands. The earlier pattern-if candidate is superseded. Mutation restrictions, ownership commitment, and evaluation with alternative patterns need formal rules; see [match arm chains](match-guards.md).
+The selected guard form is `pattern if condition { body }`, including additional explicit pattern bindings and and-chained operands inside the guard. This supersedes the earlier pattern-and separator; no as binding marker is selected. Mutation restrictions, ownership commitment, and evaluation with alternative patterns need formal rules; see [match arm chains](match-guards.md).
 
 All normally completing arms must satisfy an expected result contract when present. Otherwise, a String arm and an Int arm infer String | Int under the selected union-inference rule. An explicit exit is checked against its own target. Braces, final-expression values, and optional trailing semicolons follow the same rules for actions and values.
 

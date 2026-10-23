@@ -140,7 +140,7 @@ These are alternatives, not a recommendation to perform the lookup four times. S
 
 ```text
 message := match find_user_age(id) {
-    .Some(age) and age >= 18 { "Adult" }
+    .Some(age) if age >= 18 { "Adult" }
     .Some { "Under 18" }
     .None { "Not found" }
 }
@@ -278,7 +278,7 @@ describe_student := fn(id: Int): String {
             name: String,
             years: Int = age,
         }))
-            and years >= 18
+            if years >= 18
             and .Some(profile) := find_profile(studentId)
             and profile.active {
             "Active adult: " + name
@@ -336,8 +336,8 @@ command := match text {
 }
 
 match age {
-    value and 0 <= value < 18 { report_minor(value) }
-    value and 18 <= value <= 150 { report_adult(value) }
+    value if 0 <= value < 18 { report_minor(value) }
+    value if 18 <= value <= 150 { report_adult(value) }
     _ { report_invalid() }
 }
 

@@ -298,7 +298,7 @@ The earlier [external conditional recovery](conditional-recovery.md) proposal is
 
 ```text
 match_expression := "match" expression "{" match_arm { match_arm } "}"
-match_arm := pattern { "and" condition_operand } block { ";" }
+match_arm := pattern [ "if" and_condition ] block { ";" }
 contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
 
@@ -306,7 +306,7 @@ Omitting the entire parenthesized payload-pattern list selects a tag-only patter
 
 The [keyword-placement alternative](match-keyword-placement.md) `expression match { ... }` is under review and is not a production or alias in this sketch. It would require explicit precedence and block-continuation rules; whitespace cannot choose the subject boundary.
 
-Each arm may extend its initial pattern with and-chained conditions or explicit pattern bindings of other expressions. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no case/arrow delimiter or required separator between arms; trailing semicolons after arm bodies are allowed. The complete match is a block-value construct: it ends its item with an optional trailing semicolon, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
+Each arm may follow its initial pattern with an if guard. The guard reuses and_condition above: one condition operand followed by zero or more and operands, including explicit pattern bindings of other expressions. The if separator replaces the earlier pattern-and arm separator; ordinary conditional chains are unchanged. No as arm-binding marker is selected. Bindings flow left to right to later operands and the body; false/mismatch tries the next arm. Choose the first fully successful arm. See [match arm chains](match-guards.md). Each arm has a braced body, with no case/arrow delimiter or required separator between arms; trailing semicolons after arm bodies are allowed. The complete match is a block-value construct: it ends its item with an optional trailing semicolon, and continuing its value requires parentheses. Its input is evaluated once and bindings are local to the selected arm. Conditional and match patterns share the same pattern concepts, including `binding: Type`.
 
 This sketches the selected arm surface, not a full pattern parser. Every match must be exhaustive, including actions. An unconstrained _ binding supplies the catch-all, and _ {} explicitly ignores remaining subjects with Unit. A separate else fallback, overlaps, exact type versus subtype tests, and detailed coverage proofs remain open. See [match](match.md) and [union type patterns](union-patterns.md).
 
@@ -343,7 +343,7 @@ comparison_pattern := comparison_operator comparison_pattern_operand
 
 comparison_operator is the same ten-token family used by expression comparisons below. The enclosing pattern supplies the left operand; comparison_pattern_operand is a descriptive placeholder for the right value expression. Its complete recursive boundaries, including arm bodies and named-field selector clauses, remain open. This fragment selects no additional constructor schema, header-pattern context, or type-based parsing rule.
 
-Each prefix introduces no binding and uses its ordinary operator meaning, including Boolean complement for negative forms. The runtime right operand evaluates once when the comparison is reached; skipped tests do not evaluate it. RHS names resolve in the surrounding pre-pattern scope, not from new bindings elsewhere in the same pattern. False rejects that pattern; comparison/expression failures retain their ordinary failure behavior rather than becoming mismatch. Supported conditional/match contexts retain their mismatch rules, and ordinary declarations retain irrefutability requirements. Use later and guards for compound or cross-component conditions. General logical patterns, binding-producing alternatives, and implicit-subject pattern comparison chains are not selected. See [comparison patterns](comparison-patterns.md).
+Each prefix introduces no binding and uses its ordinary operator meaning, including Boolean complement for negative forms. The runtime right operand evaluates once when the comparison is reached; skipped tests do not evaluate it. RHS names resolve in the surrounding pre-pattern scope, not from new bindings elsewhere in the same pattern. False rejects that pattern; comparison/expression failures retain their ordinary failure behavior rather than becoming mismatch. Supported conditional/match contexts retain their mismatch rules, and ordinary declarations retain irrefutability requirements. Use an if guard in match arms, or later and operands in conditional chains, for compound or cross-component conditions. General logical patterns, binding-producing alternatives, and implicit-subject pattern comparison chains are not selected. See [comparison patterns](comparison-patterns.md).
 
 ## Loops
 

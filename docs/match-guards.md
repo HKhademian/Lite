@@ -1,24 +1,42 @@
-# Match arm condition chains
+# Match arm guards and condition chains
 
-Status: **and-chained Boolean tests and additional pattern matches selected; alternatives, mutation effects, and ownership details open**.
+Status: **pattern-if guard separator selected on 2026-10-23; Boolean tests and additional pattern matches retain selected left-to-right and chains; alternatives, mutation effects, and ownership details open**.
 
 ## Purpose and template
 
 After matching the arm's subject pattern, test conditions or match additional values using the names already unpacked. The same left-to-right rules apply as in conditional pattern chains.
 
 ```text
-pattern and condition_operand and condition_operand { body }
+pattern if condition_operand and condition_operand { body }
 ```
 
-The initial pattern matches the match subject. Later operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. There is no separate if, when, or where separator.
+The initial pattern matches the match subject. An optional if introduces the guard; its operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. Further guard operands use and, with the same left-to-right scope and short-circuit rules as conditional chains. A guard may contain just one operand. No as marker is needed to introduce the arm binding.
 
-Ordering comparisons and compound relationships already work as Boolean guards, for example `pattern and lower <= value < upper and (ready or retry_allowed)`. All ten direct comparison prefixes, including >= minimum and >! limit, are now selected as nonbinding [comparison patterns](comparison-patterns.md). A prefix tests one supplied value; compound and cross-component conditions retain these and guards. Boolean or inside a grouped guard does not select alternative binding-producing patterns.
+Ordering comparisons and compound relationships already work as Boolean guards, for example `value if lower <= value < upper and (ready or retry_allowed)`. All ten direct comparison prefixes, including >= minimum and >! limit, are now selected as nonbinding [comparison patterns](comparison-patterns.md). A prefix tests one supplied value; compound and cross-component conditions retain these if guards. Boolean or inside a grouped guard does not select alternative binding-producing patterns.
+
+## Binding visibility and simple arms
+
+The if separator makes the initial name's binding role visible without an additional as marker:
+
+```text
+match target {
+    v: T if condition(v) { handle_t(v) }
+    v if other(v)        { handle_other(v) }
+    _                    { ignore() }
+}
+```
+
+Assume statically valid Bool-producing predicates and Unit-producing handlers. The first pattern type-tests and binds v with type T before evaluating its guard. The second binds the whole subject with its inferred type. If a guard is false, try the next arm; these arm-local bindings never leak into sibling arms. The subject is evaluated once, not once per binding.
+
+Simple `v: T { ... }`, `v { ... }`, `_v { ... }`, and `_ { ... }` arms remain valid without if. `_v` and `_` are ordinary readable bindings with permission for nonuse. An unguarded untyped binding accepts every remaining subject, so these last three forms are alternatives rather than successive fallback stages. Direct comparison patterns such as `>= minimum { ... }` also remain available and bind nothing. The separator introduces no implicit conversion, copy, or new ownership permission.
+
+This selects `pattern if guard { body }` for every initial arm pattern, including structural and nonbinding patterns. It does not add a general as-pattern form, combined whole-value-plus-subpattern collectors, or implicit-subject comparison chains. Full comparison-operand parsing remains open.
 
 ## Boolean guard example
 
 ```text
 match find_user(id) {
-    .Some(user) and user.age > 14 { greet(user) }
+    .Some(user) if user.age > 14 { greet(user) }
     .Some(user) { report_too_young(user) }
     .None { report_missing() }
 }
@@ -31,7 +49,7 @@ Assume the calls produce Unit and find_user returns Option<User>. The source cal
 ```text
 match find_user(id) {
     .Some(user)
-        and user.age > 14
+        if user.age > 14
         and .Some(profile) := find_profile(user.id)
         and profile.visible {
         greet(user, profile)
@@ -58,13 +76,13 @@ Nested destructuring also works directly in that chain, for example `and (first,
 
 ## Remaining rules
 
-The and chain uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when logical operators belong inside a pattern's source value. Grouped Bool or operands introduce no extra pattern bindings. Binding-producing or/not, repeated names within a chain, alternative patterns in one arm, and custom field/equality effect contracts remain open.
+The guard's and chain uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when logical operators belong inside a pattern's source value. Grouped Bool or operands introduce no extra pattern bindings. Binding-producing or/not, repeated names within a chain, alternative patterns in one arm, and custom field/equality effect contracts remain open.
 
 The ownership model must permit later arms after a failed test or guard. Do not silently duplicate a noncopyable value or commit a move that makes that path invalid. Mutations that invalidate a refinement require explicit rules; these examples do not grant unrestricted writable aliases. The exact order and effect model of recursive structural extraction is separate from the selected left-to-right order of and operands.
 
-The earlier `pattern if condition { ... }` LiteScript guard candidate is superseded. No second spelling is selected.
+The earlier `pattern and condition { ... }` arm separator is superseded. Use `pattern if condition { ... }`; and remains a separator between subsequent guard operands. The alternative as-name arm marker was considered but not selected. Ordinary conditional chains retain their existing syntax.
 
 ## References
 
-- [Rust match guard chains](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards): guards can use earlier pattern bindings, chain additional pattern matches, and reject an arm. LiteScript reuses and instead of introducing Rust's if/let/&& punctuation; Rust's detailed ownership and alternative-pattern evaluation rules are not adopted wholesale.
+- [Rust match guard chains](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards): guards can use earlier pattern bindings, chain additional pattern matches, and reject an arm. LiteScript selects if between an arm pattern and its guard, then reuses its existing condition-chain forms and and spelling; Rust's detailed ownership and alternative-pattern evaluation rules are not adopted wholesale.
 - [Conditional chains](condition-chains.md), [match patterns](match-patterns.md), [pattern binding inference](pattern-binding-inference.md), and [match](match.md).
