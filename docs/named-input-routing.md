@@ -98,7 +98,7 @@ For a known public signature:
 2. Process supplied entries in written order. Expand shorthand and process each spread's statically known tuple components in stored order, preserving labels.
 3. An unnamed input fills the next unfilled slot in declaration order, including after named entries. Reject it if no slot remains.
 4. A named input selects its declared slot. Reject an unknown/ambiguous label. If that slot was already supplied, replace its pending value without moving or adding a slot, subject to explicit-label uniqueness above; the last admitted contribution for it wins. This permits spread collisions and retains the selected named replacement of an earlier positional contribution.
-5. Check every supplied value against that fixed slot's declared type and access contract, including values later replaced. No extra input slot, implicit union widening, or permission is introduced by replacement.
+5. Type-check every supplied expression under its applicable expression rules, including values later replaced. After routing and replacement, check each surviving input against its fixed slot's declared type/access contract. A superseded contribution need not fit that destination contract. No extra input slot, implicit union widening, or permission is introduced by replacement.
 6. Every slot still unfilled after supplied entries needs an applicable explicitly declared default compatible with that slot. Missing required inputs remain errors; no automatic zero argument is introduced.
 7. Reject invalid mappings statically before executing the call. For admitted calls, evaluate the callee first, then each supplied expression once in written order, then invoke after successful input preparation. Defaults with effects retain their separate timing/scope question.
 
@@ -119,10 +119,10 @@ op(a = 1, b = 2, c = ?);          /* reserved storage marker is not a value */
 op(a = 3, a = 1, b = 2, c = 3);  /* duplicate explicit a, despite equal types */
 op(a = 1, a = 1, b = 2, c = 3);  /* duplicate explicit a, despite equal values */
 op(=a, a = 1, b = 2, c = 3);     /* shorthand also supplies an explicit label */
-op(a = "one", ...(a = 1, b = 2, c = 3)); /* replaced value still fails a: Int */
+op(...(a = "one", b = 2, c = 3), a = "still wrong"); /* final a does not fit Int */
 ```
 
-Unknown, ambiguous, or incompatible named inputs must not fall back to positional matching. Repeated explicit labels are errors; collisions involving spread can replace a supplied value, with every contribution checked against the fixed parameter contract. Duplicate labels in the signature remain a different issue. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
+Unknown or ambiguous named inputs and incompatible surviving values must not fall back to positional matching. Repeated explicit labels are errors; collisions involving spread can replace a supplied value, with each final value checked against the fixed parameter contract. Every supplied expression must still be valid and evaluate in written order. Duplicate labels in the signature remain a different issue. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
 
 ## 3. Omissions, defaults, and underscore
 
@@ -177,7 +177,7 @@ A fresh tuple constructor under a known destination tuple type uses the same ent
 2. Require unique explicit labels within the constructor after expanding =name shorthand. Spread-contributed labels do not count as explicit labels of the enclosing constructor. Validate each operand independently.
 3. Process entries in written order. Expand each explicit tuple spread in its operand's stored component order, preserving labels. Each unnamed contribution fills the next unfilled destination slot.
 4. Each named contribution selects its declared destination slot and may replace an earlier contribution, subject to explicit-label uniqueness. Spread collisions and named replacement of an earlier positional contribution are permitted. A label not present in the destination is an error.
-5. Check every contribution against the destination slot's known type/access contract, including contributions later replaced. Replacement does not change a fixed component type or infer a wider union.
+5. Type-check every expression under its applicable expression rules. After routing and replacement, check each surviving contribution against the destination slot's known type/access contract. A superseded contribution need not fit that destination contract. Replacement does not change a fixed component type or infer a wider union.
 6. Require every destination slot to be filled; reject excess unnamed entries and missing components. No implicit zero, record default, or call-argument default fills an omitted tuple component.
 
 For admitted construction, evaluate every entry/operand once in written order, including replaced contributors. Routing determines the final destination order without reordering observable effects. Superseded-value cleanup/ownership remains open.
@@ -195,15 +195,18 @@ pair: (l: Int, r: Int) = (l = 1, ...(l = 10, r = 20));
 pair: (l: Int, r: Int) = (10, l = 20, 30);
 /* l = 20, r = 30: named l replaces the positional contribution */
 
+pair: (l: Int, r: Int) = (l = "old", ...(l = 10, r = 20));
+/* valid: final l fits Int; the superseded String expression still evaluates */
+
 /* rejected: (10, l = 20); r is still missing */
 /* rejected: (l = 10, l = 20, r = 30); duplicate explicit l */
-/* rejected: (l = "old", ...(l = 10, r = 20)); earlier l does not fit Int */
+/* rejected: (...(l = 10, r = 20), l = "wrong"); final l does not fit Int */
 /* rejected: (r = 20, 10, 30); no unfilled slot for 30 */
 /* rejected: (...(unknown = 1,), l = 10, r = 20); unknown label */
 /* rejected: (...()); both destination components are missing */
 ```
 
-Each rejected initializer above assumes the same (l: Int, r: Int) destination. A stored tuple used as a plain initializer still follows stored-tuple compatibility; (...stored) is explicit reconstruction and routes its contributions into the new destination. This rule does not reorder or relabel the operand itself. Grouping, singleton, and tuple syntax remain independent of expected types. Existing omitted-component type inference remains selected, but its full constraint-solving interaction with replacement and generics is not newly specified here.
+Each rejected initializer above assumes the same (l: Int, r: Int) destination. A stored tuple used as a plain initializer still follows stored-tuple compatibility; (...stored) is explicit reconstruction and routes its contributions into the new destination. This rule does not reorder or relabel the operand itself. Grouping, singleton, and tuple syntax remain independent of expected types. Omitted component types are inferred from the final surviving contributions as specified below; complete generic constraint solving remains separate.
 
 Expected contracts still require known labels, compatible component types, and complete initialization:
 
@@ -213,6 +216,37 @@ pair: (l: Int, r: Int) = (l = 10, r = "twenty"); /* incompatible r */
 ```
 
 Under the selected extension, (r = 20, 10) fills r then l, while (10, l = 20) remains invalid because replacing l leaves r missing. Singleton value spelling is selected separately; the empty tuple is Unit, also spelled (). The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
+
+### Patching and inferred component types selected
+
+Selected by the user, 2026-10-23: route contributions and apply permitted replacement before checking the completed tuple against its destination type. This supersedes the earlier requirement that every intermediate contribution fit that destination. The user explicitly extended final-value checking to function calls too; it is not implicit conversion or permission to skip evaluating overwritten expressions.
+
+```text
+x1: (s1: T1, s2: T2, s3: T3);
+x2: (s1: T1, s2: T1, s3: T3) = (...x1, s2 = fixToT1);
+```
+
+Assume fixToT1 is a value expression of type T1. Even when T2 is incompatible with T1, the reconstructed x2 is valid because its surviving s2 comes from fixToT1. This constructs x2 under its own tuple contract rather than converting or retyping x1.s2 from T2 to T1. Whether source values remain usable after spreading depends on the eventual copy/move/borrow rules. Without that patch, the surviving s2 must itself fit the destination. Unknown labels, excess positions, missing components, duplicate explicit labels, and invalid expressions remain errors. Source access, ownership, and cleanup obligations still apply to all evaluated contributions.
+
+A label-only or partial tuple annotation fixes the destination labels/order and any already known component types. Infer each remaining component type from its final surviving contribution, without combining superseded types into a union:
+
+```text
+x: (a,) = (a = "3", ...(a = 1,));
+/* inferred type (a: Int) */
+
+x: (a: Int) = (a = "3", ...(a = 1,));
+/* valid: final a fits the explicitly fixed Int */
+
+x: (a, b: Int) = (a = "old", ...(a = 1, b = 2));
+/* inferred a: Int; final b checked against Int */
+
+/* op has one declared input a: Int */
+op(...(a = "old",), a = 1); /* valid: only final a must fit Int */
+op(...(a = 1,), a = "wrong"); /* rejected: final a does not fit Int */
+op(a = 3, a = 1); /* rejected: duplicate explicit label */
+```
+
+If another expected contract already determines an omitted component type, check the surviving value against that type instead of reinferring it. Missing inference evidence remains an error; this selection does not complete generic, overload, or recursive inference. For calls, omitted inputs retain their applicable declared-default requirement; tuple components still acquire no implicit defaults.
 
 ## 5. Inference and stored tuples: selected order boundary
 
@@ -368,7 +402,7 @@ The latest user clarification replaces the earlier retained-colon omission form.
 (left = l, right = r): (l, r) = (l = 1, r = 2);
 ```
 
-Each annotated initializer establishes l, r order, with Int types inferred from the corresponding source expressions. All four examples bind left = 1 and right = 2. Partial annotations such as (l, r: Int) infer l while checking r against its explicit type. Labels are static names; inferred types do not depend on runtime values.
+Each annotated initializer establishes l, r order, with Int types inferred from the corresponding surviving contributions. All four examples bind left = 1 and right = 2. Partial annotations such as (l, r: Int) infer l from its final surviving contribution while checking final r against its explicit type. Labels are static names; inferred types do not depend on runtime values. See [patching and inferred component types](#patching-and-inferred-component-types-selected).
 
 Omitting component types does not omit or default their values. For stored epx in l, r order, (left, right): (l, r) = epx infers component types and binds by position; a stored r, l tuple still requires explicit reconstruction. Missing inference evidence is an error, without assuming Int, Unit, Any, or a dynamic type. Bare label-only schemas are not complete standalone aliases/signatures unless an applicable static contract determines their missing types.
 
