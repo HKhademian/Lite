@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "piles = [30,11,23,4,20], h = 5",
+    "output": "30",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "piles = [30,11,23,4,20], h = 6",
+    "output": "23",
+    "explanation": null
+  }
+]

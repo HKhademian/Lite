@@ -1,0 +1,23 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "root = [1,2,3,4,5,null,8,null,null,6,7,9]",
+    "output": "[4,2,6,5,7,1,3,9,8]",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "root = []",
+    "output": "[]",
+    "explanation": null
+  },
+  {
+    "name": "held-out-3",
+    "kind": "held-out-example",
+    "input": "root = [1]",
+    "output": "[1]",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "fruits = [1,2,1]",
+    "output": "3",
+    "explanation": "We can pick from all 3 trees."
+  }
+]

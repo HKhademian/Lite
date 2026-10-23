@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-938",
+  "source": "leetcode",
+  "title": "Range Sum of BST",
+  "url": "https://leetcode.com/problems/range-sum-of-bst/",
+  "category": "algorithms",
+  "topics": [
+    "trees",
+    "dfs",
+    "binary-search-tree",
+    "binary-tree"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0900-0999/0938.Range%20Sum%20of%20BST/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "jewels = \"aA\", stones = \"aAAbbbb\"",
+    "output": "3",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "gain = [-5,1,5,0,-7]",
+    "output": "1",
+    "explanation": "The altitudes are [0,-5,-4,1,1,-6]. The highest is 1."
+  }
+]

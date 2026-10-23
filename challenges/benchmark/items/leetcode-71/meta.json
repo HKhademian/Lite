@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-71",
+  "source": "leetcode",
+  "title": "Simplify Path",
+  "url": "https://leetcode.com/problems/simplify-path/",
+  "category": "algorithms",
+  "topics": [
+    "strings",
+    "stack"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 4,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0000-0099/0071.Simplify%20Path/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

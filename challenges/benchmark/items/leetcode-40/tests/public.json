@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "candidates = [10,1,2,7,6,1,5], target = 8",
+    "output": "[\n[1,1,6],\n[1,2,5],\n[1,7],\n[2,6]\n]",
+    "explanation": null
+  }
+]

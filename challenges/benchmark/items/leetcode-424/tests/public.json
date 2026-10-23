@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"ABAB\", k = 2",
+    "output": "4",
+    "explanation": "Replace the two 'A's with two 'B's or vice versa."
+  }
+]

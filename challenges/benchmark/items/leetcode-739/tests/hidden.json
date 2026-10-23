@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "temperatures = [30,40,50,60]",
+    "output": "[1,1,1,0]",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "temperatures = [30,60,90]",
+    "output": "[1,1,0]",
+    "explanation": null
+  }
+]

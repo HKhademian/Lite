@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"ab##\", t = \"c#d#\"",
+    "output": "true",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "s = \"a#c\", t = \"b\"",
+    "output": "false",
+    "explanation": null
+  }
+]

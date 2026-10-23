@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,5,11,5]",
+    "output": "true",
+    "explanation": "The array can be partitioned as [1, 5, 5] and [11]."
+  }
+]

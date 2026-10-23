@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "target = 7, nums = [2,3,1,2,4,3]",
+    "output": "2",
+    "explanation": "The subarray [4,3] has the minimal length under the problem constraint."
+  }
+]

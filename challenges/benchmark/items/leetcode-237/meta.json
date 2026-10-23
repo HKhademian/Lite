@@ -1,0 +1,34 @@
+{
+  "id": "leetcode-237",
+  "source": "leetcode",
+  "title": "Delete Node in a Linked List",
+  "url": "https://leetcode.com/problems/delete-node-in-a-linked-list/",
+  "category": "algorithms",
+  "topics": [
+    "linked-list"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0200-0299/0237.Delete%20Node%20in%20a%20Linked%20List/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "hand = [1,2,3,4,5], groupSize = 4",
+    "output": "false",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s1 = \"ab\", s2 = \"eidbaooo\"",
+    "output": "true",
+    "explanation": "s2 contains one permutation of s1 (\"ba\")."
+  }
+]

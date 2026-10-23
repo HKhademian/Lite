@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "num = 14",
+    "output": "6",
+    "explanation": "Step 1) 14 is even; divide by 2 and obtain 7. \nStep 2) 7 is odd; subtract 1 and obtain 6.\nStep 3) 6 is even; divide by 2 and obtain 3. \nStep 4) 3 is odd; subtract 1 and obtain 2. \nStep 5) 2 is even; divide by 2 and obtain 1. \nStep 6) 1 is odd; subtract 1 and obtain 0."
+  }
+]

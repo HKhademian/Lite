@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "matrix = [[1,1,1],[1,0,1],[1,1,1]]",
+    "output": "[[1,0,1],[0,0,0],[1,0,1]]",
+    "explanation": null
+  }
+]

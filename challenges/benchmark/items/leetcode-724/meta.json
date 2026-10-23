@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-724",
+  "source": "leetcode",
+  "title": "Find Pivot Index",
+  "url": "https://leetcode.com/problems/find-pivot-index/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "prefix-sum"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0700-0799/0724.Find%20Pivot%20Index/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

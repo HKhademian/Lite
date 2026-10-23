@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"abc\"",
+    "output": "3",
+    "explanation": "Three palindromic strings: \"a\", \"b\", \"c\"."
+  }
+]

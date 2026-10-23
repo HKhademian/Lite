@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "root = [5,3,6,2,4,null,7], key = 3",
+    "output": "[5,4,6,2,null,null,7]",
+    "explanation": "Given key to delete is 3. So we find the node with value 3 and delete it.\nOne valid answer is [5,4,6,2,null,null,7], shown in the above BST.\nPlease notice that another valid answer is [5,2,6,null,4,null,7] and it's also accepted."
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 11",
+    "output": "3",
+    "explanation": "The input binary string 1011 has a total of three set bits."
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "asteroids = [5,10,-5]",
+    "output": "[5,10]",
+    "explanation": "The 10 and -5 collide resulting in 10. The 5 and 10 never collide."
+  }
+]

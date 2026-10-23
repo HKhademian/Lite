@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"ADOBECODEBANC\", t = \"ABC\"",
+    "output": "\"BANC\"",
+    "explanation": "The minimum window substring \"BANC\" includes 'A', 'B', and 'C' from string t."
+  }
+]

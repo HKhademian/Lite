@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"leetcode\"",
+    "output": "0",
+    "explanation": "The character 'l' at index 0 is the first character that does not occur at any other index."
+  }
+]

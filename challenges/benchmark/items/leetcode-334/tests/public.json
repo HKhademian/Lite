@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,2,3,4,5]",
+    "output": "true",
+    "explanation": "Any triplet where i < j < k is valid."
+  }
+]

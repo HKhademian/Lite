@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"(()\"",
+    "output": "2",
+    "explanation": "The longest valid parentheses substring is \"()\"."
+  }
+]

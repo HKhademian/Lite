@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "columnTitle = \"AB\"",
+    "output": "28",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "columnTitle = \"ZY\"",
+    "output": "701",
+    "explanation": null
+  }
+]

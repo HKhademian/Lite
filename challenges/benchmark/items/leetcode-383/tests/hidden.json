@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "ransomNote = \"aa\", magazine = \"ab\"",
+    "output": "false",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "ransomNote = \"aa\", magazine = \"aab\"",
+    "output": "true",
+    "explanation": null
+  }
+]

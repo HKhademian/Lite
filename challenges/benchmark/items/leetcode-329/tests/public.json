@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "matrix = [[9,9,4],[6,6,8],[2,1,1]]",
+    "output": "4",
+    "explanation": "The longest increasing path is [1, 2, 6, 9]."
+  }
+]

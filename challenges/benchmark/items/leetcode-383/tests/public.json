@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "ransomNote = \"a\", magazine = \"b\"",
+    "output": "false",
+    "explanation": null
+  }
+]

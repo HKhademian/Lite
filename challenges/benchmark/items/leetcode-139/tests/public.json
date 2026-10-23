@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"leetcode\", wordDict = [\"leet\",\"code\"]",
+    "output": "true",
+    "explanation": "Return true because \"leetcode\" can be segmented as \"leet code\"."
+  }
+]

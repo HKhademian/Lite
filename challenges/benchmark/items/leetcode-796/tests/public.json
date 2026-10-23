@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"abcde\", goal = \"cdeab\"",
+    "output": "true",
+    "explanation": null
+  }
+]

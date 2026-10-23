@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [12,345,2,6,7896]",
+    "output": "2",
+    "explanation": "12 contains 2 digits (even number of digits). \n345 contains 3 digits (odd number of digits). \n2 contains 1 digit (odd number of digits). \n6 contains 1 digit (odd number of digits). \n7896 contains 4 digits (even number of digits). \nTherefore only 12 and 7896 contain an even number of digits."
+  }
+]

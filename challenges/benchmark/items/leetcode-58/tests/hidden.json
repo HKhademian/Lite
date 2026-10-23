@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"   fly me   to   the moon  \"",
+    "output": "4",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "s = \"luffy is still joyboy\"",
+    "output": "6",
+    "explanation": null
+  }
+]

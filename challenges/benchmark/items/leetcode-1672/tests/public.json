@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "accounts = [[1,2,3],[3,2,1]]",
+    "output": "6",
+    "explanation": "1st customer has wealth = 1 + 2 + 3 = 6\n2nd customer has wealth = 3 + 2 + 1 = 6\nBoth customers are considered the richest with a wealth of 6 each, so return 6."
+  }
+]

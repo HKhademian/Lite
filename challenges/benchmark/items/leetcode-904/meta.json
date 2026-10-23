@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-904",
+  "source": "leetcode",
+  "title": "Fruit Into Baskets",
+  "url": "https://leetcode.com/problems/fruit-into-baskets/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "hash-table",
+    "sliding-window"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0900-0999/0904.Fruit%20Into%20Baskets/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

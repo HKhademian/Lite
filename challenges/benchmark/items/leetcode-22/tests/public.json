@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 3",
+    "output": "[\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]",
+    "explanation": null
+  }
+]

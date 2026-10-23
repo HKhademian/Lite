@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "candidates = [2,5,2,1,2], target = 5",
+    "output": "[\n[1,2,2],\n[5]\n]",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "digits = [1,2,3]",
+    "output": "[1,2,4]",
+    "explanation": "The array represents the integer 123.\nIncrementing by one gives 123 + 1 = 124.\nThus, the result should be [1,2,4]."
+  }
+]

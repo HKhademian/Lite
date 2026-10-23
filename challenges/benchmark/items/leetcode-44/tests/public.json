@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"aa\", p = \"a\"",
+    "output": "false",
+    "explanation": "\"a\" does not match the entire string \"aa\"."
+  }
+]

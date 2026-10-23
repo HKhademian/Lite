@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,2,3,1]",
+    "output": "true",
+    "explanation": "The element 1 occurs at the indices 0 and 3."
+  }
+]

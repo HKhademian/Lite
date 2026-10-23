@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-17",
+  "source": "leetcode",
+  "title": "Letter Combinations of a Phone Number",
+  "url": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/",
+  "category": "algorithms",
+  "topics": [
+    "hash-table",
+    "strings",
+    "backtracking"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "curated",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0000-0099/0017.Letter%20Combinations%20of%20a%20Phone%20Number/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

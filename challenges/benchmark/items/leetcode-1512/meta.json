@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-1512",
+  "source": "leetcode",
+  "title": "Number of Good Pairs",
+  "url": "https://leetcode.com/problems/number-of-good-pairs/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "hash-table",
+    "math",
+    "counting"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/1500-1599/1512.Number%20of%20Good%20Pairs/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

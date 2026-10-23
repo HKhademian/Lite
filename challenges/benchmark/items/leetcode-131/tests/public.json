@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"aab\"",
+    "output": "[[\"a\",\"a\",\"b\"],[\"aa\",\"b\"]]",
+    "explanation": null
+  }
+]

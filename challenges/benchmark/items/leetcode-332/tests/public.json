@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "tickets = [[\"MUC\",\"LHR\"],[\"JFK\",\"MUC\"],[\"SFO\",\"SJC\"],[\"LHR\",\"SFO\"]]",
+    "output": "[\"JFK\",\"MUC\",\"LHR\",\"SFO\",\"SJC\"]",
+    "explanation": null
+  }
+]

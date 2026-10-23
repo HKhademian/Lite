@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"a\", t = \"a\"",
+    "output": "\"a\"",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "s = \"a\", t = \"aa\"",
+    "output": "\"\"",
+    "explanation": null
+  }
+]

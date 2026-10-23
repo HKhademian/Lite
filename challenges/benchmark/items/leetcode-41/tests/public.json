@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,2,0]",
+    "output": "3",
+    "explanation": "The numbers in the range [1,2] are all in the array."
+  }
+]

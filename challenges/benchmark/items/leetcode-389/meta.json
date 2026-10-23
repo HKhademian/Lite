@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-389",
+  "source": "leetcode",
+  "title": "Find the Difference",
+  "url": "https://leetcode.com/problems/find-the-difference/",
+  "category": "algorithms",
+  "topics": [
+    "hash-table",
+    "strings",
+    "bit-manipulation",
+    "sorting"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0300-0399/0389.Find%20the%20Difference/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

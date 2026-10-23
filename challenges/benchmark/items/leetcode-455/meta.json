@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-455",
+  "source": "leetcode",
+  "title": "Assign Cookies",
+  "url": "https://leetcode.com/problems/assign-cookies/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "two-pointers",
+    "greedy",
+    "sorting"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0400-0499/0455.Assign%20Cookies/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

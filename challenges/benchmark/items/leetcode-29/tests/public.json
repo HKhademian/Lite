@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "dividend = 10, divisor = 3",
+    "output": "3",
+    "explanation": "10/3 = 3.33333.. which is truncated to 3."
+  }
+]

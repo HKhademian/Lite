@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"Hello World\"",
+    "output": "5",
+    "explanation": "The last word is \"World\" with length 5."
+  }
+]

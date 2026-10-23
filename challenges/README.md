@@ -8,7 +8,7 @@ that later grouping, filtering and categorization can be built on.
 Everything is plain JSON/JSONL/CSV.  No database, no server, no dependencies.
 
 ```
-7,085 challenges · 9 sources · 101 topics · 43 curated lists · 3,637 with public tests
+7,085 challenges · 9 sources · 101 topics · 43 lists · 3,637 with tests · 500 benchmark items
 ```
 
 ## What is in the corpus
@@ -58,6 +58,10 @@ challenges/
 │   ├── list.schema.json       # JSON Schema for a curated list
 │   ├── tests.schema.json      # JSON Schema for a test record
 │   └── taxonomy.json          # categories, 101 canonical topics, difficulty bands
+├── benchmark/              # 500 self-contained evaluation items
+│   ├── items/<id>/          # problem.md, meta.json, tests/
+│   ├── items.jsonl          # manifest of all benchmark items
+│   └── README.md            # harness formats and coverage
 ├── tools/
 │   ├── fetch_sources.py     # cached, resumable download of raw source data
 │   ├── fetch_tests.py       # cached download of CSES/AtCoder/Rosalind pages
@@ -207,6 +211,18 @@ For LeetCode the `input` string is function-style (`nums = ..., target = ...`),
 not serialized JSON; a harness must parse it per problem.  CSES/AtCoder/Rosalind
 cases are plain stdin/stdout blocks.
 
+## Benchmark layer
+
+`benchmark/` contains **500 self-contained items** for evaluating a solver:
+202 Project Euler (single numeric answer) and 298 LeetCode (function-style
+inputs).  Each item has `problem.md`, `meta.json` and a `tests/` directory with
+public cases plus held-out official examples where available.
+
+Reference code is linked, not copied: Project Euler points at
+`nayuki/Project-Euler-solutions` (all rights reserved), LeetCode at
+`doocs/leetcode` (CC-BY-SA-4.0).  The `meta.json` records language, URL, license
+and verification status.  See [`benchmark/README.md`](benchmark/README.md).
+
 ## Querying
 
 ```bash
@@ -242,6 +258,12 @@ python3 tools/fetch_sources.py          # download/caches every source
 python3 tools/fetch_tests.py            # download sample pages
 python3 tools/build.py                 # normalize, validate, write data/*
 python3 tools/build_tests.py           # parse samples into tests.jsonl
+
+python3 tools/fetch_benchmark_euler.py
+python3 tools/build_benchmark_euler.py
+python3 tools/fetch_benchmark_leetcode.py
+python3 tools/build_benchmark_leetcode.py
+python3 tools/validate_benchmark.py
 ```
 
 `build.py` fails loudly on duplicate ids, malformed URLs, unknown categories,

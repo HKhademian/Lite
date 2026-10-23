@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-771",
+  "source": "leetcode",
+  "title": "Jewels and Stones",
+  "url": "https://leetcode.com/problems/jewels-and-stones/",
+  "category": "algorithms",
+  "topics": [
+    "hash-table",
+    "strings"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0700-0799/0771.Jewels%20and%20Stones/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

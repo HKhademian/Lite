@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [-4,-1,0,3,10]",
+    "output": "[0,1,9,16,100]",
+    "explanation": "After squaring, the array becomes [16,1,0,9,100].\nAfter sorting, it becomes [0,1,9,16,100]."
+  }
+]

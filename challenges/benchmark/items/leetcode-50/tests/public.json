@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "x = 2.00000, n = 10",
+    "output": "1024.00000",
+    "explanation": null
+  }
+]

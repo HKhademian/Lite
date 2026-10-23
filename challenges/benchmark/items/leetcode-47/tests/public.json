@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,1,2]",
+    "output": "[[1,1,2],\n [1,2,1],\n [2,1,1]]",
+    "explanation": null
+  }
+]

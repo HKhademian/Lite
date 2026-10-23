@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [3,2,2,3], val = 3",
+    "output": "2, nums = [2,2,_,_]",
+    "explanation": "Your function should return k = 2, with the first two elements of nums being 2.\nIt does not matter what you leave beyond the returned k (hence they are underscores)."
+  }
+]

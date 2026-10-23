@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]",
+    "output": "11",
+    "explanation": "The triangle looks like:\n   2\n  3 4\n 6 5 7\n4 1 8 3\nThe minimum path sum from top to bottom is 2 + 3 + 5 + 1 = 11 (underlined above)."
+  }
+]

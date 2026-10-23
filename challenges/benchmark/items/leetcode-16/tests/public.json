@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [-1,2,1,-4], target = 1",
+    "output": "2",
+    "explanation": "The sum that is closest to the target is 2. (-1 + 2 + 1 = 2)."
+  }
+]

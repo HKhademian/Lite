@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "nums = [555,901,482,1771]",
+    "output": "1",
+    "explanation": null
+  }
+]

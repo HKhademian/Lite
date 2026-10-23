@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "root = [4,2,7,1,3], val = 5",
+    "output": "[4,2,7,1,3,5]",
+    "explanation": "Another accepted tree is:"
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"()[]{}\"",
+    "output": "true",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "s = \"(]\"",
+    "output": "false",
+    "explanation": null
+  },
+  {
+    "name": "held-out-3",
+    "kind": "held-out-example",
+    "input": "s = \"([])\"",
+    "output": "true",
+    "explanation": null
+  },
+  {
+    "name": "held-out-4",
+    "kind": "held-out-example",
+    "input": "s = \"([)]\"",
+    "output": "false",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "obstacleGrid = [[0,0,0],[0,1,0],[0,0,0]]",
+    "output": "2",
+    "explanation": "There is one obstacle in the middle of the 3x3 grid above.\nThere are two ways to reach the bottom-right corner:\n1. Right -> Right -> Down -> Down\n2. Down -> Down -> Right -> Right"
+  }
+]

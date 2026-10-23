@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "head = [3,2,0,-4], pos = 1",
+    "output": "tail connects to node index 1",
+    "explanation": "There is a cycle in the linked list, where tail connects to the second node."
+  }
+]

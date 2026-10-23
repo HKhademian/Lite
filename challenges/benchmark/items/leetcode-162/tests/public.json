@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [1,2,3,1]",
+    "output": "2",
+    "explanation": "3 is a peak element and your function should return the index number 2."
+  }
+]

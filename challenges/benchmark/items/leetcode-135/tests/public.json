@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "ratings = [1,0,2]",
+    "output": "5",
+    "explanation": "You can allocate to the first, second and third child with 2, 1, 2 candies respectively."
+  }
+]

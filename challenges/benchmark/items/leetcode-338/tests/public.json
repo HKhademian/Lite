@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 2",
+    "output": "[0,1,1]",
+    "explanation": "0 --> 0\n1 --> 1\n2 --> 10"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 2",
+    "output": "2",
+    "explanation": "There are two ways to climb to the top.\n1. 1 step + 1 step\n2. 2 steps"
+  }
+]

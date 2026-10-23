@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-287",
+  "source": "leetcode",
+  "title": "Find the Duplicate Number",
+  "url": "https://leetcode.com/problems/find-the-duplicate-number/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "two-pointers",
+    "binary-search",
+    "bit-manipulation"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "curated",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0200-0299/0287.Find%20the%20Duplicate%20Number/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

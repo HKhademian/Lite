@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"Mr Ding\"",
+    "output": "\"rM gniD\"",
+    "explanation": null
+  }
+]

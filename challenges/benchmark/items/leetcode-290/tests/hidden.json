@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "pattern = \"abba\", s = \"dog cat cat fish\"",
+    "output": "false",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "pattern = \"aaaa\", s = \"dog cat cat dog\"",
+    "output": "false",
+    "explanation": null
+  }
+]

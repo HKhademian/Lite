@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "piles = [3,6,7,11], h = 8",
+    "output": "4",
+    "explanation": null
+  }
+]

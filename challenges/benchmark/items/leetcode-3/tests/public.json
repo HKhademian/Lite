@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"abcabcbb\"",
+    "output": "3",
+    "explanation": "The answer is \"abc\", with the length of 3."
+  }
+]

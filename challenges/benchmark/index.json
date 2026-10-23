@@ -1,6 +1,7 @@
 {
-  "total": 202,
+  "total": 500,
   "sources": {
+    "leetcode": 298,
     "project-euler": 202
   }
 }

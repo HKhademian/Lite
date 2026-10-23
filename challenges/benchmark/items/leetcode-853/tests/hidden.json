@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "target = 10, position = [3], speed = [3]",
+    "output": "1",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "target = 100, position = [0,2,4], speed = [4,2,1]",
+    "output": "1",
+    "explanation": null
+  }
+]

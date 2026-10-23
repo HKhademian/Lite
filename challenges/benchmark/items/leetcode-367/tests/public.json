@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "num = 16",
+    "output": "true",
+    "explanation": "We return true because 4 * 4 = 16 and 4 is an integer."
+  }
+]

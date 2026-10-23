@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "pattern = \"abba\", s = \"dog cat cat dog\"",
+    "output": "true",
+    "explanation": "The bijection can be established as:"
+  }
+]

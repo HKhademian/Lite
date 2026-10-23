@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-448",
+  "source": "leetcode",
+  "title": "Find All Numbers Disappeared in an Array",
+  "url": "https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "hash-table"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0400-0499/0448.Find%20All%20Numbers%20Disappeared%20in%20an%20Array/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

@@ -1,0 +1,40 @@
+{
+  "id": "leetcode-778",
+  "source": "leetcode",
+  "title": "Swim in Rising Water",
+  "url": "https://leetcode.com/problems/swim-in-rising-water/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "binary-search",
+    "dfs",
+    "bfs",
+    "union-find",
+    "heap",
+    "matrix"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Hard",
+    "normalized": 8.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "curated",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0700-0799/0778.Swim%20in%20Rising%20Water/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

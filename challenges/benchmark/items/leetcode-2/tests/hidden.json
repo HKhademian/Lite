@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "l1 = [0], l2 = [0]",
+    "output": "[0]",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "l1 = [9,9,9,9,9,9,9], l2 = [9,9,9,9]",
+    "output": "[8,9,9,9,0,0,0,1]",
+    "explanation": null
+  }
+]

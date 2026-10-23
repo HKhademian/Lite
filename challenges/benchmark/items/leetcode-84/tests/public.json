@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "heights = [2,1,5,6,2,3]",
+    "output": "10",
+    "explanation": "The above is a histogram where width of each bar is 1.\nThe largest rectangle is shown in the red area, which has an area = 10 units."
+  }
+]

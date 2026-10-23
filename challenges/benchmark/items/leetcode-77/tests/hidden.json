@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "n = 1, k = 1",
+    "output": "[[1]]",
+    "explanation": null
+  }
+]

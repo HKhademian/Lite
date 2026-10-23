@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "nums = [5,7,7,8,8,10], target = 6",
+    "output": "[-1,-1]",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "nums = [], target = 0",
+    "output": "[-1,-1]",
+    "explanation": null
+  }
+]

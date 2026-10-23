@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [3,1,2,4]",
+    "output": "[2,4,3,1]",
+    "explanation": "The outputs [4,2,3,1], [2,4,1,3], and [4,2,1,3] would also be accepted."
+  }
+]

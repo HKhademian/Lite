@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "word1 = \"ab\", word2 = \"pqrs\"",
+    "output": "\"apbqrs\"",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "word1 = \"abcd\", word2 = \"pq\"",
+    "output": "\"apbqcd\"",
+    "explanation": null
+  }
+]

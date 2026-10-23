@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"12\"",
+    "output": "2",
+    "explanation": "\"12\" could be decoded as \"AB\" (1 2) or \"L\" (12)."
+  }
+]

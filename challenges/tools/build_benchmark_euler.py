@@ -120,15 +120,25 @@ def main() -> None:
             "reference": meta["reference_solutions"][0]["url"],
         })
 
-    index.sort(key=lambda row: row["id"])
     BENCH.mkdir(exist_ok=True)
+    existing_path = BENCH / "items.jsonl"
+    existing = [
+        json.loads(line) for line in existing_path.read_text().splitlines()
+        if line.strip()
+    ] if existing_path.exists() else []
+    existing = [row for row in existing if row["source"] != "project-euler"]
+    all_rows = existing + index
+    all_rows.sort(key=lambda row: (row["source"], row["id"]))
     (BENCH / "items.jsonl").write_text(
-        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in index),
+        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in all_rows),
         encoding="utf-8")
+    counts: dict[str, int] = {}
+    for row in all_rows:
+        counts[row["source"]] = counts.get(row["source"], 0) + 1
     (BENCH / "index.json").write_text(
-        json.dumps({"total": len(index), "sources": {"project-euler": len(index)}},
-                   indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {len(index)} Project Euler benchmark items")
+        json.dumps({"total": len(all_rows), "sources": counts}, indent=2) + "\n",
+        encoding="utf-8")
+    print(f"wrote {len(index)} Project Euler items; total {len(all_rows)}")
 
 
 if __name__ == "__main__":

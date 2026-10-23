@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "strs = [\"flower\",\"flow\",\"flight\"]",
+    "output": "\"fl\"",
+    "explanation": null
+  }
+]

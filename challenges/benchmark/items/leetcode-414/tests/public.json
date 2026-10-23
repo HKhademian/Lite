@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [3,2,1]",
+    "output": "1",
+    "explanation": "The first distinct maximum is 3.\nThe second distinct maximum is 2.\nThe third distinct maximum is 1."
+  }
+]

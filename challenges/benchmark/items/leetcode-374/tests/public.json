@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 10, pick = 6",
+    "output": "6",
+    "explanation": null
+  }
+]

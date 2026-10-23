@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "mat = [[0,0,0],[0,1,0],[0,0,0]]",
+    "output": "[[0,0,0],[0,1,0],[0,0,0]]",
+    "explanation": null
+  }
+]

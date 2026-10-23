@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"IceCreAm\"",
+    "output": "\"AceCreIm\"",
+    "explanation": "The vowels in s are ['I', 'e', 'e', 'A'] . On reversing the vowels, s becomes \"AceCreIm\" ."
+  }
+]

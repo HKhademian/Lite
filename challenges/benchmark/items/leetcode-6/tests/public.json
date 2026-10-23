@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"PAYPALISHIRING\", numRows = 3",
+    "output": "\"PAHNAPLSIIGYIR\"",
+    "explanation": null
+  }
+]

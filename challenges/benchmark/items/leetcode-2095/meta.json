@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-2095",
+  "source": "leetcode",
+  "title": "Delete the Middle Node of a Linked List",
+  "url": "https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/",
+  "category": "algorithms",
+  "topics": [
+    "linked-list",
+    "two-pointers"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/2000-2099/2095.Delete%20the%20Middle%20Node%20of%20a%20Linked%20List/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

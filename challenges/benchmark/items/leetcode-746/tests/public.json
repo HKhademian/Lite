@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "cost = [10,15,20]",
+    "output": "15",
+    "explanation": "You will start at index 1.\n- Pay 15 and climb two steps to reach the top.\nThe total cost is 15."
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "root = [1,2,3,4,5]",
+    "output": "3",
+    "explanation": "3 is the length of the path [4,2,1,3] or [5,2,1,3]."
+  }
+]

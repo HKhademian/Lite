@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"anagram\", t = \"nagaram\"",
+    "output": "true",
+    "explanation": null
+  }
+]

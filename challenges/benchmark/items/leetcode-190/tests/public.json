@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "n = 43261596",
+    "output": "964176192",
+    "explanation": null
+  }
+]

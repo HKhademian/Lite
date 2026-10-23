@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = [\"h\",\"e\",\"l\",\"l\",\"o\"]",
+    "output": "[\"o\",\"l\",\"l\",\"e\",\"h\"]",
+    "explanation": null
+  }
+]

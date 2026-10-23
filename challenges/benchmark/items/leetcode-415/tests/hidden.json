@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "num1 = \"456\", num2 = \"77\"",
+    "output": "\"533\"",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "num1 = \"0\", num2 = \"0\"",
+    "output": "\"0\"",
+    "explanation": null
+  }
+]

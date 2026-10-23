@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "flowerbed = [1,0,0,0,1], n = 1",
+    "output": "true",
+    "explanation": null
+  }
+]

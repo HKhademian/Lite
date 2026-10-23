@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "jewels = \"z\", stones = \"ZZ\"",
+    "output": "0",
+    "explanation": null
+  }
+]

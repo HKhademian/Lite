@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-557",
+  "source": "leetcode",
+  "title": "Reverse Words in a String III",
+  "url": "https://leetcode.com/problems/reverse-words-in-a-string-iii/",
+  "category": "algorithms",
+  "topics": [
+    "two-pointers",
+    "strings"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0500-0599/0557.Reverse%20Words%20in%20a%20String%20III/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

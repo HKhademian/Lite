@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "columnTitle = \"A\"",
+    "output": "1",
+    "explanation": null
+  }
+]

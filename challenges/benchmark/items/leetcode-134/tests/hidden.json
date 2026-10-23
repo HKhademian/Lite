@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "gas = [2,3,4], cost = [3,4,3]",
+    "output": "-1",
+    "explanation": null
+  }
+]

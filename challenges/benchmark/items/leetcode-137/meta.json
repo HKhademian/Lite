@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-137",
+  "source": "leetcode",
+  "title": "Single Number II",
+  "url": "https://leetcode.com/problems/single-number-ii/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "bit-manipulation"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0100-0199/0137.Single%20Number%20II/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

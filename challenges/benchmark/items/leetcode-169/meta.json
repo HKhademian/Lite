@@ -1,0 +1,38 @@
+{
+  "id": "leetcode-169",
+  "source": "leetcode",
+  "title": "Majority Element",
+  "url": "https://leetcode.com/problems/majority-element/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "hash-table",
+    "divide-and-conquer",
+    "sorting",
+    "counting"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0100-0199/0169.Majority%20Element/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

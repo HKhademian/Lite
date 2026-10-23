@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "haystack = \"sadbutsad\", needle = \"sad\"",
+    "output": "0",
+    "explanation": "\"sad\" occurs at index 0 and 6.\nThe first occurrence is at index 0, so we return 0."
+  }
+]

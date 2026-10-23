@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "path = \"<local-path>\"",
+    "output": "\"/home\"",
+    "explanation": "The trailing slash should be removed."
+  }
+]

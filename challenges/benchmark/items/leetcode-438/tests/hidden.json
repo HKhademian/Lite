@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"abab\", p = \"ab\"",
+    "output": "[0,1,2]",
+    "explanation": null
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "root = [5,4,8,11,null,13,4,7,2,null,null,null,1], targetSum = 22",
+    "output": "true",
+    "explanation": "The root-to-leaf path with the target sum is shown."
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-701",
+  "source": "leetcode",
+  "title": "Insert into a Binary Search Tree",
+  "url": "https://leetcode.com/problems/insert-into-a-binary-search-tree/",
+  "category": "algorithms",
+  "topics": [
+    "trees",
+    "binary-search-tree",
+    "binary-tree"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0700-0799/0701.Insert%20into%20a%20Binary%20Search%20Tree/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

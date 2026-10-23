@@ -1,0 +1,9 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "flowerbed = [1,0,0,0,1], n = 2",
+    "output": "false",
+    "explanation": null
+  }
+]

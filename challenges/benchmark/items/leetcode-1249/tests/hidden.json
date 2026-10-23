@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "s = \"a)b(c)d\"",
+    "output": "\"ab(c)d\"",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "s = \"))((\"",
+    "output": "\"\"",
+    "explanation": null
+  }
+]

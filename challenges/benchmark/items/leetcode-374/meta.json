@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-374",
+  "source": "leetcode",
+  "title": "Guess Number Higher or Lower",
+  "url": "https://leetcode.com/problems/guess-number-higher-or-lower/",
+  "category": "algorithms",
+  "topics": [
+    "binary-search",
+    "interactive"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0300-0399/0374.Guess%20Number%20Higher%20or%20Lower/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

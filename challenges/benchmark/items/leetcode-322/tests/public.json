@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "coins = [1,2,5], amount = 11",
+    "output": "3",
+    "explanation": "11 = 5 + 5 + 1"
+  }
+]

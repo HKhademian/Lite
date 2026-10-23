@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"Let's take LeetCode contest\"",
+    "output": "\"s'teL ekat edoCteeL tsetnoc\"",
+    "explanation": null
+  }
+]

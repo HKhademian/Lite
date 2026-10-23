@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "word1 = \"abc\", word2 = \"pqr\"",
+    "output": "\"apbqcr\"",
+    "explanation": "The merged string will be merged as so:\nword1:  a   b   c\nword2:    p   q   r\nmerged: a p b q c r"
+  }
+]

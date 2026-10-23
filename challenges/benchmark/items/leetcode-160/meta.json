@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-160",
+  "source": "leetcode",
+  "title": "Intersection of Two Linked Lists",
+  "url": "https://leetcode.com/problems/intersection-of-two-linked-lists/",
+  "category": "algorithms",
+  "topics": [
+    "hash-table",
+    "linked-list",
+    "two-pointers"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0100-0199/0160.Intersection%20of%20Two%20Linked%20Lists/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

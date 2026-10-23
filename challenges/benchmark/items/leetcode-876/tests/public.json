@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "head = [1,2,3,4,5]",
+    "output": "[3,4,5]",
+    "explanation": "The middle node of the list is node 3."
+  }
+]

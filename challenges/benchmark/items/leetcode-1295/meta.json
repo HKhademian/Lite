@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-1295",
+  "source": "leetcode",
+  "title": "Find Numbers with Even Number of Digits",
+  "url": "https://leetcode.com/problems/find-numbers-with-even-number-of-digits/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "math"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/1200-1299/1295.Find%20Numbers%20with%20Even%20Number%20of%20Digits/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

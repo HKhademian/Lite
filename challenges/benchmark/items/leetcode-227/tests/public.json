@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"3+2*2\"",
+    "output": "7",
+    "explanation": null
+  }
+]

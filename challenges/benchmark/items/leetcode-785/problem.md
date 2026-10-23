@@ -1,0 +1,21 @@
+# Is Graph Bipartite?
+
+**Source:** [LeetCode #785](https://leetcode.com/problems/is-graph-bipartite/)  
+**Difficulty:** 5.0/10 (Medium)  
+**Topics:** dfs, bfs, union-find, graphs  
+**Harness:** function-style inputs (`name = value` pairs)
+
+## Problem
+
+There is an undirected graph with n nodes, where each node is numbered between 0 and n - 1. You are given a 2D array graph, where graph[u] is an array of nodes that node u is adjacent to. More formally, for each v in graph[u], there is an undirected edge between node u and node v. The graph has the following properties:
+A graph is bipartite if the nodes can be partitioned into two independent sets A and B such that every edge in the graph connects a node in set A and a node in set B.
+Return true if and only if it is bipartite.
+
+## Public examples
+
+### example-1
+
+```text
+Input: graph = [[1,2,3],[0,2],[0,1,3],[0,2]]
+Output: false
+```

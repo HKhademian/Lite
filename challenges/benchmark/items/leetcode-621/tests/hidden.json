@@ -1,0 +1,16 @@
+[
+  {
+    "name": "held-out-1",
+    "kind": "held-out-example",
+    "input": "tasks = [\"A\",\"C\",\"A\",\"B\",\"D\",\"B\"], n = 1",
+    "output": "6",
+    "explanation": null
+  },
+  {
+    "name": "held-out-2",
+    "kind": "held-out-example",
+    "input": "tasks = [\"A\",\"A\",\"A\", \"B\",\"B\",\"B\"], n = 3",
+    "output": "10",
+    "explanation": null
+  }
+]

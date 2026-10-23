@@ -1,0 +1,35 @@
+{
+  "id": "leetcode-1672",
+  "source": "leetcode",
+  "title": "Richest Customer Wealth",
+  "url": "https://leetcode.com/problems/richest-customer-wealth/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "matrix"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/1600-1699/1672.Richest%20Customer%20Wealth/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

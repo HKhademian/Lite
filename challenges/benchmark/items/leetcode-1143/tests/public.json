@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "text1 = \"abcde\", text2 = \"ace\"",
+    "output": "3",
+    "explanation": "The longest common subsequence is \"ace\" and its length is 3."
+  }
+]

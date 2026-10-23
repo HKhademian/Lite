@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "nums = [3,4,5,1,2]",
+    "output": "true",
+    "explanation": "[1,2,3,4,5] is the original sorted array.\nYou can rotate the array by x = 3 positions to begin on the element of value 3: [3,4,5,1,2]."
+  }
+]

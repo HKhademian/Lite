@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"rabbbit\", t = \"rabbit\"",
+    "output": "3",
+    "explanation": "As shown below, there are 3 ways you can generate \"rabbit\" from s.\nrabbbit\nrabbbit\nrabbbit"
+  }
+]

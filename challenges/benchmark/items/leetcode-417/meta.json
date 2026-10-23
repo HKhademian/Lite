@@ -1,0 +1,37 @@
+{
+  "id": "leetcode-417",
+  "source": "leetcode",
+  "title": "Pacific Atlantic Water Flow",
+  "url": "https://leetcode.com/problems/pacific-atlantic-water-flow/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "dfs",
+    "bfs",
+    "matrix"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Medium",
+    "normalized": 5.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "curated",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0400-0499/0417.Pacific%20Atlantic%20Water%20Flow/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "leetcode-239",
+  "source": "leetcode",
+  "title": "Sliding Window Maximum",
+  "url": "https://leetcode.com/problems/sliding-window-maximum/",
+  "category": "algorithms",
+  "topics": [
+    "arrays",
+    "queue",
+    "sliding-window",
+    "heap",
+    "monotonic-queue"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Hard",
+    "normalized": 8.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "curated",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0200-0299/0239.Sliding%20Window%20Maximum/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-1137",
+  "source": "leetcode",
+  "title": "N-th Tribonacci Number",
+  "url": "https://leetcode.com/problems/n-th-tribonacci-number/",
+  "category": "algorithms",
+  "topics": [
+    "math",
+    "dynamic-programming",
+    "memoization"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Easy",
+    "normalized": 2.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 1,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/1100-1199/1137.N-th%20Tribonacci%20Number/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

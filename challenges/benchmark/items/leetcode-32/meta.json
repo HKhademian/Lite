@@ -1,0 +1,36 @@
+{
+  "id": "leetcode-32",
+  "source": "leetcode",
+  "title": "Longest Valid Parentheses",
+  "url": "https://leetcode.com/problems/longest-valid-parentheses/",
+  "category": "algorithms",
+  "topics": [
+    "strings",
+    "dynamic-programming",
+    "stack"
+  ],
+  "difficulty": {
+    "scale": "leetcode",
+    "raw": "Hard",
+    "normalized": 8.0
+  },
+  "harness": "function",
+  "input_format": "text",
+  "statement": "problem.md",
+  "selection": "popular",
+  "tests": {
+    "public": 1,
+    "hidden": 2,
+    "public_path": "tests/public.json",
+    "hidden_path": "tests/hidden.json"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/doocs/leetcode/blob/main/solution/0000-0099/0032.Longest%20Valid%20Parentheses/Solution.py",
+      "license": "CC-BY-SA-4.0",
+      "status": "linked-not-executed"
+    }
+  ],
+  "license_note": "Statement metadata from LeetCode; reference code remains doocs/leetcode CC-BY-SA-4.0."
+}

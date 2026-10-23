@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"ab#c\", t = \"ad#c\"",
+    "output": "true",
+    "explanation": "Both s and t become \"ac\"."
+  }
+]

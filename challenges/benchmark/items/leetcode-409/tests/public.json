@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"abccccdd\"",
+    "output": "7",
+    "explanation": "One longest palindrome that can be built is \"dccaccd\", whose length is 7."
+  }
+]

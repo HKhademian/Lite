@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "p = [1,2,3], q = [1,2,3]",
+    "output": "true",
+    "explanation": null
+  }
+]

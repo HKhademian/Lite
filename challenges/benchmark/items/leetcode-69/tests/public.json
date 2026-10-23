@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "x = 4",
+    "output": "2",
+    "explanation": "The square root of 4 is 2, so we return 2."
+  }
+]

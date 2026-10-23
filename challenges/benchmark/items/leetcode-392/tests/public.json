@@ -1,0 +1,9 @@
+[
+  {
+    "name": "example-1",
+    "kind": "example",
+    "input": "s = \"abc\", t = \"ahbgdc\"",
+    "output": "true",
+    "explanation": null
+  }
+]
