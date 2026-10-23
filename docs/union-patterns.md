@@ -98,7 +98,7 @@ A narrowed binding exists only where its pattern matched. The producer is evalua
 
 - Complete nested pattern productions and choose common fallback patterns.
 - Define exact type identity versus subtype matching, overlap, ordering, and unreachable arms.
-- Define nested type/variant/record patterns and alternatives within one arm.
+- Complete recursive nested type/variant/record productions. Or alternatives in initial arms and constructor/tuple components are selected with payload-or-Unit joins and first-success/no-backtracking; logical and/not subpatterns and record-field composition remain open.
 - Specify borrowing, copying, moves, and narrowed binding capabilities.
 - Define exhaustive coverage for closed unions and fallback requirements for open Error contracts.
 

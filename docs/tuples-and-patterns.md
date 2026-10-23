@@ -79,6 +79,8 @@ Colon retains its type-annotation/type-test role. A typed variable binding such 
 
 The source is evaluated once before new names are introduced. Every nested component pattern must succeed before the enclosing pattern exposes bindings. Ordinary declarations require irrefutability; supported conditional/match contexts retain their mismatch behavior. Existing recursive written-order shadowing applies to the bindings the chosen collectors actually introduce. Ownership, copying, extraction effects, and complete recursive parsing remain separate contracts; this selection does not introduce loop/lambda header destructuring.
 
+Tuple component patterns also admit [nested or alternatives](match.md#nested-alternative-patterns-selected): `(.Email(address) or .Sms(address), received_at)` applies the choice to the first component and binds the second independently. Or alternatives stay inside that component's comma/parenthesis boundaries and share its supplied value; their binding types join with Unit for absent names. Whole-pattern success still gates all outer bindings. Later component failure does not retry an earlier successful local choice; outer alternatives retain their own mismatch behavior. This adds no rest-list changes, and/not subpatterns, or new headers.
+
 ### Rest and inference retain their selected contracts
 
 Rest belongs to the destructuring pattern. One final ...rest captures unselected tuple components with their existing types, labels, and stored order; without rest, require complete coverage. Zero remaining components give Unit/(), while one stays a singleton tuple. Positional, named, mixed, and rest-only tuple patterns retain their selected routing rules. List/sequence rest and variadic tuple-type declarations remain separate.

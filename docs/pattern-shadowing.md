@@ -84,7 +84,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 - Complete operand boundaries and composition grammar for the selected value/type tests.
 - Complete recursive grammar for selected variable-or-pattern collectors, named-field aliases, and tuple rest.
-- Logical not/alternatives inside one structural pattern; grouped matching-condition negation exports no names; successful and-chain shadowing and payload-or-Unit binding-producing condition or alternatives are selected.
+- Logical and/not subpatterns; nested constructor/tuple or alternatives are selected with no backtracking after local success; grouped matching-condition negation exports no names; successful and-chain shadowing and payload-or-Unit binding-producing condition or alternatives are selected.
 - Per-construct mismatch behavior outside if/match selection.
 - Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.
 - Enum `.case` versus current-context `.field` collisions.

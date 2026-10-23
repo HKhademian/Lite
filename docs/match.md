@@ -73,7 +73,32 @@ Evaluate the subject once and try alternatives left to right against that suppli
 
 Each alternative resolves free comparison-RHS names in the common pre-pattern scope, not from failed alternatives or new sibling bindings. Preserve ordinary effects and failures; they are not converted into mismatch or rolled back. The shared body's operations must be valid for the inferred union and available access. This grants no copying, moving, mutation permission, lifetime, or automatic cross-binding correlation refinements.
 
-This selects alternatives at the initial arm-pattern level. Logical alternatives nested inside component patterns and their grouping/precedence remain separate decisions. Shared-guard behavior is selected below. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+This selects alternatives at the initial arm-pattern level; constructor payload and tuple component alternatives are also selected below. Logical and/not subpatterns remain separate decisions. Shared-guard behavior is selected below. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+
+## Nested alternative patterns selected
+
+Or alternatives may also appear inside constructor payload patterns and tuple component patterns:
+
+```text
+match maybe_contact {
+    .Some(.Email(address) or .Sms(address)) {
+        deliver(address)
+    }
+    _ {}
+}
+```
+
+Assume maybe_contact is Option<Contact>, Contact has Email(String)/Sms(PhoneNumber) cases, and deliver accepts String | PhoneNumber and returns Unit. Some supplies its existing payload component to the inner alternatives. Test Email then Sms against that same supplied component, stop at the first success, and infer address as String | PhoneNumber. The producer/whole match subject is evaluated once; nesting does not introduce another producer call or a binding for the whole Some value.
+
+Existing parentheses and commas delimit the component receiving or. For example, `(.Email(address) or .Sms(address), received_at)` tests the first tuple component using the alternatives and binds the second separately. The comma ends the first component's alternative list; the alternatives do not consume received_at. Constructor payload argument separators work the same way. Or at the component-pattern level separates complete patterns; Boolean or inside a comparison RHS retains its required grouping, as in `== (ready or retry)`. This selects no logical and/not subpatterns or extra constructor schema.
+
+The union-of-names and Unit rules apply at each nested choice. `.Some(.Email(email) or .Sms(phone))` provides email: String | Unit and phone: PhoneNumber | Unit, with absent names initialized to Unit after that local choice succeeds. These are candidate bindings inside the enclosing pattern: the entire enclosing pattern must succeed before any of its bindings become available to the outer condition continuation, shared guard, or body. A failed alternative leaks no names to its peers, and new sibling pattern bindings are still unavailable as free comparison-RHS names. Resolve those names in the enclosing pre-pattern scope. Recursive written-order shadowing continues after the selected local choice, including its Unit-filled names.
+
+### Local first success without backtracking
+
+Each nested choice commits to its first locally successful alternative and skips later local alternatives. If another component subsequently mismatches, the enclosing pattern fails; do not return to an earlier successful nested choice to try a different payload binding. Ordinary enclosing alternatives may then be tried under their own rules. If the shared arm guard fails after the entire initial pattern succeeds, move to the next arm without retrying initial or nested pattern choices. Failures and explicit exits retain normal control flow rather than becoming mismatch, and performed effects are not rolled back.
+
+The same nested forms may be reused in already supported conditional patterns. Ordinary declarations still require an irrefutable pattern for their static input; this selection creates no hidden mismatch result. Subjectless match headers remain ordinary Boolean expressions, and no loop/lambda/receiver filtering is added. Full recursive productions, record-field destination composition, extraction order/effects, ownership, and complete coverage proofs remain separate contracts. See [nested inference](pattern-binding-inference.md#nested-alternative-binding-inference-selected).
 
 ## Differently named arm bindings selected
 
@@ -97,7 +122,7 @@ An arm may contain one or more pattern alternatives, with any finite number writ
 
 Evaluate the subject once and test initial patterns from left to right. Stop at the first successful pattern; do not evaluate remaining alternatives. Use that pattern section's successful bindings to evaluate the shared guard once, under the guard's ordinary internal and/or short-circuit rules. If the complete guard is false or mismatches, try the next arm; do not retry a later initial pattern in the same arm. Failures and explicit exits retain their normal meaning, and performed effects are not rolled back.
 
-Thus each arm has one shared body and at most one shared guard, but it can have many alternative initial patterns. A failure inside an or alternative within the guard may still try another guard alternative; that is distinct from retrying the initial pattern section. Nested component-pattern alternatives remain a separate feature.
+Thus each arm has one shared body and at most one shared guard, but it can have many alternative initial patterns. A failure inside an or alternative within the guard may still try another guard alternative; that is distinct from retrying the initial pattern section. Nested constructor/tuple component alternatives follow the selected local choice rule below.
 
 ## Arm chains
 

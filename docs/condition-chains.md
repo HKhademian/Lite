@@ -1,6 +1,6 @@
 # Conditional pattern chains
 
-Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with Unit for absent names selected on 2026-10-23; grouped matching-condition negation also selected with no exported bindings; logical subpattern alternatives and ownership remain open**.
+Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with Unit for absent names selected on 2026-10-23; grouped matching-condition negation also selected with no exported bindings; logical and/not subpatterns and ownership remain open**.
 
 ## Purpose and selected example
 
@@ -59,7 +59,7 @@ The rule includes underscore-prefixed pattern names and `_`, which remain ordina
 
 If any later match or test fails, no chain-local binding is available in the failed branch, a sibling arm, or following code. An outer same-named binding remains the name visible there. Earlier effects are not undone. Hidden bindings retain their own types/access and ownership obligations; this rule does not specify moves, immediate destruction, or cleanup timing. Different names remain available when both values need to be used later.
 
-This selection covers ordinary conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions and gain no binding-producing pattern conditions. Binding-producing or alternatives and grouped negation with no exported names are selected below; logical not/alternatives inside one structural pattern remain open.
+This selection covers ordinary conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions and gain no binding-producing pattern conditions. Binding-producing or alternatives and grouped negation with no exported names are selected below; nested constructor/tuple or patterns are selected separately; logical and/not subpatterns remain open.
 
 ## Binding-producing or alternatives selected
 
@@ -117,7 +117,7 @@ Assume User.active is Bool. The selected alternative supplies user before the sh
 
 At the top level of a pattern-source operand, both and and or are condition separators. A source value containing those Boolean operators needs its own ordinary expression grouping. This separates `.Some(user) := source or ...` from a source expression that computes an or value; whitespace does not choose the reading.
 
-This rule applies to conditional chains and subject-based match guards after their if separator. It does not add `patternA or patternB` inside one structural pattern, logical not subpatterns, alternative loop headers, or binding-producing subjectless match headers. Grouped matching-condition negation is selected separately and exports no names. Exact recursive parsing, negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
+This rule applies to conditional chains and subject-based match guards after their if separator. Nested `patternA or patternB` inside constructor payload/tuple component patterns is selected separately and may be reused in supported conditional patterns. This does not add logical and/not subpatterns, alternative loop headers, or binding-producing subjectless match headers. Grouped matching-condition negation is selected separately and exports no names. Exact recursive parsing, negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
 
 ## Negated matching conditions selected
 

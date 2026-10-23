@@ -69,6 +69,12 @@ Compute each alternative's own final visible bindings using existing recursive o
 
 A composite payload preserves its complete alternative shapes under the existing union rules. No implicit conversion, common-supertype replacement, or arbitrary correlation/refinement between multiple extracted names is selected. Access must be valid for all possible successful bindings; complete ownership/access joins remain separate. Source-once evaluation, first-success selection, and pre-pattern free-name lookup follow [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 
+## Nested alternative binding inference selected
+
+Apply alternative name/type joins locally inside constructor payloads and tuple components, then continue the enclosing pattern's existing recursive binding/inference rules. `.Some(.Email(address) or .Sms(address))` on Option<Contact> with Email(String)/Sms(PhoneNumber) gives address: String | PhoneNumber. `.Some(.Email(email) or .Sms(phone))` instead gives email: String | Unit and phone: PhoneNumber | Unit. The constructor provides its existing payload; it does not wrap, coerce, or duplicate a scalar or create a whole-value binding alongside the nested collector.
+
+A successful local choice produces candidate bindings for its place in the recursive written-order traversal; later same-named components can shadow them normally. No candidate name is available to a sibling pattern's comparison RHS or outside the enclosing pattern until the entire pattern succeeds. Infer against compatible enclosing input possibilities and preserve whole composite alternatives; Unit joins do not select arbitrary cross-binding correlation refinements. An earlier successful local alternative is not retried if another component or shared guard fails. See [nested alternative patterns](match.md#nested-alternative-patterns-selected).
+
 ## Composite types retain their alternatives
 
 rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to other composite variable collectors, which bind their supplied value without also destructuring it in that pattern. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
