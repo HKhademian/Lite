@@ -14,7 +14,7 @@ Here str stands for a known string type or alias. The typed component b must mat
 
 ## Inference rule
 
-1. Start with the input's statically possible types and shapes at this match site.
+1. Start with the input's statically possible types and shapes at this match site. In a later match arm or initial alternative, use the remaining subject possibilities established by earlier failures; for closed distinct union members, an unguarded whole-type arm removes its handled member. Guarded/partial patterns do not automatically remove an entire type. See [remaining subject narrowing](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
 2. Apply the complete structural and type constraints. Narrow compatible portions of each alternative and discard impossible portions; an alternative containing a union at b may be partly compatible rather than entirely accepted or rejected.
 3. For each binding occurrence, obtain the type of the component or whole value it binds in every compatible possibility. Distinct occurrences of the same name remain distinct bindings.
 4. For that occurrence, use the single projected type or the union of its projected alternatives, collapsing duplicates. Narrow composite values before projecting their component types; do not union different occurrences merely because their names are the same.

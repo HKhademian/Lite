@@ -119,7 +119,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Set patterns](set-patterns.md): equality versus membership versus unordered extraction, ambiguous assignments, and deferred syntax.
 - [Pattern aliases](pattern-aliases.md): source-field naming versus destination bindings, reference-language renaming forms, and proposed as aliases.
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, selected tag-only patterns, and open representation/conversion contracts.
-- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, stability, and open flow rules.
+- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, selected remaining types in later match arms, guard limits, stability, and open broader flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): successful completion without useful data; one zero-component value/type spelled Unit or (), selected zero mapping, and selected zero-sized physical representation.
 - [Option](option.md): explicit absence without universal nullability.

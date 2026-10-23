@@ -32,6 +32,10 @@ Annotations may constrain only selected components. The remaining bindings are i
 
 For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).
 
+## Later match arms narrow the remainder
+
+For a stable initialized closed union value, an unguarded type arm removes its completely handled alternative from later match arms. After : String on String | Float | Int, the fallback _ binding and original stable subject name both have type Float | Int in that arm. No bindings from failed arms leak forward; the proof concerns which original subject values can reach the later arm. Guarded/partial tests may leave values of the same type and cannot remove it wholesale. This does not select general conditional else or early-exit refinement; see [remaining subject types](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
+
 ## Narrowing a success union with explicit bindings
 
 Assume `lookup(id)` returns the outcome type above:

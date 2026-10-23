@@ -66,6 +66,8 @@ Bindings introduced inside a grouped negated matching condition may shadow incom
 
 Initial match-arm or alternatives have a separately selected missing-name rule: the union of their final visible names is exposed to the shared guard/body, and an absent name is initialized with Unit. These new bindings shadow outer names even on their Unit paths; they do not change the alternatives' pre-pattern input lookup or escape a fully failed pattern section. Complete condition/guard or alternatives continue to require identical introduced-name sets. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
 
+Failed alternatives/arms expose no bindings to later candidates, but a failed pattern may still refine the remaining type of the same subject. An unguarded String arm on a closed String | Float | Int subject leaves Float | Int for the next arm and its new catch-all binding. This is path knowledge, not transfer of an earlier local name. Guard/partial-pattern failure must not exclude an entire type without proof; see [remaining subject narrowing](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
+
 ## Receiver lists and other scopes
 
 The former loop receiver-slot lists are retired. A loop now permits one optional item identifier; count/index/value use context metadata. Destructuring inside the body still follows the ordered shadowing rules above. See [current item naming](loop-receivers.md).

@@ -161,6 +161,12 @@ if .Some(user) := find_user(id) {
 
 Conditionals reuse declaration-shaped pattern headers; match arms reuse those patterns directly. There is one pattern system, with no `let` declaration keyword added for conditionals.
 
+## Remaining types in later arms
+
+A later arm sees only subject possibilities not handled by earlier arms. For a stable initialized value: String | Float | Int, an unguarded `: String { ... }` arm leaves Float | Int for the following `_` arm; both the original stable value and the new `_` binding have that narrower type in the fallback. No failed-pattern bindings are carried forward. Binding inference for the later pattern uses this remaining subject type.
+
+A guarded String arm can reject Strings through its guard, so it does not remove String entirely from the next arm's input. Partial literal/comparison/payload tests likewise cannot erase a whole containing type without a supported proof. Subject identity/stability is required to refine the original name; the once-evaluated subject does not cache future getters or calls. The outer declared type remains unchanged after the match. See [remaining subject types](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
+
 ## Result and typing rules
 
 - With a subject, evaluate that input once. Without a subject, evaluate each reached Boolean arm condition once in source order.

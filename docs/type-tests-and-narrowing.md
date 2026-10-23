@@ -1,6 +1,6 @@
 # Type tests and narrowing
 
-Status: **existing-name conditional tests and binding-free : Type patterns selected; stability, logical-flow, and full type-test rules need formalization**.
+Status: **existing-name conditional tests, binding-free : Type patterns, and remaining-subject narrowing across match arms selected; match remainder selected on 2026-10-23; stability, broader logical flow, and full type-test rules need formalization**.
 
 ## Purpose
 
@@ -48,6 +48,41 @@ An existing-name test introduces no shadow binding. By contrast, the right-hand 
 
 Ordinary declarations still fix the declared type. A union binding can be refined to one alternative at a particular program point without becoming a dynamically typed binding. Patterns and tests do not grant mutation, visibility, or ownership permissions.
 
+## Remaining subject types across match arms selected
+
+Later arms match only values not already selected by an earlier arm. A failed pattern introduces no bindings into the next arm, but its failure can exclude possibilities for the same matched subject. For a closed union of distinct, nonoverlapping types, an unguarded whole-subject type arm removes the entire matched alternative from subsequent arms:
+
+```text
+value: String | Float | Int = read_value();
+
+match value {
+    : String { handle_string(value) }
+    _ {
+        handle_number(value);
+        handle_number(_)
+    }
+}
+```
+
+Assume read_value produces the declared initialized union, value is stable, and the handlers accept the indicated String or Float | Int and return Unit. The first arm permits value as String. Reaching the second arm proves that the subject is not String, so value and the newly bound readable `_` both have type Float | Int there. The underscore binds the remaining whole subject, not the original unnarrowed union. After the match, the declared type of value is still String | Float | Int; this is path-local type knowledge, not reassignment, type mutation, or a new implicit capture.
+
+Before checking a later pattern and inferring its bindings, restrict its incoming subject possibilities by supported facts from earlier arm failures. Continue this across successive unguarded type arms; for these closed distinct union members, subtraction of a fully handled member is required. Failed alternatives inside an initial arm pattern can likewise refine the subject reaching a later alternative, without making their binding names visible. Initial pattern alternatives, however, still stop at the first success before the shared guard; guard failure does not pretend that skipped alternatives were tested.
+
+### Guards and partial patterns
+
+A type-matching pattern with a false guard has not consumed every value of that type:
+
+```text
+match value {
+    text: String if is_special(text) { handle_special(text) }
+    _ { handle_remaining(_) }
+}
+```
+
+Here the fallback can still receive a String that is not special, so its type still includes String. Assume compatible Bool/Unit-producing predicates and handlers. Likewise, a literal, comparison, or payload-constrained pattern does not exclude an entire containing type merely because that pattern failed. Later arms may use only exclusions actually established for their path, not an unconditional complement of every earlier pattern's written type. Arbitrary predicate complements, intervals, overlapping subtype/interface relationships, and a complete coverage solver remain open.
+
+Refining the once-evaluated match subject does not automatically refine a fresh call, repeated getter, replaced var, or unstable aliased path. Narrow the original named value only while it still denotes that same subject with a valid proof. Binding/extraction adds no copy, freeze, move, lifetime extension, or mutation permission. Effects that invalidate identity/refinement must retain their ordinary obligations; the complete stability/ownership model remains separate. This selection is about successive subject-based match arms/alternatives, not general else or early-return negative-flow analysis.
+
 ## Stability and mutation
 
 A refinement is valid only while the compiler can establish that the tested value still satisfies it. Narrowing must not silently copy, freeze, or take a snapshot to manufacture stability.
@@ -64,7 +99,7 @@ These need decisions before the grammar is implementation-ready:
 
 1. **Logical flow and precedence.** Pattern-binding and chains with bindings available to later Boolean operands are selected; see [conditional pattern chains](condition-chains.md). Binding-producing or alternatives now require identical introduced-name sets and export first-success bindings with normalized union types; each alternative starts from the common incoming scope. Grouped matching-condition not is selected with no exported bindings; it does not by itself select negative or early-exit refinement. Broader negative/disjunctive refinement, existing-name type-test precedence, and mutation stability still need rules. Do not derive parsing from whitespace or infer disjunction/negation bindings beyond the selected same-name or guarantee.
 2. **Early-return guards.** Retaining a successful refinement after a negative branch returns is desirable for shallow code, but the precise control-flow and invalidation rules remain a proposal.
-3. **Negative information.** For a closed `User | Guest`, a failed User test can imply Guest; specify how this works through `else`, joins, overlapping types, and open interfaces.
+3. **Broader negative information.** Remaining-subject narrowing across match arms is selected for fully handled members of a closed union of distinct types. Complete negative facts through conditional else, joins, overlapping types, arbitrary guards, and open interfaces separately.
 4. **Type relations.** Define exact type identity versus subtype/interface satisfaction, generic type tests and erasure/reification, and impossible or always-true tests. This form does not settle those questions.
 5. **Conditional declarations.** Decide whether irrefutable patterns such as `if flag := false` are rejected or diagnosed. Matching `Some(false)` with `Some(flag)` succeeds independently of the payload's Boolean value.
 6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, and complete nested-pattern grammar. Repeated binding names within patterns and across successful and-chain operands use selected ordered shadowing; existing-name type tests narrow the current binding without introducing a new one.
