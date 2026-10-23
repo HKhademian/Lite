@@ -53,6 +53,22 @@ c remains Int because every compatible possibility supplies Int. C contributes n
 
 For a single statically possible input shape, every binding instead receives the corresponding concrete component type. If one source alternative has b of type `String | Int`, its matching portion retains only String for b; its other components narrow further only where the input contract establishes a relationship.
 
+## Alternative arm binding types selected
+
+For initial match-arm alternatives, require the same final visible binding names and join each name's possible payload types as a normalized union:
+
+```text
+.Email(address) or .Sms(address) {
+    deliver(address)
+}
+```
+
+This is an arm fragment for cases Email(String) and Sms(PhoneNumber); deliver must accept String | PhoneNumber. The shared body has one address name whose type is String | PhoneNumber. At runtime the value is the payload from the selected case. If PhoneNumber is a distinct type with a numeric representation, retain PhoneNumber in the union. If it is a transparent alias for Number, resolve that alias and normalize to String | Number. The language's documented string spelling is String; the example does not add lowercase string or number types.
+
+Compute each alternative's own final visible bindings using existing recursive ordered shadowing, then join the types of corresponding names across alternatives. This union is a join of mutually exclusive successful bindings; it does not merge successive same-named occurrences within a single alternative or change a binding's type during execution. Hidden bindings still retain their constraints and obligations. All alternatives introduce the same name set, including ordinary underscore bindings, even when a body does not use a name. Mismatching names are errors rather than absent/optional locals.
+
+A composite payload preserves its complete alternative shapes under the existing union rules. No implicit conversion, common-supertype replacement, or arbitrary correlation/refinement between multiple extracted names is selected. Access must be valid for all possible successful bindings; complete ownership/access joins remain separate. Source-once evaluation, first-success selection, and pre-pattern free-name lookup follow [alternative arm patterns](match.md#alternative-arm-patterns-selected).
+
 ## Composite types retain their alternatives
 
 rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to other composite variable collectors, which bind their supplied value without also destructuring it in that pattern. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.

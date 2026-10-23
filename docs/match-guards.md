@@ -87,6 +87,8 @@ match find_user(id) {
 
 Assume Option<User>/Option<Profile> producers, a Bool Profile.visible, and Unit-producing handlers. The guard source reads the first value as User. Its successful pattern then introduces value as Profile for later guard operands and the body. If the guard fails, the second arm matches the original subject and binds its own User; the failed arm's bindings do not leak. No binding is reassigned or changes type, and no implicit var permission or new ownership permission follows. Source evaluation, comparison-RHS lookup, and per-pattern recursive order follow [selected chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected). Subjectless match headers remain ordinary Boolean expressions.
 
+Initial arm-pattern alternatives such as `.Email(address) or .Sms(address)` are selected separately, with shared body bindings typed as normalized unions. Whether a failed shared guard retries another initial pattern alternative or moves to the next arm remains open; the no-retry behavior was proposed but not selected by the payload-union example. The condition-or semantics below do not settle that initial-pattern guard boundary. See [alternative arm patterns](match.md#alternative-arm-patterns-selected).
+
 ## Binding-producing guard alternatives
 
 ```text

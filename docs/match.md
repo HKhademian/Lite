@@ -55,6 +55,26 @@ The arms here produce String. Expected result contracts still constrain every no
 
 If the next non-comment token after match is `{`, that brace starts the subjectless arm list. A brace-starting subject expression must be grouped, for example `match ({ compute_subject() }) { ... }`. Within a Boolean arm header, an outer-level ungrouped opening brace starts its body; block/conditional/record value expressions used inside the header require grouping, while nested call arguments retain their ordinary delimiters. Thus val2 in `val1 == val2 { ... }` is an expression reference, not a record-construction head. Whitespace, capitalization, name lookup, and type checking do not choose the form. Complete recursive Boolean-header/body parsing still belongs to the unfinished expression grammar; this form does not introduce trailing-closure syntax or new record construction forms.
 
+## Alternative arm patterns selected
+
+A subject-based match arm may select alternative patterns with or:
+
+```text
+match contact {
+    .Email(address) or .Sms(address) {
+        deliver(address)
+    }
+}
+```
+
+Assume contact has exactly Email(String) and Sms(PhoneNumber) cases and deliver accepts String | PhoneNumber and returns Unit. The notation describes the cases' payload contracts, not new enum declaration grammar. Both alternatives bind address, and the shared body sees address as String | PhoneNumber. It holds only the successful case's actual payload at runtime; no conversion, wrapping, or simultaneous pair of values is implied. A distinct PhoneNumber type remains a member of that union even if its representation is numeric. Only a transparent alias resolves to its underlying type before union normalization.
+
+Evaluate the subject once and try alternatives left to right against that supplied value. The first successful alternative supplies the body bindings and skips later alternatives. Failed alternatives introduce no names into later ones. Every alternative must introduce the same set of final visible binding names, including underscore pattern bindings; after its own recursive ordered shadowing, each shared name's body type is the normalized union of its final binding types across alternatives. An outer name cannot fill an alternative's missing binding. This is the same name-set guarantee as condition alternatives, applied to arm patterns without repeating an explicit source.
+
+Each alternative resolves free comparison-RHS names in the common pre-pattern scope, not from failed alternatives or new sibling bindings. Preserve ordinary effects and failures; they are not converted into mismatch or rolled back. The shared body's operations must be valid for the inferred union and available access. This grants no copying, moving, mutation permission, lifetime, or automatic cross-binding correlation refinements.
+
+This selects alternatives at the initial arm-pattern level. Logical alternatives nested inside component patterns, their grouping/precedence, and the behavior of a shared guard that fails after an alternative pattern succeeds remain separate decisions. The earlier proposed no-retry shared-guard rule is not selected by the payload-type example. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+
 ## Arm chains
 
 ```text

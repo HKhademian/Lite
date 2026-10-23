@@ -304,12 +304,15 @@ The earlier [external conditional recovery](conditional-recovery.md) proposal is
 ```text
 match_expression := subject_match | subjectless_match
 subject_match := "match" expression "{" match_arm { match_arm } "}"
-match_arm := pattern [ "if" condition ] block { ";" }
+match_arm := arm_pattern [ "if" condition ] block { ";" }
+arm_pattern := pattern { "or" pattern }
 subjectless_match := "match" "{" boolean_match_arm { boolean_match_arm } "}"
 boolean_match_arm := boolean_match_header block { ";" }
 boolean_match_header := boolean_match_expression | "_"
 contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
+
+Initial subject-based arm_pattern alternatives share the once-evaluated subject, try left to right, and require identical final visible binding-name sets after each alternative's own ordered shadowing. Each shared body name has the normalized union of its possible final binding types: Email(String) and Sms(PhoneNumber) alternatives binding address give String | PhoneNumber. A distinct numeric-representation PhoneNumber is not replaced with Number; transparent aliases resolve normally. Failed alternatives leak no bindings and failures remain failures. Nested component-pattern alternatives and shared-guard failure/retry behavior remain open; the new arm_pattern fragment does not settle them. See [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 
 If the next non-comment token after match is `{`, parse subjectless_match. A brace-starting subject expression must be grouped, as in `match ({ compute_subject() }) { ... }`; whitespace or type lookup cannot choose the form. boolean_match_expression is an ordinary Bool-valued expression placeholder, excluding a header consisting solely of the fallback token `_` and outer-level ungrouped body braces. The next outer-level ungrouped opening brace starts the arm body; block/conditional/record value expressions inside a header require grouping, with nested call arguments retaining their ordinary delimiters. In `val1 == val2 { ... }`, val2 is an expression reference, not a record-construction head. Complete recursive expression/header productions remain incomplete.
 

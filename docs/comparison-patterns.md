@@ -128,14 +128,13 @@ If no new binding is needed, the guard may instead reference an already stable s
 
 ## Keep pattern logic separate from Boolean logic
 
-These are not selected shorthand:
+Logical composition within one component is not selected shorthand:
 
 ```text
 User(: Int, >= minimum and < maximum)
-User(first: Int, _) or Other(first)
 ```
 
-The first would need logical composition between patterns on the same component, including parsing and implicit-subject rules. The second would need alternative-pattern binding guarantees. Neither follows automatically from ordinary Boolean and/or operators or from the three base primitives.
+This would need logical composition between patterns on the same component, including parsing and implicit-subject rules. It does not follow automatically from ordinary Boolean and/or operators or from the three base primitives. Initial match-arm alternatives such as `.Email(address) or .Sms(address)` are now selected separately with identical binding-name sets and union binding types; see [alternative arm patterns](match.md#alternative-arm-patterns-selected). This does not select alternatives nested within a component pattern.
 
 The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. Complete condition or alternatives with explicit sources may also introduce bindings when every alternative introduces the same visible names; the first successful alternative supplies them, with normalized union types. This does not select logical not/alternatives inside one structural pattern. Grouped not around a complete matching condition is selected separately with no exported bindings. A disjunction must not expose a name supplied by only one alternative; see [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
 
