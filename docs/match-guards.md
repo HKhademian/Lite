@@ -32,7 +32,7 @@ Simple `v: T { ... }`, `v { ... }`, `_v { ... }`, and `_ { ... }` arms remain va
 
 This selects `pattern if guard { body }` for every initial arm pattern, including structural and nonbinding patterns. It does not add a general as-pattern form, combined whole-value-plus-subpattern collectors, or implicit-subject comparison chains. Full comparison-operand parsing remains open.
 
-For example, `v if lower <= v < upper { accept(v) }` visibly binds v before applying the ordinary comparison chain. The comparison-pattern spelling `>= lower < upper` is invalid; a single comparison prefix does not start an implicit-subject chain. Common arithmetic/call/member RHS forms are selected separately and introduce no names; see [common comparison operands](comparison-patterns.md#common-right-operands-selected).
+For example, `v if lower <= v < upper { accept(v) }` visibly binds v before applying the ordinary comparison chain. The comparison-pattern spelling `>= lower < upper` is invalid; a single comparison prefix does not start an implicit-subject chain. Common arithmetic/call/member RHS forms and grouped computed RHS values are selected separately and introduce no pattern names. Outer-level comparison/Boolean/conditional/block RHS expressions require grouping; an arm if guard starts only after that complete operand/pattern. See [common comparison operands](comparison-patterns.md#common-right-operands-selected) and [grouped comparison operands](comparison-patterns.md#grouped-right-operands-selected).
 
 ## Boolean guard example
 

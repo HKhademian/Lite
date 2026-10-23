@@ -1,6 +1,6 @@
 # Comparison patterns and Boolean guards
 
-Status: **all ten comparison operators, arithmetic/call/member right operands, and rejection of implicit-subject comparison-pattern chains selected on 2026-10-23; if guards selected; complete operand parsing, comparison protocols, coverage, and ownership remain open**.
+Status: **all ten comparison operators, common and grouped right operands, and rejection of implicit-subject comparison-pattern chains selected on 2026-10-23; if guards selected; complete operand parsing, comparison protocols, coverage, and ownership remain open**.
 
 ## Selected comparison-pattern family
 
@@ -60,9 +60,34 @@ match target {
 
 Assume compatible integer operands and Unit-producing handlers. Here v binds the subject; the guard is an ordinary Boolean comparison chain using v explicitly. A false guard tries the next arm. `_` remains a readable ordinary binding with permission for nonuse.
 
-### Grouped Boolean operand question remains open
+## Grouped right operands selected
 
-The proposed `== (left == right)` and `== (ready or retry)` forms would not bind any names: each would compare a Bool-compatible subject with the computed Bool RHS. left, right, ready, and retry would refer to existing values. They are not ways to capture the matched subject. The grouping/boundary rule for comparison or Boolean expressions on the RHS remains a separate proposal; selecting the common arithmetic/call/member forms does not finalize that recursive grammar. Use an explicit binding and if guard when the matched value needs a name.
+A parenthesized value expression is admitted as a comparison-pattern right operand. Require grouping when comparison operators, Boolean logic (and/or/not), or a conditional/block expression occur at the outer level of that operand:
+
+```text
+== (left == right)
+== (ready or retry)
+== (not ready)
+== (if choose_first { first } else { second })
+== ({ compute_expected() })
+```
+
+The first three compare a Bool-compatible subject with a computed Bool. The conditional and block supply their ordinary result values, which must be compatible with the selected comparison. Grouping adds no conversion, truthiness, or change to the operator meaning. All ten comparison prefixes share this rule.
+
+```text
+match flag {
+    == (ready or retry) { report_equal() }
+    _                  { report_different() }
+}
+```
+
+Assume Bool inputs and Unit-producing handlers. The first arm tests flag against the computed expected Bool; it does not capture flag or bind ready/retry. The RHS free names use the surrounding pre-pattern scope. Grouping does not expose newly bound sibling pattern names or create an implicit subject name. Any explicit local declarations within a block expression keep that block's ordinary scope.
+
+Arithmetic, calls, and member access retain their accepted concise forms. Nested operands keep their ordinary delimiters; for example, `== expected(ready or retry)` needs no extra parentheses around the whole call. By contrast, an outer RHS `== ready or retry` is invalid without grouping. `== left == right` is also invalid as a comparison pattern; use `== (left == right)` for one computed expected Bool.
+
+Grouping also distinguishes the expected conditional/block value from an arm guard or body: `== (if choose_first { first } else { second }) { handle() }` and `== ({ compute_expected() }) { handle() }` are arm fragments. An ungrouped conditional/block RHS is rejected. The optional arm guard begins after the complete pattern, as in `== expected() if ready { handle() }`.
+
+Evaluate the grouped RHS once when its comparison is reached, retaining ordinary internal short-circuiting, effects, failures, and explicit exits. Skipped patterns do not evaluate it. The subject still evaluates once. For relationships involving the matched value itself, use an explicit binding and if guard, such as `v if lower <= v < upper`; `>= lower < upper` remains invalid. This selects the grouping boundary, not a complete recursive expression/pattern parser or new logical subpatterns.
 
 ## A direct component comparison
 
