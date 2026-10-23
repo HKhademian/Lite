@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement, =name shorthand, and explicit tuple spread, selected 2026-10-23.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement subject to explicit-label uniqueness, =name shorthand, and explicit tuple spread, selected 2026-10-23.
 
 ## Selected value shorthand and positional access
 
@@ -83,7 +83,8 @@ op(=p4, =p3, =p2, =p1);
 /* the three-input op defined above: */
 op(c = 3, 1, 2);             /* c = 3; then a = 1, b = 2 */
 op(1, ...(c = 3, b = 2));    /* a = 1; spread routes c and b by name */
-op(a = 1, a = 9, b = 2, c = 3); /* final a = 9 */
+op(a = 1, ...(a = 9, b = 2, c = 3)); /* spread replaces a; final a = 9 */
+op(...(a = 1, b = 2, c = 3), a = 9); /* explicit a replaces spread a */
 op(1, a = 9, b = 2, c = 3);     /* replace the earlier positional a */
 ```
 
@@ -93,21 +94,21 @@ A plain identifier argument remains positional; =name is explicitly named and ex
 
 For a known public signature:
 
-1. Require unambiguous public labels for parameters addressable by name. Start with all declared input slots unfilled; declared defaults do not prefill them.
+1. Require unambiguous public labels for parameters addressable by name. Explicit argument labels must be unique within the call, including labels from =name shorthand, even when an intervening spread supplies the same label. Labels contributed by spread do not count as explicit labels of the enclosing call; validate each operand independently. Start with all declared input slots unfilled; declared defaults do not prefill them.
 2. Process supplied entries in written order. Expand shorthand and process each spread's statically known tuple components in stored order, preserving labels.
 3. An unnamed input fills the next unfilled slot in declaration order, including after named entries. Reject it if no slot remains.
-4. A named input selects its declared slot. Reject an unknown/ambiguous label. If that slot was already supplied, replace its pending value without moving or adding a slot; the last supplied value for it wins.
+4. A named input selects its declared slot. Reject an unknown/ambiguous label. If that slot was already supplied, replace its pending value without moving or adding a slot, subject to explicit-label uniqueness above; the last admitted contribution for it wins. This permits spread collisions and retains the selected named replacement of an earlier positional contribution.
 5. Check every supplied value against that fixed slot's declared type and access contract, including values later replaced. No extra input slot, implicit union widening, or permission is introduced by replacement.
 6. Every slot still unfilled after supplied entries needs an applicable explicitly declared default compatible with that slot. Missing required inputs remain errors; no automatic zero argument is introduced.
 7. Reject invalid mappings statically before executing the call. For admitted calls, evaluate the callee first, then each supplied expression once in written order, then invoke after successful input preparation. Defaults with effects retain their separate timing/scope question.
 
-The signature fixes the input count and destination types. Positional inputs choose unfilled slots; named inputs select a unique declared slot and may replace a previous contribution. This supersedes the earlier positional-prefix/named-suffix restriction and duplicate-supplied-input rejection. Replacement does not erase evaluation of an earlier expression, and cleanup/ownership of superseded values remains a separate contract. Normal mut/var caller grants remain required; spreading ordinary tuple values cannot manufacture writable caller locations or missing access grants.
+The signature fixes the input count and destination types. Positional inputs choose unfilled slots; named inputs select a unique declared slot and may replace a previous contribution. Explicit-label uniqueness was selected for calls after the tuple clarification on 2026-10-23: repeating an explicit label is an error even when both values have the same type or value. The earlier positional-prefix/named-suffix restriction and blanket duplicate-supplied-slot rejection remain superseded; a permitted spread collision or named replacement of a positional contribution is distinct from two explicit labels. Replacement does not erase evaluation of an earlier expression, and cleanup/ownership of superseded values remains a separate contract. Normal mut/var caller grants remain required; spreading ordinary tuple values cannot manufacture writable caller locations or missing access grants.
 
 Labels are static selectors, not expressions. A local variable named b does not change what op(b = expression) selects. Parentheses/grouping must not cause the parser to guess between an argument label and ordinary assignment according to whether type checking succeeds. Complete assignment-expression grammar remains separate.
 
 ### Selected invalid call cases
 
-Each line below is an independent rejected example for the same op signature:
+Each line below is an independent rejected example for the same op signature; assume a visible a: Int for the shorthand example:
 
 ```text
 op(1, 2);                         /* missing c: no default */
@@ -115,9 +116,13 @@ op(1, 2, 3, 4);                   /* too many positions */
 op(a = 1, b = 2, d = 3);          /* unknown d, missing c */
 op(a = "one", b = 2, c = 3);      /* incompatible a value */
 op(a = 1, b = 2, c = ?);          /* reserved storage marker is not a value */
+op(a = 3, a = 1, b = 2, c = 3);  /* duplicate explicit a, despite equal types */
+op(a = 1, a = 1, b = 2, c = 3);  /* duplicate explicit a, despite equal values */
+op(=a, a = 1, b = 2, c = 3);     /* shorthand also supplies an explicit label */
+op(a = "one", ...(a = 1, b = 2, c = 3)); /* replaced value still fails a: Int */
 ```
 
-Unknown, ambiguous, or incompatible named inputs must not fall back to positional matching. Repeated supplied names are valid replacements; duplicate labels in the signature remain a different issue. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
+Unknown, ambiguous, or incompatible named inputs must not fall back to positional matching. Repeated explicit labels are errors; collisions involving spread can replace a supplied value, with every contribution checked against the fixed parameter contract. Duplicate labels in the signature remain a different issue. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
 
 ## 3. Omissions, defaults, and underscore
 
