@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-056",
+  "source": "project-euler",
+  "title": "Powerful Digit Sum",
+  "url": "https://projecteuler.net/problem=56",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 56,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p056.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "3658d7fa3c43456f3c9c87db0490e872039516e6375336254560167cc3db2ea2",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

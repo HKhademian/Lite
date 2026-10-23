@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-500",
+  "source": "project-euler",
+  "title": "Problem 500!!!",
+  "url": "https://projecteuler.net/problem=500",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 500,
+    "normalized": 6.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p500.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "3ac8e26d4864c538936efa7c5920435107a50c01306adaee5a4aeaa2ef378f7d",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

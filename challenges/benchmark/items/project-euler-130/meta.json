@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-130",
+  "source": "project-euler",
+  "title": "Composites with Prime Repunit Property",
+  "url": "https://projecteuler.net/problem=130",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 130,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p130.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "7a6e9899cccb6a01e05013c622422717f54853f7f2581bc3b88a78b25981da08",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

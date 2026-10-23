@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-069",
+  "source": "project-euler",
+  "title": "Totient Maximum",
+  "url": "https://projecteuler.net/problem=69",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 69,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p069.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "79555e4b891e2885525c136f8b834cc0b1e9416960b12e371111a5cb2da0479f",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

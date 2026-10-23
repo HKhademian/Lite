@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-042",
+  "source": "project-euler",
+  "title": "Coded Triangle Numbers",
+  "url": "https://projecteuler.net/problem=42",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 42,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p042.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "79d6eaa2676189eb927f2e16a70091474078e2117c3fc607d35cdc6b591ef355",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

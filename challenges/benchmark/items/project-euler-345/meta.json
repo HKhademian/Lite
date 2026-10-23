@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-345",
+  "source": "project-euler",
+  "title": "Matrix Sum",
+  "url": "https://projecteuler.net/problem=345",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 345,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p345.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "21db551743591f9cd20fffcedf3bda17f9f178bc9fbca528a56c2c61b9e7c731",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

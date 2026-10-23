@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-124",
+  "source": "project-euler",
+  "title": "Ordered Radicals",
+  "url": "https://projecteuler.net/problem=124",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 124,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p124.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "d251170c5287da10bffc1ac8af344e0c434ef5f649fd430fcf1049f90d45cf45",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-020",
+  "source": "project-euler",
+  "title": "Factorial Digit Sum",
+  "url": "https://projecteuler.net/problem=20",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 20,
+    "normalized": 1.5
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p020.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "c86a2932e1c79343a3c16fb218b9944791aaeedd3e30c87d1c7f505c0e588f7c",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

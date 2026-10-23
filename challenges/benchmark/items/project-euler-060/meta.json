@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-060",
+  "source": "project-euler",
+  "title": "Prime Pair Sets",
+  "url": "https://projecteuler.net/problem=60",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 60,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p060.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "ad7c26db722221bfb1bf7e3c36b501bedf8be857b1cfa8664fccb074b54354f9",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

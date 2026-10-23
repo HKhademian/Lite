@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-034",
+  "source": "project-euler",
+  "title": "Digit Factorials",
+  "url": "https://projecteuler.net/problem=34",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 34,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p034.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "728b8d7d6d5d34cad9cbb7c3ea15f807ae57144594b1740b3c73b82314ccd1ed",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-203",
+  "source": "project-euler",
+  "title": "Squarefree Binomial Coefficients",
+  "url": "https://projecteuler.net/problem=203",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 203,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p203.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "2742f7af8ce9e20185e940bb4e27afc5fefe8cd7d01d7d8e16c7a5aaf3ad47aa",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

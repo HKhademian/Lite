@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-119",
+  "source": "project-euler",
+  "title": "Digit Power Sum",
+  "url": "https://projecteuler.net/problem=119",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 119,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p119.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "bcabd9609d7293a3a3f1640c2937e302fa52ff03a95c117f87f2c465817eba5e",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

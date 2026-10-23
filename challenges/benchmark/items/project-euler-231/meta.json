@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-231",
+  "source": "project-euler",
+  "title": "Prime Factorisation of Binomial Coefficients",
+  "url": "https://projecteuler.net/problem=231",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 231,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p231.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "4aa0c92e77eeed08994650ac6129d77db9f026ae2aee78ad5c9fde132fac0505",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

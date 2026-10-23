@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-076",
+  "source": "project-euler",
+  "title": "Counting Summations",
+  "url": "https://projecteuler.net/problem=76",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 76,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p076.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "81c54809c3bdfc23f844fde21ae645525817b6e1bee1525270f49282888a5546",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

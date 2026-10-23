@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-080",
+  "source": "project-euler",
+  "title": "Square Root Digital Expansion",
+  "url": "https://projecteuler.net/problem=80",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 80,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p080.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "58bfe3a44f8ae452aaa6ef6267bafc3e841cfe7f9672bdfeb841d2e3a62c1587",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

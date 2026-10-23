@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-150",
+  "source": "project-euler",
+  "title": "Sub-triangle Sums",
+  "url": "https://projecteuler.net/problem=150",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 150,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p150.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "c89b0574a2e2f4a63845fe0fd9d51122d9d4149d887995051c3e53d2244bba41",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

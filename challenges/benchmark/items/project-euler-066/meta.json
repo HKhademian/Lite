@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-066",
+  "source": "project-euler",
+  "title": "Diophantine Equation",
+  "url": "https://projecteuler.net/problem=66",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 66,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p066.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "316c0f93c7fe125865d85d6e7e7a31b79e9a46c414c45078b732080fa22ef2a3",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

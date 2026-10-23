@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-169",
+  "source": "project-euler",
+  "title": "Sums of Powers of Two",
+  "url": "https://projecteuler.net/problem=169",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 169,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p169.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "819b01e0394727fd089f84b9351243176920f03d0c6e33e5ff136016da5d8d4e",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-135",
+  "source": "project-euler",
+  "title": "Same Differences",
+  "url": "https://projecteuler.net/problem=135",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 135,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p135.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "0709e1008834c2ca8648376ac62d74ac8df5457069cbfedf2b0776dab07a3c5b",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

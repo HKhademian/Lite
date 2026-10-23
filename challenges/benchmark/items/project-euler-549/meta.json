@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-549",
+  "source": "project-euler",
+  "title": "Divisibility of Factorials",
+  "url": "https://projecteuler.net/problem=549",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 549,
+    "normalized": 7.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p549.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "a23baaa745a976b4f212836beb81a0a7b42d9f2e923c2412e2c07c63ff660ceb",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

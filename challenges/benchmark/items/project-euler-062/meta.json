@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-062",
+  "source": "project-euler",
+  "title": "Cubic Permutations",
+  "url": "https://projecteuler.net/problem=62",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 62,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p062.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "d25a595036aa8722157aca38f90084acb369b00df1070f49e203d5a3b7a0736d",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

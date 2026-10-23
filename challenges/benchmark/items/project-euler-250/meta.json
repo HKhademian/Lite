@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-250",
+  "source": "project-euler",
+  "title": "$250250$",
+  "url": "https://projecteuler.net/problem=250",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 250,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p250.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "f0e0dc05fb555ae5ba9820586bef3bb8a3a82905ece3d8a998a3015fc91c1c3e",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

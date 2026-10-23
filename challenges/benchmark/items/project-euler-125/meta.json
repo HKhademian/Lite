@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-125",
+  "source": "project-euler",
+  "title": "Palindromic Sums",
+  "url": "https://projecteuler.net/problem=125",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 125,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p125.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "e9b7a676dc359ffce7075886373af79e3348ddbf344502614d9940eecd0532c1",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

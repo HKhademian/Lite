@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-035",
+  "source": "project-euler",
+  "title": "Circular Primes",
+  "url": "https://projecteuler.net/problem=35",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 35,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p035.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "02d20bbd7e394ad5999a4cebabac9619732c343a4cac99470c03e23ba2bdc2bc",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

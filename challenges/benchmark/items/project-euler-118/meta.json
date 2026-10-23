@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-118",
+  "source": "project-euler",
+  "title": "Pandigital Prime Sets",
+  "url": "https://projecteuler.net/problem=118",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 118,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p118.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "834e6235764ae632737ebf7cd0be66634c4fb70fe1e55e858efd260a66a0e3a9",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

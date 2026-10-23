@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-347",
+  "source": "project-euler",
+  "title": "Largest Integer Divisible by Two Primes",
+  "url": "https://projecteuler.net/problem=347",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 347,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p347.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "0fb6749b98280cc8c26950a2cb9c9dbecac18f8760e161e9bab887dcb0077653",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

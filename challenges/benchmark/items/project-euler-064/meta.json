@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-064",
+  "source": "project-euler",
+  "title": "Odd Period Square Roots",
+  "url": "https://projecteuler.net/problem=64",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 64,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p064.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "6d62aa4b52071e39f064a930d190b85ab327eb1a5045a8050ac538666ee765ca",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

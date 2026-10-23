@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-348",
+  "source": "project-euler",
+  "title": "Sum of a Square and a Cube",
+  "url": "https://projecteuler.net/problem=348",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 348,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p348.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "0cdb77330ae73fbbd0f287240f82b7547a0ef42d37004003a9c759f86b686d61",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-387",
+  "source": "project-euler",
+  "title": "Harshad Numbers",
+  "url": "https://projecteuler.net/problem=387",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 387,
+    "normalized": 6.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p387.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "cf592fa81780e727a56553df32410beba6de9c33543dd1ef1155b368ba9a9b9f",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-018",
+  "source": "project-euler",
+  "title": "Maximum Path Sum I",
+  "url": "https://projecteuler.net/problem=18",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 18,
+    "normalized": 1.5
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p018.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "fde3f2e7127f6810eb4160bf7bb0563240d78c9d75a9a590b6d6244748a7f4ff",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

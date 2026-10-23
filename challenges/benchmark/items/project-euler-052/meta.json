@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-052",
+  "source": "project-euler",
+  "title": "Permuted Multiples",
+  "url": "https://projecteuler.net/problem=52",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 52,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p052.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "ebd72b510911af3e254a030cd891cb804e1902189eee7a0f6199472eb5e4dba2",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

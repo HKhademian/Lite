@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-133",
+  "source": "project-euler",
+  "title": "Repunit Nonfactors",
+  "url": "https://projecteuler.net/problem=133",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 133,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p133.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "e456d3fec55d88653dd88c3f8bbde1f8240c8ceb7882016d19e6f329e412a4ae",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

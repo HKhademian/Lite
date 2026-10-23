@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-047",
+  "source": "project-euler",
+  "title": "Distinct Primes Factors",
+  "url": "https://projecteuler.net/problem=47",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 47,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p047.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "c7274da71333bd93201fa1e05b1ed54e0074d83f259bd7148c70ddc43082bde1",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

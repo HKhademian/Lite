@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-050",
+  "source": "project-euler",
+  "title": "Consecutive Prime Sum",
+  "url": "https://projecteuler.net/problem=50",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 50,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p050.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "6ee74ef623df9fb69facd30b91ed78fe70370462bb267097f0dfeef9d9b057bb",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

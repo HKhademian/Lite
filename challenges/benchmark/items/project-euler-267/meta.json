@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-267",
+  "source": "project-euler",
+  "title": "Billionaire",
+  "url": "https://projecteuler.net/problem=267",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 267,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p267.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "3e054d92034d3d32c3d4e7acadf1c09232e468fc2520d23d2c7d183ec0735aa3",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

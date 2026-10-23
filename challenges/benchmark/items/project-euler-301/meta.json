@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-301",
+  "source": "project-euler",
+  "title": "Nim",
+  "url": "https://projecteuler.net/problem=301",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 301,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p301.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "eb09a0097a47e7a95b892ad7230475a1a28343b47db4faeb3e47f227aeb04738",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

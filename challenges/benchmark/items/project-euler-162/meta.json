@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-162",
+  "source": "project-euler",
+  "title": "Hexadecimal Numbers",
+  "url": "https://projecteuler.net/problem=162",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 162,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p162.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "d50ce1ab3a25a5c5e020517092128ab3ec4a3bd5b58673b2e6cda86bcc0c48a0",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-046",
+  "source": "project-euler",
+  "title": "Goldbach's Other Conjecture",
+  "url": "https://projecteuler.net/problem=46",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 46,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p046.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "8485ee802cc628b8cbd82476133d11b57af87e00711516a703525a9af0193b12",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-155",
+  "source": "project-euler",
+  "title": "Counting Capacitor Circuits",
+  "url": "https://projecteuler.net/problem=155",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 155,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p155.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "58801bebc14c905b79c209affab74e176e2e971c1d9799a1a342ae6a3c2afbc1",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

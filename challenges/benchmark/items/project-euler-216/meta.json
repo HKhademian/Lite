@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-216",
+  "source": "project-euler",
+  "title": "The Primality of $2n^2 - 1$",
+  "url": "https://projecteuler.net/problem=216",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 216,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p216.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "f735b4b441635ecded989bdc2862e35c75f5179d118d0533ae827a84ed29e81b",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-093",
+  "source": "project-euler",
+  "title": "Arithmetic Expressions",
+  "url": "https://projecteuler.net/problem=93",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 93,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p093.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "d8ed8ca27d83a63df6982905ea53b4613b9d7974edcee06f301cf43d63177f47",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

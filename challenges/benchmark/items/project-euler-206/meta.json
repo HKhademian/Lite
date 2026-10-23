@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-206",
+  "source": "project-euler",
+  "title": "Concealed Square",
+  "url": "https://projecteuler.net/problem=206",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 206,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p206.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "16bb96da8f20d738bbd735404ea148818ef5942d4d1bc4c707171f9e5e476b1e",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

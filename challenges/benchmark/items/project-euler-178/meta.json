@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-178",
+  "source": "project-euler",
+  "title": "Step Numbers",
+  "url": "https://projecteuler.net/problem=178",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 178,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p178.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "094a2ba3011118efdd9d4c1f839e6747dee8ba953b52e9012fe2977e32599375",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

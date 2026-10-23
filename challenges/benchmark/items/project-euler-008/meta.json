@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-008",
+  "source": "project-euler",
+  "title": "Largest Product in a Series",
+  "url": "https://projecteuler.net/problem=8",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 8,
+    "normalized": 1.5
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p008.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "b9fb30b6553415e9150051ce5710a93d0f55b22557c0068d8e16619a388f145a",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

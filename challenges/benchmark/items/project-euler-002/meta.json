@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-002",
+  "source": "project-euler",
+  "title": "Even Fibonacci Numbers",
+  "url": "https://projecteuler.net/problem=2",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 2,
+    "normalized": 1.5
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p002.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "1f5882e19314ac13acca52ad5503184b3cb1fd8dbeea82e0979d799af2361704",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

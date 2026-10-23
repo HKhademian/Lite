@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-160",
+  "source": "project-euler",
+  "title": "Factorial Trailing Digits",
+  "url": "https://projecteuler.net/problem=160",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 160,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p160.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "3a926519b024ea9df5e7ad79d0b1c4400f78f58d07834f5ecd7be522112b676d",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

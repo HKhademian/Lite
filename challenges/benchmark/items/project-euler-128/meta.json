@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-128",
+  "source": "project-euler",
+  "title": "Hexagonal Tile Differences",
+  "url": "https://projecteuler.net/problem=128",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 128,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p128.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "5e15922fba7f61ddccb2ee579b5ec35034cc32def25ff156ae2b0a3e98c4414e",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

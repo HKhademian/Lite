@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-303",
+  "source": "project-euler",
+  "title": "Multiples with Small Digits",
+  "url": "https://projecteuler.net/problem=303",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 303,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p303.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "e6266f575c94d805a67fcd3f2391d0961b4b121b8a66afbfbae76dfc34e5c06b",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

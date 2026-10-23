@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-079",
+  "source": "project-euler",
+  "title": "Passcode Derivation",
+  "url": "https://projecteuler.net/problem=79",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 79,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p079.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "2df095aea1862ebfed8df7fb26e8c4a518ca1a8f604a31cfba9da991fc1d6422",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-029",
+  "source": "project-euler",
+  "title": "Distinct Powers",
+  "url": "https://projecteuler.net/problem=29",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 29,
+    "normalized": 2.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p029.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "a207c35d8417aeed4c9e78bcf83f936cd8191c702893be62aa690ce16bc909ca",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

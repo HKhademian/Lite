@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-072",
+  "source": "project-euler",
+  "title": "Counting Fractions",
+  "url": "https://projecteuler.net/problem=72",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 72,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p072.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "9ef8a4249d4b8f24147ab6e9ad2536eb04f10fb886a8099e88e0e7c41cf7c616",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

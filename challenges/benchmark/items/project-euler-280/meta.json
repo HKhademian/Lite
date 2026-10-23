@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-280",
+  "source": "project-euler",
+  "title": "Ant and Seeds",
+  "url": "https://projecteuler.net/problem=280",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 280,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p280.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "4b2d9501483d450371ec4413519b0b3461502aabb970fb2b07766d0a3d3a3f85",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

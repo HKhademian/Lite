@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-346",
+  "source": "project-euler",
+  "title": "Strong Repunits",
+  "url": "https://projecteuler.net/problem=346",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 346,
+    "normalized": 5.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p346.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "f326e2241b7e57320914aa279f9ba2e155ea77f809a188958e0b590bea9c3ada",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-139",
+  "source": "project-euler",
+  "title": "Pythagorean Tiles",
+  "url": "https://projecteuler.net/problem=139",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 139,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p139.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "0d2f26ec4004c99171fc415282ec714afa617208480b45aeb104c039dc653f5d",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-061",
+  "source": "project-euler",
+  "title": "Cyclical Figurate Numbers",
+  "url": "https://projecteuler.net/problem=61",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 61,
+    "normalized": 3.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p061.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "94e4fb283c1abcccae4b8b28e39a294a323cdc9732c3d3ce1133c518d0a286f6",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

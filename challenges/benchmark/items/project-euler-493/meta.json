@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-493",
+  "source": "project-euler",
+  "title": "Under the Rainbow",
+  "url": "https://projecteuler.net/problem=493",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 493,
+    "normalized": 6.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p493.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "ee7018d63b08bc7226d6f77c2345a87e09fc7cc87b0a003aaf3a4a3f622edffd",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}

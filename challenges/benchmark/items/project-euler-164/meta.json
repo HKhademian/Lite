@@ -1,0 +1,32 @@
+{
+  "id": "project-euler-164",
+  "source": "project-euler",
+  "title": "Three Consecutive Digital Sum Limit",
+  "url": "https://projecteuler.net/problem=164",
+  "category": "mathematics",
+  "topics": [
+    "math"
+  ],
+  "difficulty": {
+    "scale": "project-euler-number",
+    "raw": 164,
+    "normalized": 4.0
+  },
+  "harness": "single-answer",
+  "statement": "problem.md",
+  "tests": {
+    "public": 1,
+    "hidden": 0,
+    "public_path": "tests/public/answer.txt"
+  },
+  "reference_solutions": [
+    {
+      "language": "python",
+      "url": "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p164.py",
+      "license": "All rights reserved; link only",
+      "verified_answer": true
+    }
+  ],
+  "answer_sha256": "5c680d0b2c4dfac8aade87be60cb4d04a4c3d4db398f51e2cbf131d699b630a8",
+  "license_note": "Statement remains Project Euler copyright; reference code remains Project Nayuki copyright."
+}
