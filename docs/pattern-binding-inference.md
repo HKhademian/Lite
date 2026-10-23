@@ -55,7 +55,7 @@ For a single statically possible input shape, every binding instead receives the
 
 ## Alternative arm binding types selected
 
-For initial match-arm alternatives, require the same final visible binding names and join each name's possible payload types as a normalized union:
+For initial match-arm alternatives, collect the union of final visible binding names and join each name's possible payload types as a normalized union, contributing Unit for alternatives where that name is absent:
 
 ```text
 .Email(address) or .Sms(address) {
@@ -65,7 +65,7 @@ For initial match-arm alternatives, require the same final visible binding names
 
 This is an arm fragment for cases Email(String) and Sms(PhoneNumber); deliver must accept String | PhoneNumber. The shared body has one address name whose type is String | PhoneNumber. At runtime the value is the payload from the selected case. If PhoneNumber is a distinct type with a numeric representation, retain PhoneNumber in the union. If it is a transparent alias for Number, resolve that alias and normalize to String | Number. The language's documented string spelling is String; the example does not add lowercase string or number types.
 
-Compute each alternative's own final visible bindings using existing recursive ordered shadowing, then join the types of corresponding names across alternatives. This union is a join of mutually exclusive successful bindings; it does not merge successive same-named occurrences within a single alternative or change a binding's type during execution. Hidden bindings still retain their constraints and obligations. All alternatives introduce the same name set, including ordinary underscore bindings, even when a body does not use a name. Mismatching names are errors rather than absent/optional locals.
+Compute each alternative's own final visible bindings using existing recursive ordered shadowing, then join the types of corresponding names across alternatives. This union is a join of mutually exclusive successful bindings; it does not merge successive same-named occurrences within a single alternative or change a binding's type during execution. Hidden bindings still retain their constraints and obligations. Different initial arm alternatives may introduce different names, including ordinary underscore bindings. For `.Email(email) or .Sms(phone)`, email has type String | Unit and phone has type PhoneNumber | Unit. The successful case supplies its payload and every absent shared name receives Unit. Shared names shadow outer bindings even on absent paths; outer values are not substituted. Identical-name `.Email(address) or .Sms(address)` retains String | PhoneNumber with no Unit contribution. Unit is an initialized value, not an unbound local or a new absence tag; a genuine Unit payload cannot be distinguished from absent-binding Unit through that binding alone. Complete condition/guard or alternatives retain the separate same-name-set restriction. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
 
 A composite payload preserves its complete alternative shapes under the existing union rules. No implicit conversion, common-supertype replacement, or arbitrary correlation/refinement between multiple extracted names is selected. Access must be valid for all possible successful bindings; complete ownership/access joins remain separate. Source-once evaluation, first-success selection, and pre-pattern free-name lookup follow [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 

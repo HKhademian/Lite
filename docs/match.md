@@ -69,11 +69,27 @@ match contact {
 
 Assume contact has exactly Email(String) and Sms(PhoneNumber) cases and deliver accepts String | PhoneNumber and returns Unit. The notation describes the cases' payload contracts, not new enum declaration grammar. Both alternatives bind address, and the shared body sees address as String | PhoneNumber. It holds only the successful case's actual payload at runtime; no conversion, wrapping, or simultaneous pair of values is implied. A distinct PhoneNumber type remains a member of that union even if its representation is numeric. Only a transparent alias resolves to its underlying type before union normalization.
 
-Evaluate the subject once and try alternatives left to right against that supplied value. The first successful alternative supplies the body bindings and skips later alternatives. Failed alternatives introduce no names into later ones. Every alternative must introduce the same set of final visible binding names, including underscore pattern bindings; after its own recursive ordered shadowing, each shared name's body type is the normalized union of its final binding types across alternatives. An outer name cannot fill an alternative's missing binding. This is the same name-set guarantee as condition alternatives, applied to arm patterns without repeating an explicit source.
+Evaluate the subject once and try alternatives left to right against that supplied value. The first successful alternative supplies the body bindings and skips later alternatives. Failed alternatives introduce no names into later ones. Arm alternatives may introduce different final visible binding names. Collect the union of their name sets, including ordinary underscore pattern bindings, after each alternative's recursive ordered shadowing. Each shared continuation name has the normalized union of its binding types across alternatives, contributing Unit for an alternative that does not introduce it. An outer name never fills a missing binding. This replaces the earlier identical-name-set restriction for initial arm alternatives; complete condition/guard or alternatives retain their separately selected same-name rule.
 
 Each alternative resolves free comparison-RHS names in the common pre-pattern scope, not from failed alternatives or new sibling bindings. Preserve ordinary effects and failures; they are not converted into mismatch or rolled back. The shared body's operations must be valid for the inferred union and available access. This grants no copying, moving, mutation permission, lifetime, or automatic cross-binding correlation refinements.
 
 This selects alternatives at the initial arm-pattern level. Logical alternatives nested inside component patterns and their grouping/precedence remain separate decisions. Shared-guard behavior is selected below. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+
+## Differently named arm bindings selected
+
+```text
+match contact {
+    .Email(email) or .Sms(phone) {
+        deliver_optional(email, phone)
+    }
+}
+```
+
+Assume Email(String)/Sms(PhoneNumber) cases and a compatible Unit-producing handler. The shared guard/body scope has email: String | Unit and phone: PhoneNumber | Unit. If Email wins, email holds its String payload and phone is Unit. If Sms wins, email is Unit and phone holds its PhoneNumber payload. These are initialized typed values, not unbound or uninitialized locals. Same-name `.Email(address) or .Sms(address)` still gives address: String | PhoneNumber, with no added Unit because every alternative supplies address.
+
+An outer same-named binding is shadowed throughout that shared scope, including on a path where the new binding is Unit. Alternatives themselves still resolve their inputs/free names before the shared bindings exist. If all alternatives fail, no new names escape; no body or shared guard executes. Ordinary access/type checks apply to the union, so a payload-only operation requires a valid narrowing/test first. This adds no mutation or ownership permissions.
+
+The Unit contribution is literal Unit/(), not a new Option/None value or synthetic discriminator. If a matched payload type already includes Unit, that payload and the absent-binding Unit are not distinguishable by that binding's value/type alone. This rule does not select automatic correlation refinements between email and phone. No missing-name Unit is added to condition/guard or alternatives, which retain the identical-name-set rule for now.
 
 ## Alternative selection before a shared guard selected
 

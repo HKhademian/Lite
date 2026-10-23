@@ -64,6 +64,8 @@ Condition or alternatives each start from the same incoming scope. They must int
 
 Bindings introduced inside a grouped negated matching condition may shadow incoming names for inner tests only. No new names escape not to outer operands, the body, else, or other alternatives, even through double negation. Incoming bindings retain ordinary outside lookup with their own types/access. The negated operand exports an empty name set for surrounding or checks; comparison operators, including =!=, never introduce bindings. See [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
 
+Initial match-arm or alternatives have a separately selected missing-name rule: the union of their final visible names is exposed to the shared guard/body, and an absent name is initialized with Unit. These new bindings shadow outer names even on their Unit paths; they do not change the alternatives' pre-pattern input lookup or escape a fully failed pattern section. Complete condition/guard or alternatives continue to require identical introduced-name sets. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
+
 ## Receiver lists and other scopes
 
 The former loop receiver-slot lists are retired. A loop now permits one optional item identifier; count/index/value use context metadata. Destructuring inside the body still follows the ordered shadowing rules above. See [current item naming](loop-receivers.md).
