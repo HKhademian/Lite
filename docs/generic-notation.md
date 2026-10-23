@@ -14,6 +14,8 @@ Result<User, LoadError>
 
 Read these as descriptions of type families and their inputs. They do not select angle brackets, argument separators, declaration syntax, parameter kinds, or explicit application syntax.
 
+The user selected a conditional type-boundary contract on 2026-10-23: if angle brackets are adopted for generic source syntax, grammatical type context must separate a closing > from an attached fallible-type ! suffix and any following initializer =. Box<Int>! = load(), Box<Int>!= load(), and Box<Int>!=load() preserve that boundary in a typed declaration; Box<Int> != load() has a detached suffix and is invalid shorthand. This reserves the attachment behavior without selecting generic application syntax, expression operators, or complete token-splitting implementation. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
+
 The same convention covers capability examples such as `Iterable<Icon>`. A capability written in a parameter sketch does not settle whether the final spelling is a generic constraint or a runtime interface value, and it does not mandate boxing or dynamic dispatch. The future generic/interface review must distinguish those mechanisms explicitly.
 
 In the array proposal, Float describes an element type and 3 describes an intended compile-time element count. Those play different conceptual roles. Showing them in one argument list does not settle whether the future language expresses them through generic parameters, compile-time functions, dedicated array syntax, or another mechanism. It also does not adopt another language's generic semantics merely by borrowing familiar punctuation.

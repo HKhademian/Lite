@@ -1,6 +1,6 @@
 # Negated comparison operators: investigation
 
-Status: **requested by the user, 2026-10-23; candidate spellings and semantics under investigation, not selected**. The current operator set, postfix Result propagation, and comparison-chain rules remain unchanged. Direct ordering-comparison patterns are still a separate unselected extension. There is no LiteScript lexer/parser/runtime verification.
+Status: **requested by the user, 2026-10-23; comparison spellings and semantics remain candidates; fallible-type suffix attachment and a conditional grammatical type boundary selected later that day**. The current operator set, postfix Result propagation, and comparison-chain rules remain unchanged. Direct ordering-comparison patterns are still a separate unselected extension. There is no LiteScript lexer/parser/runtime verification.
 
 ## Requested family and its structure
 
@@ -60,22 +60,28 @@ Alternatives with negation before the positive operator do change them: !>, !>=,
 
 The proposed =!= is therefore a meaningful candidate rather than merely a longer conventional inequality spelling. It preserves the relation-first family and avoids that observed compact propagation/equality collision.
 
-## Future generic-type boundary
+## Generic-type boundary: selected attachment contract
 
-Suffix negation still has an important future boundary. If angle-bracket generic notation becomes source syntax, a generic close followed by the selected fallible-type suffix T! and an initializer could be written:
+The finite global longest-token experiment exposed a boundary if angle-bracket generics become source syntax: Box<Int>!=load() would contain > ! = for a generic close, fallible-type shorthand suffix, and declaration initializer, but a comparison-only token inventory would absorb >!=. A uniform-suffix alternative such as >=! does not remove the strict-greater >! boundary.
+
+The user selected this type-spelling distinction on 2026-10-23:
 
 ```text
-x: Box<Int>!=load();
-/* intended type/initializer tokens: Box < Int > ! = load ( ) */
+x: Box<Int>! = load();
+x: Box<Int>!= load();  /* equivalent */
+x: Box<Int>!=load();   /* equivalent */
+/* rejected: x: Box<Int> != load(); detached shorthand suffix */
 ```
 
-The user's >!= token would absorb > ! = under a global longest-token lexer. Even with a space before assignment, Box<Int>! ends in the proposed >! token. A uniform-suffix alternative such as >=! instead of >!= does not remove the >! collision for the strict-greater case.
+The shorthand ! must be attached to the end of its type. Spaces around the following initializer = are optional. If generic source syntax uses angle brackets, grammatical type context must recognize a closing >, its attached ! suffix, and the separate initializer = even when the characters are contiguous. It must not reconstruct an attached suffix across whitespace/comments, choose a parse using identifier lookup/type-check success, or require spaces before = as a workaround.
 
-Angle-bracket generics are [temporary explanatory notation](generic-notation.md), so this is a future design constraint, not a currently implemented parse conflict. Possible resolutions include different generic application syntax or deterministic token splitting in a grammatical type context. No resolution is selected here. Do not adopt a punctuation family and silently assume this boundary is solved.
+Explicit T ! E retains ordinary token separation because it supplies an error operand. With no explicit error operand, attached T! expands to T ! Error; detached T ! is not valid shorthand. This does not change the separate expression-level postfix ! contract or adopt != as a comparison.
+
+Angle-bracket generics remain [temporary explanatory notation](generic-notation.md). The conditional boundary contract is selected; complete generic grammar, lexer/parser integration, comparison spellings, and executable verification remain open. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
 
 ## Readability and alternatives
 
-User constraint, 2026-10-23: keep source operator spellings easy to type on an ordinary keyboard. Unicode mathematical symbols are excluded from the candidate set because they are not easy to type. Continue investigating the ASCII family and resolve its >! type boundary before adoption.
+User constraint, 2026-10-23: keep source operator spellings easy to type on an ordinary keyboard. Unicode mathematical symbols are excluded from the candidate set because they are not easy to type. Continue investigating the ASCII family under the selected type-suffix attachment contract; complete lexer/parser integration remains unverified.
 
 The user's family is mechanically regular. The main human-reading question is whether >!= is reliably read as not-(>=), rather than as not-(>) with equality subsequently added. The latter intuition would give the wrong result at equality. Atomic token recognition solves machine tokenization, but a font and beginner reading study is still needed to substantiate a readability claim.
 
@@ -98,8 +104,8 @@ Direct comparison patterns should only be extended after the operator family and
 
 ## Evidence and recommendation
 
-The review inspected current operators, chains, lexical direction, fallible types, and generic-notation boundaries. A finite Python longest-token model checked each of the five proposed tokens between identifiers, the five compact propagation/comparison sequences above, and two illustrative generic/fallible initializer spellings. The user family preserved the five existing expression samples and changed both future generic samples. Prefix-negated alternatives changed all five expression samples; conventional != changed the propagation/equality sample. Host-Python checks also confirmed that the five positive predicates are false against NaN and their Boolean complements true. These are bounded lexical/semantic experiments, not a complete collision audit or LiteScript implementation tests.
+The review inspected current operators, chains, lexical direction, fallible types, and generic-notation boundaries. A finite Python longest-token model checked each of the five proposed tokens between identifiers, the five compact propagation/comparison sequences above, and two illustrative generic/fallible initializer spellings. The user family preserved the five existing expression samples and changed both future generic samples. Prefix-negated alternatives changed all five expression samples; conventional != changed the propagation/equality sample. Host-Python checks also confirmed that the five positive predicates are false against NaN and their Boolean complements true. These are bounded lexical/semantic experiments, not a complete collision audit or LiteScript implementation tests. Their global-longest-token generic results predate the selected type-context attachment contract and do not verify its implementation.
 
-Recommendation: keep the user's ASCII family as a serious candidate, define negative semantics as literal Boolean complements, preserve explicit not as the semantic reference, and settle the >! type boundary before selecting the punctuation. Measure whether readers distinguish >! from >!= at equality. Unicode source spellings are excluded by the user's typing constraint. No proposed ASCII operator, infix not phrase, or comparison-pattern extension is adopted by this investigation.
+Recommendation: keep the user's ASCII family as a serious candidate, define negative semantics as literal Boolean complements, preserve explicit not as the semantic reference, and preserve the selected type-suffix attachment boundary during future lexer/parser integration before selecting the punctuation. Measure whether readers distinguish >! from >!= at equality. Unicode source spellings are excluded by the user's typing constraint. No proposed ASCII operator, infix not phrase, or comparison-pattern extension is adopted by this investigation.
 
 Related: [operators](operators.md), [comparison chains](comparison-chains.md), [comparison patterns](comparison-patterns.md), [fallible types](fallible-types-and-error-composition.md), and [numbers](numbers.md).

@@ -39,7 +39,7 @@ if not a == b {
 
 The current design uses `not a == b` for inequality. Earlier proposals for `?=` as equality and `!=` as inequality are superseded. `?=` and `!=` have no currently assigned update meaning either; an `op=` form requires a defined underlying operation.
 
-The user requested a [negated-comparison investigation](negated-comparison-operators.md) on 2026-10-23: =!=, >!, >!=, <!, and <!=, or other readable, unambiguous spellings. The review covers Boolean complements, postfix-propagation collisions, possible generic/fallible type boundaries, and alternatives. None of these candidates is selected; this does not change the current operator set.
+The user requested a [negated-comparison investigation](negated-comparison-operators.md) on 2026-10-23: =!=, >!, >!=, <!, and <!=, or other readable, unambiguous spellings. The review covers Boolean complements, postfix-propagation collisions, possible generic/fallible type boundaries, and alternatives. The user separately selected type-suffix attachment: T! requires the ! to touch its type, while spacing around a following initializer = is optional. If angle-bracket generics are adopted, grammatical type context must preserve > then attached ! then initializer =. None of the comparison candidates is selected; this does not change the current expression operator set.
 
 ## Comparison chains
 

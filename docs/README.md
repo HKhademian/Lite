@@ -40,7 +40,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
-- [Negated comparison operators](negated-comparison-operators.md): investigation of =!=, >!, >!=, <!, and <!=; literal complements, propagation/type-token boundaries, visibility, and alternative spellings. No new operators selected.
+- [Negated comparison operators](negated-comparison-operators.md): investigation of =!=, >!, >!=, <!, and <!=; literal complements, propagation boundaries, selected type-suffix attachment, visibility, and alternative spellings. No new comparison operators selected.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.

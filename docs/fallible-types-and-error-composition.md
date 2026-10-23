@@ -15,6 +15,29 @@ SuccessType!
 
 `T ! E` is the selected compact spelling for the conceptual `Result<T, E>`. `T!` is exactly shorthand for `T ! Error`; the missing error operand selects the predefined general recoverable error contract named `Error`. These are ordinary first-class outcome types, usable in variables, parameters, and function return annotations. They do not request automatic unwrapping.
 
+### Fallible-type shorthand attachment selected
+
+Selected by the user, 2026-10-23: the ! in shorthand T! must be attached directly to the end of the type it qualifies. Do not insert whitespace or a comment between that type and its shorthand suffix. The following declaration initializer = is a separate token; spacing before or after it is optional under the ordinary item rules.
+
+```text
+x: Box<Int>! = load();
+x: Box<Int>!= load();  /* equivalent */
+x: Box<Int>!=load();   /* equivalent */
+/* rejected: x: Box<Int> != load(); detached shorthand suffix */
+```
+
+Angle-bracket generic notation in these examples remains explanatory. If it is adopted as source syntax, a grammatical type context must recognize the closing > separately from an attached fallible ! suffix and any following initializer =, even when their characters are contiguous. It must not reinterpret the detached form as an attached suffix or use name lookup/type checking to guess the boundary. This is a selected conditional boundary contract, not a complete generic grammar or a new comparison operator.
+
+The same shorthand attachment applies to ordinary and grouped types:
+
+```text
+x: User!=load();       /* User! followed by initializer = */
+x: (A | B)! = load();  /* attached to the grouped success type */
+/* rejected: x: User ! = load(); missing explicit error type, detached suffix */
+```
+
+Explicit binary fallible types retain their selected T ! E form, including ordinary token-separating spaces. Thus x: User ! ReadError = load() supplies an explicit error type; it does not use the omitted-error shorthand. Presence of an explicit error operand is determined by the type grammar and its boundaries. If no error operand is supplied, the shorthand requires attachment and expands to T ! Error. This source-spelling rule does not change binary ! precedence, error propagation, or the separate expression-level postfix ! contract.
+
 ```text
 read_text := fn(path: String): String ! ReadError {
     read_file_contents(path)
