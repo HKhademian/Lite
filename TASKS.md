@@ -2,6 +2,7 @@
 
 **Snapshot:** `5a4cf3c` (2026-10-20). **Corpus:** 135 Markdown files, ~158.5k words.
 **Scope:** gaps, contradictions, stale statuses, wrong examples, and grammar/index/ledger defects found across the documentation reviews through 2026-10-20. This is an internal backlog, not language documentation.
+**Topic view:** [ISSUES-BY-TOPIC.md](ISSUES-BY-TOPIC.md) groups these items by topic and adds review-level findings. This snapshot is stale; re-triage before relying on any item's status.
 
 **Priority legend**
 
