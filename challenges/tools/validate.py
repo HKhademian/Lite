@@ -113,6 +113,35 @@ def main() -> None:
                 if cid not in known_ids:
                     fail(f"list {where}: group references unknown challenge {cid}")
 
+    tests_path = DATA / "tests.jsonl"
+    if tests_path.exists():
+        tests = [json.loads(line) for line in
+                 tests_path.read_text().splitlines() if line.strip()]
+        test_ids = [t["challenge_id"] for t in tests]
+        if len(set(test_ids)) != len(test_ids):
+            fail("duplicate test records")
+        if set(test_ids) != known_ids:
+            missing = sorted(known_ids - set(test_ids))[:5]
+            extra = sorted(set(test_ids) - known_ids)[:5]
+            fail(f"test records do not match challenges; missing={missing} extra={extra}")
+        for t in tests:
+            where = t["challenge_id"]
+            for case in t["public"] + t["hidden"]:
+                if not case["input"].strip() or not case["output"].strip():
+                    fail(f"{where}: empty input/output in {case['name']}")
+                if not case["name"]:
+                    fail(f"{where}: unnamed test case")
+            if t["status"] == "public+hidden" and not (t["public"] and t["hidden"]):
+                fail(f"{where}: status says public+hidden but cases are missing")
+            if t["status"] == "public-only" and not (t["public"] and not t["hidden"]):
+                fail(f"{where}: status says public-only but cases are wrong")
+            if t["status"] in {"none", "not-applicable"} and (t["public"] or t["hidden"]):
+                fail(f"{where}: status {t['status']} but cases exist")
+            if t["hidden"] and t["hidden_policy"] != "held-out-official-samples":
+                fail(f"{where}: hidden cases without held-out policy")
+    else:
+        tests = []
+
     if index["total"] != len(records):
         fail("index.total does not match challenges.jsonl")
     if sum(index["sources"][i]["count"] for i in range(len(index["sources"]))) != len(records):
@@ -123,8 +152,16 @@ def main() -> None:
     if missing_topic:
         fail(f"topics missing from taxonomy: {missing_topic[:5]}")
 
-    print(f"OK: {len(records)} challenges, {len(lists)} lists, "
-          f"{len(known_topics)} topics, {len(topic_counts)} used")
+    if tests:
+        with_public = sum(1 for t in tests if t["public"])
+        with_hidden = sum(1 for t in tests if t["hidden"])
+        print(f"OK: {len(records)} challenges, {len(lists)} lists, "
+              f"{len(known_topics)} topics, {len(topic_counts)} used")
+        print(f"    tests: {with_public} with public cases, "
+              f"{with_hidden} with held-out cases")
+    else:
+        print(f"OK: {len(records)} challenges, {len(lists)} lists, "
+              f"{len(known_topics)} topics, {len(topic_counts)} used")
 
 
 if __name__ == "__main__":

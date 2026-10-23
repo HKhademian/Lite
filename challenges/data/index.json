@@ -417,5 +417,83 @@
       "title": "LeetCode · Shell",
       "count": 4
     }
-  ]
+  ],
+  "tests": {
+    "total": 7085,
+    "with_public": 3637,
+    "with_hidden": 3010,
+    "public_cases": 3637,
+    "hidden_cases": 4522,
+    "by_status": {
+      "public+hidden": 3010,
+      "none": 2105,
+      "not-applicable": 1343,
+      "public-only": 627
+    },
+    "by_source": {
+      "advent-of-code": {
+        "challenges": 262,
+        "with_public": 0,
+        "with_hidden": 0,
+        "public_cases": 0,
+        "hidden_cases": 0
+      },
+      "atcoder": {
+        "challenges": 350,
+        "with_public": 350,
+        "with_hidden": 312,
+        "public_cases": 350,
+        "hidden_cases": 565
+      },
+      "codeforces": {
+        "challenges": 800,
+        "with_public": 0,
+        "with_hidden": 0,
+        "public_cases": 0,
+        "hidden_cases": 0
+      },
+      "cryptopals": {
+        "challenges": 66,
+        "with_public": 0,
+        "with_hidden": 0,
+        "public_cases": 0,
+        "hidden_cases": 0
+      },
+      "cses": {
+        "challenges": 400,
+        "with_public": 389,
+        "with_hidden": 0,
+        "public_cases": 389,
+        "hidden_cases": 0
+      },
+      "jane-street": {
+        "challenges": 10,
+        "with_public": 0,
+        "with_hidden": 0,
+        "public_cases": 0,
+        "hidden_cases": 0
+      },
+      "leetcode": {
+        "challenges": 4087,
+        "with_public": 2793,
+        "with_hidden": 2698,
+        "public_cases": 2793,
+        "hidden_cases": 3957
+      },
+      "project-euler": {
+        "challenges": 1005,
+        "with_public": 0,
+        "with_hidden": 0,
+        "public_cases": 0,
+        "hidden_cases": 0
+      },
+      "rosalind": {
+        "challenges": 105,
+        "with_public": 105,
+        "with_hidden": 0,
+        "public_cases": 105,
+        "hidden_cases": 0
+      }
+    }
+  }
 }

@@ -8,7 +8,7 @@ that later grouping, filtering and categorization can be built on.
 Everything is plain JSON/JSONL/CSV.  No database, no server, no dependencies.
 
 ```
-7,085 challenges · 9 sources · 101 topics · 13 categories · 43 curated lists
+7,085 challenges · 9 sources · 101 topics · 43 curated lists · 3,637 with public tests
 ```
 
 ## What is in the corpus
@@ -36,6 +36,11 @@ Known gaps, stated up front:
 - Project Euler and Advent of Code difficulty is inferred from problem number /
   day, not measured.
 - Rosalind coverage is the Stronghold list (105), not every Rosalind track.
+- **Private judge tests are not public.**  The `hidden` case list contains
+  held-out official examples/samples, not the platforms' secret judge data.
+  Codeforces samples are unavailable because the site returns HTTP 403;
+  Project Euler, Advent of Code, Cryptopals and Jane Street have no uniform
+  stdin/stdout test contract.
 
 ## Files
 
@@ -45,14 +50,19 @@ challenges/
 │   ├── challenges.jsonl     # canonical records, one JSON object per line
 │   ├── challenges.csv       # flat export for spreadsheets
 │   ├── lists.jsonl          # curated lists, referencing challenge ids
-│   └── index.json           # counts by source/category/topic/difficulty
+│   ├── tests.jsonl          # official samples, public/held-out split
+│   ├── tests.csv            # test coverage summary per challenge
+│   └── index.json           # counts by source/category/topic/difficulty/tests
 ├── schema/
 │   ├── challenge.schema.json  # JSON Schema for one record
 │   ├── list.schema.json       # JSON Schema for a curated list
+│   ├── tests.schema.json      # JSON Schema for a test record
 │   └── taxonomy.json          # categories, 101 canonical topics, difficulty bands
 ├── tools/
 │   ├── fetch_sources.py     # cached, resumable download of raw source data
+│   ├── fetch_tests.py       # cached download of CSES/AtCoder/Rosalind pages
 │   ├── build.py             # normalizes sources -> data/*, validates, writes index
+│   ├── build_tests.py       # parses official samples into public/held-out cases
 │   ├── query.py             # filter / sort / group / search CLI
 │   └── validate.py          # dependency-free integrity checks for edited data
 ├── Makefile                 # make fetch / build / check
@@ -160,6 +170,43 @@ original groups:
 Each list carries `challenge_ids` in display order, plus `groups` where the
 source defines them.
 
+## Validation cases
+
+`data/tests.jsonl` has exactly one record per challenge id.  The first official
+example/sample becomes `public`; the remaining official examples become
+`hidden` and are labelled `held-out-official-samples`.
+
+```json
+{
+  "challenge_id": "leetcode-1",
+  "format": "function",
+  "status": "public+hidden",
+  "public": [{"name": "example-1", "kind": "example",
+              "input": "nums = [2,7,11,15], target = 9",
+              "output": "[0,1]", "explanation": "..."}],
+  "hidden": [{"name": "held-out-1", "kind": "held-out-example",
+              "input": "nums = [3,2,4], target = 6", "output": "[1,2]"}],
+  "hidden_policy": "held-out-official-samples"
+}
+```
+
+| Source | With public cases | With held-out cases |
+|---|---:|---:|
+| LeetCode | 2,793 | 2,698 |
+| CSES | 389 | 0 |
+| AtCoder | 350 | 312 |
+| Rosalind | 105 | 0 |
+| Codeforces | 0 | 0 |
+| Project Euler | 0 | 0 |
+| Advent of Code | 0 | 0 |
+| Cryptopals | 0 | 0 |
+| Jane Street | 0 | 0 |
+
+`status` is `public+hidden`, `public-only`, `none`, or `not-applicable`.
+For LeetCode the `input` string is function-style (`nums = ..., target = ...`),
+not serialized JSON; a harness must parse it per problem.  CSES/AtCoder/Rosalind
+cases are plain stdin/stdout blocks.
+
 ## Querying
 
 ```bash
@@ -192,8 +239,9 @@ emits full records, `--csv` emits a flat table.
 
 ```bash
 python3 tools/fetch_sources.py          # download/caches every source
-python3 tools/fetch_sources.py --only aoc --force
+python3 tools/fetch_tests.py            # download sample pages
 python3 tools/build.py                 # normalize, validate, write data/*
+python3 tools/build_tests.py           # parse samples into tests.jsonl
 ```
 
 `build.py` fails loudly on duplicate ids, malformed URLs, unknown categories,
