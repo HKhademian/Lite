@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement subject to explicit-label uniqueness, =name shorthand, and explicit tuple spread, selected 2026-10-23.
+Status: **core named call routing, validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement subject to explicit-label uniqueness, =name shorthand, and explicit tuple spread, selected 2026-10-23.
 
 ## Selected value shorthand and positional access
 
@@ -148,7 +148,7 @@ pair: (l: Int, r: Int) = (r = 20, l = 10);
 
 The initialized tuple has l = 10, r = 20 in that order. Ordinary positional tuple destructuring follows that stored order, so left is 10 and right is 20.
 
-This also applies to a known tuple-valued function input. For a function with one input pair of type (l: Int, r: Int), recommend:
+This also applies to a known tuple-valued function input. For a function with one input pair of type (l: Int, r: Int):
 
 ```text
 take_pair((r = op1(), l = op2()));
@@ -165,9 +165,45 @@ pair: (l: Int, r: Int) = (r = 20, l = 10);
 pair: (l: Int, r: Int) = (10, r = 20);
 ```
 
-All initialize the same l, r destination under the selected construction rule. A contextual literal can mix a positional prefix and named suffix by the same routing algorithm as a call. Tuple components have no newly introduced defaults; require every component to be supplied.
+All initialize the same l, r destination under the selected construction rule. These remain valid cases of the extended routing below. Tuple components have no newly introduced defaults; require every component to be supplied.
 
-These were the four complete shapes under the earlier shared prefix/suffix rule. The later inferred-tuple construction decision permits interleaving and earlier-slot replacement. Applying that extension to expected-schema routing needs a separate review; the four established contextual forms remain selected.
+These were the four complete shapes under the earlier shared prefix/suffix rule. They are no longer a complete catalogue: the user selected the following unification with call routing on 2026-10-23.
+
+### Fixed destination routing selected
+
+A fresh tuple constructor under a known destination tuple type uses the same entry routing as a call, with complete component coverage rather than argument defaults:
+
+1. Begin with the destination's fixed component order, labels, and types; all slots are unfilled. Do not append components outside that shape.
+2. Require unique explicit labels within the constructor after expanding =name shorthand. Spread-contributed labels do not count as explicit labels of the enclosing constructor. Validate each operand independently.
+3. Process entries in written order. Expand each explicit tuple spread in its operand's stored component order, preserving labels. Each unnamed contribution fills the next unfilled destination slot.
+4. Each named contribution selects its declared destination slot and may replace an earlier contribution, subject to explicit-label uniqueness. Spread collisions and named replacement of an earlier positional contribution are permitted. A label not present in the destination is an error.
+5. Check every contribution against the destination slot's known type/access contract, including contributions later replaced. Replacement does not change a fixed component type or infer a wider union.
+6. Require every destination slot to be filled; reject excess unnamed entries and missing components. No implicit zero, record default, or call-argument default fills an omitted tuple component.
+
+For admitted construction, evaluate every entry/operand once in written order, including replaced contributors. Routing determines the final destination order without reordering observable effects. Superseded-value cleanup/ownership remains open.
+
+```text
+pair: (l: Int, r: Int) = (r = 20, 10);
+/* l = 10, r = 20: unnamed 10 fills the next unfilled slot l */
+
+pair: (l: Int, r: Int) = (...(r = 20,), l = 10);
+/* l = 10, r = 20: explicit spread routes r by name */
+
+pair: (l: Int, r: Int) = (l = 1, ...(l = 10, r = 20));
+/* l = 10, r = 20: spread replaces l */
+
+pair: (l: Int, r: Int) = (10, l = 20, 30);
+/* l = 20, r = 30: named l replaces the positional contribution */
+
+/* rejected: (10, l = 20); r is still missing */
+/* rejected: (l = 10, l = 20, r = 30); duplicate explicit l */
+/* rejected: (l = "old", ...(l = 10, r = 20)); earlier l does not fit Int */
+/* rejected: (r = 20, 10, 30); no unfilled slot for 30 */
+/* rejected: (...(unknown = 1,), l = 10, r = 20); unknown label */
+/* rejected: (...()); both destination components are missing */
+```
+
+Each rejected initializer above assumes the same (l: Int, r: Int) destination. A stored tuple used as a plain initializer still follows stored-tuple compatibility; (...stored) is explicit reconstruction and routes its contributions into the new destination. This rule does not reorder or relabel the operand itself. Grouping, singleton, and tuple syntax remain independent of expected types. Existing omitted-component type inference remains selected, but its full constraint-solving interaction with replacement and generics is not newly specified here.
 
 Expected contracts still require known labels, compatible component types, and complete initialization:
 
@@ -176,7 +212,7 @@ pair: (l: Int, r: Int) = (l = 10, unknown = 20); /* unknown label */
 pair: (l: Int, r: Int) = (l = 10, r = "twenty"); /* incompatible r */
 ```
 
-The previously rejected contextual cases (r = 20, 10) and (10, l = 20) need a routing review under the new insertion rule; do not claim their outcomes from call routing. Missing required destination components remain invalid. Singleton value spelling is selected separately; the empty tuple is Unit, also spelled (). The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
+Under the selected extension, (r = 20, 10) fills r then l, while (10, l = 20) remains invalid because replacing l leaves r missing. Singleton value spelling is selected separately; the empty tuple is Unit, also spelled (). The selected construction forms do not define named tuple zero/default construction or relax the selected union initialization restrictions.
 
 ## 5. Inference and stored tuples: selected order boundary
 
@@ -191,9 +227,10 @@ Its inferred order is r, l. Execution remains op1 then op2. This order belongs t
 ```text
 pair: (l: Int, r: Int) = stored; /* rejected: stored order differs */
 pair: (l: Int, r: Int) = (l = stored.l, r = stored.r); /* explicit reconstruction */
+pair: (l: Int, r: Int) = (...stored); /* explicit spread routes fields by name */
 ```
 
-The second declaration reads the already produced fields; it does not invoke op1/op2 again. No implicit stored-tuple permutation is selected. This is the user-selected boundary, even when component types are identical.
+Both explicit reconstructions use the already produced fields; neither invokes op1/op2 again. No implicit stored-tuple permutation is selected. This is the user-selected boundary, even when component types are identical.
 
 A literal and a stored value are different syntactic inputs to construction. Merely writing a stored value where a literal was accepted does not enable contextual rerouting. More elaborate expected-type propagation through branches, generic calls, or overloads must not silently erase the stored-value boundary.
 
