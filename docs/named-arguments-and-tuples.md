@@ -45,7 +45,7 @@ resize(height = 480, width = 640);
 resize(640, height = 480);
 ```
 
-Use positional arguments first, followed by named arguments in any written order. A positional argument occupies its next signature position; a named argument identifies one public parameter. Reject unknown names, ambiguous labels, supplying one input twice, and positional arguments after a named argument. For example, resize(640, width = 800, height = 480) supplies width twice.
+Selected extension, 2026-10-23: calls construct the fixed typed input shape declared by the signature. Positional and named inputs may interleave. A positional input fills the next unfilled declared slot; a named input selects its declared slot and replaces an earlier supplied value for that slot. Thus resize(640, width = 800, height = 480) supplies final width = 800, and resize(height = 480, 640) fills width with 640. Reject unknown/ambiguous labels, excess positional inputs, missing required inputs, and incompatible types/access. All supplied expressions still evaluate once in written order, including replaced contributors.
 
 The selected omission rule still applies: every unfilled input needs an applicable explicitly declared default. Named calls let a programmer supply a later input while omitting an earlier defaulted one. They do not add automatic zero arguments. Default declaration syntax, evaluation timing, and where defaults belong remain open.
 
@@ -149,14 +149,17 @@ These initial alternatives are retained for comparison. The later selected fresh
 
 ## A tuple argument versus spreading arguments
 
+Selected by the user, 2026-10-23:
+
 ```text
-resize(size);     /* one supplied argument */
-resize(...size);  /* possible future call-spread form */
+resize(size);     /* one tuple-valued argument; not this two-input resize */
+resize(...size);  /* tuple components routed into declared inputs */
+resize(=height, =width); /* height = height, width = width */
 ```
 
-The first form does not silently turn one product value into two inputs. Call spreading is a separate proposal: current tuple construction spread does not establish it. Positional spread could map components by position; named spread could route by labels. Choosing between them matters when a named tuple's written order differs from the signature. Duplicate inputs, mixed spreads, evaluation order, permissions, and ownership must be settled before accepting either form.
+The last form uses identifier-only same-name shorthand. In a spread, labeled components route by public parameter name and unnamed components fill the next unfilled declared slot. The signature fixes available positions and types; unknown labels and excess positional inputs cannot append more parameters. A spread operand evaluates once; components are processed in stored order, and all call entries preserve written evaluation order. Repeated labels replace the earlier supplied value in the same destination slot.
 
-A function taking one tuple remains distinct from a function taking two parameters. Named tuple return values are ordinary single results; they do not introduce mutable named return locals or bare-return rules.
+A function taking one tuple remains distinct from a function taking multiple parameters: only explicit spread expands components. No intermediate tuple allocation or runtime label dictionary is required. Ordinary permission, default, and cleanup contracts remain applicable. Callable public-label compatibility, superseded-value cleanup, collection call spread, and full recursive grammar remain separate. Named tuple return values remain ordinary single results.
 
 ## Other grammar and type questions
 
@@ -164,7 +167,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 - Singleton values are selected: (value) groups, (value,) constructs an unnamed singleton, and (= value) or (label = expression) constructs a named singleton with an optional trailing comma. See [singleton values](tuple-entries-and-access.md#singleton-values-selected).
 - The empty tuple is Unit, with () as an equivalent value/type spelling. Singleton types are selected: (T) groups, (:T,) is unnamed, (label: T) is named, and (label,) infers the named component type; (:T) is rejected. Pattern grouping and singleton extraction are selected: (pattern) groups, (pattern,) extracts one positional component, and (local = label) extracts by name.
-- The earlier contextual construction cases retain their selected mappings. Standalone mixed tuple inference now allows named/unnamed interleaving and replaces repeated construction labels in their earlier slots; (42, = tea) infers (:Int, tea: String) when tea is String. Corresponding mixed type components and interleaved stored layouts are selected. Complete recursive grammar, expected-schema routing for the new construction cases, and stored named/unnamed conversion policy remain open. Function arguments retain their positional-prefix/named-suffix rule and duplicate-input rejection. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Require complete coverage unless one final ...rest captures all unselected components. Named selector rest preserves source order, labels, and types; reject unknown/duplicate source selectors. See [named rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected).
+- The earlier contextual construction cases retain their selected mappings. Standalone mixed tuple inference now allows named/unnamed interleaving and replaces repeated construction labels in their earlier slots; (42, = tea) infers (:Int, tea: String) when tea is String. Corresponding mixed type components and interleaved stored layouts are selected. Complete recursive grammar, expected-schema routing for the new construction cases, and stored named/unnamed conversion policy remain open. Function calls now permit interleaving, next-unfilled positional routing, and named replacement against fixed declared slots. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Require complete coverage unless one final ...rest captures all unselected components. Named selector rest preserves source order, labels, and types; reject unknown/duplicate source selectors. See [named rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected).
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 

@@ -25,7 +25,7 @@ tuple_value_entry := expression
                    | "..." expression
 ```
 
-This outlines entries inside an established tuple value. Singleton value forms are selected below, and basic construction spread is now [selected](tuple-spread-and-rest.md#tuple-construction-spread-selected). Assignment and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. It does not automatically extend to function arguments, records, or tuple types.
+This outlines entries inside an established tuple value. Singleton value forms are selected below, and basic construction spread is now [selected](tuple-spread-and-rest.md#tuple-construction-spread-selected). Assignment and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. Same-name call shorthand and explicit tuple call spread are now selected separately. This does not automatically extend to record or tuple type syntax.
 
 The shorthand requires an ordinary identifier resolving to a value. It cannot derive a label from a call, member access, grouped operand, or arbitrary expression:
 
@@ -34,7 +34,7 @@ meal := (cake = bake(), tea = brew()); /* explicit labels for expressions */
 meal := (= bake(), = tea);            /* rejected: bake() is not an identifier */
 ```
 
-Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Tuple construction now selects [append-or-replace](tuple-spread-and-rest.md#append-or-replace-by-label-selected): unnamed entries and new labels append, while repeated labels replace their first slot without moving it. This applies equally to explicit, shorthand, and spread entries. Named/unnamed components may interleave: (= cake, tea) is now valid, with tea remaining unnamed. This supersedes the earlier tuple-construction duplicate-label rejection and prefix/suffix restriction; function-call duplicate and ordering checks are unchanged.
+Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Tuple construction now selects [append-or-replace](tuple-spread-and-rest.md#append-or-replace-by-label-selected): unnamed entries and new labels append, while repeated labels replace their first slot without moving it. This applies equally to explicit, shorthand, and spread entries. Named/unnamed components may interleave: (= cake, tea) is now valid, with tea remaining unnamed. This supersedes the earlier tuple-construction duplicate-label rejection and prefix/suffix restriction; calls now use next-unfilled positional routing and named replacement against a fixed signature, with =name shorthand and explicit tuple spread selected separately.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
@@ -283,7 +283,7 @@ f(cake = cake);   /* a named function argument */
 f((cake = cake)); /* one argument: a named singleton tuple */
 ```
 
-These are shape comparisons, not overload declarations guaranteeing one f accepts them all. A parameter of type Unit still requires an explicitly supplied argument or an applicable declared parameter default. Zero-sized storage does not make an argument optional, and a tuple result does not silently supply multiple arguments. Call spread and call-site = identifier shorthand remain separate proposals.
+These are shape comparisons, not overload declarations guaranteeing one f accepts them all. A parameter of type Unit still requires an explicitly supplied argument or an applicable declared parameter default. Zero-sized storage does not make an argument optional, and a tuple result does not silently supply multiple arguments. Explicit tuple call spread and call-site = identifier shorthand are now selected. A signature supplies the fixed destination slots; op(tuple) still passes one value and only op(...tuple) expands it.
 
 ### 5. Arrow-free lambdas require a syntactic boundary
 

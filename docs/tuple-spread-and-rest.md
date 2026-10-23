@@ -24,7 +24,7 @@ same_shape := (...meal); /* (cake = 10, tea = 20), same labels and order */
 
 An enclosing expression with a spread entry constructs a tuple regardless of the expanded component count. The ellipsis distinguishes (...one) from grouped (one); no singleton comma is required for a spread-only expression. Ordinary optional trailing-comma rules apply. Unit/() contributes zero components, including when obtained by evaluating an action; its effects, failures, and required cleanup still apply. A Result or Option is not silently unwrapped for spreading.
 
-This contract is tuple-to-tuple spread and requires operands with statically known tuple shapes. Other scalar values do not qualify as tuples. Array, list, set, and other collection spreads are different operations whose contracts remain separate; this rule does not prohibit them globally. It does not select call spreading, generic variadic types, or new ownership permissions. Previously selected fresh expected-schema construction cases remain; extending their routing to newly interleaved/repeated-label inputs needs a separate review. Stored tuples are not silently relabeled or reordered by the spread operand itself.
+This contract is tuple-to-tuple spread and requires operands with statically known tuple shapes. Other scalar values do not qualify as tuples. Array, list, set, and other collection spreads are different operations whose contracts remain separate; this rule does not prohibit them globally. Tuple call spreading is now selected separately; generic variadic types and new ownership permissions remain separate. Previously selected fresh expected-schema construction cases remain; extending their routing to newly interleaved/repeated-label inputs needs a separate review. Stored tuples are not silently relabeled or reordered by the spread operand itself.
 
 ### Append or replace by label selected
 
@@ -55,7 +55,7 @@ All entry/operand expressions still evaluate once in written order, including ex
 
 The former unnamed-prefix/named-suffix restriction was a uniformity choice shared with calls, not a memory-layout requirement. Interleaving itself is deterministic under this insertion algorithm. Readability requires distinguishing tuple construction from calls and patterns; later replacement must retain source-order effects. Expected-schema routing for the newly allowed construction cases remains to be reviewed.
 
-Function arguments still reject duplicate inputs and positional arguments after named arguments. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; repeated constructor labels produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
+Function calls now share fixed-slot construction: positional inputs fill the next unfilled declared slot, including after named inputs; repeated names replace an earlier supplied value. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each supplied value must fit its declared type/access. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; repeated constructor labels produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
 
 ## Positional tuple rest selected
 

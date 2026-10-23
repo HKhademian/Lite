@@ -58,13 +58,13 @@ For any admitted named construction or call, preserve the existing source-order 
 
 Under the proposed name-routing interpretation, the resulting bindings would be left = op2's result and right = op1's result. These are descriptions of routed values, not instructions to call the operations again. Source order determines computation order; the mapping contract determines where the results go.
 
-The corresponding proposed reordered function call is:
+The corresponding selected reordered function call is:
 
 ```text
 consume(r = op1(), l = op2());
 ```
 
-For a signature declaring l before r, named arguments may appear in this written order. The user selected named suffix reordering. For an admitted call, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
+For a signature declaring l before r, named arguments may appear in this written order. Named inputs may reorder and interleave with positional inputs. Call spread processes components in stored order while preserving supplied-expression evaluation order. For an admitted call, evaluate consume's callee expression first, then op1, then op2, then invoke the callable with l receiving the second result and r the first. Replacing a previously supplied input by name does not erase its earlier expression evaluation; both execute in written order and the last contribution for that slot reaches the function. Superseded-value cleanup/ownership remains separate. An outward exit while evaluating op1 prevents op2 and invocation; merely returning an intact Result is not an outward exit.
 
 The user selected the distinction between contextual construction and stored tuple order: a fresh named initializer may populate destination fields in any written order, while an already stored tuple with a different component order requires explicit reconstruction. Source expression order is preserved in both cases. Different stored tuple labels likewise require explicit reconstruction. Stored named/unnamed conversions, and complete tuple/pattern grammar remain open. See [concrete named routing](named-input-routing.md) and [named arguments and tuples](named-arguments-and-tuples.md).
 

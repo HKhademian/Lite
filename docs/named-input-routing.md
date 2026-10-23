@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces repeated labels in their original slots; function-call routing remains unchanged.
+Status: **core named call routing, validation, four contextual tuple construction forms, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces repeated labels in their original slots. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement, =name shorthand, and explicit tuple spread, selected 2026-10-23.
 
 ## Selected value shorthand and positional access
 
@@ -34,7 +34,7 @@ op(1, 2, c = 3);
 
 Those three call shapes are selected. All supply a = 1, b = 2, c = 3, giving the mathematical result 123 for this illustrative body.
 
-Named suffix entries may appear in any permutation:
+Named entries may appear in any permutation:
 
 ```text
 op(c = 3, a = 1, b = 2);
@@ -50,9 +50,9 @@ op(c = third(), a = first(), b = second());
 
 Executes third(), first(), second(), then op. The producer names do not change that order.
 
-### Every complete call shape for three inputs
+### Historical prefix/suffix call shapes
 
-With these three required inputs, no spread/defaults, and the fixed mapping a = 1, b = 2, c = 3, the selected prefix/suffix rule admits exactly ten positional-versus-named orderings:
+With these three required inputs, no spread/defaults, and the fixed mapping a = 1, b = 2, c = 3, the former prefix/suffix rule admitted exactly ten positional-versus-named orderings:
 
 ```text
 op(1, 2, 3);
@@ -67,21 +67,41 @@ op(c = 3, a = 1, b = 2);
 op(c = 3, b = 2, a = 1);
 ```
 
-A positional prefix of length zero leaves six named permutations; length one leaves two; length two leaves one; length three leaves one. These are the ten complete routing shapes under the stated assumptions. Each evaluates its expressions in written order; several shapes have the same parameter-expression order.
+A positional prefix of length zero leaves six named permutations; length one leaves two; length two leaves one; length three leaves one. These were the ten complete routing shapes under the former restriction; the 2026-10-23 extension also allows interleaving, replacement, shorthand, and spread, so this is no longer a complete catalogue. Each evaluates its expressions in written order; several shapes have the same parameter-expression order.
+
+### Call input shape, shorthand, and spread selected
+
+Selected by the user, 2026-10-23: a function's declared parameters define a fixed, typed, positionally ordered input shape with public labels. Calls construct inputs for that shape using positional entries, named entries, same-name shorthand, and explicit tuple spread. This is a semantic input contract, not a requirement to allocate an intermediate tuple or change the calling convention.
+
+```text
+/* op has declared inputs p1: T1, p2: T2, p3: T3, p4: T4 */
+op(p1, ...(p2, p3), p4);
+/* same destinations as op(p1, p2, p3, p4) */
+op(=p4, =p3, =p2, =p1);
+/* expands to op(p4 = p4, p3 = p3, p2 = p2, p1 = p1) */
+
+/* the three-input op defined above: */
+op(c = 3, 1, 2);             /* c = 3; then a = 1, b = 2 */
+op(1, ...(c = 3, b = 2));    /* a = 1; spread routes c and b by name */
+op(a = 1, a = 9, b = 2, c = 3); /* final a = 9 */
+op(1, a = 9, b = 2, c = 3);     /* replace the earlier positional a */
+```
+
+A plain identifier argument remains positional; =name is explicitly named and expands to name = name. Only an ordinary identifier is accepted for shorthand, with normal lexical value lookup. Spread an operand once, in stored component order: labeled components become named inputs, while unnamed components become positional inputs. A named tuple's physical field order need not match the signature order because its labels select the destination slots. A component containing another tuple stays one input unless separately spread.
 
 ### Static routing algorithm
 
-For a known public signature, use this routing algorithm:
+For a known public signature:
 
-1. Require unambiguous public labels for parameters addressable by name.
-2. Accept a positional prefix of length k and map it to the first k signature positions. A positional argument does not search for the next unfilled slot after a named entry.
-3. After the first named argument, require every remaining argument to be named.
-4. Resolve each named label to exactly one public parameter and require that parameter to be unfilled.
-5. Require every remaining input to have an applicable explicitly declared default. A supplied argument overrides its default.
-6. Check each supplied/defaulted input against its own parameter type and access contract.
-7. Reject invalid calls statically before any part of the call can execute. For admitted calls, evaluate the callee and supplied expressions in written order.
+1. Require unambiguous public labels for parameters addressable by name. Start with all declared input slots unfilled; declared defaults do not prefill them.
+2. Process supplied entries in written order. Expand shorthand and process each spread's statically known tuple components in stored order, preserving labels.
+3. An unnamed input fills the next unfilled slot in declaration order, including after named entries. Reject it if no slot remains.
+4. A named input selects its declared slot. Reject an unknown/ambiguous label. If that slot was already supplied, replace its pending value without moving or adding a slot; the last supplied value for it wins.
+5. Check every supplied value against that fixed slot's declared type and access contract, including values later replaced. No extra input slot, implicit union widening, or permission is introduced by replacement.
+6. Every slot still unfilled after supplied entries needs an applicable explicitly declared default compatible with that slot. Missing required inputs remain errors; no automatic zero argument is introduced.
+7. Reject invalid mappings statically before executing the call. For admitted calls, evaluate the callee first, then each supplied expression once in written order, then invoke after successful input preparation. Defaults with effects retain their separate timing/scope question.
 
-The routing invariant is simple: positional and named inputs select disjoint positions, every selected position is filled once, and every unfilled position has an applicable declared default. Type/access compatibility is checked for that uniquely determined destination. Neither missing labels nor equal component types require a heuristic to choose a position.
+The signature fixes the input count and destination types. Positional inputs choose unfilled slots; named inputs select a unique declared slot and may replace a previous contribution. This supersedes the earlier positional-prefix/named-suffix restriction and duplicate-supplied-input rejection. Replacement does not erase evaluation of an earlier expression, and cleanup/ownership of superseded values remains a separate contract. Normal mut/var caller grants remain required; spreading ordinary tuple values cannot manufacture writable caller locations or missing access grants.
 
 Labels are static selectors, not expressions. A local variable named b does not change what op(b = expression) selects. Parentheses/grouping must not cause the parser to guess between an argument label and ordinary assignment according to whether type checking succeeds. Complete assignment-expression grammar remains separate.
 
@@ -93,15 +113,11 @@ Each line below is an independent rejected example for the same op signature:
 op(1, 2);                         /* missing c: no default */
 op(1, 2, 3, 4);                   /* too many positions */
 op(a = 1, b = 2, d = 3);          /* unknown d, missing c */
-op(a = 1, a = 2, b = 2, c = 3);   /* duplicate a */
-op(1, a = 2, b = 2, c = 3);       /* a already filled positionally */
-op(a = 1, 2, c = 3);              /* positional after named */
-op(1, c = 3, 2);                  /* positional after named */
 op(a = "one", b = 2, c = 3);      /* incompatible a value */
 op(a = 1, b = 2, c = ?);          /* reserved storage marker is not a value */
 ```
 
-Unknown, duplicate, or incompatible named inputs must not fall back to positional matching. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
+Unknown, ambiguous, or incompatible named inputs must not fall back to positional matching. Repeated supplied names are valid replacements; duplicate labels in the signature remain a different issue. Duplicate labels in a public signature cannot provide an unambiguous named-call contract. Whether to support separate positional-only declarations with repeated local names remains outside the selected routing core.
 
 ## 3. Omissions, defaults, and underscore
 
@@ -373,16 +389,16 @@ The actual signatures and source locations must already permit those grants. A n
 
 ## 8. Spreading and remaining boundaries
 
-Tuple construction spread does not automatically establish call spread. In particular, op(tuple_value) supplies one value and cannot silently fill several parameters. A future op(...tuple_value) needs an explicit positional-versus-named mapping policy. The selected routing core does not establish named spreading or allow it to bypass duplicate, missing, type, permission, or evaluation checks.
+Explicit tuple call spread is selected: op(...tuple_value) processes labeled components as named inputs and unnamed components through next-unfilled positional routing. In contrast, op(tuple_value) supplies one tuple-valued input. The signature still determines required fields, types, defaults, and permissions. Array/list/set/other collection spread and general variadic signatures are separate; this is tuple-to-call spread with a statically known shape. No intermediate tuple allocation, runtime label dictionary, or ABI change is required by this contract.
 
-Aliases cannot hide an order mismatch; normalized tuple contracts decide it. Named-field selectors must be statically available and accessible on the source. Union-valued components retain their existing member/widening contracts; naming a field does not unwrap Result/Option or choose a union member. Generic expected-schema discovery and full source grammar remain open.
+Aliases cannot hide a stored tuple assignment order mismatch; normalized tuple contracts decide it. Explicit call spread is a routing operation rather than direct stored-tuple assignment, so a differently ordered labeled source can supply inputs by name. Named-field selectors must be statically available and accessible on the source. Union-valued components retain their existing member/widening contracts; naming a field does not unwrap Result/Option or choose a union member. Generic expected-schema discovery and full source grammar remain open.
 
 This case catalogue covers the structural success/failure classes for the selected routing and explicitly marked extensions: positional, fully named, mixed, reordered, missing, excess, unknown, duplicate, incompatible type/access, contextual versus stored, inferred versus expected, nested calls, shadowing, and outward exits. It is a design audit, not a claim that a LiteScript parser or runtime has executed these examples.
 
 ## Review evidence and limits
 
-An independent finite routing model was evaluated for the routing algorithm on 2026-10-21. It enumerated 781 abstract call-entry shapes for three parameters, including positional entries, known labels, an unknown label, missing entries, excess entries, and duplicate selections. Its ten accepted complete shapes exactly match the ten listed above. Giving b an explicit default admits thirteen shapes. A corresponding two-component contextual tuple model enumerated 85 entry shapes and admitted the four listed construction forms.
+Historical evidence for the former routing algorithm: an independent finite model was evaluated on 2026-10-21. It enumerated 781 abstract call-entry shapes for three parameters, including positional entries, known labels, an unknown label, missing entries, excess entries, and duplicate selections. Its ten accepted complete shapes exactly match the ten listed above. Giving b an explicit default admits thirteen shapes. A corresponding two-component contextual tuple model enumerated 85 entry shapes and admitted the four listed construction forms.
 
-The model checks static position/name routing only. Types, permissions, defaults with effects, pattern ownership, source parsing, and runtime execution were reviewed as contract boundaries, not executed as LiteScript. These counts do not constitute compiler or runtime verification.
+The model checks static position/name routing only. Types, permissions, defaults with effects, pattern ownership, source parsing, and runtime execution were reviewed as contract boundaries, not executed as LiteScript. These counts describe the former prefix/suffix algorithm, do not validate the 2026-10-23 extension, and do not constitute compiler or runtime verification. No new model or language tests were run for the extension.
 
 Related: [named arguments and tuples](named-arguments-and-tuples.md), [reference comparison](named-arguments-reference-comparison.md), [evaluation order](evaluation-order.md), [tuple patterns](tuples-and-patterns.md), [aggregate patterns](aggregate-patterns.md), [argument omission](union-parameter-defaults.md), and [caller grants](caller-mutation-grants.md).
