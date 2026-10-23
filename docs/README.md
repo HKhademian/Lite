@@ -146,9 +146,9 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
 - [Conditionals](conditionals.md): one syntax for actions and values.
-- [Conditional pattern chains](condition-chains.md): and chains, same-name binding-producing or alternatives, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, and grouped matching-condition negation with no exported bindings.
+- [Conditional pattern chains](condition-chains.md): and chains, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, and grouped matching-condition negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
-- [Match arm guards](match-guards.md): selected pattern-if separator, and chains and same-name or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
+- [Match arm guards](match-guards.md): selected pattern-if separator, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based pattern arms and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.

@@ -1,6 +1,6 @@
 # Conditional pattern chains
 
-Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with identical introduced-name sets selected on 2026-10-23; grouped matching-condition negation also selected with no exported bindings; logical subpattern alternatives and ownership remain open**.
+Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with Unit for absent names selected on 2026-10-23; grouped matching-condition negation also selected with no exported bindings; logical subpattern alternatives and ownership remain open**.
 
 ## Purpose and selected example
 
@@ -76,23 +76,32 @@ Assume both sources provide Option<User> and greet returns Unit. Try the alterna
 
 ### Binding names and types
 
-Every alternative must introduce the same set of visible binding names on success, even when the body does not read them. Collect the final binding of each name after that alternative's own recursive/and-chain shadowing. Repeated occurrences of one name count as one visible name, not several names. Underscore-prefixed pattern names and `_` are ordinary bindings and participate in this comparison; unused-name permission is not permission to omit a binding from one alternative. Existing incoming names are not newly introduced and cannot fill a missing name in an alternative.
+Alternatives may introduce different binding names. Collect the union of their final visible name sets after each alternative's own recursive/and-chain shadowing. Repeated occurrences of one name count as one final visible name, not several. Include ordinary underscore-prefixed bindings and `_`; their unused-name permission changes diagnostics only. For each shared continuation name, normalize the union of its final binding types from all alternatives, contributing Unit for an alternative that does not introduce it.
 
 ```text
-/* Rejected: alternatives introduce different names. */
-if .Some(user) := cached_user
-    or .Some(other) := find_user(id) {
-    refresh()
+if .Some(email) := find_email(id)
+    or .Some(phone) := find_phone(id) {
+    deliver_optional(email, phone)
 }
 ```
 
-A Boolean-only alternative introduces no names. Thus two Boolean alternatives remain ordinary or, while mixing a branch that introduces user with a branch that introduces nothing is rejected, even if an outer user already exists. This selection does not silently synthesize a missing binding, an Option, a default, or a copy.
+Assume Option<String>/Option<PhoneNumber> producers and a compatible Unit-producing handler. After success, email has type String | Unit and phone has type PhoneNumber | Unit. If the first alternative succeeds, email holds its payload and phone is Unit; if only the second succeeds, email is Unit and phone holds its payload. Same-name alternatives such as user from two Option<User> sources still give User, without an added Unit because both supply it. This supersedes the earlier identical-introduced-name-set restriction for complete condition/guard or alternatives.
 
-After success, each shared name denotes the value from the first successful alternative. Its static type is the normalized union of that name's final binding types across the alternatives, collapsing identical types. For example, Int and String alternatives give value type Int | String. Body operations must be valid for that contract; no implicit conversion or common-supertype replacement is added. Only access valid for every possible successful binding is available; full access/ownership joins remain part of their broader contracts. No arbitrary cross-binding correlation/refinement algorithm is selected.
+A Boolean-only alternative introduces no names but is permitted alongside binding-producing alternatives:
+
+```text
+if .Some(user) := find_user(id) or guest_allowed {
+    greet_optional(user)
+}
+```
+
+Assume find_user returns Option<User>, guest_allowed is an existing Bool, and the handler accepts User | Unit. If the match succeeds, user contains its User. If that match fails and guest_allowed is true, user is Unit. If both fail, no new binding is visible in else or following code. Two Boolean-only alternatives still introduce no names. This does not add matching-source headers to subjectless match, which retains ordinary Boolean-only headers.
+
+Unit is an initialized ordinary value, not an unbound/uninitialized name, Option/None, an implicit cast, or an absence discriminator. If a payload can itself be Unit, its Unit value cannot be distinguished from absent-name Unit through that binding alone. The successful continuation must type-check against the whole union; payload-only access requires a valid narrowing/test first. Only access valid for all possible successful values is available; full access/ownership joins and arbitrary cross-binding correlation refinements remain separate.
 
 ### Scope, precedence, and grouping
 
-Each alternative starts in the same scope that existed before the or group. It may read common earlier and-chain or initial match-arm bindings. A failed alternative's tentative bindings, including bindings established before a later guard failed, are unavailable to subsequent alternatives. Successful alternatives shadow same-named incoming bindings only in the shared successful continuation. If all alternatives fail, no alternative-local names leak to else, sibling match arms, or following code.
+Each alternative starts in the same scope that existed before the or group. It may read common earlier and-chain or initial match-arm bindings. A failed alternative's tentative bindings, including bindings established before a later guard failed, are unavailable to subsequent alternatives. The shared bindings shadow same-named incoming bindings on every successful path, including paths where a new name receives Unit. Incoming values never fill a missing alternative binding. Unit-filled shared bindings are created for the successful continuation only, not in time for other alternatives to use; each alternative's inputs and free names still resolve in the common incoming scope. For example, a later `or user.active` cannot read an earlier failed alternative's user unless a suitable outer user was already in scope. If all alternatives fail, no alternative-local names leak to else, sibling match arms, or following code.
 
 And binds more tightly than or. Thus A and B or C and D selects between two and chains; it does not feed A/B's bindings into C/D. Group a disjunction before a shared later test:
 
@@ -124,7 +133,7 @@ Assume find_user returns Option<User>, User.active is Bool, and the handler retu
 
 ### Scope and existing names
 
-Bindings introduced anywhere inside the negated condition remain inside it. None are available to later outer and operands, the body, else, another alternative, or following code. This holds whether the inner condition succeeds or fails, and nested/double negation does not restore its bindings. The negated operand therefore introduces an empty name set for the enclosing or alternative rules. Its inner condition must still satisfy the ordinary same-name or contract; negation does not relax that check.
+Bindings introduced anywhere inside the negated condition remain inside it. None are available to later outer and operands, the body, else, another alternative, or following code. This holds whether the inner condition succeeds or fails, and nested/double negation does not restore its bindings. The negated operand therefore introduces an empty name set for the enclosing or alternative rules. Its inner or conditions use the same payload-or-Unit join rule, but those shared inner bindings remain inside the negation.
 
 An incoming binding retains ordinary lookup outside the negation. If an inner pattern shadows that name, the shadow is internal only; a later outer reference still refers to the incoming binding with its own type/access, subject to ordinary mutation/refinement stability. Negation does not assign, widen, or replace it.
 
@@ -155,17 +164,17 @@ if .Some(user) := find_user(id) and (user.admin or user.age > 14) {
 
 This or introduces no new bindings. It operates on two Boolean expressions after user is available. Plain Boolean conditions keep their existing not/and/or precedence.
 
-Binding-producing or is selected only between complete condition alternatives with identical introduced-name sets. Grouped matching-condition not is also selected but exports no names, because a negated match can succeed when its payload is absent. Ordinary Boolean grouping, or alternatives, and negation never export a name that may be unbound.
+Binding-producing or is selected between complete condition alternatives with shared names typed as payload unions plus Unit where absent. Grouped matching-condition not is also selected but exports no names, because a negated match can succeed when its payload is absent. Ordinary Boolean grouping, or alternatives, and negation never export a name that may be unbound.
 
 ## Parsing boundary
 
 At the top level of a pattern-source operand, both and and or are condition-chain separators. To put logical operations inside the source value instead, group that source explicitly. Calls, tuples, and other nested syntax keep their own grouping. Whitespace cannot decide whether and/or belongs to a source expression or to the condition chain.
 
-The grammar sketch uses restricted condition-operand placeholders for this boundary; it is not a complete expression grammar. And/or precedence, condition grouping, and the same-name alternative contract are selected. Grouped matching-condition negation is selected. Full recursive parsing with tagged block values, record literals, and future trailing closures remains to formalize.
+The grammar sketch uses restricted condition-operand placeholders for this boundary; it is not a complete expression grammar. And/or precedence, condition grouping, and the payload-or-Unit alternative contract are selected. Grouped matching-condition negation is selected. Full recursive parsing with tagged block values, record literals, and future trailing closures remains to formalize.
 
 ## Related features
 
-The same chain rules apply inside [match arm guards](match-guards.md), introduced by if after the initial pattern that already receives the match subject. Guards admit the same and/or condition structure, ordered shadowing, and same-name alternative rule as ordinary conditional chains. These features do not automatically select refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
+The same chain rules apply inside [match arm guards](match-guards.md), introduced by if after the initial pattern that already receives the match subject. Guards admit the same and/or condition structure, ordered shadowing, and payload-or-Unit alternative rule as ordinary conditional chains. These features do not automatically select refutable loop receiver filtering, repeated typed hook dispatch, or pattern conditions as loop sources. Existing-name type tests and their stability/flow rules remain documented separately.
 
 ## References
 

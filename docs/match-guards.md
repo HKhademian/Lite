@@ -1,6 +1,6 @@
 # Match arm guards and condition chains
 
-Status: **pattern-if separator and same-name binding-producing or alternatives selected on 2026-10-23; Boolean tests and additional matches retain left-to-right and chains; logical subpattern alternatives, mutation effects, and ownership details open**.
+Status: **pattern-if separator and binding-producing or alternatives with Unit for absent names selected on 2026-10-23; Boolean tests and additional matches retain left-to-right and chains; logical subpattern alternatives, mutation effects, and ownership details open**.
 
 This page describes subject-based pattern arms. The selected [subjectless match](match.md#subjectless-boolean-selection-selected) instead uses ordinary Boolean headers directly, without a separate pattern or an additional if separator.
 
@@ -12,7 +12,7 @@ After matching the arm's subject pattern, test conditions or match additional va
 pattern if condition { body }
 ```
 
-The initial pattern matches the match subject. An optional if introduces the guard; its operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. Guard conditions use and chains and or alternatives with the same precedence, scope, short-circuiting, and identical introduced-name-set requirement as conditional chains. A guard may contain just one operand. No as marker is needed to introduce the arm binding.
+The initial pattern matches the match subject. An optional if introduces the guard; its operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. Guard conditions use and chains and or alternatives with the same precedence, scope, short-circuiting, and payload-or-Unit binding join rule as conditional chains. A guard may contain just one operand. No as marker is needed to introduce the arm binding.
 
 Ordering comparisons and compound relationships already work as Boolean guards, for example `value if lower <= value < upper and (ready or retry_allowed)`. All ten direct comparison prefixes, including >= minimum and >! limit, are now selected as nonbinding [comparison patterns](comparison-patterns.md). A prefix tests one supplied value; compound and cross-component conditions retain these if guards. Boolean or inside a grouped guard does not select alternative binding-producing patterns.
 
@@ -102,7 +102,7 @@ match find_group(id) {
 }
 ```
 
-Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alternatives begin with the same group binding from the initial arm pattern and introduce user. The first successful alternative supplies user and skips the other; a failed alternative exposes no tentative bindings to the next. The common binding's type is the normalized union of the alternatives' final types, here User. Different introduced-name sets are rejected. Group a disjunction before any shared later and test. Grouped matching-condition not is selected separately and exports no names; logical alternatives inside the initial structural pattern remain open; see [selected or alternatives](condition-chains.md#binding-producing-or-alternatives-selected).
+Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alternatives begin with the same group binding from the initial arm pattern and introduce user. The first successful alternative supplies user and skips the other; a failed alternative exposes no tentative bindings to the next. The common binding's type is the normalized union of the alternatives' final types, here User. Differently named alternatives are also allowed: the shared continuation sees the union of introduced names with Unit for a name absent from the successful alternative. A Boolean-only alternative contributes Unit for all those new names; incoming values are not substituted. Group a disjunction before any shared later and test. Grouped matching-condition not is selected separately and exports no names; logical alternatives inside the initial structural pattern remain open; see [selected or alternatives](condition-chains.md#binding-producing-or-alternatives-selected).
 
 ## Negating a guard condition
 
@@ -131,7 +131,7 @@ Assume Option<Group>/Option<User> sources, Bool User.active, and a Unit-producin
 
 ## Remaining rules
 
-The guard uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when and/or belongs inside a pattern's source value. Grouped Boolean-only or operands introduce no extra pattern bindings; binding-producing or alternatives require identical introduced-name sets and export the first successful alternative's bindings. Grouped matching-condition not exports no names. Logical not/alternatives inside one structural pattern and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
+The guard uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when and/or belongs inside a pattern's source value. Grouped Boolean-only or operands introduce no extra pattern bindings; binding-producing or alternatives export the union of introduced names with the first successful alternative's payloads and Unit for absent names. Grouped matching-condition not exports no names. Logical not/alternatives inside one structural pattern and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
 
 The ownership model must permit later arms after a failed test or guard. Do not silently duplicate a noncopyable value or commit a move that makes that path invalid. Mutations that invalidate a refinement require explicit rules; these examples do not grant unrestricted writable aliases. The exact order and effect model of recursive structural extraction is separate from the selected left-to-right order of and operands.
 
