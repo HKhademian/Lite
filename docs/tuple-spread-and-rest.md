@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels selected 2026-10-23; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Rest after named selectors, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels and rest after named selectors selected 2026-10-23; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Positional tuple rest selected
 
@@ -23,7 +23,7 @@ Zero remaining components produce Unit/(); one produces a singleton tuple rather
 /* (first, second) := (1, 2, 3);    extra component without rest */
 ```
 
-Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple patterns, including named/mixed source tuples with label preservation below; it does not select rest after named selectors, list rest, rest-only pattern spelling, or new header-pattern support. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
+Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple patterns, including named/mixed source tuples with label preservation below; named selector rest is selected separately below. List rest, rest-only pattern spelling, and new header-pattern support remain separate. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
 
 ## Remainder labels selected
 
@@ -50,7 +50,32 @@ rest.tea; /* "green" */
 
 The prefix binding name first does not become a component label. Consumed fields are absent from rest; rest.cake in the meal example is rejected. A fully unnamed remainder stays unnamed, and exhausting any tuple produces Unit/(). A named singleton keeps its label rather than converting to an unnamed singleton or scalar. Existing structural tuple identity and stored-label compatibility apply to the resulting tuple.
 
-This selects a positional prefix plus rest over named, unnamed, or mixed source tuples. It does not select named-selector-plus-rest patterns such as (drink = tea, ...rest), whose coverage and removal rules remain separate.
+This selects a positional prefix plus rest over named, unnamed, or mixed source tuples. Named-selector-plus-rest coverage and removal are selected next.
+
+## Named selectors with rest selected
+
+Selected by the user, 2026-10-23: named selectors remove their chosen fields, and one trailing ...rest captures every unselected component in the source's stored order. Preserve each remaining label, if present, and its component type; numeric positions restart at zero within rest.
+
+```text
+meal := (cake = 10, tea = 20, fruit = 30);
+(drink = tea, ...rest) := meal;
+/* drink = 20; rest = (cake = 10, fruit = 30) */
+
+(snack = fruit, dessert = cake, ...rest) := meal;
+/* snack = 30; dessert = 10; rest = (tea = 20) */
+
+(dessert = cake, drink = tea, snack = fruit, ...rest) := meal;
+/* rest = () */
+
+(drink = tea, ...rest) := (1, tea = "green", fruit = 30);
+/* drink = "green"; rest has type (:Int, fruit: Int) */
+```
+
+Selector order determines binding order, including the existing ordered-shadowing behavior; it does not reorder the source or remainder. Source selectors refer to fields in the source tuple, not lexical variables. Evaluate the source once before introducing bindings. Unknown source labels, duplicate source selectors, multiple rest captures, and a nonfinal rest capture are rejected. Repeated destination names retain existing shadowing rules and are not duplicate source selectors.
+
+Without rest, named extraction still requires complete component coverage. With rest, all unselected components are captured, including unnamed positions in a mixed source. Fully named, mixed, unnamed singleton, named singleton, and empty remainders retain their existing shape/type identities. Ordinary declarations must be irrefutable; supported conditional/match contexts retain their established matching rules. Rest does not supply missing fields or silently discard unselected components.
+
+This extends named-only selector patterns with a final rest; it does not select mixing positional and named selectors within one pattern, record rest, rest-only spelling, list rest, or ownership rules.
 
 ## Two directions for the same punctuation
 

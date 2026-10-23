@@ -219,7 +219,7 @@ A known fully named destination still supplies names for positional entries: pai
 
 ## 6. Destructuring and the user's original form
 
-The user also selected [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected): (pattern) groups the entire source binding, (pattern,) extracts one positional component, and (local = label) extracts the named component. No-comma positional extraction is not selected. Existing exact coverage, source evaluation, and ordinary irrefutability rules apply.
+The user also selected [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected): (pattern) groups the entire source binding, (pattern,) extracts one positional component, and (local = label) extracts the named component. No-comma positional extraction is not selected. Existing coverage-without-rest, source evaluation, and ordinary irrefutability rules apply.
 
 The user clarified the intended annotation as (l: Int, r: Int): a named tuple type. The colon after a binding pattern supplies the source/initializer tuple contract; it does not list source-field selectors.
 
@@ -241,7 +241,7 @@ stored := (r = 20, l = 10);
 (left = l, right = r) := stored; /* left = 10, right = 20 */
 ```
 
-The initial named tuple pattern requires exact component coverage: reject unknown or duplicate source selectors, omitted components, and mixed positional/named patterns. Named rest/partial extraction needs a separate rule. This tuple-pattern rule does not decide the separate record-pattern omission questions.
+Without rest, named tuple patterns require exact component coverage: reject unknown or duplicate source selectors, omitted components, and mixed positional/named selector patterns. Named selectors with one final ...rest are now selected: remove the chosen fields and capture every unselected component in source order, preserving labels and types. Selector order affects binding order, not remainder order; evaluate the source once. Numeric positions restart at zero within rest. A rest capture does not supply missing fields. Mixed source tuples may retain unnamed components in rest; mixing positional and named selectors in the same pattern remains separate. See [named selectors with rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected). This tuple-pattern rule does not decide record omission/rest rules.
 
 Repeated destination bindings retain the already selected written-order shadowing rule:
 

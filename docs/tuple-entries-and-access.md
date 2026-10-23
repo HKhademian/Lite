@@ -90,7 +90,7 @@ meal := (cake = 42);
 (local = cake) := meal; /* named extraction: local is Int */
 ```
 
-The selected forms are (pattern) for grouping, (pattern,) for one positional component, and (local = label) for the named component. Named forms can retain the ordinary optional trailing comma. Positional extraction works on either named or unnamed singleton tuples; named extraction requires the stated source label and the existing exact-coverage/duplicate rules. The value-entry = identifier shorthand is not a pattern shorthand.
+The selected forms are (pattern) for grouping, (pattern,) for one positional component, and (local = label) for the named component. Named forms can retain the ordinary optional trailing comma. Positional extraction works on either named or unnamed singleton tuples; named extraction requires the stated source label and the existing coverage-without-rest and duplicate-selector rules. The value-entry = identifier shorthand is not a pattern shorthand.
 
 Evaluate the source once before introducing its bindings. Grouping preserves the complete input type and pattern behavior; it never unwraps based on the source or expected type. A singleton tuple pattern requires one component, not a scalar or a two-component tuple. For example, (value,) := 42 is rejected as a declaration shape mismatch. Typed components keep their existing meaning: (value: Int,) requires one Int component, while (value: Int) groups a typed binding for the whole input.
 
@@ -152,7 +152,7 @@ Positional destructuring can bind the whole mixed tuple:
 (number, drink) := mixed;
 ```
 
-The existing initial exact-coverage named pattern does not acquire numeric source selectors or mixed positional/named pattern clauses through this decision. Those pattern extensions remain separate.
+Named patterns require complete coverage without rest, or may capture unselected fields with one final rest. They do not acquire numeric source selectors or mixed positional/named pattern clauses through this decision. Those pattern extensions remain separate.
 
 ## Expected named types still accept positional entries
 
