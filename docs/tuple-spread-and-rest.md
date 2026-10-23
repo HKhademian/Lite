@@ -71,6 +71,8 @@ meal := (cake = 10, tea = 20, fruit = 30);
 /* drink = "green"; rest has type (:Int, fruit: Int) */
 ```
 
+The selected = identifier pattern shorthand expands to identifier = identifier, so (=fruit, ...rest) selects fruit and captures every other component. Duplicate/unknown source checks apply after expansion. See [same-name pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected).
+
 Selector order determines binding order, including the existing ordered-shadowing behavior; it does not reorder the source or remainder. Source selectors refer to fields in the source tuple, not lexical variables. Evaluate the source once before introducing bindings. Unknown source labels, duplicate source selectors, multiple rest captures, and a nonfinal rest capture are rejected. Repeated destination names retain existing shadowing rules and are not duplicate source selectors.
 
 Without rest, named extraction still requires complete component coverage. With rest, all unselected components are captured, including unnamed positions in a mixed source. Fully named, mixed, unnamed singleton, named singleton, and empty remainders retain their existing shape/type identities. Ordinary declarations must be irrefutable; supported conditional/match contexts retain their established matching rules. Rest does not supply missing fields or silently discard unselected components.

@@ -24,7 +24,7 @@ tuple_value_entry := expression
                    | "=" identifier
 ```
 
-This outlines entries inside an established tuple value; singleton value forms are selected below, while spread, assignment, and complete recursive expression grammar remain separate. The shorthand applies to tuple values, not automatically to function arguments, records, patterns, or tuple types.
+This outlines entries inside an established tuple value; singleton value forms are selected below, while spread, assignment, and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. It does not automatically extend to function arguments, records, or tuple types.
 
 The shorthand requires an ordinary identifier resolving to a value. It cannot derive a label from a call, member access, grouped operand, or arbitrary expression:
 
@@ -90,7 +90,7 @@ meal := (cake = 42);
 (local = cake) := meal; /* named extraction: local is Int */
 ```
 
-The selected forms are (pattern) for grouping, (pattern,) for one positional component, and (local = label) for the named component. Named forms can retain the ordinary optional trailing comma. Positional extraction works on either named or unnamed singleton tuples; named extraction requires the stated source label and the existing coverage-without-rest and duplicate-selector rules. The value-entry = identifier shorthand is not a pattern shorthand.
+The selected forms are (pattern) for grouping, (pattern,) for one positional component, and (local = label) for the named component. Named forms can retain the ordinary optional trailing comma. Positional extraction works on either named or unnamed singleton tuples; named extraction requires the stated source label and the existing coverage-without-rest and duplicate-selector rules. Tuple patterns now separately select = identifier as shorthand for identifier = identifier; it is an explicitly named selector, not a positional binding or equality test.
 
 Evaluate the source once before introducing its bindings. Grouping preserves the complete input type and pattern behavior; it never unwraps based on the source or expected type. A singleton tuple pattern requires one component, not a scalar or a two-component tuple. For example, (value,) := 42 is rejected as a declaration shape mismatch. Typed components keep their existing meaning: (value: Int,) requires one Int component, while (value: Int) groups a typed binding for the whole input.
 
@@ -263,7 +263,7 @@ inferred: (cake,) = (cake = 42);
 
 ### 3. Pattern grouping and singleton extraction selected
 
-The user subsequently selected (pattern) for grouping, (pattern,) for one positional component, and (local = label) for named extraction. Thus (local) := one binds the complete singleton tuple, while (local,) := one extracts its component. See [singleton binding patterns](#singleton-binding-patterns-selected). Keep destination = sourceField direction; = identifier value shorthand is not a pattern shorthand. Recursive parser integration remains separate from these selected semantics.
+The user subsequently selected (pattern) for grouping, (pattern,) for one positional component, and (local = label) for named extraction. Thus (local) := one binds the complete singleton tuple, while (local,) := one extracts its component. See [singleton binding patterns](#singleton-binding-patterns-selected). Keep destination = sourceField direction; tuple patterns now separately select = identifier as identifier = identifier shorthand. Recursive parser integration remains separate from these selected semantics.
 
 The user also selected the [empty tuple pattern](#empty-tuple-pattern-selected): () matches only Unit and binds no names. It is not a wildcard, discard, or missing-value pattern. Ordinary declaration patterns must be irrefutable for their source contract; conditional/match patterns retain their existing mismatch behavior. Positional tuple rest now selects Unit/() for an empty remainder and a singleton for one remaining component; partial-pattern ownership remains separate.
 

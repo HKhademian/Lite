@@ -243,6 +243,27 @@ stored := (r = 20, l = 10);
 
 Without rest, named tuple patterns require exact component coverage: reject unknown or duplicate source selectors, omitted components, and mixed positional/named selector patterns. Named selectors with one final ...rest are now selected: remove the chosen fields and capture every unselected component in source order, preserving labels and types. Selector order affects binding order, not remainder order; evaluate the source once. Numeric positions restart at zero within rest. A rest capture does not supply missing fields. Mixed source tuples may retain unnamed components in rest; mixing positional and named selectors in the same pattern remains separate. See [named selectors with rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected). This tuple-pattern rule does not decide record omission/rest rules.
 
+### Same-name tuple pattern shorthand selected
+
+Selected by the user, 2026-10-23: in a named tuple pattern, = identifier expands to identifier = identifier. The left identifier introduces the local binding; the right identifier selects the source field. Both explicit clauses and shorthand clauses are named selectors, so either may appear in any selector order.
+
+```text
+meal := (cake = 10, tea = 20, fruit = 30);
+(=fruit, =tea, =cake) := meal;
+/* equivalent: (fruit = fruit, tea = tea, cake = cake) := meal; */
+/* fruit = 30; tea = 20; cake = 10 */
+
+(=fruit, drink = tea, dessert = cake) := meal;
+(=fruit, ...rest) := meal;
+/* rest = (cake = 10, tea = 20) */
+```
+
+Evaluate the source once. The shorthand selects fields, not outer lexical values, and never means positional selection or equality comparison. It also establishes a named singleton pattern: (=fruit) := (fruit = 30). The existing == expression pattern remains the explicit value-comparison form.
+
+Reject ambiguous or invalid mappings rather than guessing: expand shorthand before checking duplicate source selectors, reject unknown source labels, and require full coverage unless a final rest captures the remainder. A shorthand operand must be one identifier; =expression is not a general pattern production. For example, (=fruit, =fruit, ...rest) repeats a source field, (=coffee, ...rest) names an unknown field in meal, and (=meal.fruit) is not identifier shorthand. All are rejected.
+
+This selects tuple pattern shorthand separately from tuple value shorthand. It does not select shorthand in calls, records, or tuple types. Mixed positional/named selector patterns remain an open proposal; the user's all-named reordered example does not require them. Complete parsing must establish syntactic roles without whitespace, capitalization, type lookup, or expected-type guesses. Existing ordered destination shadowing remains deterministic and is not rejected as an ambiguous source mapping.
+
 Repeated destination bindings retain the already selected written-order shadowing rule:
 
 ```text
