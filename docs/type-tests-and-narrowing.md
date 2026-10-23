@@ -67,7 +67,7 @@ These need decisions before the grammar is implementation-ready:
 3. **Negative information.** For a closed `User | Guest`, a failed User test can imply Guest; specify how this works through `else`, joins, overlapping types, and open interfaces.
 4. **Type relations.** Define exact type identity versus subtype/interface satisfaction, generic type tests and erasure/reification, and impossible or always-true tests. This form does not settle those questions.
 5. **Conditional declarations.** Decide whether irrefutable patterns such as `if flag := false` are rejected or diagnosed. Matching `Some(false)` with `Some(flag)` succeeds independently of the payload's Boolean value.
-6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, nested patterns, and repeated-name rules within the selected and chains.
+6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, and complete nested-pattern grammar. Repeated binding names within patterns and across successful and-chain operands use selected ordered shadowing; existing-name type tests narrow the current binding without introducing a new one.
 
 These are semantic gaps to track, not reasons to require `person: User = person` everywhere.
 

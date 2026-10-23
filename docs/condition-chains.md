@@ -1,6 +1,6 @@
 # Conditional pattern chains
 
-Status: **and-chained pattern binding and Boolean guards selected; binding-producing or/not and rebinding across operands open**.
+Status: **and-chained pattern binding and Boolean guards selected; ordered shadowing across successful operands selected on 2026-10-23; binding-producing or/not and ownership remain open**.
 
 ## Purpose and selected example
 
@@ -23,7 +23,7 @@ The and separates two condition operands. It is not part of the value supplied t
 
 Thus user exists for the age test only after Some matches. The failed branch does not receive the newly introduced user, even when the pattern succeeded but a later guard failed. Following code and sibling conditions/bodies do not receive that new binding. An enclosing same-named value retains normal lookup outside the binding's successful scope.
 
-Pattern source expressions resolve before introducing that pattern's names. They can use bindings established by earlier operands. Repeating a name in later operands needs its own policy; the selected ordered shadowing within each pattern (the former loop receiver lists are retired) does not silently decide it. See [pattern binding and shadowing](pattern-shadowing.md).
+Pattern source expressions resolve before introducing that pattern's names. They can use bindings established by earlier operands. A later successful binding of the same name shadows the earlier one for subsequent operands and the successful body; it does not reassign or change the earlier binding's type. Within each operand, recursive ordered shadowing still applies. See [pattern binding and shadowing](pattern-shadowing.md).
 
 Side effects already performed by earlier operands are not rolled back when a later operand fails. Existing borrowing, mutation, and cleanup rules still apply. This feature does not choose ownership commitment timing or silently unwrap fallible calls.
 
@@ -38,6 +38,28 @@ if .Some(user) := find_user(id)
 ```
 
 The line breaks have no structural meaning. user is available to find_profile; both user and profile are available to the final guard and body. Skipped operations do not run. Each component binding retains the type inferred from input portions compatible with its pattern.
+
+## Ordered shadowing across operands selected
+
+A binding-producing operand may introduce a name already bound by an earlier operand:
+
+```text
+if .Some(value) := find_user(id)
+    and .Some(value) := find_profile(value.id)
+    and value.visible {
+    show_profile(value)
+}
+```
+
+Assume find_user returns Option<User>, find_profile takes a user id and returns Option<Profile>, Profile has a Bool visible field, and show_profile returns Unit. The second source reads value as the earlier User. Only after its whole pattern succeeds does the new Profile binding become visible to value.visible and the body. These are distinct bindings and may have different types; shadowing needs no var and does not assert equality or infer a union for one changing binding.
+
+Resolve each operand's source and free names in comparison-pattern RHS expressions in the scope available before that pattern. This includes earlier successful chain bindings, but not new sibling bindings inside the current pattern. Then apply the pattern's existing recursive binding order; only after the whole pattern succeeds do its final bindings extend or shadow the chain scope.
+
+The rule includes underscore-prefixed pattern names and `_`, which remain ordinary readable bindings with permission for nonuse. It also applies when a match-arm guard shadows a name from that arm's initial subject pattern. Boolean operands and existing-name type tests do not themselves introduce a replacement binding; they keep their existing testing/narrowing roles.
+
+If any later match or test fails, no chain-local binding is available in the failed branch, a sibling arm, or following code. An outer same-named binding remains the name visible there. Earlier effects are not undone. Hidden bindings retain their own types/access and ownership obligations; this rule does not specify moves, immediate destruction, or cleanup timing. Different names remain available when both values need to be used later.
+
+This selection covers ordinary conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions and gain no binding-producing pattern conditions. Binding-producing or/not and alternative-pattern guaranteed-binding rules remain open.
 
 ## Ordinary Boolean grouping
 

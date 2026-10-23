@@ -69,6 +69,24 @@ Underscore-prefixed bindings can leave positional components unused in additiona
 
 Nested destructuring also works directly in that chain, for example `and (first, last: String) := user.name_parts`, assuming a suitable tuple-valued field. Alternatively a structural pattern such as `Some((first: String, last: String))` can match an optional tuple in one step. These reuse the same typed component patterns and inference rules; no nested match statement is required merely to extract or constrain components.
 
+## Shadowing earlier arm bindings
+
+A successful guard pattern may shadow a binding from the initial subject pattern or an earlier guard operand:
+
+```text
+match find_user(id) {
+    .Some(value)
+        if .Some(value) := find_profile(value.id)
+        and value.visible {
+        show_profile(value)
+    }
+    .Some(value) { show_user(value) }
+    .None {}
+}
+```
+
+Assume Option<User>/Option<Profile> producers, a Bool Profile.visible, and Unit-producing handlers. The guard source reads the first value as User. Its successful pattern then introduces value as Profile for later guard operands and the body. If the guard fails, the second arm matches the original subject and binds its own User; the failed arm's bindings do not leak. No binding is reassigned or changes type, and no implicit var permission or new ownership permission follows. Source evaluation, comparison-RHS lookup, and per-pattern recursive order follow [selected chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected). Subjectless match headers remain ordinary Boolean expressions.
+
 ## Scope, failure, and result
 
 - Try arms in source order; choose the first whose structural pattern and all additional operands succeed. Execute only its body, with no implicit fallthrough.
@@ -80,7 +98,7 @@ Nested destructuring also works directly in that chain, for example `and (first,
 
 ## Remaining rules
 
-The guard's and chain uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when logical operators belong inside a pattern's source value. Grouped Bool or operands introduce no extra pattern bindings. Binding-producing or/not, repeated names within a chain, alternative patterns in one arm, and custom field/equality effect contracts remain open.
+The guard's and chain uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when logical operators belong inside a pattern's source value. Grouped Bool or operands introduce no extra pattern bindings. Binding-producing or/not, alternative patterns in one arm, and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
 
 The ownership model must permit later arms after a failed test or guard. Do not silently duplicate a noncopyable value or commit a move that makes that path invalid. Mutations that invalidate a refinement require explicit rules; these examples do not grant unrestricted writable aliases. The exact order and effect model of recursive structural extraction is separate from the selected left-to-right order of and operands.
 

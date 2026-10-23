@@ -78,7 +78,7 @@ if (left, right) := pair and left == right {
 }
 ```
 
-A later and operand can use names from earlier successful patterns. Rebinding across separate operands remains its own open scope decision.
+A later and operand can use names from earlier successful patterns and may shadow one with a new binding after its whole pattern succeeds. Its source and comparison-pattern RHS free names resolve before those new bindings, using the scope from earlier successful operands. Later operands and the body see the final successful binding. This applies to conditional chains and subject-based match guards; it is not assignment or a type change to the earlier binding. See [chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected).
 
 ## Type-only patterns and existing-subject narrowing
 

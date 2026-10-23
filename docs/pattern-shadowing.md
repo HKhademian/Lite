@@ -1,6 +1,6 @@
 # Pattern binding and shadowing
 
-Status: **ordered shadowing within patterns selected on 2026-10-18**.
+Status: **ordered shadowing within patterns selected on 2026-10-18; shadowing across successful conditional-chain and subject-based match-guard bindings selected on 2026-10-23**.
 
 ## Purpose and rule
 
@@ -58,7 +58,7 @@ if (left, right) := pair and left == right {
 }
 ```
 
-Later successful and operands can use existing earlier bindings. Whether a separate later pattern operand may redeclare one of those names is still a condition-chain scope decision. Within each operand's individual pattern, ordered shadowing is selected.
+Later successful and operands can use existing earlier bindings and may introduce a new binding with the same name. Resolve the later source and comparison-pattern RHS free names before its new bindings are introduced, using the scope established by earlier successful operands. After the whole pattern succeeds, its final binding of each name shadows the earlier one for subsequent operands and the body. The bindings remain distinct and may have different types; this is not assignment, equality, or widening one binding to a union. The same rule applies from an initial match-arm pattern into its if guard and between further guard operands. A failed chain leaks no bindings to else, sibling arms, or following code; ordinary outer lookup remains. See [chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected).
 
 ## Receiver lists and other scopes
 
@@ -76,7 +76,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 - Complete operand boundaries and composition grammar for the selected value/type tests.
 - Complete recursive grammar for selected variable-or-pattern collectors, named-field aliases, and tuple rest.
-- Rebinding across separate and operands and binding-producing or/not.
+- Binding-producing or/not and guaranteed bindings across alternative patterns; successful and-chain shadowing is selected.
 - Per-construct mismatch behavior outside if/match selection.
 - Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.
 - Enum `.case` versus current-context `.field` collisions.

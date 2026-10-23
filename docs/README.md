@@ -101,7 +101,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Type categories](type-categories.md): products, sums, raw codes, domain wrappers, generated operations, and value/reference semantics as separate decisions.
 - [Type categories compared](type-categories-comparison.md): enum, struct, data/case class, value-wrapper, and sealed-family models across twelve reference languages.
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
-- [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
+- [Pattern binding and shadowing](pattern-shadowing.md): repeated names within patterns and across successful chain/guard bindings, recursive binding order, source lookup, and visible binding types.
 - [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.
 - [Comparison patterns](comparison-patterns.md): all ten nonbinding comparison prefixes, selected arithmetic/call/member and grouped RHS forms, required grouping for outer comparison/Boolean/conditional/block operands, runtime bounds evaluated once when reached, ordinary comparison/failure semantics, rejection of implicit-subject chains, and if guards for complex conditions.
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
@@ -146,7 +146,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
 - [Conditionals](conditionals.md): one syntax for actions and values.
-- [Conditional pattern chains](condition-chains.md): and-chained matching, later-operand binding scope, short-circuiting, and open or/not rules.
+- [Conditional pattern chains](condition-chains.md): and-chained matching, selected ordered shadowing across successful operands, source-before-binding scope, short-circuiting, and open or/not rules.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, and-chained guard operands, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based pattern arms and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.

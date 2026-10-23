@@ -81,7 +81,7 @@ Repeated destination names within one pattern are permitted. Bind in recursive w
 
 Aliases remain useful when both selected values must stay accessible. Selected localName = field binds only localName; it does not also introduce the source field's name. Its destination participates in the same ordering rule.
 
-Repeated names in distinct match arms remain independent. Rebinding across separate conditional-chain operands is still open, as are complete schema rules, named versus positional mixing, field effects, and ownership. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
+Repeated names in distinct match arms remain independent. Successful bindings across conditional-chain and subject-based match-guard operands now shadow in order, with each source resolving before its new bindings. Use different names when both values must remain accessible; see [chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected). Complete schema rules, named versus positional mixing, field effects, and ownership remain open. Define duplicate source-field selection separately: selecting one source field twice must not silently duplicate ownership or repeat an effectful getter under an unspecified extraction contract.
 
 ## Related concepts
 
