@@ -1,11 +1,20 @@
 # LiteScript remediation backlog — by topic
 
-**Snapshot:** `d314a9b` (2026-10-23). **Corpus:** 148 Markdown files, ~214k words, 20 `.lite` samples.
-**Scope:** consolidates the 59 items in [TASKS.md](TASKS.md) and adds 15 project-level findings from the 2026-10-23 review.
+**Snapshot:** `177893c` (2026-10-23). **Corpus:** 148 Markdown files, ~214.5k words, 20 `.lite` samples.
+**Scope:** consolidates the 59 items in [TASKS.md](TASKS.md), 15 project-level findings from the 2026-10-23 review, and 7 findings from the 2026-10-23 re-triage.
 
-This is the topic-oriented view. [TASKS.md](TASKS.md) remains the detailed evidence log. T-item statuses are inherited as “reported open”; they have **not** been re-verified against this HEAD. Triage them before treating any row as confirmed.
+This is the topic-oriented view. [TASKS.md](TASKS.md) remains the detailed evidence log. All 59 T items were re-triaged against this snapshot on 2026-10-23; each T entry now carries a verified status.
 
-**Totals:** 74 issues: 59 inherited (T-001–T-059) + 15 new (R-001–R-015). 8 are P0. The current state is a design corpus, not an implementation.
+**Totals:** 81 issues: 59 inherited (T-001–T-059), 15 project findings (R-001–R-015), and 7 re-triage findings (N-001–N-007). 8 are P0. The current state is a design corpus, not an implementation.
+
+## Verification — 2026-10-23
+
+| Batch | Fixed | Partial | Open |
+|---|---:|---:|---:|
+| T-001–T-059 | 3 | 6 | 50 |
+| R-001–R-015 | 2 | 1 | 12 |
+
+Fixed T items: T-001, T-041, T-049. Partial: T-002, T-034, T-043, T-047, T-050, T-054. Fixed R items: R-003 (this re-triage) and R-005 (history pushed); R-013 is partial. See each [TASKS.md](TASKS.md) entry for the evidence behind a status.
 
 **Severity**
 
@@ -16,19 +25,19 @@ This is the topic-oriented view. [TASKS.md](TASKS.md) remains the detailed evide
 
 ## Topic scorecard
 
-Scores describe current health, not effort: 10 means no remediation is needed.
+Scores describe current health, not effort: 10 means no remediation is needed. Issue counts include fixed items for coverage; scores were not re-scored after the re-triage.
 
 | # | Topic | Score | Issues | Main risk |
 |---:|---|---:|---:|---|
 | 1 | Vision and principles | 8/10 | 1 | No defined ladder from super-simple entry use to advanced scenarios |
 | 2 | Foundations and scope | 3/10 | 4 | Surface syntax is running ahead of memory, generics, and modules |
-| 3 | Documentation architecture, metadata, and navigation | 4/10 | 10 | No current normative spec; stale dates and statuses |
-| 4 | Grammar and syntax | 4/10 | 6 | Grammar cannot derive selected declarations or recovery chains |
+| 3 | Documentation architecture, metadata, and navigation | 4/10 | 11 | No current normative spec; stale dates and statuses |
+| 4 | Grammar and syntax | 4/10 | 8 | Grammar cannot derive selected declarations or recovery chains |
 | 5 | Types and inference | 5/10 | 1 | Foundation list and inference rules are incomplete |
-| 6 | Initialization, mutability, and access | 5/10 | 7 | Universal zero is selected before its mappings exist |
+| 6 | Initialization, mutability, and access | 5/10 | 8 | Universal zero is selected before its mappings exist |
 | 7 | Functions, lambdas, and calls | 6/10 | 2 | Tagged return to a function has no syntax |
-| 8 | Conditionals and tags | 5/10 | 3 | Zero fallback silently overwrites accumulated state |
-| 9 | Loops and completion | 4/10 | 6 | Exit and completion contracts disagree across pages |
+| 8 | Conditionals and tags | 5/10 | 4 | Zero fallback silently overwrites accumulated state |
+| 9 | Loops and completion | 4/10 | 7 | Exit and completion contracts disagree across pages |
 | 10 | Pattern matching | 5/10 | 6 | Wildcard and alias vocabulary still implies retired semantics |
 | 11 | Recovery, errors, panics, and cleanup | 4/10 | 8 | Failure aggregate and typed-filter semantics are inconsistent |
 | 12 | Collections and sequences | 5/10 | 5 | `[T]` contract, failure channel, and terminology drift |
@@ -37,7 +46,7 @@ Scores describe current health, not effort: 10 means no remediation is needed.
 | 15 | References and comparisons | 7/10 | 1 | One stale status claim |
 | 16 | Naming and terminology | 5/10 | 1 | Case conventions are undocumented and inconsistent |
 | 17 | Tooling, implementation, and validation | 2/10 | 4 | No executable feedback loop |
-| 18 | Process and repository hygiene | 3/10 | 4 | Stale backlog, unpushed work, no automation |
+| 18 | Process and repository hygiene | 4/10 | 5 | Stale backlog, no automation |
 
 ---
 
@@ -70,6 +79,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-058 · P3 — Status vocabulary is not the four documented labels.** Status lines predominantly say “selected/open/established.” **Fix:** adopt the four labels as status prefixes or redefine the legend to match practice.
 - **R-004 · P1 — Date and metadata drift.** [README](README.md) and [docs index](docs/README.md) say 2026-10-20, while 24 docs contain 2026-10-21/22 selections. **Fix:** use one metadata source, remove hand-written snapshot dates, and add a CI check.
 - **R-006 · P2 — No automated documentation checks.** Links, anchors, duplicate index entries, status vocabulary, and stale dates are checked manually. **Fix:** add a documentation check script and run it in CI.
+- **N-005 · P1 — Index omits eight documents.** [docs/README.md](docs/README.md) has no entry for `branch-result-inference.md`, `conditional-union-fallback.md`, `union-empty-zero-proposal.md`, `union-initialization-policy.md`, `union-parameter-defaults.md`, `union-storage-reference-comparison.md`, `union-zero.md`, or the handoff. Several record selected 2026-10-21 rules. **Fix:** index them with accurate status blurbs.
 
 ## 4. Grammar and syntax — 4/10
 
@@ -79,6 +89,8 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-017 · P2 — Grammar still lacks the selected type layer.** Record, enum, alias, union, and `A & B` forms are unreachable or absent. **Fix:** add a `type_item` production plus union and failure-aggregate placeholders.
 - **T-045 · P2 — Grammar still says receiver declarations follow the source.** No loop receiver declarations exist. **Fix:** delete the clause; count/value metadata is implicit.
 - **R-010 · P2 — Documented code examples are unverified.** T-016 proves at least two examples do not parse. **Fix:** extract fenced examples, parse them, and mark expected-error examples explicitly.
+- **N-002 · P1 — Grammar contradicts itself on bare multi-member union declarations.** [grammar-sketch.md](docs/grammar-sketch.md) requires an initializer or `= ?` for these declarations, while the no-initializer rule says omission supplies the type’s all-zero value. **Fix:** add the union exception to the no-initializer production.
+- **N-004 · P2 — Grammar still calls completion-receiver policy proposed.** [grammar-sketch.md](docs/grammar-sketch.md) lists “completion/recovery receiver mismatch policy” as proposed while saying there is no completion receiver and calling receiver forms superseded. **Fix:** scope the sentence to parameters and recovery.
 
 ## 5. Types and inference — 5/10
 
@@ -95,6 +107,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-029 · P2 — `mutability.md` omits the first-initialization exception.** **Fix:** say “after initialization” and note the `= ?` first-write exception.
 - **T-031 · P2 — `option.md` omits its universal-zero mapping.** **Fix:** add “`zero(Option<T>)` is `.None`; extraction still has no implicit numeric fallback.”
 - **T-050 · P2 — Universal zero is selected before its mappings exist.** Enums, unions, references, resources, and functions still need mappings. **Fix:** mark dependent contracts conditional, or complete the mappings before relying on them further.
+- **N-006 · P2 — Ledger still calls callable zero a proposal.** [decisions-and-open-questions.md](docs/decisions-and-open-questions.md) says function zero mappings remain design work and a zero-result callable is “a proposal”, while [zero-initialization.md](docs/zero-initialization.md) selects zero-result callable behavior. **Fix:** mark callable zero selected and keep only invocation/ABI details open.
 
 ## 7. Functions, lambdas, and calls — 6/10
 
@@ -106,6 +119,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-007 · P0 — Conditional leading-dot rule contradicts itself.** “Does not shadow” and “does not fall through” imply opposite targets. **Fix:** inside a conditional, leading-dot metadata has no target; use `@loop.field` and `@tag.value` only in `then`.
 - **T-049 · P2 — Untagged conditional `then` cannot read its `T`; this is not stated.** **Fix:** state that an untagged `then` can ignore `T` but needs `@tag` to read it, or allow a local name.
 - **T-051 · P2 — Conditional zero fallback remains a beginner-facing footgun.** An unmatched `if` can overwrite accumulated state. **Fix:** confirm the rule is intentional, or require an explicit `else`/`continue` for value-position conditionals in loops.
+- **N-001 · P1 — Conditional zero initialization is described both as selected and superseded.** [conditionals.md](docs/conditionals.md) still says the result is “initialized to `zero(T)`” and [tags-and-contexts.md](docs/tags-and-contexts.md) says it exists before the first condition, while [conditionals.md](docs/conditionals.md) calls that model superseded and [conditional-union-fallback.md](docs/conditional-union-fallback.md) requires an explicit fallback for multi-member unions. **Fix:** remove the pre-selection-zero wording and define only the selected-branch/fallback construction.
 
 ## 9. Loops and completion — 4/10
 
@@ -115,6 +129,7 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 - **T-014 · P2 — `result-and-errors.md` cites the retired loop action-only receiver rule.** **Fix:** delete the sentence or replace it with the current `then` versus recovery distinction.
 - **T-042 · P2 — Historical accumulator omits `break value`.** **Fix:** add `break value` to the replacing list.
 - **T-043 · P2 — Loop-alternatives page uses retired `else`/“accumulator” terms.** **Fix:** use `then` and `.value`, or mark the page historical.
+- **N-003 · P2 — Retired accumulator terminology survives in new and updated pages.** [branch-result-inference.md](docs/branch-result-inference.md) and [conditional-union-fallback.md](docs/conditional-union-fallback.md) say “loop accumulator”; [references.md](docs/references.md) says “selected accumulator”; [tooling-and-learning.md](docs/tooling-and-learning.md) lists accumulators as current; [control-flow.md](docs/control-flow.md) says “accumulator-preserving bare `break`”. [loop-value.md](docs/loop-value.md) says `.value` replaces it. **Fix:** use `.value`/“loop value” except in explicit history.
 
 ## 10. Pattern matching — 5/10
 
@@ -177,9 +192,10 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 ## 18. Process and repository hygiene — 3/10
 
 - **T-055 · P3 — Handoff file is orphaned and overstates completion.** It says `status: in_progress` while all six todos are completed. **Fix:** move or index it, set the overall status, and link rather than restate selected rules.
-- **R-003 · P1 — Backlog is stale.** [TASKS.md](TASKS.md) is 99 commits behind, says 135 docs / 158.5k words, and marks no item fixed. **Fix:** re-triage all 59 items, add status/owner/commit, update counts and date, and regenerate on each release.
-- **R-005 · P1 — 132 commits are unpushed.** The branch is ahead of `origin/main` with no backup. **Fix:** push, add a remote backup, and run CI on the remote.
+- **R-003 · FIXED (2026-10-23) — Backlog was stale.** All 59 T items were re-triaged at `177893c`; counts, date, and per-item statuses are updated. **Fix:** keep counts generated and re-triage on each snapshot.
+- **R-005 · FIXED (2026-10-23) — Unpushed history.** `origin/main` matched the documentation HEAD `177893c` when verified (`git rev-list --left-right --count origin/main...main` = `0 0`); the re-triage commit is the only local commit. **Fix:** push after review and keep CI and a remote backup enabled.
 - **R-012 · P3 — No license or contribution metadata.** There is no `LICENSE` or `CONTRIBUTING` file. **Fix:** add a license and a short contribution note, or state that the repository is not accepting contributions.
+- **N-007 · P3 — Backlogs are not linked from either entry point.** [README.md](README.md) and [docs/README.md](docs/README.md) link neither [TASKS.md](TASKS.md) nor [ISSUES-BY-TOPIC.md](ISSUES-BY-TOPIC.md). **Fix:** link both from the docs index or a single status page.
 
 ---
 
@@ -187,10 +203,10 @@ The white paper and [principles](docs/principles.md) are coherent and usable.
 
 ### Phase 0 — stabilize the record (1–2 days)
 
-1. Push the 113 unpushed commits (R-005).
-2. Re-triage T-001–T-059 and update [TASKS.md](TASKS.md) (R-003).
+1. Confirm `origin/main` matches HEAD and enable remote CI (R-005, R-006).
+2. Keep the re-triaged T statuses current (R-003, done 2026-10-23).
 3. Fix the metadata drift and add a date/link check (R-004, R-006).
-4. Resolve the remaining P0 semantics: T-001, T-002, T-003, T-004, T-005, T-006, T-007.
+4. Resolve the remaining P0 semantics: T-002 (partial) and T-003–T-007 (open); T-001 is fixed.
 5. Add the missing roadmap/definition of done (R-013).
 
 ### Phase 1 — make the core executable (2–4 weeks)
@@ -231,6 +247,7 @@ A topic is closed only when:
 ## Coverage check
 
 - **T-001–T-059:** all 59 appear exactly once in the primary sections above.
-- **R-001–R-015:** all 15 new findings appear.
-- **Not re-verified:** all inherited T-statuses. Do not treat this file as proof that an item is still open; confirm each against HEAD during Phase 0.
-- **Not re-opened:** the TASKS “Verified non-issues” list remains valid at its snapshot: internal links/anchors, tagged-return wording, `continue @scan.value` as a selected form (except T-004), record `= 0`, and external URLs. Re-check after edits.
+- **R-001–R-015:** all 15 project findings appear.
+- **N-001–N-007:** all 7 re-triage findings appear in their primary topics.
+- **Re-verified 2026-10-23:** 3 T fixed, 6 T partial, 50 T open; 2 R fixed, 1 R partial, 12 R open. See [TASKS.md](TASKS.md) for per-item evidence.
+- **Not re-opened:** tagged-return wording, `continue @scan.value` as a selected form (except T-004), and record `= 0` remain non-issues. Internal links/anchors were checked at the snapshot; external URL liveness was last checked 2026-10-20 and has not been re-verified.
