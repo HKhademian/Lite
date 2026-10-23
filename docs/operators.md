@@ -1,13 +1,12 @@
 # Operators
 
-Status: **equality, comparison chaining, and logical direction established; complete arithmetic precedence and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
 
 ## Working operator set
 
 ```text
 +  -  *  /  //  %
-==
-<  <=  >  >=
+==  =!=  >  >!  <  <!  >=  >!=  <=  <!=
 and  or  not
 =
 +=  -=  *=  /=  //=  %=
@@ -25,21 +24,23 @@ Numeric representations, noninteger remainder, implicit conversions, and operato
 
 ## Equality and negation
 
-Use one equality operator, `==`:
+Use `==` for equality and `=!=` for its Boolean complement:
 
 ```text
 if a == b {
     same()
 }
 
-if not a == b {
+if a =!= b {
     different()
 }
 ```
 
-The current design uses `not a == b` for inequality. Earlier proposals for `?=` as equality and `!=` as inequality are superseded. `?=` and `!=` have no currently assigned update meaning either; an `op=` form requires a defined underlying operation.
+`not a == b` remains equivalent to `not (a == b)` for one comparison; `=!=` expresses inequality within one adjacent comparison of a longer chain. Earlier proposals for `?=` as equality and conventional `!=` as inequality remain superseded. Neither token gains an assigned meaning from the selected `=!=` spelling.
 
-The user requested a [negated-comparison investigation](negated-comparison-operators.md) on 2026-10-23: =!=, >!, >!=, <!, and <!=, or other readable, unambiguous spellings. The review covers Boolean complements, postfix-propagation collisions, possible generic/fallible type boundaries, and alternatives. The user separately selected type-suffix attachment: T! requires the ! to touch its type, while spacing around a following initializer = is optional. If angle-bracket generics are adopted, grammatical type context must preserve > then attached ! then initializer =. None of the comparison candidates is selected; this does not change the current expression operator set.
+The user selected the [negated-comparison family](negated-comparison-operators.md) on 2026-10-23: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Each negative form invokes the corresponding positive comparison once on the evaluated operands and complements its normal Bool result, preserving failure and effect behavior. It does not negate an operand, independently overload a different relation, or unconditionally rewrite to the opposite ordering. Complete custom-comparison and Float contracts remain open.
+
+All ten are expression comparison tokens. Recognize longer members before their prefixes in expression context; a trailing = belongs to the comparison token and does not introduce a compound update. Type-suffix attachment remains separately selected: T! requires ! to touch its type, with optional spacing around a following initializer =. If angle-bracket generics are adopted, grammatical type context must preserve > then attached ! then initializer =. This operator selection does not adopt a generic grammar or direct comparison-pattern prefixes.
 
 ## Comparison chains
 
@@ -47,7 +48,7 @@ The user requested a [negated-comparison investigation](negated-comparison-opera
 inside := 0 <= x < 10;
 ```
 
-Chains compare adjacent operands, evaluate each operand at most once from left to right, and stop at the first false comparison. Each adjacent pair must be statically comparable and produce `Bool`. Equality and ordering operators share the comparison precedence level; mixed operators and changes in direction use the same adjacent-pair rule.
+Chains compare adjacent operands, evaluate each operand at most once from left to right, and stop at the first false comparison. Each adjacent pair must be statically comparable and produce `Bool`. All ten operators ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!= share exactly one comparison precedence level. Mixed positive/negative operators and changes in direction use the same adjacent-pair rule, rather than comparing an intermediate Bool with the next operand.
 
 `not 0 <= x < 10` means `not (0 <= x < 10)`. Parentheses can instead make a comparison result an operand, as in `(a < b) == flag`. See [comparison chains](comparison-chains.md) for evaluation examples, ownership constraints, and the difference from a literal `and` rewrite.
 

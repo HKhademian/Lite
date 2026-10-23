@@ -1,6 +1,6 @@
 # Comparison chains
 
-Status: **accepted; custom comparison and ownership contracts still need formalization**.
+Status: **accepted; all ten positive/negated comparison operators share this precedence and chain contract, selected 2026-10-23; custom comparison and ownership contracts still need formalization**.
 
 ## Purpose and template
 
@@ -10,7 +10,7 @@ Express mathematical bounds and adjacent comparisons without repeating the middl
 lower <= value < upper
 ```
 
-Supported comparison operators are `<`, `<=`, `>`, `>=`, and `==`. All share one comparison precedence level. A chain produces `Bool`.
+Supported comparison operators are `==`, `=!=`, `>`, `>!`, `<`, `<!`, `>=`, `>!=`, `<=`, and `<!=`. All ten share exactly one comparison precedence level. A chain produces `Bool`.
 
 ## Adjacent-pair rule
 
@@ -26,9 +26,13 @@ Mixed operators, equality chains, and changes in direction use the same rule:
 a < b > c;    /* a < b and b > c */
 a == b == c;  /* a == b and b == c */
 a < b == c;   /* a < b and b == c */
+a >! b < c;   /* not (a > b), then b < c */
+a =!= b == c; /* not (a == b), then b == c */
 ```
 
 These comments describe logical conditions. Repeating a source expression in a literal `and` rewrite is not equivalent when that expression has effects.
+
+A negated operator complements only its adjacent positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. If the resulting Bool is false, the chain stops. Prefix not instead negates the complete chain. For example, not a > b < c means not ((a > b) and (b < c)) under single-evaluation chain semantics; it is not the same rule as a >! b < c. See [negated comparisons](negated-comparison-operators.md).
 
 ## Evaluation and short-circuiting
 

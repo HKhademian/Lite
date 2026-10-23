@@ -18,7 +18,7 @@ Recommend extending the existing value-match family to these operator prefixes:
 
 This adds comparison choices within value matching rather than a fourth base operation. Each prefix tests the supplied subject/component against its right operand and introduces no binding. Literal value patterns keep their concise equality meaning.
 
-No inequality or negated-ordering token is selected through this extension. The user requested a separate [negated-comparison investigation](negated-comparison-operators.md), including =!=, >!, >!=, <!, and <!=. Conventional != also has no selected LiteScript meaning. Ordinary Boolean negation already expresses inequality in a guard; a comparison-token review does not automatically select direct comparison patterns or logical pattern negation.
+The user separately selected the [expression comparison family](negated-comparison-operators.md), including =!=, >!, >!=, <!, and <!=, with all ten positive/negative operators at one comparison precedence. This does not automatically select their direct pattern prefixes or logical pattern negation: == expected remains the selected comparison-pattern primitive, while the proposed direct-prefix extension remains open. Guards can use the selected expression operators. Conventional != still has no selected LiteScript meaning.
 
 ## A direct component comparison
 
