@@ -75,6 +75,8 @@ The initializer supplies values by name into l, r order, infers both component t
 
 ### Tuple value shorthand and position types
 
+In inferred tuple construction, explicit labels must be unique within each constructor, including labels introduced by =name shorthand. Collisions involving spread may replace an earlier slot without moving it; the final surviving contribution determines that component's type. Thus (a = "3", ...(a = 1,)) infers (a: Int), whereas both (a = "3", a = 1) and (a = 3, a = 1) are duplicate-label errors. Earlier valid expressions still evaluate in written order. This does not retype a stored tuple or widen a declared parameter type; fixed expected-schema integration and superseded-value ownership remain separate. See [construction validation and insertion](tuple-spread-and-rest.md#append-or-replace-by-label-selected).
+
 In value context, (cake, tea) constructs unnamed positional components unless an expected named destination supplies their roles. The selected (= cake, = tea) instead supplies named entries cake = cake and tea = tea. This does not change bare labels in tuple type context. Named and unnamed tuples both expose fixed zero-based numeric access (.0, .1, and so on), with the corresponding component's static type and compile-time bounds checking. See [tuple entries and access](tuple-entries-and-access.md); mixed standalone inference is selected: (42, = tea) infers (:Int, tea: String) when tea is String. Only explicitly named entries supply labels without an expected schema. Intact stored named/unnamed conversions remain open.
 
 ## Inferred functions

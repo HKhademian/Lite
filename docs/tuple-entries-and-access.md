@@ -34,7 +34,7 @@ meal := (cake = bake(), tea = brew()); /* explicit labels for expressions */
 meal := (= bake(), = tea);            /* rejected: bake() is not an identifier */
 ```
 
-Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Tuple construction now selects [append-or-replace](tuple-spread-and-rest.md#append-or-replace-by-label-selected): unnamed entries and new labels append, while repeated labels replace their first slot without moving it. This applies equally to explicit, shorthand, and spread entries. Named/unnamed components may interleave: (= cake, tea) is now valid, with tea remaining unnamed. This supersedes the earlier tuple-construction duplicate-label rejection and prefix/suffix restriction; calls now use next-unfilled positional routing and named replacement against a fixed signature, with =name shorthand and explicit tuple spread selected separately.
+Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Tuple construction now selects [append-or-replace](tuple-spread-and-rest.md#append-or-replace-by-label-selected): unnamed entries and new labels append, while label collisions involving spread replace their first slot without moving it. Explicit labels must be unique within each constructor, including labels supplied by =name shorthand; each nested spread operand is validated independently. The final surviving contribution determines the inferred component type. Named/unnamed components may interleave: (= cake, tea) is now valid, with tea remaining unnamed. This supersedes the earlier prefix/suffix restriction; duplicate explicit labels remain errors; calls now use next-unfilled positional routing and named replacement against a fixed signature, with =name shorthand and explicit tuple spread selected separately.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
@@ -130,7 +130,7 @@ Treating grouped T as a tuple, identifying T with its singleton, or automaticall
 
 ## Mixed tuples selected
 
-Initially selected 2026-10-22 for an unnamed prefix and named suffix; extended by the user 2026-10-23 to arbitrary interleaving in tuple values and their stored layouts. Without an expected destination type, append components in written order, infer labels only for explicit/shorthand entries, and replace repeated labels in their original slots:
+Initially selected 2026-10-22 for an unnamed prefix and named suffix; extended by the user 2026-10-23 to arbitrary interleaving in tuple values and their stored layouts. Without an expected destination type, append components in written order, infer labels only for explicit/shorthand entries, and replace permitted label collisions involving spread in their original slots:
 
 ```text
 tea := "green";
@@ -145,7 +145,7 @@ mixed.tea; /* same component as mixed.1 */
 
 The selected mixed type form combines :Type for an unnamed component with name: Type for a named component. No synthetic label is added to the unnamed position. The per-position label, or its absence, participates in the existing structural tuple identity together with the resolved component type. Fully unnamed, fully named, and mixed tuples all retain fixed numeric access; name access exists only for labeled components. A label gives an existing position semantic meaning without changing storage: the same ordered component types have the same size, alignment, and per-position offsets regardless of their labels. Labels add no per-value name metadata. Equal layout does not erase label-sensitive type identity or permit implicit relabeling. See [tuple labels and storage](memory-and-performance.md#tuple-labels-describe-positions-without-changing-storage).
 
-Evaluate entries once from left to right, including entries later replaced. Interleaved types use the existing component forms in their stored order, for example (cake: Int, :Int, tea: String). No runtime representation change follows merely from interleaving. Repeated construction labels replace their original slot; duplicate labels in tuple type declarations and duplicate source selectors in patterns still fail. Expected-schema routing for newly interleaved/repeated-label inputs, replacement type compatibility, and cleanup/ownership remain separate. See [insertion rules](tuple-spread-and-rest.md#append-or-replace-by-label-selected).
+Evaluate entries once from left to right, including entries later replaced. Interleaved types use the existing component forms in their stored order, for example (cake: Int, :Int, tea: String). No runtime representation change follows merely from interleaving. Spread collisions replace their original slot, with the surviving contribution determining its inferred type. Repeated explicit labels, duplicate labels in tuple type declarations, and duplicate source selectors in patterns still fail. Expected-schema routing for newly interleaved/repeated-label inputs, fixed-schema replacement compatibility, and cleanup/ownership remain separate. See [insertion rules](tuple-spread-and-rest.md#append-or-replace-by-label-selected).
 
 Positional destructuring can bind the whole mixed tuple:
 
@@ -330,7 +330,7 @@ Selected basic tuple spread preserves statically known product shape and labels.
 
 With Unit as the zero-component tuple, Unit-valued expressions are zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
 
-For noncolliding inputs, spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread yields zero, one, or multiple components and explicitly establishes tuple syntax: (...empty) gives Unit/(), (...one) stays a singleton tuple, and (...pair) retains both components. Preserve operand component labels and order. Repeated labels now replace their original slot without adding a component, so total written/expanded arity can exceed final tuple arity. Named/unnamed value components and corresponding stored layouts may interleave. Expected-schema routing for the new cases, replacement type compatibility, complete recursive grammar, and access/ownership remain separate.
+For noncolliding inputs, spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread yields zero, one, or multiple components and explicitly establishes tuple syntax: (...empty) gives Unit/(), (...one) stays a singleton tuple, and (...pair) retains both components. Preserve operand component labels and order. Permitted spread collisions replace their original slot without adding a component, so total written/expanded arity can exceed final tuple arity. Named/unnamed value components and corresponding stored layouts may interleave. Expected-schema routing for the new cases, fixed-schema replacement compatibility, complete recursive grammar, and access/ownership remain separate.
 
 ### 10. Diagnostics, formatting, and migration
 
@@ -360,7 +360,7 @@ Checked against primary documentation, 2026-10-22. These are comparisons, not Li
 
 Unit is now selected as the zero-component tuple, with () accepted as equivalent value/type syntax. Keep selected singleton values and explicit extraction; reference prose can retain Unit as the clear action-result spelling. Singleton value/type forms and binding/grouped patterns are selected; the former singleton syntax recommendations are resolved above.
 
-Basic tuple spread, append-or-replace construction, and positional rest's zero/one/many remainder shapes are selected. Next settle complete recursive type/pattern integration, expected-schema routing for the new construction cases, and replacement types/ownership. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
+Basic tuple spread, append-or-replace construction, and positional rest's zero/one/many remainder shapes are selected. Next settle complete recursive type/pattern integration, expected-schema routing for the new construction cases, and fixed-schema replacement compatibility and ownership. Keep call arity, explicit defaults, Option/Result wrappers, nominal empty records, evaluation order, definite initialization, and access rules intact. No special runtime mechanism is needed merely to represent the distinctions, but zero physical overhead remains an implementation claim to measure.
 
 ## Follow-up proposals and scalar versus tuple examples
 

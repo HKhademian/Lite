@@ -1,10 +1,10 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Repeated construction labels replace their earlier slot without moving it; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Label collisions involving spread replace their earlier slot without moving it; duplicate explicit labels are errors, and surviving contributions determine inferred component types; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Tuple construction spread selected
 
-Selected by the user, 2026-10-23: ...tuple inserts an existing tuple's components into the enclosing tuple. Process components in source order, preserving their labels where present and their types. New components append; repeated labels use the earlier slot as specified below. Evaluate each operand once in written order. Flatten only explicitly spread tuples; a nested tuple written as an ordinary entry remains one component.
+Selected by the user, 2026-10-23: ...tuple inserts an existing tuple's components into the enclosing tuple. Process components in source order, preserving their labels where present and their types. New components append; permitted label collisions involving spread use the earlier slot as specified below. Evaluate each operand once in written order. Flatten only explicitly spread tuples; a nested tuple written as an ordinary entry remains one component.
 
 ```text
 pair := (10, 20);
@@ -28,11 +28,11 @@ This contract is tuple-to-tuple spread and requires operands with statically kno
 
 ### Append or replace by label selected
 
-Selected by the user, 2026-10-23: construct inferred tuples from left to right, expanding each spread in source order. Apply the same insertion rule to spread components, explicit labeled entries, same-name shorthand, and ordinary unnamed entries:
+Selected by the user, 2026-10-23, with explicit-duplicate validation clarified later that day: construct inferred tuples from left to right, expanding each spread in source order. First require unique explicitly written labels within each tuple constructor, treating =name as name = name. A spread operand's labels belong to that operand rather than to the enclosing constructor's explicit-label set. Validate each nested constructor independently; spread does not make an invalid operand valid. For an admitted constructor, apply these insertion rules:
 
 1. An unnamed component appends at the next free position.
 2. A previously unseen label appends at the next free position and names that slot.
-3. A label already introduced by an earlier component replaces that slot's value. Keep its position and label; do not append another component or move the slot.
+3. A label already introduced by an earlier component replaces that slot's value when the collision involves spread. Keep its position and label; do not append another component or move the slot. Two explicitly written entries with the same label are an error, even when their types and values agree.
 
 ```text
 x := (...(cake = 10, tea = 20), cake = 30);
@@ -45,17 +45,24 @@ result := (1, =c, ...(=a, 9, =b), a = new, 6);
 /* result = (1, =c, a = new, 9, =b, 6) */
 /* a remains at position 2; the final unnamed 6 appends at position 5 */
 
-direct := (cake = 10, tea = 20, cake = 30);
-/* same two-component result as x */
+changed := (a = "3", ...(a = 1,));
+/* changed = (a = 1), with type (a: Int); a remains at position 0 */
+
+/* rejected: (a = "3", a = 1); duplicate explicit label */
+/* rejected: (a = 3, a = 1);   same type does not permit a duplicate */
+/* rejected: (a = 1, a = 1);   same value does not permit a duplicate */
+/* rejected: (=a, a = 1);      shorthand also supplies an explicit label */
 ```
 
-Named and unnamed components may interleave in tuple values and the corresponding stored tuple layout. This supersedes the earlier positional-prefix/named-suffix restriction and duplicate-label rejection for tuple value construction. Only one slot for each label survives, at the position of that label's first introduction. A later spread may replace an earlier explicit field, and a later explicit field may replace a spread field. Unnamed components never replace an earlier position by value or by a generated label.
+Named and unnamed components may interleave in tuple values and the corresponding stored tuple layout. This supersedes the earlier positional-prefix/named-suffix restriction. The later clarification narrows duplicate-label replacement to collisions involving spread; repeated explicit labels remain errors. Only one slot for each label survives, at the position of that label's first introduction. A later spread may replace an earlier explicit field, a later explicit field may replace a spread field, and successive spreads may replace each other's fields. Unnamed components never replace an earlier position by value or by a generated label.
 
-All entry/operand expressions still evaluate once in written order, including expressions whose contributed values are later replaced. The shown equivalence describes final slots, not permission to erase earlier effects or required cleanup. Static labels and tuple shapes let the compiler determine destinations; no runtime name dictionary is required by this rule. Replacement type compatibility and cleanup/ownership of superseded values need separate rules.
+For an inferred tuple, the final surviving contribution determines each slot's component type. Spread replacement may therefore change that type: the String contribution in changed above is superseded by Int, without inferring String | Int. The earlier contribution must still be a valid expression; this construction rule does not retype an already stored tuple or require the final slot to hold every intermediate contribution.
+
+All entry/operand expressions in an admitted constructor still evaluate once in written order, including expressions whose contributed values are later replaced. The shown equivalence describes final slots, not permission to erase earlier effects or required cleanup. Static labels and tuple shapes let the compiler determine destinations; no runtime name dictionary is required by this rule. Cleanup/ownership of superseded values and integration with a fixed expected tuple schema remain separate contracts.
 
 The former unnamed-prefix/named-suffix restriction was a uniformity choice shared with calls, not a memory-layout requirement. Interleaving itself is deterministic under this insertion algorithm. Readability requires distinguishing tuple construction from calls and patterns; later replacement must retain source-order effects. Expected-schema routing for the newly allowed construction cases remains to be reviewed.
 
-Function calls now share fixed-slot construction: positional inputs fill the next unfilled declared slot, including after named inputs; repeated names replace an earlier supplied value. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each supplied value must fit its declared type/access. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; repeated constructor labels produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
+Function calls have a separately selected fixed-slot construction rule: positional inputs fill the next unfilled declared slot, including after named inputs; repeated names replace an earlier supplied value. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each supplied value must fit its declared type/access. Whether the new explicit-duplicate restriction also applies to calls remains to be confirmed; the inferred tuple rule does not change declared parameter types. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; valid spread collisions produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
 
 ## Positional tuple rest selected
 
@@ -196,7 +203,7 @@ Construction can contain multiple spreads, preserving each operand's expanded co
 combined := (0, ...left, 3, ...right, 6);
 ```
 
-Positional tuple patterns select at most one trailing rest capture. Omitting rest requires exact arity. Writing rest permits zero remaining components but never supplies missing required components. Construction spread's placement does not extend pattern rest placement. Construction label collisions use earlier-slot replacement, and named/unnamed value components may interleave.
+Positional tuple patterns select at most one trailing rest capture. Omitting rest requires exact arity. Writing rest permits zero remaining components but never supplies missing required components. Construction spread's placement does not extend pattern rest placement. Permitted construction label collisions involving spread use earlier-slot replacement, and named/unnamed value components may interleave.
 
 No public heap allocation, bitwise-copy policy, deep cloning, duplicate resource ownership, or mutable aliasing permission follows from the ellipsis. The eventual copy/move/borrow contracts govern component use and simultaneous bindings.
 
