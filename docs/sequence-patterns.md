@@ -4,7 +4,7 @@ Status: **tuples, typed positional composition, and positional tuple rest shape/
 
 ## Shared component meanings
 
-Each position receives exactly its corresponding component. A name binds it, : Type tests its type, == expected compares it with an existing value, and nested structure/cases recursively apply the same rules. Repeated names shadow in written order, including ordinary readable _.
+Each position receives exactly its corresponding component. A name binds it, : Type tests its type, a selected comparison prefix such as == expected or >= limit compares it with a right operand without binding, and nested structure/cases recursively apply the same rules. Repeated names shadow in written order, including ordinary readable _.
 
 ## Tuples and pairs
 

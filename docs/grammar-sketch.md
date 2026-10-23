@@ -335,6 +335,16 @@ At most one capture appears last in a positional tuple pattern. It preserves the
 
 The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. Current loop headers bind only one optional item name; destructuring and selection belong in the body. Parameter and completion/recovery receiver mismatch policy remains proposed. A pattern placeholder does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation.
 
+### Comparison-pattern prefixes selected
+
+```text
+comparison_pattern := comparison_operator comparison_pattern_operand
+```
+
+comparison_operator is the same ten-token family used by expression comparisons below. The enclosing pattern supplies the left operand; comparison_pattern_operand is a descriptive placeholder for the right value expression. Its complete recursive boundaries, including arm bodies and named-field selector clauses, remain open. This fragment selects no additional constructor schema, header-pattern context, or type-based parsing rule.
+
+Each prefix introduces no binding and uses its ordinary operator meaning, including Boolean complement for negative forms. The runtime right operand evaluates once when the comparison is reached; skipped tests do not evaluate it. RHS names resolve in the surrounding pre-pattern scope, not from new bindings elsewhere in the same pattern. False rejects that pattern; comparison/expression failures retain their ordinary failure behavior rather than becoming mismatch. Supported conditional/match contexts retain their mismatch rules, and ordinary declarations retain irrefutability requirements. Use later and guards for compound or cross-component conditions. General logical patterns, binding-producing alternatives, and implicit-subject pattern comparison chains are not selected. See [comparison patterns](comparison-patterns.md).
+
 ## Loops
 
 ```text
@@ -440,7 +450,7 @@ comparison_operator := "==" | "=!=" | ">" | ">!" | "<" | "<!"
                      | ">=" | ">!=" | "<=" | "<!="
 ```
 
-All ten comparison operators share exactly this one precedence level, binding more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Negated operators complement one corresponding positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Recognize the longest comparison token in expression context; grammatical type context retains the selected attached type-suffix/initializer boundary. Parentheses establish separate comparisons when required. Direct comparison-pattern prefixes remain separately proposed.
+All ten comparison operators share exactly this one precedence level, binding more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Negated operators complement one corresponding positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Recognize the longest comparison token in expression context; grammatical type context retains the selected attached type-suffix/initializer boundary. Parentheses establish separate comparisons when required. All ten nonbinding comparison-pattern prefixes are selected separately; that does not add implicit-subject pattern chains.
 
 `comparison_operand` is a placeholder for expressions binding more tightly than comparisons, including grouping and arithmetic; its full production remains open. With no comparison operator, the production passes through the operand expression. Arithmetic, ranges, calls, member access, literals, type syntax, and pattern grammar are intentionally not completed here. See [comparison chains](comparison-chains.md).
 

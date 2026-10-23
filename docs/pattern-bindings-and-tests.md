@@ -1,6 +1,6 @@
 # Pattern bindings, value tests, and type tests
 
-Status: **bind, type-match, and value-match primitives selected on 2026-10-18; full composition grammar and effect/ownership contracts remain open**.
+Status: **bind, type-match, and value-match primitives selected on 2026-10-18; all ten comparison prefixes selected within value matching on 2026-10-23; full composition grammar and effect/ownership contracts remain open**.
 
 ## Purpose
 
@@ -12,12 +12,13 @@ The selected base operations on a supplied value are bind, type match, and value
 
 1. **Bind:** `name` introduces a local name for the supplied value.
 2. **Type match:** `: Type` checks the supplied value's type without binding a new name.
-3. **Value match:** `== expected` compares the supplied value with an existing value without binding a new name.
+3. **Value match:** a selected comparison prefix, such as `== expected` or `>= limit`, compares the supplied value with its right operand without binding a new name. All ten positive/negative comparison operators are supported.
 
 ```text
 name                  /* bind */
 : Type                /* type match */
 == expected           /* value match */
+>= limit              /* another comparison in the same value-match family */
 ```
 
 These are pattern operations with a supplied subject, not standalone expressions creating values. The existing typed binding composes the first two operations:
@@ -36,7 +37,7 @@ The [Student aggregate examples](aggregate-patterns.md) apply these meanings to 
 
 Named record patterns use inferred braces with destination pattern = sourceField, for example { years = age, }. The source field is selected on the right; the receiving pattern is on the left. A type-only test is { : Int = age, } and a typed alias is { years: Int = age, }. Retained conveniences field == expected compare without binding, while field: Type type-tests and binds under the same field name. These reuse the three primitives; the previous reversed field = destinationPattern mapping is superseded.
 
-The [comparison-pattern review](comparison-patterns.md) proposes extending value matching with direct <, <=, >, and >= prefixes. Equality remains the selected direct comparison. Other comparisons already work in ordinary Boolean and guards, including grouped Boolean or; general logical subpatterns and binding-producing alternatives remain separate open features.
+The [comparison-pattern family](comparison-patterns.md) selects all ten prefixes: ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!=. Each tests its supplied component with the ordinary operator meaning and binds nothing. Runtime right operands evaluate once when the test is reached; false is mismatch and failures remain failures. RHS names resolve in the surrounding pre-pattern scope. Compound and cross-component relationships continue to use and guards; general logical subpatterns and binding-producing alternatives remain separate open features.
 
 An unmarked bare identifier in a pattern is a binding. The rule does not reinterpret type names after colon, field selectors, or explicit constructor heads as bindings. Imports, capitalization, and the presence of an outer constant or type do not turn a bare binding into a test. `_` remains ordinary and readable; repeated bindings shadow in recursive written order without asserting equality.
 
@@ -172,8 +173,8 @@ Match examples use literal cases, dot-prefixed enum cases, and bare type names f
 
 ## Review outcome and remaining work
 
-Bind (`name`), type match (`: Type`), and value match (`== expected`) are selected as base operations. Typed bindings compose binding and type matching; literals remain concise value tests. Explicit `.None` case selection and ordinary readable underscore bindings remain selected.
+Bind (`name`), type match (`: Type`), and value match are selected as base operations. Value matching accepts all ten comparison prefixes, including == expected and >= limit; this does not add a fourth base operation. Typed bindings compose binding and type matching; literals remain concise equality tests. Explicit `.None` case selection and ordinary readable underscore bindings remain selected.
 
-Complete equality-operand boundaries, equality effects/fallibility, exact type/subtype semantics, and refinement stability before treating the design as an implementation-ready specification. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
+Complete comparison-operand boundaries, custom comparison effects/fallibility, exact type/subtype semantics, and refinement stability before treating the design as an implementation-ready specification. Runtime comparison RHS expressions already evaluate once when reached, and failures remain failures. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
 
 Related: [pattern shadowing](pattern-shadowing.md), [match capabilities](match-patterns.md), [type tests](type-tests-and-narrowing.md), and [match arm chains](match-guards.md).

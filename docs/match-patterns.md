@@ -19,7 +19,7 @@ The five capabilities below are selected requirements. Where a spelling extends 
 
 ## 1. Equality
 
-Match by equality with a value: numbers, strings, Booleans, named constants, and compatible values computed or obtained at runtime. This is more than an integer-only jump-table switch.
+Match by equality with a value: numbers, strings, Booleans, named constants, and compatible values computed or obtained at runtime. Equality is one specialization of the selected comparison-pattern family: all ten comparison operators may prefix a right operand, compare it with the supplied subject/component, and introduce no binding. Runtime bounds evaluate once when reached; false is mismatch and failures remain failures. See [comparison patterns](comparison-patterns.md). This is more than an integer-only jump-table switch.
 
 Literal value-match arms:
 
@@ -34,7 +34,7 @@ Require compatible operand types and a defined equality contract; do not add imp
 
 The selected base operations are bind (`name`), type match (`: Type`), and value match (`== expected`). Typed binding `name: Type` composes the first two. The [binding-versus-testing reference review](pattern-bindings-and-tests.md) explains their distinctions and remaining semantic contracts. Bare identifiers and `.None` keep their selected roles; no prelude constant or type name silently changes a bare binding into a test.
 
-Decide how many times and when a computed comparison value is evaluated, whether matching uses ordinary `==` or a restricted equality capability, and how side effects or fallible equality participate. The subject-once rule does not automatically answer those questions. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
+A computed comparison RHS evaluates once when its test is reached; skipped tests do not evaluate it. Prefixes use ordinary comparison meanings and preserve failures rather than converting them into mismatch. Complete generic/custom comparison applicability, extraction effects, and ownership commitment remain open. Custom equality must not silently swallow recoverable errors or force every structural pattern to call user-defined equality.
 
 ## 2. Plain enums
 
@@ -151,7 +151,7 @@ Other useful follow-ups are alternatives in one arm, range patterns, and a remai
 - Complete recursive composition and operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection. No interpretation may rely on capitalization or whitespace.
 - Every match must now be exhaustive, including actions; _ {} explicitly ignores remaining values. Specify overlap, unreachable arms, optional else fallback syntax, and the coverage algorithm.
 - Define borrow/copy/move behavior and field access permissions, especially after a nested match fails.
-- Specify equality semantics, effects, and comparison-operand evaluation without sacrificing the once-evaluated subject contract.
+- Formalize custom comparison applicability/effects, extraction, and ownership without sacrificing the selected once-evaluated subject and RHS-once-when-reached contracts.
 - Share the applicable patterns with conditional matching; do not create an unrelated `if` pattern language.
 
 Some fragments intentionally omit remaining arms to isolate a pattern category. They are not claims of exhaustive or executable examples. These capabilities do not establish a parser, representation, or benchmark result.

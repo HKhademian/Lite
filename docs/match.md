@@ -113,7 +113,7 @@ This example assumes a stable `person: User | Guest` and String-producing method
 
 The earlier bare `User` type-arm candidate is ruled out by the selected bare-name binding rule: it binds a name rather than testing a type. Capitalization and type-name lookup do not change that meaning. The selected `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. It introduces no name; explicit `user: User` combines the same type match with a binding.
 
-Bind (`name`), type match (`: Type`), and value match (`== expected`) are selected base operations. They compose within structural patterns; components use variable bindings or nested patterns without combined whole-value/nested collectors; complete recursive record/tuple parsing remains open. Bare identifiers bind, and `.None` explicitly selects the absent Option case; see [pattern bindings and tests](pattern-bindings-and-tests.md).
+Bind (`name`), type match (`: Type`), and value match (comparison prefixes such as `== expected` or `>= limit`) are selected base operations. They compose within structural patterns; components use variable bindings or nested patterns without combined whole-value/nested collectors; complete recursive record/tuple parsing remains open. Bare identifiers bind, and `.None` explicitly selects the absent Option case; see [pattern bindings and tests](pattern-bindings-and-tests.md).
 
 Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
 

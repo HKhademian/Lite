@@ -1,24 +1,41 @@
 # Comparison patterns and Boolean guards
 
-Status: **equality value matching and Boolean guards selected; direct ordering-comparison patterns proposed on 2026-10-18**.
+Status: **all ten comparison operators selected as nonbinding pattern prefixes on 2026-10-23; Boolean guards selected; complete operand parsing, comparison protocols, coverage, and ownership remain open**.
 
-## Current rule and proposed extension
+## Selected comparison-pattern family
 
-The selected direct value-match form is `== expected`. Other comparisons already work as ordinary Boolean expressions in an and guard after a successful pattern. Direct ordering prefixes are not selected yet.
-
-Recommend extending the existing value-match family to these operator prefixes:
+The selected value-match family accepts every selected comparison operator as a prefix to its right operand. The enclosing pattern supplies the left operand, whether it is the whole match subject or one selected component:
 
 ```text
-== expected     /* selected */
-< limit         /* proposed */
-<= limit        /* proposed */
-> limit         /* proposed */
->= limit        /* proposed */
+== expected
+=!= expected
+> limit
+>! limit
+< limit
+<! limit
+>= limit
+>!= limit
+<= limit
+<!= limit
 ```
 
 This adds comparison choices within value matching rather than a fourth base operation. Each prefix tests the supplied subject/component against its right operand and introduces no binding. Literal value patterns keep their concise equality meaning.
 
-The user separately selected the [expression comparison family](negated-comparison-operators.md), including =!=, >!, >!=, <!, and <!=, with all ten positive/negative operators at one comparison precedence. This does not automatically select their direct pattern prefixes or logical pattern negation: == expected remains the selected comparison-pattern primitive, while the proposed direct-prefix extension remains open. Guards can use the selected expression operators. Conventional != still has no selected LiteScript meaning.
+These prefixes use the [selected expression comparison meanings](negated-comparison-operators.md): =!= complements ==, >! complements >, >!= complements >=, <! complements <, and <!= complements <=. Evaluate the underlying positive comparison once and complement its normal Bool result for a negative form. This does not introduce logical pattern not, independently overloaded negative relations, or conventional !=.
+
+```text
+label := match score {
+    >= passMark { "pass" }
+    _           { "retry" }
+}
+
+match entry {
+    (name, >! limit) { accept(name) }
+    _               { reject() }
+}
+```
+
+Assume Int-compatible score/passMark and a comparable second entry component/limit; the handlers in the second example return Unit. A false comparison rejects that pattern and permits the enclosing conditional/match fallback behavior. A comparison failure remains a failure, not mismatch. Literal patterns such as 42 retain concise equality semantics.
 
 ## A direct component comparison
 
@@ -28,11 +45,13 @@ Assume User exposes two components and its second component supports the indicat
 User(: Int, >= minimum)
 ```
 
-Under the proposal, match the User family/schema, type-match the first component, then compare the second with minimum. No local names are introduced. This keeps a single component constraint next to its component without adding a temporary binding.
+Assuming that positional User schema is available, match its structure, type-match the first component, then compare the second with minimum. No local names are introduced by those two tests. This keeps a single component constraint next to its component without adding a temporary binding; selecting a comparison prefix does not itself define a new record/constructor schema.
 
 The underlying operator must be statically applicable and produce Bool. A comparison does not silently become a type test, coerce incompatible operands, or turn a recoverable error into mismatch. If broader input requires narrowing before comparing, use an explicit typed binding and a guard. Generic constraints, union applicability, operator overloads, and failure/effect contracts still need their complete rules.
 
-For consistency with equality matching, the proposed right operand can be an existing runtime value, not only a compile-time constant. Expected-value expression boundaries, evaluation timing, effects, and required error handling need the same explicit contract as equality patterns; selecting a prefix does not settle them.
+The right operand may be a runtime value, not only a compile-time constant. Evaluate its expression once when that comparison test is reached; a skipped test does not evaluate it. Preserve ordinary expression/operator effects and failure behavior. This does not require hoisting bounds or caching them across arms. Names resolve in the surrounding pre-pattern scope: a binding introduced elsewhere in the same pattern is not implicitly available as a comparison bound. Use a later and guard for relationships between newly extracted components.
+
+The source still evaluates once under the enclosing pattern's rules. Ordinary declarations retain their irrefutability requirement; this selection adds no implicit failure behavior, parameter dispatch, or loop/lambda header support. Complete right-operand syntax, recursive pattern/arm-body boundaries, generic operator applicability, extraction effects, ownership commitment, and required Result handling remain separate contracts.
 
 ## Compound and cross-component conditions
 
@@ -68,14 +87,14 @@ The selected form is `pattern and (Boolean_condition or Boolean_condition)`. Its
 
 ## Reference comparison
 
-Dart directly supports equality and ordering patterns, including nested combinations with logical patterns. Its relational operands are constants, and its logical patterns have separate precedence and binding rules. LiteScript's proposed runtime bounds and existing guard syntax would therefore be deliberate choices, not an adoption of all Dart semantics. [Dart relational patterns](https://dart.dev/language/pattern-types#relational).
+Dart directly supports equality and ordering patterns, including nested combinations with logical patterns. Its relational operands are constants, and its logical patterns have separate precedence and binding rules. LiteScript's selected runtime bounds and existing guard syntax are deliberate choices, not an adoption of all Dart semantics. [Dart relational patterns](https://dart.dev/language/pattern-types#relational).
 
 Rust match guards are Boolean tests evaluated after their pattern succeeds; a false guard permits a later arm. They supply the useful model for complex conditions without needing a new structural pattern for every predicate. LiteScript already uses and as its guard separator. [Rust match guards](https://doc.rust-lang.org/reference/expressions/match-expr.html#match-guards).
 
-## Recommendation and remaining work
+## Selected boundary and remaining work
 
-Use direct comparison patterns for a single component test. Use and guards, with grouped Boolean or where needed, for compound or cross-component conditions. Keep equality selected, record direct <, <=, >, and >= as the proposed extension, and postpone general logical subpatterns until binding/precedence rules are settled.
+Use direct comparison patterns for a single component test. Use and guards, with grouped Boolean or where needed, for compound or cross-component conditions. All ten prefixes are selected; general logical subpatterns, binding-producing alternatives, and implicit-subject pattern chains are not added by this selection.
 
-Remaining contracts include operand boundaries, operator applicability/effects, generic constraints, evaluation/ownership commitment, coverage of comparison regions, and whether logical subpatterns are worth adding later. Arbitrary guarded predicates do not automatically prove exhaustive coverage.
+Remaining contracts include complete operand boundaries, custom operator applicability/effects, generic constraints, extraction/ownership commitment, coverage of comparison regions, and whether logical subpatterns are worth adding later. A false comparison is mismatch, but a failure is not; right-operand evaluation is once when reached. Arbitrary comparison regions or guarded predicates do not automatically prove exhaustive coverage; retain an explicit catch-all when completeness cannot be established.
 
 Related: [pattern primitives](pattern-bindings-and-tests.md), [aggregate patterns](aggregate-patterns.md), [match arm chains](match-guards.md), and [conditional pattern chains](condition-chains.md).

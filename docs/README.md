@@ -40,7 +40,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
 - [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
-- [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. Direct comparison-pattern prefixes remain separate.
+- [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
@@ -103,7 +103,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Underscore bindings and skips](wildcards-and-skips.md): ordinary readable `_`, unused-name intent, and concise positional matching.
 - [Pattern binding and shadowing](pattern-shadowing.md): repeated names, recursive binding order, source lookup, and visible binding types.
 - [Pattern bindings and tests](pattern-bindings-and-tests.md): selected bind/type-match/value-match primitives, composition, explicit .None cases, and the reference comparison.
-- [Comparison patterns](comparison-patterns.md): proposed direct ordering tests, selected Boolean guards, and the boundary between pattern alternatives and Boolean or.
+- [Comparison patterns](comparison-patterns.md): all ten nonbinding comparison prefixes, runtime bounds evaluated once when reached, ordinary comparison/failure semantics, and guards for compound or cross-component conditions.
 - [Aggregate patterns](aggregate-patterns.md): selected inferred record patterns, destination-first field routing, equality and typed shorthand; positional schemas remain open.
 - [Tuples and patterns](tuples-and-patterns.md): selected positional/named/mixed bindings, typed/inferred tuple annotations, nested variable-or-pattern collectors without double binding, and remaining recursive parsing/ownership contracts.
 - [Named arguments and named tuples](named-arguments-and-tuples.md): selected interleaved call inputs, same-name shorthand, explicit tuple call spread, named replacement, and structural, label-sensitive stored tuples; open callable label compatibility and remaining tuple conversions; modern reference-language comparisons.
