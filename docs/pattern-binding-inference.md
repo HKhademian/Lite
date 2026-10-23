@@ -7,10 +7,10 @@ Status: **infer unannotated bindings from compatible input possibilities, preser
 An explicit annotation constrains the matched component. Other bindings are inferred from the part of the input type that can satisfy the whole pattern. A programmer need not annotate every component to keep static type checking.
 
 ```text
-(x, y: (a, b: str, c), ...rest)
+(x, (a, b: str, c), ...rest)
 ```
 
-Here str stands for a known string type or alias. The typed component b must match it without conversion. The other names receive inferred static types, not automatically Any, a common supertype, or runtime-varying variable types. The whole-value colon/rest spelling remains a [separate syntax proposal](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest); the binding-inference requirement also applies to already selected typed destructuring.
+Here str stands for a known string type or alias. The typed component b must match it without conversion. The other names receive inferred static types, not automatically Any, a common supertype, or runtime-varying variable types. The nested component uses a pattern collector rather than also binding a whole-value name. This [collector choice](tuples-and-patterns.md#nested-tuple-patterns-and-rest-selected) is selected; complete recursive parsing and ownership remain separate. The binding-inference requirement also applies to typed destructuring.
 
 ## Inference rule
 
@@ -36,7 +36,7 @@ C = (:String, :(:Float, :Int,    :Bool), :Bool,   :Float)
 Match with str denoting String:
 
 ```text
-(x, y: (a, b: str, c), ...rest)
+(x, (a, b: str, c), ...rest)
 ```
 
 A and B satisfy the type constraint; C cannot, because its b component is Int. Inside the successful branch:
@@ -46,17 +46,16 @@ x    : Int | Float
 a    : Bool | Int
 b    : String
 c    : Int
-y    : (:Bool, :String, :Int) | (:Int, :String, :Int)
 rest : (:Bool, :Int) | (:String, :Bool)
 ```
 
-c remains Int because every compatible possibility supplies Int. C contributes nothing to the types of x, a, c, y, or rest. Matching does not convert C's Int component into text.
+c remains Int because every compatible possibility supplies Int. C contributes nothing to the types of x, a, c, or rest. Matching does not convert C's Int component into text.
 
 For a single statically possible input shape, every binding instead receives the corresponding concrete component type. If one source alternative has b of type `String | Int`, its matching portion retains only String for b; its other components narrow further only where the input contract establishes a relationship.
 
 ## Composite types retain their alternatives
 
-rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to y and other composite bindings. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
+rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to other composite variable collectors, which bind their supplied value without also destructuring it in that pattern. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
 
 Projecting individual bindings naturally gives each its own union type. Further narrowing one extracted binding and automatically refining its siblings requires explicit correlation and mutation rules; that broader flow feature is not selected merely by this initial inference requirement. Preserve the compatible composite alternatives without claiming arbitrary cross-binding dependent typing.
 
@@ -65,7 +64,7 @@ Projecting individual bindings naturally gives each its own union type. Further 
 - The inferred types describe every value that may reach the successful branch, not only the concrete value observed in one execution.
 - No implicit cast, numeric widening, string conversion, allocation, or cloning is introduced by pattern inference.
 - Type knowledge does not grant mutation, access, or ownership permissions.
-- Whole-value and component bindings must refer to the matched data under the chosen ownership contract; inference cannot manufacture duplicate ownership.
+- Each supplied component uses a variable collector or a pattern collector, without an extra whole-value binding alongside its nested pattern. Inference cannot manufacture ownership, copies, or mutation permissions.
 - A pattern with no compatible portion cannot normally execute its body. The exact unreachable-pattern diagnostic policy remains open.
 - A generic or open input can justify only its available type bounds and refinements. Generic type-test legality and how to represent such refinements need formalization; the compiler must not guess concrete types.
 

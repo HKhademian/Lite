@@ -132,7 +132,7 @@ The capability and typed tuple shape are selected. Complete tuple/record product
 
 Unannotated components still receive precise inferred types. Apply the whole pattern's constraints to the possible input alternatives, then infer each binding as its corresponding concrete type or union across compatible portions. A constraint on b can therefore exclude an alternative from every other binding's inference too. Composite bindings preserve complete alternative shapes. See [pattern binding inference](pattern-binding-inference.md); this rule does not change how arm result expressions are checked.
 
-The extended `(x, y: (a, b: str, c), ...rest)` shape is a separate [whole-value/nested/rest proposal](tuples-and-patterns.md#proposal-whole-value-binding-nested-patterns-and-rest). It would retain y as well as its extracted components; its colon grammar and ownership rules are not settled by selecting typed component patterns.
+Nested tuple destructuring uses `(x, (a, b: str, c), ...rest)`, with str denoting a known type. The second outer component is collected by its nested pattern; it does not also introduce a whole-value name y. A variable binding in that position instead collects the whole component. This [collector choice](tuples-and-patterns.md#nested-tuple-patterns-and-rest-selected) is selected; complete recursive parsing and ownership remain separate.
 
 ## Sixth capability: arm condition chains
 
@@ -144,7 +144,7 @@ Event.Click(x, y) and x >= 0 and y >= 0 { handle_click(x, y) }
 
 If a condition is false or an additional pattern fails, selection continues to later arms. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).
 
-Other useful follow-ups are alternatives in one arm, range patterns, whole-value-plus-payload binding, and a remainder/fallback arm. They are separate decisions rather than additional requirements inferred from the numbered list.
+Other useful follow-ups are alternatives in one arm, range patterns, and a remainder/fallback arm. They are separate decisions rather than additional requirements inferred from the numbered list. Combined whole-value-plus-payload binding is rejected; choose a variable collector or a nested pattern for the supplied component.
 
 ## Common contracts still to settle
 

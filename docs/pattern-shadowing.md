@@ -10,7 +10,7 @@ An unmarked bare identifier in a pattern binds, even if an outer value or type h
 
 ## Binding order
 
-Traverse positional pattern components from left to right, recursively finishing each component before moving to the next. Constructor payload patterns follow that same order. For future named-field patterns, use their written pattern order, not source record layout. If whole-value-plus-subpattern syntax is adopted, introduce the whole-value name before traversing its nested pattern. These ordering rules do not select the still-proposed record, whole-value, or rest punctuation.
+Traverse positional pattern components from left to right, recursively finishing each component before moving to the next. Constructor payload patterns follow that same order. For named-field patterns, use their written pattern order, not source record layout. A supplied component uses either a variable binding or a nested pattern; no additional whole-value binding is introduced before traversing a nested pattern. Complete recursive parsing and ownership remain separate.
 
 The body and later conditions see the last successful binding of each name. This is a name-resolution order; it does not specify observable getter, comparison, ownership-transfer, or destruction order. Those contracts must be defined separately.
 
@@ -75,7 +75,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 ## Remaining decisions
 
 - Complete operand boundaries and composition grammar for the selected value/type tests.
-- Full recursive grammar, named-field aliases, whole-value patterns, and rest captures.
+- Complete recursive grammar for selected variable-or-pattern collectors, named-field aliases, and tuple rest.
 - Rebinding across separate and operands and binding-producing or/not.
 - Per-construct mismatch behavior outside if/match selection.
 - Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.

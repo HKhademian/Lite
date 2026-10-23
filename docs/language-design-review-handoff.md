@@ -306,6 +306,8 @@ Latest review, 2026-10-21: [named arguments and named tuples](named-arguments-an
 
 Selected tuple component spelling, 2026-10-21: name: Type for named explicit types, bare name for named inferred types, and :Type for unnamed explicit types. In tuple type context, (l, r) means labels with inferred types; (:Int, :Int) is the unnamed typed pair. Bare (Int, Int) is retired as a positional type spelling, and dangling name: entries are removed. Parenthesized value expressions and binding patterns retain their context-specific meanings. See [component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
 
+Selected collector choice, 2026-10-23: each supplied component uses a variable binding or a nested pattern, without both collectors at that position. (first, pair, ...rest) binds the whole second component; (first, (a, b), ...rest) destructures it without introducing pair. Combined whole-value-plus-subpattern binding is rejected, including name: (subpatterns) and name @ pattern; colon remains for type annotations/tests, and tuple-type labels are not new local bindings. The [nested collector contract](tuples-and-patterns.md#nested-tuple-patterns-and-rest-selected) and [inference example](pattern-binding-inference.md) now omit the extra y binding. Preserve selected source-once evaluation, nested typed components, tuple routing/rest rules, and recursive ordered shadowing. Complete parsing and ownership remain open.
+
 - Preserve simple, explicit syntax and strong static contracts; do not use null/undefined as an implicit absence model.
 - Do not promote a suggestion to a selected rule without user confirmation.
 - Keep any performance statement as a goal until measured.
