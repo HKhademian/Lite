@@ -1,6 +1,6 @@
 # Pattern binding inference
 
-Status: **infer unannotated bindings from compatible input possibilities, preserving concrete types and unions; complete inference and ownership algorithms open**.
+Status: **infer unannotated bindings from compatible input possibilities, preserving concrete types and unions; narrowing stable related bindings from known alternatives selected on 2026-10-23; complete inference, invalidation, and ownership algorithms open**.
 
 ## Purpose and template
 
@@ -67,19 +67,47 @@ This is an arm fragment for cases Email(String) and Sms(PhoneNumber); deliver mu
 
 Compute each alternative's own final visible bindings using existing recursive ordered shadowing, then join the types of corresponding names across alternatives. This union is a join of mutually exclusive successful bindings; it does not merge successive same-named occurrences within a single alternative or change a binding's type during execution. Hidden bindings still retain their constraints and obligations. Different initial arm alternatives may introduce different names, including ordinary underscore bindings. For `.Email(email) or .Sms(phone)`, email has type String | Unit and phone has type PhoneNumber | Unit. The successful case supplies its payload and every absent shared name receives Unit. Shared names shadow outer bindings even on absent paths; outer values are not substituted. Identical-name `.Email(address) or .Sms(address)` retains String | PhoneNumber with no Unit contribution. Unit is an initialized value, not an unbound local or a new absence tag; a genuine Unit payload cannot be distinguished from absent-binding Unit through that binding alone. Complete condition/guard or alternatives now use the same union-of-names and payload-or-Unit rule, including Boolean-only alternatives; no missing binding is borrowed from incoming scope. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
 
-A composite payload preserves its complete alternative shapes under the existing union rules. No implicit conversion, common-supertype replacement, or arbitrary correlation/refinement between multiple extracted names is selected. Access must be valid for all possible successful bindings; complete ownership/access joins remain separate. Source-once evaluation, first-success selection, and pre-pattern free-name lookup follow [alternative arm patterns](match.md#alternative-arm-patterns-selected).
+A composite payload preserves its complete alternative shapes under the existing union rules. No implicit conversion or common-supertype replacement is selected. Stable binding relationships established by known alternatives now support the narrowing rule below; arbitrary relationships not established by the input/pattern alternatives remain outside that rule. Access must be valid for all possible successful bindings; complete ownership/access joins remain separate. Source-once evaluation, first-success selection, and pre-pattern free-name lookup follow [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 
 ## Nested alternative binding inference selected
 
 Apply alternative name/type joins locally inside constructor payloads and tuple components, then continue the enclosing pattern's existing recursive binding/inference rules. `.Some(.Email(address) or .Sms(address))` on Option<Contact> with Email(String)/Sms(PhoneNumber) gives address: String | PhoneNumber. `.Some(.Email(email) or .Sms(phone))` instead gives email: String | Unit and phone: PhoneNumber | Unit. The constructor provides its existing payload; it does not wrap, coerce, or duplicate a scalar or create a whole-value binding alongside the nested collector.
 
-A successful local choice produces candidate bindings for its place in the recursive written-order traversal; later same-named components can shadow them normally. No candidate name is available to a sibling pattern's comparison RHS or outside the enclosing pattern until the entire pattern succeeds. Infer against compatible enclosing input possibilities and preserve whole composite alternatives; Unit joins do not select arbitrary cross-binding correlation refinements. An earlier successful local alternative is not retried if another component or shared guard fails. See [nested alternative patterns](match.md#nested-alternative-patterns-selected).
+A successful local choice produces candidate bindings for its place in the recursive written-order traversal; later same-named components can shadow them normally. No candidate name is available to a sibling pattern's comparison RHS or outside the enclosing pattern until the entire pattern succeeds. Infer against compatible enclosing input possibilities and preserve whole composite alternatives; Unit joins retain their known alternative combinations for stable related-binding narrowing, without inventing arbitrary relationships. An earlier successful local alternative is not retried if another component or shared guard fails. See [nested alternative patterns](match.md#nested-alternative-patterns-selected).
 
 ## Composite types retain their alternatives
 
 rest is a union of complete remaining tuple shapes. Do not replace it with `(:(Bool | String), :(Int | Bool))`: that product admits combinations neither A nor B supplied. The same principle applies to other composite variable collectors, which bind their supplied value without also destructuring it in that pattern. Different remaining lengths must be retained as different shapes, rather than silently inserting missing values or converting the remainder into a homogeneous list.
 
-Projecting individual bindings naturally gives each its own union type. Further narrowing one extracted binding and automatically refining its siblings requires explicit correlation and mutation rules; that broader flow feature is not selected merely by this initial inference requirement. Preserve the compatible composite alternatives without claiming arbitrary cross-binding dependent typing.
+Projecting individual bindings naturally gives each its own union type. Preserve their known compatible alternative combinations as well: a successful type test of one stable binding can remove impossible combinations and narrow related siblings under the selected rule below. This is limited to relationships established by the input/pattern alternatives; arbitrary cross-binding dependent typing and complete mutation/effect analysis remain open.
+
+## Narrowing related stable bindings selected
+
+Keep known combinations of bindings from pattern alternatives available for later type tests. Narrowing one stable binding removes incompatible combinations and reprojects the types of related bindings from the combinations that remain:
+
+```text
+match contact {
+    .Email(email) or .Sms(phone) if email: String {
+        send_email(email)
+        /* email: String; phone: Unit */
+    }
+    _ {}
+}
+```
+
+Assume Contact has exactly Email(String) and Sms(PhoneNumber), and send_email accepts String and returns Unit. Before the guard, email: String | Unit and phone: PhoneNumber | Unit reflect only two possible successful binding combinations: (email: String, phone: Unit) or (email: Unit, phone: PhoneNumber). They do not describe four independently interchangeable combinations. The guard email: String excludes the Sms combination, so the body sees email as String and phone as Unit. No value is reassigned or converted, and no declared binding type changes during execution; the compiler refines what is known on this path.
+
+Apply this to finite known input/pattern alternative relationships, including nested constructor/tuple patterns and the shared successful continuation of condition or alternatives. The whole pattern/or group must first succeed under its existing scope rules; a type test in a later guard, and operand, or body can then narrow the stable bindings that still refer to those same values. Names from failed alternatives remain invisible. This adds no references to newly bound sibling names inside a pattern's comparison RHS and no binding export through negation. After a narrowed scope ends, use the knowledge established for that outer scope rather than retaining a branch-local proof unconditionally.
+
+### Unit does not identify a unique path
+
+If Email's payload is String | Unit, the known combinations instead include Email(String)/phone Unit, Email(Unit)/phone Unit, and email Unit/Sms(PhoneNumber). An email: String test still proves phone is Unit. An email: Unit test, however, admits both Email(Unit) and Sms, so phone remains Unit | PhoneNumber. Genuine Unit payloads and absent-binding Unit have the same ordinary value/type; this rule invents no absence discriminator or hidden tag test to distinguish them. Narrow only as far as the remaining combinations justify.
+
+### Stability and binding identity
+
+Track the identities of the related bindings, not just their spelling. A later shadow binding is a new binding and its tests do not automatically refine the earlier binding's siblings. Reassignment, a writable alias, or an effect that may replace a relevant value invalidates the relationship unless it can be proved preserved. When that proof is unavailable, do not narrow another binding using it; retain its independently justified type or require a fresh test. A readable/fixed binding does not freeze everything reachable through it, and extraction does not promise copies or extended lifetimes.
+
+This selects the finite known-alternative narrowing contract, not a complete general alias/effect solver, arbitrary numeric/predicate relationships, open subtype overlap, parent reconstruction from unrelated field reads, allocation strategy, or runtime representation. Existing ownership/access obligations and guard short-circuit/no-retry behavior remain intact.
 
 ## Static meaning and capabilities
 
@@ -94,6 +122,6 @@ Projecting individual bindings naturally gives each its own union type. Further 
 
 Dart patterns bind variables with inferred types and permit typed subpatterns; Kotlin describes smart casts and common-supertype approximations because it does not expose general union types. LiteScript's selected requirement preserves concrete types or unions from compatible alternatives rather than automatically replacing them with such an approximation. See [Dart patterns](https://dart.dev/language/patterns) and [Kotlin type checks](https://kotlinlang.org/docs/typecasts.html).
 
-Formalize union normalization, exact-type/subtype intersections, generics, correlated component refinements, tuple/rest type grammar, and ownership during matching. No compiler implementation or inference-completeness proof is implied.
+Complete exact-type/subtype intersections, generics, the inference/invalidation algorithm for selected known-alternative relationships, tuple/rest type grammar, and ownership during matching. Plain-union normalization is selected separately. No compiler implementation or inference-completeness proof is implied.
 
 Related: [typed destructuring](match-patterns.md#typed-destructuring-selected-composition-rule), [union type patterns](union-patterns.md), [types and inference](types-and-inference.md), and [tuples and patterns](tuples-and-patterns.md).

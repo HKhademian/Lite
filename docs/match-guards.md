@@ -138,6 +138,10 @@ match find_group(id) {
 
 Assume Option<Group>/Option<User> sources, Bool User.active, and a Unit-producing handler. The incoming group remains available after the negation. The inner user can be used only inside its parentheses and is unavailable in the handler or later outer guard operands unless an outer user already exists, in which case lookup still denotes that outer binding. Negation contributes no introduced names to any enclosing or alternative; it complements only a normal result and does not recover failures. Comparisons including =!= introduce no bindings in any guard. See [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
 
+## Narrowing related guard bindings
+
+The selected [related-binding rule](pattern-binding-inference.md#narrowing-related-stable-bindings-selected) retains finite known alternative combinations while their values remain stable. For `.Email(email) or .Sms(phone) if email: String`, with Email(String)/Sms(PhoneNumber), the guard proves email: String and phone: Unit for the body. It does not retry another initial pattern alternative. If a payload may itself be Unit, a Unit test retains every compatible combination rather than inventing an absent-value tag. Later shadows are distinct binding identities; relevant replacement/effects must invalidate unpreserved relationships. Whole-pattern success and pre-pattern RHS lookup rules are unchanged.
+
 ## Scope, failure, and result
 
 - Try arms in source order; choose the first whose initial structural pattern and complete guard condition succeed. Execute only its body, with no implicit fallthrough.
