@@ -149,6 +149,7 @@ def main() -> None:
                 "hidden": len(test["hidden"]),
                 "public_path": "tests/public.json",
                 "hidden_path": "tests/hidden.json",
+                "hidden_kind": "held-out-official-examples",
             },
             "reference_solutions": [{
                 "language": "python",

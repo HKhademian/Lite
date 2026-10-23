@@ -97,7 +97,8 @@ def main() -> None:
             "harness": "single-answer",
             "statement": "problem.md",
             "tests": {"public": 1, "hidden": 0,
-                      "public_path": "tests/public/answer.txt"},
+                      "public_path": "tests/public/answer.txt",
+                      "hidden_kind": "none"},
             "reference_solutions": [{
                 "language": "python",
                 "url": f"{NAYUKI}/p{number:03d}.py",

@@ -22,7 +22,8 @@
     "public": 1,
     "hidden": 1,
     "public_path": "tests/public.json",
-    "hidden_path": "tests/hidden.json"
+    "hidden_path": "tests/hidden.json",
+    "hidden_kind": "held-out-official-examples"
   },
   "reference_solutions": [
     {
