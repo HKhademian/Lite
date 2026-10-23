@@ -21,6 +21,8 @@ The selected value-match family accepts every selected comparison operator as a 
 
 This adds comparison choices within value matching rather than a fourth base operation. Each prefix tests the supplied subject/component against its right operand and introduces no binding. Literal value patterns keep their concise equality meaning.
 
+All ten comparisons are nonbinding in both expression and comparison-pattern positions. `actual =!= expected` reads existing operands; `=!= expected` as a pattern reads the existing expected value. In `v if v =!= expected { ... }`, the initial v pattern introduces the binding, while =!= only compares. Negative spelling never turns an RHS identifier into a collector. Grouped [matching-condition negation](condition-chains.md#negated-matching-conditions-selected) can contain internal pattern bindings but exports none; it is distinct from these comparison operators.
+
 These prefixes use the [selected expression comparison meanings](negated-comparison-operators.md): =!= complements ==, >! complements >, >!= complements >=, <! complements <, and <!= complements <=. Evaluate the underlying positive comparison once and complement its normal Bool result for a negative form. This does not introduce logical pattern not, independently overloaded negative relations, or conventional !=.
 
 ```text
@@ -135,7 +137,7 @@ User(first: Int, _) or Other(first)
 
 The first would need logical composition between patterns on the same component, including parsing and implicit-subject rules. The second would need alternative-pattern binding guarantees. Neither follows automatically from ordinary Boolean and/or operators or from the three base primitives.
 
-The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. Complete condition or alternatives with explicit sources may also introduce bindings when every alternative introduces the same visible names; the first successful alternative supplies them, with normalized union types. This does not select binding-producing not or alternatives inside one structural pattern. A disjunction must not expose a name supplied by only one alternative; see [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
+The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. Complete condition or alternatives with explicit sources may also introduce bindings when every alternative introduces the same visible names; the first successful alternative supplies them, with normalized union types. This does not select logical not/alternatives inside one structural pattern. Grouped not around a complete matching condition is selected separately with no exported bindings. A disjunction must not expose a name supplied by only one alternative; see [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
 
 ## Reference comparison
 

@@ -252,7 +252,7 @@ if .Some(user) := find_user(id) and user.age > 14 {
 }
 ```
 
-Within an and chain, evaluate operands left to right and stop at the first false result or pattern mismatch. A successful pattern makes its bindings available to later and operands and the successful body. They do not leak into else or following code. This includes chains with more than one pattern match; or alternatives now permit matching with identical introduced-name sets and the first successful alternative's bindings. And binds more tightly than or, and grouping supports a shared later test; see [conditional pattern chains](condition-chains.md). Binding-producing not remains open.
+Within an and chain, evaluate operands left to right and stop at the first false result or pattern mismatch. A successful pattern makes its bindings available to later and operands and the successful body. They do not leak into else or following code. This includes chains with more than one pattern match; or alternatives now permit matching with identical introduced-name sets and the first successful alternative's bindings. And binds more tightly than or, and grouping supports a shared later test; see [conditional pattern chains](condition-chains.md). Grouped not around a matching condition is now selected, with internal bindings confined to that condition and no new names exported to either branch or later tests. Ordinary Boolean not and comparison operators remain nonbinding; broader negative-flow refinement remains open.
 
 ## Nested ownership
 

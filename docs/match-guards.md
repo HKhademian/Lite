@@ -100,7 +100,23 @@ match find_group(id) {
 }
 ```
 
-Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alternatives begin with the same group binding from the initial arm pattern and introduce user. The first successful alternative supplies user and skips the other; a failed alternative exposes no tentative bindings to the next. The common binding's type is the normalized union of the alternatives' final types, here User. Different introduced-name sets are rejected. Group a disjunction before any shared later and test. Binding-producing not and logical alternatives inside the initial structural pattern remain separate; see [selected or alternatives](condition-chains.md#binding-producing-or-alternatives-selected).
+Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alternatives begin with the same group binding from the initial arm pattern and introduce user. The first successful alternative supplies user and skips the other; a failed alternative exposes no tentative bindings to the next. The common binding's type is the normalized union of the alternatives' final types, here User. Different introduced-name sets are rejected. Group a disjunction before any shared later and test. Grouped matching-condition not is selected separately and exports no names; logical alternatives inside the initial structural pattern remain open; see [selected or alternatives](condition-chains.md#binding-producing-or-alternatives-selected).
+
+## Negating a guard condition
+
+A guard may use the selected grouped negation:
+
+```text
+match find_group(id) {
+    .Some(group)
+        if not (.Some(user) := find_user(group.id) and user.active) {
+        report_missing_or_inactive(group)
+    }
+    _ {}
+}
+```
+
+Assume Option<Group>/Option<User> sources, Bool User.active, and a Unit-producing handler. The incoming group remains available after the negation. The inner user can be used only inside its parentheses and is unavailable in the handler or later outer guard operands unless an outer user already exists, in which case lookup still denotes that outer binding. Negation contributes no introduced names to any enclosing or alternative; it complements only a normal result and does not recover failures. Comparisons including =!= introduce no bindings in any guard. See [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
 
 ## Scope, failure, and result
 
@@ -113,7 +129,7 @@ Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alte
 
 ## Remaining rules
 
-The guard uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when and/or belongs inside a pattern's source value. Grouped Boolean-only or operands introduce no extra pattern bindings; binding-producing or alternatives require identical introduced-name sets and export the first successful alternative's bindings. Binding-producing not, alternatives inside one structural pattern, and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
+The guard uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when and/or belongs inside a pattern's source value. Grouped Boolean-only or operands introduce no extra pattern bindings; binding-producing or alternatives require identical introduced-name sets and export the first successful alternative's bindings. Grouped matching-condition not exports no names. Logical not/alternatives inside one structural pattern and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
 
 The ownership model must permit later arms after a failed test or guard. Do not silently duplicate a noncopyable value or commit a move that makes that path invalid. Mutations that invalidate a refinement require explicit rules; these examples do not grant unrestricted writable aliases. The exact order and effect model of recursive structural extraction is separate from the selected left-to-right order of and operands.
 

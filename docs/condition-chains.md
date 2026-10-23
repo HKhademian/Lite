@@ -1,6 +1,6 @@
 # Conditional pattern chains
 
-Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with identical introduced-name sets selected on 2026-10-23; binding-producing not, logical subpattern alternatives, and ownership remain open**.
+Status: **and-chained binding, ordered shadowing, and binding-producing or alternatives with identical introduced-name sets selected on 2026-10-23; grouped matching-condition negation also selected with no exported bindings; logical subpattern alternatives and ownership remain open**.
 
 ## Purpose and selected example
 
@@ -59,7 +59,7 @@ The rule includes underscore-prefixed pattern names and `_`, which remain ordina
 
 If any later match or test fails, no chain-local binding is available in the failed branch, a sibling arm, or following code. An outer same-named binding remains the name visible there. Earlier effects are not undone. Hidden bindings retain their own types/access and ownership obligations; this rule does not specify moves, immediate destruction, or cleanup timing. Different names remain available when both values need to be used later.
 
-This selection covers ordinary conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions and gain no binding-producing pattern conditions. Binding-producing or alternatives are selected below; binding-producing not and alternatives inside one structural pattern remain open.
+This selection covers ordinary conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions and gain no binding-producing pattern conditions. Binding-producing or alternatives and grouped negation with no exported names are selected below; logical not/alternatives inside one structural pattern remain open.
 
 ## Binding-producing or alternatives selected
 
@@ -108,7 +108,40 @@ Assume User.active is Bool. The selected alternative supplies user before the sh
 
 At the top level of a pattern-source operand, both and and or are condition separators. A source value containing those Boolean operators needs its own ordinary expression grouping. This separates `.Some(user) := source or ...` from a source expression that computes an or value; whitespace does not choose the reading.
 
-This rule applies to conditional chains and subject-based match guards after their if separator. It does not add `patternA or patternB` inside one structural pattern, binding-producing not, alternative loop headers, or binding-producing subjectless match headers. Exact recursive parsing, negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
+This rule applies to conditional chains and subject-based match guards after their if separator. It does not add `patternA or patternB` inside one structural pattern, logical not subpatterns, alternative loop headers, or binding-producing subjectless match headers. Grouped matching-condition negation is selected separately and exports no names. Exact recursive parsing, negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
+
+## Negated matching conditions selected
+
+Use `not (condition)` to negate a grouped matching condition without exporting any new bindings:
+
+```text
+if not (.Some(user) := find_user(id) and user.active) {
+    report_missing_or_inactive()
+}
+```
+
+Assume find_user returns Option<User>, User.active is Bool, and the handler returns Unit. Evaluate the inner condition under its ordinary matching, and/or, and short-circuit rules. Inside that condition, user becomes available after Some succeeds and can be read by user.active. Complement the inner condition's normal Bool result. A missing user or an inactive user makes this negation true.
+
+### Scope and existing names
+
+Bindings introduced anywhere inside the negated condition remain inside it. None are available to later outer and operands, the body, else, another alternative, or following code. This holds whether the inner condition succeeds or fails, and nested/double negation does not restore its bindings. The negated operand therefore introduces an empty name set for the enclosing or alternative rules. Its inner condition must still satisfy the ordinary same-name or contract; negation does not relax that check.
+
+An incoming binding retains ordinary lookup outside the negation. If an inner pattern shadows that name, the shadow is internal only; a later outer reference still refers to the incoming binding with its own type/access, subject to ordinary mutation/refinement stability. Negation does not assign, widen, or replace it.
+
+```text
+/* Rejected when no outer user is in scope: no binding escapes not. */
+if not (.Some(user) := find_user(id)) and user.active {
+    greet(user)
+}
+```
+
+### Evaluation and operator distinction
+
+Each reached source/test runs once for its occurrence. Ordinary internal and/or short-circuiting remains in effect; there is no second evaluation to invert the result. Errors, panics, propagation, and explicit exits retain their ordinary behavior instead of becoming a successful negation. Effects are not rolled back, and this rule adds no copy/move/cleanup or lifetime guarantee.
+
+Comparisons themselves introduce no bindings, including every negated comparison operator. `actual =!= expected` reads both existing operands; the comparison pattern `=!= expected` compares its supplied subject with an existing expected value. In `v if v =!= expected { ... }`, the initial v pattern binds; =!= only tests. The same nonbinding rule applies to ==, >, >!, <, <!, >=, >!=, <=, and <!=. Explicit declarations inside an ordinary block operand retain their own local scope; the comparison operator does not declare them.
+
+Require the grouped `not (condition)` spelling when negating a matching condition; this does not select an ungrouped `not pattern := source` form. Ordinary expression not, its precedence, and all comparison meanings are unchanged. This form applies to conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions without matching-source conditions, including inside not. Logical not subpatterns, negative/early-exit refinement, full recursive parsing, ownership, and coverage remain separate contracts.
 
 ## Ordinary Boolean grouping
 
@@ -122,13 +155,13 @@ if .Some(user) := find_user(id) and (user.admin or user.age > 14) {
 
 This or introduces no new bindings. It operates on two Boolean expressions after user is available. Plain Boolean conditions keep their existing not/and/or precedence.
 
-Binding-producing or is selected only between complete condition alternatives with identical introduced-name sets, as described above. Not around a binding-producing condition remains unselected: a negated match can succeed when its payload is absent. Neither ordinary Boolean grouping nor this or rule permits exporting a name that may be unbound.
+Binding-producing or is selected only between complete condition alternatives with identical introduced-name sets. Grouped matching-condition not is also selected but exports no names, because a negated match can succeed when its payload is absent. Ordinary Boolean grouping, or alternatives, and negation never export a name that may be unbound.
 
 ## Parsing boundary
 
 At the top level of a pattern-source operand, both and and or are condition-chain separators. To put logical operations inside the source value instead, group that source explicitly. Calls, tuples, and other nested syntax keep their own grouping. Whitespace cannot decide whether and/or belongs to a source expression or to the condition chain.
 
-The grammar sketch uses restricted condition-operand placeholders for this boundary; it is not a complete expression grammar. And/or precedence, condition grouping, and the same-name alternative contract are selected. Full recursive parsing with not, tagged block values, record literals, and future trailing closures remains to formalize.
+The grammar sketch uses restricted condition-operand placeholders for this boundary; it is not a complete expression grammar. And/or precedence, condition grouping, and the same-name alternative contract are selected. Grouped matching-condition negation is selected. Full recursive parsing with tagged block values, record literals, and future trailing closures remains to formalize.
 
 ## Related features
 

@@ -62,6 +62,8 @@ Later successful and operands can use existing earlier bindings and may introduc
 
 Condition or alternatives each start from the same incoming scope. They must introduce the same visible names after their own recursive/and-chain shadowing. A failed alternative exposes no names to the next; the first successful alternative supplies the continuation's bindings, whose types are the normalized unions of the alternatives' final binding types. This joins possible successful bindings without reassigning or changing an earlier binding's type. See [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
 
+Bindings introduced inside a grouped negated matching condition may shadow incoming names for inner tests only. No new names escape not to outer operands, the body, else, or other alternatives, even through double negation. Incoming bindings retain ordinary outside lookup with their own types/access. The negated operand exports an empty name set for surrounding or checks; comparison operators, including =!=, never introduce bindings. See [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
+
 ## Receiver lists and other scopes
 
 The former loop receiver-slot lists are retired. A loop now permits one optional item identifier; count/index/value use context metadata. Destructuring inside the body still follows the ordered shadowing rules above. See [current item naming](loop-receivers.md).
@@ -78,7 +80,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 - Complete operand boundaries and composition grammar for the selected value/type tests.
 - Complete recursive grammar for selected variable-or-pattern collectors, named-field aliases, and tuple rest.
-- Binding-producing not and alternatives inside one structural pattern; successful and-chain shadowing and same-name binding-producing condition or alternatives are selected.
+- Logical not/alternatives inside one structural pattern; grouped matching-condition negation exports no names; successful and-chain shadowing and same-name binding-producing condition or alternatives are selected.
 - Per-construct mismatch behavior outside if/match selection.
 - Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.
 - Enum `.case` versus current-context `.field` collisions.

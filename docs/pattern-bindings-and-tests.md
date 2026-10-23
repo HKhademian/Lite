@@ -29,6 +29,8 @@ These are pattern operations with a supplied subject, not standalone expressions
 name: Type            /* type match and bind the narrowed value */
 ```
 
+The comparison operators never introduce bindings, including negative forms such as =!=. In `v if v =!= expected`, the initial v pattern binds and the comparison only reads values. A comparison-pattern RHS name such as expected is ordinary existing-value lookup, not capture. Grouped [negated matching conditions](condition-chains.md#negated-matching-conditions-selected) likewise export no new names, although explicit patterns inside them may bind for their own inner tests.
+
 An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, not a fourth base operation. `== "ali"` spells its value test explicitly. Enum-case selection such as `.completed`, constructor heads, tuples, and future record forms supply structural or case constraints and route components to subpatterns; they are not all reduced to whole-value equality.
 
 No general inline binding-plus-equality spelling is selected by these three primitives. Use an if guard in a match arm, or the existing and chain in a conditional, to test a value after extracting it; combined-pattern syntax beyond the selected typed binding still needs a grammar decision.
