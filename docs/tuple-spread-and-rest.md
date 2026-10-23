@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Label collisions involving spread replace their earlier slot without moving it; duplicate explicit labels are errors, and surviving contributions determine inferred component types; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named selector patterns, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Label collisions involving spread replace their earlier slot without moving it; duplicate explicit labels are errors, and surviving contributions determine inferred component types; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named tuple patterns are selected with left-to-right, next-unselected source routing on 2026-10-23. Variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Tuple construction spread selected
 
@@ -62,7 +62,7 @@ All entry/operand expressions in an admitted constructor still evaluate once in 
 
 The former unnamed-prefix/named-suffix restriction was a uniformity choice shared with calls, not a memory-layout requirement. Interleaving itself is deterministic under this insertion algorithm. Readability requires distinguishing tuple construction from calls and patterns; later replacement must retain source-order effects. Known tuple destinations use the selected call-style routing with complete coverage and no implicit component defaults. Omitted component types are inferred from their final surviving contributions. Complete generic constraint solving and recursive parsing remain separate.
 
-Function calls have a separately selected fixed-slot construction rule: positional inputs fill the next unfilled declared slot, including after named inputs; admitted named inputs replace an earlier supplied value, subject to explicit-label uniqueness. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each final surviving input must fit its declared type/access. The user also selected explicit-label uniqueness for calls on 2026-10-23, including =name shorthand. Spread collisions remain allowed; only the final surviving input must fit the declared parameter contract; superseded expressions must still type-check and evaluate. This final-value rule is shared with typed tuple patching and does not change parameter types. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; valid spread collisions produce one final field, not a duplicate-field type. Mixed positional/named selector patterns remain separate.
+Function calls have a separately selected fixed-slot construction rule: positional inputs fill the next unfilled declared slot, including after named inputs; admitted named inputs replace an earlier supplied value, subject to explicit-label uniqueness. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each final surviving input must fit its declared type/access. The user also selected explicit-label uniqueness for calls on 2026-10-23, including =name shorthand. Spread collisions remain allowed; only the final surviving input must fit the declared parameter contract; superseded expressions must still type-check and evaluate. This final-value rule is shared with typed tuple patching and does not change parameter types. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; valid spread collisions produce one final field, not a duplicate-field type. Mixed positional/named tuple patterns are selected below; they reject duplicate source selection rather than replacing values.
 
 ## Positional tuple rest selected
 
@@ -139,7 +139,44 @@ Selector order determines binding order, including the existing ordered-shadowin
 
 Without rest, named extraction still requires complete component coverage. With rest, all unselected components are captured, including unnamed positions in a mixed source. Fully named, mixed, unnamed singleton, named singleton, and empty remainders retain their existing shape/type identities. Ordinary declarations must be irrefutable; supported conditional/match contexts retain their established matching rules. Rest does not supply missing fields or silently discard unselected components.
 
-This extends named-only selector patterns with a final rest; it does not select mixing positional and named selectors within one pattern, record rest, list rest, or ownership rules. Rest-only tuple patterns are selected below.
+Named-only selector patterns with a final rest remain selected; mixing positional and named selectors is selected next. Record rest, list rest, and ownership rules remain separate. Rest-only tuple patterns are selected below.
+
+## Mixed positional and named tuple patterns selected
+
+Selected by the user, 2026-10-23: one tuple pattern may interleave positional component patterns, explicit destination = sourceField selectors, and =name shorthand. Routing selects source components; it does not replace values or reorder the source.
+
+1. Evaluate the source once before introducing any new bindings. Begin with all source component positions unselected.
+2. Process entries from left to right. A positional entry selects the next unselected component in stored source order. A named entry selects its literal source field, including after expanding =name to name = name.
+3. Mark each selected component unavailable to later entries. Reject an unknown field, selecting an already selected component, or a positional entry when no component remains. Do not reserve fields for later named entries or search ahead to make the pattern valid.
+4. Permit at most one final ...rest. It captures all unselected components in stored source order, preserving their types and labels; numeric positions restart at zero. Without rest, require complete component coverage.
+
+```text
+meal := (cake = 10, tea = 20, fruit = 30);
+
+(first, drink = tea, ...rest) := meal;
+/* first = 10; drink = 20; rest = (fruit = 30) */
+
+(drink = tea, first, ...rest) := meal;
+/* drink = 20; first = 10; rest = (fruit = 30) */
+
+(=fruit, first, ...rest) := meal;
+/* fruit = 30; first = 10; rest = (tea = 20) */
+
+(drink = tea, first, last) := meal;
+/* drink = 20; first = 10; last = 30; complete coverage without rest */
+
+(drink = tea, first, ...rest) := (7, tea = "green", true);
+/* drink: String = "green"; first: Int = 7; rest = (true,), type (:Bool,) */
+
+/* rejected: (first, dessert = cake, ...rest) := meal; cake selected twice */
+/* rejected: (first, drink = tea) := meal; fruit omitted without rest */
+/* rejected: (first, drink = coffee, ...rest) := meal; unknown field */
+/* rejected: (first, ...rest, drink = tea) := meal; rest is not final */
+```
+
+Selection identity is the source position, so choosing a named field also consumes it for positional routing and vice versa. A bare binding name does not select a same-named source field; it remains positional. Repeated destination names retain ordered shadowing when they receive distinct source components; duplicate source selection remains invalid. This is extraction, not construction's permitted replacement.
+
+The selected component pattern receives its source component's existing type; rest retains its complete remaining tuple shape. Unit/() is an empty remainder, and one remaining component stays a singleton tuple. Every component subpattern must succeed before bindings are exposed to the branch. Ordinary declarations require irrefutability; supported conditional/match contexts retain their mismatch rules. Within an already supported nested tuple pattern, routing applies to that pattern's own supplied tuple. This does not select new nested/whole-value colon syntax, numeric source selectors, loop/lambda header support, allocation, copying, or ownership permissions.
 
 ## Rest-only tuple pattern selected
 

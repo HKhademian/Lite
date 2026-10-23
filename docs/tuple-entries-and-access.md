@@ -95,7 +95,7 @@ The selected forms are (pattern) for grouping, (pattern,) for one positional com
 
 Evaluate the source once before introducing its bindings. Grouping preserves the complete input type and pattern behavior; it never unwraps based on the source or expected type. A singleton tuple pattern requires one component, not a scalar or a two-component tuple. For example, (value,) := 42 is rejected as a declaration shape mismatch. Typed components keep their existing meaning: (value: Int,) requires one Int component, while (value: Int) groups a typed binding for the whole input.
 
-These are pattern semantics wherever the corresponding grouped/tuple pattern is supported. Ordinary declarations still require an irrefutable match; conditional/match patterns retain their selected mismatch behavior. This does not add tuple destructuring to loop headers or lambda parameter headers that do not already support it. Complete recursive type/pattern integration, rest ownership, and mixed named/positional pattern extensions remain separate.
+These are pattern semantics wherever the corresponding grouped/tuple pattern is supported. Ordinary declarations still require an irrefutable match; conditional/match patterns retain their selected mismatch behavior. This does not add tuple destructuring to loop headers or lambda parameter headers that do not already support it. Mixed named/positional tuple patterns are now selected separately with next-unselected source routing. Complete recursive type/pattern integration and rest ownership remain separate.
 
 ## Empty tuple pattern selected
 
@@ -153,7 +153,7 @@ Positional destructuring can bind the whole mixed tuple:
 (number, drink) := mixed;
 ```
 
-Named patterns require complete coverage without rest, or may capture unselected fields with one final rest. They do not acquire numeric source selectors or mixed positional/named pattern clauses through this decision. Those pattern extensions remain separate.
+Named patterns require complete coverage without rest, or may capture unselected fields with one final rest. Mixed positional/named tuple patterns are now [selected](tuple-spread-and-rest.md#mixed-positional-and-named-tuple-patterns-selected): positional entries take the next unselected source component, named entries select their field, and duplicate source selection is invalid. Numeric source selectors remain separate.
 
 ## Expected named types still accept positional entries
 
@@ -411,7 +411,7 @@ The user later selected consistent grouping instead of this alternative: (local)
 ## Remaining grammar and inference issues
 
 - Empty tuple/Unit identity, () value/type spelling, and singleton value/grouping forms are selected above. Singleton type spellings and grouped/singleton binding patterns are selected; complete recursive type/pattern integration remains open.
-- Interleaved named/unnamed tuple values and corresponding stored type layouts are selected. Mixed positional/named selector patterns remain separate. Known destination tuple constructors now use the selected call-style routing, with unique explicit labels, final-slot type/access checks, complete coverage, and no implicit component defaults.
+- Interleaved named/unnamed tuple values and corresponding stored type layouts are selected. Mixed positional/named tuple patterns are selected separately with next-unselected source routing and duplicate-source rejection. Known destination tuple constructors now use the selected call-style routing, with unique explicit labels, final-slot type/access checks, complete coverage, and no implicit component defaults.
 - Numeric member suffixes need a deliberate lexer/parser boundary. A standalone .5 is not a fractional literal; tuple.5 is a member access when that position exists. Nested access such as pair.0.1 must not accidentally tokenize 0.1 as a decimal literal. Exact scanning and numeric suffix spellings remain to be formalized without relying on whitespace or type checking to choose the parse.
 - Runtime variable indexing is rejected. Union receivers without a common tuple shape, computed compile-time position syntax, and numeric access assignment rules remain separate type/access decisions.
 
