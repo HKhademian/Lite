@@ -60,6 +60,8 @@ if (left, right) := pair and left == right {
 
 Later successful and operands can use existing earlier bindings and may introduce a new binding with the same name. Resolve the later source and comparison-pattern RHS free names before its new bindings are introduced, using the scope established by earlier successful operands. After the whole pattern succeeds, its final binding of each name shadows the earlier one for subsequent operands and the body. The bindings remain distinct and may have different types; this is not assignment, equality, or widening one binding to a union. The same rule applies from an initial match-arm pattern into its if guard and between further guard operands. A failed chain leaks no bindings to else, sibling arms, or following code; ordinary outer lookup remains. See [chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected).
 
+Condition or alternatives each start from the same incoming scope. They must introduce the same visible names after their own recursive/and-chain shadowing. A failed alternative exposes no names to the next; the first successful alternative supplies the continuation's bindings, whose types are the normalized unions of the alternatives' final binding types. This joins possible successful bindings without reassigning or changing an earlier binding's type. See [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
+
 ## Receiver lists and other scopes
 
 The former loop receiver-slot lists are retired. A loop now permits one optional item identifier; count/index/value use context metadata. Destructuring inside the body still follows the ordered shadowing rules above. See [current item naming](loop-receivers.md).
@@ -76,7 +78,7 @@ Hidden bindings remain real bindings. Shadowing does not waive ownership obligat
 
 - Complete operand boundaries and composition grammar for the selected value/type tests.
 - Complete recursive grammar for selected variable-or-pattern collectors, named-field aliases, and tuple rest.
-- Binding-producing or/not and guaranteed bindings across alternative patterns; successful and-chain shadowing is selected.
+- Binding-producing not and alternatives inside one structural pattern; successful and-chain shadowing and same-name binding-producing condition or alternatives are selected.
 - Per-construct mismatch behavior outside if/match selection.
 - Complete stored Result payload extraction contracts, preserving selected .ok/.err outcome-side inspection.
 - Enum `.case` versus current-context `.field` collisions.

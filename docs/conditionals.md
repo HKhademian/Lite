@@ -252,7 +252,7 @@ if .Some(user) := find_user(id) and user.age > 14 {
 }
 ```
 
-Evaluate operands left to right and stop at the first false result or pattern mismatch. A successful pattern makes its bindings available to later and operands and the successful body. They do not leak into else or following code. This includes chains with more than one pattern match; full scope, parsing boundaries, and open or/not interactions are in [conditional pattern chains](condition-chains.md).
+Within an and chain, evaluate operands left to right and stop at the first false result or pattern mismatch. A successful pattern makes its bindings available to later and operands and the successful body. They do not leak into else or following code. This includes chains with more than one pattern match; or alternatives now permit matching with identical introduced-name sets and the first successful alternative's bindings. And binds more tightly than or, and grouping supports a shared later test; see [conditional pattern chains](condition-chains.md). Binding-producing not remains open.
 
 ## Nested ownership
 

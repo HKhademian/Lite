@@ -100,7 +100,7 @@ Readability assessments above are design judgments, not measured user results. e
 
 All ten operators ==, =!=, >, >!, <, <!, >=, >!=, <=, and <!= share one comparison precedence. A negated comparison complements one adjacent pair within a chain, retaining single evaluation, left-to-right execution, and short-circuiting. For example, a >! b < c would test not (a > b) and then b < c using the retained b. Existing prefix not a > b < c instead negates the entire chain. These are different expressions.
 
-All ten comparison-pattern prefixes are also selected. Each tests its supplied component with the ordinary operator meaning, introduces no binding, and evaluates its runtime right operand once when reached. False is mismatch; a failure remains a failure. This does not select general logical not patterns, binding-producing alternatives, implicit-subject pattern chains, or a new coverage proof algorithm. Complete operand boundaries remain open; see [comparison patterns](comparison-patterns.md).
+All ten comparison-pattern prefixes are also selected. Each tests its supplied component with the ordinary operator meaning, introduces no binding, and evaluates its runtime right operand once when reached. False is mismatch; a failure remains a failure. This does not select general logical not patterns, alternatives inside one structural pattern, implicit-subject pattern chains, or a new coverage proof algorithm. Complete operand boundaries remain open; see [comparison patterns](comparison-patterns.md).
 
 ## Evidence and remaining work
 

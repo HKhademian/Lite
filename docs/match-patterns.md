@@ -142,7 +142,7 @@ After a structural pattern succeeds, Boolean conditions and additional pattern b
 Event.Click(x, y) if x >= 0 and y >= 0 { handle_click(x, y) }
 ```
 
-If a condition is false or an additional pattern fails, selection continues to later arms. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).
+If the complete guard fails, selection continues to later arms; a failed and chain first permits any remaining or alternative in that guard. Binding-producing or alternatives must introduce the same visible names and export the first successful alternative's bindings. Earlier bindings are available to later operands and the successful body, with left-to-right short-circuiting. Nested destructuring can appear in these additional matches. Mutation, recursive extraction effects, and ownership commitment need further rules. A guarded arm does not establish full coverage of its structural pattern. See [match arm chains](match-guards.md).
 
 Other useful follow-ups are alternatives in one arm, range patterns, and a remainder/fallback arm. They are separate decisions rather than additional requirements inferred from the numbered list. Combined whole-value-plus-payload binding is rejected; choose a variable collector or a nested pattern for the supplied component.
 

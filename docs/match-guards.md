@@ -1,6 +1,6 @@
 # Match arm guards and condition chains
 
-Status: **pattern-if guard separator selected on 2026-10-23; Boolean tests and additional pattern matches retain selected left-to-right and chains; alternatives, mutation effects, and ownership details open**.
+Status: **pattern-if separator and same-name binding-producing or alternatives selected on 2026-10-23; Boolean tests and additional matches retain left-to-right and chains; logical subpattern alternatives, mutation effects, and ownership details open**.
 
 This page describes subject-based pattern arms. The selected [subjectless match](match.md#subjectless-boolean-selection-selected) instead uses ordinary Boolean headers directly, without a separate pattern or an additional if separator.
 
@@ -9,10 +9,10 @@ This page describes subject-based pattern arms. The selected [subjectless match]
 After matching the arm's subject pattern, test conditions or match additional values using the names already unpacked. The same left-to-right rules apply as in conditional pattern chains.
 
 ```text
-pattern if condition_operand and condition_operand { body }
+pattern if condition { body }
 ```
 
-The initial pattern matches the match subject. An optional if introduces the guard; its operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. Further guard operands use and, with the same left-to-right scope and short-circuit rules as conditional chains. A guard may contain just one operand. No as marker is needed to introduce the arm binding.
+The initial pattern matches the match subject. An optional if introduces the guard; its operands are Bool tests, existing-name type tests where valid, or explicit pattern bindings of another expression. Guard conditions use and chains and or alternatives with the same precedence, scope, short-circuiting, and identical introduced-name-set requirement as conditional chains. A guard may contain just one operand. No as marker is needed to introduce the arm binding.
 
 Ordering comparisons and compound relationships already work as Boolean guards, for example `value if lower <= value < upper and (ready or retry_allowed)`. All ten direct comparison prefixes, including >= minimum and >! limit, are now selected as nonbinding [comparison patterns](comparison-patterns.md). A prefix tests one supplied value; compound and cross-component conditions retain these if guards. Boolean or inside a grouped guard does not select alternative binding-producing patterns.
 
@@ -63,7 +63,7 @@ match find_user(id) {
 }
 ```
 
-Every reached operand runs once, in source order, until false or mismatch. A successful additional pattern extends the bindings available to later operands and this body. The initial pattern is applied to the original subject; `Some(profile) := ...` explicitly identifies another source rather than silently rematching the original Option<User>.
+Within an and chain, every reached operand runs once, in source order, until false or mismatch. A successful additional pattern extends the bindings available to later operands and this body. The initial pattern is applied to the original subject; `Some(profile) := ...` explicitly identifies another source rather than silently rematching the original Option<User>.
 
 Underscore-prefixed bindings can leave positional components unused in additional matches, such as `and (_, last: String) := user.name_parts`. `_` is an ordinary readable binding; repeated names shadow in pattern order. Later operands may read the final visible binding of each name. See [underscore bindings and skips](wildcards-and-skips.md).
 
@@ -87,22 +87,37 @@ match find_user(id) {
 
 Assume Option<User>/Option<Profile> producers, a Bool Profile.visible, and Unit-producing handlers. The guard source reads the first value as User. Its successful pattern then introduces value as Profile for later guard operands and the body. If the guard fails, the second arm matches the original subject and binds its own User; the failed arm's bindings do not leak. No binding is reassigned or changes type, and no implicit var permission or new ownership permission follows. Source evaluation, comparison-RHS lookup, and per-pattern recursive order follow [selected chain shadowing](condition-chains.md#ordered-shadowing-across-operands-selected). Subjectless match headers remain ordinary Boolean expressions.
 
+## Binding-producing guard alternatives
+
+```text
+match find_group(id) {
+    .Some(group)
+        if .Some(user) := cached_user(group.id)
+            or .Some(user) := find_user(group.id) {
+        greet(user)
+    }
+    _ { report_missing() }
+}
+```
+
+Assume Option<Group>/Option<User> sources and Unit-producing handlers. Both alternatives begin with the same group binding from the initial arm pattern and introduce user. The first successful alternative supplies user and skips the other; a failed alternative exposes no tentative bindings to the next. The common binding's type is the normalized union of the alternatives' final types, here User. Different introduced-name sets are rejected. Group a disjunction before any shared later and test. Binding-producing not and logical alternatives inside the initial structural pattern remain separate; see [selected or alternatives](condition-chains.md#binding-producing-or-alternatives-selected).
+
 ## Scope, failure, and result
 
-- Try arms in source order; choose the first whose structural pattern and all additional operands succeed. Execute only its body, with no implicit fallthrough.
+- Try arms in source order; choose the first whose initial structural pattern and complete guard condition succeed. Execute only its body, with no implicit fallthrough.
 - Bindings are available only after their own successful match, to later operands and the selected body. They do not leak into later arms or following code. A binding source resolves before its new names are introduced.
-- False or mismatch skips the rest of this arm's tests. Side effects already performed are not rolled back.
+- False or mismatch skips the remaining operands of its current and chain; try another or alternative if present. A failed complete guard permits the next arm. Side effects already performed are not rolled back.
 - Explicit return or Result propagation in an operand keeps its ordinary control-flow meaning; it is not converted into a false guard or a request to try another arm. Ordinary Results are not implicitly unwrapped by matching or guarding.
 - The body's normal result must satisfy an expected result contract when present; otherwise normally completing arms infer a normalized plain union under selected [branch-result inference](branch-result-inference.md). Input binding inference remains a separate rule.
 - A guarded pattern does not alone prove coverage of every value admitted by its structural pattern. Provide complete coverage where required; the exact coverage algorithm and action-match policy remain open.
 
 ## Remaining rules
 
-The guard's and chain uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when logical operators belong inside a pattern's source value. Grouped Bool or operands introduce no extra pattern bindings. Binding-producing or/not, alternative patterns in one arm, and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
+The guard uses the same expression boundaries as [conditional pattern chains](condition-chains.md): grouping is required when and/or belongs inside a pattern's source value. Grouped Boolean-only or operands introduce no extra pattern bindings; binding-producing or alternatives require identical introduced-name sets and export the first successful alternative's bindings. Binding-producing not, alternatives inside one structural pattern, and custom field/equality effect contracts remain open. Repeated binding names across successful guard operands now use ordered shadowing.
 
 The ownership model must permit later arms after a failed test or guard. Do not silently duplicate a noncopyable value or commit a move that makes that path invalid. Mutations that invalidate a refinement require explicit rules; these examples do not grant unrestricted writable aliases. The exact order and effect model of recursive structural extraction is separate from the selected left-to-right order of and operands.
 
-The earlier `pattern and condition { ... }` arm separator is superseded. Use `pattern if condition { ... }`; and remains a separator between subsequent guard operands. The alternative as-name arm marker was considered but not selected. Ordinary conditional chains retain their existing syntax.
+The earlier `pattern and condition { ... }` arm separator is superseded. Use `pattern if condition { ... }`; and/or remain condition operators inside the guard, with and binding more tightly. The alternative as-name arm marker was considered but not selected. Ordinary conditional chains retain their existing syntax.
 
 ## References
 

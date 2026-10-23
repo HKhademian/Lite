@@ -135,7 +135,7 @@ User(first: Int, _) or Other(first)
 
 The first would need logical composition between patterns on the same component, including parsing and implicit-subject rules. The second would need alternative-pattern binding guarantees. Neither follows automatically from ordinary Boolean and/or operators or from the three base primitives.
 
-The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. General binding-producing or/not and pattern alternatives remain open. A successful disjunction must not expose a name supplied by only one of its alternatives.
+The selected form is `pattern if (Boolean_condition or Boolean_condition)`. Its grouped or runs only after preceding bindings exist and introduces no new names. Complete condition or alternatives with explicit sources may also introduce bindings when every alternative introduces the same visible names; the first successful alternative supplies them, with normalized union types. This does not select binding-producing not or alternatives inside one structural pattern. A disjunction must not expose a name supplied by only one alternative; see [binding-producing or](condition-chains.md#binding-producing-or-alternatives-selected).
 
 ## Reference comparison
 
@@ -145,7 +145,7 @@ Rust match guards are Boolean tests evaluated after their pattern succeeds; a fa
 
 ## Selected boundary and remaining work
 
-Use direct comparison patterns for a single component test. Use if guards in match arms and later and operands in conditional chains, with grouped Boolean or where needed, for compound or cross-component conditions. All ten prefixes are selected; general logical subpatterns, binding-producing alternatives, and implicit-subject pattern chains are not added by this selection.
+Use direct comparison patterns for a single component test. Use if guards in match arms and later and operands in conditional chains, with grouped Boolean or where needed, for compound or cross-component conditions. All ten prefixes are selected; general logical subpatterns, alternatives inside one structural pattern, and implicit-subject pattern chains are not added by this selection. Binding-producing or between complete condition alternatives is selected separately.
 
 Remaining contracts include complete operand boundaries, custom operator applicability/effects, generic constraints, extraction/ownership commitment, coverage of comparison regions, and whether logical subpatterns are worth adding later. A false comparison is mismatch, but a failure is not; right-operand evaluation is once when reached. Arbitrary comparison regions or guarded predicates do not automatically prove exhaustive coverage; retain an explicit catch-all when completeness cannot be established.
 
