@@ -144,11 +144,16 @@ Selected tuple value entries and numeric access are outlined separately from tup
 tuple_value_entry := expression
                    | identifier "=" expression
                    | "=" identifier
+                   | "..." expression
+
+spread_tuple_value := "(" tuple_value_entry {"," tuple_value_entry} [","] ")"
 
 tuple_position_suffix := "." decimal_position
 ```
 
 Here decimal_position is a descriptive placeholder for a fixed nonnegative zero-based position, not a runtime expression. The selected = identifier shorthand expands to identifier = identifier; ordinary positional expressions do not infer labels. Both named and unnamed tuples expose positions in stored order, and invalid positions are compile-time errors. Runtime variable tuple indexing is rejected; dot followed by an identifier selects that literal field name. Mixed tuples with an unnamed prefix and named suffix are selected: (42, = tea) infers (:Int, tea: String) when tea is String, preserving unlabeled positions and all written evaluation order. These fragments do not decide complete recursive type/pattern integration, interleaved mixed type layouts, computed compile-time position syntax, numeric writes, or the complete lexer. In particular, scanning nested pair.0.1 must distinguish numeric suffixes from a fractional literal without whitespace or type-based guessing. See [tuple entries and access](tuple-entries-and-access.md).
+
+The spread_tuple_value fragment requires at least one spread entry; this identifies tuple construction independently of the expanded count. Basic construction spread is selected: operands must be tuples with statically known shapes, preserve component order and labels, evaluate once in written order, and flatten only when explicitly spread. Thus (...empty) yields Unit/(), (...one) stays a singleton tuple, and (...pair) keeps both components. Reject scalar and runtime-length collection operands, without unwrapping Option/Result. The user requires name overriding, but duplicate-label collision layout remains pending; see [spread contract](tuple-spread-and-rest.md#tuple-construction-spread-selected) and [collision question](tuple-spread-and-rest.md#name-overriding-positional-collision-rule-pending). Interleaved named/unnamed layouts and complete expression grammar remain separate.
 
 Selected singleton value forms distinguish grouping by syntax:
 

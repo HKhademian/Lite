@@ -22,9 +22,10 @@ A descriptive entry production is:
 tuple_value_entry := expression
                    | identifier "=" expression
                    | "=" identifier
+                   | "..." expression
 ```
 
-This outlines entries inside an established tuple value; singleton value forms are selected below, while spread, assignment, and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. It does not automatically extend to function arguments, records, or tuple types.
+This outlines entries inside an established tuple value. Singleton value forms are selected below, and basic construction spread is now [selected](tuple-spread-and-rest.md#tuple-construction-spread-selected). Assignment and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. It does not automatically extend to function arguments, records, or tuple types.
 
 The shorthand requires an ordinary identifier resolving to a value. It cannot derive a label from a call, member access, grouped operand, or arbitrary expression:
 
@@ -33,7 +34,7 @@ meal := (cake = bake(), tea = brew()); /* explicit labels for expressions */
 meal := (= bake(), = tea);            /* rejected: bake() is not an identifier */
 ```
 
-Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. Duplicate labels are rejected, including duplicates introduced by shorthand. Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) is selected: the first component stays unnamed and the second is labeled tea.
+Underscore remains an ordinary identifier; = _ refers to its visible binding and supplies the label _. The existing explicit-entry rule rejects duplicate labels, including duplicates introduced by shorthand; the newly requested spread name-overriding rule and its collision layout are [pending clarification](tuple-spread-and-rest.md#name-overriding-positional-collision-rule-pending). Existing positional-prefix/named-suffix rules still apply: (= cake, tea) places a positional entry after a named one and is rejected. Standalone inference of a partially named tuple such as (cake, = tea) is selected: the first component stays unnamed and the second is labeled tea.
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
@@ -144,7 +145,7 @@ mixed.tea; /* same component as mixed.1 */
 
 The selected mixed type form combines :Type for an unnamed component with name: Type for a named component. No synthetic label is added to the unnamed position. The per-position label, or its absence, participates in the existing structural tuple identity together with the resolved component type. Fully unnamed, fully named, and mixed tuples all retain fixed numeric access; name access exists only for labeled components.
 
-Evaluate entries once from left to right. A positional entry after a named one remains rejected, and duplicate named labels remain rejected. Mixing the full and shorthand named entry spellings does not change these rules. Interleaved named/unnamed type layouts and construction into those layouts are not selected by this prefix/suffix example.
+Evaluate entries once from left to right. A positional entry after a named one remains rejected, and duplicate named labels in ordinary explicit entries remain rejected under the existing rule; spread name-overriding collision layout is pending clarification. Mixing the full and shorthand named entry spellings does not change these rules. Interleaved named/unnamed type layouts and construction into those layouts are not selected by this prefix/suffix example.
 
 Positional destructuring can bind the whole mixed tuple:
 
@@ -325,11 +326,11 @@ An empty executable block still produces Unit. The empty tuple spelling does not
 
 ### 9. Spread and rest expose the low-arity choice
 
-The existing spread/rest proposal preserves statically known product shape. Under the existing spread proposal and selected Unit/empty identity, spreading Unit would contribute zero components; spreading a singleton contributes one; explicitly including the tuple as an ordinary entry instead contributes the tuple itself as one component. Selected positional tuple rest has the empty tuple/Unit shape when exhausted, while a one-component rest remains a singleton. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected).
+Selected basic tuple spread preserves statically known product shape and labels. With the selected Unit/empty identity, spreading Unit contributes zero components; spreading a singleton contributes one; explicitly including the tuple as an ordinary entry instead contributes the tuple itself as one component. Selected positional tuple rest has the empty tuple/Unit shape when exhausted, while a one-component rest remains a singleton. See [selected tuple rest](tuple-spread-and-rest.md#positional-tuple-rest-selected).
 
-This introduces a real choice: with Unit as the zero-component tuple, the spread proposal would make all Unit-valued expressions potential zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
+With Unit as the zero-component tuple, Unit-valued expressions are zero-component spread operands, including action results. An action's evaluation, failure propagation, and required cleanup must still happen even though it contributes no components. A fallible Result<Unit, E> is not an empty tuple and cannot be spread by silently unwrapping it.
 
-Spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread may yield zero, one, or multiple components. Its expression syntax and interaction with grouping need a production of their own; the selected (value,) rule alone does not settle them. Named/mixed spread routing, duplicates, and access/ownership remain open.
+For noncolliding inputs, spread-result arity is the sum of expanded shapes, not simply the number of written operands or commas. A lone spread yields zero, one, or multiple components and explicitly establishes tuple syntax: (...empty) gives Unit/(), (...one) stays a singleton tuple, and (...pair) retains both components. Preserve operand component labels and order. The user also requires name overriding; its duplicate-label collision layout and effect on arity remain pending clarification. Interleaved named/unnamed routing, complete recursive grammar, and access/ownership remain separate.
 
 ### 10. Diagnostics, formatting, and migration
 
