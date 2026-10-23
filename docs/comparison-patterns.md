@@ -126,6 +126,8 @@ This example assumes the User matching schema, Int-compatible bounds/comparison 
 
 If no new binding is needed, the guard may instead reference an already stable subject through its accessible fields. The unbound `User(: Int, == outVal)` pattern does not create implicit first/second receiver names for later conditions.
 
+For compound comparisons, the preferred spelling is an explicit variable pattern followed by an if guard: `score if minimum <= score < maximum` for a whole subject, or `.Some(score) if minimum <= score < maximum` for a payload. This makes the tested value visible and uses the same rule at both levels. Direct single-comparison patterns remain available. Pattern-level and remains unselected at both levels; see [preferred compound comparison style](match-guards.md#preferred-style-for-compound-comparisons).
+
 ## Keep pattern logic separate from Boolean logic
 
 Logical composition within one component is not selected shorthand:

@@ -36,6 +36,24 @@ This selects `pattern if guard { body }` for every initial arm pattern, includin
 
 For example, `v if lower <= v < upper { accept(v) }` visibly binds v before applying the ordinary comparison chain. The comparison-pattern spelling `>= lower < upper` is invalid; a single comparison prefix does not start an implicit-subject chain. Common arithmetic/call/member RHS forms and grouped computed RHS values are selected separately and introduce no pattern names. Outer-level comparison/Boolean/conditional/block RHS expressions require grouping; an arm if guard starts only after that complete operand/pattern. See [common comparison operands](comparison-patterns.md#common-right-operands-selected) and [grouped comparison operands](comparison-patterns.md#grouped-right-operands-selected).
 
+## Preferred style for compound comparisons
+
+The user prefers a visible variable binding followed by an if guard for interval and other compound comparisons. Use the same rule for a whole match subject and a nested constructor payload:
+
+```text
+match score {
+    score if minimum <= score < maximum { accept(score) }
+    _                                   { reject() }
+}
+
+match maybe_score {
+    .Some(score) if minimum <= score < maximum { accept(score) }
+    _                                         { reject() }
+}
+```
+
+Assume compatible Int inputs/bounds, Option<Int> for maybe_score, and Unit-producing handlers. The initial pattern visibly supplies the local score name; the ordinary Boolean guard tests it only after matching succeeds. A false guard permits the next arm, and the subject producer still evaluates once. This preference keeps direct single-comparison patterns available. Pattern-level comparison conjunctions such as >= minimum and < maximum remain unselected at both the whole-subject and nested levels; this is an open syntax proposal, not a selected nested-only capability or a permanent rejection.
+
 ## Boolean guard example
 
 ```text
