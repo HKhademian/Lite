@@ -1,0 +1,421 @@
+{
+  "total": 7085,
+  "built": "2026-10-23",
+  "sources": [
+    {
+      "id": "advent-of-code",
+      "name": "Advent of Code",
+      "homepage": "https://adventofcode.com",
+      "description": "Annual 25-day (12 in 2025) two-part holiday puzzle event, 2015-2025.",
+      "count": 262
+    },
+    {
+      "id": "project-euler",
+      "name": "Project Euler",
+      "homepage": "https://projecteuler.net",
+      "description": "Mathematical/computational problems, one numeric answer each.",
+      "count": 1005
+    },
+    {
+      "id": "leetcode",
+      "name": "LeetCode",
+      "homepage": "https://leetcode.com",
+      "description": "Interview-style function problems; free problems only, with topics.",
+      "count": 4087
+    },
+    {
+      "id": "codeforces",
+      "name": "Codeforces",
+      "homepage": "https://codeforces.com",
+      "description": "Competitive programming; 800 most-solved rated problems with tags.",
+      "count": 800
+    },
+    {
+      "id": "cses",
+      "name": "CSES Problem Set",
+      "homepage": "https://cses.fi/problemset/",
+      "description": "400-task competitive programming set with 18 topic sections.",
+      "count": 400
+    },
+    {
+      "id": "atcoder",
+      "name": "AtCoder",
+      "homepage": "https://atcoder.jp",
+      "description": "ABC/ARC/AGC problems with community difficulty estimates.",
+      "count": 350
+    },
+    {
+      "id": "rosalind",
+      "name": "Rosalind",
+      "homepage": "https://rosalind.info",
+      "description": "Bioinformatics programming challenges.",
+      "count": 105
+    },
+    {
+      "id": "cryptopals",
+      "name": "Cryptopals",
+      "homepage": "https://cryptopals.com",
+      "description": "The Matasano crypto challenges, 8 sets of 8.",
+      "count": 66
+    },
+    {
+      "id": "jane-street",
+      "name": "Jane Street Puzzles",
+      "homepage": "https://www.janestreet.com/puzzles/",
+      "description": "Monthly quantitative trading puzzles.",
+      "count": 10
+    }
+  ],
+  "categories": {
+    "algorithms": 5533,
+    "mathematics": 1005,
+    "puzzles": 272,
+    "bioinformatics": 105,
+    "databases": 94,
+    "security": 66,
+    "concurrency": 6,
+    "shell": 4
+  },
+  "difficulty": {
+    "1": 334,
+    "10": 13,
+    "2": 1202,
+    "3": 294,
+    "4": 484,
+    "5": 2610,
+    "6": 391,
+    "7": 363,
+    "8": 1352,
+    "9": 42
+  },
+  "topics": {
+    "math": 1864,
+    "arrays": 1673,
+    "strings": 793,
+    "dynamic-programming": 752,
+    "greedy": 642,
+    "hash-table": 611,
+    "sorting": 558,
+    "binary-search": 410,
+    "dfs": 391,
+    "two-pointers": 296,
+    "graphs": 281,
+    "implementation": 273,
+    "trees": 270,
+    "bfs": 233,
+    "bit-manipulation": 231,
+    "matrix": 228,
+    "simulation": 195,
+    "number-theory": 188,
+    "prefix-sum": 186,
+    "heap": 169,
+    "counting": 167,
+    "brute-force": 160,
+    "data-structures": 157,
+    "sliding-window": 144,
+    "stack": 140,
+    "combinatorics": 140,
+    "binary-tree": 130,
+    "constructive-algorithms": 122,
+    "enumeration": 118,
+    "bioinformatics": 105,
+    "bitmask": 101,
+    "union-find": 100,
+    "shortest-path": 95,
+    "design": 94,
+    "databases": 94,
+    "backtracking": 88,
+    "segment-tree": 82,
+    "linked-list": 66,
+    "cryptography": 66,
+    "geometry": 64,
+    "mixed": 60,
+    "divide-and-conquer": 59,
+    "ordered-set": 59,
+    "fenwick-tree": 58,
+    "string-matching": 54,
+    "monotonic-stack": 54,
+    "hashing": 54,
+    "trie": 45,
+    "memoization": 41,
+    "recursion": 40,
+    "queue": 40,
+    "game-theory": 38,
+    "network-flow": 30,
+    "binary-search-tree": 29,
+    "topological-sort": 28,
+    "rolling-hash": 25,
+    "advanced-techniques": 25,
+    "range-queries": 25,
+    "monotonic-queue": 18,
+    "interactive": 17,
+    "brainteaser": 16,
+    "aes": 16,
+    "data-stream": 13,
+    "randomized": 12,
+    "probability": 11,
+    "suffix-array": 11,
+    "ternary-search": 10,
+    "abstract-algebra": 10,
+    "merge-sort": 9,
+    "doubly-linked-list": 9,
+    "counting-sort": 9,
+    "encoding": 8,
+    "xor": 8,
+    "block-ciphers": 8,
+    "stream-ciphers": 8,
+    "randomness": 8,
+    "mt19937": 8,
+    "diffie-hellman": 8,
+    "rsa": 8,
+    "length-extension": 8,
+    "quickselect": 7,
+    "bucket-sort": 6,
+    "sweep-line": 6,
+    "concurrency": 6,
+    "graph-matching": 6,
+    "iterator": 5,
+    "shell": 4,
+    "reservoir-sampling": 4,
+    "2-sat": 4,
+    "radix-sort": 3,
+    "eulerian-circuit": 3,
+    "minimum-spanning-tree": 3,
+    "strongly-connected-component": 3,
+    "special": 3,
+    "rejection-sampling": 2,
+    "parsing": 2,
+    "biconnected-component": 1,
+    "meet-in-the-middle": 1,
+    "chinese-remainder-theorem": 1,
+    "fft": 1,
+    "scheduling": 1
+  },
+  "topics_source": {
+    "source": 3648,
+    "none": 1861,
+    "curated": 1176,
+    "section": 400
+  },
+  "status": {
+    "verified": 5846,
+    "partial": 1239
+  },
+  "lists": [
+    {
+      "id": "blind-75",
+      "title": "Blind 75",
+      "count": 75
+    },
+    {
+      "id": "neetcode-150",
+      "title": "NeetCode 150",
+      "count": 149
+    },
+    {
+      "id": "aoc-2015",
+      "title": "Advent of Code 2015",
+      "count": 25
+    },
+    {
+      "id": "aoc-2016",
+      "title": "Advent of Code 2016",
+      "count": 25
+    },
+    {
+      "id": "aoc-2017",
+      "title": "Advent of Code 2017",
+      "count": 25
+    },
+    {
+      "id": "aoc-2018",
+      "title": "Advent of Code 2018",
+      "count": 25
+    },
+    {
+      "id": "aoc-2019",
+      "title": "Advent of Code 2019",
+      "count": 25
+    },
+    {
+      "id": "aoc-2020",
+      "title": "Advent of Code 2020",
+      "count": 25
+    },
+    {
+      "id": "aoc-2021",
+      "title": "Advent of Code 2021",
+      "count": 25
+    },
+    {
+      "id": "aoc-2022",
+      "title": "Advent of Code 2022",
+      "count": 25
+    },
+    {
+      "id": "aoc-2023",
+      "title": "Advent of Code 2023",
+      "count": 25
+    },
+    {
+      "id": "aoc-2024",
+      "title": "Advent of Code 2024",
+      "count": 25
+    },
+    {
+      "id": "aoc-2025",
+      "title": "Advent of Code 2025",
+      "count": 12
+    },
+    {
+      "id": "cses-introductory-problems",
+      "title": "CSES · Introductory Problems",
+      "count": 24
+    },
+    {
+      "id": "cses-additional-problems-i",
+      "title": "CSES · Additional Problems I",
+      "count": 30
+    },
+    {
+      "id": "cses-bitwise-operations",
+      "title": "CSES · Bitwise Operations",
+      "count": 11
+    },
+    {
+      "id": "cses-graph-algorithms",
+      "title": "CSES · Graph Algorithms",
+      "count": 36
+    },
+    {
+      "id": "cses-sorting-and-searching",
+      "title": "CSES · Sorting and Searching",
+      "count": 35
+    },
+    {
+      "id": "cses-advanced-techniques",
+      "title": "CSES · Advanced Techniques",
+      "count": 25
+    },
+    {
+      "id": "cses-dynamic-programming",
+      "title": "CSES · Dynamic Programming",
+      "count": 23
+    },
+    {
+      "id": "cses-range-queries",
+      "title": "CSES · Range Queries",
+      "count": 25
+    },
+    {
+      "id": "cses-tree-algorithms",
+      "title": "CSES · Tree Algorithms",
+      "count": 16
+    },
+    {
+      "id": "cses-string-algorithms",
+      "title": "CSES · String Algorithms",
+      "count": 21
+    },
+    {
+      "id": "cses-mathematics",
+      "title": "CSES · Mathematics",
+      "count": 37
+    },
+    {
+      "id": "cses-geometry",
+      "title": "CSES · Geometry",
+      "count": 16
+    },
+    {
+      "id": "cses-construction-problems",
+      "title": "CSES · Construction Problems",
+      "count": 8
+    },
+    {
+      "id": "cses-interactive-problems",
+      "title": "CSES · Interactive Problems",
+      "count": 6
+    },
+    {
+      "id": "cses-additional-problems-ii",
+      "title": "CSES · Additional Problems II",
+      "count": 30
+    },
+    {
+      "id": "cses-sliding-window-problems",
+      "title": "CSES · Sliding Window Problems",
+      "count": 11
+    },
+    {
+      "id": "cses-advanced-graph-problems",
+      "title": "CSES · Advanced Graph Problems",
+      "count": 28
+    },
+    {
+      "id": "cses-counting-problems",
+      "title": "CSES · Counting Problems",
+      "count": 18
+    },
+    {
+      "id": "cryptopals-set-1",
+      "title": "Cryptopals · Set 1: Basics",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-2",
+      "title": "Cryptopals · Set 2: Block crypto",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-3",
+      "title": "Cryptopals · Set 3: Block & stream crypto",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-4",
+      "title": "Cryptopals · Set 4: Stream crypto and randomness",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-5",
+      "title": "Cryptopals · Set 5: Diffie-Hellman and friends",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-6",
+      "title": "Cryptopals · Set 6: RSA and DSA",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-7",
+      "title": "Cryptopals · Set 7: Hashes",
+      "count": 8
+    },
+    {
+      "id": "cryptopals-set-8",
+      "title": "Cryptopals · Set 8: Abstract algebra",
+      "count": 10
+    },
+    {
+      "id": "project-euler-first-100",
+      "title": "Project Euler · First 100",
+      "count": 100
+    },
+    {
+      "id": "leetcode-databases",
+      "title": "LeetCode · Database",
+      "count": 94
+    },
+    {
+      "id": "leetcode-concurrency",
+      "title": "LeetCode · Concurrency",
+      "count": 6
+    },
+    {
+      "id": "leetcode-shell",
+      "title": "LeetCode · Shell",
+      "count": 4
+    }
+  ]
+}

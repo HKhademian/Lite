@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/list.schema.json",
+  "title": "ChallengeList",
+  "description": "A curated collection of challenge ids (event year, section, roadmap, ...).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "kind", "source", "url", "description", "count", "challenge_ids"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": ["event", "section", "set", "collection", "roadmap"]
+    },
+    "source": { "type": "string" },
+    "url": { "type": "string", "pattern": "^https://" },
+    "description": { "type": "string" },
+    "count": { "type": "integer", "minimum": 0 },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "challenge_ids"],
+        "properties": {
+          "name": { "type": "string" },
+          "challenge_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "challenge_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered ids; all must exist in data/challenges.jsonl."
+    }
+  }
+}

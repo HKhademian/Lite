@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/challenge.schema.json",
+  "title": "Challenge",
+  "description": "One normalized programming problem, question or coding challenge.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "source",
+    "url",
+    "native_id",
+    "category",
+    "topics",
+    "raw_topics",
+    "tags",
+    "difficulty",
+    "formats",
+    "languages",
+    "topics_source",
+    "premium",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Globally unique, stable, source-prefixed id (e.g. leetcode-1, aoc-2020-11)."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "advent-of-code",
+        "project-euler",
+        "leetcode",
+        "codeforces",
+        "cses",
+        "atcoder",
+        "rosalind",
+        "cryptopals",
+        "jane-street"
+      ]
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https://"
+    },
+    "native_id": {
+      "type": "string",
+      "description": "Identifier inside the source (question number, task id, contest id, slug)."
+    },
+    "set": {
+      "type": ["string", "null"],
+      "description": "Year, contest, section, track or collection the item belongs to."
+    },
+    "number": {
+      "type": ["integer", "null"],
+      "description": "Numeric position inside the source or set, when one exists."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "algorithms",
+        "data-structures",
+        "mathematics",
+        "databases",
+        "shell",
+        "concurrency",
+        "javascript",
+        "data-analysis",
+        "security",
+        "bioinformatics",
+        "puzzles",
+        "frontend",
+        "system-design"
+      ]
+    },
+    "primary_topic": {
+      "type": ["string", "null"],
+      "description": "First topic, provided as a convenience for grouping."
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "description": "Canonical, normalized topic ids; see schema/taxonomy.json."
+    },
+    "raw_topics": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The source's own topic labels, before normalization."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Free-form facets: source, year, contest, rating, index, ..."
+    },
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scale", "raw", "normalized"],
+      "properties": {
+        "scale": { "type": "string" },
+        "raw": { "type": ["string", "number"] },
+        "normalized": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10
+        }
+      }
+    },
+    "formats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "function",
+          "stdin-stdout",
+          "sql",
+          "shell",
+          "programming",
+          "puzzle",
+          "single-answer",
+          "two-part",
+          "interactive"
+        ]
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "topics_source": {
+      "type": "string",
+      "enum": ["source", "section", "curated", "none"],
+      "description": "How topics were obtained; 'none' means the record still needs tagging."
+    },
+    "popularity": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "attempts": { "type": "integer", "minimum": 0 },
+        "solved": { "type": "integer", "minimum": 0 },
+        "acceptance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "users": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "premium": {
+      "type": "boolean",
+      "description": "True for LeetCode problems that require a subscription."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "partial"],
+      "description": "'partial' means title/URL are verified but topics are missing."
+    }
+  }
+}
