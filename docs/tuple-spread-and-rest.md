@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Named/mixed rest labels, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels selected 2026-10-23; construction spread remains a proposal**. Singleton value forms were selected later: (value,) is an unnamed singleton, while (value) groups. Rest after named selectors, variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
 
 ## Positional tuple rest selected
 
@@ -23,7 +23,34 @@ Zero remaining components produce Unit/(); one produces a singleton tuple rather
 /* (first, second) := (1, 2, 3);    extra component without rest */
 ```
 
-Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple remainders; it does not select named/mixed remainder label handling, list rest, rest-only pattern spelling, or new header-pattern support. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
+Ordinary declarations require an irrefutable match for the source contract. Supported conditional/match contexts retain their mismatch rules when required components or their subpatterns fail. Evaluate the source once before introducing bindings. This selection covers positional tuple patterns, including named/mixed source tuples with label preservation below; it does not select rest after named selectors, list rest, rest-only pattern spelling, or new header-pattern support. Copy/move/borrow and simultaneous ownership remain separate; capturing a tuple does not itself promise heap allocation or deep cloning.
+
+## Remainder labels selected
+
+Selected by the user, 2026-10-23: positional tuple rest preserves each remaining component's label, if present, along with its type and stored order. Removing a positional prefix does not rename, reorder, or remove labels from the suffix. Numeric positions restart at zero within the remainder.
+
+```text
+meal := (cake = 10, tea = 20, fruit = 30);
+(first, ...rest) := meal;
+/* first = 10; rest has type (tea: Int, fruit: Int) */
+rest.0;     /* 20 */
+rest.tea;   /* 20 */
+rest.1;     /* 30 */
+rest.fruit; /* 30 */
+
+(first, ...rest) := (cake = 10, tea = 20);
+/* rest = (tea = 20), with type (tea: Int), not (:Int,) */
+
+(first, ...rest) := (1, 2, tea = "green");
+/* rest has type (:Int, tea: String) */
+rest.0;   /* 2: remains unnamed */
+rest.1;   /* "green" */
+rest.tea; /* "green" */
+```
+
+The prefix binding name first does not become a component label. Consumed fields are absent from rest; rest.cake in the meal example is rejected. A fully unnamed remainder stays unnamed, and exhausting any tuple produces Unit/(). A named singleton keeps its label rather than converting to an unnamed singleton or scalar. Existing structural tuple identity and stored-label compatibility apply to the resulting tuple.
+
+This selects a positional prefix plus rest over named, unnamed, or mixed source tuples. It does not select named-selector-plus-rest patterns such as (drink = tea, ...rest), whose coverage and removal rules remain separate.
 
 ## Two directions for the same punctuation
 
