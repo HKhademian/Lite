@@ -6,18 +6,18 @@ Status: **read/write entry compatibility and basic read-flow invalidation, neste
 
 A local binding keeps its declared accepted replacements even when its current read type is narrower. A var T parameter has both read and write access to T. The callee may read T immediately; it need not assign before reading or returning. Var is not output-only access or a mandatory-write promise.
 
-For the supported simple local cases, check both directions at the call:
+For the supported simple local cases, check both directions at callee entry, after argument preparation:
 
 - Every currently justified readable alternative fits the parameter's readable type.
 - Every replacement permitted by the parameter fits the caller location's declared accepted writes.
 
-The current read type and the declared write contract are separate inputs to this check. A String | Int location currently reading Int can supply var Int, but cannot supply var String. Its storage accepts String writes, yet the callee could immediately read an Int as String. Merely fitting the callee's possible writes is insufficient.
+The current read type and the declared write contract are separate inputs to this check. A String | Int location still reading Int at invocation can supply var Int, but cannot supply var String. Its storage accepts String writes, yet the callee could immediately read an Int as String. Merely fitting the callee's possible writes is insufficient.
 
 These checks require valid entry refinements and compatible location access throughout the call. They do not select general access variance, shared-alias concurrency, or a complete subtype/ownership model.
 
 ## Entry facts after argument evaluation selected
 
-Selected on **2026-10-24**: the readable type required by each var argument must remain justified when the callee begins, after evaluation of all reached supplied arguments. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
+Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
 
 ```text
 var x: String | Int = ?;
@@ -37,6 +37,42 @@ Preserve ordinary callee-first, argument-left-to-right evaluation and select eac
 Require a supported proof that entry reads fit after intervening argument effects; invalidate earlier facts where those effects may change the location unless preservation is justified. Continue checking the callee's permitted writes against the caller's declared accepted replacements. Calls whose argument evaluation exits do not reach invocation and retain ordinary failure/exit behavior; no post-call fact is established merely by selecting an argument.
 
 This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. The later-argument read and direct-write cases are separately allowed below; general grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+
+## Entry compatibility established during preparation selected
+
+Selected on **2026-10-24**: later arguments may establish the required entry read type for an earlier selected initialized local. The local need not already have that read type when its location is selected; the caller retains its existing authority during preparation, and the callee receives the grant only at invocation.
+
+Assume use_text takes read/write String access, an Int value, and returns Unit:
+
+```text
+var value: String | Int = ?;
+value = 42;
+
+use_text(var value, ({
+    value = "ready";
+    0
+}));
+```
+
+Select value's location while its current read type is Int. Under the caller's grant, the later argument installs String and produces 0. At invocation, String satisfies the callee's readable input, and its permitted String writes fit the caller's declared String | Int storage. Accept this call; do not reject it merely because the local held Int at the earlier selection point. The String-to-Int example above remains rejected because it leaves the wrong type at invocation.
+
+From the same initial value, the user's temporary form has the same effects and grant handoff for this stable callable name and simple local:
+
+```text
+var value: String | Int = ?;
+value = 42;
+
+tmp := {
+    value = "ready";
+    0
+}
+/* value reads as String; declared writes still accept String | Int. */
+use_text(var value, tmp);
+```
+
+These are alternative fragments. The temporary has type Int. Before use_text starts, value reads as String and permits a String write; its declared caller replacement contract still also permits Int. During the call, the callee receives only the read/write String authority requested by its parameter. Normal return leaves a String read type under that contract, without changing the caller's declared String | Int writes or promising particular String contents.
+
+Require a supported String read proof on every path reaching invocation; a later expression that may leave Int does not suffice. A plain use_text(var value, 0) with value still reading Int remains rejected. Keep single location selection, ordinary callee-first/source-argument evaluation, permitted writes, location/lifetime validity, and duplicate-grant rejection. The temporary equivalence does not authorize reordering effects from an earlier callee or argument expression. This selects entry-type establishment for initialized simple locals; it adds no uninitialized-input parameter mode, write-only contract, runtime type check, or broader alias/effect inference.
 
 ## Later argument reads of a selected local allowed
 
