@@ -81,6 +81,8 @@ exp : fn (...Params1, ...Params2, ...rest: Int): Int =
 
 A declared ...rest: T accepts zero or more additional T values collected as an array. T may itself be a tuple; each extra tuple remains one input. Both known-size and runtime-length array spreads may feed a declared tail. The same segment is valid in ordinary tuple schemas: a remainder from `(q: Int, w: Int, e: Int, ...rest: Int)` after selecting q/w preserves `(e: Int, ...rest: Int)`. Ordinary fixed-tuple pattern rest below remains a tuple operation. Exact runtime-array spelling, tail normalization/composition, and ownership remain open; the discussion's [T; ...] was only a placeholder. See [the complete selected examples](tuple-array-shapes.md).
 
+Access a declared tail by its schema name: mytuple.rest obtains the array through existing named tuple access. mytuple.rest[index] then follows array-indexing rules, outside tuple access. This does not introduce runtime tuple positions, a numeric position for the tail, or multiple declared rest segments. See [named tail access](tuple-array-shapes.md#declared-names-access-array-tails).
+
 ## Positional tuple rest selected
 
 Selected by the user, 2026-10-22: a positional tuple pattern may contain one ...rest capture, placed last. It binds the remaining components as a tuple, preserving their individual types and stored order.

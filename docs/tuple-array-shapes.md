@@ -126,6 +126,23 @@ x : (q: Int, w: Int, e: Int, ...rest: Int);
 
 The array-tail capability is not limited to functions. The tuple's fixed component schema is statically described; runtime variability belongs to its declared homogeneous array tail. This does not introduce arbitrary runtime tuple fields, labels, or independently changing component types.
 
+### Declared names access array tails
+
+The declared rest segment already has a name. For the schema above, x.rest accesses its array tail through ordinary named tuple member access. No new tuple access syntax is needed. After that member access, x.rest[index] is an array-indexing expression: element access, bounds, failures, and permissions follow the array contract. The runtime array length does not introduce additional tuple positions.
+
+```text
+inspect := fn (first: Int, ...rest: Int) {
+    tail := arguments.rest;
+    loop tail as value {
+        print(value);
+    }
+}
+```
+
+For callable input schemas, arguments.rest uses the declared input-tail name; an implementation-local collector name does not rename the schema member. This named access does not select named call routing into a variadic segment, numeric tuple access to the tail, its exact numeric position/component-count model, or tail-only normalization. Multiple declared rest segments remain a future discussion. Array indexing syntax and behavior are outside this tuple-access clarification.
+
+### Pattern remainders preserve the tail
+
 A pattern rest capture preserves unselected fixed components and the existing tail in their order. It must not convert a remaining fixed field into an unrelated array element or manufacture tuple fields from the runtime tail's current length. In a callable implementation whose local header consumes all fixed inputs, its trailing collector receives the declared array tail, as myrest does above. General tail-only tuple normalization and whole-value/array identity are not selected merely by that collector behavior.
 
 Ordinary fixed tuples keep their existing pattern-rest rule: zero fixed remaining components give Unit/(), one gives a singleton tuple, and heterogeneous remaining components preserve their individual types and labels. That pattern operation does not become a homogeneous array merely because it uses the same ellipsis marker. A declared ...rest: T array segment and a pattern ...remainder have distinct syntactic roles: one declares accepted input elements, the other collects the source's remainder.
