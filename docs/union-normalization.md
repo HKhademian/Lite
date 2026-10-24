@@ -2,6 +2,8 @@
 
 Status: **selected 2026-10-18: plain unions ignore member order, flatten nested plain unions, and remove duplicate type identities after transparent-alias resolution**. Distinct record declarations and enum cases retain identity. Automatic member admission and checked narrowing are selected separately. Subtype absorption, broader assignability, recursive alias legality, representation, and ABI remain separate contracts.
 
+Direct [union-target type tests](type-tests-and-narrowing.md#union-targets-in-type-tests-selected) use this normalization on input and target members. For closed distinct types, success keeps shared members and failure the input remainder; target-only members never widen the input.
+
 ## One type despite spelling differences
 
 Assume A, B, and C name existing distinct types:

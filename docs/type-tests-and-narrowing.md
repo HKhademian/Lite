@@ -40,6 +40,30 @@ The three roles are distinct:
 
 All bodies require braces. Existing-name tests do not add another general declaration syntax. `if person: User = person` remains valid explicit shadow binding, but is not required for narrowing.
 
+## Union targets in type tests selected
+
+Selected on **2026-10-24**: a type test may use a plain union as its target type. For initialized closed unions of distinct, nonoverlapping types, normalize input and target alternatives, keep their shared members on success, and keep input members outside the target on failure:
+
+```text
+value: String | Float | Int = read_value();
+
+if value: (String | Float) {
+    /* value: String | Float */
+} else {
+    /* value: Int */
+}
+```
+
+Assume read_value produces the declared union and value remains stable. This accepts the same active members as value: String or value: Float, but expresses one type test with a union target. The parentheses group a type; no new condition operator is introduced. Testing String | Bool against this input succeeds only for String and leaves Float | Int on failure. Bool does not become possible merely because it appears in the target.
+
+Plain-union normalization applies to both sides: member order is irrelevant, nested plain unions flatten, and duplicate resolved identities (including transparent aliases) collapse. Distinct nominal types stay distinct; structural resemblance does not establish membership. This selection requires the stated closed distinct-member cases, not a full structural/subtype/interface or generic-overlap algorithm.
+
+A target covering every known input member makes an existing-name test always true; a known disjoint target makes it always false. Such well-formed existing-name tests remain legal with the selected constant-test warning. A partially overlapping target is not constant just because it includes some impossible members. Impossible-branch typing and broader source-pattern diagnostics retain their separate open contracts.
+
+Only the selected control-flow path gains the shared/remainder type knowledge. No stored value, declared type, conversion, union member, or Unit is manufactured. Existing-name tests bind nothing; the shared typed and type-only pattern forms retain their own binding and mismatch contracts when supplied a union type. Ordinary declarations still require their existing irrefutability contract; no new header or receiver context is added.
+
+Read the existing subject once for this test; target member order does not cause runtime expression evaluation or conversion attempts. Preserve reached-source effects/failures/exits, stable-binding identity, and ordinary short-circuiting. Refine a later use only while its proof remains valid; no copy/freeze, new ownership permission, or lifetime extension is implied. Negating the whole test complements its normal result, with the same scope and no exported bindings as the existing negation rules.
+
 ## Provably constant type tests selected
 
 Selected on **2026-10-24**: a well-formed existing-name type test remains valid when the known types prove its result always true or always false. Issue a warning for that proven constant test:
@@ -211,7 +235,7 @@ These need decisions before the grammar is implementation-ready:
 1. **Logical flow and precedence.** Pattern-binding and chains with bindings available to later Boolean operands are selected; see [conditional pattern chains](condition-chains.md). Binding-producing or alternatives export the union of introduced names with first-success values and Unit for absent paths, typed as normalized unions; each alternative starts from the common incoming scope. Grouped matching-condition not is selected with no exported bindings; its binding-scope rule is separate from the selected early-exit refinement of existing bindings. Related stable-binding narrowing from finite known alternatives is selected separately. False-branch refinement through else/else if and into later or operands, plus normalized successful-path joins of stable existing bindings after or, are selected. Common incoming lexical bindings remain the same even when supported failure facts narrow their types for a later alternative. Existing-name tests complete before not, with and tighter than or; concise not name: Type is selected while source-pattern negation remains grouped. Broader negative/disjunctive refinement beyond supported facts, other expression/type grammar interactions, and complete mutation/effect invalidation still need rules. Do not derive parsing from whitespace or infer disjunction/negation bindings beyond the selected payload-or-Unit or guarantee.
 2. **Complete exit-flow analysis.** Stable existing-binding refinement after an early exit is selected above. Full integration with all completion/cleanup paths, alias/effect invalidation, and broader logical predicates remains to formalize; exiting branches never export otherwise out-of-scope names.
 3. **Broader negative information.** Remaining-subject narrowing across match arms is selected for fully handled members of a closed union of distinct types. False-branch remainders through else/else if, narrowing into later or operands, and the all-reaching-path early-exit cases are selected. Successful or joins of supported existing-binding possibilities are also selected. General joins beyond these supported facts, overlapping types, arbitrary guards, and open interfaces still need a complete contract.
-4. **Type relations.** Provably constant existing-name tests remain legal with the selected warning. Complete exact identity versus subtype/interface satisfaction, generic tests and erasure/reification, and stability-sensitive proof rules separately; unknown relationships are not automatically constant.
+4. **Type relations.** Direct plain-union targets are selected for closed distinct members, with shared input/target members on success and the input remainder on failure. Provably constant existing-name tests remain legal with the selected warning. Complete exact identity versus subtype/interface satisfaction, generic tests and erasure/reification, and stability-sensitive proof rules separately; unknown relationships are not automatically constant.
 5. **Conditional diagnostics.** [Irrefutable pattern conditions](conditionals.md#irrefutable-pattern-conditions-selected) are selected: allow them and warn when the complete matching condition is provably always successful. `if flag := false` binds false and enters its body; a later and flag explicitly tests the Bool and can reject the complete condition. Matching `Some(false)` with `Some(flag)` succeeds independently of payload truthiness. Provably always-true/always-false existing-name type tests are separately allowed with a warning. Exact warning controls, broader impossible-pattern/always-false diagnostics, impossible-branch typing, and complete coverage proofs remain open.
 6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, and complete nested-pattern grammar. Repeated binding names within patterns and across successful and-chain operands use selected ordered shadowing; existing-name type tests narrow the current binding without introducing a new one.
 

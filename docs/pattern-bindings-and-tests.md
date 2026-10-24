@@ -29,6 +29,8 @@ These are pattern operations with a supplied subject, not standalone expressions
 name: Type            /* type match and bind the narrowed value */
 ```
 
+A target Type may itself be a plain union in supported type-test/pattern forms. For closed distinct members, success keeps only members shared by input and target, while failure keeps the input remainder. Type-only patterns still bind nothing and typed patterns retain their existing binding/mismatch contracts; see [union targets](type-tests-and-narrowing.md#union-targets-in-type-tests-selected).
+
 The comparison operators never introduce bindings, including negative forms such as =!=. In `v if v =!= expected`, the initial v pattern binds and the comparison only reads values. A comparison-pattern RHS name such as expected is ordinary existing-value lookup, not capture. Grouped [negated matching conditions](condition-chains.md#negated-matching-conditions-selected) likewise export no new names, although explicit patterns inside them may bind for their own inner tests.
 
 An ordinary literal such as `42` or `"ali"` is a concise value-match pattern, not a fourth base operation. `== "ali"` spells its value test explicitly. Enum-case selection such as `.completed`, constructor heads, tuples, and future record forms supply structural or case constraints and route components to subpatterns; they are not all reduced to whole-value equality.

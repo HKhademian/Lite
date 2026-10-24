@@ -185,6 +185,8 @@ Well-formed existing-name type tests remain valid when proven always true or alw
 
 The successful body of an or condition joins the supported successful-path types of stable existing bindings. For value: String | Float | Int, testing value: String or value: Float leaves String | Float in the body and Int in else. No Unit is introduced by this existing-binding join; new alternative-local names retain their separate payload-or-Unit rule. Preserve all possible successful paths and stability across effects; see [successful or narrowing](condition-chains.md#narrowing-after-successful-or-conditions-selected).
 
+An existing-name type test may target a plain union: with stable value: String | Float | Int, if value: (String | Float) leaves String | Float in the body and Int in else. A target member absent from the input creates no new possibility. See [union targets](type-tests-and-narrowing.md#union-targets-in-type-tests-selected).
+
 ## Pattern conditions
 
 ```text

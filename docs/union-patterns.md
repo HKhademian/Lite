@@ -28,6 +28,12 @@ Type patterns also compose inside destructuring: `(x: Int, y: String)` tests and
 
 Annotations may constrain only selected components. The remaining bindings are inferred from compatible input possibilities as concrete types or unions; excluded alternatives cannot continue widening sibling bindings. Composite bindings retain whole alternatives. See [pattern binding inference](pattern-binding-inference.md).
 
+## Union target types selected
+
+Selected on **2026-10-24**: the target Type may itself be a plain union in the existing supported type-test/pattern forms. For closed distinct members, compare normalized alternatives: success keeps shared input/target members and failure keeps the input remainder. With value: String | Float | Int, if value: (String | Float) gives String | Float in the body and Int in else; a String | Bool target instead permits only String and cannot inject Bool into the input.
+
+Type-only patterns such as : (String | Float) still introduce no name, while a typed binding uses its normal narrowed-binding contract. This adds no new pattern placement, source separator, or mismatch policy. Whole-member coverage removes only admitted target members; guarded/partial failures may retain them. Existing-name always-true/always-false tests follow their selected warning policy. See [union targets in type tests](type-tests-and-narrowing.md#union-targets-in-type-tests-selected) for normalization, stability, and open type-relation boundaries.
+
 ## Narrowing without redeclaration
 
 For an existing union binding, use `if person: User { ... }` when no new name is needed. This is a type test of that name, not a pattern that creates a shadow binding. The existing value is usable as User while its refinement is valid. The explicit binding forms below remain useful and selected. Stability, mutation, and broader flow rules are tracked in [type tests and narrowing](type-tests-and-narrowing.md).
