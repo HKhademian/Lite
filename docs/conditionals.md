@@ -179,6 +179,8 @@ For a stable initialized closed union of distinct members, a failed whole-member
 
 Supported false-path facts also carry into a later or operand: with a stable String | Int value, value: String or value > 0 tests the right side as Int, while the successful body still admits String | Int. This refines existing bindings without exposing names introduced by a failed alternative; see [or-operand narrowing](condition-chains.md#narrowing-into-later-or-operands-selected).
 
+Concise negation of Boolean operands and existing-name tests is selected: if not value: String means if not (value: String). Not binds more tightly than and, which binds more tightly than or, so if not blocked or trusted and ready means (not blocked) or (trusted and ready). Negating a source-pattern condition still requires parentheses, including typed source bindings. See [condition negation scope](operators.md#negation-scope-in-conditions-selected).
+
 ## Pattern conditions
 
 ```text

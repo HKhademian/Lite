@@ -80,6 +80,40 @@ To negate only `a` before comparing:
 
 The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
+## Negation scope in conditions selected
+
+Selected on **2026-10-24**: not negates the following complete Boolean operand or existing-name type test. A comparison chain completes before not; an existing-name type test likewise completes before not. Then and binds more tightly than or. The spellings if not, and not, and or not are readable keyword sequences using that same prefix operator, not separate operators with a different scope.
+
+```text
+if not blocked or trusted and ready {
+    proceed()
+}
+```
+
+Assume blocked, trusted, and ready are Bool and proceed returns Unit. The grouping is:
+
+```text
+if (not blocked) or (trusted and ready) {
+    proceed()
+}
+```
+
+If blocked is false, the first alternative succeeds and trusted/ready are skipped; readiness is not required on that path. Requiring ready for either alternative needs explicit grouping:
+
+```text
+if ((not blocked) or trusted) and ready {
+    proceed()
+}
+```
+
+Use parentheses to extend negation over a compound condition, as in not (blocked or restricted). Ordinary single comparisons retain their selected spelling and meaning, including not actual == expected and not (actual == expected).
+
+Existing-name type tests permit the concise form if not value: String, equivalent to if not (value: String). For stable value: String | Int, if not value: String and value > 0 tests the comparison with value as Int. No name is introduced, and supported narrowing remains subject to stability. See [type tests](type-tests-and-narrowing.md#negation-and-condition-precedence-selected).
+
+Source-pattern conditions retain grouped negation: not (.Some(user) := source) and not (user: User = source). Ungrouped not pattern := source or not name: Type = source is rejected; this selection adds shorthand only for existing-name tests alongside ordinary Boolean negation. This grouped requirement also preserves the existing rule for source-patterns that introduce no names. All names introduced inside negation remain internal, including through double negation; see [negated matching conditions](condition-chains.md#negated-matching-conditions-selected).
+
+Negation complements only a normal Boolean result. Preserve short-circuiting, effects, source evaluation, and failures/exits. Not remains usable in ordinary value expressions such as allowed := not blocked; no preceding if/and/or keyword is required. This selects condition scope and the illustrated type-test precedence, not a complete expression/type parser or new logical subpatterns.
+
 ## Recoverable error propagation
 
 Postfix `!` extracts one Result success payload or returns its declared recoverable error from the nearest function or closure. It participates in left-to-right postfix chaining:
