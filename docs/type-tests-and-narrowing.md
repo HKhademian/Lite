@@ -252,9 +252,9 @@ The declared writable storage contract remains var (String | Int) in the example
 
 ## Flow types after explicit var calls selected
 
-Selected on **2026-10-24**: an explicit var grant permits replacement, so a call may invalidate current read facts for that location. For x declared String | Int and currently reading Int, replace(var x) leaves String | Int after normal return when that callable permits either final member without a stronger guarantee. A supported guarantee that the final stored type is String or Int establishes that read type instead. The guarantee must hold on every normal return; write permission alone does not prove that a replacement occurred or that a particular member remains.
+Selected on **2026-10-24**: a var T parameter reads and may write T. A call requires every currently justified readable alternative to fit its input and every permitted replacement to fit the caller's declared accepted writes. For x declared String | Int and currently reading Int, replace(var x) may leave String | Int when it accepts both; replaceInt(var x) is valid and leaves Int, while replaceStr(var x) requiring readable String is rejected. A no-write path does not invalidate the single-member conclusion because that member was already required on entry.
 
-The user sequence with replaceStr and replaceInt assumes both accept incoming String | Int and guarantee the indicated final member. Do not infer this from their names or treat var String as an output-only annotation. Declared replacement contracts, Unit call results, and var/mut authority stay unchanged. Source notation and verification/inference of final-state guarantees remain open; see [call replacement flow](call-replacement-flow.md) for the full sequence, failure-path limits, and stability/alias boundaries.
+Do not infer String after an invalid call from Int to var String. Narrow writes alone do not make a signature output-only. The call result remains Unit, storage keeps its declared accepted replacements, and current refinements must remain valid through the call. Write-only access is a future topic, not a current mode; see [call replacement flow](call-replacement-flow.md) for the corrected valid/rejected sequences and remaining alias/effect work.
 
 ## Stability and mutation
 

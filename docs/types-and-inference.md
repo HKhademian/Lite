@@ -127,7 +127,7 @@ Explicit exits do not need to provide a local continuation value at the point th
 
 An internal `Never` or bottom type can describe control flow that cannot complete locally. Supported exhausted conditional type-test branches now warn and give the exhausted binding this read type; it can satisfy a known ordinary value parameter without producing a runtime value. Unrelated bindings retain their types and independent errors remain errors. Public spelling, member/generic behavior, and general usability are open, including the requested future exploration of Never | T and Never & T. See [Never and unreachable flow](never-and-unreachable-flow.md).
 
-After explicit var caller-location grants, current read refinements may be invalidated; a supported guaranteed normal-return stored type can establish a new read fact. This is separate from permitted writes, incoming read compatibility, and the callable's ordinary result type. Exact guarantee syntax/verification and full alias/effect inference remain open; see [call replacement flow](call-replacement-flow.md).
+Explicit var caller-location calls check current reads and declared accepted replacements separately. Var String reads and writes String; it rejects a current Int. A valid String-only call preserves String, while a wide String | Int call can widen an Int read refinement. Ordinary call results and storage write contracts stay unchanged. Write-only access is a future topic, not current semantics; see [call replacement flow](call-replacement-flow.md).
 
 ## No universal absence
 

@@ -1,63 +1,93 @@
 # Flow types after caller-location replacement
 
-Status: **basic invalidation after explicit var calls and use of guaranteed normal-return stored types selected 2026-10-24; source notation, verification/inference of guarantees, and the complete alias/effect model remain open**.
+Status: **read/write entry compatibility and basic read-flow invalidation after explicit var calls selected 2026-10-24; write-only access is future work, not a current mode; complete alias/effect rules remain open**.
 
 ## Declared storage and current reads
 
-A local binding keeps its declared accepted replacements even when its current read type is narrower. Granting a call var access lets that call replace the supplied location within its access contract. Invalidate facts that depended on the old value unless preservation or a final stored-type guarantee is justified.
+A local binding keeps its declared accepted replacements even when its current read type is narrower. A var T parameter has both read and write access to T. The callee may read T immediately; it need not assign before reading or returning. Var is not output-only access or a mandatory-write promise.
 
-For a location declared String | Int, a call that may leave either member cannot preserve an incoming Int-only read fact merely because the value was Int before the call. After normal return, use the justified remaining possibilities from the call contract. Without a supported stronger fact, the full String | Int declared contract is the conservative read type.
+For the supported simple local cases, check both directions at the call:
 
-## Selected sequence and callable obligations
+- Every currently justified readable alternative fits the parameter's readable type.
+- Every replacement permitted by the parameter fits the caller location's declared accepted writes.
 
-The following is the user's selected expected-flow sequence. It uses existing call syntax and the abstract callable obligations listed below; it does not define new signature syntax:
+The current read type and the declared write contract are separate inputs to this check. A String | Int location currently reading Int can supply var Int, but cannot supply var String. Its storage accepts String writes, yet the callee could immediately read an Int as String. Merely fitting the callee's possible writes is insufficient.
+
+These checks require valid entry refinements and compatible location access throughout the call. They do not select general access variance, shared-alias concurrency, or a complete subtype/ownership model.
+
+## Helper contracts
+
+The imaginary helper signatures describe these single-parameter access contracts; their ordinary call results are Unit:
+
+- replace takes var String | var Int, equivalent within one complete access contract to var (String | Int): it reads String | Int and may write either member.
+- replaceStr takes var String: it reads String and may write String.
+- replaceInt takes var Int: it reads Int and may write Int.
+
+The first contract is not an overload choice that promises one particular final member. The single-member helpers do not accept other incoming members merely because their names suggest replacement.
+
+## Valid flow sequence
 
 ```text
 var x: String | Int = ?;
 
 x = 42;
 /* x reads as Int. */
+replaceInt(var x);
+/* Valid: x reads as Int. */
 
 replace(var x);
-/* x reads as String | Int. */
-
-replaceStr(var x);
-/* x reads as String. */
-
-x = 42;
-/* x reads as Int. */
-
-replaceStr(var x);
-/* x reads as String. */
-
-replaceInt(var x);
-/* x reads as Int. */
+/* Valid: x reads as String | Int. */
 
 x = "42";
 /* x reads as String. */
+replaceStr(var x);
+/* Valid: x reads as String. */
+
+x = 42;
+replaceInt(var x);
+/* Valid: x reads as Int. */
 ```
 
-Assume 42 is Int. The three callables accept the incoming String | Int value and receive compatible caller-location replacement authority. `replace` permits either final member, with no narrower supported guarantee. `replaceStr` guarantees that the location holds String on every normal return; `replaceInt` guarantees Int. These names describe their intended contracts here and do not themselves cause type inference. Their ordinary call results are Unit, independently of the stored values.
+Assume 42 is Int and the helpers have the contracts above. The simple single-member call preserves its member because the incoming value already fits that member and every permitted write also fits it. A no-write path preserves the same valid member. No separate final-state guarantee or required assignment is needed.
 
-Every replacement still has to fit x's declared String | Int storage and its var permission. A final read guarantee changes static knowledge at the continuation, not the declared accepted replacements; Bool remains an invalid replacement. The existing reservation/definite-initialization rules apply to = ?, and direct assignments keep their selected flow behavior.
+A wider var (String | Int) call can discard the incoming Int-only refinement because it may write String. After normal return, use String | Int as the conservative read type unless a separately supported preservation fact exists. Do not infer a narrower type from a helper name, an observed execution, or tests that happened to write one member. General body-effect inference remains open.
 
-## Permission is not a final-state guarantee
+All calls keep x's declared String | Int accepted replacements; Bool remains an invalid replacement. The calls themselves return Unit, independently of the location's contents. The existing = ? definite-initialization rules and direct-assignment flow rules are unchanged.
 
-Var permits replacement; it does not promise that a write occurs. A callable can return without assigning. If the incoming value is Int and the callable is merely allowed to write String, a no-write path can still leave Int. Its permission alone therefore cannot establish String on return.
+## Rejected cross-member calls
 
-The stronger obligation concerns the final stored type on every normal-return path, not necessarily an unconditional assignment. A function may preserve an already-String value or replace an Int and still fulfill a String guarantee. A conditional write that can leave an incompatible old value does not fulfill it.
+These are independent rejected fragments for the same declared String | Int storage:
 
-Do not interpret a simple var String parameter as an output-only promise. Its ordinary read contract also requires an incoming String and does not by itself accept the current Int shown above. Accepting String | Int on entry while guaranteeing String on return needs that input/final-state distinction in the callable contract. The exact public spelling, inference, and verification of these guarantees are open; no new out, ensures, or effect syntax is selected.
+```text
+x = 42;
+replaceStr(var x); /* Rejected: current Int cannot satisfy readable String. */
+```
 
-A caller may use a final stored-type guarantee only when it is supported by the callable contract/proof available at that call. Do not guess from a function name, one observed run, tests that happened to write, or an unstated implementation assumption. Complete body-effect inference and guarantee validation remain future work.
+```text
+x = "42";
+replaceInt(var x); /* Rejected: current String cannot satisfy readable Int. */
+```
+
+```text
+replace(var x);
+replaceStr(var x); /* Rejected: the current String | Int may still be Int. */
+```
+
+A rejected call establishes no successful post-call read fact. In particular, the first fragment does not make x read as String. The same input-compatibility rule applies even if the particular function body assigns before reading: a plain var String signature is a read/write String contract, not an output-only special case inferred from its body.
 
 ## Return paths, stability, and identity
 
-Establish the final read fact only at a normal-return continuation covered by the guarantee. A failure, panic, or explicit transfer keeps its ordinary behavior and does not establish that normal-return fact on a recovered path. The call may already have changed the location before failing; do not silently restore the incoming value or its old refinement.
+Preserve justified facts only while the location stays stable. A possibly replacing call invalidates old value-dependent tests/relationships unless preservation is supported. The supported post-call facts above apply to normal return; failures, panics, cleanup, and transfers keep their ordinary behavior. A call may already have written before failing, so do not silently restore the pre-call value or refinement on a recovered path.
 
-A grant designates the supplied location under existing evaluation/lifetime rules. Preserve callee and argument evaluation order, source authority, cleanup obligations, and normal var/mut distinctions. This does not infer new writable aliases, detach a copy instead of updating the caller, or change call result types.
+The grant designates the supplied location under existing evaluation/lifetime rules. Preserve callee/argument evaluation, caller authority, initialization, var/mut distinctions, cleanup, and ownership obligations. A narrowed read does not change declared accepted writes or grant a new writable alias. Internal Never read compatibility does not bypass these write/access checks.
 
-Discard stale value-dependent relationships involving a possibly replaced value; retain only independently valid or supported preserved facts. A new String/Int guarantee remains usable only while that location stays stable. Captured writes, shared state, multiple aliased parameters, callbacks, failure-path guarantees, and complete effect/exclusivity rules remain open. This selection concerns explicit caller-location replacement through var, not arbitrary getters or blanket invalidation after every read-only call.
+Captured writes, shared state, multiple aliased parameters, callbacks, failure-path facts, and complete exclusivity/effect analysis remain open. This selection concerns explicit caller-location grants, not arbitrary getters or automatic invalidation after every read-only call.
+
+## Future write-only access
+
+The user requests possible write-only access in a future review, not now. Keep its spelling, readable-before-write behavior, required-write/normal-return guarantees, reservation/initialization interactions, failure paths, and access compatibility open. No new output mode, keyword, or final-state-guarantee syntax is selected. Var T retains its current read/write T meaning.
+
+A future contract accepting an incoming Int while promising final String would need an explicitly different input/output or write-only model. It must not be inferred from var String today. Explore that separately from permission to write, which alone does not require a write to occur.
 
 ## Related documents
 

@@ -57,7 +57,7 @@ Var User alone does not permit modifying fields of the current payload. A call s
 
 Combined mut/var contracts and argument syntax remain open. The two selected markers do not establish a combined modifier order.
 
-The normal-return read type after an explicit var grant depends on supported replacement guarantees. A String | Int location previously reading Int may return to String | Int after an unrestricted replacement call; a guaranteed final String establishes String. Permission to write String alone does not exclude a no-write path retaining Int. Preserve declared accepted replacements, input compatibility, and Unit call results; see [call replacement flow](call-replacement-flow.md).
+Before an explicit var call, check current reads against the callee's read type and callee writes against declared caller replacements. Var String both reads and writes String, so an Int input is rejected even when the caller storage accepts String. A valid String-only call preserves String; a wide String | Int call may widen an Int refinement to that union. No output-only or mandatory-write meaning is implied. Write-only access is deferred; see [call replacement flow](call-replacement-flow.md).
 
 ## Evaluation and scope
 

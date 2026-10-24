@@ -88,7 +88,7 @@ A parameter requiring only var B also promises that reading yields B. It cannot 
 
 These are proposed access-compatibility rules, not general container variance, numeric conversion, structural record assignment, or a complete subtype system.
 
-After normal return, explicit caller-location replacement invalidates affected old read facts unless preservation or a final stored-type guarantee is supported. Var permission alone is not such a guarantee; a callable may return without assigning. A guarantee that accepts the incoming String | Int and leaves String/Int establishes that member without narrowing the location's declared accepted replacements. Public guarantee syntax/verification remains open; see [call replacement flow](call-replacement-flow.md).
+For the selected simple local flow cases, entry compatibility uses the current justified read type and the location's declared accepted writes. Var String reads and writes String: a current Int cannot enter that parameter, while a valid String input remains String after normal return whether or not a write occurs. A var (String | Int) call can widen an Int-only fact to String | Int. Preserve stability/authority and the separate ordinary call result; write-only access remains future work. See [call replacement flow](call-replacement-flow.md).
 
 ## Lifetime, evaluation, and observable effects
 
