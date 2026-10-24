@@ -16,7 +16,7 @@ The = direction is destination from source. Construction supplies a predefined d
 
 ```text
 /* Construction: destination fields on the left. */
-student: Student = { id = 7, name = "Ali", age = 18, };
+student: Student = { id = 7, name = "Ali", age = 18, }
 
 /* Deconstruction: destination bindings on the left. */
 {

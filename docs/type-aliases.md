@@ -53,7 +53,7 @@ Using the selected explicit form:
 
 ```text
 Member := type User;
-user: User = { name = "Ali", age = 10, };
+user: User = { name = "Ali", age = 10, }
 member: Member = user;
 ```
 

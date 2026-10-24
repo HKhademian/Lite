@@ -33,6 +33,8 @@ plans:
 
 ## Mission
 
+Documentation/formatter clarification, 2026-10-24: omit unnecessary semicolons after complete block/record items everywhere, including nested definitions and braced initializers. Keep ordinary adjacent-item separators, enclosing call/list punctuation, import-list separators, and any separately identified special delimiter. The grammar still permits optional trailing separators; this is a presentation choice. See [semicolon style after closing braces](lexical-structure.md#semicolon-style-after-closing-braces).
+
 Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or explicitly preserve open contracts by comparing concrete examples and documenting their type/control-flow consequences. Keep the beginner-facing syntax simple, make typing strong by default, avoid null-like values, and treat small runtime/native performance as goals rather than measured results.
 
 ## Done

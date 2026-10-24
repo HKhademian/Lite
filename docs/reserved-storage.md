@@ -7,7 +7,7 @@ Status: **value: Type = ? and whole-value first initialization with = selected, 
 ```text
 x: User;       /* implicit zero initialization */
 x: User = 0;   /* explicit zero initialization */
-x: User = {};  /* declared defaults */
+x: User = {}  /* declared defaults */
 x: User = ?;   /* explicitly uninitialized storage */
 ```
 
@@ -57,7 +57,7 @@ The user compared these forms and subsequently approved the first as the initial
 
 ```text
 x: User = ?;
-x: User = {?};
+x: User = {?}
 x ?= User;
 x := ?User;
 ```
@@ -95,7 +95,7 @@ Every candidate retains the same initialization-state, lifetime, ownership, and 
 ```text
 x: User;             /* selected: implicit valid all-zero value */
 x: User = 0;         /* selected: explicit valid all-zero value */
-x: User = {};        /* selected: declared-default construction */
+x: User = {}        /* selected: declared-default construction */
 x: User = ?;         /* selected marker: storage exists; payload not initialized */
 ```
 

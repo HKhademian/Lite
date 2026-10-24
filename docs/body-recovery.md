@@ -110,6 +110,8 @@ These snippets illustrate the proposed distinction within their containing body.
 
 This delimiter proposal needs review before adoption. It does not make semicolon a value-discard operator. Body hooks would be attached clauses rather than ordinary final work items; the existing final-expression rule would apply to the completed work region, with recovery/value and cleanup transformations specified separately. The Unit examples avoid assuming a new normal-return type rule.
 
+That proposed semicolon serves as an explicit hook delimiter, not an ordinary trailing separator after a completed block. It is not selected grammar and must not be generalized into a block-ending requirement. Ordinary examples follow the [omit-when-unnecessary rule](lexical-structure.md#semicolon-style-after-closing-braces).
+
 Receiver omission could remain supported for a body-owned else because its explicit separator/brace owner already distinguishes it from a call handler or external false branch. That would need to be stated in the final grammar rather than inferred from this illustration.
 
 Recovery/cleanup may use their receiver and outer bindings such as path. Work-local names must not become magically initialized if failure occurred before their declaration. Definite-initialization and lifetime rules must govern any such access; the examples do not use text from recovery or cleanup.

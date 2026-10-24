@@ -6,7 +6,7 @@ Status: **selected 2026-10-18: an existing member value is admitted to a plain u
 
 ```text
 Person := type User | Guest;
-user: User = { name = "Ali", age = 10, };
+user: User = { name = "Ali", age = 10, }
 person: Person = user;
 ```
 
@@ -24,7 +24,7 @@ Resolve transparent aliases and normalize the target union before checking exact
 
 ```text
 Person := type User | Guest;
-student: Student = { name = "Ali", age = 10, };
+student: Student = { name = "Ali", age = 10, }
 bad: Person = student; /* rejected: Student is not a listed member */
 ```
 

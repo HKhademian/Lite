@@ -9,7 +9,7 @@ x: User = {}
 y := User {}
 ```
 
-Each complete record initializer closes its declaration item. A trailing semicolon is optional and allowed. Newlines are irrelevant: x: User = {} y := User {} is the same pair of declarations. An assignment or explicit exit ending in the same outer construction follows the same boundary rule.
+Each complete record initializer closes its declaration item. Omit the optional trailing semicolon, both at top level and in nested declarations. Newlines are irrelevant: x: User = {} y := User {} is the same pair of declarations. An assignment or explicit exit ending in the same outer construction follows the same boundary rule. The grammar still permits an optional semicolon; see the [shared style and required exceptions](lexical-structure.md#semicolon-style-after-closing-braces).
 
 This applies to field declarations with record defaults as well:
 

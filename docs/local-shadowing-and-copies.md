@@ -28,7 +28,7 @@ Inner := record { position: Position; w: Int; }
 Middle := record { inner: Inner; q: Int; }
 Outer := record { middle: Middle; u: Int; }
 
-original: Outer = {};
+original: Outer = {}
 mut copied := original;
 copied.middle.inner.position.x = 10;
 ```
@@ -42,7 +42,7 @@ User := record { name: String; age: Int; }
 P := record { nested: Middle; u: Int; }
 Q := record { nested: Middle; u: User; }
 
-originalQ: Q = {};
+originalQ: Q = {}
 mut copiedQ := originalQ;
 copiedQ.u.age = 18;
 ```

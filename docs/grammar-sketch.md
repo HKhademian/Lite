@@ -55,6 +55,8 @@ item := declaration
 
 The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself and permits optional trailing separators. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
+Documentation and formatter style omit optional separators after a closed item at every nesting depth. This does not alter the grammar's permissive optional separators or remove required separators from simple items; see [semicolon style after closing braces](lexical-structure.md#semicolon-style-after-closing-braces).
+
 The exact expression productions implementing this classification remain part of the incomplete expression grammar. The classification must follow syntactic structure, not a scan for the last `}` character: import-list braces and blocks/record constructions nested inside calls or groupings do not end the enclosing item.
 
 ## Block-value continuation
@@ -241,7 +243,7 @@ The selected declaration surface is `Student := record { name: String; grade: In
 
 The [initialization overview](record-initialization.md) proposes field: Type = defaultExpression and declared-default filling when a record initializer is supplied. Zero mode bypasses declared defaults and requires valid zero values. Simple typed value declarations select it through an omitted initializer or explicit contextual literal 0. Complete field-default/literal-typing rules remain unformalized. Empty contextual record initialization is selected, as described below; executable {} retains its Unit result.
 
-The proposed nested field type `stats: { points: Int; level: Int = 1; };` uses braces in an explicit type position and omits record there. Distinct identity per record type declaration is selected for inline types too; the shorthand's full type production remains open. This does not remove record from a top-level binding such as Profile := record { ... }.
+The proposed nested field type `stats: { points: Int; level: Int = 1; }` uses braces in an explicit type position and omits record there. Distinct identity per record type declaration is selected for inline types too; the shorthand's full type production remains open. This does not remove record from a top-level binding such as Profile := record { ... }.
 
 The selected [zero rule](zero-initialization.md) equates value: Type; with value: Type = 0. Both use universally valid all-zero initialization and bypass declared field defaults. Within initializer expressions, only literal 0 has the special contextual-zero meaning; integer variables and nonzero integer literals are not implicitly converted to records. Special-type zero mappings and complete literal/inference contracts remain open.
 

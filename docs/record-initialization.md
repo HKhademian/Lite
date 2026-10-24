@@ -29,7 +29,7 @@ There are two selected core initialization modes, with a semantic difference:
 ```text
 implicit: User;     /* implicit zero; ignore field defaults */
 zeroed: User = 0;   /* explicit contextual zero; ignore field defaults */
-configured: User = {}; /* apply declared defaults, then zero-fill other fields */
+configured: User = {} /* apply declared defaults, then zero-fill other fields */
 ```
 
 The selected surface direction reserved: User = ?; requests storage without either initialization mode. It remains unavailable as an ordinary User until initialization completes; first-write operations, allocation policy, and complete state/cleanup rules remain open. The earlier reserve() spelling is not a selected synonym. See [reserved storage](reserved-storage.md).
@@ -41,7 +41,7 @@ The empty contextual record initializer is selected: its established initializer
 Omitting the initializer of a simple typed binding selects the same semantic zero as explicit = 0; neither uses declared field defaults. Every type has a valid all-zero value; this does not implicitly cast an arbitrary integer to a record. See [zero initialization](zero-initialization.md).
 
 ```text
-user := User {};
+user := User {}
 ```
 
 Under the proposed default-resolution rule, this initializes every field:
@@ -70,9 +70,9 @@ This resolution applies only to record-initializer construction, such as User {}
 user := User {
     name = "Ali",
     age = 10,
-};
+}
 
-inactive := User { name = "Sam", active = false, };
+inactive := User { name = "Sam", active = false, }
 ```
 
 Unspecified fields still follow the same resolution rule. Explicit initialization does not require mut: construction establishes the initial value rather than updating an existing one.
@@ -80,15 +80,15 @@ Unspecified fields still follow the same resolution rule. Explicit initializatio
 An annotated binding can omit the construction type because it supplies the expected record type:
 
 ```text
-user: User = { name = "Ali", age = 10, };
+user: User = { name = "Ali", age = 10, }
 ```
 
-The empty contextual form `user: User = {};` is selected as record construction, just like the already established nonempty contextual form. `User {}` remains allowed. An executable empty block still produces Unit; a function/if/loop/match body never turns into record data because a record result is expected.
+The empty contextual form `user: User = {}` is selected as record construction, just like the already established nonempty contextual form. `User {}` remains allowed. An executable empty block still produces Unit; a function/if/loop/match body never turns into record data because a record result is expected.
 
 ```text
-user: User = {};   /* record initializer: apply field defaults */
+user: User = {}   /* record initializer: apply field defaults */
 
-do_nothing := fn() {}; /* executable function body: Unit */
+do_nothing := fn() {} /* executable function body: Unit */
 
 match status {
     _ {}             /* executable arm body: Unit */
@@ -105,7 +105,7 @@ user := User {
     address = {
         city = "Shiraz",
     },
-};
+}
 ```
 
 The address field already supplies Address, so repeating its type is optional. postalCode defaults to 0. The explicit spelling `address = Address { city = "Shiraz", }` remains allowed. The same contextual rule applies at every established record-field level, including Registration.student and Registration.contact.
@@ -116,11 +116,11 @@ Defaults should not introduce a hidden recursive merge:
 
 ```text
 Office := record {
-    address: Address = { city = "Munich", postalCode = 80331, };
+    address: Address = { city = "Munich", postalCode = 80331, }
 }
 
-first := Office {};
-second := Office { address = { postalCode = 1000, }, };
+first := Office {}
+second := Office { address = { postalCode = 1000, }, }
 ```
 
 The proposed result is first.address.city "Munich", but second.address.city "Unknown". The second initializer supplies a new Address, whose omitted city uses Address's own default. It replaces Office's address default as a whole. A patch/update/merge operation would need its own explicit contract.
@@ -149,19 +149,19 @@ Profile := record {
     stats: {
         points: Int;
         level: Int = 1;
-    };
+    }
 }
 
 profile := Profile {
     name = "Ali",
     stats = { points = 20, },
-};
+}
 ```
 
 The field's colon already starts a type position, so the recommended shorthand omits a redundant record keyword before its type braces. This declares an unnamed field type, then uses its known field contract for construction. It is an inline type declaration, not a shared default object. Under the proposal, omitted stats in record-initializer mode would recursively initialize points to 0 and level to 1:
 
 ```text
-profile: Profile = {};
+profile: Profile = {}
 ```
 
 This is distinct from a bare-brace top-level type declaration: Profile := still starts an expression position, so this proposal retains its record keyword. Whether the longer nested stats: record { ... } spelling remains as an alias is a separate syntax choice; recommending the shorter form does not select two interchangeable spellings.
@@ -206,7 +206,7 @@ Declared-default construction is separate: = {} uses field defaults, whereas omi
 - Recommend initially restricting declared field defaults to compile-time values. Effectful or recoverably fallible runtime setup belongs in an explicitly called factory, preserving visible failure handling. Exact constant-expression grammar remains open.
 - Evaluate explicit initializer expressions once, left to right in written order, under the selected ordinary evaluation-order rule. Do not evaluate a superseded field default for side effects.
 - Each construction establishes its own logical default values. Do not introduce accidental shared writable collections through a declaration default. Ownership/copy rules must establish whether any noncopyable default can be reused.
-- `mut user := User {};` grants writable held-data access; `var user := User {};` permits replacing the binding; `var mut` permits both. Default initialization does not change those permissions.
+- `mut user := User {}` grants writable held-data access; `var user := User {}` permits replacing the binding; `var mut` permits both. Default initialization does not change those permissions.
 - No mandated preliminary zero-fill followed by overwrites is implied. A compiler may construct the final valid representation directly and remove redundant stores. This does not establish C-level performance before implementation and measurement.
 - In var x: User; x = make_user();, zero initialization remains the source meaning, but its physical stores may be omitted if they have no observable effect. Reads, aliases, callbacks, exits before replacement, and any required cleanup must retain that meaning. See [semantic initialization versus physical writes](memory-and-performance.md#semantic-initialization-versus-physical-writes).
 

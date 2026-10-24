@@ -17,7 +17,7 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Item boundaries
 
-A complete block construct ends its item without requiring ;. A trailing semicolon is optional and allowed, including after a declaration initialized by a block, function, conditional, match, loop, or record construction. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner.
+A complete block construct ends its item without requiring `;`. Write it without a trailing semicolon, at top level and inside other blocks. This includes declarations initialized directly by blocks, functions/lambdas, conditionals, matches, loops, or record constructions. The grammar still allows an optional trailing semicolon. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner. See the [semicolon style and required exceptions](lexical-structure.md#semicolon-style-after-closing-braces).
 
 ```text
 answer := {
@@ -29,11 +29,10 @@ use(answer);
 Both items can also appear on the same line. Whitespace never determines the boundary.
 
 ```text
-answer := { 42 };
-use(answer);
+answer := { 42 } use(answer);
 ```
 
-The optional trailing semicolon does not change the block's value. The earlier ban on this spelling is superseded.
+The closing body separates the declaration from use(answer), even on the same line. An optional semicolon would not change the block's value; omitting it is the documentation/formatter style, not a syntax ban.
 
 Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record literal boundaries](record-literal-boundaries.md) for the requested inferred form and remaining disambiguation.
 
@@ -51,7 +50,7 @@ These outer items are ordinary expressions or declarations and use ordinary sepa
 
 - A final expression supplies the block's value.
 - A final declaration or assignment produces `Unit`.
-- An empty executable block produces `Unit`. Contextual record initializer braces such as `user: User = {};` are data construction, not executable blocks, and apply the record's defaults instead.
+- An empty executable block produces `Unit`. Contextual record initializer braces such as `user: User = {}` are data construction, not executable blocks, and apply the record's defaults instead.
 - An empty match-arm body therefore produces Unit too: `_ {}` and `_ { Unit }` have the same result.
 - Separators are ignored when locating the final item.
 - The compiler does not search backward past a final declaration or assignment for an earlier expression.

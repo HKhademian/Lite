@@ -69,8 +69,8 @@ For an ordinary returned error union, sequential recovery processes one active a
 
 ```text
 x1 := op();                 // T ! (A | B)
-x2 := x1 else (: A) { R1 }; // (T | R1) ! B
-x3 := x2 else (: B) { R2 }; // T | R1 | R2
+x2 := x1 else (: A) { R1 } // (T | R1) ! B
+x3 := x2 else (: B) { R2 } // T | R1 | R2
 ```
 
 The chained spelling `op() else (: A) { R1 } else (: B) { R2 }` composes these recovery expressions from left to right. An original A error runs only the A handler and produces R1; an original B error runs only the B handler and produces R2. Original success runs neither handler. A returned `A | B` does not contain both errors simultaneously. With these disjoint filters and normally completing handlers, reversing the clauses does not change which original error is handled.

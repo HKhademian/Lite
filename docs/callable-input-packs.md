@@ -66,7 +66,7 @@ value : Int = (x) { x > 0 }
 
 Only the parenthesized implementation admits keyword omission. Keep `fn { arguments.0 > 0 }` and `fn pack { pack.0 > 0 }`: bare executable braces already run immediately, and `pack { ... }` overlaps record construction. Construct-owned headers such as `if (condition) { ... }` and `loop (source) { ... }` retain their own boundaries. Bodies always use braces; ordinary item/call separators remain unchanged.
 
-Documentation style: omit the optional trailing semicolon when a complete top-level definition, assignment, or other block item ends in `}`. Write `op := fn { ... }`, without a following semicolon. The closing body already ends that item. Semicolons remain permitted by the language; braces nested inside a call or other enclosing expression do not end the outer item.
+Documentation style: omit the optional trailing semicolon whenever a complete definition, assignment, or other block item ends in `}`, at every nesting depth. Write `op := fn { ... }`, without a following semicolon. The closing body already ends that item. Semicolons remain permitted by the language; braces nested inside a call or other enclosing expression do not end the outer item. See the [shared semicolon rule and necessary separators](lexical-structure.md#semicolon-style-after-closing-braces).
 
 ## Application with an existing pack
 

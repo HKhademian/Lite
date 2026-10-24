@@ -29,6 +29,32 @@ Fallible-type shorthand has a selected attachment rule: T! requires ! to touch t
 
 Only the trailing separator is optional: commas between list elements and semicolons between ordinary adjacent items still separate them. Line breaks do not supply missing separators. This rule does not interchange comma and semicolon contexts. In the selected singleton value forms, the comma in (value,) establishes a tuple rather than grouping and is therefore required. Named singleton entries such as (= value) are already unambiguous and allow an optional trailing comma. See [singleton values](tuple-entries-and-access.md#singleton-values-selected).
 
+## Semicolon style after closing braces
+
+Omit the semicolon after a complete block item at every nesting depth. This applies to function/lambda definitions, standalone blocks, complete if/match/loop constructs, record/type definitions, and declarations or assignments ending directly in those constructs. Their closing body already ends the item; a following item needs no extra separator, even on the same line. The grammar still permits an optional trailing semicolon, but documentation examples and formatter output should omit it.
+
+```text
+var operation := fn(x: Int) { x * 3 }
+operation = fn(x: Int) { x * 4 }
+
+outer := fn {
+    inner := fn { 42 }
+    inner()
+}
+
+profile := Profile {}
+```
+
+The rule concerns a complete item, not the last brace character encountered. Preserve punctuation when it serves a required role:
+
+- Ordinary adjacent items still use `;`, as in `first(); second();`.
+- A block nested inside a call or grouping does not close the outer item. In `accept(fn { 42 }); next();`, the semicolon after the call separates ordinary items.
+- Supplied tuple/record/list components keep their required commas, including after a nested braced value.
+- Braces grouping imported names are not a block body: `import school.students.{Student, find_student};` keeps its ordinary separator before a following item.
+- Attached else/then/finally clauses remain part of their complete construct; do not insert a separator between the owner and its clauses.
+
+This does not introduce automatic semicolon insertion, make newlines significant, or change a block's result. Foreign-language reference examples retain their own punctuation rules. A separately proposed explicit hook delimiter is not a general block-ending requirement; see [body recovery](body-recovery.md#proposed-explicit-separator-rule).
+
 ## Equivalent examples
 
 ```text

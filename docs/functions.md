@@ -456,7 +456,7 @@ The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type
 
 ## Result rules
 
-The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. The completed function definition ends its outer item with an optional trailing semicolon; see [blocks and results](blocks-and-results.md).
+The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. A completed function/lambda definition or assignment already ends at its closing body: omit the optional trailing semicolon, including inside another block. A callback body inside a call does not end the enclosing call item; retain that call's required separator. See [blocks and results](blocks-and-results.md) and the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces).
 
 ```text
 greet := fn(name: String): Unit {

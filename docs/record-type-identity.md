@@ -15,7 +15,7 @@ Student := record {
     age: Int;
 }
 
-user := User { name = "Ali", age = 10, };
+user := User { name = "Ali", age = 10, }
 student: Student = user;
 ```
 
@@ -40,7 +40,7 @@ student: Student = user;
 student: Student = {
     name = user.name,
     age = user.age,
-};
+}
 ```
 
 The second form uses the already selected contextual-construction syntax. It must obey visibility and the eventual copy/move/borrow contract; reconstruction does not silently clone noncopyable data. A future conversion API can encapsulate the mapping without making all equal-shaped records interchangeable.
@@ -50,7 +50,7 @@ The identity belongs to the declared type, not the spelling of a local name. An 
 ## Construction and extraction remain concise
 
 ```text
-user: User = { name = "Ali", age = 10, };
+user: User = { name = "Ali", age = 10, }
 { userName = name, years = age, } := user;
 ```
 
@@ -75,7 +75,7 @@ Profile := record {
     stats: {
         points: Int;
         level: Int = 1;
-    };
+    }
 }
 ```
 
@@ -91,20 +91,20 @@ Apply one selected rule to named and unnamed record type declarations: each decl
 
 ```text
 Player := record {
-    stats: { points: Int; };
+    stats: { points: Int; }
 }
 
 Team := record {
-    stats: { points: Int; };
+    stats: { points: Int; }
 }
 
-player: Player = { stats = { points = 10, }, };
+player: Player = { stats = { points = 10, }, }
 
 /* Rejected: different inline type declarations. */
-badTeam: Team = { stats = player.stats, };
+badTeam: Team = { stats = player.stats, }
 
 /* Explicit reconstruction into Team's established stats type. */
-team: Team = { stats = { points = player.stats.points, }, };
+team: Team = { stats = { points = player.stats.points, }, }
 ```
 
 Type identity is checked independently of ownership and mutation permissions.
@@ -116,8 +116,8 @@ Stats := record { points: Int; }
 Player := record { stats: Stats; }
 Team := record { stats: Stats; }
 
-player: Player = { stats = { points = 10, }, };
-team: Team = { stats = player.stats, };
+player: Player = { stats = { points = 10, }, }
+team: Team = { stats = player.stats, }
 ```
 
 The last initializer is now type-compatible because both fields use the same Stats declaration; actual transfer still obeys the eventual copy/move/borrow rules. No structural conversion or automatic deep copy is implied.

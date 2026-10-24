@@ -36,7 +36,7 @@ student: Student = { name = "Ali", grade = 12, }
 other := Student { name = "Sam", grade = 10, }
 ```
 
-The complete record construction ends the declaration item without a semicolon; a trailing semicolon remains allowed. This also applies to field declarations with block/record default initializers. Commas between supplied value fields remain required. See [record literal boundaries](record-literal-boundaries.md).
+The complete record construction ends the declaration item without a semicolon. Omit the optional trailing semicolon at every nesting depth; this also applies to field declarations with block/record default initializers. Commas between supplied value fields remain required. The grammar still permits a trailing semicolon; see [record literal boundaries](record-literal-boundaries.md) and the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces).
 
 The same contextual rule applies to nested record fields. If Registration declares a Student-valued student field, `Registration { student = { ... }, ... }` need not repeat Student. Initialization does not require var merely because it uses =. No search through unrelated record types by field names is implied.
 
@@ -81,7 +81,7 @@ This shorthand is not yet added to the selected grammar. It needs field-presence
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 
-An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; };` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Distinct identity per inline declaration is selected; its shorthand and full type grammar remain proposals. See [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
+An explicit type position is a narrower case: the proposed `stats: { points: Int; level: Int = 1; }` can omit record because colon already requires a type. This is an unnamed record type, unlike braces in a record-value initializer or executable body. Distinct identity per inline declaration is selected; its shorthand and full type grammar remain proposals. See [inline record types](record-initialization.md#6-unnamed-record-type-inside-a-record-proposal).
 
 ### Reference comparison and tradeoff
 
@@ -95,7 +95,7 @@ Omitting the type name shortens known-type and deeply nested extraction. The cos
 
 Record shorthand requires a known expected record type, as in an annotated initializer or predefined nested field. A field initializer's right-hand side is an expression, while a deconstruction clause's right-hand side is a source-field selector. Their syntactic contexts decide these roles; moving data is always toward the left, with copy/move/borrow details left to the memory model.
 
-Function/if/loop/match bodies remain executable blocks even when their expected result is a record; do not reinterpret a body as initialization. Empty contextual initialization is selected: `user: User = {};` creates a record using its declared-default construction policy, while an empty executable body still produces Unit. Full expression grammar must express these distinct roles, including single-field cases. Do not resolve ambiguous syntax by choosing whichever interpretation happens to type-check. Construction in other expected-type positions, exact inference propagation, omitted/default fields, and diagnostics still need a full contract.
+Function/if/loop/match bodies remain executable blocks even when their expected result is a record; do not reinterpret a body as initialization. Empty contextual initialization is selected: `user: User = {}` creates a record using its declared-default construction policy, while an empty executable body still produces Unit. Full expression grammar must express these distinct roles, including single-field cases. Do not resolve ambiguous syntax by choosing whichever interpretation happens to type-check. Construction in other expected-type positions, exact inference propagation, omitted/default fields, and diagnostics still need a full contract.
 
 ## Access and composition
 

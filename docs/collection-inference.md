@@ -32,7 +32,7 @@ toolbar: Toolbar = {
         { name = "Home" },
         { name = "Search" },
     ],
-};
+}
 ```
 
 `List<Icon>` is temporary explanatory notation, pending generic syntax. Toolbar supplies the field's collection type; that supplies each element's Icon type. Repeating List and Icon names throughout the initializer should be unnecessary. This extends the selected contextual-record direction across a collection boundary; its complete inference rules still need confirmation.

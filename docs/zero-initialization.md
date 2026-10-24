@@ -14,11 +14,11 @@ Profile := record {
     stats: {
         points: Int;
         level: Int = 1;
-    };
+    }
 }
 
 zeroed: Profile = 0;
-configured: Profile = {};
+configured: Profile = {}
 ```
 
 Zeroed has empty name, points 0, and level 0. Configured has name Guest, points 0, and level 1. Both are initialized values. The implementation must choose representations and operations such that zero-filled storage maps to each field's valid zero value.
@@ -87,7 +87,7 @@ The zero callable performs no updates through `mut` or `var` parameter grants. T
 ```text
 profile: Profile = {
     stats = 0,
-};
+}
 ```
 
 Name uses its declared default Guest; stats explicitly zeroes its fields and bypasses level's default 1. Stats = {} would apply its defaults. Default construction and universal zero remain distinct operations.

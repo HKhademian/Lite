@@ -17,7 +17,7 @@ match expression {
 }
 ```
 
-Each arm header, including an optional if guard, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. A trailing semicolon after a braced arm body is allowed. A completed match also permits an optional trailing semicolon, including when initializing a binding. Parenthesize the entire match to continue its value with a call, member, index, or operator.
+Each arm header, including an optional if guard, is followed directly by a braced body. There is no case/arrow/then delimiter or required separator between arms. Omit the optional semicolon after each arm body and after the completed match, including nested code and binding initializers. The grammar still permits those separators; see the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces). Parenthesize the entire match to continue its value with a call, member, index, or operator.
 
 The [keyword-placement review](match-keyword-placement.md) compares the current `match value { ... }` form with `value match { ... }`. It recommends retaining the current prefix form for consistency with if/loop and existing block boundaries. Subject-first matching remains an alternative under review, not a second accepted spelling.
 

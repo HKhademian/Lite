@@ -70,9 +70,9 @@ student: Student = {
     id = 7,
     name = "Ali",
     age = 18,
-};
+}
 
-other := Student { id = 8, name = "Sam", age = 20, };
+other := Student { id = 8, name = "Sam", age = 20, }
 ```
 
 Colons declare field types; equals supplies predefined fields' initial values. Initialization does not require var merely because it uses =. The record is not a superclass, and the declaration does not select reference identity or allocation semantics.
@@ -252,7 +252,7 @@ Registration := record {
 registration := Registration {
     student = { id = 7, name = "Ali", age = 18, },
     contact = { email = "ali@example.test", verified = true, },
-};
+}
 
 if {
     { studentId = id, name = name, years: Int = age, } = student,

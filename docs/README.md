@@ -30,7 +30,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
-- [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, and block boundaries.
+- [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.

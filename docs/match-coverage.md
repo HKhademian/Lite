@@ -55,7 +55,7 @@ An empty branch produces Unit; it does not supply an arbitrary missing String or
 label: String = match status {
     .Ready { "Ready" }
     _ {}
-};
+}
 ```
 
 Provide a compatible fallback or an explicit exit:
@@ -64,7 +64,7 @@ Provide a compatible fallback or an explicit exit:
 label: String = match status {
     .Ready { "Ready" }
     _ { "Other status" }
-};
+}
 ```
 
 An expected result contract must admit Unit to accept an empty result branch. Without an expected result contract, a genuine Unit arm participates in the normalized result union under selected [branch-result inference](branch-result-inference.md). A return/propagation exit provides no local continuation value and is checked against its exit target instead.

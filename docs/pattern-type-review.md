@@ -73,7 +73,7 @@ Ordinary fixed-tuple positional binding follows stored order. Named tuple patter
 Record declarations use record. Construction targets predefined fields on the left; named deconstruction targets bindings/subpatterns on the left:
 
 ```text
-student: Student = { id = 7, name = "Ali", age = 18, };
+student: Student = { id = 7, name = "Ali", age = 18, }
 { studentId = id, studentName = name, years = age, } := student;
 ```
 

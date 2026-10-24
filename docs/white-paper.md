@@ -57,7 +57,7 @@ Profile := record {
 }
 
 zeroed: Profile;
-configured: Profile = {};
+configured: Profile = {}
 ```
 
 `zeroed` contains an empty name and zero points. `configured` applies the declared defaults, producing `"Guest"` and `10`. The source chooses the initialization operation; zero initialization consistently bypasses declared field defaults.
