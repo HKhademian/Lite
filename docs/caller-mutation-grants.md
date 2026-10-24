@@ -65,6 +65,8 @@ Evaluate the callee first and arguments left to right, once each. Select/evaluat
 
 Granted access lasts for the call. One source location supplies only one active write grant, so repeated explicit var arguments to the same local in one call are rejected. Equal stored values in distinct locals do not imply a duplicate location; see [single source write grant](call-replacement-flow.md#single-source-write-grant-selected). General overlap/exclusivity checks, callbacks, temporary arguments, alias validity, activation timing, and cleanup still require formalization. No automatic rollback or transactional commit is selected. Backend representation must preserve caller-visible writes rather than turn them into local-copy updates.
 
+Received var access can be forwarded explicitly with inner(var target) as a temporary handoff of the same grant. The outer holder cannot independently use it while the nested grant is active; on normal return the same location and nested writes are available again. No extra write authority, detached copy, duplicate grant, or escaping access is created. General alias/reentrant enforcement and activation timing remain open; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected).
+
 ## No extra parameter mode for local work
 
 Use a local declaration or shadowing to create a working binding. A left-side fn(var target: T) header for local rebinding is retired. Type-side fn(target: var T) instead describes caller replacement and belongs in the public contract. See [the var qualifier](var-access-qualifier.md).

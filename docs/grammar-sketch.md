@@ -536,6 +536,8 @@ At invocation after all reached supplied arguments, earlier var locations must s
 
 One source location supplies only one active write grant. Reject two explicit var arguments referring to the same local in one call, even if the parameter types are identical; distinct local locations are not duplicates merely because their stored values are equal. This known-overlap check adds no new call syntax, snapshots, copy-back, or runtime alias check. Broader path/field/index overlap and grant activation remain open; see [single source write grant](call-replacement-flow.md#single-source-write-grant-selected).
 
+A var-qualified parameter can explicitly forward its existing grant to one nested call. The nested active holder temporarily suspends outer access through the same authority; normal return restores the immediate caller's same-location grant with nested writes visible. Preserve read/write compatibility, received authority bounds, evaluation, and nonescaping lifetime; no new production, grant duplication, copy-back, or pointer representation is selected. Exact activation and callback/reentrancy checks remain open; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected).
+
 These are semantic rules, not consequences of associativity or whitespace. [Evaluation order](evaluation-order.md) records the details and separates them from unchosen argument-passing, aliasing, and cleanup contracts.
 
 ## Open parser interactions

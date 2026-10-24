@@ -54,6 +54,8 @@ The parameter's association with its caller location remains fixed. Assignment t
 
 The qualifier var User does not by itself permit target.age = 20. That changes the held payload, which requires mut access as well. Conversely, mut User permits held-data updates without implicitly authorizing replacement of the caller location.
 
+A received var parameter may forward its existing source-location grant to one nested call with inner(var target). While the nested grant is active, the outer holder cannot independently use that same authority; normal return restores its access to the same location with the nested writes visible. This is a handoff, not grant duplication, extra local var storage, or an escaping reference. Ordinary compatibility/authority checks still apply; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected).
+
 ## Combining permissions
 
 Inside a body, var mut value := source combines local binding replacement with a shallow mutable record copy. It does not write back to the caller. A direct mut parameter call instead grants access to the supplied caller data.

@@ -456,6 +456,8 @@ The [ordinary parameter review](parameter-values-and-slots.md) keeps the current
 
 For explicit var caller-location grants, validate current readable possibilities against the callee input and every permitted replacement against the caller's declared writes. Var String is read/write String, so it rejects a current Int; an accepted String-only call leaves String, while a wide replacement call can widen Int to String | Int. This is not output-only access or a required-write promise. Write-only access is deferred; see [call replacement flow](call-replacement-flow.md).
 
+A received var parameter may be forwarded to one nested call by explicit var argument syntax. This temporarily hands off the same source write grant: the outer holder is suspended during nested active access and regains the same location on normal return. Read/write compatibility and authority remain bounded by the outer received contract, with no extra local var, detached copy, duplicated grant, or escaping reference. See [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected); activation/callback/reentrancy policy remains separate.
+
 The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn (count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn (param: var) requires an inferable value type under the eventual inference rules. See [var access](var-access-qualifier.md) and [parameter permissions](parameter-permissions.md).
 
 ## Result rules

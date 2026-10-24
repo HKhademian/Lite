@@ -61,6 +61,31 @@ Do not silently clone/detach a value, create independent copy-back parameters, a
 
 The mandatory selected check is the obvious same-local duplicate in one call, under the single-source grant principle. General alias detection through different names/paths, field/index overlap, parent/child storage, mut payload aliases, callbacks/reentrancy, exclusivity implementation, and exact grant/borrow activation timing remain open. This does not decide read-only argument passing or infer that equal object payloads imply identical local storage.
 
+## Nested forwarding of a write grant selected
+
+Selected on **2026-10-24**: a var-qualified parameter may explicitly forward its existing caller-location grant to one nested call. This is a temporary handoff of the same write authority, not a second active grant or new local storage:
+
+```text
+inner := fn(value: var Int): Unit {
+    value = 42;
+}
+
+outer := fn(value: var Int): Unit {
+    inner(var value);
+    value = 7;
+}
+```
+
+Inner receives the original supplied location. While its grant is active, outer's independent access through that handed-off grant is suspended. On normal return, outer regains its grant for the same location, observes the effects of inner's writes under the ordinary read-flow rules, and can assign 7. An enclosing caller supplying that location observes the replacements; the parameters do not become detached working copies. Both call expressions still have their ordinary Unit result.
+
+No second local var declaration is needed to forward a received var parameter. The nested call uses the existing explicit var argument marker and must satisfy ordinary current-read, accepted-write, location-validity, and authority checks. It cannot obtain more replacement authority than outer received, even if the original caller's hidden storage contract was broader. Selecting an earlier var argument still does not freeze its payload; the required read proof must hold at nested-callee entry after later argument effects.
+
+Forwarding can nest along a synchronous call chain, with only one active holder for this source grant at a time and access returning to the immediate suspended caller on normal return. A call such as two_targets(var value, var value), assuming two otherwise compatible var parameters, still violates the same-local duplicate rule; forwarding does not split the authority into two parameters. It does not transfer ownership of the payload, retarget the supplied location, or create an escaping reference.
+
+The nested access cannot outlive the received caller-location access. Do not return, store globally, or capture this temporary grant for later use. Preserve ordinary callee/argument evaluation, side effects, cleanup, and ownership obligations without copying, implicit copy-back, rollback, or a new pointer/runtime representation.
+
+The suspension described here concerns the nested call's active grant; it does not select the exact activation moment during argument evaluation. Callback/reentrancy rules, general alias detection, overlapping fields/indices, and complete borrow/lifetime/exclusivity implementation remain open. This normal-return selection does not establish normal continuation facts on failure/exit paths or define additional recovery/cleanup access rights. Ordinary failure/transfer/cleanup contracts continue to apply, and earlier writes are not silently undone.
+
 ## Helper contracts
 
 The imaginary helper signatures describe these single-parameter access contracts; their ordinary call results are Unit:
