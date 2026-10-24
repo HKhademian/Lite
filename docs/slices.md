@@ -18,6 +18,8 @@ This proposes zero-based indices for each view and a half-open range: include th
 
 Copying a view still refers to the same source region. An independent owning copy requires a separate copy/clone operation. A view's copied references retain their permissions; shallow-copying a read-only view cannot manufacture writable access to its source.
 
+The selected [variadic rest retention rules](tuple-array-shapes.md#rest-access-storage-and-retention) use the same ownership distinction without selecting Slice as the rest-array type. Rest can use valid borrowed backing storage; keeping it requires a proven lifetime or lasting ownership, and constructing independent owned storage is explicit. This does not finalize slice syntax or general borrow enforcement.
+
 ## Inputs that actually require contiguity
 
 ```text

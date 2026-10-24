@@ -59,7 +59,36 @@ The name rest is a signature declaration; myrest is an implementation-local coll
 
 T may be any valid input type, including a tuple. With ...rest: EachRestType, each additional input is one intact X/Y/Z tuple and the collected value is an array of those tuples. It is not a flat repetition of X, Y, and Z. Explicit spreading at a call site continues to expand the operand's components rather than implicitly preserving it as one input.
 
-The spelling [T; ...] used during discussion was a placeholder, not selected syntax for a runtime-length array. The exact rest-array type notation, ownership, allocation, lifetime, and ABI remain open. The selected [T] indexed-sequence capability does not by itself select a concrete runtime array owner either.
+The spelling [T; ...] used during discussion was a placeholder, not selected syntax for a runtime-length array. The exact rest-array type notation, allocation, ABI, and complete ownership/lifetime machinery remain open, subject to the selected access and retention rules below. The selected [T] indexed-sequence capability does not by itself select a concrete runtime array owner either.
+
+## Rest access, storage, and retention
+
+Selected in the follow-up discussion, 2026-10-24: a variadic rest array provides readable access by default. Its element type and length contract do not imply ownership, writable access, or heap allocation.
+
+```text
+inspect := fn (first: Int, ...rest: Int) {
+    loop rest as value {
+        print(value);
+    }
+}
+
+inspect(1, 2, 3);
+
+extra := read_numbers();
+inspect(1, ...extra);
+```
+
+Both calls expose the same readable rest-array contract. Explicit extra arguments can populate temporary storage for the call. A compatible existing array may supply storage directly when the lifetime, access, and observable-value rules permit it. Multiple spreads may require gathering elements; no unconditional contiguous layout, zero-copy path, or allocation strategy is selected by these examples. Reusing source storage must not silently change observable aliasing or mutation behavior; their complete rules remain open.
+
+The selected boundaries are:
+
+- Borrowed backing storage must remain valid throughout every permitted use. A call-scoped temporary cannot become lasting storage just because rest has an array type.
+- Keeping, returning, or otherwise using rest beyond the call requires valid lasting ownership or a proven backing-storage lifetime. Do not silently copy, clone, heap-promote, or extend a borrow to repair an otherwise invalid escape.
+- Creating an independent owned array from borrowed or temporary rest storage requires an explicit copy/ownership operation. Its name, syntax, element copy/move eligibility, and allocation/failure behavior remain open. This does not imply a deep clone or grant ownership of resources referenced by elements.
+- A valid longer-lived borrow is not an independently owned array. The selection does not add a general escaping-reference feature or choose a lifetime-annotation syntax.
+- Writable rest access requires an explicit contract and caller permission. Ordinary ...source does not grant writes into source. Mutable-tail syntax, source overlap, and whether an admitted writable collector aliases or owns storage need separate rules; no detached-copy fallback may silently replace promised caller-data writes.
+
+An ordinary tuple containing a borrowed array tail must also preserve backing-storage validity. Its tail declaration does not establish owning versus borrowed construction. This decision settles variadic default access and explicit retention costs without choosing general parameter transport, ordinary array ownership, or tuple-tail normalization. See [ordinary parameter passing](parameter-values-and-slots.md) and [memory and performance](memory-and-performance.md).
 
 ## Ordinary tuples may have the same array tail
 

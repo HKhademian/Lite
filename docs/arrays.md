@@ -30,6 +30,8 @@ The generator name, generic inference, allocation/failure policy, and callback c
 
 Avoid calling a borrowed slice an owning runtime array merely because both have runtime lengths. Ownership determines who keeps storage alive and releases it.
 
+A variadic collector's array contract does not require an owning allocation. Its selected [access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention) provide readable access by default, permit valid borrowed or call-temporary backing storage, and require explicit copy/ownership operations to create independent owned storage. Retention needs lasting ownership or a proven lifetime; array shape alone provides neither. General array ownership and runtime-array spelling remain open.
+
 ## Fixed length is independent of placement and mutability
 
 Compile-time size does not force stack placement: an inline array can reside inside a heap-owned object or another valid region. Runtime allocation policy is also separate. No automatic large-stack allocation or heap fallback is selected.

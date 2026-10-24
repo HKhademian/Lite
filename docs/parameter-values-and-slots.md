@@ -18,12 +18,14 @@ In particular, passing an immutable aggregate indirectly as an optimization does
 
 Recommendation: define observable semantics first, then let the compiler optimize representation. Default record value/reference semantics and the copy/move/borrow contract still need a separate decision.
 
+The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. This does not select ordinary parameter transport or a general escaping-reference syntax. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
+
 ## 3. Explicit operation on the caller's location
 
 The selected writable-storage feature covers temporary access to a caller variable or field:
 
 ```text
-replace := fn(target: var (A | B)) {
+replace := fn (target: var (A | B)) {
     target = new_B()
 }
 

@@ -19,7 +19,7 @@ The headerless form retains an expected callable's entire input contract. Withou
 
 ## Input signatures and the singleton boundary
 
-The subsequent [tuple-type/array-tail decisions](tuple-array-shapes.md) extend signatures with `fn (...Params1, ...Params2, ...rest: T): Return`. Type spreads construct the fixed inputs with label overriding; a declared final variadic segment collects an array of T. Each additional input has type T, including tuple-valued T. This is not specialization to a different fixed tuple per argument count. Runtime-array spelling and complete routing remain open. Two-colon/empty-slot headers and mandatory-parentheses migrations were discussed but not selected.
+The subsequent [tuple-type/array-tail decisions](tuple-array-shapes.md) extend signatures with `fn (...Params1, ...Params2, ...rest: T): Return`. Type spreads construct the fixed inputs with label overriding; a declared final variadic segment collects an array of T. Each additional input has type T, including tuple-valued T. This is not specialization to a different fixed tuple per argument count. Rest arrays provide readable access by default; retaining them requires valid ownership or a proven lifetime, and constructing independent owned storage requires an explicit copy/ownership operation. No invalid escape is silently repaired by copying. See [rest access and retention](tuple-array-shapes.md#rest-access-storage-and-retention). Runtime-array spelling and complete routing remain open. Two-colon/empty-slot headers and mandatory-parentheses migrations were discussed but not selected.
 
 ```text
 fn (): Ret                  /* empty input tuple */
