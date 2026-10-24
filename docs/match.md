@@ -10,6 +10,8 @@ Select behavior by variant, type, or destructured data with a subject, or by Boo
 
 Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards introduced by if, with and-chained Boolean tests and additional pattern matches, are selected too; see [match arm chains](match-guards.md).
 
+Subject-based guards share the selected [optional leading condition separator](leading-separators.md): pattern if and ready and permitted { body } has the same meaning as the form without the first and. This does not add leading or to the initial pattern alternatives or to subjectless Boolean expression headers.
+
 ```text
 match expression {
     pattern { arm_body }

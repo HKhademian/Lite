@@ -311,7 +311,8 @@ conditional := [tag] "if" condition block
                [ finally_clause ]
 conditional_then := "then" block
 
-condition := or_condition
+condition := [leading_condition_separator] or_condition
+leading_condition_separator := "and" | "or"
 or_condition := and_condition { "or" and_condition }
 and_condition := condition_operand { "and" condition_operand }
 condition_operand := condition_boolean_operand | existing_name_type_test
@@ -328,6 +329,8 @@ type_match_pattern := ":" type
 value_match_pattern := "==" pattern_value_operand
 typed_binding_pattern := identifier ":" type
 ```
+
+The optional leading and/or belongs only to a complete condition or explicitly parenthesized condition group. Remove it before applying the ordinary precedence and binding rules; it creates no true/false operand or empty alternative. Require at least one real operand and reject stacked, interior, or trailing separators: if and a and b is valid, while if or and a and if a or and b are invalid. The same condition production is used after else if and in subject-based match guards. This does not change ordinary Boolean expression, loop-header, subjectless-match-header, or pattern-alternative grammar. See [optional leading separators](leading-separators.md).
 
 The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Bare .Some in a pattern is now selected to test only the tag with no payload binding; arbitrary refutable receiver patterns still need a mismatch contract. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
@@ -494,6 +497,14 @@ The [type alias comparison](type-aliases.md) selected Alias := type TypeExpressi
 
 Plain-union [normalization](union-normalization.md) is selected independently of precedence: member order does not affect identity, nested plain unions flatten, and duplicate identities disappear after alias resolution. These rules do not flatten Option/Result/enum boundaries, merge distinct nominal records, reorder match arms, or choose an ABI.
 
+### Optional leading union separator selected
+
+```text
+union_type := ["|"] union_member_type { "|" union_member_type }
+```
+
+This is a selected nonempty-chain fragment in type context, not a complete type-expression grammar. union_member_type excludes ungrouped top-level | and binary fallible !; its recursive productions and other constructor precedence remain open. Established grouping may contain another union chain. Thus Alias := type | A | B and Alias := type A | B denote the same type, while Alias := type |, Alias := type | | A, and Alias := type A | are invalid. A singleton | A denotes A and adds no empty member or Unit. Each union operand of binary ! uses this same fragment, preserving the selected tighter union precedence. No public intersection-type or leading-& production is selected. See [optional leading separators](leading-separators.md#plain-union-types).
+
 ## Recoverable error expressions and shared recovery direction
 
 ```text
@@ -528,6 +539,8 @@ comparison := comparison_operand { comparison_operator comparison_operand }
 comparison_operator := "==" | "=!=" | ">" | ">!" | "<" | "<!"
                      | ">=" | ">!=" | "<=" | "<!="
 ```
+
+These are ordinary Boolean expression productions. Optional leading and/or is selected separately at the complete condition boundary above; do not put an optional prefix on logical_and, logical_or, and_condition, or or_condition. Doing so would admit stacked/interior leaders that the selected rule rejects. Leading condition punctuation does not change this precedence ladder or introduce unary logical operators.
 
 All ten comparison operators share exactly this one precedence level, binding more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Negated operators complement one corresponding positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Recognize the longest comparison token in expression context; grammatical type context retains the selected attached type-suffix/initializer boundary. Parentheses establish separate comparisons when required. All ten nonbinding comparison-pattern prefixes are selected separately; that does not add implicit-subject pattern chains.
 

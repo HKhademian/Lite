@@ -36,6 +36,19 @@ The type keyword gives the complete right-hand side a type-expression context th
 
 The first block records the rejected alternative; the second uses the selected prefix. They are not interchangeable alias spellings. If User denotes a type, Member := User is not the selected way to alias it. If a name instead denotes an ordinary value, the ordinary value-binding rule still applies; capitalization never decides this. The examples use selected tuple component and named callable parameter forms; complete recursive type grammar and generic List<User> notation remain to be formalized.
 
+## Optional leading union separator selected
+
+The alias initializer's established type context permits one optional leading | on a nonempty plain-union chain:
+
+```text
+Value := type
+    | String
+    | Int
+    | Float;
+```
+
+This denotes exactly String | Int | Float under the ordinary transparent-alias and union-normalization rules. A singleton Value := type | String denotes String. The same leading form is available in other established type contexts and explicitly grouped union chains. No empty member, Unit, new nominal wrapper, or changed fallible-type precedence is introduced. Empty, stacked, interior extra, and trailing separators are invalid. Leading & awaits intersection-type selection; it is not admitted merely by analogy. See [optional leading separators](leading-separators.md#plain-union-types), selected 2026-10-24.
+
 ## What changes as types become more complex
 
 - **Existing named type:** Member := User is concise and readily resolvable when User denotes a type. The explicit form advertises the declaration's role before the reader resolves User.

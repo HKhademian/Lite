@@ -1,6 +1,6 @@
 # Operators
 
-Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions selected 2026-10-24; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
 
 ## Working operator set
 
@@ -79,6 +79,12 @@ To negate only `a` before comparing:
 ```
 
 The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
+
+## Optional leading condition separators selected
+
+A complete condition or explicitly parenthesized condition group may start with one optional `and` or `or`, selected 2026-10-24. For example, if and a and b is equivalent to if a and b, and if or a and b or c is equivalent to if (a and b) or c. The leading token is presentation punctuation, not a unary operator or implicit Boolean operand. Normal not/and/or precedence, short-circuiting, effects/failures, bindings, and narrowing remain unchanged.
+
+Require at least one real operand. Reject stacked leaders, an extra leader after an interior operator, and trailing operators. This selection covers if/else-if conditions and subject-based match guards that reuse condition grammar; ordinary Boolean value expressions, loop headers, subjectless match headers, and pattern alternatives are unchanged. Leading | is selected separately in plain-union type context; leading & awaits intersection-type selection. See [optional leading separators](leading-separators.md) for examples and boundaries.
 
 ## Negation scope in conditions selected
 

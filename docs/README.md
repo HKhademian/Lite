@@ -1,6 +1,6 @@
 # Language documentation
 
-Design snapshot: **2026-10-20**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-24**. Stage: **planning; no implementation**.
 
 ## Start here
 
@@ -30,7 +30,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
-- [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
+- [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
+- [Optional leading separators](leading-separators.md): selected leading and/or at complete condition/group boundaries and | on nonempty plain-union chains; equivalent compact forms, unchanged precedence/effects/bindings, invalid separators, and conditional future leading-& support.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
@@ -39,7 +40,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
-- [Operators](operators.md): arithmetic, comparison, logical operations, and precedence.
+- [Operators](operators.md): arithmetic, comparison, logical operations, optional leading condition separators, and unchanged precedence.
 - [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
@@ -77,8 +78,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Record literal boundaries](record-literal-boundaries.md): optional semicolons after record initializers and unresolved inferred-literal versus executable-block classification.
 - [Records](records.md): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
 - [Record type identity](record-type-identity.md): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
-- [Type aliases](type-aliases.md): selected Alias := type TypeExpression, transparent identity, and comparison with the rejected direct-binding alternative.
-- [Plain union normalization](union-normalization.md): selected order independence, flattening, and duplicate removal without collapsing nominal records, enum cases, Option, or Result.
+- [Type aliases](type-aliases.md): selected Alias := type TypeExpression, optional leading | in union initializers, transparent identity, and comparison with the rejected direct-binding alternative.
+- [Plain union normalization](union-normalization.md): selected order independence, flattening, duplicate removal, and unchanged identity with optional leading |, without collapsing nominal records, enum cases, Option, or Result.
 - [Union membership](union-membership.md): selected automatic member admission, checked narrowing, nominal identity, and remaining representation contracts.
 - [Union widening](union-widening.md): selected automatic widening when every normalized source alternative is an exact destination member, with checked narrowing in the reverse direction.
 - [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
@@ -149,10 +150,10 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Body-owned recovery](body-recovery.md): selected internal recovery placement; body-wide section examples and delimiter candidates are explicitly deferred.
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
-- [Conditionals](conditionals.md): one syntax for actions and values, with irrefutable matching conditions allowed and a warning for proven complete-condition success.
-- [Conditional pattern chains](condition-chains.md): and chains, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, failure-path narrowing of stable existing bindings into later or operands and their successful-path joins, concise Boolean/type-test negation under not/and/or precedence, and grouped source-pattern negation with no exported bindings.
+- [Conditionals](conditionals.md): one syntax for actions and values, optional leading and/or, and irrefutable matching conditions allowed with a warning for proven complete-condition success.
+- [Conditional pattern chains](condition-chains.md): and chains, optional leading and/or without extra operands, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, failure-path narrowing of stable existing bindings into later or operands and their successful-path joins, concise Boolean/type-test negation under not/and/or precedence, and grouped source-pattern negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
-- [Match arm guards](match-guards.md): selected pattern-if separator, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
+- [Match arm guards](match-guards.md): selected pattern-if separator, optional leading and/or, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based arms, nested constructor/tuple or patterns with local first-success, and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.

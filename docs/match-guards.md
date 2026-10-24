@@ -16,6 +16,24 @@ The initial pattern matches the match subject. An optional if introduces the gua
 
 Ordering comparisons and compound relationships already work as Boolean guards, for example `value if lower <= value < upper and (ready or retry_allowed)`. All ten direct comparison prefixes, including >= minimum and >! limit, are now selected as nonbinding [comparison patterns](comparison-patterns.md). A prefix tests one supplied value; compound and cross-component conditions retain these if guards. Boolean or inside a grouped guard does not select alternative binding-producing patterns.
 
+## Optional leading guard separator selected
+
+Because the guard after if uses the shared condition grammar, it permits one optional leading `and` or `or`, including within an explicitly parenthesized condition group:
+
+```text
+match target {
+    user: User if
+        and user.active
+        and permitted(user)
+    {
+        greet(user)
+    }
+    _ {}
+}
+```
+
+Assume User.active and permitted produce Bool and greet returns Unit. The initial type pattern still supplies user before the guard runs. Removing the leading and changes no evaluation, scope, precedence, binding join, narrowing, or arm-selection behavior. An empty guard or stacked/interior extra leaders are invalid. This does not add leading or to the initial arm-pattern alternatives or to subjectless Boolean match headers. See [optional leading separators](leading-separators.md), selected 2026-10-24.
+
 ## Binding visibility and simple arms
 
 The if separator makes the initial name's binding role visible without an additional as marker:

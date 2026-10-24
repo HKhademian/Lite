@@ -96,6 +96,8 @@ Selected on **2026-10-24**: an existing-name type test is a complete condition o
 
 The source initializer distinguishes a binding-producing typed condition: negating user: User = source still requires not (user: User = source). Negating a := source-pattern condition likewise remains grouped. Do not reinterpret an ungrouped not name: Type = source as a negated existing-name test followed by initialization. Compound negation uses parentheses around the entire intended condition. These rules do not select arbitrary expression subjects or a full type/parser grammar; see [condition negation scope](operators.md#negation-scope-in-conditions-selected).
 
+The selected [optional leading condition separator](leading-separators.md) is removed before these rules apply. For a stable value: String | Int, if or value: String or value > 0 has the same later-operand Int refinement and successful-body String | Int join as the form without the leading or. Likewise, if and value: String and accepts(value) retains the original guarded-condition failure facts; punctuation supplies no additional success/failure path or binding.
+
 ## Evaluation and scope
 
 The condition reads its subject once for the test. This does not promise that later independent property reads are cached, or that later function calls reproduce the tested value.

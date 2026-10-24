@@ -10,6 +10,7 @@ The project is currently **planning only**. These documents record the design di
 - [Principles and goals](docs/principles.md)
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)
+- [Optional leading separators for conditions and unions](docs/leading-separators.md)
 - [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [External references](docs/references.md)
 

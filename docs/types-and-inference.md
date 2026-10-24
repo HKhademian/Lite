@@ -55,6 +55,10 @@ The [type-category review](type-categories.md) separates products, named enum al
 
 Record type declarations have selected nominal identity, including unnamed inline declarations: two independently declared records remain distinct despite identical fields. Conversion requires explicit reconstruction under their visibility and ownership contracts. Contextual record construction and headless field extraction do not introduce structural assignment compatibility. Standalone inferred record literals and generic type instantiation still need contracts; see [record identity](record-type-identity.md).
 
+## Optional leading union separator
+
+An established type-expression context permits one optional leading | on a nonempty plain-union chain, selected 2026-10-24. Value := type | String | Int and Value := type String | Int denote the same transparent alias; an annotation such as value: (| String | Int) uses the same union type. This spelling neither adds Unit nor changes inference, type identity, normalization, or precedence. Leading & is conditional on future intersection-type selection. See [optional leading separators](leading-separators.md#plain-union-types).
+
 ## Tuple type components
 
 Tuple type components use the selected three forms:

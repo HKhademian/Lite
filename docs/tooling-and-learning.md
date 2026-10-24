@@ -18,6 +18,8 @@ The formatter must not infer missing semicolons from line breaks, change final-e
 
 Its selected presentation omits optional semicolons after complete block/record items at every nesting depth, including function/lambda definitions and declarations with braced initializers. Keep necessary ordinary-item separators and enclosing call/list/tuple punctuation. Recognize complete syntax rather than deleting every semicolon after a brace character; import-list braces and proposed special delimiters have different roles. See the [semicolon style rule](lexical-structure.md#semicolon-style-after-closing-braces). This is a formatter requirement, not an implemented tool claim.
 
+The selected [optional leading separators](leading-separators.md) permit aligned condition entries beginning with and/or and union members beginning with |. Formatting must preserve their semantic equivalence with the form without the leading token, including short-circuiting and binding flow. The policy for preserving, adding, or removing these optional leaders remains open; this does not add missing operands or general punctuation repetition.
+
 ## Run and build proposals
 
 ```text

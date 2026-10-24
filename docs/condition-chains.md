@@ -14,6 +14,10 @@ if .Some(user) := find_user(id) and user.age > 14 {
 
 The and separates two condition operands. It is not part of the value supplied to Some: the pattern matches `find_user(id)`, and the age comparison runs only after that match succeeds.
 
+## Optional leading separator selected
+
+Selected 2026-10-24: the complete condition, or an explicitly parenthesized condition group, may start with one optional `and` or `or`. Thus if and .Some(user) := find_user(id) and user.active has exactly the same evaluation and binding flow as the form without the first and. A leading or likewise creates no empty alternative, missing-name Unit contribution, or extra evaluation. Require at least one real operand; do not permit stacked leaders or a new leader after an interior separator. Normal and-before-or precedence, shadowing, successful/failed-path narrowing, and ownership obligations remain unchanged. This also applies to subject-based match guards using the same condition grammar, without adding logical subpatterns or new expression-header forms. See [optional leading separators](leading-separators.md).
+
 ## Evaluation and binding scope within an and chain
 
 1. Evaluate the first condition operand.

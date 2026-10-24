@@ -90,6 +90,8 @@ Left-to-right order does not force evaluation of skipped expressions:
 - A conditional evaluates only the selected branch; an `else if` condition is reached only after earlier conditions fail.
 - An explicit exit during evaluation prevents subsequent operands or arguments from being evaluated.
 
+The selected [optional leading separators](leading-separators.md) add no evaluation step: if and a and b evaluates exactly like if a and b, and if or a or b evaluates exactly like if a or b. The leading token is not a synthetic true/false operand or empty alternative. Existing condition-pattern binding and narrowing flow likewise remain unchanged.
+
 The effect and overload rules for Boolean operators remain open. They cannot be used to infer eager evaluation of an otherwise skipped operand.
 
 ## Assignment targets

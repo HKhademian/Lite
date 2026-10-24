@@ -135,6 +135,8 @@ User ! (ReadError | ParseError)
 
 The ungrouped spelling is valid for users, developers, and all other code; grouping is a reference-documentation preference. The grouped spelling makes both sides immediately visible and distinguishes the outcome from `A | B | (C ! D) | E | F`, which is a different type: a union whose only fallible member is `C ! D`. A union of complete fallible types groups those operands, for example `(User ! LoadError) | (Guest ! GuestError)`.
 
+Each nonempty union operand may use its selected optional leading |, including inside explicit grouping: (| User | Guest) ! (| ReadError | ParseError) denotes the same outcome type as (User | Guest) ! (ReadError | ParseError). The leader adds no empty member or Unit and does not change this precedence. See [optional leading separators](leading-separators.md#plain-union-types).
+
 In type position, `!` joins success and error types. In value position, postfix `!` extracts an outcome or propagates its failure. The parser distinguishes those contexts without relying on spaces or newlines.
 
 ## General Error shorthand

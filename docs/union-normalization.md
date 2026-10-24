@@ -19,6 +19,10 @@ Nested := type A | (B | C);
 
 First, Reordered, and Repeated denote the same union type. Flat and Nested also denote the same union type. These are transparent aliases, not declarations of fresh nominal record types.
 
+### Optional leading | selected
+
+Selected 2026-10-24: a nonempty plain-union chain in type context may start with one optional |. Thus Leading := type | A | B denotes the same type as First above, and Singleton := type | A denotes A. Grouped unions may also use their own leading |. This is a presentation rule applied before normalization, not another union member or permission for empty/stacked/interior extra/trailing separators. It adds no Unit, bottom type, or identity. Public intersection-type semantics and leading & remain unselected; illustrative failure aggregates are separate. See [optional leading separators](leading-separators.md#plain-union-types).
+
 ### Selected rules
 
 1. **Order does not affect identity.** A | B and B | A are the same plain union type.

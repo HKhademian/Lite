@@ -20,6 +20,26 @@ if condition {
 
 All branch bodies require braces. A `then` block may follow the complete conditional chain, after its optional final `else`; it processes the selected branch result or the missing-`else` zero result. The old `endif` and unblocked single-statement forms are superseded.
 
+## Optional leading and/or selected
+
+A condition may begin with one optional `and` or `or` so every entry can use the same visual shape:
+
+```text
+if
+    and connected
+    and authenticated
+{
+    proceed()
+} else if
+    or cached
+    or available_locally
+{
+    load()
+}
+```
+
+Assume existing Bool flags and Unit-producing handlers. Each branch tests exactly the condition obtained by removing its first and/or token. The same option exists at the start of an explicitly parenthesized condition group. A single real operand is sufficient; empty conditions, stacked leaders, interior extra leaders, and trailing operators are invalid. Newlines do not determine grouping, and and still binds more tightly than or. Evaluation, bindings, narrowing, branch results, and hooks retain their existing contracts. See [optional leading separators](leading-separators.md), selected 2026-10-24.
+
 ## Action example
 
 ```text
