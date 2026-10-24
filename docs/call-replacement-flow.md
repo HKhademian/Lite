@@ -36,7 +36,7 @@ Preserve ordinary callee-first, argument-left-to-right evaluation and select eac
 
 Require a supported proof that entry reads fit after intervening argument effects; invalidate earlier facts where those effects may change the location unless preservation is justified. Continue checking the callee's permitted writes against the caller's declared accepted replacements. Calls whose argument evaluation exits do not reach invocation and retain ordinary failure/exit behavior; no post-call fact is established merely by selecting an argument.
 
-This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. The later-argument read case is separately allowed below; general grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. The later-argument read and direct-write cases are separately allowed below; general grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
 
 ## Later argument reads of a selected local allowed
 
@@ -58,7 +58,30 @@ This permits the illustrated read while preparing arguments; selecting var count
 
 Entry compatibility still holds after all reached argument effects: current reads must fit the var parameter, and its permitted writes must fit the declared caller storage. The earlier String-to-Int invalidation example remains rejected. The same-local duplicate var arguments in one call remain rejected. Reads still require initialized storage and a valid current read proof; reservation alone is insufficient.
 
-This selection covers simple initialized locals and computed scalar arguments. It does not select later writes during argument preparation, field/index overlap, retained read aliases, aggregate input copying/borrowing, callbacks/reentrancy, or a complete grant-activation model. Once the callee's grant is active, the existing single-holder and nested-forwarding suspension rules still apply.
+This selection covers simple initialized locals and computed scalar arguments. Direct local writes during preparation are separately selected below. Field/index overlap, retained read aliases, aggregate input copying/borrowing, callbacks/reentrancy, and a complete grant-activation model remain open. Once the callee's grant is active, the existing single-holder and nested-forwarding suspension rules still apply.
+
+## Later argument writes to a selected local allowed
+
+Selected on **2026-10-24**: a later supplied argument may perform a permitted direct write to an earlier selected initialized local before invocation. The caller holds the location's write grant during argument preparation; selecting that location for the pending var argument does not also activate a callee holder. At invocation, the caller hands the grant to the callee. Only one holder has active write authority at each stage.
+
+```text
+add := fn(target: var Int, amount: Int): Unit {
+    target = target + amount;
+}
+
+var count: Int = 10;
+add(var count, ({
+    count = 20;
+    count + 1
+}));
+/* After normal return, count is 41. */
+```
+
+Evaluate the callee first and select count's location once. Then evaluate the grouped argument block under the caller's existing authority: write 20 to count and compute the scalar argument 21. Invoke add with the same location now holding 20; its assignment adds 21 and writes 41. The call result remains Unit. The parenthesized block ({ ... }) makes the argument expression boundary explicit; retain that grouping in this example.
+
+There is no overlap between the caller's preparation-time grant and the callee's invocation-time grant. Neither location selection nor the computed scalar duplicates write authority. Preserve ordinary source order, initialized reads, declared accepted writes, location validity, and the callee's required entry read type after all reached argument effects. A later String-to-Int write still prevents invocation of a var String parameter; two same-local var arguments in the same call remain rejected.
+
+If argument evaluation fails or exits, do not invoke the callee. Prior writes retain their ordinary effects; no rollback or pre-selection payload snapshot is introduced. This selects direct local writes during preparation, not a complete policy for nested granting calls in later arguments, retained aliases, overlapping fields/indices, callbacks/reentrancy, cleanup, or aggregate copying/borrowing. Once invoked, ordinary single-holder, nested-forwarding, and recovery rules continue to apply.
 
 ## Single source write grant selected
 
