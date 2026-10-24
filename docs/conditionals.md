@@ -173,7 +173,7 @@ if person: User {
 
 This tests the existing value and narrows its usable type where the test is known to hold, subject to stability. It introduces no name, assignment, copy, or unchecked cast. The declared type remains unchanged. Redeclaring `person` is optional; explicit binding is useful when a new name or producer expression is wanted.
 
-See [type tests and narrowing](type-tests-and-narrowing.md) for the selected forms and the remaining mutation, logical-flow, early-return, subtype, and generic-test decisions. Existing-name type tests are selected; their full flow-sensitive semantics are not yet a complete contract.
+See [type tests and narrowing](type-tests-and-narrowing.md) for the selected forms, stable existing-binding refinement after early exits, and remaining mutation, broader logical-flow, subtype, and generic-test decisions. Existing-name type tests are selected; their full flow-sensitive semantics are not yet a complete contract.
 
 ## Pattern conditions
 

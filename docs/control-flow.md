@@ -23,7 +23,7 @@ Semicolons separate ordinary items; a newline never decides whether an exit oper
 
 ## Plain return
 
-`return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary.
+`return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary. [Early-exit narrowing](type-tests-and-narrowing.md#narrowing-after-early-exits-selected) retains supported type facts about stable existing bindings on all paths reaching a continuation. An exiting path contributes no normal continuation there; determine this from its actual target and completion behavior, not the exit keyword alone. This changes no binding scope or cleanup obligation.
 
 The [error-return shorthand proposal](error-return-sugar.md) would add throw error with the exact semantics of return .err(error), requiring the nearest function/closure's declared fallible result contract. It shares that return boundary and cleanup rules; bare throw and tagged throw are not proposed. Its spelling remains unselected.
 

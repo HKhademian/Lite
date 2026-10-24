@@ -1,6 +1,6 @@
 # Type tests and narrowing
 
-Status: **existing-name conditional tests, binding-free : Type patterns, and remaining-subject narrowing across match arms selected; match remainder selected on 2026-10-23; stability, broader logical flow, and full type-test rules need formalization**.
+Status: **existing-name conditional tests, binding-free : Type patterns, remaining-subject narrowing across match arms, and stable existing-binding narrowing after early exits selected; early-exit rule selected on 2026-10-24; stability, broader logical flow, and full type-test rules need formalization**.
 
 ## Purpose
 
@@ -81,7 +81,38 @@ match value {
 
 Here the fallback can still receive a String that is not special, so its type still includes String. Assume compatible Bool/Unit-producing predicates and handlers. Likewise, a literal, comparison, or payload-constrained pattern does not exclude an entire containing type merely because that pattern failed. Later arms may use only exclusions actually established for their path, not an unconditional complement of every earlier pattern's written type. Arbitrary predicate complements, intervals, overlapping subtype/interface relationships, and a complete coverage solver remain open.
 
-Refining the once-evaluated match subject does not automatically refine a fresh call, repeated getter, replaced var, or unstable aliased path. Narrow the original named value only while it still denotes that same subject with a valid proof. Binding/extraction adds no copy, freeze, move, lifetime extension, or mutation permission. Effects that invalidate identity/refinement must retain their ordinary obligations; the complete stability/ownership model remains separate. This selection is about successive subject-based match arms/alternatives, not general else or early-return negative-flow analysis.
+Refining the once-evaluated match subject does not automatically refine a fresh call, repeated getter, replaced var, or unstable aliased path. Narrow the original named value only while it still denotes that same subject with a valid proof. Binding/extraction adds no copy, freeze, move, lifetime extension, or mutation permission. Effects that invalidate identity/refinement must retain their ordinary obligations; the complete stability/ownership model remains separate. This match-specific selection is separate from the early-exit rule below; a complete general negative-flow analysis remains open.
+
+## Narrowing after early exits selected
+
+Selected on **2026-10-24**: retain supported type facts about stable existing bindings when those facts hold on every path that reaches the next item. A branch that exits before that continuation contributes no normally reaching path:
+
+```text
+show_text := fn(value: String | Int): Unit {
+    if not (value: String) {
+        return;
+    }
+
+    print_text(value); // value is String here
+}
+```
+
+Assume print_text accepts String and returns Unit. The existing-name test introduces no binding. If value is not String, the function returns; every path reaching print_text therefore proves value is String. The same rule permits Int after an exiting positive String test on this closed distinct union. The stored value and its declared String | Int type do not change.
+
+Only paths actually reaching the continuation participate. If the rejected branch can complete normally, that path still contributes its possible types; merely logging a non-String value instead of returning does not justify print_text(value). Follow an exit's actual target and ordinary completion/cleanup behavior: a targeted return from an inner block may reach code after that block, so its keyword alone cannot establish the exclusion. Preserve only facts valid on all reaching paths after any intervening effects.
+
+This is refinement of bindings already in scope, not a new binding-scope rule. In particular, the following remains rejected when no outer user exists:
+
+```text
+if not (.Some(user) := find_user(id)) {
+    return;
+}
+greet(user); // rejected: user was declared inside not
+```
+
+Bindings introduced inside negation remain confined there even if the other path exits. Likewise, branch-local bindings do not become visible after an if merely because another branch returns. Existing same-named outer bindings retain their own identities; an internal shadow does not refine them by spelling alone.
+
+Require a valid stability proof at each use. Replacement, writable aliases, or effects that may change the tested alternative invalidate affected facts unless preservation can be established. Do not cache fresh calls/getters, copy or freeze a value, or infer mutation/lifetime permissions to maintain a refinement. This selection requires the illustrated closed, distinct union type-test cases; arbitrary predicate complements, overlapping types, general disjunctive flow, and complete alias/effect analysis remain open. It does not add a new logical pattern, cast, or syntax form.
 
 ## Related pattern bindings
 
@@ -101,9 +132,9 @@ The exact policy depends on the memory, aliasing, and effect models. Support for
 
 These need decisions before the grammar is implementation-ready:
 
-1. **Logical flow and precedence.** Pattern-binding and chains with bindings available to later Boolean operands are selected; see [conditional pattern chains](condition-chains.md). Binding-producing or alternatives export the union of introduced names with first-success values and Unit for absent paths, typed as normalized unions; each alternative starts from the common incoming scope. Grouped matching-condition not is selected with no exported bindings; it does not by itself select negative or early-exit refinement. Related stable-binding narrowing from finite known alternatives is selected separately. Broader negative/disjunctive refinement, existing-name type-test precedence, and complete mutation/effect invalidation still need rules. Do not derive parsing from whitespace or infer disjunction/negation bindings beyond the selected payload-or-Unit or guarantee.
-2. **Early-return guards.** Retaining a successful refinement after a negative branch returns is desirable for shallow code, but the precise control-flow and invalidation rules remain a proposal.
-3. **Broader negative information.** Remaining-subject narrowing across match arms is selected for fully handled members of a closed union of distinct types. Complete negative facts through conditional else, joins, overlapping types, arbitrary guards, and open interfaces separately.
+1. **Logical flow and precedence.** Pattern-binding and chains with bindings available to later Boolean operands are selected; see [conditional pattern chains](condition-chains.md). Binding-producing or alternatives export the union of introduced names with first-success values and Unit for absent paths, typed as normalized unions; each alternative starts from the common incoming scope. Grouped matching-condition not is selected with no exported bindings; its binding-scope rule is separate from the selected early-exit refinement of existing bindings. Related stable-binding narrowing from finite known alternatives is selected separately. Broader negative/disjunctive refinement, existing-name type-test precedence, and complete mutation/effect invalidation still need rules. Do not derive parsing from whitespace or infer disjunction/negation bindings beyond the selected payload-or-Unit or guarantee.
+2. **Complete exit-flow analysis.** Stable existing-binding refinement after an early exit is selected above. Full integration with all completion/cleanup paths, alias/effect invalidation, and broader logical predicates remains to formalize; exiting branches never export otherwise out-of-scope names.
+3. **Broader negative information.** Remaining-subject narrowing across match arms is selected for fully handled members of a closed union of distinct types. Beyond the selected all-reaching-path early-exit cases, negative facts through conditional else, joins, overlapping types, arbitrary guards, and open interfaces still need a complete contract.
 4. **Type relations.** Define exact type identity versus subtype/interface satisfaction, generic type tests and erasure/reification, and impossible or always-true tests. This form does not settle those questions.
 5. **Conditional declarations.** Decide whether irrefutable patterns such as `if flag := false` are rejected or diagnosed. Matching `Some(false)` with `Some(flag)` succeeds independently of the payload's Boolean value.
 6. **Binding capabilities.** Finish conditional binding modifiers, borrow/move/copy behavior, and complete nested-pattern grammar. Repeated binding names within patterns and across successful and-chain operands use selected ordered shadowing; existing-name type tests narrow the current binding without introducing a new one.
