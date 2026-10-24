@@ -81,7 +81,47 @@ Evaluate the callee first and select count's location once. Then evaluate the gr
 
 There is no overlap between the caller's preparation-time grant and the callee's invocation-time grant. Neither location selection nor the computed scalar duplicates write authority. Preserve ordinary source order, initialized reads, declared accepted writes, location validity, and the callee's required entry read type after all reached argument effects. A later String-to-Int write still prevents invocation of a var String parameter; two same-local var arguments in the same call remain rejected.
 
-If argument evaluation fails or exits, do not invoke the callee. Prior writes retain their ordinary effects; no rollback or pre-selection payload snapshot is introduced. This selects direct local writes during preparation, not a complete policy for nested granting calls in later arguments, retained aliases, overlapping fields/indices, callbacks/reentrancy, cleanup, or aggregate copying/borrowing. Once invoked, ordinary single-holder, nested-forwarding, and recovery rules continue to apply.
+If argument evaluation fails or exits, do not invoke the callee. Prior writes retain their ordinary effects; no rollback or pre-selection payload snapshot is introduced. Simple nested granting calls in later arguments are separately selected below; retained aliases, overlapping fields/indices, callbacks/reentrancy, complete cleanup rules, and aggregate copying/borrowing remain open. Once invoked, ordinary single-holder, nested-forwarding, and recovery rules continue to apply.
+
+## Nested granting calls during argument preparation allowed
+
+Selected on **2026-10-24**: a later argument may temporarily grant the same initialized simple local to another synchronous call that completes before the pending outer invocation. Selecting the outer var location does not activate another holder. Using add from the preceding example:
+
+```text
+prepare := fn(target: var Int): Int {
+    target = 20;
+    target + 1
+}
+
+var count: Int = 10;
+add(var count, prepare(var count));
+/* After normal return, count is 41. */
+```
+
+The active grant passes from caller to prepare, back to caller, then to add, and back to caller. Prepare writes 20 and returns 21 before add begins. Add receives the same location holding 20 and adds the supplied 21. Only one holder has active write authority at each stage; this does not duplicate the grant into two parameters of one invocation.
+
+For these stable callable names and the simple count local, evaluating the scalar preparation into a fresh temporary gives the same call effects and result. From the same initial count value, the inline call above corresponds to:
+
+```text
+tmp := prepare(var count);
+add(var count, tmp);
+```
+
+The preceding direct-write argument example likewise corresponds to the user's executable block initializer:
+
+```text
+tmp := {
+    count = 20;
+    count + 1
+}
+add(var count, tmp);
+```
+
+The block's assignment produces Unit, and its final count + 1 supplies the Int result 21. Each inline or temporary form evaluates its preparation once, leaves count holding 20 before add starts, and ends with count holding 41. The temporary examples are alternative fragments, not additional calls to execute after the inline form. Retain ({ ... }) around the inline argument block so its expression boundary is explicit; the standalone block initializer uses its ordinary declaration boundary.
+
+This equivalence describes the effects, values, and grant handoffs of these examples. It is not a general instruction to move a later argument ahead of an effectful callee expression or earlier arguments. Ordinary calls still evaluate the callee first, then supplied arguments left to right, selecting each location once. A general transformation must preserve those evaluations, selected-location identity, lexical scope, and lifetimes; computed field/index locations and aggregate transport retain their separate open contracts.
+
+After prepare ends, require the outer callee's entry read type still to fit the current local and its permitted writes still to fit the caller's declared storage. Preserve the inner call's own compatibility, single-holder, lifetime, cleanup, and recovery obligations. If argument evaluation fails or exits without producing the required input, do not invoke add; prior writes are not rolled back. Recovered argument evaluation may continue only with a valid result and restored authority. The known duplicate-grant rejection within one invocation remains unchanged. Retained aliases, overlapping paths, callbacks/reentrancy, and a complete activation/effect model remain open.
 
 ## Single source write grant selected
 
