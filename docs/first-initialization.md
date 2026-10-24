@@ -30,7 +30,12 @@ An omitted initializer is different: x: User; already initializes semantic zero.
 
 ## Writable before initialization, readable afterward
 
-Clarified on **2026-10-24**: explicit reservation permits a first whole-value write while ordinary reads are forbidden. After successful initialization, a fixed binding is readable and cannot be replaced; a var binding is readable and remains writable. Initialization state and replacement permission are separate checks.
+Clarified on **2026-10-24**: the examples distinguish single-write and multi-write bindings. Both begin unreadable when explicitly reserved with = ?. In every currently selected case, a successful whole-value write makes the binding readable:
+
+- Single-write, x: Int = ?: unreadable with one initialization write available; after that write, readable with no further writes allowed on that execution path.
+- Multi-write, var y: Int = ?: unreadable with initialization available; after that write, readable with further replacements allowed. Each later successful write keeps reads available and updates the current read type under the ordinary flow rules.
+
+Write allowance and readable state are separate checks. These labels describe the existing fixed/var declarations; they add no source keywords.
 
 ```text
 x: Int = ?;
@@ -46,7 +51,7 @@ y = 2;  /* Valid replacement through var. */
 z := y; /* Valid read. */
 ```
 
-The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence. The later z declarations use ordinary sequential local shadowing. Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Here writable describes permission for the first whole-value assignment; it introduces no new qualifier or callee access mode. Ordinary var parameters still require initialized readable input.
+The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence. The later z declarations use ordinary sequential local shadowing. Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Both single-write and multi-write bindings become readable after a successful write; the multi-write binding also retains replacement permission. Ordinary var parameters still require initialized readable input.
 
 The same checks apply to unions alongside the selected [assignment flow rules](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected):
 

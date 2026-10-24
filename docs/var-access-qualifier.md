@@ -20,7 +20,7 @@ The parameter does not own an independent local working copy. Its association wi
 
 ## Reservation and first-write access
 
-With x: Int = ?, ordinary reads are rejected until the first whole-value x = 74. That write initializes fixed x; afterward reads are allowed and replacement is rejected. Var y: Int = ? has the same initial read prohibition, then permits both reads and later replacement after initialization. This initialization permission applies to union storage too, without adding a readable unknown/Unit alternative or selecting write-only parameters. See [initialization access examples](first-initialization.md#writable-before-initialization-readable-afterward).
+The reserved declarations distinguish single-write x: Int = ? and multi-write var y: Int = ?. Both initially reject reads. In every currently selected case, a successful whole-value write makes reads available. For x, that write consumes its one initialization write; y retains replacement permission, and each later successful write leaves it readable with the updated flow type. These independent write-allowance and readable-state checks apply to union storage too. No readable unknown/Unit alternative or write-only parameter mode is introduced. See [initialization access examples](first-initialization.md#writable-before-initialization-readable-afterward).
 
 ## Zero initialization does not change the access contract
 
