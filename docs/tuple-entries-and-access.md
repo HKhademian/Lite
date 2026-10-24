@@ -48,6 +48,8 @@ Selected by the user, 2026-10-22: Unit is the zero-component tuple, with () as a
 
 ## Singleton values selected
 
+The 2026-10-24 [callable input-header rule](callable-input-packs.md#input-signatures-and-the-singleton-boundary) is a separate syntactic context: `fn (Int): Ret` already denotes one input, and a one-position implementation header `(x) { ... }` needs no singleton comma. This does not change ordinary tuple values/types/patterns below. Intrinsic `.call` receives an ordinary tuple expression, so `f.call (4,)` supplies one Int while `f.call(4)` rejects a scalar operand; invocation sugar `f(4)` constructs one supplied input.
+
 Selected by the user, 2026-10-22: an unnamed singleton needs a comma to distinguish it from grouping. An explicitly named entry already establishes a tuple, so its trailing comma is optional:
 
 ```text
@@ -240,6 +242,8 @@ There is no grouped scalar inside (): grouping needs an expression. The empty fo
 ### 2. Singleton type boundary selected
 
 Selected by the user, 2026-10-22:
+
+These are ordinary tuple-type rules. A callable type's dedicated input signature, such as `fn (Int): Ret`, has its own header delimiters and permits an unnamed singleton without the comma; see [callable input headers](callable-input-packs.md#input-signatures-and-the-singleton-boundary).
 
 ```text
 (Int)        /* grouped scalar type Int */

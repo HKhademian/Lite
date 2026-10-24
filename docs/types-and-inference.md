@@ -84,12 +84,20 @@ In value context, (cake, tea) constructs unnamed positional components unless an
 ## Inferred functions
 
 ```text
-double := fn(x) {
-    x + x
-}
+operation := (x: Int) { x * 3 }
+operation := fn(x: Int) { x * 3 }
+/* alternative definitions; one Int input and an inferred Int result */
+
+operation := (x: Float): Float { x * 3 }
+operation := fn(x: Float): Float { x * 3 }
+/* alternative explicit contracts, checked by ordinary numeric rules */
 ```
 
-Nonrecursive local lambdas with established input types have selected [body-result inference](functions.md#independent-lambda-result-inference). Without an explicit or expected result contract, distinct completion payload types form a [normalized plain union](functions.md#mixed-local-result-types): an Int return and String tail infer Int | String. Explicit/expected result types remain constraints, and escaping recoverable errors require an explicit contract. Unknown-input generic inference remains open. [Conditional and match results](branch-result-inference.md) separately have the same selected normalized-union inference.
+The [unified callable model](callable-input-packs.md) uses the same inference with and without `fn`. Input shape and types must be established by annotations, an expected callable contract, or both. The nonrecursive local body can then infer its result; knowing only the shape or result is insufficient to choose unknown input types. Under `operation: fn (Int): Int`, both `(x) { x * 3 }` and `fn(x) { x * 3 }` use that expected contract. Under `operation: fn (Int): Int = fn { arguments.0 * 3 }`, the full implicit input pack is a singleton Int. Independently, headerless fn has Unit inputs, not a guessed generic pack.
+
+Neither `operation := (x) { x * 3 }` nor `operation := fn(x) { x * 3 }` establishes x's type. Inferring reusable input requirements from body operations remains a separate proposal. The keyword does not grant another inference mode. Parsing recognizes the lambda before checking its destination; a noncallable destination is rejected, not used to choose an immediate-block interpretation.
+
+Nonrecursive local literals with established input types have selected [body-result inference](functions.md#independent-lambda-result-inference). Without an explicit or expected result contract, distinct completion payload types form a [normalized plain union](functions.md#mixed-local-result-types): an Int return and String tail infer Int | String. Explicit/expected result types remain constraints, and escaping recoverable errors require an explicit contract. Unknown-input generic inference remains open. [Conditional and match results](branch-result-inference.md) separately have the same selected normalized-union inference.
 
 One proposal is constrained generic inference: the function is valid for types supporting an appropriate addition operation. Alternatives include requiring parameter annotations in more situations. Recursive and ambiguous definitions need a specified inference boundary.
 

@@ -86,21 +86,29 @@ inferred_binding_modifiers := "mut" | "var" | "var" "mut"
 assignment := assignable "=" expression
             | assignable update_operator expression
 
-function := "fn" "(" [parameters] ")" [":" type] block
+function := "fn" [function_input_binding] [":" type] block
 
-function_type := "fn" "(" [typed_parameters] ")" ":" type
+function_input_binding := identifier | receiver_header
 
-typed_parameter := pattern ":" type
+receiver_header := "(" [receiver {"," receiver} [","]] ")"
+receiver := identifier [":" type]
+
+lambda := receiver_header [":" type] block
+
+function_type := "fn" "(" [signature_input {"," signature_input} [","]] ")" ":" type
+signature_input := type | identifier ":" type
 
 mut_qualified_type := "mut" type_operand
 var_qualified_access := "var" type_operand
 ```
 
-The explicit function-type template uses named typed parameters, as in `fn(a: Int): Int!`, with no executable body. The final `type` is the callable's result type, so this example returns `Int ! Error`. A `function` literal is an expression and can appear on an ordinary assignment's right-hand side, as in `myfn = fn(a: Int): Int! { a + 1 };`, when `myfn` is a compatible `var` binding. These templates do not settle parameter-name identity, full callable variance/capture rules, or the complete recursive type grammar; see [functions](functions.md#function-types-literals-and-reassignment).
+The explicit function-type template admits named typed inputs, as in `fn(a: Int): Int!`, and unnamed positional types, as in `fn (Int): Int!`, with no executable body. Its last `type` is the result contract. Parentheses immediately after `fn` in type context denote the input signature, so a one-input signature needs no trailing comma; ordinary tuple type/value/pattern grouping remains unchanged. `function` and `lambda` are expressions usable in declarations, assignments, and call arguments. The outline covers simple local receivers; full nested/rest header patterns, defaults, parameter-name identity, callable variance/capture rules, and complete recursive type grammar remain open. See [functions](functions.md#function-types-literals-and-reassignment).
 
-The surface direction pairs full typed `fn` definitions with contextual `(parameters) { body }` lambdas. The intermediate `fn(a) { ... }` expected-type shorthand is retired as redundant; the `parameters` placeholder must not silently reintroduce it as a selected feature. Broader body-based/standalone inference proposals remain separate. A declaration or assignment ending directly in either function body is a closed item with an optional trailing semicolon. Arrow and Rust/V-style pipe spellings remain unselected comparisons; see [functions](functions.md#compact-implementations-under-review).
+The 2026-10-24 surface direction is one callable model: `fn(a) { ... }` and `(a) { ... }` share semantics, with the keyword optional only for the parenthesized form. This supersedes the earlier retirement of contextual `fn`. Input shape/types come from annotations, an expected callable, or both; local result inference is available once inputs are known. Independently untyped `(x) { x * 3 }` and `fn(x) { x * 3 }` retain the same unresolved input type. A declaration or assignment ending directly in either body is a closed item with an optional trailing semicolon. Arrows and pipes remain unselected; see [callable input packs](callable-input-packs.md).
 
-The arrow-free `(parameters) { body }` lambda is the current surface direction; its complete production remains to be formalized. In ordinary expression positions it reserves a syntactic parameter-list-plus-block shape. Brace-owning construct headers such as `if (condition) { body }` must retain their own header/body boundary, and `(T) { ... }` cannot simultaneously denote grouped-type record construction in that expression position. Newlines and expected types must not choose the parse. The [lambda review](functions.md#c-arrow-free-lambda-parameter-list-followed-by-a-block-current-direction) describes header bindings, item separators, callback arguments, and remaining grammar work.
+Headerless `fn { ... }` and `fn : Ret { ... }` retain expected inputs when present; independently their input tuple is Unit. `fn pack { ... }` gives the whole input tuple a local name, while parenthesized receivers bind components. The implicit `arguments` names the full tuple of the nearest callable, including unnamed inputs. Its complete shadowing/collision and ownership rules remain open. Omitting `fn` from headerless/whole-pack forms is not selected: bare braces already execute, and identifier-plus-braces overlaps record construction.
+
+The arrow-free `(parameters) { body }` lambda is recognized syntactically in ordinary expression positions, before its destination is type-checked. A destination such as Int rejects the lambda instead of changing its parse. Brace-owning construct headers such as `if (condition) { body }` retain their own boundary, and `(T) { ... }` cannot simultaneously denote grouped-type record construction there. Newlines, expected types, and name lookup must not choose the parse. Complete recursive integration remains open; see [lambda boundaries](functions.md#c-arrow-free-lambda-parameter-list-followed-by-a-block-current-direction).
 
 Within that contextual lambda direction, the empty-header meaning is selected: `() { body }` leaves all expected inputs unnamed locally while retaining the expected callable's entire signature. It does not declare zero arity or inject the signature's parameter names into the body. Expected types supply the contract after syntactic recognition; they do not choose whether the tokens form a lambda. Nonempty headers may bind a positional prefix; local result inference is selected below, while unknown-input and recursive result inference remain open. See [header bindings](functions.md#named-underscore-and-empty-headers).
 
@@ -115,6 +123,8 @@ Optional lambda signatures are selected: `(a: Int): Int { body }`, with each par
 [Mixed local completion payloads](functions.md#mixed-local-result-types) infer a normalized plain union when a nonrecursive local lambda has known inputs and no explicit/expected result contract: an Int return plus a String tail infers Int | String. Existing result contracts constrain all payloads; Result boundaries and explicit escaping-error contracts remain intact. [Conditional and match result inference](branch-result-inference.md) is also selected: without an expected result contract, infer the normalized plain union of normally completing branch/arm results. Preserve allowed single-type missing-else zero(T), actual Unit results, then T/R separation, and match exhaustiveness. The selected [conditional union fallback](conditional-union-fallback.md) requires an explicit fallback for normally reachable unmatched multi-member union completion; exhaustive chains construct their selected member without initial undirected union zero.
 
 Callable capture/context design and environment context such as allocators are [postponed](deferred-contexts.md). Earlier capture headers and context-bearing callable types are retained as ideas, not current productions. This does not change ordinary lambda parameters, optional annotations, or the unnamed-input rule.
+
+All the empty/prefix receiver and known-input result rules above apply equally with and without `fn`; an explicit whole-pack header is not a one-component receiver header. General exact/nested/rest header patterns are separate from the selected positional-prefix binding behavior.
 
 inferred_source_pattern denotes a pattern whose outermost form is not the typed binding identifier : type. Thus `age: Int = source` is the selected whole typed declaration and `age: Int := source` is rejected. A structural source pattern can still contain typed subpatterns, such as `(age: Int, name) := pair`; its outer form is a tuple pattern, not a whole typed binding. Complete recursive productions remain open, but must preserve this selected restriction rather than introduce a second typed spelling.
 
@@ -131,6 +141,14 @@ No modifiers means a fixed binding with read-only access. var permits whole-bind
 Sequential ordinary local declarations may shadow earlier names in the same block. Resolve an ordinary initializer before introducing its new names. This does not select recursive function initialization or duplicate parameter/field-list entries. A mutable declaration from an existing copyable record creates a shallow mutable copy, including inline nested records but preserving reference targets and permissions; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
+
+## Intrinsic callable application
+
+```text
+pack_application := invokable_operand "." "call" [pack_expression]
+```
+
+This is an intentionally incomplete expression-boundary outline. Intrinsic `.call` invokes, with Unit as the supplied pack when its operand is omitted. `f.call pack`, `f.call(pack)`, and `f(...pack)` use the same component routing for a valid tuple. Parentheses after `.call` belong to the pack expression: `(pack)` groups it and `(...pack)` constructs a spread tuple; whitespace does not change the parse. `f.call(4)` rejects a scalar operand, while `f.call (4,)` and invocation sugar `f(4)` supply one Int. `f(pack)` still supplies one tuple-valued input. `f.call`, `f.call Unit`, `f.call ()`, and `f()` invoke with zero supplied inputs; missing required inputs still need declared defaults. `.call` is not ordinary method-value lookup. Full operand precedence, chaining, reserved-member policy, and recursive expression integration remain open. See [application with an existing pack](callable-input-packs.md#application-with-an-existing-pack).
 
 ## Named calls and tuples under review
 

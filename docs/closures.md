@@ -12,7 +12,7 @@ transform := fn(x: Int): Int {
 }
 ```
 
-Use `(x) { ... }` when a binding, method signature, or callback contract supplies parameter and result types. Optional lambda annotations such as `(x: Int): Int { ... }` can also supply an independent signature. Both lambda and full `fn` forms use brace bodies and permit optional trailing item semicolons. The intermediate contextual `fn(x) { ... }` spelling is retired as redundant. Complete lambda parsing remains open; capture design is postponed; see [functions](functions.md#compact-implementations-under-review).
+`fn(x) { ... }` and `(x) { ... }` are the same callable literal with an optional keyword before the parenthesized header. An expected binding/method/callback contract can supply omitted input/result types; annotations can establish independent inputs, and a known-input nonrecursive local body can infer its result. Thus `fn(x: Int) { x * 3 }` and `(x: Int) { x * 3 }` infer the same result. The 2026-10-24 clarification supersedes the earlier retirement of contextual `fn`. Headerless `fn { arguments.0 * 3 }` and whole-pack `fn pack { pack.0 * 3 }` retain their keyword. These forms do not select captures or their representation; see [input packs and lambda shorthand](callable-input-packs.md) and [functions](functions.md#compact-implementations-under-review).
 
 ## Result behavior
 
