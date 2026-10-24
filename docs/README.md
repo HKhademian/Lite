@@ -146,7 +146,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Body-owned recovery](body-recovery.md): selected internal recovery placement; body-wide section examples and delimiter candidates are explicitly deferred.
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
-- [Conditionals](conditionals.md): one syntax for actions and values.
+- [Conditionals](conditionals.md): one syntax for actions and values, with irrefutable matching conditions allowed and a warning for proven complete-condition success.
 - [Conditional pattern chains](condition-chains.md): and chains, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, and grouped matching-condition negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.

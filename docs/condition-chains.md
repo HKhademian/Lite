@@ -27,6 +27,8 @@ Pattern source expressions resolve before introducing that pattern's names. They
 
 Side effects already performed by earlier operands are not rolled back when a later operand fails. Existing borrowing, mutation, and cleanup rules still apply. This feature does not choose ownership commitment timing or silently unwrap fallible calls.
 
+An [irrefutable matching operand](conditionals.md#irrefutable-pattern-conditions-selected) is allowed: if flag := check_ready() and flag binds a Bool and then tests it. Warn when the complete matching condition is provably always successful, as in if flag := false; an irrefutable prefix alone does not cause this warning when a later test can reject the condition. Source failures/exits and the successful-condition scope remain unchanged.
+
 ## More than one match
 
 ```text

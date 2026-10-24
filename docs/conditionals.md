@@ -2,7 +2,7 @@
 
 Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior, `then`-before-`finally` cleanup order, and cleanup-failure precedence are selected; exact cleanup attachment scope and aggregate handling remain open**.
 
-Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
+Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
 ## Template
 
@@ -199,7 +199,7 @@ if person: User = person {
 
 The right-hand `person` resolves to the outer binding before the pattern introduces its shadow. The first body sees a `User`; sibling conditions, sibling bodies, and following code resolve the outer name again. This does not reassign the outer value or change its static type. Borrowing, copying, and moving remain separate ownership decisions. See [union type patterns](union-patterns.md).
 
-A pattern condition tests **matching**, not the truthiness of its payload. `if Some(flag) := lookup_flag()` matches `Some(false)` as well as `Some(true)`. By contrast, `if flag` requires a `Bool` and tests its value. Whether an irrefutable condition such as `if flag := false` is rejected or diagnosed remains open; if accepted as a pattern, it would always match.
+A pattern condition tests **matching**, not the truthiness of its payload. `if Some(flag) := lookup_flag()` matches `Some(false)` as well as `Some(true)`. By contrast, `if flag` requires a `Bool` and tests its value. Irrefutable conditions are permitted under the selected policy below.
 
 `if x = value` remains invalid assignment-as-condition. The selected `if x: Type = value` is a typed declaration-shaped pattern header, not an assignment expression. Conditional binding modifiers remain unspecified. Type-pattern support does not select typed receiver-dispatch chains.
 
@@ -212,6 +212,32 @@ if .Some(age: Int) := find_user_age(id) {
 ```
 
 The same outer-binding restriction applies to ordinary declarations. It does not change direct `age: Int` patterns in match arms or type constraints inside tuple/constructor patterns.
+
+## Irrefutable pattern conditions selected
+
+Selected on **2026-10-24**: allow an irrefutable pattern in a supported matching condition. It succeeds whenever its source completes normally, including when that source produces false:
+
+```text
+if flag := false {
+    use(flag); // body runs with flag == false
+}
+```
+
+The compiler issues a warning because this complete condition always succeeds. It remains valid code; the warning does not reject the binding, turn the payload into a Boolean test, or add a mismatch path. Refutability depends on the source's admitted type/shape and the whole pattern, as in other pattern contexts.
+
+An irrefutable operand can introduce a binding for a later real test:
+
+```text
+if flag := check_ready() and flag {
+    proceed(); // body runs only when flag is true
+}
+```
+
+Assume check_ready returns Bool and use/proceed return Unit. The source is evaluated once when reached, the pattern binds its result, and the later Boolean operand tests flag. Since that operand can reject the complete condition, the binding prefix alone does not trigger the always-success warning. This keeps matching and Boolean testing explicit and preserves ordinary and/or precedence, short-circuiting, shadowing, and successful-condition scope.
+
+Warn when the complete matching condition is provably always successful, rather than warning for every irrefutable operand inside a condition that can still fail. The standalone binding example requires that warning; this does not require deciding arbitrary predicates, solving all coverage, or issuing the warning when success cannot be proven. Exact diagnostic wording, suppression controls, always-false diagnostics, and general unreachable-code analysis remain open.
+
+Normal success is distinct from source failure or an explicit exit. Such outcomes retain their ordinary behavior; they do not become pattern mismatch or successful selection. Preserve all reached-source effects and ownership/cleanup obligations even when the match itself cannot fail. Names remain local to the condition's successful scope; no names escape into else or following code. This policy also applies to matching conditions inside subject-based match guards. It adds no binding-producing headers to subjectless match and no new pattern placement in loop/parameter/receiver headers. Ordinary declarations keep their existing irrefutability requirement.
 
 ## Case equality versus case-pattern binding
 
