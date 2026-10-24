@@ -33,6 +33,10 @@ Side effects already performed by earlier operands are not rolled back when a la
 
 An [irrefutable matching operand](conditionals.md#irrefutable-pattern-conditions-selected) is allowed: if flag := check_ready() and flag binds a Bool and then tests it. Warn when the complete matching condition is provably always successful, as in if flag := false; an irrefutable prefix alone does not cause this warning when a later test can reject the condition. Source failures/exits and the successful-condition scope remain unchanged.
 
+## Leading separators inside nested patterns
+
+Supported nested constructor-payload/tuple-component pattern alternatives may begin with one optional or, as in if .Some(or .Email(address) or .Sms(address)) := source { body }. The prefix changes no local matching or binding join and adds no new condition source. The complete condition has its own optional leader; do not stack leaders at the same boundary, as in if or or .Some(value) := source. See [nested leading alternatives](leading-separators.md#nested-alternatives).
+
 ## More than one match
 
 ```text

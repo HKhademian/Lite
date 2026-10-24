@@ -1,6 +1,6 @@
 # Optional leading separators
 
-Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, and plain-union type expressions; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
+Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives with leading or, and plain-union type expressions; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
 
 ## Purpose
 
@@ -52,7 +52,7 @@ if
 }
 ```
 
-Each condition/group has its own optional leading token. Parentheses establish a nested group; an already established complete expression or condition boundary needs no extra parentheses. The rule also applies to ordinary Boolean expressions, including loop sources and subjectless match Boolean headers, as described below. Initial match-arm and nested pattern alternatives retain their own grammar and do not gain a leading `or`. An ungrouped interior logical operand cannot start another leading-separator sequence.
+Each condition/group has its own optional leading token. Parentheses establish a nested group; an already established complete expression or condition boundary needs no extra parentheses. The rule also applies to ordinary Boolean expressions, including loop sources and subjectless match Boolean headers, as described below. Initial match-arm and nested pattern alternatives separately permit one leading `or` under their pattern grammar. An ungrouped interior logical operand cannot start another leading-separator sequence.
 
 ### Precedence and effects
 
@@ -109,6 +109,63 @@ Assume `running` is Bool, `remaining` is Int, and `process_next` returns Unit an
 
 The leading token requires a Bool source; it does not coerce an iterable to Bool or introduce header pattern matching. Iterable sources retain their existing evaluation-once contract, and an omitted source still selects unconditional iteration. A bare leader without an operand is invalid, not an omitted source. This extension supersedes the earlier restriction of leading logical separators to if/guard conditions.
 
+## Pattern alternatives with one shared body
+
+Selected 2026-10-24: a complete initial subject-based match-arm pattern list may start with one optional `or`. Every entry is a complete pattern, with its own payload bindings when applicable. The body-opening brace follows the whole list, or its optional shared `if` guard:
+
+```text
+match contact {
+    or .Email(address)
+    or .Sms(address)
+    or .Unavailable
+    {
+        deliver_optional(address)
+    }
+}
+```
+
+Assume Contact has exactly Email(String), Sms(PhoneNumber), and payload-free Unavailable cases, and the handler accepts String | PhoneNumber | Unit and returns Unit. These three alternatives form one arm with one body. Removing the first `or` produces exactly the same arm; line breaks and indentation do not create separate arms. A singleton `or .Email(address) { body }` is also allowed when the complete match handles its other cases as required.
+
+Evaluate the subject once, try the real patterns in written order, and stop at the first successful pattern. Bindings belong to that alternative and retain their existing inferred types and ordered shadowing. The shared continuation joins the real alternatives' final binding-name sets: here `address` is String | PhoneNumber | Unit because the real Unavailable pattern supplies no address. The leading `or` contributes no additional alternative, binding, Unit, result, or test. A shared name present in every real alternative gains no Unit merely from this punctuation. Different names retain their existing payload-or-Unit joins; outer values never fill omissions. See [binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
+
+### Shared guards
+
+```text
+match contact {
+    or .Email(address)
+    or .Sms(address)
+    if
+        and permitted(address)
+        and ready
+    {
+        deliver(address)
+    }
+    _ {}
+}
+```
+
+Assume permitted accepts String | PhoneNumber and returns Bool, ready is Bool, and deliver accepts that union and returns Unit. The pattern list and guard each have their own optional leader. The `if` separates them syntactically. Run the shared guard once after the first successful initial pattern. If the complete guard fails, move to the next arm; do not retry the earlier arm's remaining initial alternatives. Effects and failures retain ordinary behavior, and exhaustiveness/result checking are unchanged. See [shared-guard selection](match.md#alternative-selection-before-a-shared-guard-selected).
+
+### Nested alternatives
+
+The same single leading `or` is allowed at the start of an already supported constructor-payload or tuple-component alternative list:
+
+```text
+match maybe_contact {
+    .Some(
+        or .Email(address)
+        or .Sms(address)
+    ) {
+        deliver(address)
+    }
+    _ {}
+}
+```
+
+Assume Option<Contact> and the same payload/handler types above. This means `.Some(.Email(address) or .Sms(address))`, without another Option layer or an empty alternative. A tuple component may likewise use `(or .Email(address) or .Sms(address), received_at)`: the comma ends the first component's list and `received_at` remains the next component. Each local list has its own optional leader and requires a real pattern. Successful candidate bindings escape the enclosing pattern only after the whole pattern succeeds. Preserve local first-success/no-backtracking, pre-pattern free-name lookup, known binding relationships, and ownership obligations.
+
+These nested forms also work inside already supported conditional patterns. The condition prefix and pattern-list prefix must not stack at the same boundary: `if or or .Some(value) := source` remains invalid. This does not add `and`/`not` subpatterns, new pattern-bearing loop/lambda headers, refutable ordinary declarations, or arbitrary new record-pattern schemas. Full recursive parsing remains open. This selection supersedes the earlier exclusion of leading `or` from initial/nested pattern alternatives.
+
 ## Plain-union types
 
 In an established type-expression context, a plain-union chain permits one optional leading `|`:
@@ -132,7 +189,7 @@ The same presentation is intended for a leading `&` if intersection types are se
 
 ## Boundaries and rejected forms
 
-- Require at least one real Boolean/condition operand or union member. A leading separator alone does not form an expression, condition, loop source, or type.
+- Require at least one real Boolean/condition operand, pattern, or union member. A leading separator alone does not form an expression, condition, loop source, pattern list, or type.
 - Permit at most one leading separator at each admitted boundary. Do not stack leading `and`/`or` tokens or repeat leading `|` tokens.
 - Retain every interior separator and operand. A trailing separator is not selected.
 - Whitespace, indentation, comments, and line breaks do not create or change these boundaries. The same forms work on one line or many.
@@ -162,8 +219,10 @@ InvalidTail := type String |;
 
 Ordinary item and list separators retain their own contracts. A leading `|` is unrelated to duplicate type-member normalization, repeated semicolons, or optional boundary commas in call inputs. No general permission to repeat arbitrary punctuation follows.
 
+At an arm's initial-pattern boundary, `or { body }`, `or or .Email(address) { body }`, `.Email(address) or or .Sms(address) { body }`, and `or .Email(address) or { body }` are invalid: a real initial pattern or the pattern after a separator is missing. Apply the same nonempty/no-stacked/no-trailing rule to nested pattern lists. An interior separator never opens another prefix position by itself.
+
 ## Grammar and tooling
 
-The [condition grammar](grammar-sketch.md#conditionals) and [Boolean expression fragment](grammar-sketch.md#logical-grouping) put the optional logical leader at each complete expression/condition entry, outside the precedence ladder. They do not independently prefix the first operand again. The [type fragment](grammar-sketch.md#optional-leading-union-separator-selected) places `|` on a nonempty union chain. This prevents accidental admission of stacked leaders or leading operators after every interior `and`/`or` token. Special pattern-source and comparison-pattern operand grammars retain their existing boundaries; use explicit grouping when those grammars reserve ungrouped top-level logical operators as separators.
+The [condition grammar](grammar-sketch.md#conditionals) and [Boolean expression fragment](grammar-sketch.md#logical-grouping) put the optional logical leader at each complete expression/condition entry, outside the precedence ladder. They do not independently prefix the first operand again. The [pattern fragment](grammar-sketch.md#match) places one optional `or` on each complete nonempty initial/component alternative list; its individual patterns do not independently admit another bare leader at that same boundary. The [type fragment](grammar-sketch.md#optional-leading-union-separator-selected) places `|` on a nonempty union chain. This prevents accidental admission of stacked leaders or leading operators after every interior `and`/`or` token. Special pattern-source and comparison-pattern operand grammars retain their existing boundaries; use explicit grouping when those grammars reserve ungrouped top-level logical operators as separators.
 
 Formatting can align the entries and place braces consistently without changing meaning. A policy for preserving, adding, or removing optional leading separators remains open; no formatter implementation is claimed. Diagnostics should identify the missing operand or extra separator at the relevant token. These examples require future parser/type-checker conformance tests; documentation checks do not verify execution.

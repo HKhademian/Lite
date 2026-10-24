@@ -1,6 +1,6 @@
 # Match and exhaustive selection
 
-Status: **subject-based pattern matching and subjectless Boolean selection selected; subjectless form selected on 2026-10-23; if-introduced pattern-arm guards and exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
+Status: **subject-based pattern matching and subjectless Boolean selection selected; subjectless form selected on 2026-10-23; optional leading or on initial/nested pattern alternatives selected 2026-10-24; if-introduced pattern-arm guards and exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
@@ -10,7 +10,7 @@ Select behavior by variant, type, or destructured data with a subject, or by Boo
 
 Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards introduced by if, with and-chained Boolean tests and additional pattern matches, are selected too; see [match arm chains](match-guards.md).
 
-Subject-based guards share the selected [optional leading condition separator](leading-separators.md): pattern if and ready and permitted { body } has the same meaning as the form without the first and. This does not add leading or to initial pattern alternatives. Subjectless Boolean expression headers share the ordinary Boolean-expression prefix rule separately.
+Subject-based guards share the selected [optional leading condition separator](leading-separators.md): pattern if and ready and permitted { body } has the same meaning as the form without the first and. Initial pattern alternatives separately permit one optional leading or. Subjectless Boolean expression headers share the ordinary Boolean-expression prefix rule without gaining pattern bindings.
 
 ```text
 match expression {
@@ -79,6 +79,23 @@ Each alternative resolves free comparison-RHS names in the common pre-pattern sc
 
 This selects alternatives at the initial arm-pattern level; constructor payload and tuple component alternatives are also selected below. Logical and/not subpatterns remain separate decisions. Shared-guard behavior is selected below. Subjectless match headers remain Boolean expressions. See [alternative binding inference](pattern-binding-inference.md#alternative-arm-binding-types-selected).
 
+### Optional leading or and one shared body
+
+Selected 2026-10-24: the complete initial pattern list permits one optional leading or, so payload-binding and payload-free alternatives can use the same visual shape:
+
+```text
+match contact {
+    or .Email(address)
+    or .Sms(address)
+    or .Unavailable
+    {
+        deliver_optional(address)
+    }
+}
+```
+
+Assume exactly Email(String), Sms(PhoneNumber), and payload-free Unavailable cases and a Unit-producing handler accepting String | PhoneNumber | Unit. These are three patterns in one arm with one shared body. Removing the first or gives exactly the compact form; braces and an optional shared if guard, not newlines, establish the arm boundary. A singleton leading-or list is valid too. The leader supplies no empty pattern, test, binding, or Unit. The binding address gains Unit here only because the real Unavailable alternative lacks that binding. Keep ordinary first-success selection, payload-or-Unit binding joins, guard-once/no-retry behavior, and exhaustive checking. Empty, stacked, interior extra, and trailing or separators are invalid. See [leading pattern alternatives](leading-separators.md#pattern-alternatives-with-one-shared-body).
+
 ## Nested alternative patterns selected
 
 Or alternatives may also appear inside constructor payload patterns and tuple component patterns:
@@ -97,6 +114,8 @@ Assume maybe_contact is Option<Contact>, Contact has Email(String)/Sms(PhoneNumb
 Existing parentheses and commas delimit the component receiving or. For example, `(.Email(address) or .Sms(address), received_at)` tests the first tuple component using the alternatives and binds the second separately. The comma ends the first component's alternative list; the alternatives do not consume received_at. Constructor payload argument separators work the same way. Or at the component-pattern level separates complete patterns; Boolean or inside a comparison RHS retains its required grouping, as in `== (ready or retry)`. This selects no logical and/not subpatterns or extra constructor schema.
 
 The union-of-names and Unit rules apply at each nested choice. `.Some(.Email(email) or .Sms(phone))` provides email: String | Unit and phone: PhoneNumber | Unit, with absent names initialized to Unit after that local choice succeeds. These are candidate bindings inside the enclosing pattern: the entire enclosing pattern must succeed before any of its bindings become available to the outer condition continuation, shared guard, or body. A failed alternative leaks no names to its peers, and new sibling pattern bindings are still unavailable as free comparison-RHS names. Resolve those names in the enclosing pre-pattern scope. Recursive written-order shadowing continues after the selected local choice, including its Unit-filled names.
+
+Each complete constructor-payload or tuple-component alternative list may also start with one optional or. Thus .Some(or .Email(address) or .Sms(address)) and (or .Email(address) or .Sms(address), received_at) retain exactly the corresponding compact patterns' matching/binding behavior. Existing parentheses and commas bound the local list; a real pattern is required and no second bare leader is allowed at the same boundary. This does not introduce logical and/not subpatterns or a new schema. See [nested leading alternatives](leading-separators.md#nested-alternatives).
 
 ### Local first success without backtracking
 

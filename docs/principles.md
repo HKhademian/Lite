@@ -27,7 +27,7 @@ Let people and programming agents focus on problem solving through concise, read
 - Collection consumers request the capabilities they need; standard and user implementations provide them. Shared element-typed APIs must not require primitive-wrapper collection families, conversion to one standard container, or a universal boxed-object representation. See [collection abstractions](collection-abstractions.md).
 - Small runtime requirements and native execution as an intended implementation direction.
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.
-- Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](leading-separators.md) let every Boolean-expression, condition, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
+- Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](leading-separators.md) let every Boolean-expression, condition, pattern-alternative, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
 - One conditional syntax for actions and values.
 - One `loop` keyword for the supported iteration modes.
 

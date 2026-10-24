@@ -102,6 +102,8 @@ And chains can combine pattern matches and Boolean guards: successful bindings a
 
 ## 3. Match arms
 
+The complete initial arm-pattern list permits one optional leading or, including alternatives with payload bindings and alternatives without bindings. They still share one optional if guard and one body. Supported constructor-payload/tuple-component alternative lists permit the same leader locally and may be reused in existing conditional patterns. The leader creates no empty alternative, binding, or Unit contribution and changes no mismatch, exhaustiveness, or ownership rule. This does not introduce alternative headers in loop/lambda/recovery contexts. See [leading pattern alternatives](leading-separators.md#pattern-alternatives-with-one-shared-body), selected 2026-10-24.
+
 ```text
 match value {
     .Some(item) { process(item) }

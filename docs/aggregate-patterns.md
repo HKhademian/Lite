@@ -89,6 +89,10 @@ All fields are shown here to avoid selecting partial-field omission through an e
 
 The proposed same-name shorthand `{ name, age } := user` would expand to `{ name = name, age = age } := user`. It does not require a type name and does not turn bare entries into value tests. Its grammar, field omission, and `_` field-entry behavior remain proposals; see [record shorthand](records.md#proposed-same-name-field-shorthand).
 
+## Optional leading separators in nested patterns
+
+Already supported constructor-payload and tuple-component alternative lists may use one optional leading or, as in .Some(or .Email(address) or .Sms(address)) or (or .Email(address) or .Sms(address), received_at). Existing parentheses and commas delimit each nonempty list; the prefix supplies no component, binding, or Unit. Preserve the selected local choice and inference contracts. This is a presentation rule for existing nested alternatives, not an extension of record schemas or extraction/ownership rules. See [nested leading alternatives](leading-separators.md#nested-alternatives), selected 2026-10-24.
+
 ## Positional value constraints
 
 If Student explicitly exposes the positional matching schema `(age, name)`, the same two tests can be written:

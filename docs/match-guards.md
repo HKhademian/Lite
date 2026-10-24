@@ -32,7 +32,7 @@ match target {
 }
 ```
 
-Assume User.active and permitted produce Bool and greet returns Unit. The initial type pattern still supplies user before the guard runs. Removing the leading and changes no evaluation, scope, precedence, binding join, narrowing, or arm-selection behavior. An empty guard or stacked/interior extra leaders are invalid. Initial arm-pattern alternatives do not gain a leading or. Subjectless match Boolean headers independently share the ordinary Boolean-expression prefix rule, without gaining pattern bindings. See [optional leading separators](leading-separators.md), selected 2026-10-24.
+Assume User.active and permitted produce Bool and greet returns Unit. The initial type pattern still supplies user before the guard runs. Removing the leading and changes no evaluation, scope, precedence, binding join, narrowing, or arm-selection behavior. An empty guard or stacked/interior extra leaders are invalid. The initial arm-pattern list independently permits one optional leading or; an if still separates that complete list from its shared guard. Thus or .Email(address) or .Sms(address) if and permitted(address) { body } uses one optional leader at each of two distinct boundaries. First initial-pattern success commits before the shared guard runs; complete guard failure advances to the next arm without retrying other initial alternatives. Subjectless match Boolean headers independently share the ordinary Boolean-expression prefix rule, without gaining pattern bindings. See [optional leading separators](leading-separators.md), selected 2026-10-24.
 
 ## Binding visibility and simple arms
 

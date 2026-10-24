@@ -55,6 +55,8 @@ For a single statically possible input shape, every binding instead receives the
 
 ## Alternative arm binding types selected
 
+An initial or supported nested pattern-alternative list may use one optional leading or, selected 2026-10-24. This punctuation does not participate in the alternative name/type join: or .Email(address) or .Sms(address) gives the same String | PhoneNumber binding as the compact form, with no extra Unit. If a real alternative lacks address, that alternative still contributes Unit normally. One shared arm body, optional shared guard, nested first-success behavior, and related-binding narrowing retain their existing contracts. See [leading pattern alternatives](leading-separators.md#pattern-alternatives-with-one-shared-body).
+
 For initial match-arm alternatives, collect the union of final visible binding names and join each name's possible payload types as a normalized union, contributing Unit for alternatives where that name is absent:
 
 ```text
