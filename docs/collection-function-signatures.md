@@ -9,27 +9,27 @@ A collection input contract states the operations the function requires from its
 Traversal-only signatures below use temporary Iterable<User> notation. The accepted [User] shorthand would additionally require exact count and positional indexing:
 
 ```text
-visit := fn(users: Iterable<User>) {
+visit := fn (users: Iterable<User>) {
     loop users as user {
         greet(user);
     }
 }
 
-make_users := fn(): Iterable<User> {
+make_users := fn (): Iterable<User> {
     [User { name = "Ali", }, User { name = "Mina", }]
 }
 ```
 
-Assume User exposes the illustrated field and greet accepts User with read access. The input may be supplied by compatible arrays, lists, sets, slices, or user providers under their access/lifetime contracts. The output guarantees traversal; the List implementation chosen by the literal does not automatically become part of the public contract.
+Assume User exposes the illustrated field and greet accepts User with read access. The input may be supplied by compatible arrays, lists, sets, slices, or user providers under their access/lifetime contracts. The output guarantees traversal; the fixed-array implementation inferred from the known-size literal does not automatically become part of the public contract.
 
-This is the proposed semantic interpretation, not finalized source syntax. The literal's selected List default supplies a concrete provider where the abstract expected contract does not choose one. It does not manufacture an arbitrary caller-selected container.
+This is the proposed semantic interpretation, not finalized source syntax. A known-size fresh literal now supplies a fixed-array provider when the abstract expected contract does not choose a concrete collection family. An explicit expected concrete List can request growable construction. The rule does not manufacture an arbitrary caller-selected provider; see [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 ## Inferred versus explicitly complete inputs
 
 For a simple inferred definition:
 
 ```text
-third := fn(users): User! {
+third := fn (users): User! {
     users[2]!
 }
 ```
@@ -47,7 +47,7 @@ The later [ergonomics review](collection-signature-ergonomics.md) investigated p
 ## Preserve input/output relationships
 
 ```text
-keep := fn(value) {
+keep := fn (value) {
     value
 }
 ```
@@ -60,7 +60,7 @@ Naming an input and output with the same broad traversal contract alone does not
 
 ### Inferred concrete output
 
-A function with no explicit result abstraction can infer the concrete type of its returned value, such as the default List supplied by a bracket literal. Callers can use whatever that returned type publicly supports. The implementation/provider then forms part of the exposed type contract.
+A function with no explicit result abstraction can infer the concrete type of its returned value, including a fixed array from a known-size bracket literal. Callers can use that returned type's public operations; fixed arrays do not acquire growth merely because their length was inferred. The concrete provider remains part of the result contract. Generic/opaque result identities and complete inference remain separate proposals.
 
 Changing an inferred result from List to Set can therefore change the API even if both are traversable. Ownership and fallibility cannot be silently altered through result inference; escaping recoverable errors still need their declared contract.
 

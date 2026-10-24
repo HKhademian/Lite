@@ -1,6 +1,6 @@
 # Tuple construction spread and pattern rest
 
-Status: **construction spread and typed pattern rest requested by the user, 2026-10-19; positional tuple rest shape, placement, and arity selected 2026-10-22; preservation of remainder labels, rest after named selectors, rest-only tuple patterns, and basic tuple construction spread selected 2026-10-23**. Label collisions involving spread replace their earlier slot without moving it; duplicate explicit labels are errors, and surviving contributions determine inferred component types; named and unnamed value components may interleave, selected 2026-10-23. Mixed positional/named tuple patterns are selected with left-to-right, next-unselected source routing on 2026-10-23. Variadic tuple-type declarations, complete recursive type/pattern integration, and ownership remain separate decisions. The empty tuple is selected as Unit, with () as equivalent value/type syntax. This is a design contract, not implemented parser/runtime behavior.
+Status: **fixed-tuple construction/pattern rest selected through 2026-10-23; type spread with label overriding, fixed-array spread, and declared homogeneous array tails selected 2026-10-24**. Spread collisions replace the original slot without moving it; explicit labels remain unique. Fixed-tuple pattern rest retains its typed tuple remainder. A declared ...rest: T describes an array tail, including in ordinary tuples. Complete grammar, runtime-array spelling, ownership, and some routing remain open. See [tuple and array shapes](tuple-array-shapes.md). This is design documentation, not parser/runtime verification.
 
 ## Tuple construction spread selected
 
@@ -24,7 +24,7 @@ same_shape := (...meal); /* (cake = 10, tea = 20), same labels and order */
 
 An enclosing expression with a spread entry constructs a tuple regardless of the expanded component count. The ellipsis distinguishes (...one) from grouped (one); no singleton comma is required for a spread-only expression. Ordinary optional trailing-comma rules apply. Unit/() contributes zero components, including when obtained by evaluating an action; its effects, failures, and required cleanup still apply. A Result or Option is not silently unwrapped for spreading.
 
-This contract is tuple-to-tuple spread and requires operands with statically known tuple shapes. Other scalar values do not qualify as tuples. Array, list, set, and other collection spreads are different operations whose contracts remain separate; this rule does not prohibit them globally. Tuple call spreading is now selected separately; generic variadic types and new ownership permissions remain separate. Fresh constructors with a known destination tuple type now use [fixed destination routing](named-input-routing.md#fixed-destination-routing-selected): unnamed contributions fill the next unfilled slot, named contributions select declared slots, explicit labels are unique, each final surviving contribution fits its destination type/access, and every component must be supplied. No tuple component defaults are introduced. Stored tuples are not silently relabeled or reordered by the spread operand itself.
+The original rule expands fixed tuple components without scalar conversion or Option/Result unwrapping. The 2026-10-24 extension also expands a fixed array's known elements into fixed tuple positions and supports fixed tuple/array spreads into array construction. Runtime-length arrays may supply declared homogeneous tails; arbitrary set/provider spread is not selected. Fresh fixed tuple destinations retain [fixed destination routing](named-input-routing.md#fixed-destination-routing-selected), unique explicit labels, final-slot type/access checks, and complete fixed coverage without tuple defaults. Stored tuple-valued components are not silently relabeled or reordered. See [known-size construction and array tails](tuple-array-shapes.md).
 
 ### Append or replace by label selected
 
@@ -63,6 +63,23 @@ All entry/operand expressions in an admitted constructor still evaluate once in 
 The former unnamed-prefix/named-suffix restriction was a uniformity choice shared with calls, not a memory-layout requirement. Interleaving itself is deterministic under this insertion algorithm. Readability requires distinguishing tuple construction from calls and patterns; later replacement must retain source-order effects. Known tuple destinations use the selected call-style routing with complete coverage and no implicit component defaults. Omitted component types are inferred from their final surviving contributions. Complete generic constraint solving and recursive parsing remain separate.
 
 Function calls have a separately selected fixed-slot construction rule: positional inputs fill the next unfilled declared slot, including after named inputs; admitted named inputs replace an earlier supplied value, subject to explicit-label uniqueness. =name shorthand and explicit tuple call spread are selected. Unknown labels and excess inputs remain errors, and each final surviving input must fit its declared type/access. The user also selected explicit-label uniqueness for calls on 2026-10-23, including =name shorthand. Spread collisions remain allowed; only the final surviving input must fit the declared parameter contract; superseded expressions must still type-check and evaluate. This final-value rule is shared with typed tuple patching and does not change parameter types. Tuple patterns still reject duplicate source selectors. Tuple type declarations still require unique labels; valid spread collisions produce one final field, not a duplicate-field type. Mixed positional/named tuple patterns are selected below; they reject duplicate source selection rather than replacing values.
+
+## Type construction and declared array tails selected
+
+In type position, ...Params expands a tuple schema using the same append-or-replace-by-label rule as value construction. Unnamed components append; a later spread label replaces its original slot's type without moving it. Explicit labels remain unique. This constructs a contract at compile time; it does not change a stored tuple's type.
+
+```text
+Params1 := type (:Int, score: String, :Int);
+Params2 := type (:Int, score: Int);
+/* (...Params1, ...Params2) gives (:Int, score: Int, :Int, :Int) */
+
+exp : fn (...Params1, ...Params2, ...rest: Int): Int =
+    (a, score, b, c, ...myrest) {
+        42
+    }
+```
+
+A declared ...rest: T accepts zero or more additional T values collected as an array. T may itself be a tuple; each extra tuple remains one input. Both known-size and runtime-length array spreads may feed a declared tail. The same segment is valid in ordinary tuple schemas: a remainder from `(q: Int, w: Int, e: Int, ...rest: Int)` after selecting q/w preserves `(e: Int, ...rest: Int)`. Ordinary fixed-tuple pattern rest below remains a tuple operation. Exact runtime-array spelling, tail normalization/composition, and ownership remain open; the discussion's [T; ...] was only a placeholder. See [the complete selected examples](tuple-array-shapes.md).
 
 ## Positional tuple rest selected
 
@@ -228,7 +245,7 @@ details := (...identity, true);
 
 The result has three positions with Int, String, and Bool types respectively. Spreading does not turn them into one homogeneous collection of union-valued elements. A rest capture likewise preserves the actual remaining positional types.
 
-Construction spread requires a tuple with a statically known shape. The selected positional rest captures a statically typed tuple remainder. This tuple constructor does not implicitly convert a List, set, or generator into a statically fixed tuple. Spreading those collections belongs to separate construction and consumption contracts. Fixed-array-to-tuple conversion is also not selected here.
+Fixed tuple construction requires statically known component counts. Explicit fixed-array spread is now selected: a [T; N] operand contributes N unnamed T components. A runtime-length array may supply a declared homogeneous tail, but cannot manufacture an unknown number of fixed tuple fields. Ordinary fixed-tuple pattern rest preserves its structural tuple remainder. List, set, and generator adaptation remain separate contracts; see [tuple/array shapes](tuple-array-shapes.md).
 
 ## Evaluation and placement
 

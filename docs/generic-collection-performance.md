@@ -5,7 +5,7 @@ Status: **unified API goal selected; mechanism proposal, 2026-10-19**. Shared co
 ## Same source contract, specialized data
 
 ```text
-render_icons := fn(icons: Iterable<Icon>) {
+render_icons := fn (icons: Iterable<Icon>) {
     loop icons as icon { render(icon); }
 }
 ```
@@ -46,6 +46,6 @@ C# generic collections demonstrate that unified generic element APIs can store v
 
 ## Integration priorities
 
-Define element/access and capability semantics first, then generic specialization and optional dynamic representations. Review standard algorithm inputs and outputs against those contracts so a new provider can participate without users rewriting their consumers. Concrete storage defaults remain conveniences for providers, including the selected bracket-literal List default.
+Define element/access and capability semantics first, then generic specialization and optional dynamic representations. Review standard algorithm inputs and outputs against those contracts so a new provider can participate without users rewriting their consumers. Concrete construction defaults remain separate from consumer contracts. Fresh known-size bracket literals now infer fixed arrays; growable List storage is explicit. See [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 Related: [consumer abstractions](collection-abstractions.md), [capabilities](collection-capabilities.md), [provider-neutral algorithms](collection-algorithms.md), [temporary generic notation](generic-notation.md), and [memory and performance](memory-and-performance.md).

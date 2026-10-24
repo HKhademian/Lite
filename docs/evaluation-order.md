@@ -48,6 +48,8 @@ Zero-initialized callables follow the same order. Their zero-result behavior doe
 
 ## Named inputs and destination order
 
+Array/fixed-tuple spread evaluates each operand once at its written position, then supplies values in stored order. A declared variadic tail may receive zero elements without constructing a T value. Type-level tuple spread constructs a contract at compile time; it does not evaluate a runtime tuple. Shape inference does not authorize reordering effects, erasing superseded contributions, or assuming zero copies. See [tuple and array shapes](tuple-array-shapes.md).
+
 The user's binding shape uses the selected inferred named annotation:
 
 ```text

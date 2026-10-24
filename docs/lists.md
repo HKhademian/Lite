@@ -1,27 +1,27 @@
 # Growable owning lists
 
-Status: **growable List as the default bracket-literal family selected, 2026-10-19**. Full `List<T>` type grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. No owner copy/move/share policy or allocation/error policy is selected here.
+Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24**. Full List<T> generic grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. No owner copy/move/share policy or allocation/error policy is selected here.
 
 ## Purpose and beginner examples
 
-`List<Int>` is [temporary explanatory notation](generic-notation.md), not a selected generic application spelling. The selected literal default remains growable List regardless of how explicit type arguments will eventually be written.
+`List<Int>` is [temporary explanatory notation](generic-notation.md), not selected generic application syntax. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 A list owns a contiguous allocation with a current initialized length and possibly larger capacity. Adding/removing elements changes length. A list is not a linked list in this proposal.
 
 ```text
-numbers := [10, 20, 30];
+numbers: List<Int> = [10, 20, 30];
 loop numbers as number { print(number) }
 
-mut editable := [10, 20, 30];
+editable: mut List<Int> = [10, 20, 30];
 editable[0] = 99;
 push_back(mut editable, 40);
 ```
 
-The literal's growable List default is selected; the push_back helper remains a [proposed end operation](sequence-end-operations.md), and the complete indexing API still needs formalization. With no more specific expected type, [10, 20, 30] infers `List<Int>`, whether its binding is fixed, var, mut, or var mut. A plain binding provides read-only access even though the collection kind supports growth. Actual changes require the corresponding access permission. An explicit expected array type can select fixed layout under its future construction contract.
+The explicit expected List types above select growable construction; push_back remains a [proposed end operation](sequence-end-operations.md), and the complete indexing API still needs formalization. Without such an expected concrete type, [10, 20, 30] now infers [Int; 3], regardless of var/mut modifiers. A read-only List value retains its List contract; readable access alone does not turn an existing provider into a fixed array.
 
-The explicit mut argument follows selected caller grants. Adding mut grants mutation; it must not change List into another collection kind. A fixed list binding can permit mutation of its container data without permitting replacement of the binding. Empty and heterogeneous literal inference remain open.
+The explicit mut argument follows selected caller grants. Mut grants supported mutation without changing a collection family or inventing growth. A fixed List binding can permit container mutation without permitting binding replacement. Fixed arrays permit writable elements without supporting growth. Empty, heterogeneous, and runtime-length spread literal inference remain open.
 
-Var numbers := [...] would permit whole-binding replacement, while var mut would permit both replacement and held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`.
+A var binding with an explicit List contract permits compatible whole-binding replacement; adding mut also permits supported held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`. An unannotated var numbers := [1, 2, 3] instead remains a fixed [Int; 3] binding with replacement permission.
 
 The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Capture scope, concrete helper names, and allocation failure policy remain open.
 

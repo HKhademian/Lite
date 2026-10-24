@@ -31,7 +31,7 @@ collect_into(mut destination, selected);
 
 These are schematic operations, not selected APIs. Filtering need not immediately allocate a List. A destination might be a standard list, set, arena builder, or application-defined sink, provided it meets the operation's element/access and error contract. Destination semantics such as uniqueness and ordering must be explicit; they are not equivalent to always constructing a List.
 
-The chosen default List can remain a convenient materialization target. It must not be the only supported target. A function intentionally returning a concrete provider is also valid when that ownership/layout choice is part of its documented result.
+An explicitly selected List can remain a convenient growable materialization target, while fresh known-size literals now infer fixed arrays. No standard provider should be the only supported target. A function intentionally returning a concrete provider is valid when its ownership/layout choice is part of its documented result.
 
 Lazy adapters retain source lifetime and consumption constraints. Fallible predicates or destinations must expose their declared failures. This proposal does not select exact lazy-adapter ownership, exception cleanup, or partial-output rollback.
 

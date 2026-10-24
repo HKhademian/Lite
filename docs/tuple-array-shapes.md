@@ -1,0 +1,146 @@
+# Tuple types, array tails, and fixed-size inference
+
+Status: **selected design direction, 2026-10-24; no compiler, parser, runtime, or performance verification**. Type construction uses label overriding, callable and ordinary tuple schemas support homogeneous array tails, and statically sized fresh bracket literals infer fixed arrays. This supersedes the earlier unconditional growable-List literal default. Complete recursive syntax, ownership, runtime-array type spelling, and some routing details remain open.
+
+## Type spread constructs an input contract
+
+```text
+Params1 := type (:Int, score: String, :Int);
+Params2 := type (:Int, score: Int);
+EachRestType := type (:X, :Y, :Z);
+
+exp : fn (...Params1, ...Params2, ...rest: EachRestType): Int =
+    (a, score, b, c, ...myrest) {
+        42
+    }
+```
+
+X, Y, and Z stand for established types. The type position parses each ...Params operand as tuple-type construction, not runtime value unpacking. A spread operand must supply a tuple schema. Expand its fixed components in stored order, preserving labels and types. Unnamed components append; a later contribution with an existing label replaces that label's original slot without moving it. Existing explicit-label uniqueness rules remain: a spread does not authorize duplicate explicitly written labels inside one constructor.
+
+The fixed portion above becomes:
+
+```text
+(:Int, score: Int, :Int, :Int)
+```
+
+Params2's score overrides String with Int at position one. Its unnamed Int appends at position three. The implementation's a, score, b, c bind those four positions; local receiver names do not select fields by name. Every additional input has type EachRestType. These decisions resolve spread-label overriding during type construction; do not describe this example as strict concatenation producing duplicate score fields.
+
+Type construction fixes the callable contract before invocation. It does not dynamically change a stored function's accepted types, infer a runtime type object, or expose captured state as call inputs. A component containing another tuple stays one component unless explicitly spread.
+
+## A declared variadic tail collects an array
+
+```text
+max := fn (val1: Int, val2: Int, ...rest: Int): Int {
+    var best := if val1 > val2 { val1 } else { val2 }
+    loop rest as value {
+        if value > best { best = value }
+    }
+    best
+}
+
+max(1, 2, 3, 4, 5);       /* rest = [3, 4, 5] */
+max(1, 2);                /* rest = [] */
+max(1, 2, ...(3, 4, 5));   /* rest = [3, 4, 5] */
+
+x : [Int; 5];
+max(...x);                /* two fixed inputs and three tail elements */
+```
+
+In a signature, ...rest: T means zero or more additional inputs, each checked against T. The callee receives the collected tail as an array of T, including when there are no extra inputs. It is not a fixed tuple specialized to each call's argument count. The array length may be known at a particular call site or only at runtime; both call forms are valid in this model. No minimum tail length or automatic zero-valued T element is introduced.
+
+```text
+extra := read_numbers();
+max(1, 2, ...extra);
+```
+
+Assume read_numbers returns a readable Int array of runtime-known length. Both required inputs are already supplied, so an empty extra is valid. A known-size array spread also supplies fixed inputs when its static extent proves enough elements are available, as max(...x) does above. A known insufficient fixed extent is rejected when no applicable declared defaults supply the missing fixed inputs. For a runtime-length spread that must also fill missing fixed inputs, such as max(...extra), the exact runtime arity-check/failure contract remains open. No missing argument is silently synthesized.
+
+The name rest is a signature declaration; myrest is an implementation-local collector and need not have the same spelling. Use a single trailing declared variadic segment in the forms shown here. Public named routing into a variadic segment, defaults interacting with it, and full mixed named/runtime-spread routing still need formalization.
+
+T may be any valid input type, including a tuple. With ...rest: EachRestType, each additional input is one intact X/Y/Z tuple and the collected value is an array of those tuples. It is not a flat repetition of X, Y, and Z. Explicit spreading at a call site continues to expand the operand's components rather than implicitly preserving it as one input.
+
+The spelling [T; ...] used during discussion was a placeholder, not selected syntax for a runtime-length array. The exact rest-array type notation, ownership, allocation, lifetime, and ABI remain open. The selected [T] indexed-sequence capability does not by itself select a concrete runtime array owner either.
+
+## Ordinary tuples may have the same array tail
+
+```text
+x : (q: Int, w: Int, e: Int, ...rest: Int);
+(a, b, ...xrest) := x;
+/* a receives q; b receives w */
+/* xrest preserves e followed by the original Int array tail */
+/* remainder schema: (e: Int, ...rest: Int) */
+```
+
+The array-tail capability is not limited to functions. The tuple's fixed component schema is statically described; runtime variability belongs to its declared homogeneous array tail. This does not introduce arbitrary runtime tuple fields, labels, or independently changing component types.
+
+A pattern rest capture preserves unselected fixed components and the existing tail in their order. It must not convert a remaining fixed field into an unrelated array element or manufacture tuple fields from the runtime tail's current length. In a callable implementation whose local header consumes all fixed inputs, its trailing collector receives the declared array tail, as myrest does above. General tail-only tuple normalization and whole-value/array identity are not selected merely by that collector behavior.
+
+Ordinary fixed tuples keep their existing pattern-rest rule: zero fixed remaining components give Unit/(), one gives a singleton tuple, and heterogeneous remaining components preserve their individual types and labels. That pattern operation does not become a homogeneous array merely because it uses the same ellipsis marker. A declared ...rest: T array segment and a pattern ...remainder have distinct syntactic roles: one declares accepted input elements, the other collects the source's remainder.
+
+Rest-only and mixed named/positional patterns preserve their existing source-once, no-duplicate-selection, and ownership requirements. Exact coverage without a rest collector remains required. Nested tail composition, tail-only schemas, numeric access to a tail segment, and full header/type/pattern integration remain open. No runtime variable indexing of ordinary tuple components is added; the tail is accessed using its array contract.
+
+## Known-size arrays and fixed tuples can construct each other
+
+```text
+x : [Int; 5];
+y := (...x);
+/* y: (:Int, :Int, :Int, :Int, :Int) */
+
+z := [...y];
+/* z: [Int; 5] */
+
+w := [...x, ...y, ...z];
+/* w: [Int; 15] */
+
+u := (...x, ...y, ...z);
+/* u: a fixed tuple with fifteen Int components */
+```
+
+The [T; N] spelling records the fixed-array form used in this discussion; N is a compile-time extent. Spreading such an array into a fixed tuple contributes exactly N unnamed components. Spreading a fixed tuple into an array supplies its values in stored order; each must fit the destination element type. Known lengths add when constructing combined spreads. A tuple-valued array element remains one component unless separately spread.
+
+Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. General heterogeneous-literal inference and numeric common-type selection remain open; no implicit Any or unchecked conversion is introduced.
+
+Evaluate each source expression once in written order. Type/length compatibility does not prove identical layout, zero copying, ownership transfer, alias safety, or no allocation. Construction and cleanup must obey the eventual memory rules. A runtime-length array can supply a declared array tail; it cannot determine a statically enumerated fixed tuple's component count without an additional proven extent.
+
+## Known-size fresh literals infer fixed arrays
+
+```text
+x := [1, 2, 3];
+/* [Int; 3], fixed binding, read-only access */
+
+mut y := [1, 2, 3];
+/* [Int; 3], fixed binding, writable elements */
+y[0] = 9;
+
+var z := [1, 2, 3];
+/* [Int; 3], replaceable binding, read-only elements */
+z = [4, 5, 6];
+/* z = [4, 5]; rejected: incompatible fixed extent */
+```
+
+Without a more specific expected construction type, a fresh nonempty bracket literal with an established element type and statically known total length N infers [T; N]. This includes literals composed entirely from known-length fixed-array/fixed-tuple spreads. It supersedes the 2026-10-19 unconditional List default.
+
+Readable access is implicit; writable access and binding replacement remain explicit through mut and var. Neither modifier changes the literal's collection family or extent, and later append operations do not retroactively select growable storage. Fixed arrays can permit element replacement without supporting growth. Explicitly request a growable List through an expected concrete type or constructor when growth is wanted; concrete constructor names and generic application syntax remain provisional.
+
+The rule applies to fresh construction. Receiving an existing List/provider preserves its contract; read-only access does not freeze it, convert it into a fixed array, or establish a compile-time length. A read_numbers result whose size is known only at runtime remains runtime-sized. An abstract traversal/indexed capability supplies element/access requirements without inventing a concrete collection provider.
+
+An established expected concrete collection type may select a different constructor family, including List. Runtime-length spread literal inference, empty literals without an element-type source, heterogeneous literals, explicit adaptation, and allocation policy need separate rules. Do not infer a fixed extent merely from a runtime length observed once, or treat the unresolved cases as an automatic growable-List fallback.
+
+## Header candidates that were not selected
+
+The discussion considered fn args : Params : Return, fn args :: Return, and fn :: Return as a two-slot annotation model. Their repeated colons and empty slots were not adopted. Existing result-colon meaning remains in force.
+
+It also considered typing a whole input pack with fn (...args: Params): Return. Under the selected variadic element rule, ...args: Params describes additional inputs each of type Params; it must not double as an annotation of the entire collected tuple. Establish a whole input contract at the destination instead:
+
+```text
+Params := type (:Int, :Int, score: Int);
+exp : fn (...Params): Int = (...args) {
+    args.0 + args.1 + args.score
+}
+```
+
+Here the known fixed input tuple is collected with the existing rest-only receiver pattern; no variadic segment is declared in this signature. The input contract could also be implemented with explicit component receivers or the existing headerless fn/whole-pack forms. Requiring parentheses on every function literal or removing those existing forms was only an explored alternative, not a selected migration. The generic sketch Function<Result, Inputs> did not select generic punctuation, parameter order, or a new builtin Function type.
+
+Write a space after fn in LiteScript examples, including before a parenthesized header. Omit unnecessary semicolons after completed block items at every nesting depth; preserve necessary ordinary-item separators and enclosing expression punctuation. These presentation rules do not make whitespace significant.
+
+Related: [functions](functions.md), [callable input packs](callable-input-packs.md), [tuple spread/rest](tuple-spread-and-rest.md), [arrays](arrays.md), [lists](lists.md), [sequence families](sequence-types.md), and [ordinary parameter passing](parameter-values-and-slots.md).

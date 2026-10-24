@@ -80,7 +80,7 @@ if [a, b] := values {
 
 Evaluate the source once. On a length mismatch, enter else with neither a nor b in scope. A matching length still needs every component subpattern to succeed. The same matching behavior applies in match arms, where later arms can handle other shapes.
 
-Recommend letting a direct literal establish a known length, so [a, b] := [1, 2] can succeed without changing the literal's selected List default. Length knowledge is a refinement fact, not an implicit conversion to a fixed array. The complete proof policy for variables, aliases, mutation, and calls remains open; direct literal proof is proposed rather than an implemented check.
+A direct known-size literal now infers a fixed array, so [a, b] := [1, 2] has a statically known extent under the proposed sequence-pattern proof rules. This supersedes the earlier recommendation to keep List as the literal default and attach only a length refinement. Existing lists/providers do not become arrays because a size was observed. Complete proof policy for variables, aliases, unknown-length arrays, and heterogeneous inputs remains separate.
 
 A rest capture permits additional elements; it does not supply missing prefix elements:
 

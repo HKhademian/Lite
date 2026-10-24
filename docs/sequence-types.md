@@ -1,6 +1,6 @@
 # Sequence storage families
 
-Status: **growable List as the default bracket-literal family selected, 2026-10-19; storage-family details remain proposals**. Array owners, list owners, and slice views are the recommended model. Full type syntax, generic punctuation, conversions, ownership, and complete access grammar remain open. Existing var/mut, record-copy, and initialization decisions remain in force.
+Status: **fresh statically sized bracket literals infer fixed arrays, selected 2026-10-24; the earlier unconditional growable-List default is superseded**. Array owners, growable list owners, and slice views remain the recommended storage roles. Complete generic syntax, conversions, ownership, and access grammar remain open. See [tuple/array shape decisions](tuple-array-shapes.md).
 
 ## Three roles
 
@@ -17,12 +17,12 @@ The user explicitly deferred generic syntax: these angle-bracket forms describe 
 ## Selected literal default and proposed advanced forms
 
 ```text
-numbers := [10, 20, 30];                 /* selected default: growable List<Int> */
-point: Array<Int, 3> = [10, 20, 30];     /* compile-time fixed array */
+numbers := [10, 20, 30];                 /* inferred [Int; 3] */
+point: [Int; 3] = [10, 20, 30];          /* compile-time fixed array */
 tail: Slice<Int> = numbers[1..3];        /* view containing 20, 30 */
 ```
 
-Without a more specific expected sequence type, a bracket literal such as [10, 20, 30] infers a growable `List<Int>`. The collection can grow when mut access permits it; a plain binding still has read-only access. An explicit expected array type can select fixed layout, subject to its eventual type/construction rules. Half-open slicing and the displayed array/slice type syntax remain proposals, and no compiler is implemented.
+Without a more specific expected concrete collection type, a fresh nonempty bracket literal with an established element type and known total length infers [T; N]. Static spreads contribute their known lengths. An explicit expected List type can request growable construction. Read access is implicit; mut/var permissions do not change collection family or extent. Empty/heterogeneous and runtime-length spread literals still need inference rules. Half-open slicing and complete generic/view grammar remain proposals; no compiler is implemented.
 
 Adding mut or observing an append later must not change the inferred collection family. Expected typing comes from an established type context rather than guesses from future mutations. Empty and heterogeneous literals need their own inference rules, without an implicit Any type.
 
@@ -50,7 +50,7 @@ Bounded-capacity lists, type-level slice extents, strided views, SIMD operations
 
 ## Decisions to take in order
 
-1. Complete array/list/slice storage roles; the default literal family is now selected as List.
+1. Complete array/list/slice storage roles; preserve fixed-array inference for fresh known-size literals and explicitly request growable storage.
 2. Choose owner copy/move/share semantics and slice lifetime/invalidation rules.
 3. Select type/literal/slicing spellings, index origin, and bounds-failure handling.
 4. Specify capacity allocation, bulk initialization, partial cleanup, and generic inference.

@@ -19,7 +19,7 @@ Push_start/push_end/pop_start/pop_end are coherent alternatives. Front/back has 
 
 ```text
 /* Proposed helpers; ordinary calls retain explicit mutation grants. */
-mut numbers := [2, 3];
+numbers: mut List<Int> = [2, 3];
 push_front(mut numbers, 1);
 push_back(mut numbers, 4);
 
@@ -30,7 +30,7 @@ print(first);
 print(last);
 ```
 
-The user accepts these direct sequence operations: an empty pop faults safely rather than returning Option. Attached else provides the requested recovery surface; its full scope and implementation remain open. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change the List literal default. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
+The user accepts these direct sequence operations: an empty pop faults safely rather than returning Option. Attached else provides the requested recovery surface; its full scope and implementation remain open. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change fixed-array literal inference; the example explicitly requests growable List storage using provisional generic notation. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
 
 The same operation supports explicit local recovery without a second helper:
 

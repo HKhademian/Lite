@@ -60,6 +60,8 @@ The whole pattern must succeed before the branch executes. A mismatching compone
 
 ## Nested tuple patterns and rest selected
 
+The 2026-10-24 [array-tail extension](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail) adds declared ...rest: T in ordinary tuple schemas and callable signatures. A remainder pattern preserves unselected fixed components plus that tail: `(a, b, ...xrest) := x` on `(q: Int, w: Int, e: Int, ...rest: Int)` leaves `(e: Int, ...rest: Int)`. A declared variadic segment collects an array; ordinary fixed-tuple pattern rest below keeps its tuple remainder. Tail-only normalization, ownership, and full recursive integration remain open.
+
 Selected by the user, 2026-10-23: collect a supplied component either into a variable binding or into a nested pattern. A variable collector names the whole component; a pattern collector destructures or tests it. Do not combine both collectors for the same supplied component in one pattern.
 
 ```text
@@ -83,7 +85,7 @@ Tuple component patterns also admit [nested or alternatives](match.md#nested-alt
 
 ### Rest and inference retain their selected contracts
 
-Rest belongs to the destructuring pattern. One final ...rest captures unselected tuple components with their existing types, labels, and stored order; without rest, require complete coverage. Zero remaining components give Unit/(), while one stays a singleton tuple. Positional, named, mixed, and rest-only tuple patterns retain their selected routing rules. List/sequence rest and variadic tuple-type declarations remain separate.
+Rest belongs to the destructuring pattern. One final ...rest captures unselected tuple components with their existing types, labels, and stored order; without rest, require complete coverage. For an ordinary fixed tuple, zero remaining components give Unit/(), while one stays a singleton tuple. Positional, named, mixed, and rest-only patterns retain their routing rules. On the selected array-tailed schemas, preserve any remaining fixed components followed by the original array tail; see [array-tailed tuples](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail). List/sequence pattern rest and full recursive integration remain separate.
 
 Infer each unannotated variable binding from the input possibilities compatible with the whole pattern. Exclude impossible alternatives before projecting the corresponding component types. Preserve unions of complete shapes for composite collectors such as rest, rather than independently widening their components into combinations the input never supplied. See [pattern binding inference](pattern-binding-inference.md) for the nested example without a second whole-value binding.
 

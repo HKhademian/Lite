@@ -23,9 +23,9 @@ These method names are proposals, not implemented standard-library APIs.
 
 ## Proposed storage families
 
-The [sequence storage review](sequence-types.md) recommends fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. The [array proposal](arrays.md) separates compile-time inline length from runtime-sized fixed ownership; the [list proposal](lists.md) separates live initialized length from reserved capacity; the [slice proposal](slices.md) exposes existing initialized elements without owning or copying them. These roles and their source syntax remain proposals.
+The [sequence storage review](sequence-types.md) recommends fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. The [array proposal](arrays.md) separates compile-time inline length from runtime-sized fixed ownership; the [list proposal](lists.md) separates live initialized length from reserved capacity; the [slice proposal](slices.md) exposes existing initialized elements without owning or copying them. Their owning/view representations and complete source grammar remain proposals; fixed-array [T; N] examples and known-size literal inference are selected below.
 
-Growable List inference is selected for bracket literals without a more specific expected sequence type; adding var/mut does not change that family. An explicit expected array type can select fixed layout under its future construction rules. Owner copying/transferring/sharing, exact type syntax, slice lifetime rules, and mutable-view formation remain open. See [lists](lists.md) and the [reference comparison](sequence-types-comparison.md).
+Fresh bracket literals with an established element type and statically known length infer [T; N], unless an expected concrete collection type selects another constructor family. This supersedes unconditional List inference. Var/mut affect permissions without changing family or extent. Growable List storage is explicit; existing providers retain their contracts. Empty/heterogeneous and runtime-length spread literal inference, ownership/transfer, runtime-array spelling, and view lifetimes remain open. See [tuple and array shapes](tuple-array-shapes.md).
 
 ## Element contract
 

@@ -10,6 +10,8 @@ Mutation should be practical and easy to express. Counters, accumulators, collec
 
 This is one language with useful defaults, not a pure subset that students must leave before writing stateful programs.
 
+Known collection shape is preserved independently of access permission. Under the [2026-10-24 literal rule](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays), [1, 2, 3] infers [Int; 3] with read-only access. Mut can permit element writes without adding growth; var can permit compatible binding replacement without changing the extent. Growable storage is explicitly requested through a concrete expected type or constructor. Read-only access to an existing/runtime-sized provider does not establish a compile-time size or freeze aliases.
+
 ## Binding and data permissions
 
 ```text

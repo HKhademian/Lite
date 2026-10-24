@@ -19,6 +19,8 @@ The headerless form retains an expected callable's entire input contract. Withou
 
 ## Input signatures and the singleton boundary
 
+The subsequent [tuple-type/array-tail decisions](tuple-array-shapes.md) extend signatures with `fn (...Params1, ...Params2, ...rest: T): Return`. Type spreads construct the fixed inputs with label overriding; a declared final variadic segment collects an array of T. Each additional input has type T, including tuple-valued T. This is not specialization to a different fixed tuple per argument count. Runtime-array spelling and complete routing remain open. Two-colon/empty-slot headers and mandatory-parentheses migrations were discussed but not selected.
+
 ```text
 fn (): Ret                  /* empty input tuple */
 fn (Int): Ret               /* one unnamed Int input */
@@ -30,7 +32,7 @@ In a callable type, parentheses immediately after `fn` delimit the input signatu
 
 This is a function-header rule, not a change to ordinary tuple values, types, or patterns. Outside that signature/header position, `(value)` groups, `(value,)` constructs a singleton, and `(:Int,)` is the existing unnamed singleton tuple type. Type context parses `fn (Int): Ret` as an input type signature; expression context parses `fn (x) { ... }` as local receiver bindings. Capitalization or successful type lookup must not reinterpret a receiver identifier as a type-only parameter. A tuple-valued component stays one input; it is not flattened because its implementation names or inspects its nested fields. Complete recursive callable input-type and header-pattern grammar remains open.
 
-The previously selected contextual receiver rules still apply: an empty header binds no local names while retaining expected inputs, and a nonempty header may bind a positional prefix. Without an expected callable, an empty header means zero inputs. Binding a known tuple's components does not itself replace those rules with exact-coverage pattern matching. General nested/rest header patterns and any replacement of prefix binding by exact destructuring require a separate decision; ordinary body-local tuple patterns retain their exact-coverage rules.
+The previously selected contextual receiver rules still apply: an empty header binds no local names while retaining expected inputs, and a nonempty header may bind a positional prefix. Without an expected callable, an empty header means zero inputs. Binding a known tuple's components does not itself replace those rules with exact-coverage pattern matching. Simple trailing rest receivers now follow the array-tail extension. General nested header patterns and any replacement of prefix binding by exact destructuring require a separate decision; ordinary body-local tuple patterns retain their exact-coverage rules.
 
 ## Where the contract comes from
 

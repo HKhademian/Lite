@@ -7,7 +7,7 @@ The [callable input-pack model](callable-input-packs.md) records the selected sy
 ## Template
 
 ```text
-name := fn(parameter: ParameterType): ResultType {
+name := fn (parameter: ParameterType): ResultType {
     body
 }
 ```
@@ -17,7 +17,7 @@ Functions are definitions bound to names, not a separate category requiring a se
 ## Example
 
 ```text
-double := fn(x: Int): Int {
+double := fn (x: Int): Int {
     2 * x
 }
 ```
@@ -26,14 +26,16 @@ Use `:` for result annotations, matching other type annotations. The earlier `->
 
 ## Function types, literals, and reassignment
 
-An explicitly written function type uses a signature without a body: `fn(a: Int): Int!`. The type after the signature's result colon is the callable's result type; here `Int!` means `Int ! Error`. A function literal can use the corresponding named typed implementation header followed by its executable body. It is a value expression usable in an initializer or an assignment. Callable type headers describe types; implementation headers introduce local receivers, without using name lookup to choose between those syntactic roles.
+The [tuple-type spread and array-tail extension](tuple-array-shapes.md) selects `fn (...Params, ...rest: T): Return`: type spreads construct fixed inputs, and a declared trailing segment accepts zero or more additional T values collected as an array. T may itself be a tuple. This tail is also valid in an ordinary tuple schema. Type-spread overrides replace labeled slots in place. Two-colon header candidates remain unselected. Write a space after fn in examples; whitespace still has no semantic role.
+
+An explicitly written function type uses a signature without a body: `fn (a: Int): Int!`. The type after the signature's result colon is the callable's result type; here `Int!` means `Int ! Error`. A function literal can use the corresponding named typed implementation header followed by its executable body. It is a value expression usable in an initializer or an assignment. Callable type headers describe types; implementation headers introduce local receivers, without using name lookup to choose between those syntactic roles.
 
 ```text
-var myfn: fn(a: Int): Int!;
+var myfn: fn (a: Int): Int!;
 
 _ := myfn(0); // supplied a = 0; zero callable returns .ok(0)
 
-myfn = fn(a: Int): Int! {
+myfn = fn (a: Int): Int! {
     a + 1
 }
 
@@ -45,7 +47,7 @@ The declaration immediately initializes `myfn` to the callable type's zero value
 
 The calls store their `Int ! Error` outcomes in the ordinary readable `_` binding. They do not implicitly extract success or discard errors; underscore unused-name intent has its separate diagnostic rules. Omitted arguments require an applicable explicitly declared default, as specified below.
 
-The explicit signature form and function-literal assignment are selected. Callable input signatures also admit unnamed positional types: `fn (Int): Int`, `fn (Int, String): Bool`, and `fn (): Unit`. Parentheses immediately after `fn` in a callable type delimit its input tuple, not grouping, so a one-input signature needs no trailing comma. Existing labeled forms such as `fn(a: Int): Int` remain available. Ordinary tuple type/value/pattern grouping and singleton commas are unchanged. Parameter-name identity in function types, broader callable compatibility/variance, captures, ownership, and complete recursive type grammar remain to be specified.
+The explicit signature form and function-literal assignment are selected. Callable input signatures also admit unnamed positional types: `fn (Int): Int`, `fn (Int, String): Bool`, and `fn (): Unit`. Parentheses immediately after `fn` in a callable type delimit its input tuple, not grouping, so a one-input signature needs no trailing comma. Existing labeled forms such as `fn (a: Int): Int` remain available. Ordinary tuple type/value/pattern grouping and singleton commas are unchanged. Parameter-name identity in function types, broader callable compatibility/variance, captures, ownership, and complete recursive type grammar remain to be specified.
 
 ## Whole input tuples and implicit arguments
 
@@ -58,7 +60,7 @@ operation : fn (Int): Int = (x) { x * 3 }
 
 These are alternative implementations of the same contract. `arguments` denotes the nearest callable's complete input tuple; a whole-pack header names that tuple, and a parenthesized header binds its components locally. Local binder names do not change expected public labels. Access to the pack alongside local components grants no extra copying, moves, mutation, or escaping caller-location permissions. Complete implicit-name collision/shadowing and ownership rules remain open.
 
-With an expected input contract, headerless `fn { ... }` retains all its inputs. Independently, a headerless `fn { ... }` or `fn : Ret { ... }` has Unit inputs. A named pack or component without an established type does not default to Unit. The selected contextual empty/prefix receiver rules below are preserved; general exact/nested/rest header patterns need a separate decision. See [input packs](callable-input-packs.md).
+With an expected input contract, headerless `fn { ... }` retains all its inputs. Independently, a headerless `fn { ... }` or `fn : Ret { ... }` has Unit inputs. A named pack or component without an established type does not default to Unit. The selected contextual empty/prefix receiver rules below are preserved; simple trailing rest receivers are selected by the array-tail extension, while general exact/nested header patterns need a separate decision. See [input packs](callable-input-packs.md).
 
 ## Intrinsic application and invocation sugar
 
@@ -85,7 +87,7 @@ Both paths use existing named/positional routing, declared-default-only omission
 
 An argument may be omitted only when an applicable explicitly declared parameter default supplies its value. Without such a default, omission is a compile-time error for every parameter type, including Int, Unit, records, and plain unions. A supplied argument takes precedence over the default. There is no automatic zero or declared-type default construction merely because a type supports it.
 
-This supersedes the earlier default-or-zero argument rule. For fn(a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
+This supersedes the earlier default-or-zero argument rule. For fn (a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
 
 Default-expression syntax, evaluation timing and scope, defaults in callable signatures versus assigned implementations, and integration with parameter patterns remain open. Core named-call omission is selected: every unfilled parameter requires an applicable declared default. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
 
@@ -97,14 +99,14 @@ The [concrete named routing review](named-input-routing.md) records named permut
 
 ## Compact implementations under review
 
-Use one callable-literal model. `fn(parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or both. A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. Independent unknown-input and recursive result inference remain separate.
+Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or both. A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. Independent unknown-input and recursive result inference remain separate.
 
 ### Two scenarios: full definition and contextual implementation
 
 **1. An independent definition establishes its input types through annotations.**
 
 ```text
-var x := fn(a: Int): String {
+var x := fn (a: Int): String {
     "original"
 }
 ```
@@ -121,19 +123,19 @@ x = (a) {
 
 Here the existing callable contract supplies the parameter type `Int` and result type `String`. The implementation names its local parameters and provides the body without repeating those types. Omitting annotations does not change the established contract; the replacement must satisfy it. The function body also ends this assignment's item, so its trailing semicolon is optional and allowed. The body above returns a string literal to keep the example focused on function syntax.
 
-The same contextual lambda can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn(a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. See [item boundaries](blocks-and-results.md#item-boundaries).
+The same contextual lambda can be used when a method signature or callback parameter supplies the expected callable type. A separate declaration such as `var x: fn (a: Int): String;` is another source of that contract, not a prerequisite for the normal definition above. See [item boundaries](blocks-and-results.md#item-boundaries).
 
-For an imaginary map API expecting `fn(item: Int): Int`, the full and contextual forms are:
+For an imaginary map API expecting `fn (item: Int): Int`, the full and contextual forms are:
 
 ```text
-doubled := map(numbers, fn(n: Int): Int { n * 2 });
-doubled := map(numbers, fn(n) { n * 2 });
+doubled := map(numbers, fn (n: Int): Int { n * 2 });
+doubled := map(numbers, fn (n) { n * 2 });
 doubled := map(numbers, (n) { n * 2 });
 ```
 
 These are equivalent alternative implementations under the same expected callable contract, not declarations required together. Predicate examples are in the [inline callback probes](callable-input-packs.md#inline-callback-probes).
 
-For the declared `var myfn: fn(a: Int): Int!;`, either keyword spelling gets the parameter's `Int` type and checks its body against `Int ! Error`. The comparison below retains earlier alternatives as review history; B and C now share the selected semantics. Arrows, pipes, and signature-inherited local names remain unselected alternatives.
+For the declared `var myfn: fn (a: Int): Int!;`, either keyword spelling gets the parameter's `Int` type and checks its body against `Int ! Error`. The comparison below retains earlier alternatives as review history; B and C now share the selected semantics. Arrows, pipes, and signature-inherited local names remain unselected alternatives.
 
 ### Solutions in the modern reference languages
 
@@ -195,12 +197,12 @@ A single local parameter name precedes the arrow; parentheses would support zero
 ### B. Parenthesized fn with optional annotations
 
 ```text
-myfn = fn(a) { a + 1 }
-doubled := map(numbers, fn(n) { n * 2 });
-positive := filter(numbers, fn(n) { n > 0 });
+myfn = fn (a) { a + 1 }
+doubled := map(numbers, fn (n) { n * 2 });
+positive := filter(numbers, fn (n) { n > 0 });
 ```
 
-The 2026-10-24 clarification supersedes the earlier retirement of this form. It has exactly the same semantics as `(parameters) { body }`; retaining `fn` is an explicit function marker, not another inference mode. Both spellings accept contextual or annotated inputs and known-input local result inference. Without an expected input contract, `fn(x) { x * 3 }` and `(x) { x * 3 }` have the same unresolved input type; adding the keyword does not infer an arbitrary numeric/generic contract.
+The 2026-10-24 clarification supersedes the earlier retirement of this form. It has exactly the same semantics as `(parameters) { body }`; retaining `fn` is an explicit function marker, not another inference mode. Both spellings accept contextual or annotated inputs and known-input local result inference. Without an expected input contract, `fn (x) { x * 3 }` and `(x) { x * 3 }` have the same unresolved input type; adding the keyword does not infer an arbitrary numeric/generic contract.
 
 ### C. Arrow-free lambda: parameter list followed by a block (current direction)
 
@@ -219,7 +221,7 @@ lambda := "(" [lambda_parameters] ")" [":" type] block
 lambda_parameter := identifier [":" type]
 ```
 
-This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts, or independent inputs when annotations establish their types. The user selected the empty contextual header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. A one-position receiver header needs no singleton comma because it is syntactically a header. Complete nested/rest patterns need integration with the eventual grammar; ordinary tuple patterns are unchanged.
+This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts, or independent inputs when annotations establish their types. The user selected the empty contextual header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. A one-position receiver header needs no singleton comma because it is syntactically a header. Simple trailing rest receivers now follow the array-tail extension; complete nested patterns still need integration with the eventual grammar; ordinary tuple patterns are unchanged.
 
 Capture-header syntax and semantics are [pinned for later](deferred-contexts.md). Earlier `[offset]` and `[var offset]` examples remain in the deferred closure review; they are not part of the current lambda grammar outline.
 
@@ -228,7 +230,7 @@ Capture-header syntax and semantics are [pinned for later](deferred-contexts.md)
 Lambda parameter and result annotations are optional; this direction is selected. Being a lambda does not require omitting annotations. Reuse the ordinary colon notation, with optional annotations on each named parameter and after the closing parameter parenthesis:
 
 ```text
-/* Expected callback contract: fn(item: Int): Int */
+/* Expected callback contract: fn (item: Int): Int */
 map(numbers, (n) { n * 2 });
 map(numbers, (n: Int) { n * 2 });
 map(numbers, (n): Int { n * 2 });
@@ -247,7 +249,7 @@ double := (n: Int): Int {
 
 Clear local result inference is selected below; inference of unknown input types from arbitrary body operations remains open. The empty contextual header `()` still leaves expected inputs unnamed: adding a result annotation, as in `x = (): String { "replacement" }`, does not redefine `x` as zero-arity. Without an expected callable type, an empty header declares zero inputs; see [independent empty headers](#empty-headers-without-an-expected-callable).
 
-Typed lambdas and typed `fn` expressions are now explicitly one model: `fn(n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` provide the same input/result contract and implementation behavior. Neither spelling is removed. The keyword remains necessary for headerless and whole-pack forms; omitting it from `fn { ... }` would leave executable braces, and omitting it from `fn pack { ... }` would overlap record construction.
+Typed lambdas and typed `fn` expressions are now explicitly one model: `fn (n: Int): Int { n * 2 }` and `(n: Int): Int { n * 2 }` provide the same input/result contract and implementation behavior. Neither spelling is removed. The keyword remains necessary for headerless and whole-pack forms; omitting it from `fn { ... }` would leave executable braces, and omitting it from `fn pack { ... }` would overlap record construction.
 
 Rust provides a direct reference for optional closure signatures: `|n: i32| -> i32 { n * 2 }`, with parameter annotations and an optional result annotation. See [Rust closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html), checked 2026-10-21. LiteScript's proposed delimiters and result colon retain its own notation.
 
@@ -257,19 +259,19 @@ Selected rule: a nonrecursive local function literal, with or without `fn`, can 
 
 ```text
 double := (n: Int) { n * 2 }
-/* Inferred signature: fn(n: Int): Int */
+/* Inferred signature: fn (n: Int): Int */
 
 constant := () { 42 }
-/* Inferred signature: fn(): Int */
+/* Inferred signature: fn (): Int */
 
 greeting := () { "hello" }
-/* Inferred signature: fn(): String */
+/* Inferred signature: fn (): String */
 
 empty := () {}
-/* Inferred signature: fn(): Unit */
+/* Inferred signature: fn (): Unit */
 
 operation := (x: Int) { x * 3 }
-/* One Int input, inferred Int result; fn(x: Int) has the same inference */
+/* One Int input, inferred Int result; fn (x: Int) has the same inference */
 
 operation := (x: Float): Float { x * 3 }
 /* Alternative definition: explicit input/result, checked by ordinary numeric rules */
@@ -292,7 +294,7 @@ choose := (flag: Bool) {
     if flag { return 1 }
     "none"
 }
-/* Inferred signature: fn(flag: Bool): (Int | String) */
+/* Inferred signature: fn (flag: Bool): (Int | String) */
 ```
 
 The explicit return supplies Int to the lambda, while normal completion supplies String. Both contribute to its inferred result. The guard's exiting branch does not itself produce a local conditional value. Returns belonging to a nested callable do not contribute to the enclosing lambda's result.
@@ -316,7 +318,7 @@ Reference comparison, checked 2026-10-21: [Rust if expressions](https://doc.rust
 
 #### Named, underscore, and empty headers
 
-The user compares three implementation headers under the existing `x: fn(a: Int): String` contract:
+The user compares three implementation headers under the existing `x: fn (a: Int): String` contract:
 
 ```text
 x = (a) {
@@ -334,7 +336,7 @@ x = () {
 
 In the contextual lambda, `(a)` binds the input as a local `Int` named `a`. `(_)` binds the input as the ordinary readable `Int` name `_`, explicitly permitting nonuse. It is not a discard pattern and does not remove the input from the callable contract; see [unused-name intent](unused-name-intent.md). Both bodies return `String`, and trailing item semicolons remain optional.
 
-With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn(a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
+With an expected callable type, the empty header `()` retains its entire signature and binds none of its inputs locally. For this `x`, the implementation remains `fn (a: Int): String`: the one `Int` input is accepted without a local parameter name, and the body must produce `String`. The original signature's name `a` is not implicitly introduced into the implementation body. A zero-parameter expected signature also admits the empty header. Without an expected callable type, the empty header declares zero inputs.
 
 Calls retain their normal input evaluation, passing, permission, and cleanup contracts even when the implementation leaves inputs unnamed. This does not make caller argument expressions optional or skip their effects. Omitted call arguments still require applicable explicitly declared defaults. Nonempty lambda headers may likewise leave trailing inputs unnamed, as specified below. These rules do not revise explicitly declared callable parameter lists or choose general standalone inference without an expected contract.
 
@@ -344,9 +346,9 @@ Selected rule: preserve the expected input contract when one exists; otherwise a
 
 ```text
 constant := (): Int { 42 }
-/* Independent signature: fn(): Int */
+/* Independent signature: fn (): Int */
 
-ignore_input: fn(n: Int): Int = (): Int { 42 }
+ignore_input: fn (n: Int): Int = (): Int { 42 }
 /* Established contextual rule: one Int input, no local input binding */
 ```
 
@@ -361,8 +363,8 @@ Rust's zero-input closure spelling is `|| { 42 }`, with an explicitly empty para
 An expected callable may have more inputs than the lambda body needs:
 
 ```text
-/* Expected contract: fn(left: Int, right: Int): Int */
-combine: fn(left: Int, right: Int): Int = (left) { left * 2 }
+/* Expected contract: fn (left: Int, right: Int): Int */
+combine: fn (left: Int, right: Int): Int = (left) { left * 2 }
 ```
 
 Selected rule: allow omitted trailing names. A nonempty header binds a positional prefix of the expected inputs. Here left binds the first Int; the second input remains unnamed. `()` is the zero-name case of the same principle. The callable still has the expected two-input signature. Writing `(left, _) { left * 2 }` is also legal, but naming the trailing position is not required.
@@ -422,11 +424,11 @@ This selects invocation semantics. Complete callable type grammar, ownership and
 
 ## Collection input requirements
 
-Simple collection functions should not require beginner authors to know protocol names. The [inference proposal](collection-inference.md) explores fn(icons) with reusable requirements inferred from the body, plus contextual construction of collection elements. Generalization, public signatures, and any short annotation remain open; omitting a parameter type does not yet select a generic mechanism.
+Simple collection functions should not require beginner authors to know protocol names. The [inference proposal](collection-inference.md) explores fn (icons) with reusable requirements inferred from the body, plus contextual construction of collection elements. Generalization, public signatures, and any short annotation remain open; omitting a parameter type does not yet select a generic mechanism.
 
 The [signature proposal](collection-function-signatures.md) separates required input behavior from guaranteed output behavior, inferred inputs from explicitly complete contracts, and static abstract returns from runtime-erased values. A common contract alone does not preserve concrete input/output identity or choose a stored representation. The [operation-contract model](collection-operation-contracts.md) resolves loop/bracket sugar statically and distinguishes unsupported operations from supported operations returning typed failures.
 
-The user-selected direction is to constrain collection inputs by the operations required, not their provider type or compile-time size. Conceptually, fn(icons: `Iterable<Icon>`) can traverse compatible list, array, set, slice, or generated sources without requiring a List conversion. The angle-bracket/interface notation is provisional and does not mandate boxed runtime dispatch. Sized, repeatable, indexed, or contiguous requirements belong in a signature only when needed. Cursor consumption, yielded access, and retained-source lifetimes must remain explicit in their eventual contracts. See [collection abstractions](collection-abstractions.md) and [capabilities](collection-capabilities.md).
+The user-selected direction is to constrain collection inputs by the operations required, not their provider type or compile-time size. Conceptually, fn (icons: `Iterable<Icon>`) can traverse compatible list, array, set, slice, or generated sources without requiring a List conversion. The angle-bracket/interface notation is provisional and does not mandate boxed runtime dispatch. Sized, repeatable, indexed, or contiguous requirements belong in a signature only when needed. Cursor consumption, yielded access, and retained-source lifetimes must remain explicit in their eventual contracts. See [collection abstractions](collection-abstractions.md) and [capabilities](collection-capabilities.md).
 
 ## Parameter mutation contracts
 
@@ -435,7 +437,7 @@ The selected [placement rule](mut-qualifier-placement.md) is user: mut User for 
 Parameters provide read access by default. Qualify the affected parameter's type with mut to request writable access:
 
 ```text
-rename := fn(user: mut User, name: String): Unit {
+rename := fn (user: mut User, name: String): Unit {
     user.name = name
 }
 ```
@@ -444,7 +446,7 @@ The example assumes `name` is an accessible writable field in the implementation
 
 The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. There is no additional `mut fn` or other function-level mutation marker.
 
-The declaration `mut rename := fn(...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
+The declaration `mut rename := fn (...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
 
 Calling a mut-qualified parameter requires an explicit grant, as in rename(mut userVar, "Ali"). The caller must already provide mutable access. Updates affect that supplied data; the compiler must not silently mutate a detached copy or upgrade a read-only argument. This selects temporary writable caller-data access for mut parameters. Ordinary read-only input transfer, complete alias/lifetime rules, capture permissions, and purity remain open; see [caller grants](caller-mutation-grants.md).
 
@@ -454,14 +456,14 @@ The [ordinary parameter review](parameter-values-and-slots.md) keeps the current
 
 For explicit var caller-location grants, validate current readable possibilities against the callee input and every permitted replacement against the caller's declared writes. Var String is read/write String, so it rejects a current Int; an accepted String-only call leaves String, while a wide replacement call can widen Int to String | Int. This is not output-only access or a required-write promise. Write-only access is deferred; see [call replacement flow](call-replacement-flow.md).
 
-The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn(count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn(param: var) requires an inferable value type under the eventual inference rules. See [var access](var-access-qualifier.md) and [parameter permissions](parameter-permissions.md).
+The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn (count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn (param: var) requires an inferable value type under the eventual inference rules. See [var access](var-access-qualifier.md) and [parameter permissions](parameter-permissions.md).
 
 ## Result rules
 
 The body's final expression supplies normal completion. A final declaration or assignment produces `Unit`. Trailing separators after an ordinary body item change nothing. A completed function/lambda definition or assignment already ends at its closing body: omit the optional trailing semicolon, including inside another block. A callback body inside a call does not end the enclosing call item; retain that call's required separator. See [blocks and results](blocks-and-results.md) and the [shared semicolon rule](lexical-structure.md#semicolon-style-after-closing-braces).
 
 ```text
-greet := fn(name: String): Unit {
+greet := fn (name: String): Unit {
     print("Hello, " + name)
 }
 ```
@@ -469,7 +471,7 @@ greet := fn(name: String): Unit {
 ## Early return
 
 ```text
-validate := fn(value: Int): Int ! ValidationError {
+validate := fn (value: Int): Int ! ValidationError {
     if value < 0 {
         return .err(ValidationError.Negative)
     }
@@ -497,7 +499,7 @@ Local handling does not require a catch boundary around unrelated statements. Co
 ## Closures
 
 ```text
-double := fn(x: Int) {
+double := fn (x: Int) {
     x * 2
 }
 ```

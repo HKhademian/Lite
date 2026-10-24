@@ -21,7 +21,7 @@ Copying a view still refers to the same source region. An independent owning cop
 ## Inputs that actually require contiguity
 
 ```text
-upload_pixels := fn(pixels: Contiguous<Pixel>) {
+upload_pixels := fn (pixels: Contiguous<Pixel>) {
     upload_region(pixels.as_slice());
 }
 ```
@@ -43,7 +43,7 @@ Mutable view alias rules need an explicit decision. Do not silently import Rust 
 A usable view needs live backing storage and valid element bounds. It cannot escape an expiring local owner, survive incompatible owner replacement, or continue referring to a deallocated/reallocated list allocation.
 
 ```text
-mut numbers := [10, 20, 30];
+numbers: mut List<Int> = [10, 20, 30];
 view := numbers[0..2];
 append(mut numbers, 40);
 print(view[0]);

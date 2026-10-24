@@ -22,7 +22,7 @@ In the array proposal, Float describes an element type and 3 describes an intend
 
 ## Preserve concepts without freezing punctuation
 
-The selected growable List default for [1, 2, 3] is a semantic decision. Calling its inferred type `List<Int>` in prose does not select how a programmer will explicitly write or define that type application.
+The 2026-10-24 rule makes a fresh [1, 2, 3] infer [Int; 3], superseding the earlier unconditional List default. This fixed-array notation does not select general angle-bracket generic declaration/application syntax. List<Int> still describes an explicitly requested growable provider in provisional notation; runtime-array type spelling remains open. See [shape and inference decisions](tuple-array-shapes.md).
 
 Likewise, future notation changes must preserve whichever array-length, slice-access, and type-identity contracts are selected. The current array/slice proposals do not themselves settle those contracts. Record syntax and already selected annotations remain separate decisions.
 

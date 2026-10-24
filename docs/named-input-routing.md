@@ -23,7 +23,7 @@ This contract does not choose copying, moving, borrowing, access activation, rol
 ## 2. Function calls: selected routing
 
 ```text
-op := fn(a: Int, b: Int, c: Int): Int {
+op := fn (a: Int, b: Int, c: Int): Int {
     a * 100 + b * 10 + c
 }
 
@@ -91,6 +91,8 @@ op(1, a = 9, b = 2, c = 3);     /* replace the earlier positional a */
 A plain identifier argument remains positional; =name is explicitly named and expands to name = name. Only an ordinary identifier is accepted for shorthand, with normal lexical value lookup. Spread an operand once, in stored component order: labeled components become named inputs, while unnamed components become positional inputs. A named tuple's physical field order need not match the signature order because its labels select the destination slots. A component containing another tuple stays one input unless separately spread.
 
 ### Static routing algorithm
+
+The following algorithm describes fixed declared slots. The 2026-10-24 [array-tail extension](tuple-array-shapes.md) adds a final variadic segment: further positional inputs feed its homogeneous element contract rather than creating new fixed slots. Known-size arrays expand into statically routable unnamed values; runtime arrays may feed the tail once fixed required inputs are established. Exact dynamic routing into missing fixed slots, named-tail supply, and failure/default behavior remain open. Earlier fixed-only excess-input rejection applies to signatures without a tail.
 
 For a known public signature:
 
@@ -438,14 +440,14 @@ The entry forms follow the existing type-only : Type convention while retaining 
 
 The enclosing syntactic context establishes the role of parentheses. In a type annotation, (l, r) is a named schema with inferred types. In a value expression, (l, r) constructs a tuple from lexical values. In a binding pattern, (l, r) introduces positional bindings. Type-name lookup and capitalization must not choose among these parses. A component uses either a variable binding or a nested pattern; no combined whole-value collector is selected. After colon, a tuple type constrains the variable binding and its labels do not introduce component locals. Complete recursive parsing remains open.
 
-All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Named/unnamed components may interleave in stored tuple type layouts. Recursive type/pattern integration, variadic types, and complete recursive productions remain separate decisions. Singleton types use (T) for grouping, (:T,) for an unnamed component, (label: T) for a named component, and (label,) for an inferred named component; (:T) is rejected. See the [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected). The choice does not rename public function parameters or select unknown-input lambda inference.
+All three component forms may contain a nested tuple type where a type is written, for example (:Int, :(:Bool, :String)). Mixed tuple types with an unnamed prefix and named suffix, such as (:Int, tea: String), are selected. Singleton value construction is selected separately. The empty tuple is Unit, also spelled (). Named/unnamed components may interleave in stored tuple type layouts. The 2026-10-24 [array-tail extension](tuple-array-shapes.md) selects homogeneous variadic elements in callable and ordinary tuple schemas. Full recursive type/pattern integration remains open. Singleton types use (T) for grouping, (:T,) for an unnamed component, (label: T) for a named component, and (label,) for an inferred named component; (:T) is rejected. See the [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected). The choice does not rename public function parameters or select unknown-input lambda inference.
 
 ## 7. Callables, nested inputs, and permissions
 
 Recommend taking public call labels from the statically visible callable contract. Contextual lambda headers retain positional local naming:
 
 ```text
-var difference: fn(l: Int, r: Int): Int;
+var difference: fn (l: Int, r: Int): Int;
 difference = (x, y) { x - y }
 difference(r = 2, l = 10); /* proposed public-label routing: result 8 */
 ```
@@ -465,7 +467,7 @@ The actual signatures and source locations must already permit those grants. A n
 
 ## 8. Spreading and remaining boundaries
 
-Explicit tuple call spread is selected: op(...tuple_value) processes labeled components as named inputs and unnamed components through next-unfilled positional routing. In contrast, op(tuple_value) supplies one tuple-valued input. The signature still determines required fields, types, defaults, and permissions. Array/list/set/other collection spread and general variadic signatures are separate; this is tuple-to-call spread with a statically known shape. No intermediate tuple allocation, runtime label dictionary, or ABI change is required by this contract.
+Explicit tuple call spread is selected: op(...tuple_value) processes labeled components as named inputs and unnamed components through next-unfilled positional routing. In contrast, op(tuple_value) supplies one tuple-valued input. The signature still determines required fields, types, defaults, and permissions. The 2026-10-24 extension also selects fixed-array call spread and runtime-array supply into declared homogeneous variadic tails once required fixed inputs are established. List/set/other provider adaptation and runtime spread into missing fixed inputs remain open; see [array-backed variadics](tuple-array-shapes.md#a-declared-variadic-tail-collects-an-array). No intermediate tuple allocation, runtime label dictionary, or ABI change is required by this contract.
 
 Aliases cannot hide a stored tuple assignment order mismatch; normalized tuple contracts decide it. Explicit call spread is a routing operation rather than direct stored-tuple assignment, so a differently ordered labeled source can supply inputs by name. Named-field selectors must be statically available and accessible on the source. Union-valued components retain their existing member/widening contracts; naming a field does not unwrap Result/Option or choose a union member. Generic expected-schema discovery and full source grammar remain open.
 

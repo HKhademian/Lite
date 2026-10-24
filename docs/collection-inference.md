@@ -12,7 +12,7 @@ loop numbers as number {
 }
 ```
 
-The growable List default is already selected. Neither example needs a generic annotation or a traversal-interface name. Expected types can supply information at construction boundaries, just as they do for records. Existing collection values keep their provider type; inference must not silently collect a set, slice, or producer into a List.
+The known-size literal now infers [Int; 3], superseding the former unconditional List default. Neither example needs generic vocabulary. Expected types may supply element information or select a concrete constructor family; an abstract traversal requirement alone does not. Existing collection values retain their provider type. See [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 ## Carry expected types through nested literals
 
@@ -46,7 +46,7 @@ render_icons([
 ]);
 ```
 
-Assume render_icons has an established requirement to traverse Icon values. A traversal requirement supplies an element type but does not choose a concrete provider, so this literal would retain the usual List default. A concrete expected array type could instead select its array construction contract. Do not infer a Set or an arbitrary user provider merely because it also supports traversal; provider construction needs an unambiguous rule.
+Assume render_icons has an established requirement to traverse Icon values. It supplies an element requirement without choosing a concrete provider. The known-size fresh literal therefore uses fixed-array inference. An expected concrete List type can instead request growable construction. Do not infer Set or an arbitrary provider from traversal alone. Empty/heterogeneous and runtime-length literals remain separate decisions.
 
 When no expected element type is available, an explicit Icon constructor can supply it. Standalone anonymous record identity, empty literals, heterogeneous literals, overloaded calls, and conflicting expected types remain separate inference decisions.
 
@@ -55,7 +55,7 @@ When no expected element type is available, an explicit Icon constructor can sup
 Candidate syntax, reusing the existing inferred-function proposal:
 
 ```text
-render_icons := fn(icons) {
+render_icons := fn (icons) {
     loop icons as icon {
         render(icon);
     }
@@ -75,7 +75,7 @@ Mutating caller data still requires declared mut access and an explicit caller g
 The user's beginner goal also applies to indexed operations. Names such as Indexed, Iterable, or Contiguous are design vocabulary and possible advanced contracts, not prerequisites for authoring an ordinary script.
 
 ```text
-third_or_zero := fn(values) {
+third_or_zero := fn (values) {
     values[2] else {
         0
     }
@@ -90,7 +90,7 @@ Under the proposed generic requirement inference, values[2] establishes that thi
 A propagating version can declare only its result contract while leaving the input requirement inferred:
 
 ```text
-third_required := fn(values): Int! {
+third_required := fn (values): Int! {
     values[2]!
 }
 ```
@@ -112,7 +112,7 @@ The subsequent [source-visibility correction](collection-signature-ergonomics.md
 An element-oriented annotation is a useful alternative to evaluate:
 
 ```text
-render_icons := fn(icons: [Icon]) {
+render_icons := fn (icons: [Icon]) {
     loop icons as icon {
         render(icon);
     }
@@ -124,7 +124,7 @@ This is **unselected syntax**. Two possible meanings need a deliberate choice:
 - A concrete growable container of Icon. Easy to teach, but would constrain provider choice if used as the input requirement.
 - A traversal contract over Icon. Fits the consumer goal, but says nothing by itself about indexing, growth, storage, or runtime representation.
 
-It must not silently switch between those meanings in parameters, fields, and return types. If it is a constraint-only form, that restriction must be explicit; if it is a general type, stored and returned values need a representation and lifetime contract. A bracket literal can still construct a concrete List even when an annotation denotes an abstraction, provided that distinction is consistent and documented.
+It must not silently switch between those meanings in parameters, fields, and return types. If it is a constraint-only form, that restriction must be explicit; if it is a general type, stored and returned values need a representation and lifetime contract. A known-size bracket literal can still construct a concrete fixed array even when an annotation denotes an abstraction, provided that distinction is consistent and documented.
 
 Do not finalize this shorthand as a side effect of choosing generic punctuation. Its meaning needs review first.
 
@@ -144,7 +144,7 @@ Both are source-spelling candidates; no ownership or representation is selected 
 
 The resemblance to slices is real. Rust writes its dynamically sized slice type as [T], usually accessed through a borrowed &[T] or &mut [T]; [T; N] is a fixed-size array type. Zig and Odin use []T for slices and [N]T for fixed arrays. Sources: [Rust slices](https://doc.rust-lang.org/reference/types/slice.html), [Rust arrays](https://doc.rust-lang.org/reference/types/array.html), [Zig 0.15.1 slices](https://ziglang.org/documentation/0.15.1/#Slices), and [Odin slices](https://odin-lang.org/docs/overview/#slices).
 
-A contiguous slice can give an array or list a shared input representation without copying elements. An arbitrary set, chunked source, or generator cannot generally provide that same representation without materialization. Consequently, choosing slice semantics for fn(icons: [Icon]) would narrow the earlier provider-independent traversal goal.
+A contiguous slice can give an array or list a shared input representation without copying elements. An arbitrary set, chunked source, or generator cannot generally provide that same representation without materialization. Consequently, choosing slice semantics for fn (icons: [Icon]) would narrow the earlier provider-independent traversal goal.
 
 For that consumer goal, the working recommendation is to evaluate [Icon] as a concise read-only traversal requirement and retain an explicit slice concept when contiguity is required. The [Icon; 10] candidate needs its own decision: inline fixed-array storage, an exact-length view, or a requirement with a statically known extent. Length and ownership are separate properties. A lazy or one-shot source must not be counted or materialized implicitly to establish the extent.
 

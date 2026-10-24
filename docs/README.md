@@ -68,9 +68,9 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Temporary generic notation](generic-notation.md): angle brackets explain type-family concepts while generic source syntax remains deferred; type inputs and compile-time values are distinct concerns.
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
-- [Sequence storage families](sequence-types.md): selected growable List literal default; proposed array owners and slice views, storage/copy boundaries, and decision order.
-- [Arrays](arrays.md): proposed compile-time inline arrays and runtime-sized fixed-length owners; initialization, layout, and sized-view distinctions.
-- [Lists](lists.md): selected growable List literal default; proposed contiguous owners, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics.
+- [Sequence storage families](sequence-types.md): fixed-array inference for fresh known-size literals, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
+- [Arrays](arrays.md): [T; N] fixed extents, known-size literal/spread construction, runtime arrays for variadic tails, and open ownership/layout/type details.
+- [Lists](lists.md): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
 - [Slices](slices.md): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
 - [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
@@ -111,7 +111,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Tuple entries and access](tuple-entries-and-access.md): selected = identifier named shorthand, unnamed and mixed value entries, inferred mixed tuple types, fixed zero-based numeric access, singleton values, selected ()/Unit empty tuple identity, and a cross-context review of types, patterns, calls, lambdas, initialization, and spread.
 - [Concrete named input routing](named-input-routing.md): selected argument mapping, invalid-input checks, named destructuring, tuple component forms, written evaluation order, fixed destination tuple routing with complete coverage and no implicit component defaults, and fresh-versus-stored tuple behavior; open callable, default-timing, and permission-composition details.
 - [Named calls and tuples across the reference languages](named-arguments-reference-comparison.md): all twelve established references plus C#, distinguishing native argument labels, named product values, tuple labels, and compatibility.
-- [Tuple spread and rest](tuple-spread-and-rest.md): selected tuple construction spread, earlier-slot spread collision replacement, explicit-label uniqueness, surviving-field type inference, interleaved layouts, positional/named/mixed/rest-only patterns, next-unselected source routing, shape/label preservation, and separate ownership questions.
+- [Tuple spread and rest](tuple-spread-and-rest.md): fixed component/pattern spread, type construction with label overriding, homogeneous array-tail declarations, remainder preservation, and ownership boundaries.
+- [Tuple types, array tails, and fixed-size inference](tuple-array-shapes.md): selected type-spread overrides, tuple-valued variadic elements, runtime array tails in ordinary tuples/functions, fixed-array conversions, known-size literal inference, and unselected header candidates.
 - [Pattern binding inference](pattern-binding-inference.md): partially annotated patterns, compatible input alternatives, shared and nested constructor/tuple alternative binding unions with Unit for absent names, narrowing stable related bindings from known alternatives, and preserved composite shapes.
 - [Pattern contexts](pattern-contexts.md): cross-context audit of := source placement, == value tests, bindings, declarations, if/match, receivers, and recommended mismatch policies.
 - [Pattern type review](pattern-type-review.md): comprehensive coverage review, confirmed rules, and the remaining record, sequence, set, range, and evaluation decisions.

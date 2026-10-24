@@ -7,14 +7,14 @@ The [concrete routing case catalogue](named-input-routing.md) records the select
 ## Selected basic call forms
 
 ```text
-op := fn(a: Int, b: Int, c: Int): Int { a + b + c }
+op := fn (a: Int, b: Int, c: Int): Int { a + b + c }
 
 op(1, 2, 3);
 op(a = 1, b = 2, c = 3);
 op(1, 2, c = 3);
 ```
 
-These forms supply the same three inputs to the same callable. Naming an argument does not turn the call into a single record or tuple argument. No extra named-parameter declaration marker is required for these simple identifier parameters. The user's abbreviated fn(a,b,c) sketch describes the call shape; it does not select independent inference of unknown function input types. Omission still requires an applicable explicitly declared default.
+These forms supply the same three inputs to the same callable. Naming an argument does not turn the call into a single record or tuple argument. No extra named-parameter declaration marker is required for these simple identifier parameters. The user's abbreviated fn (a,b,c) sketch describes the call shape; it does not select independent inference of unknown function input types. Omission still requires an applicable explicitly declared default.
 
 The comparison of all twelve established reference languages, plus supplemental C#, is in [named calls and tuples across the reference languages](named-arguments-reference-comparison.md).
 
@@ -23,7 +23,7 @@ The comparison of all twelve established reference languages, plus supplemental 
 Use colon for a type and equals for a supplied value, following existing record construction:
 
 ```text
-resize := fn(width: Int, height: Int): Int {
+resize := fn (width: Int, height: Int): Int {
     width * height
 }
 
@@ -58,14 +58,14 @@ Names can be resolved statically. This feature need not require a runtime name d
 ## Public names and implementation-local names
 
 ```text
-var area: fn(width: Int, height: Int): Int;
+var area: fn (width: Int, height: Int): Int;
 area = (w, h) { w * h }
 result := area(width = 640, height = 480);
 ```
 
 Recommend obtaining public labels from the caller-visible callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
 
-A full definition such as fn(width: Int, height: Int): Int { ... } supplies the identifier labels used by its selected named calls. Public-label compatibility across stored callable assignment remains open, as do broader parameter-pattern and repeated-name declaration rules. Underscore is an ordinary readable identifier in LiteScript; this review must not silently turn it into an unnamed-input marker.
+A full definition such as fn (width: Int, height: Int): Int { ... } supplies the identifier labels used by its selected named calls. Public-label compatibility across stored callable assignment remains open, as do broader parameter-pattern and repeated-name declaration rules. Underscore is an ordinary readable identifier in LiteScript; this review must not silently turn it into an unnamed-input marker.
 
 Two policies for stored callable compatibility remain open:
 
@@ -148,6 +148,8 @@ Record field declarations require a semicolon between adjacent ordinary fields. 
 These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; stored named/unnamed conversions, complete recursive grammar, and the specifically marked pattern extensions remain open. Named argument support remains a separate capability.
 
 ## A tuple argument versus spreading arguments
+
+The subsequent [array-tail extension](tuple-array-shapes.md#a-declared-variadic-tail-collects-an-array) accepts fixed-array and runtime-array call spread in written evaluation order. Arrays supply unnamed values; fixed tuple labels retain their selected routing. A final declared ...rest: T collects additional positional inputs as an array; without it, excess inputs remain errors. A runtime-array spread after all fixed required inputs are supplied may be empty. Exact runtime routing into missing fixed slots, failure/default behavior, and named-tail supply remain open. No required value is silently manufactured.
 
 Selected by the user, 2026-10-23:
 

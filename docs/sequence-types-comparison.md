@@ -32,7 +32,7 @@ Kotlin distinguishes fixed-size arrays from lists; its collection APIs distingui
 
 ## Recommendation for LiteScript
 
-Start from the Odin/Rust separation of roles: fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. Let beginner code infer ordinary lists. Distinguish compile-time fixed length from runtime fixed length within the array family, without calling both stack arrays. Consider bounded-capacity lists and type-level slice lengths later as library/specialization features.
+Start from the Odin/Rust separation of roles: fixed-length owning arrays, growable owning lists, and borrowed contiguous slices. The selected 2026-10-24 direction lets fresh known-size literals infer fixed arrays and requires explicit growable storage; this supersedes the earlier ordinary-List recommendation. See [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays). Distinguish compile-time fixed length from runtime fixed length within the array family, without calling both stack arrays. Consider bounded-capacity lists and type-level slice lengths later as library/specialization features.
 
 The subsequent [consumer-abstraction direction](collection-abstractions.md) keeps those roles on the provider side. Public algorithms should request traversal or another required capability instead of universally requiring List or Slice. Rust IntoIterator and C++ ranges provide relevant behavioral models; exact LiteScript protocols remain proposals.
 

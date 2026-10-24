@@ -11,7 +11,7 @@ Students can write ordinary code without annotations while the compiler still re
 ```text
 value := expression;
 value: Type = expression;
-function_name := fn(parameter: Type): ResultType { body }
+function_name := fn (parameter: Type): ResultType { body }
 ```
 
 ## Examples
@@ -30,7 +30,7 @@ Inference chooses static types. It does not make a variable dynamically change t
 
 Loop inference is bidirectional: body constraints and the destination's expected type cooperate. In x: Long = loop my_ints { .value + .item }, the destination constrains the loop's value type rather than selecting an unchecked cast after execution. A body containing only .value can also be inferred when the destination supplies its type. With then, the body value type and final result type remain distinct. Numeric compatibility still follows the separately defined arithmetic rules. See [loop type inference](loop-type-inference.md).
 
-A bracket literal without a more specific expected sequence type defaults to growable List: numbers := [1, 2, 3] infers `List<Int>`. Var/mut only changes access permissions, not the inferred family; later append operations must not retroactively turn a fixed array into a list. An explicit expected array type may select fixed layout under the eventual array construction contract. Empty/heterogeneous inference and complete type/literal grammar remain open. See [lists](lists.md) and [sequence storage families](sequence-types.md).
+A fresh nonempty bracket literal with an established element type and statically known length N infers [T; N], unless an expected concrete collection type selects another constructor family. Thus numbers := [1, 2, 3] infers [Int; 3], and known-size array/tuple spreads contribute their lengths. This supersedes the earlier unconditional List default. Var/mut affect permissions, not family or extent; later append operations cannot retroactively make an array growable. Existing providers retain their type and access contract. Empty/heterogeneous and runtime-length spread literals remain open. See [array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 A simple declaration can supply the type without an initializer: x: User; immediately creates its valid language-defined all-zero value, equivalent to x: User = 0. The distinct x: User = {} uses declared defaults. Var x: User; has the writable storage contract var User, whose read value type is User; replacement permission does not turn a read into a writable alias. Omitted inferred declarations still lack a type/source and are rejected. See [zero initialization](zero-initialization.md) and [var access](var-access-qualifier.md).
 
@@ -85,17 +85,17 @@ In value context, (cake, tea) constructs unnamed positional components unless an
 
 ```text
 operation := (x: Int) { x * 3 }
-operation := fn(x: Int) { x * 3 }
+operation := fn (x: Int) { x * 3 }
 /* alternative definitions; one Int input and an inferred Int result */
 
 operation := (x: Float): Float { x * 3 }
-operation := fn(x: Float): Float { x * 3 }
+operation := fn (x: Float): Float { x * 3 }
 /* alternative explicit contracts, checked by ordinary numeric rules */
 ```
 
-The [unified callable model](callable-input-packs.md) uses the same inference with and without `fn`. Input shape and types must be established by annotations, an expected callable contract, or both. The nonrecursive local body can then infer its result; knowing only the shape or result is insufficient to choose unknown input types. Under `operation: fn (Int): Int`, both `(x) { x * 3 }` and `fn(x) { x * 3 }` use that expected contract. Under `operation: fn (Int): Int = fn { arguments.0 * 3 }`, the full implicit input pack is a singleton Int. Independently, headerless fn has Unit inputs, not a guessed generic pack.
+The [unified callable model](callable-input-packs.md) uses the same inference with and without `fn`. Input shape and types must be established by annotations, an expected callable contract, or both. The nonrecursive local body can then infer its result; knowing only the shape or result is insufficient to choose unknown input types. Under `operation: fn (Int): Int`, both `(x) { x * 3 }` and `fn (x) { x * 3 }` use that expected contract. Under `operation: fn (Int): Int = fn { arguments.0 * 3 }`, the full implicit input pack is a singleton Int. Independently, headerless fn has Unit inputs, not a guessed generic pack.
 
-Neither `operation := (x) { x * 3 }` nor `operation := fn(x) { x * 3 }` establishes x's type. Inferring reusable input requirements from body operations remains a separate proposal. The keyword does not grant another inference mode. Parsing recognizes the lambda before checking its destination; a noncallable destination is rejected, not used to choose an immediate-block interpretation.
+Neither `operation := (x) { x * 3 }` nor `operation := fn (x) { x * 3 }` establishes x's type. Inferring reusable input requirements from body operations remains a separate proposal. The keyword does not grant another inference mode. Parsing recognizes the lambda before checking its destination; a noncallable destination is rejected, not used to choose an immediate-block interpretation.
 
 Nonrecursive local literals with established input types have selected [body-result inference](functions.md#independent-lambda-result-inference). Without an explicit or expected result contract, distinct completion payload types form a [normalized plain union](functions.md#mixed-local-result-types): an Int return and String tail infer Int | String. Explicit/expected result types remain constraints, and escaping recoverable errors require an explicit contract. Unknown-input generic inference remains open. [Conditional and match results](branch-result-inference.md) separately have the same selected normalized-union inference.
 

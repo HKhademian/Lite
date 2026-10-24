@@ -117,7 +117,7 @@ See [indexed-sequence contract](indexed-sequence-contract.md#contract-versus-sto
 
 The [sequence-family review](sequence-types.md) distinguishes compile-time inline arrays, runtime-sized fixed array owners, growable list owners, and borrowed slice views. Fixed length does not mandate stack placement. A runtime-sized owner may keep its descriptor inline while managing separately allocated elements. A slice views live initialized elements without an element allocation or copy.
 
-These storage representations are proposals; the growable List default for unannotated bracket literals is selected. Copying an owning descriptor cannot by itself establish two independent allocation owners; list move/clone/share rules and slice lifetime/invalidation need explicit contracts. Do not silently add copy-on-write, reference counting, or heap promotion to satisfy a borrowed-view use. These facilities could be evaluated separately. Full literal inference, type syntax, allocator/failure policy, and exact ABI remain open.
+These storage representations remain proposals. Fresh statically sized bracket literals now infer fixed arrays, superseding the earlier unconditional List default; runtime-array storage and type spelling remain open. Copying an owning descriptor cannot establish two independent allocation owners by itself; list move/clone/share rules and slice lifetime/invalidation still need contracts. Explicit spreads construct compatible shapes without guaranteeing shared layout or zero copying. See [tuple/array shapes](tuple-array-shapes.md).
 
 ## Semantic initialization versus physical writes
 

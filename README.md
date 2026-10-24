@@ -10,6 +10,7 @@ The project is currently **planning only**. These documents record the design di
 - [Principles and goals](docs/principles.md)
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)
+- [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [External references](docs/references.md)
 
 Each concept has its own document containing its purpose, working syntax, examples, constraints, and unresolved details. Earlier alternatives are retained only when they explain a decision or an outstanding choice.
