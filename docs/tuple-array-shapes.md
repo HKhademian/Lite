@@ -54,15 +54,30 @@ max(1, 2, ...extra);
 
 fixed: [Int; 5] = [1, 2, 3, 4, 5];
 max(...fixed, ...extra);   /* rest = [3, 4, 5, ...extra] */
+max(...extra, ...fixed,);  /* also valid: combined length is at least five */
+max(, ...extra, ...fixed,); /* same inputs; optional boundary commas */
 ```
 
 Assume read_numbers returns a readable Int array of runtime-known length. Both required inputs are supplied in max(1, 2, ...extra), so an empty extra is valid. In max(...fixed, ...extra), fixed supplies the two required inputs and contributes its remaining three elements to rest; extra contributes all of its elements afterward. Rest has length 3 plus the runtime length of extra. Evaluate both spread operands once in written order; the retention and storage rules below still apply.
+
+The reversed order max(...extra, ...fixed,) is valid too. Compose the positional input sequence in written order, then route its first two elements to val1/val2 and the remainder to rest. The known five-element contribution proves sufficient total length even though the leading contribution has runtime length. Every possible fixed-slot or tail element has type Int, so this proof covers types as well as count.
+
+Selected future call syntax, clarified by the user: optional leading and trailing boundary commas have no argument meaning. max(, ...extra, ...fixed,) supplies exactly the same entries as max(...extra, ...fixed). These commas do not introduce Unit values, omitted argument slots, defaults, or extra tuple components. Interior commas still separate actual entries; this is not an omitted-argument feature. Empty-list boundary variants and complete recursive grammar remain open; no parser implementation is claimed.
+
+For fixed = [1, 2, 3, 4, 5], the resulting inputs are:
+
+- Empty extra: val1 = 1, val2 = 2, rest = [3, 4, 5].
+- extra = [9]: val1 = 9, val2 = 1, rest = [2, 3, 4, 5].
+- extra = [9, 8]: val1 = 9, val2 = 8, rest = [1, 2, 3, 4, 5].
+- extra = [9, 8, 7]: val1 = 9, val2 = 8, rest = [7, 1, 2, 3, 4, 5].
+
+Fixed-slot value origins may depend on a runtime length while the destination tuple shape and admissibility proof stay static. This does not require constructing an intermediate dynamic-shape tuple or a concatenated array. The compiler must preserve once-per-expression written evaluation order and the selected storage/lifetime contract.
 
 Selected clarification, 2026-10-24: the guaranteed contract is the statically known input tuple shape. The compiler must prove that the composition of supplied arguments satisfies it. This includes coverage of required fixed slots, existing positional/named routing, final surviving slot types and access permissions, and the declared element type of every tail input. Known length alone is not sufficient if types, labels, or permissions are incompatible. Applicable explicitly declared defaults retain their existing role; this rule introduces no implicit argument values.
 
 The proof applies to the supplied argument composition; not every source needs a statically known element count. A runtime-sized array can feed the declared array tail without changing the tuple's fixed shape. Runtime tail length is not a runtime tuple arity or a source of new tuple fields. Exact tail representation and numeric access remain separate questions.
 
-For an ordinary runtime-sized extra with no established sufficient-length proof, max(...extra) and max(1, ...extra) are rejected: the supplied arguments cannot be proven to cover both required fixed inputs. The example max(...fixed, ...extra) is accepted because coverage and element types are provable while extra contributes only to the permitted tail. A runtime arity check is not a substitute for the required compile-time proof. General length-refinement syntax, defaults interacting with spreads, and full mixed named/runtime-spread routing remain open.
+For an ordinary runtime-sized extra with no established sufficient-length proof, max(...extra) and max(1, ...extra) are rejected: the supplied arguments cannot be proven to cover both required fixed inputs. Both orders of the fixed/runtime spread examples are accepted because the complete composition proves coverage and compatible types. A runtime spread need not occur only after the fixed inputs have been filled. A known minimum total length alone does not admit incompatible possible slot types or permissions. A runtime arity check is not a substitute for the required compile-time proof. General length-refinement syntax, defaults interacting with spreads, and full mixed named/runtime-spread routing remain open.
 
 The name rest is a signature declaration; myrest is an implementation-local collector and need not have the same spelling. Use a single trailing declared variadic segment in the forms shown here. Public named routing into a variadic segment, defaults interacting with it, and full mixed named/runtime-spread routing still need formalization.
 
