@@ -51,9 +51,18 @@ In a signature, ...rest: T means zero or more additional inputs, each checked ag
 ```text
 extra := read_numbers();
 max(1, 2, ...extra);
+
+fixed: [Int; 5] = [1, 2, 3, 4, 5];
+max(...fixed, ...extra);   /* rest = [3, 4, 5, ...extra] */
 ```
 
-Assume read_numbers returns a readable Int array of runtime-known length. Both required inputs are already supplied, so an empty extra is valid. A known-size array spread also supplies fixed inputs when its static extent proves enough elements are available, as max(...x) does above. A known insufficient fixed extent is rejected when no applicable declared defaults supply the missing fixed inputs. For a runtime-length spread that must also fill missing fixed inputs, such as max(...extra), the exact runtime arity-check/failure contract remains open. No missing argument is silently synthesized.
+Assume read_numbers returns a readable Int array of runtime-known length. Both required inputs are supplied in max(1, 2, ...extra), so an empty extra is valid. In max(...fixed, ...extra), fixed supplies the two required inputs and contributes its remaining three elements to rest; extra contributes all of its elements afterward. Rest has length 3 plus the runtime length of extra. Evaluate both spread operands once in written order; the retention and storage rules below still apply.
+
+Selected clarification, 2026-10-24: the guaranteed contract is the statically known input tuple shape. The compiler must prove that the composition of supplied arguments satisfies it. This includes coverage of required fixed slots, existing positional/named routing, final surviving slot types and access permissions, and the declared element type of every tail input. Known length alone is not sufficient if types, labels, or permissions are incompatible. Applicable explicitly declared defaults retain their existing role; this rule introduces no implicit argument values.
+
+The proof applies to the supplied argument composition; not every source needs a statically known element count. A runtime-sized array can feed the declared array tail without changing the tuple's fixed shape. Runtime tail length is not a runtime tuple arity or a source of new tuple fields. Exact tail representation and numeric access remain separate questions.
+
+For an ordinary runtime-sized extra with no established sufficient-length proof, max(...extra) and max(1, ...extra) are rejected: the supplied arguments cannot be proven to cover both required fixed inputs. The example max(...fixed, ...extra) is accepted because coverage and element types are provable while extra contributes only to the permitted tail. A runtime arity check is not a substitute for the required compile-time proof. General length-refinement syntax, defaults interacting with spreads, and full mixed named/runtime-spread routing remain open.
 
 The name rest is a signature declaration; myrest is an implementation-local collector and need not have the same spelling. Use a single trailing declared variadic segment in the forms shown here. Public named routing into a variadic segment, defaults interacting with it, and full mixed named/runtime-spread routing still need formalization.
 
