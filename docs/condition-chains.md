@@ -152,6 +152,8 @@ Comparisons themselves introduce no bindings, including every negated comparison
 
 Require the grouped `not (condition)` spelling when negating a matching condition; this does not select an ungrouped `not pattern := source` form. Ordinary expression not, its precedence, and all comparison meanings are unchanged. This form applies to conditional chains and subject-based match guards. Subjectless match headers remain ordinary Boolean expressions without matching-source conditions, including inside not. Stable existing bindings may retain proven types after an early exit, but this never exports names from not; see [early-exit narrowing](type-tests-and-narrowing.md#narrowing-after-early-exits-selected). Logical not subpatterns, broader negative flow, full recursive parsing, ownership, and coverage remain separate contracts.
 
+A failed complete and condition does not prove that each operand failed: value: String and is_special(value) can fail for a String. Later else-if conditions and else receive only justified exclusions of stable existing values; no bindings from that failed chain leak. See [false-branch narrowing](type-tests-and-narrowing.md#false-branches-and-else-if-chains-selected).
+
 ## Ordinary Boolean grouping
 
 An and operand can contain a grouped Boolean expression:
