@@ -54,7 +54,7 @@ The parameter's association with its caller location remains fixed. Assignment t
 
 The qualifier var User does not by itself permit target.age = 20. That changes the held payload, which requires mut access as well. Conversely, mut User permits held-data updates without implicitly authorizing replacement of the caller location.
 
-A received var parameter may forward its existing source-location grant to one nested call with inner(var target). While the nested grant is active, the outer holder cannot independently use that same authority; normal return restores its access to the same location with the nested writes visible. This is a handoff, not grant duplication, extra local var storage, or an escaping reference. Ordinary compatibility/authority checks still apply; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected).
+A received var parameter may forward its existing source-location grant to one nested call with inner(var target). While the nested grant is active, the outer holder cannot independently use that same authority; normal return restores its access to the same location with the nested writes visible. This is a handoff, not grant duplication, extra local var storage, or an escaping reference. Ordinary compatibility/authority checks still apply; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected). After a recoverable failure, the same grant is restored before caller recovery starts, once nested access and applicable callee-side cleanup end; writes remain visible and old refinements are not automatically restored. See [caller recovery](call-replacement-flow.md#recovery-after-a-forwarded-call-selected).
 
 ## Combining permissions
 

@@ -1,6 +1,6 @@
 # Flow types after caller-location replacement
 
-Status: **read/write entry compatibility and basic read-flow invalidation after explicit var calls selected 2026-10-24; write-only access is future work, not a current mode; complete alias/effect rules remain open**.
+Status: **read/write entry compatibility and basic read-flow invalidation, nested forwarding, and caller recovery after explicit var calls selected 2026-10-24; write-only access is future work, not a current mode; complete alias/effect rules remain open**.
 
 ## Declared storage and current reads
 
@@ -84,7 +84,29 @@ Forwarding can nest along a synchronous call chain, with only one active holder 
 
 The nested access cannot outlive the received caller-location access. Do not return, store globally, or capture this temporary grant for later use. Preserve ordinary callee/argument evaluation, side effects, cleanup, and ownership obligations without copying, implicit copy-back, rollback, or a new pointer/runtime representation.
 
-The suspension described here concerns the nested call's active grant; it does not select the exact activation moment during argument evaluation. Callback/reentrancy rules, general alias detection, overlapping fields/indices, and complete borrow/lifetime/exclusivity implementation remain open. This normal-return selection does not establish normal continuation facts on failure/exit paths or define additional recovery/cleanup access rights. Ordinary failure/transfer/cleanup contracts continue to apply, and earlier writes are not silently undone.
+The suspension described here concerns the nested call's active grant; it does not select the exact activation moment during argument evaluation. Callback/reentrancy rules, general alias detection, overlapping fields/indices, and complete borrow/lifetime/exclusivity implementation remain open. Caller recovery after the nested access and applicable callee-side cleanup end is selected [below](#recovery-after-a-forwarded-call-selected). Other failure/exit paths do not establish normal continuation facts; ordinary failure/transfer/cleanup contracts continue to apply, and earlier writes are not silently undone.
+
+## Recovery after a forwarded call selected
+
+Selected on **2026-10-24**: when a forwarded call ends through a recoverable failure, restore the immediate caller's same-location grant after the nested access and applicable callee-side cleanup end, before the caller's recovery handler starts. The handler can then read and write through that restored grant:
+
+```text
+outer := fn(value: var Int): Unit {
+    inner(var value) else {
+        value = 0;
+    }
+
+    value = 7;
+}
+```
+
+Assume inner accepts read/write Int access and has a fallible Unit result covered by this handler. It may write before failing. The handler's assignment is valid because outer has regained its original grant; if the handler completes normally, execution continues to the assignment of 7. An enclosing caller observes the writes to the original location. If recovery instead fails or transfers control outward, that path does not execute the following assignment.
+
+Restoring authority does not restore old contents or old refinements. Earlier writes remain visible; there is no rollback, detached working copy, or implicit copy-back. In this Int-only example, the received contract still justifies Int reads. If a nested call may replace String | Int storage, recovery cannot assume the pre-call String-only fact merely because the call failed. Use only read facts justified after possible writes and cleanup; general failure-path effect inference remains open.
+
+A returned Result failure reaches caller recovery after the callee has returned and ended its access. For a typed panic crossing the call boundary, applicable exited-scope [finally blocks](finally.md) run before the caller's handler, with the grant restored after nested access and callee-side cleanup end. A handler inside inner that recovers while inner continues does not return the grant to outer early. In a deeper forwarding chain, restore each immediate suspended holder only as its child access ends; never reactivate several holders at once.
+
+This selects access at the caller recovery boundary, preserving ordinary recovery, cleanup, result typing, and control transfers. It does not define hard-abort recovery, callback/reentrancy access, exact activation during argument evaluation, general alias enforcement, or a complete unwind/cleanup access model. It creates no write-only mode or final-state guarantee.
 
 ## Helper contracts
 
@@ -152,7 +174,7 @@ Preserve justified facts only while the location stays stable. A possibly replac
 
 The grant designates the supplied location under existing evaluation/lifetime rules. Preserve callee/argument evaluation, caller authority, initialization, var/mut distinctions, cleanup, and ownership obligations. A narrowed read does not change declared accepted writes or grant a new writable alias. Internal Never read compatibility does not bypass these write/access checks.
 
-The same-local duplicate var grant in one call is rejected under the selected single-source rule. Captured writes, shared state, general alias detection/enforcement, callbacks, failure-path facts, and complete exclusivity/effect analysis remain open. This selection concerns explicit caller-location grants, not arbitrary getters or automatic invalidation after every read-only call.
+The same-local duplicate var grant in one call is rejected under the selected single-source rule. Captured writes, shared state, general alias detection/enforcement, callbacks, general failure-path facts beyond the selected caller recovery boundary, and complete exclusivity/effect analysis remain open. This selection concerns explicit caller-location grants, not arbitrary getters or automatic invalidation after every read-only call.
 
 ## Future write-only access
 

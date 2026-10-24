@@ -41,6 +41,10 @@ Type-pattern matching is the selected narrowing capability for these union alter
 
 A fallback returning `Unit` similarly produces `T | Unit`. A declared result type still constrains the expression: an annotation requiring `User` cannot erase a possible `String` or `Unit`. General union grammar, narrowing syntax, common-interface access, ownership, conversions, and representation remain open.
 
+## Caller-location access during recovery
+
+Selected on **2026-10-24**: after a forwarded var call ends, its immediate caller regains the same-location grant before caller recovery begins, once nested access and applicable callee-side cleanup have ended. The handler may read and write through that grant. Restoring access does not undo earlier writes or restore invalidated refinements. Normal handler completion permits the following continuation; an outward failure or transfer does not. Recovery inside the still-active nested callee does not restore the outer holder early. See [recovery after a forwarded call](call-replacement-flow.md#recovery-after-a-forwarded-call-selected) for the example, Result/panic ordering, and remaining scope limits.
+
 ## Reference-language comparisons
 
 ### Rust

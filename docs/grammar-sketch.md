@@ -538,6 +538,8 @@ One source location supplies only one active write grant. Reject two explicit va
 
 A var-qualified parameter can explicitly forward its existing grant to one nested call. The nested active holder temporarily suspends outer access through the same authority; normal return restores the immediate caller's same-location grant with nested writes visible. Preserve read/write compatibility, received authority bounds, evaluation, and nonescaping lifetime; no new production, grant duplication, copy-back, or pointer representation is selected. Exact activation and callback/reentrancy checks remain open; see [nested forwarding](call-replacement-flow.md#nested-forwarding-of-a-write-grant-selected).
 
+When a forwarded call fails, restore the immediate caller's same-location grant after nested access and applicable callee-side cleanup end, before caller recovery starts. Its handler can read/write; earlier writes persist, and pre-call refinements are not automatically restored. Normal handler completion reaches subsequent code; outward failure/transfer does not. Recovery inside the still-active nested callee does not restore the outer grant early. See [caller recovery](call-replacement-flow.md#recovery-after-a-forwarded-call-selected).
+
 These are semantic rules, not consequences of associativity or whitespace. [Evaluation order](evaluation-order.md) records the details and separates them from unchosen argument-passing, aliasing, and cleanup contracts.
 
 ## Open parser interactions
