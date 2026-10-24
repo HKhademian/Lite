@@ -36,7 +36,29 @@ Preserve ordinary callee-first, argument-left-to-right evaluation and select eac
 
 Require a supported proof that entry reads fit after intervening argument effects; invalidate earlier facts where those effects may change the location unless preservation is justified. Continue checking the callee's permitted writes against the caller's declared accepted replacements. Calls whose argument evaluation exits do not reach invocation and retain ordinary failure/exit behavior; no post-call fact is established merely by selecting an argument.
 
-This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. Grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. The later-argument read case is separately allowed below; general grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+
+## Later argument reads of a selected local allowed
+
+Selected on **2026-10-24**: selecting an initialized local for an earlier var argument does not prohibit later supplied argument expressions from reading that local to compute scalar values before invocation:
+
+```text
+add := fn(target: var Int, amount: Int): Unit {
+    target = target + amount;
+}
+
+var count: Int = 10;
+add(var count, count + 1);
+/* After normal return, count is 21. */
+```
+
+Evaluate the callee first. Select count's location once for the first argument, then evaluate count + 1 from its current readable Int value, producing 11. Only after the supplied inputs are prepared does add begin using its granted caller-location access. Its assignment reads 10 through target, adds the supplied 11, and writes 21 to the same count location. The call result is Unit. The computed scalar argument is an ordinary expression result; it does not supply a second write grant or a retained location alias.
+
+This permits the illustrated read while preparing arguments; selecting var count does not begin the callee's body or block that read. Preserve source evaluation order and ordinary expression effects, failures, and exits. If argument evaluation exits, the callee is not invoked. Selecting the location neither freezes its payload nor authorizes reordering or reevaluating that location.
+
+Entry compatibility still holds after all reached argument effects: current reads must fit the var parameter, and its permitted writes must fit the declared caller storage. The earlier String-to-Int invalidation example remains rejected. The same-local duplicate var arguments in one call remain rejected. Reads still require initialized storage and a valid current read proof; reservation alone is insufficient.
+
+This selection covers simple initialized locals and computed scalar arguments. It does not select later writes during argument preparation, field/index overlap, retained read aliases, aggregate input copying/borrowing, callbacks/reentrancy, or a complete grant-activation model. Once the callee's grant is active, the existing single-holder and nested-forwarding suspension rules still apply.
 
 ## Single source write grant selected
 

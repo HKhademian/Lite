@@ -52,6 +52,8 @@ Selected on **2026-10-24**: an earlier var argument's required readable type mus
 
 The selected [single source write-grant rule](call-replacement-flow.md#single-source-write-grant-selected) also rejects f(var x, var x): one underlying local cannot supply two active replacement grants in the same call. This is independent of the entry-type check and preserves single-location semantics without choosing activation timing, copy-back, or runtime alias checks. Broader overlap and alias detection remain open.
 
+For an initialized local and computed scalar argument, selecting an earlier var location permits later ordinary reads before invocation. In add(var count, count + 1) with count initially 10 and add taking var Int plus Int and adding the latter into the former, select count once, compute 11, then invoke and write 21. This grants no second writable alias and does not relax entry-type or definite-initialization checks. Later writes, retained read aliases, and general activation policy remain open. See [later argument reads](call-replacement-flow.md#later-argument-reads-of-a-selected-local-allowed).
+
 ## Named inputs and destination order
 
 Array/fixed-tuple spread evaluates each operand once at its written position, then supplies values in stored order. A declared variadic tail may receive zero elements without constructing a T value. Type-level tuple spread constructs a contract at compile time; it does not evaluate a runtime tuple. Shape inference does not authorize reordering effects, erasing superseded contributions, or assuming zero copies. See [tuple and array shapes](tuple-array-shapes.md).
