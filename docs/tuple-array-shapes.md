@@ -126,6 +126,34 @@ x : (q: Int, w: Int, e: Int, ...rest: Int);
 
 The array-tail capability is not limited to functions. The tuple's fixed component schema is statically described; runtime variability belongs to its declared homogeneous array tail. This does not introduce arbitrary runtime tuple fields, labels, or independently changing component types.
 
+### Construction guarantees the destination type
+
+```text
+Args := type (first: Int, second: Int, ...rest: Int);
+extra := read_numbers();
+fixed: [Int; 5] = [1, 2, 3, 4, 5];
+
+value: Args = (...extra, ...fixed);
+```
+
+Assume extra is a readable runtime-sized Int array. This construction is valid by the same whole-composition proof as the corresponding call: the supplied sequence guarantees enough compatible values for first/second, with the remaining values collected into the declared Int array tail. The resulting value has the statically guaranteed Args tuple type. Which source supplies a fixed slot's value may depend on the runtime length of extra; the slot's declared type and the tuple shape do not. value.rest accesses the named array tail.
+
+Runtime-dependent source routing is not a lack of type/shape knowledge. The compiler must prove that every admitted routing satisfies the destination contract, including final-slot types, permissions, and required fixed coverage. Preserve written-order source evaluation and the selected storage/lifetime rules. Do not introduce implicit tuple defaults, dynamic tuple fields, or an allocation guarantee.
+
+### Rest-only tuples need no fixed components
+
+```text
+OnlyRest := type (...rest: Int);
+named: OnlyRest = (...extra);
+
+a := (...fixed);   /* five statically known unnamed Int components */
+b := (...extra);   /* zero fixed components plus an Int array tail */
+```
+
+A tuple may have an empty fixed prefix and still contain its declared rest array. Therefore b := (...extra) is a valid inference direction once extra's element type is known; it is not rejected merely because the array length is runtime-sized or there is no expected destination. The statically known shape is a rest-only tuple, not a tuple with a runtime-selected number of fixed components. An empty extra produces an empty tail while preserving that same rest-only shape; this does not select identity with Unit or a bare array.
+
+The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. The inferred tail's name, its label-sensitive compatibility with explicitly named schemas, exact representation, and normalization/equivalence with a bare array remain open. named above explicitly establishes the tail name rest through OnlyRest; this example does not invent a member name for b. Multiple rest segments remain a future discussion.
+
 ### Declared names access array tails
 
 The declared rest segment already has a name. For the schema above, x.rest accesses its array tail through ordinary named tuple member access. No new tuple access syntax is needed. After that member access, x.rest[index] is an array-indexing expression: element access, bounds, failures, and permissions follow the array contract. The runtime array length does not introduce additional tuple positions.
@@ -147,7 +175,7 @@ A pattern rest capture preserves unselected fixed components and the existing ta
 
 Ordinary fixed tuples keep their existing pattern-rest rule: zero fixed remaining components give Unit/(), one gives a singleton tuple, and heterogeneous remaining components preserve their individual types and labels. That pattern operation does not become a homogeneous array merely because it uses the same ellipsis marker. A declared ...rest: T array segment and a pattern ...remainder have distinct syntactic roles: one declares accepted input elements, the other collects the source's remainder.
 
-Rest-only and mixed named/positional patterns preserve their existing source-once, no-duplicate-selection, and ownership requirements. Exact coverage without a rest collector remains required. Nested tail composition, tail-only schemas, numeric access to a tail segment, and full header/type/pattern integration remain open. No runtime variable indexing of ordinary tuple components is added; the tail is accessed using its array contract.
+Rest-only and mixed named/positional patterns preserve their existing source-once, no-duplicate-selection, and ownership requirements. Exact coverage without a rest collector remains required. Rest-only tuple schemas and runtime-array construction inference are selected above; tail-only normalization, nested tail composition, numeric access to a tail segment, and full header/type/pattern integration remain open. No runtime variable indexing of ordinary tuple components is added; the tail is accessed using its array contract.
 
 ## Known-size arrays and fixed tuples can construct each other
 

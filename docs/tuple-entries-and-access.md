@@ -46,6 +46,8 @@ The 2026-10-24 [type/array shape extension](tuple-array-shapes.md) selects tuple
 
 Declared rest segments already have names: mytuple.rest uses ordinary named member access to obtain that array. A following mytuple.rest[index] is array access, whose bounds, failures, and permissions belong to the array contract rather than tuple-position access. This clarification adds no numeric slot/component-count rule for the tail and does not select multiple rest segments. See [declared tail names](tuple-array-shapes.md#declared-names-access-array-tails).
 
+A rest-only tuple has zero fixed components and an array tail; this is a valid static shape. Spreading a runtime-sized array with an established element type into (...extra) can infer that shape without an expected destination. An expected tuple schema can also establish a fixed prefix plus tail when the supplied composition provably satisfies it, even if fixed-slot value origins depend on runtime lengths. Inferred tail names, exact numeric exposure, and identity with a bare array remain open. See [rest-only construction](tuple-array-shapes.md#rest-only-tuples-need-no-fixed-components).
+
 ## Empty tuple and Unit selected
 
 Selected by the user, 2026-10-22: Unit is the zero-component tuple, with () as an equivalent value/type spelling. This is identity, not a conversion or another union case. Unit | () normalizes to Unit. The singleton (Unit,) still contains one component and is a distinct product shape. Empty tuple access .0 is rejected at compile time. Call argument lists and lambda headers retain their own syntactic roles; f() passes zero arguments while f(()) explicitly passes one Unit value. A Unit parameter still needs an argument or applicable declared default. See [Unit](unit.md).

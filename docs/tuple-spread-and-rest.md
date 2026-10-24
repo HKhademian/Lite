@@ -249,6 +249,8 @@ The result has three positions with Int, String, and Bool types respectively. Sp
 
 Fixed tuple construction requires statically known component counts. Explicit fixed-array spread is now selected: a [T; N] operand contributes N unnamed T components. A runtime-length array may supply a declared homogeneous tail, but cannot manufacture an unknown number of fixed tuple fields. Ordinary fixed-tuple pattern rest preserves its structural tuple remainder. List, set, and generator adaptation remain separate contracts; see [tuple/array shapes](tuple-array-shapes.md).
 
+Ordinary tuple construction also accepts runtime-sized spreads against an established tuple schema when the whole supplied composition proves its fixed-slot and array-tail contract. Runtime-dependent value origins do not change the guaranteed destination type. Without an expected schema, (...extra) for an established runtime-sized T array infers a rest-only tuple: zero fixed components plus an array tail of T. This is a statically known shape, not dynamic tuple arity. Tail-name inference and equivalence with a bare array remain open; see [destination guarantees](tuple-array-shapes.md#construction-guarantees-the-destination-type) and [rest-only tuples](tuple-array-shapes.md#rest-only-tuples-need-no-fixed-components).
+
 ## Evaluation and placement
 
 Evaluate tuple entries from left to right. Evaluate each spread operand once, then insert its components in their original positional order. A nested tuple remains one component unless its expression is explicitly spread.
