@@ -32,7 +32,7 @@ match target {
 }
 ```
 
-Assume User.active and permitted produce Bool and greet returns Unit. The initial type pattern still supplies user before the guard runs. Removing the leading and changes no evaluation, scope, precedence, binding join, narrowing, or arm-selection behavior. An empty guard or stacked/interior extra leaders are invalid. This does not add leading or to the initial arm-pattern alternatives or to subjectless Boolean match headers. See [optional leading separators](leading-separators.md), selected 2026-10-24.
+Assume User.active and permitted produce Bool and greet returns Unit. The initial type pattern still supplies user before the guard runs. Removing the leading and changes no evaluation, scope, precedence, binding join, narrowing, or arm-selection behavior. An empty guard or stacked/interior extra leaders are invalid. Initial arm-pattern alternatives do not gain a leading or. Subjectless match Boolean headers independently share the ordinary Boolean-expression prefix rule, without gaining pattern bindings. See [optional leading separators](leading-separators.md), selected 2026-10-24.
 
 ## Binding visibility and simple arms
 

@@ -94,6 +94,8 @@ Left-to-right order does not force evaluation of skipped expressions:
 
 The selected [optional leading separators](leading-separators.md) add no evaluation step: if and a and b evaluates exactly like if a and b, and if or a or b evaluates exactly like if a or b. The leading token is not a synthetic true/false operand or empty alternative. Existing condition-pattern binding and narrowing flow likewise remain unchanged.
 
+The same prefix rule in ready := and a and b; computes and stores one Bool when that initializer executes. It does not store a deferred condition. In loop and a and b { body }, the loop's existing Bool-source contract reevaluates the expression before every body entry, preserving short-circuiting on each check. Subjectless match Boolean headers retain their existing once-when-reached evaluation. Prefix punctuation selects none of these evaluation frequencies.
+
 The effect and overload rules for Boolean operators remain open. They cannot be used to infer eager evaluation of an otherwise skipped operand.
 
 ## Assignment targets

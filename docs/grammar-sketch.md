@@ -311,8 +311,8 @@ conditional := [tag] "if" condition block
                [ finally_clause ]
 conditional_then := "then" block
 
-condition := [leading_condition_separator] or_condition
-leading_condition_separator := "and" | "or"
+condition := [leading_logical_separator] or_condition
+leading_logical_separator := "and" | "or"
 or_condition := and_condition { "or" and_condition }
 and_condition := condition_operand { "and" condition_operand }
 condition_operand := condition_boolean_operand | existing_name_type_test
@@ -330,7 +330,7 @@ value_match_pattern := "==" pattern_value_operand
 typed_binding_pattern := identifier ":" type
 ```
 
-The optional leading and/or belongs only to a complete condition or explicitly parenthesized condition group. Remove it before applying the ordinary precedence and binding rules; it creates no true/false operand or empty alternative. Require at least one real operand and reject stacked, interior, or trailing separators: if and a and b is valid, while if or and a and if a or and b are invalid. The same condition production is used after else if and in subject-based match guards. This does not change ordinary Boolean expression, loop-header, subjectless-match-header, or pattern-alternative grammar. See [optional leading separators](leading-separators.md).
+The optional leading and/or belongs to a complete condition entry, including an explicitly parenthesized condition group. Remove it before applying ordinary precedence and binding rules; it creates no true/false operand or empty alternative. Require at least one real operand and reject stacked, interior, or trailing separators: if and a and b is valid, while if or and a and if a or and b are invalid. The same condition production is used after else if and in subject-based match guards. Ordinary Boolean expressions now admit the same prefix at complete expression entries under the logical-expression fragment below, including initializers, loop sources, and subjectless match Boolean headers. This does not add leading or to pattern alternatives. The condition_boolean_operand placeholder must not admit another bare leading separator after an outer condition prefix or an interior operator; explicitly grouped conditions establish their own entry. See [optional leading separators](leading-separators.md).
 
 The := separator belongs to pattern_condition, not to pattern. Therefore the same case/value-test pattern appears as `if .Some(== outValAge) := find_user_age(id)` or directly as `.Some(== outValAge) { ... }` in a match arm. Typed conditions use the separate selected identifier : type = source form; identifier : type := source is rejected by the same inferred_source_pattern restriction as ordinary declarations. Nested typed constraints remain valid, as in `if .Some(age: Int) := source`. Bare .Some in a pattern is now selected to test only the tag with no payload binding; arbitrary refutable receiver patterns still need a mismatch contract. See the [operator-placement audit](pattern-contexts.md#operator-placement-audit).
 
@@ -366,6 +366,8 @@ boolean_match_arm := boolean_match_header block { ";" }
 boolean_match_header := boolean_match_expression | "_"
 contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
+
+The ordinary Bool-valued boolean_match_expression entry admits the selected single optional leading and/or, as in and connected and permitted { body }, using the same expression-entry fragment as an initializer or Boolean loop source. It gains no condition-pattern binding. The initial/nested alternative_pattern productions retain their separate nonempty pattern grammar and gain no leading or.
 
 Initial subject-based arm_pattern alternatives share the once-evaluated subject and try left to right. After per-alternative ordered shadowing, collect the union of their final visible binding-name sets; missing names contribute Unit to the shared guard/body bindings. Each shared guard/body name has the normalized union of its possible final binding types, including Unit for absent alternatives: Email(String) and Sms(PhoneNumber) alternatives binding address give String | PhoneNumber. Differently named Email(email)/Sms(phone) alternatives instead give email: String | Unit and phone: PhoneNumber | Unit, initializing the absent name with Unit rather than reading an outer binding. The same payload-or-Unit join now applies to complete condition/guard alternatives; neither context requires identical name sets. A distinct numeric-representation PhoneNumber is not replaced with Number; transparent aliases resolve normally. Failed alternatives leak no bindings and failures remain failures. The repeated or production permits any finite number of initial alternatives. The if separator starts one shared guard after the whole pattern section: stop at the first successful initial pattern, evaluate the shared guard once, and on complete guard failure continue to the next arm without retrying any initial alternatives. Ordinary and/or precedence applies inside the guard, not across the if separator. Nested constructor/tuple component alternatives are selected as described below. See [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 
@@ -444,6 +446,8 @@ As is selected spelling for a single optional item name; the earlier colon alter
 Every loop owns .item, .index, .count, and typed .value metadata, subject to phase availability. Index is zero-based traversal position; count is entered-iteration count. Value is zero-initialized before iteration and internally replaced by a completed tail expression, continue value, or break value. Plain continue and bare break preserve it. The old .acc/Option accumulator and previous-value slots are retired. See [loop value](loop-value.md) for typing and zero rules.
 
 Source type selects Boolean reevaluation or iterable evaluation-once. Omitted source means unconditional iteration. There is no post-condition production. Count and value can be read before the first condition, in the body, and in then. Item/index are available during active iterations and as last-visited metadata in then, not in source/condition evaluation. With zero body entries, then exposes typed zero placeholders for item/index and count 0; completion retention is field-sensitive, so unused last-item state need not be retained.
+
+A source uses the selected complete-expression leading-separator rule: loop and running and remaining > 0 { body } needs no parentheses and has the same reevaluated Bool source as the form without the first and. The source begins after loop and ends at the established body boundary; newlines do not delimit it. A leading and/or requires Bool, does not coerce an iterable, and requires a real operand. Header pattern bindings are not added. See [leading Boolean loop sources](leading-separators.md#boolean-loop-sources).
 
 Then retains the same owning loop context, including on untagged loops, and follows ordinary final-expression rules. When both completion and cleanup hooks are present, `then` finishes before `finally`; successful cleanup preserves the result and cleanup does not recover failures. Cleanup-failure precedence is selected; exact attachment syntax/scope and aggregate handling remain open. Separate loop empty-else and completion-receiver forms are superseded. Body-wide recovery/cleanup sections remain [deferred](deferred-cleanup-and-resources.md); external whole-loop error handlers remain retired.
 
@@ -531,6 +535,7 @@ See [Result and errors](result-and-errors.md) and [panics](panics.md).
 ## Logical grouping
 
 ```text
+logical_expression := [leading_logical_separator] logical_or
 logical_or  := logical_and { "or" logical_and }
 logical_and := logical_not { "and" logical_not }
 logical_not := "not" logical_not | comparison
@@ -540,7 +545,9 @@ comparison_operator := "==" | "=!=" | ">" | ">!" | "<" | "<!"
                      | ">=" | ">!=" | "<=" | "<!="
 ```
 
-These are ordinary Boolean expression productions. Optional leading and/or is selected separately at the complete condition boundary above; do not put an optional prefix on logical_and, logical_or, and_condition, or or_condition. Doing so would admit stacked/interior leaders that the selected rule rejects. Leading condition punctuation does not change this precedence ladder or introduce unary logical operators.
+The logical_expression fragment is selected at complete ordinary expression entries: initializers after := or =, supplied argument/return/tail expressions, Boolean loop sources, subjectless match Boolean headers, and explicit expression grouping. With a leading and/or, require the resulting expression to be Bool; without one, existing expression typing is unchanged. This is an entry fragment, not a completed expression grammar. The prefix is recognized syntactically, not by type-check success. Ordinary declarations and Boolean loop headers need no additional parentheses: ready := and a and b; and loop and a and b { body } use their existing item/body delimiters.
+
+Keep logical_or, logical_and, logical_not, or_condition, and and_condition unprefixed. Interior operands use that unprefixed ladder; only an explicit group or another independently established complete expression position opens a new entry. Do not admit stacked leaders, if a or and b, or ready := not and a. Condition entries use their own single optional prefix rather than nesting another logical_expression prefix at the same boundary. Pattern-source/comparison-pattern operand delimiters retain their separate restrictions. The leading token changes neither precedence nor short-circuiting and adds no unary logical operator or binding-producing value expression.
 
 All ten comparison operators share exactly this one precedence level, binding more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Negated operators complement one corresponding positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Recognize the longest comparison token in expression context; grammatical type context retains the selected attached type-suffix/initializer boundary. Parentheses establish separate comparisons when required. All ten nonbinding comparison-pattern prefixes are selected separately; that does not add implicit-subject pattern chains.
 

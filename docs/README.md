@@ -31,16 +31,16 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
-- [Optional leading separators](leading-separators.md): selected leading and/or at complete condition/group boundaries and | on nonempty plain-union chains; equivalent compact forms, unchanged precedence/effects/bindings, invalid separators, and conditional future leading-& support.
+- [Optional leading separators](leading-separators.md): selected leading and/or at complete Boolean-expression/condition boundaries, including unparenthesized initializers and Boolean loop sources and | on nonempty plain-union chains; equivalent compact forms, unchanged precedence/effects/bindings, invalid separators, and conditional future leading-& support.
 - [Comments](comments.md): nested comments, raw fences, and delimiter errors.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
-- [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, independent `var`/`mut` capabilities, and declared replacement contracts versus flow-sensitive read types.
+- [Declarations and assignment](declarations-and-assignment.md): `:=`, unparenthesized Boolean initializers with optional leading and/or, explicit types, independent `var`/`mut` capabilities, and declared replacement contracts versus flow-sensitive read types.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
-- [Operators](operators.md): arithmetic, comparison, logical operations, optional leading condition separators, and unchanged precedence.
+- [Operators](operators.md): arithmetic, comparison, logical operations, optional leading Boolean-expression/condition separators, and unchanged precedence.
 - [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
@@ -154,11 +154,11 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Conditional pattern chains](condition-chains.md): and chains, optional leading and/or without extra operands, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, failure-path narrowing of stable existing bindings into later or operands and their successful-path joins, concise Boolean/type-test negation under not/and/or precedence, and grouped source-pattern negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, optional leading and/or, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
-- [Match](match.md): subject-based arms, nested constructor/tuple or patterns with local first-success, and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
+- [Match](match.md): subject-based arms, nested constructor/tuple or patterns with local first-success, and selected subjectless Boolean selection with optional leading and/or and an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
-- [Loops](loops.md): Boolean, iterable, and unconditional sources.
+- [Loops](loops.md): Boolean, iterable, and unconditional sources, with optional leading and/or on unparenthesized Boolean sources.
 - [Loop examples](loop-examples.md): worked loops with one optional item name, metadata state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
 - [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.value on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.

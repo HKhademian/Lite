@@ -18,6 +18,20 @@ var name: mut Type = initializer;
 name = replacement;
 ```
 
+## Boolean initializers with a leading separator
+
+A complete Boolean initializer may begin with one optional `and` or `or` without enclosing parentheses:
+
+```text
+ready :=
+    and connected
+    and authenticated
+    and permitted
+;
+```
+
+Assume the three inputs are Bool. This infers Bool and evaluates exactly like ready := connected and authenticated and permitted;. The semicolon ends the ordinary declaration item regardless of line placement; newlines do not terminate or group the expression. A typed initializer after = or an assignment's replacement expression uses the same rule. A prefixed initializer requires a real operand and must type-check as Bool; no implicit operand, reevaluation, or condition-pattern binding is added. See [optional leading separators](leading-separators.md#boolean-values-without-extra-parentheses), selected 2026-10-24.
+
 ## Multi-member union initialization
 
 [x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice): an undirected zero request must not choose among distinct normalized members. Use = ? for explicit reservation, or supply an initialized compatible expression. A{} names a record member and applies its defaults; the proposed A{0} spelling would name and zero that member. Bare local multi-member union declarations are rejected: require an initialized expression or explicit = ?. Apply after alias resolution/normalization; the general omitted-initializer rule below has this selected exception.

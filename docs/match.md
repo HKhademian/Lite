@@ -10,7 +10,7 @@ Select behavior by variant, type, or destructured data with a subject, or by Boo
 
 Required capabilities are equality selection, conventional payload-free enums, enums with associated values, destructuring, and type checking/narrowing. See [match pattern capabilities](match-patterns.md) for the five categories and their distinctions. Guards introduced by if, with and-chained Boolean tests and additional pattern matches, are selected too; see [match arm chains](match-guards.md).
 
-Subject-based guards share the selected [optional leading condition separator](leading-separators.md): pattern if and ready and permitted { body } has the same meaning as the form without the first and. This does not add leading or to the initial pattern alternatives or to subjectless Boolean expression headers.
+Subject-based guards share the selected [optional leading condition separator](leading-separators.md): pattern if and ready and permitted { body } has the same meaning as the form without the first and. This does not add leading or to initial pattern alternatives. Subjectless Boolean expression headers share the ordinary Boolean-expression prefix rule separately.
 
 ```text
 match expression {
@@ -38,6 +38,8 @@ match {
 Assume compatible equality operands, an existing Bool isUserSigned, and Unit-producing handlers. Each reached condition evaluates once, in source order. False continues to the next arm. Execute only the first true arm's body, then finish the match without fallthrough; later conditions and bodies do not run. Ordinary Boolean and/or/not and comparison chains retain their expression precedence and short-circuiting. Effects already performed remain; failures and explicit exits keep their ordinary meaning instead of becoming false.
 
 The absence of a subject selects expression headers. `isUserSigned` reads an existing Bool; it does not bind a new name. `_ready` would likewise read an existing Bool. There is no implicit subject or capture binding. Binding-producing pattern-condition headers and an additional pattern-arm if separator are not added by this selection; combine ordinary Boolean tests with and/or instead.
+
+A complete Boolean header may start with one optional and/or under the [leading-separator rule](leading-separators.md#boolean-values-without-extra-parentheses). For example, and connected and permitted { allow() } tests exactly connected and permitted. The arm's body-opening brace establishes the header boundary without extra parentheses; indentation does not. Each reached header is still evaluated only once for that selection attempt, and no pattern name is introduced. Initial patterns in subject-based matching retain their separate alternative grammar.
 
 A header consisting solely of `_` is the unconditional fallback in this subjectless form. It introduces no binding because there is no supplied subject. `_` inside another expression retains ordinary identifier lookup. In subject-based matching, `match value { _ { ... } }` still binds the whole subject to readable unused-allowed `_`; its selected pattern meaning is unchanged. Put a subjectless fallback last: if it appears earlier, it selects when reached and makes later arms unreachable.
 

@@ -1,6 +1,6 @@
 # Loops
 
-Status: **one keyword, three source modes, one optional item name, and metadata-only state selected; full protocol/inference contracts open, updated 2026-10-19**.
+Status: **one keyword, three source modes, one optional item name, and metadata-only state selected; optional leading and/or on unparenthesized Boolean sources selected 2026-10-24; full protocol/inference contracts open**.
 
 ## Template
 
@@ -45,6 +45,19 @@ total := @bounded loop @bounded.count < 10 and @bounded.value < 30 {
 ```
 
 The numeric body establishes the loop value type; complete circular/expected-type inference remains to formalize.
+
+A Boolean source may use the selected optional leading and/or without parentheses:
+
+```text
+loop
+    and running
+    and remaining > 0
+{
+    process_next()
+}
+```
+
+Assume running is Bool, remaining is Int, and process_next returns Unit and may update the state read by the source. Removing the leading and gives exactly the same reevaluated, short-circuit Boolean source. The loop keyword and body-opening brace establish the header boundaries; line breaks do not. A bare leader is not an omitted source, and an iterable cannot be coerced into this Bool expression. No pattern bindings or additional metadata are introduced. See [leading Boolean loop sources](leading-separators.md#boolean-loop-sources), selected 2026-10-24.
 
 ### Unconditional
 

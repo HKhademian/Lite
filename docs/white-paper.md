@@ -118,7 +118,7 @@ A person or agent reading a function should be able to identify its inputs, outp
 
 The design should favor visible contracts, consistent composition, explicit effects, and diagnostics that explain the cause of a problem and the action needed to fix it. Formatting should be consistent and preserve meaning. Names and types should carry useful information without forcing a reader through layers of generated or implicit behavior.
 
-Conciseness can coexist with optional redundancy that makes code pleasant to write and edit. The selected [leading-separator rule](leading-separators.md) allows every condition or union entry to start with its separator, including the first, while preserving exactly the compact form's meaning. Explicit tokens, rather than line layout, still establish the boundaries.
+Conciseness can coexist with optional redundancy that makes code pleasant to write and edit. The selected [leading-separator rule](leading-separators.md) allows every Boolean-expression, condition, or union entry to start with its separator, including the first, while preserving exactly the compact form's meaning. Explicit tokens, rather than line layout, still establish the boundaries.
 
 This also supports teaching. A beginner can start with values, inferred bindings, calls, conditions, and loops, then learn explicit mutation, absence, failures, and stronger library contracts as the problem requires them. More advanced use retains the same basic model.
 

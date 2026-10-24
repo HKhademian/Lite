@@ -1,6 +1,6 @@
 # Operators
 
-Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions selected 2026-10-24; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
 
 ## Working operator set
 
@@ -80,11 +80,11 @@ To negate only `a` before comparing:
 
 The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
-## Optional leading condition separators selected
+## Optional leading logical separators selected
 
-A complete condition or explicitly parenthesized condition group may start with one optional `and` or `or`, selected 2026-10-24. For example, if and a and b is equivalent to if a and b, and if or a and b or c is equivalent to if (a and b) or c. The leading token is presentation punctuation, not a unary operator or implicit Boolean operand. Normal not/and/or precedence, short-circuiting, effects/failures, bindings, and narrowing remain unchanged.
+A complete Boolean expression or condition may start with one optional `and` or `or`, selected 2026-10-24. For example, if and a and b is equivalent to if a and b, and if or a and b or c is equivalent to if (a and b) or c. An initializer such as ready := and a and b; and a Boolean loop source such as loop and a and b { body } need no extra parentheses. An explicitly grouped expression/condition also establishes its own entry. The leading token is presentation punctuation, not a unary operator or implicit Boolean operand. Normal not/and/or precedence, short-circuiting, effects/failures, bindings, and narrowing remain unchanged.
 
-Require at least one real operand. Reject stacked leaders, an extra leader after an interior operator, and trailing operators. This selection covers if/else-if conditions and subject-based match guards that reuse condition grammar; ordinary Boolean value expressions, loop headers, subjectless match headers, and pattern alternatives are unchanged. Leading | is selected separately in plain-union type context; leading & awaits intersection-type selection. See [optional leading separators](leading-separators.md) for examples and boundaries.
+Require at least one real operand and Bool typing for a prefixed ordinary value expression, even a singleton. Reject stacked leaders, an extra leader after an interior operator, and trailing operators. This selection covers ordinary Boolean expressions, Boolean loop sources, subjectless match Boolean headers, if/else-if conditions, and subject-based match guards. Ordinary value positions gain no condition-pattern bindings, and initial/nested pattern alternatives gain no leading or. Existing item/header delimiters apply independently of line layout. Leading | is selected separately in plain-union type context; leading & awaits intersection-type selection. See [optional leading separators](leading-separators.md) for examples and boundaries.
 
 ## Negation scope in conditions selected
 
