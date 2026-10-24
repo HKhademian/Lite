@@ -165,7 +165,7 @@ The resulting LiteScript proposal, examples, and unresolved name-resolution rule
 
 ## Remaining decisions
 
-1. **Irrefutable conditions: selected.** Allow them and warn when the complete matching condition is provably always successful; an irrefutable prefix followed by a potentially false test does not itself trigger the warning. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness. Exact diagnostic controls and broader impossible/unreachable analysis remain open; see [selected policy](conditionals.md#irrefutable-pattern-conditions-selected).
+1. **Irrefutable conditions: selected.** Allow them and warn when the complete matching condition is provably always successful; an irrefutable prefix followed by a potentially false test does not itself trigger the warning. `Some(false)` still matches `Some(flag)`; matching does not test payload truthiness. Provably constant existing-name type tests are separately allowed with warnings; see [constant type tests](type-tests-and-narrowing.md#provably-constant-type-tests-selected). Exact diagnostic controls and broader impossible-pattern/unreachable analysis remain open; see [selected policy](conditionals.md#irrefutable-pattern-conditions-selected).
 2. Decide whether a separate else fallback convenience remains alongside the ordinary `_` catch-all binding pattern.
 3. Complete guard effects/ownership, overlap, unreachable arms, and exhaustive coverage for closed unions versus open interfaces.
 4. Define nested patterns, exact-type versus subtype matching, and borrowing/moving/copying.

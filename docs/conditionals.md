@@ -181,6 +181,8 @@ Supported false-path facts also carry into a later or operand: with a stable Str
 
 Concise negation of Boolean operands and existing-name tests is selected: if not value: String means if not (value: String). Not binds more tightly than and, which binds more tightly than or, so if not blocked or trusted and ready means (not blocked) or (trusted and ready). Negating a source-pattern condition still requires parentheses, including typed source bindings. See [condition negation scope](operators.md#negation-scope-in-conditions-selected).
 
+Well-formed existing-name type tests remain valid when proven always true or always false, with a warning for the constant test. For text: String, text: String always matches and text: Int never matches when String/Int are disjoint. Unknown names/types and other invalid expressions remain errors; general unreachable-code analysis is separate. See [constant type tests](type-tests-and-narrowing.md#provably-constant-type-tests-selected).
+
 ## Pattern conditions
 
 ```text
@@ -239,7 +241,7 @@ if flag := check_ready() and flag {
 
 Assume check_ready returns Bool and use/proceed return Unit. The source is evaluated once when reached, the pattern binds its result, and the later Boolean operand tests flag. Since that operand can reject the complete condition, the binding prefix alone does not trigger the always-success warning. This keeps matching and Boolean testing explicit and preserves ordinary and/or precedence, short-circuiting, shadowing, and successful-condition scope.
 
-Warn when the complete matching condition is provably always successful, rather than warning for every irrefutable operand inside a condition that can still fail. The standalone binding example requires that warning; this does not require deciding arbitrary predicates, solving all coverage, or issuing the warning when success cannot be proven. Exact diagnostic wording, suppression controls, always-false diagnostics, and general unreachable-code analysis remain open.
+Warn when the complete matching condition is provably always successful, rather than warning for every irrefutable operand inside a condition that can still fail. The standalone binding example requires that warning; this does not require deciding arbitrary predicates, solving all coverage, or issuing the warning when success cannot be proven. Provably constant existing-name type tests have a separate warning policy, even within a larger condition. Exact diagnostic wording, suppression controls, broader always-false diagnostics, and general unreachable-code analysis remain open; see [constant type tests](type-tests-and-narrowing.md#provably-constant-type-tests-selected).
 
 Normal success is distinct from source failure or an explicit exit. Such outcomes retain their ordinary behavior; they do not become pattern mismatch or successful selection. Preserve all reached-source effects and ownership/cleanup obligations even when the match itself cannot fail. Names remain local to the condition's successful scope; no names escape into else or following code. This policy also applies to matching conditions inside subject-based match guards. It adds no binding-producing headers to subjectless match and no new pattern placement in loop/parameter/receiver headers. Ordinary declarations keep their existing irrefutability requirement.
 
