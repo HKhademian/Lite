@@ -35,7 +35,7 @@ _ := myfn(0); // supplied a = 0; zero callable returns .ok(0)
 
 myfn = fn(a: Int): Int! {
     a + 1
-};
+}
 
 _ := myfn(0); // supplied a = 0; replacement returns .ok(1)
 _ := myfn(5); // supplied a = 5; replacement returns .ok(6)
@@ -184,7 +184,7 @@ For LiteScript, the most directly relevant precedents are Rust's generally usabl
 
 ```text
 myfn = a => a + 1;
-myfn = a => { a + 1 };
+myfn = a => { a + 1 }
 
 doubled := map(numbers, n => n * 2);
 positive := filter(numbers, n => n > 0);
@@ -386,18 +386,18 @@ An expected callable supplies omitted types; annotations can instead establish i
 
 ```text
 myfn = => a + 1;
-myfn = => { a + 1 };
+myfn = => { a + 1 }
 ```
 
 The expected signature supplies both parameter types and the name `a`. The arrow marks a function boundary with little repeated syntax. This makes signature parameter names significant to implementation scope: renaming them or introducing a same-named enclosing local needs a precise rule. In map/filter calls, the programmer would need the callback parameter names supplied by the API, or a separately designed implicit-name convention. Parameter-name identity in callable types is still open.
 
-A further reduction, `myfn = { a + 1 };`, also inherits parameter names and would make expected type decide whether ordinary executable braces describe immediate work or a deferred function body. That would need an explicit revision to the current block rules and is not the recommended starting point.
+A further reduction, `myfn = { a + 1 }`, also inherits parameter names and would make expected type decide whether ordinary executable braces describe immediate work or a deferred function body. That would need an explicit revision to the current block rules and is not the recommended starting point.
 
 ### E. Pipe-delimited local parameter names
 
 ```text
 myfn = |a| a + 1;
-myfn = |a| { a + 1 };
+myfn = |a| { a + 1 }
 doubled := map(numbers, |n| n * 2);
 positive := filter(numbers, |n| n > 0);
 ```
