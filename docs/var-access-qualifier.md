@@ -37,6 +37,8 @@ Selected on **2026-10-24**: a tracked direct local assignment may narrow the cur
 
 Selected on **2026-10-24**: caller-location calls check current readable possibilities against the parameter's read type and its possible replacements against the source's declared writes. Var String reads and writes String. For String | Int storage reading Int, a wide replacement call can leave String | Int, an Int-only call is valid and leaves Int, and a String-only call is rejected. No write is required to preserve a valid single-member input; the qualifier is not output-only. Write-only access is future work, not selected now; see [call replacement flow](call-replacement-flow.md).
 
+One source location cannot duplicate its active write grant into two var parameters. Repeated explicit var arguments to the same local in one call are rejected even when their parameter types are identical or a particular body does not write. This selects the known same-local case; broader alias/overlap enforcement and activation timing remain open. See [single source write grant](call-replacement-flow.md#single-source-write-grant-selected).
+
 ## Local implementation details stay in the body
 
 ```text

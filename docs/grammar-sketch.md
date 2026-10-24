@@ -534,6 +534,8 @@ Ordinary operator operands evaluate left to right after grouping is determined. 
 
 At invocation after all reached supplied arguments, earlier var locations must still have justified readable types fitting their parameters. A later argument that changes selected String | Int storage from String to Int prevents a var String call, even though the location initially fit and the write itself was allowed. Preserve single selection and source evaluation order; this is a static type obligation, not runtime checking or a selected borrow-activation policy. See [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected).
 
+One source location supplies only one active write grant. Reject two explicit var arguments referring to the same local in one call, even if the parameter types are identical; distinct local locations are not duplicates merely because their stored values are equal. This known-overlap check adds no new call syntax, snapshots, copy-back, or runtime alias check. Broader path/field/index overlap and grant activation remain open; see [single source write grant](call-replacement-flow.md#single-source-write-grant-selected).
+
 These are semantic rules, not consequences of associativity or whitespace. [Evaluation order](evaluation-order.md) records the details and separates them from unchosen argument-passing, aliasing, and cleanup contracts.
 
 ## Open parser interactions

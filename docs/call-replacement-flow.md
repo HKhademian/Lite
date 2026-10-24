@@ -36,7 +36,30 @@ Preserve ordinary callee-first, argument-left-to-right evaluation and select eac
 
 Require a supported proof that entry reads fit after intervening argument effects; invalidate earlier facts where those effects may change the location unless preservation is justified. Continue checking the callee's permitted writes against the caller's declared accepted replacements. Calls whose argument evaluation exits do not reach invocation and retain ordinary failure/exit behavior; no post-call fact is established merely by selecting an argument.
 
-This selects a necessary type-safety condition at invocation. It does not choose when borrows activate, an exclusivity implementation, or the full legality of overlapping/callback/aliased accesses. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+This selects a necessary type-safety condition at invocation. The same-local duplicate var-grant case is separately rejected below. Grant/borrow activation, an exclusivity implementation, and broader overlapping/callback/alias checks remain open. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+
+## Single source write grant selected
+
+Selected on **2026-10-24**: one underlying source location supplies only one active write grant. A call cannot duplicate that grant into two var parameters. In particular, reject two explicit var arguments identifying the same local binding in one call:
+
+```text
+change := fn(a: var String, b: var (String | Int)): Unit {
+    b = 42;
+    print_text(a);
+}
+
+var x: String | Int = ?;
+x = "ready";
+change(var x, var x); /* Rejected: the same source would supply two write grants. */
+```
+
+Assume print_text accepts String and returns Unit, and the named types are distinct. Both arguments satisfy their separate entry-type and accepted-write checks initially. But if they received the same location, writing Int through b would invalidate a's promised readable String. A single-source write grant cannot be duplicated to create those simultaneous parameter accesses.
+
+Reject the repeated grant even when both parameter value types are identical or the current function body happens not to write. The rule concerns source-location write authority, not just finding a conflicting assignment in a particular body. Compare local binding/location identity, not equal stored values or only textual names. Two distinct local locations can each supply their own grant; this restriction alone does not reject them, though all ordinary compatibility rules still apply.
+
+Do not silently clone/detach a value, create independent copy-back parameters, arbitrate write-back order, or add a runtime alias check to make the rejected call work. Preserve caller-location replacement semantics and existing evaluation order. A rejected call establishes no post-call read fact.
+
+The mandatory selected check is the obvious same-local duplicate in one call, under the single-source grant principle. General alias detection through different names/paths, field/index overlap, parent/child storage, mut payload aliases, callbacks/reentrancy, exclusivity implementation, and exact grant/borrow activation timing remain open. This does not decide read-only argument passing or infer that equal object payloads imply identical local storage.
 
 ## Helper contracts
 
@@ -104,7 +127,7 @@ Preserve justified facts only while the location stays stable. A possibly replac
 
 The grant designates the supplied location under existing evaluation/lifetime rules. Preserve callee/argument evaluation, caller authority, initialization, var/mut distinctions, cleanup, and ownership obligations. A narrowed read does not change declared accepted writes or grant a new writable alias. Internal Never read compatibility does not bypass these write/access checks.
 
-Captured writes, shared state, multiple aliased parameters, callbacks, failure-path facts, and complete exclusivity/effect analysis remain open. This selection concerns explicit caller-location grants, not arbitrary getters or automatic invalidation after every read-only call.
+The same-local duplicate var grant in one call is rejected under the selected single-source rule. Captured writes, shared state, general alias detection/enforcement, callbacks, failure-path facts, and complete exclusivity/effect analysis remain open. This selection concerns explicit caller-location grants, not arbitrary getters or automatic invalidation after every read-only call.
 
 ## Future write-only access
 
