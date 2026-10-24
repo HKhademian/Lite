@@ -250,11 +250,17 @@ Replacement invalidates old tests and relationships that depended on the prior s
 
 The declared writable storage contract remains var (String | Int) in the example; reading x as Int does not turn it into a var Int access contract, grant an escaping writable reference, or settle general access variance/call compatibility. Mut permissions, borrowing/moving/copying, cleanup, and ownership obligations remain unchanged. No new binding, implicit conversion, copy/freeze, or dynamically changing declared type is introduced.
 
+## Flow types after explicit var calls selected
+
+Selected on **2026-10-24**: an explicit var grant permits replacement, so a call may invalidate current read facts for that location. For x declared String | Int and currently reading Int, replace(var x) leaves String | Int after normal return when that callable permits either final member without a stronger guarantee. A supported guarantee that the final stored type is String or Int establishes that read type instead. The guarantee must hold on every normal return; write permission alone does not prove that a replacement occurred or that a particular member remains.
+
+The user sequence with replaceStr and replaceInt assumes both accept incoming String | Int and guarantee the indicated final member. Do not infer this from their names or treat var String as an output-only annotation. Declared replacement contracts, Unit call results, and var/mut authority stay unchanged. Source notation and verification/inference of final-state guarantees remain open; see [call replacement flow](call-replacement-flow.md) for the full sequence, failure-path limits, and stability/alias boundaries.
+
 ## Stability and mutation
 
 A refinement is valid only while the compiler can establish that the tested value still satisfies it. Narrowing must not silently copy, freeze, or take a snapshot to manufacture stability.
 
-Fixed local bindings and tracked direct local assignments use the selected flow rules. Direct whole-value assignment replaces old read facts with justified replacement facts as selected above; writable aliases, captured variables, shared data, and getters still require complete invalidation rules. A fixed binding with `mut` access does not automatically make everything reachable through it stable. Mutation of an unrelated field need not invalidate a top-level union alternative; the compiler must track what can actually change.
+Fixed local bindings and tracked direct local assignments use the selected flow rules. Direct whole-value assignment replaces old read facts with justified replacement facts as selected above; explicit var calls use the selected contract-based invalidation/final-state rule, while complete alias, captured-variable, shared-data, and getter invalidation rules remain open. A fixed binding with `mut` access does not automatically make everything reachable through it stable. Mutation of an unrelated field need not invalidate a top-level union alternative; the compiler must track what can actually change.
 
 **Working policy:** after an operation that may replace or change the tested alternative, drop the refinement unless it can be re-established. A successfully completed direct local assignment re-establishes read facts from the replacement under the selected rule above. Reject a narrower-only operation where the proof is unavailable; the programmer can retest or use an explicit binding whose ownership contract supplies the required stability. Explicit binding alone is not a promise of a deep immutable snapshot.
 

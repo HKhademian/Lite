@@ -57,6 +57,8 @@ Var User alone does not permit modifying fields of the current payload. A call s
 
 Combined mut/var contracts and argument syntax remain open. The two selected markers do not establish a combined modifier order.
 
+The normal-return read type after an explicit var grant depends on supported replacement guarantees. A String | Int location previously reading Int may return to String | Int after an unrestricted replacement call; a guaranteed final String establishes String. Permission to write String alone does not exclude a no-write path retaining Int. Preserve declared accepted replacements, input compatibility, and Unit call results; see [call replacement flow](call-replacement-flow.md).
+
 ## Evaluation and scope
 
 Evaluate the callee first and arguments left to right, once each. Select/evaluate the marked data access or location under the existing evaluation-order rules. Neither marker implicitly invokes a cloning operation.

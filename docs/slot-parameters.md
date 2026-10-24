@@ -88,6 +88,8 @@ A parameter requiring only var B also promises that reading yields B. It cannot 
 
 These are proposed access-compatibility rules, not general container variance, numeric conversion, structural record assignment, or a complete subtype system.
 
+After normal return, explicit caller-location replacement invalidates affected old read facts unless preservation or a final stored-type guarantee is supported. Var permission alone is not such a guarantee; a callable may return without assigning. A guarantee that accepts the incoming String | Int and leaves String/Int establishes that member without narrowing the location's declared accepted replacements. Public guarantee syntax/verification remains open; see [call replacement flow](call-replacement-flow.md).
+
 ## Lifetime, evaluation, and observable effects
 
 The selected caller-location access is temporary and limited to the call. It does not grant an escaping storage-access handle that can be stored globally, returned, or captured for later use. General reference values and lifetime extension are not selected. Overlapping writable arguments and reentrant/callback access still need a defined rule; the conservative starting proposal rejects overlaps that cannot be proven safe.

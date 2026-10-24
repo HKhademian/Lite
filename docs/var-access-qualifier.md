@@ -33,6 +33,10 @@ The omitted initializer and = 0 have the same valid-zero requirement and bypass 
 
 Selected on **2026-10-24**: a tracked direct local assignment may narrow the currently readable value without narrowing the declared accepted replacements. For var x: String | Int = ? followed by x = 42, the current read type is Int and the writable storage contract remains var (String | Int). A later String assignment is valid. This does not turn the location into a var Int contract or grant writable access through an ordinary value read; general access/call compatibility remains separate. See [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) for path joins, successful first initialization, and alias/effect invalidation.
 
+## Read types after caller replacement
+
+Selected on **2026-10-24**: replace(var x) can discard an Int-only fact when the callable may leave either member of x's declared String | Int storage. A supported String/Int final-state guarantee on every normal return can instead establish that read type, without changing accepted replacements or the call's ordinary result type. Var is permission, not proof that a write occurs. A plain var String input also requires a readable String on entry; it is not an output-only promise accepting an incoming Int. Exact guarantee syntax/verification and broader aliases/effects remain open; see [call replacement flow](call-replacement-flow.md).
+
 ## Local implementation details stay in the body
 
 ```text
@@ -111,7 +115,7 @@ Do not flatten two separate complete access contracts as though they were one va
 
 The callee must handle every possible source read, and every replacement the callee may perform must be accepted by the source location. A source reading A/B/C and accepting only B cannot supply var (A | B | C), even though its readable type matches: the callee could write A or C. Checking the readable union alone is insufficient.
 
-The rename adds no runtime representation or conversion. Actual copying, borrowing, cleanup, exclusivity, callbacks, and refinement invalidation require their own contracts. Explicit local mutable record copies retain their selected shallow-copy behavior; explicit caller grants must not silently detach into copies.
+The rename adds no runtime representation or conversion. Basic explicit-var-call refinement invalidation and final-state flow are selected in [call replacement flow](call-replacement-flow.md). Actual copying, borrowing, cleanup, exclusivity, callbacks, and complete alias/effect invalidation still require their own contracts. Explicit local mutable record copies retain their selected shallow-copy behavior; explicit caller grants must not silently detach into copies.
 
 ## Migration and remaining decisions
 

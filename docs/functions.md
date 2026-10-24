@@ -452,6 +452,8 @@ Calling a mut-qualified parameter requires an explicit grant, as in rename(mut u
 
 The [ordinary parameter review](parameter-values-and-slots.md) keeps the current feature scope to ordinary inputs and writable slots. Read-only defaults do not decide copying versus borrowing. An efficient indirect calling convention must preserve the eventual observable semantics; it does not by itself introduce a public reference feature or caller writeback.
 
+For an explicit var caller-location grant, normal-return flow uses supported replacement guarantees. A call allowed to leave String | Int discards an old Int-only fact; a guaranteed final String/Int establishes that member. Write permission alone does not prove an assignment happened, and plain var String still requires an appropriate readable input. Guarantee spelling and verification remain open; see [call replacement flow](call-replacement-flow.md).
+
 The [access-ergonomics goal](slot-ergonomics.md) hides derived mathematical type structure. Use local declarations and shadowing for working values: fn(count: Int) { var count := count; count += 1; count }. Left-side local-only var headers are omitted; type-side var declares caller replacement. The shorthand fn(param: var) requires an inferable value type under the eventual inference rules. See [var access](var-access-qualifier.md) and [parameter permissions](parameter-permissions.md).
 
 ## Result rules
