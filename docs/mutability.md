@@ -24,7 +24,7 @@ var user := make_user();
 user = make_another_user(); /* permitted if the types and ownership contract agree */
 ```
 
-`var` grants reassignment of the binding. It does not change the static value type or grant writable access to held data. That second permission requires `mut`.
+`var` grants reassignment of the binding. It does not change the declared value contract or grant writable access to held data. That second permission requires `mut`. A successful direct local assignment may establish a narrower current read type: String | Int storage assigned 42 reads as Int while still accepting String or Int replacements. This applies in ordinary code blocks, not only after type tests; see [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected).
 
 For a binding explicitly reserved with x: User = ?, the first whole-value x = make_user() initializes rather than replaces a value and does not require var. It is allowed once per execution path; every path reaching ordinary use must have initialized x. The next whole-value write requires var. This does not change the already-initialized examples above or select partial field/element construction. See [first initialization](first-initialization.md).
 

@@ -32,7 +32,7 @@ name = replacement;
 - `var` opts into binding reassignment, without granting writable access to held data.
 - `mut` opts into writable access to held data, without granting binding reassignment.
 - `var mut` opts into both capabilities, in that order.
-- Either capability leaves the binding's static value type fixed.
+- Either capability leaves the binding's declared value contract fixed; a flow-sensitive read type may narrow without narrowing the accepted replacement contract.
 - `=` does not declare a name. For a binding explicitly reserved with = ?, its first whole-value = may initialize it without var, subject to definite-initialization checks. Later whole-binding replacement requires var. A field or element update through an initialized binding requires mut, permitted field/element access, and a compatible ownership contract. Partial construction has a separate open contract.
 - `:=` never means "declare if absent, otherwise update."
 - Declarations and assignments are statements producing `Unit`.
@@ -84,6 +84,10 @@ score = 20;       /* rejected: immutable binding */
 The second example isolates type safety; the third isolates immutability.
 
 Function values follow the same declaration and replacement rules. `var myfn: fn(a: Int): Int!;` starts as the zero callable. `myfn = fn(a: Int): Int! { a + 1 }` replaces it with a function literal fitting that contract. An initialized binding without `var` cannot be replaced this way. See [function types and reassignment](functions.md#function-types-literals-and-reassignment).
+
+## Read types after assignment
+
+Selected on **2026-10-24**: direct local writes check against the declared value/storage contract, while reads use the type justified at the current program point. With var x: String | Int = ? followed by x = 42, x reads as Int but still accepts a later String replacement. After x = "hello", reads are String; Bool still fails the declared union. This applies throughout ordinary code blocks, including outside if branches. The assignment expression itself still produces Unit. A bare local multi-member union declaration remains rejected; = ? is the explicit reservation and x must be initialized before use. See [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) for control-flow joins, shadowing, successful-write timing, and stability limits.
 
 ## Held-data updates versus binding updates
 

@@ -29,6 +29,10 @@ x: User = {} /* declared-default record construction */
 
 The omitted initializer and = 0 have the same valid-zero requirement and bypass declared defaults. Each declaration completes initialization immediately. The var declaration exposes var User as its storage access contract: reads produce User and permitted writes accept User. Reading x does not transfer a writable alias or wrap its value in a runtime reference object. Var does not make fields inside User mutable. See [zero initialization](zero-initialization.md).
 
+## Declared writes and current reads
+
+Selected on **2026-10-24**: a tracked direct local assignment may narrow the currently readable value without narrowing the declared accepted replacements. For var x: String | Int = ? followed by x = 42, the current read type is Int and the writable storage contract remains var (String | Int). A later String assignment is valid. This does not turn the location into a var Int contract or grant writable access through an ordinary value read; general access/call compatibility remains separate. See [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected) for path joins, successful first initialization, and alias/effect invalidation.
+
 ## Local implementation details stay in the body
 
 ```text

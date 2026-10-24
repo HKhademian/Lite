@@ -35,7 +35,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
-- [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, and independent `var`/`mut` capabilities.
+- [Declarations and assignment](declarations-and-assignment.md): `:=`, explicit types, independent `var`/`mut` capabilities, and declared replacement contracts versus flow-sensitive read types.
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
@@ -119,7 +119,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Set patterns](set-patterns.md): equality versus membership versus unordered extraction, ambiguous assignments, and deferred syntax.
 - [Pattern aliases](pattern-aliases.md): source-field naming versus destination bindings, reference-language renaming forms, and proposed as aliases.
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, selected tag-only patterns, and open representation/conversion contracts.
-- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User` and concise negation, selected condition precedence, direct union targets, warnings for provably constant tests, explicit bindings, selected remaining types in later match arms, else/else-if chains, and later or operands, successful or joins, stable existing-binding refinement after early exits, guard limits, stability, and open broader flow rules.
+- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User` and concise negation, selected condition precedence, direct union targets, warnings for provably constant tests, explicit bindings, selected remaining types in later match arms, else/else-if chains, and later or operands, successful or joins, read types after direct assignment, stable existing-binding refinement after early exits, guard limits, stability, and open broader flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, plain-union targets, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): successful completion without useful data; one zero-component value/type spelled Unit or (), selected zero mapping, and selected zero-sized physical representation.
 - [Option](option.md): explicit absence without universal nullability.

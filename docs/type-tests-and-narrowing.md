@@ -218,13 +218,39 @@ Require a valid stability proof at each use. Replacement, writable aliases, or e
 
 Successful type tests can narrow other stable bindings when finite known input/pattern alternatives establish their relationship. For Email(String)/Sms(PhoneNumber) with separate email/phone bindings and Unit for the missing name, testing email: String proves phone is Unit in the successful continuation. If Email can itself carry Unit, testing email: Unit retains both possible sources of that Unit and cannot uniquely prove Sms or remove Unit from phone. Track binding identity and invalidate affected proofs on relevant replacement/mutation unless preserved; no sibling lookup inside pattern comparison operands, negation binding export, or new runtime tag is introduced. See [related stable-binding narrowing](pattern-binding-inference.md#narrowing-related-stable-bindings-selected).
 
+## Flow types after direct assignment selected
+
+Selected on **2026-10-24**: a binding has a declared value/storage contract and a flow-sensitive read type at each program point. Direct local assignment checks the replacement against the declared contract and required write capability. After successful assignment, reads use the supported type facts of the newly assigned value, replacing stale facts about the previous value. This applies in ordinary straight-line code and nested blocks, not only inside a type-tested branch:
+
+```text
+var x: String | Int = ?;
+
+x = 42;
+use_int(x);    /* x reads as Int; storage still accepts String | Int. */
+
+x = "hello";
+use_string(x); /* x reads as String; storage still accepts String | Int. */
+```
+
+Assume 42 is Int and the handlers accept Int/String and return Unit. The explicit = ? reserves storage under the existing initialization rule; x cannot be read before its first successful whole-value assignment. A bare local var x: String | Int remains rejected by the selected multi-member union initialization policy. Var permits later replacements; the separate first-initialization exception for reserved fixed storage is unchanged.
+
+The narrowed read type does not become the next assignment's target contract. x = 42 is allowed even where a prior type test proved x is String, because Int fits the declared String | Int. A Bool replacement still fails that declared contract. If a replacement source is only known as String | Int, subsequent reads retain that whole union; the compiler must not guess its active member. An inferred var x := 42 keeps its declared Int contract and does not acquire permission to accept String.
+
+A direct assignment to the same outer local persists when a nested block finishes; leaving the block does not restore its former value or read facts. A shadow declaration creates a different binding and is checked separately. At control-flow joins, keep possibilities from all normally reaching paths: an Int assignment on one branch and a String assignment on another leaves String | Int afterward. Do not use the last assignment written in source order as if every path executed it. Loop entry/back-edge paths likewise require justified facts; complete flow-analysis algorithms remain open.
+
+Publish the new read facts only after the assignment succeeds. Evaluate the target and source in their ordinary order; the right-hand expression uses the facts valid while it executes, before replacement. Source failures/exits retain their ordinary behavior and do not establish successful-assignment facts on other paths. The assignment itself still produces Unit; a subsequent read of x produces the currently justified value type.
+
+Replacement invalidates old tests and relationships that depended on the prior stored value; only independently justified or preserved facts may remain. The new facts are usable only while the location remains stable. Writable aliases, captured-variable writes, shared storage, or effects that may replace the value can invalidate them unless preservation is established. This selection covers direct local whole-value assignment and successful first initialization, not a general getter/field/index/call-result refinement or complete alias/effect model.
+
+The declared writable storage contract remains var (String | Int) in the example; reading x as Int does not turn it into a var Int access contract, grant an escaping writable reference, or settle general access variance/call compatibility. Mut permissions, borrowing/moving/copying, cleanup, and ownership obligations remain unchanged. No new binding, implicit conversion, copy/freeze, or dynamically changing declared type is introduced.
+
 ## Stability and mutation
 
 A refinement is valid only while the compiler can establish that the tested value still satisfies it. Narrowing must not silently copy, freeze, or take a snapshot to manufacture stability.
 
-Fixed local bindings are the initial target. `var` reassignment, writable aliases, captured variables, shared data, and getters require explicit invalidation rules. A fixed binding with `mut` access does not automatically make everything reachable through it stable. Mutation of an unrelated field need not invalidate a top-level union alternative; the compiler must track what can actually change.
+Fixed local bindings and tracked direct local assignments use the selected flow rules. Direct whole-value assignment replaces old read facts with justified replacement facts as selected above; writable aliases, captured variables, shared data, and getters still require complete invalidation rules. A fixed binding with `mut` access does not automatically make everything reachable through it stable. Mutation of an unrelated field need not invalidate a top-level union alternative; the compiler must track what can actually change.
 
-**Working policy:** after an operation that may replace or change the tested alternative, drop the refinement unless it can be re-established. Reject a narrower-only operation where the proof is unavailable; the programmer can retest or use an explicit binding whose ownership contract supplies the required stability. Explicit binding alone is not a promise of a deep immutable snapshot.
+**Working policy:** after an operation that may replace or change the tested alternative, drop the refinement unless it can be re-established. A successfully completed direct local assignment re-establishes read facts from the replacement under the selected rule above. Reject a narrower-only operation where the proof is unavailable; the programmer can retest or use an explicit binding whose ownership contract supplies the required stability. Explicit binding alone is not a promise of a deep immutable snapshot.
 
 The exact policy depends on the memory, aliasing, and effect models. Support for testing arbitrary member/index paths or call results without naming them remains open. No global runtime reflection system is selected by this feature.
 
