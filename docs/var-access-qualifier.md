@@ -18,6 +18,10 @@ replace(var user); /* assignment inside replace updates this caller binding */
 
 The parameter does not own an independent local working copy. Its association with the supplied location is fixed for the call. Assignment changes that location's content, not which location the parameter designates. No general pointer/reference value or escaping access handle is introduced.
 
+## Reservation and first-write access
+
+With x: Int = ?, ordinary reads are rejected until the first whole-value x = 74. That write initializes fixed x; afterward reads are allowed and replacement is rejected. Var y: Int = ? has the same initial read prohibition, then permits both reads and later replacement after initialization. This initialization permission applies to union storage too, without adding a readable unknown/Unit alternative or selecting write-only parameters. See [initialization access examples](first-initialization.md#writable-before-initialization-readable-afterward).
+
 ## Zero initialization does not change the access contract
 
 ```text

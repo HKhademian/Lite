@@ -115,6 +115,8 @@ Initializing reserved fields for the first time must be distinguished from assig
 
 Whole-value x = value is selected as first initialization without var when the compiler proves x has not already been initialized on any reaching path. Multiple assignment sites in mutually exclusive branches are allowed, but every path reaching a value use must have initialized x. Later replacement requires var. No fallback zero value is supplied to a missing branch. See [first initialization](first-initialization.md).
 
+Before that first write, the reserved binding permits whole-value initialization but no ordinary reads. Afterward, fixed storage is readable without replacement permission; var storage is readable and permits later replacement. Union read-flow rules apply only after initialization and do not change these permissions. See the [fixed and var examples](first-initialization.md#writable-before-initialization-readable-afterward).
+
 Field/element construction, initializer callbacks, and initialization through a callee remain separate decisions. No init/finalize keyword is selected. An ordinary function named reserve cannot silently grant first-initialization semantics outside the selected marker contract.
 
 If field-by-field construction is supported, track which fields are initialized on every control-flow path. A complete value requires every required field and the type's validity contract, including any cross-field invariant. Partially written record storage is not automatically a usable User. Whether initialized subfields can be accessed during construction requires a separate rule.

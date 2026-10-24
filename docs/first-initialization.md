@@ -28,6 +28,39 @@ x = another_user();   /* later replacement; var permits it */
 
 An omitted initializer is different: x: User; already initializes semantic zero. Its next x = ... would be replacement and therefore requires var.
 
+## Writable before initialization, readable afterward
+
+Clarified on **2026-10-24**: explicit reservation permits a first whole-value write while ordinary reads are forbidden. After successful initialization, a fixed binding is readable and cannot be replaced; a var binding is readable and remains writable. Initialization state and replacement permission are separate checks.
+
+```text
+x: Int = ?;
+/* x permits first initialization; reading x is rejected. */
+x = 74;
+/* x is readable as Int; another assignment is rejected without var. */
+
+var y: Int = ?;
+z := y; /* Rejected: y has no initialized value to read. */
+y = 1;  /* Valid first initialization. */
+z := y; /* Valid read. */
+y = 2;  /* Valid replacement through var. */
+z := y; /* Valid read. */
+```
+
+The marked rejected declaration illustrates a diagnostic; remove it for a valid sequence. The later z declarations use ordinary sequential local shadowing. Var never makes an uninitialized payload readable, and first-initialization permission does not give fixed x ongoing replacement access. Here writable describes permission for the first whole-value assignment; it introduces no new qualifier or callee access mode. Ordinary var parameters still require initialized readable input.
+
+The same checks apply to unions alongside the selected [assignment flow rules](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected):
+
+```text
+var value: String | Int = ?;
+/* Reads and type tests are rejected before initialization. */
+value = 74;
+/* Reads are Int; later replacements may still be String or Int. */
+value = "ready";
+/* Reads are String; later replacements may still be String or Int. */
+```
+
+For fixed value: String | Int = ?, the first valid assignment likewise establishes the current member, but another whole-value assignment is rejected without var. Reservation adds neither Unit nor an unknown member to the union. Read-flow narrowing does not erase definite-initialization, branch-coverage, or access obligations; storage declared String | Int still rejects a Bool write. Write-only callee access remains [future work](call-replacement-flow.md#future-write-only-access).
+
 ## One initialization per execution path
 
 Multiple source assignment sites are allowed when control flow chooses exactly one:
