@@ -37,6 +37,8 @@ Represent successful completion without useful payload data. `Unit` is not an ab
 
 Initial match-arm alternatives may bind different names. The shared guard/body receives Unit for a name absent from the successful alternative: Email(email)/Sms(phone) patterns produce email: String | Unit and phone: PhoneNumber | Unit. Unit is an initialized ordinary value here, not a new absence tag or a replacement for an unhandled control-flow path. A genuine Unit payload and absent-name Unit cannot be distinguished through that binding alone. Complete condition/guard or alternatives now use the same rule, including Boolean-only alternatives: `if .Some(user) := find_user(id) or guest_allowed` gives user: User | Unit on success. Unit-filled new bindings shadow outer names; no names escape an all-false condition or a grouped negation. See [differently named arm bindings](match.md#differently-named-arm-bindings-selected).
 
+Unit has one real value. An exhausted type-test remainder has no possible values and uses the selected internal Never read type in an unreachable conditional branch; it does not produce Unit or widen a result union. See [Never and unreachable flow](never-and-unreachable-flow.md).
+
 ## Unit versus None
 
 `Unit` is the result of completing an action without a useful payload. `None` is the absent variant of an `Option<T>`.

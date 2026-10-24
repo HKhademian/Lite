@@ -125,7 +125,7 @@ Pattern bindings have a separate selected inference rule: constrain the input by
 
 Explicit exits do not need to provide a local continuation value at the point they exit; their payload is checked against the exit target.
 
-An internal `Never` or bottom type can describe control flow that cannot complete locally. Its public spelling and general usability are open.
+An internal `Never` or bottom type can describe control flow that cannot complete locally. Supported exhausted conditional type-test branches now warn and give the exhausted binding this read type; it can satisfy a known ordinary value parameter without producing a runtime value. Unrelated bindings retain their types and independent errors remain errors. Public spelling, member/generic behavior, and general usability are open, including the requested future exploration of Never | T and Never & T. See [Never and unreachable flow](never-and-unreachable-flow.md).
 
 ## No universal absence
 

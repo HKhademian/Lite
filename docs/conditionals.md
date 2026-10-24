@@ -67,6 +67,8 @@ The selected [branch-result inference rule](branch-result-inference.md) applies 
 
 The selected [union fallback rule](conditional-union-fallback.md) requires an explicit fallback when resolved T is a multi-member plain union and selection can normally finish without a contributor. Exhaustive chains construct their chosen member directly; conditional then receives a valid T. This supersedes unconditional pre-selection zero initialization of conditional result storage.
 
+Exhausted conditional type-test branches warn and give exhausted bindings an internal Never read type, preserving ordinary checking without contributing a normally produced branch result. This does not inject Unit or change the missing-else zero fallback; see [Never and unreachable flow](never-and-unreachable-flow.md).
+
 ## Missing final `else`
 
 ```text

@@ -43,6 +43,8 @@ Duplicate type identities disappear, and nested plain unions flatten. Preserve n
 
 An expected result remains a constraint: `value: Int = if flag { 1 } else { "none" }` is rejected rather than widening the annotation. An expected Int | String accepts both alternatives. Exiting branches supply no local result; their payloads are checked against their actual targets. Match exhaustiveness remains required.
 
+A conditional branch proven unreachable by the supported type-test exhaustion rules contributes no normally produced result, even when its syntactic body contains Unit-producing statements. Its exhausted binding has an internal Never read type for supported ordinary value checking. This selects reachable-result collection, not public Never | T or Never & T algebra; see [Never and unreachable flow](never-and-unreachable-flow.md).
+
 ## Unit, missing else, and then
 
 An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` infers Int | Unit. By contrast, `if flag { 1 }` retains the selected missing-else policy: infer Int from its contributing branch and supply zero(Int) when unmatched. Missing else never adds Unit merely because no branch ran.
