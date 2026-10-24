@@ -173,9 +173,11 @@ if person: User {
 
 This tests the existing value and narrows its usable type where the test is known to hold, subject to stability. It introduces no name, assignment, copy, or unchecked cast. The declared type remains unchanged. Redeclaring `person` is optional; explicit binding is useful when a new name or producer expression is wanted.
 
-See [type tests and narrowing](type-tests-and-narrowing.md) for the selected forms, false-branch narrowing through else/else if, stable existing-binding refinement after early exits, and remaining mutation, broader logical-flow, subtype, and generic-test decisions. Existing-name type tests are selected; their full flow-sensitive semantics are not yet a complete contract.
+See [type tests and narrowing](type-tests-and-narrowing.md) for the selected forms, false-branch narrowing through else/else if and into later or operands, stable existing-binding refinement after early exits, and remaining mutation, broader logical-flow, subtype, and generic-test decisions. Existing-name type tests are selected; their full flow-sensitive semantics are not yet a complete contract.
 
 For a stable initialized closed union of distinct members, a failed whole-member type test removes that member in else. Each later else-if condition receives the remainder from preceding failed conditions, just as an if nested inside else does. For String | Float | Int, testing String and then Float leaves Int in the final else. A complete condition such as value: String and is_special(value) can fail for a String, so its else must retain String. Earlier branch-local names do not leak; effects that invalidate stability can discard the refinement. See [false-branch narrowing](type-tests-and-narrowing.md#false-branches-and-else-if-chains-selected).
+
+Supported false-path facts also carry into a later or operand: with a stable String | Int value, value: String or value > 0 tests the right side as Int, while the successful body still admits String | Int. This refines existing bindings without exposing names introduced by a failed alternative; see [or-operand narrowing](condition-chains.md#narrowing-into-later-or-operands-selected).
 
 ## Pattern conditions
 

@@ -119,7 +119,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Set patterns](set-patterns.md): equality versus membership versus unordered extraction, ambiguous assignments, and deferred syntax.
 - [Pattern aliases](pattern-aliases.md): source-field naming versus destination bindings, reference-language renaming forms, and proposed as aliases.
 - [Enums and variants](enums-and-variants.md): plain cases, explicit backing types and assigned values, associated payloads, contextual .case shorthand, selected tag-only patterns, and open representation/conversion contracts.
-- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, selected remaining types in later match arms and else/else-if chains, stable existing-binding refinement after early exits, guard limits, stability, and open broader flow rules.
+- [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User`, explicit bindings, selected remaining types in later match arms, else/else-if chains, and later or operands, stable existing-binding refinement after early exits, guard limits, stability, and open broader flow rules.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): successful completion without useful data; one zero-component value/type spelled Unit or (), selected zero mapping, and selected zero-sized physical representation.
 - [Option](option.md): explicit absence without universal nullability.
@@ -147,7 +147,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
 - [Conditionals](conditionals.md): one syntax for actions and values, with irrefutable matching conditions allowed and a warning for proven complete-condition success.
-- [Conditional pattern chains](condition-chains.md): and chains, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, and grouped matching-condition negation with no exported bindings.
+- [Conditional pattern chains](condition-chains.md): and chains, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, failure-path narrowing of stable existing bindings into later or operands, and grouped matching-condition negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based arms, nested constructor/tuple or patterns with local first-success, and selected subjectless Boolean selection with an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.

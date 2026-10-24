@@ -103,7 +103,7 @@ Unit is an initialized ordinary value, not an unbound/uninitialized name, Option
 
 ### Scope, precedence, and grouping
 
-Each alternative starts in the same scope that existed before the or group. It may read common earlier and-chain or initial match-arm bindings. A failed alternative's tentative bindings, including bindings established before a later guard failed, are unavailable to subsequent alternatives. The shared bindings shadow same-named incoming bindings on every successful path, including paths where a new name receives Unit. Incoming values never fill a missing alternative binding. Unit-filled shared bindings are created for the successful continuation only, not in time for other alternatives to use; each alternative's inputs and free names still resolve in the common incoming scope. For example, a later `or user.active` cannot read an earlier failed alternative's user unless a suitable outer user was already in scope. If all alternatives fail, no alternative-local names leak to else, sibling match arms, or following code.
+Each alternative starts with the same lexical bindings that existed before the or group. Supported failure facts may refine those existing bindings on the path into a later alternative, as selected below; this never imports an earlier alternative's new names. It may read common earlier and-chain or initial match-arm bindings. A failed alternative's tentative bindings, including bindings established before a later guard failed, are unavailable to subsequent alternatives. The shared bindings shadow same-named incoming bindings on every successful path, including paths where a new name receives Unit. Incoming values never fill a missing alternative binding. Unit-filled shared bindings are created for the successful continuation only, not in time for other alternatives to use; each alternative's inputs and free names still resolve in the common incoming scope. For example, a later `or user.active` cannot read an earlier failed alternative's user unless a suitable outer user was already in scope. If all alternatives fail, no alternative-local names leak to else, sibling match arms, or following code.
 
 And binds more tightly than or. Thus A and B or C and D selects between two and chains; it does not feed A/B's bindings into C/D. Group a disjunction before a shared later test:
 
@@ -119,7 +119,31 @@ Assume User.active is Bool. The selected alternative supplies user before the sh
 
 At the top level of a pattern-source operand, both and and or are condition separators. A source value containing those Boolean operators needs its own ordinary expression grouping. This separates `.Some(user) := source or ...` from a source expression that computes an or value; whitespace does not choose the reading.
 
-This rule applies to conditional chains and subject-based match guards after their if separator. Nested `patternA or patternB` inside constructor payload/tuple component patterns is selected separately and may be reused in supported conditional patterns. This does not add logical and/not subpatterns, alternative loop headers, or binding-producing subjectless match headers. Grouped matching-condition negation is selected separately and exports no names. Exact recursive parsing, negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
+This rule applies to conditional chains and subject-based match guards after their if separator. Nested `patternA or patternB` inside constructor payload/tuple component patterns is selected separately and may be reused in supported conditional patterns. This does not add logical and/not subpatterns, alternative loop headers, or binding-producing subjectless match headers. Grouped matching-condition negation is selected separately and exports no names. Failure-path narrowing of stable existing bindings is selected below. Exact recursive parsing, broader negative flow, ownership commitment, cleanup timing, and coverage proofs remain open.
+
+## Narrowing into later or operands selected
+
+Selected on **2026-10-24**: a later condition alternative receives supported type facts established when the preceding alternatives failed. This is the same false-path refinement used when entering else, applied at the point where short-circuit or reaches its next operand:
+
+```text
+value: String | Int = read_value();
+
+if value: String or value > 0 {
+    handle(value); // String | Int
+}
+```
+
+Assume read_value produces the declared initialized union, Int supports comparison with 0, and handle accepts String | Int and returns Unit. The right operand runs only when the existing-name String test fails, so value is Int for value > 0. A String succeeds at the first alternative and skips that comparison. The successful body admits both String and Int because either alternative can select it. Refine existing bindings at each operand; do not give the body only the last alternative's narrower type.
+
+Apply this successively across an or chain. For a stable String | Float | Int value, after failed whole-member String and Float tests, a third alternative receives Int. Each reached operand/source evaluates once for its occurrence in source order; failure or an explicit exit keeps its ordinary control flow rather than becoming false. Effects are not rolled back.
+
+A failed compound alternative can have several causes. In `(value: String and is_special(value)) or value > 0`, the right side can still receive a String when is_special returns false, so the Int-only comparison is rejected for the same String | Int input. Require is_special to accept String and return Bool. Do not subtract the whole String member merely because the complete guarded alternative failed, or infer arbitrary predicate complements.
+
+This changes type knowledge about the common incoming bindings, not their lexical scope. Names introduced by a failed alternative remain unavailable to later alternatives, even if an earlier part of that alternative matched successfully. A later or user.active cannot use an earlier failed alternative's newly bound user; an existing outer user retains its own identity. Successful alternatives still join newly introduced names using the selected payload-or-Unit rule. Existing binding identities are not merged with those new names by spelling.
+
+Retain facts only while the tested existing binding remains stable. Replacement, relevant mutation, writable aliases, or effects can invalidate a fact unless preservation is established; fresh calls and repeated getters receive no cached-value promise. No copy/freeze, mutation permission, or lifetime extension is introduced. This selection covers the supported closed distinct union type-test facts and their existing flow rules, not a complete subtype/alias solver, interval analysis, or arbitrary disjunctive inference.
+
+The rule applies to supported conditional chains and subject-based match guards using those chains. It adds no new subpattern forms or binding-producing subjectless headers. Pattern-alternative matching and ordinary first-success short-circuiting retain their selected rules.
 
 ## Negated matching conditions selected
 
