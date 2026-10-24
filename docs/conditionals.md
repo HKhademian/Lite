@@ -183,6 +183,8 @@ Concise negation of Boolean operands and existing-name tests is selected: if not
 
 Well-formed existing-name type tests remain valid when proven always true or always false, with a warning for the constant test. For text: String, text: String always matches and text: Int never matches when String/Int are disjoint. Unknown names/types and other invalid expressions remain errors; general unreachable-code analysis is separate. See [constant type tests](type-tests-and-narrowing.md#provably-constant-type-tests-selected).
 
+The successful body of an or condition joins the supported successful-path types of stable existing bindings. For value: String | Float | Int, testing value: String or value: Float leaves String | Float in the body and Int in else. No Unit is introduced by this existing-binding join; new alternative-local names retain their separate payload-or-Unit rule. Preserve all possible successful paths and stability across effects; see [successful or narrowing](condition-chains.md#narrowing-after-successful-or-conditions-selected).
+
 ## Pattern conditions
 
 ```text

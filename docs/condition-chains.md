@@ -145,6 +145,32 @@ Retain facts only while the tested existing binding remains stable. Replacement,
 
 The rule applies to supported conditional chains and subject-based match guards using those chains. It adds no new subpattern forms or binding-producing subjectless headers. Pattern-alternative matching and ordinary first-success short-circuiting retain their selected rules.
 
+## Narrowing after successful or conditions selected
+
+Selected on **2026-10-24**: after an or condition succeeds, refine a stable existing binding to the normalized union of its supported possibilities from every alternative that can successfully reach that continuation. Each alternative includes the failure facts needed to reach it and its own successful tests:
+
+```text
+value: String | Float | Int = read_value();
+
+if value: String or value: Float {
+    /* value: String | Float */
+} else {
+    /* value: Int */
+}
+```
+
+Assume read_value produces the declared initialized closed union of distinct, nonoverlapping types, and value remains stable. The first alternative succeeds for String. After its failure, the second sees Float | Int and succeeds for Float. The successful body therefore sees String | Float; the final else sees Int after both whole-member tests fail. The body's type is neither the original full union nor only the last successful alternative's type.
+
+This refinement is also available to a later and operand after a grouped or condition succeeds. Preserve ordinary first-success short-circuiting: joining static possibilities does not evaluate skipped alternatives, retry a completed successful group, or select several values. An and operand after that group can still reject the complete condition under the existing scope/flow rules.
+
+Do not add Unit merely to join an existing binding: it already has a value on every path. If Unit is genuinely among its surviving input alternatives, retain it normally. Newly introduced alternative bindings still follow the separate payload-or-Unit rule. Track binding identities through shadowing; an existing name's refinement does not convert an alternative-local replacement into that same binding.
+
+Join only justified possibilities, while keeping every possible successful path. For value: String | Float | Int, value: String or allow_other still admits all three types in the body when the existing Bool allow_other can succeed for non-Strings. A guarded String alternative followed by a Float alternative can narrow the successful body to String | Float, but its else can retain String | Int because some Strings may fail the guard. Arbitrary predicate complements, intervals, and overlapping subtype/interface inference remain open.
+
+Require valid stability proofs at the continuation. Relevant replacement/mutation, writable aliases, or effects can invalidate earlier facts unless preservation is established; no snapshot, copy/freeze, or new ownership permission is implied. This is path-local type knowledge, not a change to the binding's declared type. After the complete if, ordinary reaching-path joins and the selected early-exit rule still apply.
+
+This selection applies to supported conditional chains and subject-based match guards. It changes no binding visibility, evaluation order, failure/exit behavior, source-pattern negation, or allowed subpattern/header forms. Complete type relations and alias/effect analysis remain separate.
+
 ## Negated matching conditions selected
 
 Use `not (condition)` to negate a grouped matching condition without exporting any new bindings:
