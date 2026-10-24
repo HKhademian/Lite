@@ -178,7 +178,21 @@ The same-local duplicate var grant in one call is rejected under the selected si
 
 ## Future write-only access
 
-The user requests possible write-only access in a future review, not now. Keep its spelling, readable-before-write behavior, required-write/normal-return guarantees, reservation/initialization interactions, failure paths, and access compatibility open. No new output mode, keyword, or final-state-guarantee syntax is selected. Var T retains its current read/write T meaning.
+Future direction clarified on **2026-10-24**: a function parameter could request single-write-only or multi-write-only access, including access to uninitialized caller storage. The write allowance and permission to read are separate parts of that future contract. The selected local single-write/multi-write examples become readable after a successful write; they do not yet define write-only parameter behavior. Var T retains its current read/write T meaning and requires initialized readable input.
+
+The motivating large-buffer example is:
+
+```text
+users: [User; 100000] = ?;
+```
+
+This reserves the fixed array's complete storage without constructing readable User elements. A future initializer parameter could request access to populate that supplied storage directly, avoiding a preliminary zero/default construction pass. The declaration uses the existing fixed-array and reservation forms; no initializer parameter/call syntax or indexed first-construction syntax is selected here. Stack/heap placement and allocation policy remain separate.
+
+Review single-write and multi-write permissions explicitly: a single-write destination would allow one initialization write on a path; a multi-write destination could allow repeated writes under its eventual contract. For an array-building API, specify whether the write allowance applies to the whole array, each element, or a designated region. Constructing 100000 different elements is not automatically 100000 replacements of the same destination.
+
+Keep these obligations open before selecting the feature: whether write-only access remains unreadable inside the callee after a write or supports a later explicit/state-based transition; which supplied initialization states are admitted; whether successful return guarantees complete initialization; how the caller learns which values or regions are readable; and how partial writes, replacement cleanup, failures, grant forwarding, and lifetime/access checks work. Permission to write alone does not prove that all required elements were initialized. Untouched elements cannot be read, and cleanup must account for which elements actually became valid under the eventual policy. Preserve the existing union compatibility and flow obligations where applicable; uninitialized storage adds no readable Unit or unknown union member.
+
+This is recorded future work, not a current parameter mode. No new keyword, qualifier, output mode, or final-state-guarantee syntax is selected.
 
 A future contract accepting an incoming Int while promising final String would need an explicitly different input/output or write-only model. It must not be inferred from var String today. Explore that separately from permission to write, which alone does not require a write to occur.
 

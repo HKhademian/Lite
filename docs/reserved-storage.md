@@ -27,7 +27,9 @@ Records, anonymous record aggregates, and tuples motivate the same operation: re
 
 ## Main use case: large arrays and buffers
 
-User clarification, 2026-10-19: bulk element storage, especially large arrays, is the primary motivation. Reserve the storage and populate it directly rather than requiring a preliminary pass that zeroes every element. Array type syntax, dynamic-size allocation APIs, and indexed first-initialization syntax remain open; the single-User examples illustrate the marker rather than its primary workload.
+User clarification, 2026-10-19: bulk element storage, especially large arrays, is the primary motivation. Reserve the storage and populate it directly rather than requiring a preliminary pass that zeroes every element. The later fixed-array form [T; N] is selected; dynamic-size allocation APIs and indexed first-initialization syntax remain open. The single-User examples illustrate the marker rather than its primary workload.
+
+The 2026-10-24 motivating example is users: [User; 100000] = ?. A future function parameter could request single-write-only or multi-write-only access to initialize such supplied storage. Keep read authority, write allowance per whole destination/element/region, complete-initialization proof, partial-failure cleanup, and syntax open. See [future write-only parameters](call-replacement-flow.md#future-write-only-access); this does not make existing var/mut parameters accept an uninitialized array.
 
 Reservation means storage has been provided. It is not a null pointer, a missing allocation, None, or a recoverable allocation-failure result. No public pointer syntax is implied. Heap allocation failure must have its own eventual contract rather than becoming a readable null inside an ordinary value.
 

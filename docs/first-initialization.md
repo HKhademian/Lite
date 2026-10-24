@@ -106,7 +106,7 @@ Initialization establishes a value; later replacement may need cleanup of an old
 
 ## Caller access and partial construction
 
-An ordinary parameter requiring User, mut User, or var User assumes a valid incoming value. It is not automatically an output-only initialization parameter merely because its current implementation writes first. Receiving reserved storage through a callee requires a separately declared contract; no out keyword is selected here.
+An ordinary parameter requiring User, mut User, or var User assumes a valid incoming value. It is not automatically an output-only initialization parameter merely because its current implementation writes first. Receiving reserved storage through a callee requires a separately declared contract; no out keyword is selected here. The user requests future single-write-only and multi-write-only parameter contracts, motivated by users: [User; 100000] = ?. Their syntax, read permissions after writes, per-element versus whole-destination write allowance, completion guarantees, and partial-failure behavior remain open; see [future write-only access](call-replacement-flow.md#future-write-only-access).
 
 This decision covers whole-value initialization only. It does not select x.field = ... or indexed writes as construction operations on uninitialized subobjects. Large-array initialization is the main motivating next step: track which elements are valid while the array's storage already exists, without reading untouched elements or requiring a preliminary zero fill.
 
