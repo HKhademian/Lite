@@ -46,6 +46,10 @@ Argument order does not determine whether arguments move, copy, or borrow, or wh
 
 Zero-initialized callables follow the same order. Their zero-result behavior does not skip argument evaluation or required argument cleanup. If an argument expression exits before invocation, the zero callable is not invoked. See [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
 
+## Earlier var arguments and later effects
+
+Selected on **2026-10-24**: an earlier var argument's required readable type must still hold at callee entry, after later supplied argument expressions have been evaluated. Selecting the location while its value fits is insufficient. For String | Int storage currently reading String, use_text(var x, ({ x = 42; 0 })) is rejected when use_text requires var String and Int: the later argument would leave Int before invocation. The assignment fits storage but invalidates the call's input proof. Preserve evaluation order and single location selection; no snapshot, reordering, or reevaluation repairs the call. This is a static entry obligation, not runtime rechecking or a complete borrow-activation/alias policy; see [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected).
+
 ## Named inputs and destination order
 
 Array/fixed-tuple spread evaluates each operand once at its written position, then supplies values in stored order. A declared variadic tail may receive zero elements without constructing a T value. Type-level tuple spread constructs a contract at compile time; it does not evaluate a runtime tuple. Shape inference does not authorize reordering effects, erasing superseded contributions, or assuming zero copies. See [tuple and array shapes](tuple-array-shapes.md).

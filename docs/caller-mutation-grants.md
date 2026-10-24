@@ -61,7 +61,7 @@ Before an explicit var call, check current reads against the callee's read type 
 
 ## Evaluation and scope
 
-Evaluate the callee first and arguments left to right, once each. Select/evaluate the marked data access or location under the existing evaluation-order rules. Neither marker implicitly invokes a cloning operation.
+Evaluate the callee first and arguments left to right, once each. Select/evaluate the marked data access or location under the existing evaluation-order rules. An earlier var input refinement must still fit when the callee begins after later argument effects; reject a call whose required input proof is unavailable then. No snapshot, reordering, or repeated location selection is implied; see [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected). Neither marker implicitly invokes a cloning operation.
 
 Granted access lasts for the call. Exact overlap/exclusivity checks, callbacks, temporary arguments, alias validity, and cleanup still require formalization. No automatic rollback or transactional commit is selected. Backend representation must preserve caller-visible writes rather than turn them into local-copy updates.
 

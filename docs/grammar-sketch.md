@@ -532,6 +532,8 @@ All ten comparison operators share exactly this one precedence level, binding mo
 
 Ordinary operator operands evaluate left to right after grouping is determined. Calls evaluate the callee first, supplied arguments in source order, then invoke the callable. Short-circuit constructs skip unneeded expressions. Assignment selects its target once before the right-hand side; a compound update reads the selected target's value before its right operand, then computes and writes the result.
 
+At invocation after all reached supplied arguments, earlier var locations must still have justified readable types fitting their parameters. A later argument that changes selected String | Int storage from String to Int prevents a var String call, even though the location initially fit and the write itself was allowed. Preserve single selection and source evaluation order; this is a static type obligation, not runtime checking or a selected borrow-activation policy. See [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected).
+
 These are semantic rules, not consequences of associativity or whitespace. [Evaluation order](evaluation-order.md) records the details and separates them from unchosen argument-passing, aliasing, and cleanup contracts.
 
 ## Open parser interactions

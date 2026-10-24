@@ -15,6 +15,29 @@ The current read type and the declared write contract are separate inputs to thi
 
 These checks require valid entry refinements and compatible location access throughout the call. They do not select general access variance, shared-alias concurrency, or a complete subtype/ownership model.
 
+## Entry facts after argument evaluation selected
+
+Selected on **2026-10-24**: the readable type required by each var argument must remain justified when the callee begins, after evaluation of all reached supplied arguments. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
+
+```text
+var x: String | Int = ?;
+x = "ready";
+
+use_text(var x, ({
+    x = 42;
+    0
+}));
+/* Rejected: x reads as Int before use_text begins. */
+```
+
+Assume use_text requires a read/write String location and an Int value, and returns Unit. According to the selected evaluation order, the first argument selects x while it reads as String; the later block expression would assign Int and produce 0 before invocation. That assignment fits x's declared String | Int storage, but the resulting Int cannot satisfy the callee's readable String input. Reject the call statically; an initial successful check of the first argument does not authorize it.
+
+Preserve ordinary callee-first, argument-left-to-right evaluation and select each supplied location once. A var grant designates the location, not a snapshot of the payload it held at selection. Do not reorder the write, silently copy the old String into detached storage, or reevaluate the location to make the call fit. This rule is a static entry obligation, not a selected runtime type check or recovery path.
+
+Require a supported proof that entry reads fit after intervening argument effects; invalidate earlier facts where those effects may change the location unless preservation is justified. Continue checking the callee's permitted writes against the caller's declared accepted replacements. Calls whose argument evaluation exits do not reach invocation and retain ordinary failure/exit behavior; no post-call fact is established merely by selecting an argument.
+
+This selects a necessary type-safety condition at invocation. It does not choose when borrows activate, an exclusivity implementation, or the full legality of overlapping/callback/aliased accesses. Satisfying the entry-type condition alone does not approve every such pattern. Independent earlier rejection by a future ownership rule is compatible with this obligation. Access validity and required invariants during the call retain their separate obligations.
+
 ## Helper contracts
 
 The imaginary helper signatures describe these single-parameter access contracts; their ordinary call results are Unit:
