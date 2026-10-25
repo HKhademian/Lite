@@ -90,7 +90,7 @@ loop {
 }
 ```
 
-Count and typed value are initialized before the first condition. A current item is not available in the source/condition or before a body entry. Index is the zero-based active traversal position; item/index are available during active iterations and as last-visited metadata in then. If no body ran, then receives type-directed zero placeholders and `.count == 0`. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
+Count and typed value are initialized before the first condition. A current item is not available in the source/condition or before a body entry. For positional sources, index is the zero-based active traversal position; a unique set or other nonpositional source has no `.index`. Item and positional index are available during active iterations and as last-visited metadata in then. If no body ran, then receives a typed zero item and, for positional sources, index 0, with `.count == 0`. A source union of Bool and iterable has no selected meaning. No post-condition loop form is added.
 
 ## Direction, stride, keys, and entries
 

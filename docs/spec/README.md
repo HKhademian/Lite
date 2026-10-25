@@ -114,7 +114,7 @@ Selected:
 
 - One `loop` keyword supports iterable, Boolean, and unconditional sources.
 - `as` names one optional item. Destructuring happens inside the body; positional receiver lists and completion receivers are retired.
-- `.item`, `.index`, `.count`, and `.value` are loop metadata. `.value` has static type `T` and starts at `zero(T)`.
+- `.item`, `.count`, and `.value` are loop metadata; `.index` is additionally available only for positional sources such as arrays, lists, and slices, not for a unique set. `.value` has static type `T` and starts at `zero(T)`.
 - `.item` is `Unit` in Boolean and unconditional loops. After zero body entries, `then` exposes type-directed zero placeholders and `.count == 0`.
 - A normally completing tail value, `continue value`, or `break value` commits to `.value`. Plain `continue` and bare `break` preserve it.
 - A no-`else` conditional in loop tail position contributes nothing on no match; a declaration such as `x := if ...; x` still contributes `x`'s declaration default.

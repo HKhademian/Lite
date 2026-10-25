@@ -2,7 +2,7 @@
 
 Status: **historical recovery/completion example; external construct-handler placement superseded, 2026-10-19**. The example's receiver lists, Option accumulator, `then(result)`, and external grouped-loop recovery are not current syntax. It is retained only to record the earlier discussion. The user now requires recovery inside fn/if/loop/match bodies. Current loop completion and value rules are in [loops](loops.md); body-wide scope and syntax are reviewed in [body-owned recovery](body-recovery.md). Construct-level `then`-before-`finally` order is selected; body-wide cleanup placement remains separate.
 
-**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.index/.count/.value metadata, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
+**Latest loop update, 2026-10-19:** header receiver lists/patterns, .acc, and automatic Option accumulator state shown below are historical. Current loops use one optional item name plus .item/.count/.value metadata, and .index for positional sources, with typed zero-initialized value. See [current loops](loops.md) and [loop value](loop-value.md).
 
 ## A collision the if proposal does not solve
 

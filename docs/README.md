@@ -196,7 +196,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Loop pattern alternatives](loop-pattern-alternatives.md): selected body-based selection and historical receiver-pattern/filtering alternatives, with adapter, termination, branch, and failure questions deferred.
 - [Loop value](loop-value.md): typed zero-initialized .value, internal commits, skipped iterations, and result inference.
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
-- [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
+- [Last item during completion](loop-last-item.md): .item and positional .index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
 - [Finally](finally.md): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching handler, primary/secondary cleanup-failure precedence, declaration-ordered member-wise handling, order-insensitive `&` co-occurrence patterns, and ordered failure tuples; the `&` form's public value, attachment scope, no-handler policy, and hard-abort behavior remain open.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.

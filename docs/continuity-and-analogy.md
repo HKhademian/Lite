@@ -107,6 +107,51 @@ should recognize the loop `then` shape as the same result-processing phase, with
 
 A reader who knows `@tag.value` inside a conditional `then` should not expect an untagged leading dot to work there. The tag requirement is the visible boundary, and the same tag vocabulary appears across constructs.
 
+## Similar input, different capabilities
+
+The strongest case is a shared input shape over different source capabilities.
+
+```text
+loop users as user {
+    greet(user)
+}
+
+loop unique_users as user {
+    greet(user)
+}
+```
+
+Both loops use the same `loop … as … { … }` header, the same body rules, and the same `.item`/`.value` completion model. The similarity is intentional: a reader who understands one already understands the binding, body, and completion shape of the other.
+
+What differs is the **source capability**, not the loop rule:
+
+| Source | Traversal | `.index` | Order | Notes |
+|---|---|---|---|---|
+| Array/list/slice | positional | yes | preserved positions | `.index` is traversal position, not an original key |
+| Unique set | element-wise | no | not a stable positional order | uniqueness is a set property; do not synthesize an index |
+| Generator/stream | element-wise | no by default | provider-defined | no rewind, length, or random access unless provided |
+| Explicit reverse view | positional if the provider preserves it | yes, traversal position | reverse of the source contract | reversal is explicit, not a silent loop mode |
+
+```text
+@scan loop unique_users as user {
+    describe(@scan.index)   /* rejected: a set has no positional traversal */
+}
+```
+
+The source type is the visible boundary. The loop does not guess an enumeration order for a set, does not manufacture an index by buffering, and does not turn a traversal into random access. If a position is required, use an explicitly ordered source or maintain an external counter; do not change the loop keyword to invent one.
+
+The same rule applies to “back to front” traversal:
+
+```text
+loop users as user {
+    visit(user)
+}
+```
+
+An explicit reverse traversal must be requested through the source/provider, for example an ordered reverse view or operation whose spelling is not selected here. `loop` itself does not silently reverse an arbitrary source. When a provider does expose reverse positional traversal, `.index` remains the traversal position (`0` for the first visited item), not the original forward index.
+
+This is the intended reading of “similar input pattern”: similar source shape gives similar **rules**, while capability differences give visibly different **available fields**. The difference must be diagnosed at the capability boundary, not discovered at runtime.
+
 ## Decision checklist
 
 Use this checklist for every syntax or rule decision.

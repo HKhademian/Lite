@@ -1,6 +1,6 @@
-# Last item and index during loop completion
+# Last item and positional index during loop completion
 
-Status: **completion access, zero-iteration placeholders, and use-based retention selected by the user, 2026-10-19; ownership/lowering mechanics remain open**. Item/index are available during active iterations and as the last visited entry in `then` when an iteration occurred. Only metadata observed during completion needs retention for that phase.
+Status: **completion access, zero-iteration placeholders, and use-based retention selected by the user, 2026-10-19; ownership/lowering mechanics remain open**. Item and, for positional sources, index are available during active iterations and as the last visited entry in `then` when an iteration occurred. Only metadata observed during completion needs retention for that phase.
 
 ## What it is useful for
 
@@ -28,17 +28,17 @@ report := @scan loop [4, 8, 12] as number {
 }
 ```
 
-Assume describe_last returns String. With these rules, bare break on 8 leads to then with item 8, index 1, count 2, and value 40. The item/index describe the last entered body, not the last committed body value. If the last entry instead used continue, it would likewise remain the last visited item without overwriting .value.
+Assume describe_last returns String and the source is positional. With these rules, bare break on 8 leads to then with item 8, index 1, count 2, and value 40. The item and positional index describe the last entered body, not the last committed body value. If the last entry instead used continue, it would likewise remain the last visited item without overwriting .value.
 
-This adds no last/last_item field names or completion receivers. .item and .index directly inside then select the same loop context even without an explicit tag. A nested if/match still requires a tag or captured locals; no outward field lookup is added. The optional as number binding remains iteration-local rather than being reintroduced implicitly in then.
+This adds no last/last_item field names or completion receivers. `.item` and, for positional sources, `.index` directly inside then select the same loop context even without an explicit tag. A nested if/match still requires a tag or captured locals; no outward field lookup is added. The optional as number binding remains iteration-local rather than being reintroduced implicitly in then.
 
 ## Zero-iteration placeholders
 
-The user selected zero placeholders for `.item` and `.index` in `then` when no body was entered. The loop's `.count` is 0, and its typed `.value` remains its initialized zero. These are distinct metadata fields with their own types.
+The user selected zero placeholders for `.item` and, for positional sources, `.index` in `then` when no body was entered. The loop's `.count` is 0, and its typed `.value` remains its initialized zero. These are distinct metadata fields with their own types.
 
-For an iterable loop, `.item` is the language-defined zero of the source element type. For a Boolean or unconditional loop, `.item` is `Unit`, which is its own zero value because Unit has one inhabitant. Under the user's selected zero-sized representation, no payload bytes need to be stored. `.index` is zero. `.count == 0` distinguishes these placeholders from the item and index of an actual first entry, whose index is also zero. The placeholder does not claim that a source element existed or that a body ran. If completion reads this field after zero entries, no last source item needs to be retained.
+For an iterable loop, `.item` is the language-defined zero of the source element type. For a Boolean or unconditional loop, `.item` is `Unit`, which is its own zero value because Unit has one inhabitant. Under the user's selected zero-sized representation, no payload bytes need to be stored. For a positional source, `.index` is zero; a unique set or other nonpositional source exposes `.item` but not `.index`. `.count == 0` distinguishes these placeholders from the item and, where available, index of an actual first entry. The placeholder does not claim that a source element existed or that a body ran. If completion reads this field after zero entries, no last source item needs to be retained.
 
-This rule applies to `then` after the loop. `.item` and `.index` are not available in a loop source expression or condition before an iteration is entered. Index means zero-based traversal position, independent of source keys, reversed positions, or stride.
+This rule applies to `then` after the loop. `.item` and, for positional sources, `.index` are not available in a loop source expression or condition before an iteration is entered. Index means zero-based traversal position for positional sources, independent of source keys, reversed positions, or stride.
 
 ## Use-based retention
 

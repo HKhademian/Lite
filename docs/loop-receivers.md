@@ -64,7 +64,7 @@ The following alternatives were considered and not selected:
 - **No `.item` in source-less modes:** directly reflects that no source element exists, but makes the metadata interface depend on source mode.
 - **The Boolean condition as `.item`:** exposes the `true` result that allowed entry, but gives Boolean and unconditional loops different item types and treats a guard as payload.
 
-After zero body entries, `then` still exposes `.item` and `.index` as type-directed zero placeholders; `.count == 0` signals that no entry ran. For a Boolean/unconditional loop, the `.item` placeholder is `Unit`, and `.index` is zero. No active item is available in source/condition evaluation or before a successful Boolean check / first unconditional body entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
+After zero body entries, `then` still exposes a typed zero `.item` and, for positional sources, `.index`; `.count == 0` signals that no entry ran. For a Boolean/unconditional loop, the `.item` placeholder is `Unit`, and `.index` is zero. A unique set or other nonpositional iterable has no `.index`. No active item is available in source/condition evaluation or before a successful Boolean check / first unconditional body entry. See [zero-iteration placeholders](loop-last-item.md#zero-iteration-placeholders).
 
 ## Retired forms
 

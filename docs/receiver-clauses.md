@@ -74,7 +74,7 @@ This is not accepted grammar. If adopted, it would require decisions about:
 
 The [pattern context review](pattern-contexts.md#7-completion-hook-receivers) recommends ordinary receivers bind irrefutably. A selective hook or Result error pattern needs an explicit unmatched-input policy; one pattern-bearing clause must not silently swallow an error or omit required cleanup. This recommendation does not select the explored typed dispatch chains.
 
-Current loop `then` has no receiver: it reads the owning context's `.value`, `.count`, and phase-valid item/index metadata. A zero-entry loop exposes selected typed zero placeholders for `.item`/`.index`, distinguished by `.count == 0`. Cleanup-only `finally` likewise has no receiver; it does not receive or transform the pending outcome. Cleanup-failure precedence is selected; attachment syntax and aggregate handling remain open.
+Current loop `then` has no receiver: it reads the owning context's `.value`, `.count`, and phase-valid item and positional-index metadata. A zero-entry loop exposes a typed zero `.item` and, for positional sources, `.index`, distinguished by `.count == 0`; a nonpositional source has no `.index`. Cleanup-only `finally` likewise has no receiver; it does not receive or transform the pending outcome. Cleanup-failure precedence is selected; attachment syntax and aggregate handling remain open.
 
 ## Related concepts and references
 
