@@ -215,6 +215,24 @@ A tuple may have an empty fixed prefix and still contain its declared rest array
 
 The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. The selected default label for an unannotated inferred rest-only tail is rest: b has the inferred schema (...rest: Int), and b.rest accesses its array. This label is independent of the source expression's spelling, so (...read_numbers()) gets the same label. rest remains an ordinary member label, not a reserved keyword. An expected schema or explicit named-tail construction can choose another label. Existing label-sensitive tuple rules still apply; full tail compatibility, exact representation, and normalization/equivalence with a bare array remain open. Multiple rest segments remain a future discussion.
 
+### Default tail-label collisions are rejected
+
+Selected in the follow-up discussion, 2026-10-25: reject an inferred tuple schema when its default array-tail label rest conflicts with a fixed member already named rest. The compiler must not silently overwrite the fixed member, replace it with a rest segment, invent another label, or treat rest as a reserved keyword.
+
+```text
+items := read_numbers();
+value := (rest = 10, ...items);
+/* rejected: the inferred tail label rest conflicts with the fixed member */
+
+value: (rest: Int, ...numbers: Int) = (rest = 10, ...items);
+/* valid for a compatible Int array source */
+/* value.rest is 10; value.numbers is the array tail */
+```
+
+The explicit destination is the reference contract. It names the fixed member rest and the array tail numbers, so no default tail label is generated and the collision is removed. Preserve the ordinary coverage, type, label-routing, permission, and source-evaluation requirements; an explicit schema does not bypass those checks.
+
+This is a collision of member declarations during inference, not an ordinary contribution replacing a value in an established fixed slot. Existing fixed-component append-or-replace rules are unchanged. Compare member labels rather than lexical variable names: a positional value expression named rest does not itself declare a fixed member named rest. Likewise, rest remains usable as an ordinary label when no default-tail collision occurs. Other tail-label collision/merge cases and multiple declared rest segments remain separate.
+
 ### Zero and singleton fixed expansion versus declared tails
 
 Selected in the follow-up discussion, 2026-10-25: without a destination requesting a different shape, fixed-array spread enumerates its known fixed arity. An explicit named rest declaration instead preserves a tail-bearing tuple schema, including when the source array has zero or one element.
@@ -267,7 +285,7 @@ typed_empty: (...extra: Int) = (...extra = []);
 
 This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty literals without element-type evidence remain separate; known-type heterogeneous construction follows the union inference rule below.
 
-Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed named-entry composition, collisions involving tail labels, multiple stored rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
+Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed named-entry composition, other collisions involving tail labels, multiple stored rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
 
 ### Spreading a rest-bearing tuple
 
