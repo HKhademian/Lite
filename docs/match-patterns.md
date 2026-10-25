@@ -1,6 +1,6 @@
 # Match pattern capabilities
 
-Status: **equality, plain enums, payload enums, destructuring, and type matching required; complete productions and evaluation contracts open**.
+Status: **equality, plain enums, payload enums, destructuring, and type matching required; selected production surface outlined in the grammar sketch, while constructor schemas, evaluation, ownership, and coverage contracts remain open**.
 
 ## Purpose and template
 
@@ -78,7 +78,7 @@ match point {
 
 Assume point has a compatible two-element tuple type. This pattern receives the whole point and destructures that same value. It does not switch to unrelated metadata because a tuple pattern was written.
 
-Tuple, record/field, and nested patterns belong to this capability. Positional tuples and destination = sourceField named tuple/record patterns have selected forms. Complete recursive grammar, record positional schemas, and sequence/rest extensions remain open; see [tuple routing](named-input-routing.md) and [aggregate patterns](aggregate-patterns.md). Literal or type constraints should compose with extraction, subject to the full pattern grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
+Tuple, record/field, and nested patterns belong to this capability. Positional tuples and destination = sourceField named tuple/record patterns have selected forms. The selected recursive grammar is outlined in the [grammar sketch](grammar-sketch.md#match); record positional schemas and sequence/rest extensions remain open. See [tuple routing](named-input-routing.md) and [aggregate patterns](aggregate-patterns.md). Literal or type constraints should compose with extraction, subject to the incomplete expression operand grammar. This does not imply heap allocation or automatic calls to arbitrary user getters.
 
 Newly bound component names are branch-local and may shadow outer names. A name in a binding position inside a constructor pattern, such as `Event.Key(key)`, binds its payload; an outer variable with the same spelling must not silently change it into an equality test. Repeated binding names within a pattern shadow in recursive written order, without asserting equality. `_` follows the same rule as every other binding name and explicitly permits nonuse. Typed underscore bindings can constrain components and remain readable; see [pattern shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
@@ -152,7 +152,7 @@ Selected 2026-10-24: complete initial arm-pattern lists and supported nested con
 
 ## Common contracts still to settle
 
-- Complete recursive composition and operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection. No interpretation may rely on capitalization or whitespace.
+- Complete expression operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection schemas. The recursive pattern productions are in the grammar sketch. No interpretation may rely on capitalization or whitespace.
 - Every match must now be exhaustive, including actions; _ {} explicitly ignores remaining values. Specify overlap, unreachable arms, optional else fallback syntax, and the coverage algorithm.
 - Define borrow/copy/move behavior and field access permissions, especially after a nested match fails.
 - Formalize custom comparison applicability/effects, extraction, and ownership without sacrificing the selected once-evaluated subject and RHS-once-when-reached contracts.

@@ -1,6 +1,6 @@
 # Pattern bindings, value tests, and type tests
 
-Status: **bind, type-match, and value-match primitives selected on 2026-10-18; all ten comparison prefixes selected within value matching on 2026-10-23; full composition grammar and effect/ownership contracts remain open**.
+Status: **bind, type-match, and value-match primitives selected on 2026-10-18; all ten comparison prefixes selected within value matching on 2026-10-23; selected composition productions outlined in the grammar sketch, while comparison operand boundaries and effect/ownership contracts remain open**.
 
 ## Purpose
 
@@ -181,6 +181,6 @@ Match examples use literal cases, dot-prefixed enum cases, and bare type names f
 
 Bind (`name`), type match (`: Type`), and value match are selected as base operations. Value matching accepts all ten comparison prefixes, including == expected and >= limit; this does not add a fourth base operation. Typed bindings compose binding and type matching; literals remain concise equality tests. Explicit `.None` case selection and ordinary readable underscore bindings remain selected.
 
-Complete comparison-operand boundaries, custom comparison effects/fallibility, exact type/subtype semantics, and refinement stability before treating the design as an implementation-ready specification. Runtime comparison RHS expressions already evaluate once when reached, and failures remain failures. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
+Complete comparison-operand boundaries, custom comparison effects/fallibility, exact type/subtype semantics, and refinement stability remain open before treating the design as an implementation-ready specification. The selected composition productions are in the [grammar sketch](grammar-sketch.md#match). Runtime comparison RHS expressions already evaluate once when reached, and failures remain failures. The broader [pattern context review](pattern-contexts.md) still tracks receiver mismatch, ownership, coverage, rest/record grammar, and enum/metadata disambiguation.
 
 Related: [pattern shadowing](pattern-shadowing.md), [match capabilities](match-patterns.md), [type tests](type-tests-and-narrowing.md), and [match arm chains](match-guards.md).

@@ -242,17 +242,7 @@ inferred_named_singleton_type := "(" identifier "," ")"
 
 Thus (Int) groups a scalar type, (:Int,) is an unnamed singleton, (cake: Int) is a named singleton with an optional trailing comma, and (cake,) names a singleton component whose type must be inferred from static evidence. (:Int) is rejected: the unnamed singleton comma is required across values, types, and patterns. Bare labels remain labels in tuple type components; name lookup and expected types do not choose the parse. See [singleton type boundary](tuple-entries-and-access.md#2-singleton-type-boundary-selected).
 
-Selected empty, grouped, and singleton tuple patterns use these descriptive fragments:
-
-```text
-empty_tuple_pattern := "(" ")"
-grouped_pattern := "(" pattern ")"
-singleton_tuple_pattern := "(" pattern "," ")"
-named_singleton_tuple_pattern := "(" named_tuple_selector [","] ")"
-named_tuple_selector := identifier "=" identifier | "=" identifier
-```
-
-In the explicit named selector, the two identifiers mean destination binding and source field label, respectively. The selected = identifier pattern shorthand expands to identifier = identifier; each identifier denotes that same destination name and source label. Thus (=fruit, =tea, =cake) is an all-named pattern in the written binding order. Reject unknown/duplicate source selectors after expansion and require complete coverage unless rest captures the remainder. This is not equality or positional inference. See [pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected). (local) := one groups the binding and preserves the whole tuple; (local,) := one extracts its one component; (local = label) := one extracts by name. A typed binding inside grouping constrains the whole source, while a typed component followed by the singleton comma constrains the component. Expected types do not choose the parse. The selected empty tuple pattern () matches only Unit and binds no names. Its source is evaluated once. Ordinary declarations require an irrefutable match; supported conditional/match contexts use their existing mismatch rules. These fragments do not formalize the complete recursive parser or new header-pattern support. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected). See [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected).
+Selected empty, grouped, and singleton tuple patterns use the unified `tuple_pattern` in the match grammar: `()` is empty, `(pattern)` groups, `(pattern,)` is an unnamed singleton, and `(local = label)` or `(=label)` is a named singleton. In the explicit named selector, the two identifiers mean destination binding and source field label, respectively. The selected `= identifier` pattern shorthand expands to `identifier = identifier`; each identifier denotes that same destination name and source label. Thus `(=fruit, =tea, =cake)` is an all-named pattern in the written binding order. Reject unknown/duplicate source selectors after expansion and require complete coverage unless rest captures the remainder. This is not equality or positional inference. See [pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected). `(local) := one` groups the binding and preserves the whole tuple; `(local,) := one` extracts its one component; `(local = label) := one` extracts by name. A typed binding inside grouping constrains the whole source, while a typed component followed by the singleton comma constrains the component. Expected types do not choose the parse. The selected empty tuple pattern `()` matches only Unit and binds no names. Its source is evaluated once. Ordinary declarations require an irrefutable match; supported conditional/match contexts use their existing mismatch rules. Header-pattern support remains separate. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected) and [singleton binding patterns](tuple-entries-and-access.md#singleton-binding-patterns-selected).
 
 ## Call input entries selected
 
@@ -303,7 +293,9 @@ Selected record forms and field-list fragments:
 record_initialization_field := identifier "=" expression
 named_record_pattern := "{" [named_record_fields] "}"
 named_record_fields := named_record_clause { "," named_record_clause } [","]
-named_record_clause := pattern "=" identifier
+named_record_clause := pattern_operand "=" identifier
+                     | identifier "==" pattern_value_operand
+                     | identifier ":" type
                     | identifier "==" pattern_value_operand
                     | identifier ":" type
 ```
@@ -355,12 +347,9 @@ negated_existing_name_type_test := "not" existing_name_type_test
 existing_name_type_test := identifier ":" type
 pattern_condition := inferred_source_pattern ":=" condition_value_operand
                    | identifier ":" type "=" condition_value_operand
-
-binding_pattern := identifier
-type_match_pattern := ":" type
-value_match_pattern := "==" pattern_value_operand
-typed_binding_pattern := identifier ":" type
 ```
+
+Pattern primitives are defined once in the match grammar below: binding, typed binding, type-only match, and the ten comparison-prefix value tests. Condition patterns reuse those productions rather than defining a second vocabulary.
 
 The optional leading and/or belongs to a complete condition entry, including an explicitly parenthesized condition group. Remove it before applying ordinary precedence and binding rules; it creates no true/false operand or empty alternative. Require at least one real operand and reject stacked, interior, or trailing separators: if and a and b is valid, while if or and a and if a or and b are invalid. The same condition production is used after else if and in subject-based match guards. Ordinary Boolean expressions now admit the same prefix at complete expression entries under the logical-expression fragment below, including initializers, loop sources, and subjectless match Boolean headers. Initial/nested pattern alternatives independently permit one leading or under the separate alternative_pattern production below; do not stack condition and pattern leaders at the same boundary. The condition_boolean_operand placeholder must not admit another bare leading separator after an outer condition prefix or an interior operator; explicitly grouped conditions establish their own entry. See [optional leading separators](leading-separators.md).
 
@@ -391,19 +380,48 @@ match_expression := subject_match | subjectless_match
 subject_match := "match" expression "{" match_arm { match_arm } "}"
 match_arm := arm_pattern [ "if" condition ] block { ";" }
 arm_pattern := alternative_pattern
+
+pattern := pattern_operand
 alternative_pattern := ["or"] pattern { "or" pattern }
 component_pattern := alternative_pattern
+
+pattern_operand := binding_pattern
+                 | typed_binding_pattern
+                 | type_match_pattern
+                 | comparison_pattern
+                 | literal_pattern
+                 | constructor_pattern
+                 | tuple_pattern
+                 | named_record_pattern
+
+binding_pattern := identifier
+typed_binding_pattern := identifier ":" type
+type_match_pattern := ":" type
+comparison_pattern := comparison_operator pattern_value_operand
+literal_pattern := literal
+pattern_value_operand := comparison_operand | grouped_comparison_pattern_operand
+
+constructor_pattern := dot_case_pattern
+                    | qualified_case_pattern
+                    | bare_constructor_pattern
+dot_case_pattern := "." identifier [ "(" payload_pattern_list ")" ]
+qualified_case_pattern := identifier "." identifier { "." identifier }
+                          [ "(" payload_pattern_list ")" ]
+bare_constructor_pattern := identifier "(" payload_pattern_list ")"
+payload_pattern_list := ["or"] component_pattern { "," component_pattern } [","]
+
 subjectless_match := "match" "{" boolean_match_arm { boolean_match_arm } "}"
 boolean_match_arm := boolean_match_header block { ";" }
 boolean_match_header := boolean_match_expression | "_"
-contextual_enum_case := "." identifier [ "(" [pattern_list] ")" ]
 ```
+
+A `pattern` is one operand form; `alternative_pattern` is the nonempty `or` list used by an arm or a nested component. Parentheses and commas bound each nested alternative list, so a nested `or` never escapes its constructor payload or tuple component. `literal` is a placeholder for numeric, string, and Boolean literal tokens; the exact numeric-literal production remains open. The Boolean literal tokens `true` and `false` are literal value tests, not bindings; numeric and string literal patterns likewise test equality and bind nothing. `pattern_value_operand` is an expression that binds more tightly than comparison, or a grouped expression; ungrouped top-level comparison, Boolean, conditional, or block RHS forms are rejected. A bare `identifier` is always a binding, including `_`; a constructor requires `.case`, a qualified dotted head, or an explicit `name(...)` payload head. `qualified_case_pattern` is a case-pattern head; an arbitrary qualified value used for comparison is written `== value.path`, not as a bare dotted pattern.
 
 The ordinary Bool-valued boolean_match_expression entry admits the selected single optional leading and/or, as in and connected and permitted { body }, using the same expression-entry fragment as an initializer or Boolean loop source. It gains no condition-pattern binding. The separate alternative_pattern production now permits one optional leading or on a nonempty initial arm-pattern list or supported constructor-payload/tuple-component list. Here pattern is one individual pattern and must not independently admit another bare leading or at the same boundary. Nested component lists establish their own entry. Reject empty lists, stacked/interior extra leaders, and trailing separators. The optional if guard follows the complete initial list and then one shared block; newlines do not split the alternatives into arms. See [leading pattern alternatives](leading-separators.md#pattern-alternatives-with-one-shared-body).
 
 Initial subject-based arm_pattern alternatives share the once-evaluated subject and try left to right. After per-alternative ordered shadowing, collect the union of their final visible binding-name sets; missing names contribute Unit to the shared guard/body bindings. Each shared guard/body name has the normalized union of its possible final binding types, including Unit for absent alternatives: Email(String) and Sms(PhoneNumber) alternatives binding address give String | PhoneNumber. Differently named Email(email)/Sms(phone) alternatives instead give email: String | Unit and phone: PhoneNumber | Unit, initializing the absent name with Unit rather than reading an outer binding. The same payload-or-Unit join now applies to complete condition/guard alternatives; neither context requires identical name sets. A distinct numeric-representation PhoneNumber is not replaced with Number; transparent aliases resolve normally. Failed alternatives leak no bindings and failures remain failures. The repeated or production permits any finite number of initial alternatives. The if separator starts one shared guard after the whole pattern section: stop at the first successful initial pattern, evaluate the shared guard once, and on complete guard failure continue to the next arm without retrying any initial alternatives. Ordinary and/or precedence applies inside the guard, not across the if separator. Nested constructor/tuple component alternatives are selected as described below. See [alternative arm patterns](match.md#alternative-arm-patterns-selected).
 
-Nested constructor payload patterns and tuple component patterns may use component_pattern alternatives. In this descriptive fragment, pattern denotes one individual supported pattern, whose child payload/tuple patterns may in turn admit component_pattern; complete recursive productions remain unfinished. Existing payload/tuple parentheses and comma separators bound each local choice. At that component level, or separates complete pattern alternatives; ordinary Boolean or intended inside a comparison RHS stays grouped as == (ready or retry). Thus .Some(.Email(address) or .Sms(address)) joins address as String | PhoneNumber; (.Email(address) or .Sms(address), received_at) applies the choice only to the first component. Different local binding names join payload types with Unit where absent, after per-alternative shadowing. Candidate bindings are exposed outside only after the whole enclosing pattern succeeds. Free comparison-RHS names retain pre-pattern lookup, not sibling binding lookup. Stop at the first local success and skip later local alternatives; a later component/guard failure never retries an earlier successful local choice. A failed enclosing pattern may still permit another enclosing alternative; a failed shared arm guard moves to the next arm. Preserve source-once evaluation, ordinary effects/failures, irrefutable declarations, existing supported pattern contexts, and ownership obligations. No and/not subpatterns, new headers, or constructor schemas are selected. See [nested alternatives](match.md#nested-alternative-patterns-selected).
+Nested constructor payload patterns and tuple component patterns may use component_pattern alternatives. The productions above cover the selected recursive forms; constructor schemas, extraction effects, and ownership remain separate. Existing payload/tuple parentheses and comma separators bound each local choice. At that component level, or separates complete pattern alternatives; ordinary Boolean or intended inside a comparison RHS stays grouped as == (ready or retry). Thus .Some(.Email(address) or .Sms(address)) joins address as String | PhoneNumber; (.Email(address) or .Sms(address), received_at) applies the choice only to the first component. Different local binding names join payload types with Unit where absent, after per-alternative shadowing. Candidate bindings are exposed outside only after the whole enclosing pattern succeeds. Free comparison-RHS names retain pre-pattern lookup, not sibling binding lookup. Stop at the first local success and skip later local alternatives; a later component/guard failure never retries an earlier successful local choice. A failed enclosing pattern may still permit another enclosing alternative; a failed shared arm guard moves to the next arm. Preserve source-once evaluation, ordinary effects/failures, irrefutable declarations, existing supported pattern contexts, and ownership obligations. No and/not subpatterns, new headers, or constructor schemas are selected. See [nested alternatives](match.md#nested-alternative-patterns-selected).
 
 If the next non-comment token after match is `{`, parse subjectless_match. A brace-starting subject expression must be grouped, as in `match ({ compute_subject() }) { ... }`; whitespace or type lookup cannot choose the form. boolean_match_expression is an ordinary Bool-valued expression placeholder, excluding a header consisting solely of the fallback token `_` and outer-level ungrouped body braces. The next outer-level ungrouped opening brace starts the arm body; block/conditional/record value expressions inside a header require grouping, with nested call arguments retaining their ordinary delimiters. In `val1 == val2 { ... }`, val2 is an expression reference, not a record-construction head. Complete recursive expression/header productions remain incomplete.
 
@@ -417,30 +435,36 @@ Each subject-based arm may follow its initial pattern with an if guard. The guar
 
 Later subject-based arms and initial pattern alternatives receive the remaining subject possibilities established by earlier failures, without importing failed bindings. For a stable initialized String | Float | Int subject, an unguarded : String arm excludes String from the next arm, so both the original stable name and a catch-all _ binding there have type Float | Int. A guard or partial pattern failure does not exclude the whole written type: String may remain after a guarded String arm. Refine only proven subject possibilities and stable aliases of that same subject; no copy/freeze or general predicate-complement solver is implied. Declared types after the match remain unchanged. See [remaining subject narrowing](type-tests-and-narrowing.md#remaining-subject-types-across-match-arms-selected).
 
-This sketches the selected arm surfaces, not a full expression/pattern parser. Every match must be exhaustive, including actions. In subject-based matching, an unconstrained _ binding supplies the catch-all, and _ {} explicitly ignores remaining subjects with Unit. In subjectless matching, _ {} is a fallback with no binding and handles the all-false path with Unit. A separate else fallback, overlaps, exact type versus subtype tests, and detailed coverage proofs remain open. See [match](match.md) and [union type patterns](union-patterns.md).
+This sketches the selected arm surfaces and pattern productions; expression and coverage details remain incomplete. Every match must be exhaustive, including actions. In subject-based matching, an unconstrained _ binding supplies the catch-all, and _ {} explicitly ignores remaining subjects with Unit. In subjectless matching, _ {} is a fallback with no binding and handles the all-false path with Unit. A separate else fallback, overlaps, exact type versus subtype tests, and detailed coverage proofs remain open. See [match](match.md) and [union type patterns](union-patterns.md).
 
 Finite known binding combinations from input/pattern alternatives are retained for later stable related-binding narrowing. For Email(String)/Sms(PhoneNumber), separate email/phone names initially have String | Unit and PhoneNumber | Unit but only the two paired combinations are possible. A later successful email: String test excludes the Sms combination, so phone narrows to Unit. If Email may itself carry Unit, email: Unit does not identify Sms; retain all compatible combinations and their projected types. Require stable binding identities; relevant replacement, shadowing, or effects must not transfer stale relationships to new values. No arbitrary predicate solver, implicit conversion, extra runtime discriminator, sibling pattern-RHS lookup, or negation binding export is selected. See [related binding inference](pattern-binding-inference.md#narrowing-related-stable-bindings-selected).
 
-The full pattern grammar must cover equality, plain enum cases, payload-bearing cases, destructuring, and type tests. The base spellings are selected: name binds, `: Type` type-matches, and `== expected` value-matches. Full operand boundaries, recursive composition, enum declarations, and record-pattern delimiters remain open. See [match pattern capabilities](match-patterns.md).
+The pattern grammar covers equality and the other comparison prefixes, plain enum cases, payload-bearing cases, destructuring, and type tests. The base spellings are selected: name binds, `: Type` type-matches, and a comparison prefix value-matches. Complete expression operand boundaries, enum declarations, constructor schemas, record field omission, and ownership remain open. See [match pattern capabilities](match-patterns.md).
 
-Bare identifiers in pattern binding positions introduce names; they do not become equality or type tests through lookup or capitalization. Use `.None` for the absent Option case, not bare None. Existing Some(value) constructor heads remain explicit payload patterns. The [pattern primitives](pattern-bindings-and-tests.md) select `== expected` value tests and `: Type` type-only patterns, neither of which binds a name. `name: Type` combines binding and type matching. The pattern_value_operand placeholder still requires complete expression-boundary/precedence rules; these productions describe the chosen forms without claiming a complete parser.
+Bare identifiers in pattern binding positions introduce names; they do not become equality or type tests through lookup or capitalization. Use `.None` for the absent Option case, not bare None. Existing Some(value) constructor heads remain explicit payload patterns. The [pattern primitives](pattern-bindings-and-tests.md) select comparison-prefix value tests and `: Type` type-only patterns, neither of which binds a name. `name: Type` combines binding and type matching. `pattern_value_operand` still relies on the incomplete expression grammar, so these productions describe the selected forms without claiming a complete expression parser.
 
-Typed component patterns are selected within destructuring, as in `(x: Int, y: String)` and constructor payloads containing that tuple pattern. The same pattern can appear as a match arm or before `:=` in a conditional. The whole pattern succeeds only when all required structural and type constraints hold; it is not a converting cast. This composition requirement does not complete the recursive pattern parser, record syntax, or ownership contract.
+Typed component patterns are selected within destructuring, as in `(x: Int, y: String)` and constructor payloads containing that tuple pattern. The same pattern can appear as a match arm or before `:=` in a conditional. The whole pattern succeeds only when all required structural and type constraints hold; it is not a converting cast. The grammar above covers this composition; complete record schemas and ownership remain open.
 
 An annotation constrains its component; other binding types are inferred by narrowing the entire input against the pattern and projecting each binding's concrete type or union from the compatible portions. Composite alternatives remain intact. This is a semantic requirement, not additional syntax or a match-arm result-union rule; see [pattern binding inference](pattern-binding-inference.md).
 
-Nested tuple components use either a variable binding or a nested pattern: (first, pair, ...rest) binds the second component as pair, while (first, (a, b), ...rest) destructures it into a and b. Combined whole-value/subpattern binding is rejected. Colon retains its type role: pair: (a, b) constrains and binds pair, with a and b as type-component labels rather than new local bindings. Complete recursive parsing must preserve these roles independently of whitespace, identifier casing, or type lookup. Positional tuple rest now has selected shape, placement, and arity:
+Nested tuple components use either a variable binding or a nested pattern: (first, pair, ...rest) binds the second component as pair, while (first, (a, b), ...rest) destructures it into a and b. Combined whole-value/subpattern binding is rejected. Colon retains its type role: pair: (a, b) constrains and binds pair, with a and b as type-component labels rather than new local bindings. The recursive productions must preserve these roles independently of whitespace, identifier casing, or type lookup. The selected tuple-pattern forms include positional rest with fixed placement and arity:
 
 ```text
+tuple_pattern := "(" ")"
+               | "(" pattern ")"
+               | "(" pattern "," ")"
+               | "(" named_tuple_selector [","] ")"
+               | rest_only_tuple_pattern
+               | "(" tuple_pattern_entry "," tuple_pattern_entry
+                     { "," tuple_pattern_entry } [","] ")"
+
+tuple_pattern_entry := component_pattern | named_tuple_selector | tuple_rest_capture
 tuple_rest_capture := "..." identifier
 rest_only_tuple_pattern := "(" tuple_rest_capture [","] ")"
-
-tuple_pattern_entry := positional_component_pattern | named_tuple_selector
-mixed_tuple_pattern := "(" tuple_pattern_entry {"," tuple_pattern_entry}
-                       ["," tuple_rest_capture] [","] ")"
+named_tuple_selector := identifier "=" identifier | "=" identifier
 ```
 
-The mixed_tuple_pattern fragment requires at least one positional entry and one named selector. positional_component_pattern is a placeholder for already supported component-pattern forms, excluding top-level named selectors and rest. This fragment does not complete recursive pattern parsing or add patterns to loop/lambda headers. Each positional entry selects the next unselected source position in stored order; a named selector selects its source field. Selecting a component twice is invalid, regardless of destination binding names. Explicit selectors and =name shorthand share this rule.
+The unified `tuple_pattern` covers empty, grouped, singleton, named-singleton, rest-only, and multi-entry forms. A one-entry parenthesized pattern groups; a required comma makes it a singleton; the multi-entry form needs at least two entries and admits positional, named-selector, and mixed lists. Each positional entry selects the next unselected source position in stored order; a named selector selects its source field. At most one rest capture appears last. Selecting a component twice is invalid, regardless of destination binding names. Explicit selectors and `=name` shorthand share this rule. This completes the selected tuple-pattern surface; tail-only normalization and ownership remain separate.
 
 At most one capture appears last in a positional tuple pattern. For a fixed tuple it preserves remaining component types, labels, and order as a tuple: zero gives Unit/(), one remains a singleton; without rest, require exact coverage. On a schema with an array tail, preserve any unselected fixed components followed by that tail; a callable receiver aligned with all fixed inputs collects the declared array segment. No pattern rest fills missing fixed components. Tail-only normalization and full integration remain open; see [array-tailed tuples](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail).
 
@@ -449,13 +473,12 @@ The [pattern context review](pattern-contexts.md) distinguishes shared pattern f
 ### Comparison-pattern prefixes selected
 
 ```text
-comparison_pattern := comparison_operator comparison_pattern_operand
 grouped_comparison_pattern_operand := "(" expression ")"
 ```
 
-comparison_operator is the same ten-token family used by expression comparisons below. The enclosing pattern supplies the left operand; comparison_pattern_operand is a descriptive placeholder for the right value expression. Its complete recursive boundaries, including arm bodies and named-field selector clauses, remain open. This fragment selects no additional constructor schema, header-pattern context, or type-based parsing rule.
+`comparison_operator` is the same ten-token family used by expression comparisons below. The enclosing pattern supplies the left operand; `pattern_value_operand` is an expression that binds more tightly than comparison, or a grouped expression. Its recursive expression boundaries, including arm bodies and named-field selector clauses, remain open. This fragment selects no additional constructor schema, header-pattern context, or type-based parsing rule.
 
-Selected common RHS forms include ordinary arithmetic, calls, and member access without additional pattern-specific grouping: `>= minimum + margin`, `== expected()`, and `== settings.limit`. They retain ordinary operator meanings, static compatibility, pre-pattern name lookup, and RHS-once-when-reached evaluation; they bind nothing. An ungrouped implicit-subject chain such as `>= lower < upper` is invalid. Use `v if lower <= v < upper { ... }` to bind and guard explicitly. Grouped RHS value expressions are also selected, with grouping required for outer-level comparison operators, Boolean logic, and conditional/block expressions. The grouped_comparison_pattern_operand production is one admitted comparison_pattern_operand form; it uses existing expression forms and adds no binding. Full recursive operand and delimiter productions remain incomplete. See [common comparison operands](comparison-patterns.md#common-right-operands-selected).
+Selected common RHS forms include ordinary arithmetic, calls, and member access without additional pattern-specific grouping: `>= minimum + margin`, `== expected()`, and `== settings.limit`. They retain ordinary operator meanings, static compatibility, pre-pattern name lookup, and RHS-once-when-reached evaluation; they bind nothing. An ungrouped implicit-subject chain such as `>= lower < upper` is invalid. Use `v if lower <= v < upper { ... }` to bind and guard explicitly. Grouped RHS value expressions are also selected, with grouping required for outer-level comparison operators, Boolean logic, and conditional/block expressions. The `grouped_comparison_pattern_operand` form is one admitted `pattern_value_operand`; it uses existing expression forms and adds no binding. Full recursive operand and delimiter productions remain incomplete. See [common comparison operands](comparison-patterns.md#common-right-operands-selected).
 
 `== (left == right)` and `== (ready or retry)` compare the supplied Bool-compatible subject with a computed Bool; neither binds a name. Conditional/block operands likewise group, as in `== (if ready { first } else { second })` and `== ({ compute_expected() })`. Arithmetic/call/member forms keep their ordinary concise syntax; nested call arguments use their existing delimiters. Ungrouped outer comparison/Boolean/conditional/block RHS forms are rejected. An arm if guard follows the complete pattern, as in `== expected() if ready { handle() }`. These boundaries apply to all ten comparison prefixes. See [grouped comparison operands](comparison-patterns.md#grouped-right-operands-selected).
 
@@ -495,7 +518,7 @@ context_access := "." field
 
 Named tags are prefixes on the construct. Leading-dot metadata shorthand applies to the current loop context and never searches outward; inside a conditional, use an explicit loop tag. Conditional result `.value` requires `@tag.value` and is readable only inside the attached `then`; ambiguous leading-dot metadata reads are rejected. Body braces belong to their construct and do not add another wrapper context.
 
-Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; pattern_list and full enum productions remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
+Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; payload matching uses the selected payload pattern list, while full enum declarations and constructor schemas remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
 
 The tag scope includes its header, so a loop condition may reference initialized count or typed value state. Current items are not available before body entry.
 
@@ -653,7 +676,7 @@ Lexical/syntax failures do not authorize formatter repair or partial-file rewrit
 
 ## Open parser interactions
 
-- Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.
+The selected pattern productions are above. Constructor and enum declaration schemas, complete expression operands, record field omission, and coverage proofs remain open; typed hook-dispatch chains remain exploratory.
 
 ## Related concepts and references
 

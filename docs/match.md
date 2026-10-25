@@ -1,6 +1,6 @@
 # Match and exhaustive selection
 
-Status: **subject-based pattern matching and subjectless Boolean selection selected; subjectless form selected on 2026-10-23; optional leading or on initial/nested pattern alternatives selected 2026-10-24; if-introduced pattern-arm guards and exhaustive actions/values selected; full grammar, coverage algorithm, and ownership rules open**.
+Status: **subject-based pattern matching and subjectless Boolean selection selected; subjectless form selected on 2026-10-23; optional leading or on initial/nested pattern alternatives selected 2026-10-24; if-introduced pattern-arm guards and exhaustive actions/values selected; selected pattern surface outlined in the grammar sketch, while constructor/enum schemas, coverage algorithm, and ownership rules open**.
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
@@ -121,7 +121,7 @@ Each complete constructor-payload or tuple-component alternative list may also s
 
 Each nested choice commits to its first locally successful alternative and skips later local alternatives. If another component subsequently mismatches, the enclosing pattern fails; do not return to an earlier successful nested choice to try a different payload binding. Ordinary enclosing alternatives may then be tried under their own rules. If the shared arm guard fails after the entire initial pattern succeeds, move to the next arm without retrying initial or nested pattern choices. Failures and explicit exits retain normal control flow rather than becoming mismatch, and performed effects are not rolled back.
 
-The same nested forms may be reused in already supported conditional patterns. Ordinary declarations still require an irrefutable pattern for their static input; this selection creates no hidden mismatch result. Subjectless match headers remain ordinary Boolean expressions, and no loop/lambda/receiver filtering is added. Full recursive productions, record-field destination composition, extraction order/effects, ownership, and complete coverage proofs remain separate contracts. See [nested inference](pattern-binding-inference.md#nested-alternative-binding-inference-selected).
+The same nested forms may be reused in already supported conditional patterns. Ordinary declarations still require an irrefutable pattern for their static input; this selection creates no hidden mismatch result. Subjectless match headers remain ordinary Boolean expressions, and no loop/lambda/receiver filtering is added. The selected recursive productions are in the [grammar sketch](grammar-sketch.md#match); record-field destination composition, extraction order/effects, ownership, and complete coverage proofs remain separate contracts. See [nested inference](pattern-binding-inference.md#nested-alternative-binding-inference-selected).
 
 ## Differently named arm bindings selected
 
@@ -245,7 +245,7 @@ This example assumes a stable `person: User | Guest` and String-producing method
 
 The earlier bare `User` type-arm candidate is ruled out by the selected bare-name binding rule: it binds a name rather than testing a type. Capitalization and type-name lookup do not change that meaning. The selected `: User { ... }` marks a type-only pattern explicitly and parallels the colon in existing-name tests. It introduces no name; explicit `user: User` combines the same type match with a binding.
 
-Bind (`name`), type match (`: Type`), and value match (comparison prefixes such as `== expected` or `>= limit`) are selected base operations. They compose within structural patterns; components use variable bindings or nested patterns without combined whole-value/nested collectors; complete recursive record/tuple parsing remains open. Bare identifiers bind, and `.None` explicitly selects the absent Option case; see [pattern bindings and tests](pattern-bindings-and-tests.md).
+Bind (`name`), type match (`: Type`), and value match (comparison prefixes such as `== expected` or `>= limit`) are selected base operations. They compose within structural patterns; components use variable bindings or nested patterns without combined whole-value/nested collectors. The selected recursive record/tuple productions are in the [grammar sketch](grammar-sketch.md#match); record schemas and ownership remain open. Bare identifiers bind, and `.None` explicitly selects the absent Option case; see [pattern bindings and tests](pattern-bindings-and-tests.md).
 
 Automatic refinement applies only while the original subject name still denotes the tested value. A match evaluates its subject once; this must not make repeated calls or mutable getters appear stable, or silently freeze a reassignable name. A producer can already use explicit arm bindings to name the matched payload.
 
@@ -253,7 +253,7 @@ Automatic refinement applies only while the original subject name still denotes 
 
 Source-order selection of the first fully successful arm is selected, with no implicit fallthrough. Finishing an arm finishes selection; it does not require break. Its if guard runs after structural success; a failed complete guard permits later arms, after trying any or alternatives within that guard. Explicit fallthrough syntax is not selected. Unreachable-arm diagnostics remain to specify.
 
-The required pattern categories include equality values, plain enum cases, payload cases, destructuring, and type alternatives. Complete constant resolution and equality semantics before choosing their full grammar. Range patterns, alternatives in one arm, and custom matching hooks can be designed separately. Record destructuring is in scope for the destructuring requirement, with its syntax open. No additional `switch` keyword is proposed.
+The required pattern categories include equality values, plain enum cases, payload cases, destructuring, and type alternatives. Complete constant resolution and equality semantics remain open; the selected surface grammar is in the [grammar sketch](grammar-sketch.md#match). Range patterns, alternatives in one arm, and custom matching hooks can be designed separately. Record destructuring is in scope for the destructuring requirement, with its selected named-pattern surface in the grammar sketch and schema rules still open. No additional `switch` keyword is proposed.
 
 ### Fallback and exhaustiveness
 

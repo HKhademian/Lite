@@ -1,6 +1,6 @@
 # Aggregate patterns: fields and positions
 
-Status: **destination-first record patterns, inferred pattern shape, contextual/explicit construction, equality shorthand, and typed same-name binding selected; complete schemas and ownership remain open**.
+Status: **destination-first record patterns, inferred pattern shape, contextual/explicit construction, equality shorthand, and typed same-name binding selected; selected named-pattern productions outlined in the grammar sketch, while schemas and ownership remain open**.
 
 ## Purpose
 
@@ -167,7 +167,7 @@ Recommendation: permit both only with explicit field/schema contracts. Keep posi
 ## Remaining decisions
 
 - Record/type patterns versus enum payload constructors, and how the matching schema is declared.
-- Full named-pattern productions and schema rules, preserving inferred braces, destination-first routing, and typed shorthand.
+- Schema rules for named patterns, preserving inferred braces, destination-first routing, and typed shorthand; the selected productions are in the [grammar sketch](grammar-sketch.md#record-declarations).
 - Whether named and positional forms may mix; no mixing rule is selected by these examples.
 - Omitted fields, exact positional arity, and rest capture; do not silently assume partial or exhaustive field extraction.
 - Duplicate source-field selection, unknown fields, visibility, extraction effects, ownership, and writable access.
