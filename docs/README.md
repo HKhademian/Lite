@@ -59,7 +59,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, identity leading + without conversion or implicit zero, range direction, and stride.
 - [Division](division.md): contextual /, integer floor _/, remainder %, modulo _%, corresponding updates, signed results, and open numeric/lexical contracts.
-- [Arithmetic methods and selected family](arithmetic-methods-and-division-revision.md): / _/ % _%, additional named methods, expected-result division, retained compact/spaced requirement, and unresolved underscore/identifier scanning.
+- [Arithmetic methods and selected family](arithmetic-methods-and-division-revision.md): / _/ % _%, additional named methods, division calculation versus integer storage, retained compact/spaced requirement, and unresolved underscore/identifier scanning.
 - [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, local typed-`else` recovery, and unresolved fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 

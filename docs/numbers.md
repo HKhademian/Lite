@@ -48,7 +48,7 @@ Within the selected set, prefix negation binds above multiplicative * / _/ % _%,
 
 ## Division
 
-Selected 2026-10-25: / uses its expected result type. Float/Double result contexts retain the fraction; Int result contexts truncate toward zero, including 2.0 / 7 and 2 / 7.0. Without an expected result type, either decimal literal supplies a fractional default; integer-only division retains its integer default. The integer floor operator remains _/:
+Selected 2026-10-25: distinguish division calculation from storage. A floating operand supplies floating arithmetic even for an Int destination; / then truncates the quotient for integer storage, while _/ floors it. An expected Float/Double result keeps / fractional, including 2 / 7. Without either source of floating arithmetic, integer-only division retains its integer default:
 
 ```text
 fraction: Float = 2 / 7;   /* approximately 0.285714... */
@@ -59,9 +59,13 @@ whole: Int = 2 / 7.0;      /* 0 */
 left := 2.0 / 7;           /* fractional */
 right := 2 / 7.0;          /* fractional */
 floored := -7 _/ 2;        /* -4 */
+positive: Int = 7.5 / 2;   /* 3: floating calculation, truncated storage */
+negative: Int = -7.5 / 2;  /* -3 */
+floored: Int = -7.5 _/ 2;  /* -4 */
+small: Int = 2 / 0.5;      /* 4: divisor stays 0.5 */
 ```
 
-Expected types guide division before its quotient is computed: do not truncate and then widen an integer zero to Float/Double. The selected literal cases do not establish general stored-value conversion, admission of nonintegral decimal operands under Int division, or expected-type propagation through every expression form. Concrete Float/Double representations, broader compatibility, full inference, and exact faults remain open.
+Nonintegral floating literals and established floating operands are admitted for division into Int. Preserve operand values during the calculation, then round the quotient as the operator requires; do not truncate operands or compute integer zero and widen it for Float/Double. Concrete floating precision, mixed widths, representability/non-finite faults, general assignment conversions, and inference/rounding boundaries in larger expressions remain open. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
 
 Remainder % pairs with Int-result truncating / and follows the dividend when nonzero. Modulo _% pairs with floor _/ and follows the divisor when nonzero: -7 % 2 is -1, -7 _% 2 is 1, and 7 _% -2 is -1. The corresponding updates are /=, _/=, %=, and _%=.
 

@@ -30,6 +30,8 @@ quotient := dividend _/ divisor
 
 For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer remainder % and modulo _% fault on a zero divisor. Their minimum % -1 and minimum _% -1 cases still need independent result rules: each mathematical result is representable as zero even though its associated quotient is not, so the quotient rule alone does not settle whether either operation faults.
 
+A division with floating operands retains floating arithmetic before its quotient is truncated by / or floored by _/ for Int storage. This admits nonintegral operands but leaves out-of-range, non-finite, and floating zero-divisor behavior to the numeric fault contract; it does not authorize wrapping or saturation on storage. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+
 The same rule applies to other basic math operators when their numeric contract defines a fault. It does not decide floating-point representation, non-finite results, mixed operands, or conversions.
 
 ## Individual recovery remains a requirement

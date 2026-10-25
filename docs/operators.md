@@ -49,11 +49,11 @@ This selects the spelling and grouping requirement, not a complete power contrac
 
 ## Division
 
-Selected 2026-10-25: / is contextual. An expected Float/Double result preserves the fraction in 2 / 7; an expected Int result truncates 2 / 7, 2.0 / 7, and 2 / 7.0 to zero. Without that Int context, either decimal literal supplies a fractional default; integer-only division retains its integer default. Integer _/ performs floor division independently: -7 _/ 2 is -4. The expected result guides division before computing the quotient; do not truncate first and widen zero. See [contextual division](division.md#contextual-division-selected).
+Selected 2026-10-25: floating operands supply floating division semantics, even for Int storage. For an Int destination, / truncates the quotient toward zero and _/ floors it: -7.5 / 2 stores -3, while -7.5 _/ 2 stores -4. Nonintegral literals and established floating values are admitted; operands retain their values, so 2 / 0.5 stores 4. Float/Double results keep / fractional, including 2 / 7. With no floating operand or fractional expected result, integer-only division retains its integer default. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
 
 Integer % is truncating remainder and _% is floor modulo. A nonzero remainder follows the dividend; a nonzero modulo follows the divisor. With an Int quotient, the successful integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). The corresponding updates are /=, _/=, %=, and _%=.
 
-This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. Exact conversions, mixed-value compatibility beyond the selected literal cases, wider expected-type propagation, representations, noninteger floor/remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
+This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. General conversions, mixed floating widths/precision, larger-expression context/rounding boundaries, floating floor result types beyond Int storage, floating remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
 
 ## Equality and negation
 

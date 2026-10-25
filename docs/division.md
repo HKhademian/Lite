@@ -1,10 +1,10 @@
 # Division, remainder, and modulo
 
-Status: **contextual /, floor _/, remainder %, and modulo _% selected 2026-10-25; compact/spaced equivalence remains required, with identifier-boundary scanning unresolved**. Expected Float/Double division retains the fraction; expected Int division truncates, including the selected mixed literal forms. This supersedes the operand-only division rule and the earlier // / %% floor spellings. Complete numeric compatibility, representation, inference, fault rules, and parsing remain open.
+Status: **contextual division and quotient storage clarified 2026-10-25; / truncates for Int storage, _/ floors; % remainder and _% modulo remain selected**. A floating operand supplies floating arithmetic even when the destination is Int. Float/Double destinations retain the fraction for /. Compact/spaced equivalence remains required, with identifier-boundary scanning unresolved. Complete numeric representation, inference, fault rules, and parsing remain open.
 
 ## Selected family
 
-For an Int division result, / truncates toward zero; a Float or Double division result retains the fraction. Without an expected result type, the existing integer-only default truncates, while a decimal literal in either operand selects fractional division in the admitted literal examples. Integer _/ rounds toward negative infinity. Remainder % pairs with integer-result truncating /; modulo _% pairs with floor _/.
+A floating operand supplies floating division semantics; an Int destination receives the rounded quotient rather than forcing integer operands. For Int storage, / truncates toward zero and _/ rounds toward negative infinity. A Float/Double destination retains the fraction for /, including 2 / 7. Without a result context, a floating operand gives fractional /; integer-only division retains its integer default. Remainder % pairs with truncating integer quotients; modulo _% pairs with floor quotients.
 
 ```text
 b: Int = -7;
@@ -18,7 +18,7 @@ modulo := b _% c;   /* 1 */
 
 ## Contextual division selected
 
-An explicit result type constrains the division itself. All of these literal expressions retain the fraction:
+Distinguish the arithmetic used for the calculation from the value stored. A floating operand, including a nonintegral literal or an established floating value, supplies floating arithmetic. An expected Float/Double result can also request fractional division from integer-spelled literals:
 
 ```text
 from_integers: Float = 2 / 7;    /* approximately 0.285714... */
@@ -28,7 +28,7 @@ right_decimal := 2 / 7.0;       /* fractional */
 both_decimal := 7.0 / 2.0;      /* 3.5 */
 ```
 
-With an Int result context, all three supplied literal shapes truncate toward zero:
+An Int destination accepts the integer part using the selected operation's rounding. These original forms remain admitted:
 
 ```text
 from_integers: Int = 2 / 7;     /* 0 */
@@ -36,9 +36,26 @@ left_decimal: Int = 2.0 / 7;    /* 0 */
 right_decimal: Int = 2 / 7.0;   /* 0 */
 ```
 
-The Float/Double rule also applies to the mixed literal shapes; Int context takes precedence over their fractional default. Thus a decimal point does not force fractional division against an explicit Int result. Conversely, 2 / 7 must not first become integer zero and then widen to Float/Double. Division is checked with its expected result type before selecting the admitted arithmetic operation; this is a static rule, not a runtime type change or formatter rule.
+A floating operand keeps its floating arithmetic role under Int storage. The fractional cases do not truncate operands, switch to integer arithmetic because of the destination, or compute integer zero and then widen it to satisfy Float/Double. Ordinary integer-only division still needs no floating intermediate. These are language semantics, not a required sequence of CPU instructions.
 
-These examples select the result behavior and admission of the shown literals. They do not authorize unrestricted conversion of stored numeric values, truncation of operands before dividing, or a universal numeric assignment cast. Compatibility for already typed mixed operands and nonintegral decimal operands, propagation of expectations through larger expressions/calls/returns, concrete Float/Double representations, and full constraint solving remain open. In particular, the result rule alone does not decide whether 2.5 / 7 is admitted under an Int context. See [types and inference](types-and-inference.md) and [arithmetic methods](arithmetic-methods-and-division-revision.md).
+## Floating calculation and integer storage
+
+Selected by the user, 2026-10-25: nonintegral floating operands are admitted for division into Int. Calculate with their floating values, then use truncation for / or floor for _/ when producing the stored integer:
+
+```text
+positive: Int = 7.5 / 2;       /* 3: quotient 3.75, truncated */
+negative: Int = -7.5 / 2;      /* -3: quotient -3.75, truncated */
+floored: Int = -7.5 _/ 2;      /* -4: quotient -3.75, floored */
+small_divisor: Int = 2 / 0.5;  /* 4: divisor stays 0.5 */
+
+source: Float = 7.5;
+from_value: Int = source / 2;  /* 3: floating value, not only literal syntax */
+fraction: Float = 7.5 / 2;     /* 3.75 */
+```
+
+Truncation discards the fractional part toward zero; floor chooses the greatest integer no larger than the quotient. They agree for positive quotients but differ for negative inexact quotients. Never truncate 0.5 to a zero divisor or truncate 7.5 before division.
+
+The storage rule applies to these division expressions; it does not select an unrestricted Float-to-Int assignment cast or change a source binding's type/value. Complete context/rounding boundaries inside larger expressions and calls/returns remain open. So do concrete Float/Double precision, mixed floating widths, representability, overflow, zero divisors, non-finite quotients, and floating remainder/modulo. The examples use small finite quotients and establish expected values, not a LiteScript runtime implementation. See [types and inference](types-and-inference.md), [arithmetic faults](arithmetic-faults.md), and [arithmetic methods](arithmetic-methods-and-division-revision.md).
 
 ## Integer-only code
 
@@ -48,7 +65,7 @@ remaining /= 2;
 remaining += 3;
 ```
 
-Ordinary integer division needs no floating-point intermediate or mandatory named rounding helper. Floor division remains explicit when its negative-input behavior is intended. Named methods are an additional surface, not the only everyday interface.
+Ordinary integer-only division needs no floating-point intermediate or mandatory named rounding helper. Floor division remains explicit when its negative-input behavior is intended. Named methods are an additional surface, not the only everyday interface.
 
 ## Compound updates
 
@@ -62,7 +79,7 @@ var floored := -7;
 floored _/= 2; /* -4 */
 ```
 
-Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= applies the matching contextual division contract, with the target supplying the expected result type; broader mixed-value compatibility still needs specification.
+Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= and _/= apply the matching calculation/storage contract. An Int target does not strip fractional parts from a floating right operand before division; the matching quotient rounding supplies the stored integer. Exact width/precision compatibility and fault boundaries still need specification.
 
 ## Signed floor division
 
@@ -121,9 +138,9 @@ The former // and %% arithmetic spellings are superseded. This does not introduc
 ## Open numeric contracts
 
 - Preserve typed panics for defined arithmetic faults and local typed-else recovery; returned Result errors remain a separate channel.
-- Define numeric widths, Float/Double representations, broader mixed-value compatibility, conversions, nonintegral-decimal admission under Int division, and inference beyond the selected literal/result contexts.
+- Define numeric widths, Float/Double precision and mixed-width compatibility, representability/conversion faults, general numeric conversions, and inference/rounding boundaries in larger expressions.
 - Define precise zero-divisor and overflow/unrepresentable-result cases and payloads, including minimum-integer/-1 quotient and remainder/modulo cases.
-- Define noninteger floor/remainder/modulo behavior and any combined quotient/remainder API.
+- Complete floating floor result typing beyond the selected Int-storage cases, floating remainder/modulo, and any combined quotient/remainder API.
 - Resolve identifier/operator scanning while retaining the user's compact/spaced requirement; complete the recursive grammar and numeric method signatures.
 
 ## Related concepts and references

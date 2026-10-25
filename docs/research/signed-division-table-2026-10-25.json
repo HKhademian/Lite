@@ -32,7 +32,7 @@
         "3"
       ],
       "source": "division.md",
-      "note": "Selected design with explicit Int result context; contextual division determines truncation versus a fractional quotient. General numeric compatibility and representations remain open. Not an implemented runtime."
+      "note": "Selected calculation/storage design: floating operands retain floating arithmetic; Int storage truncates the quotient for /, while Float storage retains its fraction. Precision/width and storage fault details remain open. Not an implemented runtime."
     },
     {
       "language": "LiteScript",
@@ -88,7 +88,7 @@
         "3.5"
       ],
       "source": "division.md",
-      "note": "Selected design with explicit Float result context; contextual division determines truncation versus a fractional quotient. General numeric compatibility and representations remain open. Not an implemented runtime."
+      "note": "Selected calculation/storage design: floating operands retain floating arithmetic; Int storage truncates the quotient for /, while Float storage retains its fraction. Precision/width and storage fault details remain open. Not an implemented runtime."
     },
     {
       "language": "Odin",
