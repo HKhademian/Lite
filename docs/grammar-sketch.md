@@ -427,7 +427,7 @@ The mixed_tuple_pattern fragment requires at least one positional entry and one 
 
 At most one capture appears last in a positional tuple pattern. For a fixed tuple it preserves remaining component types, labels, and order as a tuple: zero gives Unit/(), one remains a singleton; without rest, require exact coverage. On a schema with an array tail, preserve any unselected fixed components followed by that tail; a callable receiver aligned with all fixed inputs collects the declared array segment. No pattern rest fills missing fixed components. Tail-only normalization and full integration remain open; see [array-tailed tuples](tuple-array-shapes.md#ordinary-tuples-may-have-the-same-array-tail).
 
-The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. Current loop headers bind only one optional item name; destructuring and selection belong in the body. Parameter and completion/recovery receiver mismatch policy remains proposed. A pattern placeholder does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation.
+The [pattern context review](pattern-contexts.md) distinguishes shared pattern forms from per-construct mismatch behavior. Current loop headers bind only one optional item name; destructuring and selection belong in the body. Parameter and recovery receiver mismatch policy remains proposed, while loop completion has no receiver. A pattern placeholder does not silently select filtering, runtime dispatch, unchecked unwrap, or automatic propagation.
 
 ### Comparison-pattern prefixes selected
 
