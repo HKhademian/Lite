@@ -594,6 +594,10 @@ These are semantic rules, not consequences of associativity or whitespace. [Eval
 
 The selected [formatter presentation](leading-separators.md#formatter-presentation-selected) uses no leader on compact multi-entry chains and a leader on multiline ones. These are output conventions, not separate grammar productions or newline-dependent parses. The optional-prefix grammar remains valid for either layout; formatting must preserve complete-chain boundaries, existing precedence, and nonempty-list requirements. Singleton leaders are not automatically synthesized.
 
+### Idempotence
+
+The selected [idempotence contract](tooling-and-learning.md#formatter-stability-and-idempotence) requires a successfully formatted output to remain byte-for-byte unchanged on a second successful pass with the same formatter version and effective configuration. This constrains formatter presentation and future conformance checks, not source grammar or runtime evaluation.
+
 ### Malformed source
 
 Lexical/syntax failures do not authorize formatter repair or partial-file rewrites. The selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source) leaves the affected file/buffer unchanged, emits a focused diagnostic, permits other requested valid files to be formatted, and reports overall failure. It adds no recovery token, implicit operand, or newline-dependent grammar production; full type checking is not a formatting prerequisite.

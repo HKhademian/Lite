@@ -81,6 +81,8 @@ rustfmt --emit stdout --edition 2024 --config-path /path/to/isolated/rustfmt.tom
 
 The Rustfmt config contained max_width = 100. Every successful output was passed through the same command a second time; all eight second passes were unchanged. A rejected Deno attempt using --no-editorconfig is not counted as successful evidence. Version discovery confirmed the local Bun limitation above. No SDKs or dependencies were installed, and no project source was run through a foreign formatter.
 
+LiteScript subsequently selected [formatter idempotence](tooling-and-learning.md#formatter-stability-and-idempotence) as its own required future conformance check on 2026-10-25. The foreign-tool second passes here remain evidence only for these captured inputs and versions; they neither verify a LiteScript formatter nor prove universal idempotence for those external tools.
+
 These languages do not support LiteScript's leading and spelling. The probes isolate comment/layout handling using analogous valid syntax; they cannot verify LiteScript syntax, semantics, or future formatter output.
 
 ## Consequences for LiteScript

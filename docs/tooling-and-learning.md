@@ -1,6 +1,6 @@
 # Tooling and learning
 
-Status: **official formatter required; compact/multiline leading-separator presentation and unchanged-file handling of malformed/incomplete source selected 2026-10-25; broader toolchain and teaching approach proposed**.
+Status: **official formatter required; compact/multiline leading-separator presentation, unchanged-file handling of malformed/incomplete source, and formatter idempotence selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
 ## Purpose
 
@@ -33,6 +33,22 @@ Comments are neutral to code parsing, so a commented-out entry does not count to
 Selected 2026-10-25: preserve ordinary/raw comment contents as opaque text and retain their attachment to the same nearby code. Indentation at a comment's source position and surrounding line breaks may change; do not parse or reflow the body as code or prose. Only real operands/patterns/members count when formatting chains. An apparent disabled condition is neither a phantom entry nor an implicit keep-multiline directive. See the [selected comment-formatting contract](comments.md#selected-formatting-contract).
 
 The [formatter comparison](comment-formatting-research.md) covers Deno, Bun, Rustfmt, Dart/Flutter, and Prettier. Its versioned local probes and documentation findings remain comparison evidence, not an adoption of another tool's directives. Exact attachment/line-placement algorithms, explicit-singleton normalization, documentation-comment syntax, and any future formatting escape mechanism remain open. No LiteScript formatter implementation is claimed.
+
+## Formatter stability and idempotence
+
+Selected 2026-10-25: after a successful format, formatting the output again with the same formatter version and effective configuration must succeed and produce byte-for-byte identical source:
+
+```text
+fmt(fmt(source)) == fmt(source)
+```
+
+This is an equation describing the tool's output, not new LiteScript source syntax. Hold the formatter version and effective settings fixed for both passes. Changing the formatter version or settings may choose a different stable presentation; this rule does not freeze formatting across upgrades or configuration changes.
+
+Leading separators, compact/multiline choices, indentation, line wrapping, comment placement/attachment, ordinary item separators, and final whitespace must not oscillate between layouts on successive passes. Preserve opaque comment contents and the other selected meaning-preservation contracts. Exact width, singleton-leader normalization, and attachment algorithms remain open, but their eventual rules must satisfy this requirement.
+
+Idempotence is a required formatter conformance check: for each successful-format fixture, capture the first output, format it again under the same version/settings, require both passes to succeed, and compare the complete outputs. Cover compact/multiline and mixed chains, grouped/nested expressions, pattern alternatives/shared guards, plain unions, singletons, ordinary/raw comments, and semicolon boundaries. A failed or skipped second pass is not evidence of idempotence. This does not require full type checking before formatting or create a new CLI verification flag.
+
+Malformed input retains the separate unchanged-file/failure contract below; it is not a successful formatting fixture. This selects a future conformance requirement, not an implemented formatter, an executed LiteScript check, or proof that all inputs satisfy it.
 
 ## Incomplete or malformed source
 

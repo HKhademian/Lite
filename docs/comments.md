@@ -87,6 +87,8 @@ Ali's commented-out initializer remains valid, and its comment stays with that i
 
 This selects an observable formatter contract, not a parser/trivia data structure or an implementation. Documentation-comment markers/attachment and any explicit leave-this-region-unformatted mechanism require separate future decisions. No special directive syntax is selected by these ordinary comment rules.
 
+Comment layout and attachment must also satisfy the selected [formatter idempotence rule](tooling-and-learning.md#formatter-stability-and-idempotence): a second successful pass with the same version/settings leaves the complete output unchanged. Allowing surrounding line breaks or indentation to change on the first pass does not permit repeated movement on later passes. Future conformance fixtures must cover ordinary/raw comments without interpreting their opaque bodies as code.
+
 ## Missing delimiters
 
 An unterminated ordinary comment or raw fence is a compile-time error. The compiler reports the unmatched opener; it must not guess where executable code resumes.
