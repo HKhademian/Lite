@@ -59,7 +59,7 @@ loop 10..=1 as number { process(number) }
 loop (10..=1).step(3) as number { process(number) }
 ```
 
-The intended descending example visits `10, 7, 4, 1`. A positive step magnitude follows the direction chosen by bounds. Zero step requires rejection. Equal bounds, exclusive ranges, overflow near numeric limits, and dynamic invalid steps need precise contracts.
+The unstepped descending range `10..=1` visits `10, 9, 8, 7, 6, 5, 4, 3, 2, 1`. The stepped range `(10..=1).step(3)` visits `10, 7, 4, 1`. A positive step magnitude follows the direction chosen by bounds. Zero step requires rejection. Equal bounds, exclusive ranges, overflow near numeric limits, and dynamic invalid steps need precise contracts.
 
 ## Matching numbers and ranges
 
