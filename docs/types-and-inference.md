@@ -32,6 +32,27 @@ inspect := fn(value: Int | String): Unit {
 
 This applies to ordinary initialization, assignment, arguments, and returns, including stored Result payload contracts and callable compatibility. An earlier widening does not authorize an unchecked reverse conversion. Existing static assignment-flow facts can justify narrowing without adding a redundant runtime test; their validity and invalidation rules still apply. Safe callable adaptation continues to use its own input/result directions, and writable grants retain their separate checks.
 
+## Generic widening requires complete compatibility
+
+Selected 2026-10-25: widening a generic value is allowed when the compiler can prove compatibility of the complete instantiated source and destination contracts. Reject the conversion when that proof cannot be established. A relation between the type arguments alone is insufficient: Int fitting Int | String does not automatically make every G<Int> fit G<Int | String>.
+
+Using [temporary generic notation](generic-notation.md), assume an established family and a helper producing a valid initialized source:
+
+```text
+s: MyGenericClass<Int> = make_int_instance();
+wider: MyGenericClass<Int | String> = s;
+```
+
+This is accepted only when the family supports the complete compatibility proof. The name MyGenericClass does not select class declaration syntax or reference semantics. Ordinary value copying applies, the source keeps its original type, and the compiler adapts representation where required by a supported conversion.
+
+For a simple value family containing only a compatible inline value: T payload, with no incompatible operations, constraints, or other invariants, copying Int into an independent Int | String payload can satisfy the proof. Writing a String into that independently owned widened copy, if writable access is available, does not itself invalidate the original Int copy. This does not grant mutation through a read-only binding or establish independent storage behind reference/handle fields.
+
+By contrast, suppose a family contains a stored callback whose contract is fn(value: T): Unit. A source callback accepting only Int cannot satisfy a destination callback promising to accept Int | String. That conversion is rejected: copying the callback does not make its implementation accept String. Apply the existing [callable input/result directions](callable-value-variance.md#compatibility-directions), rather than replacing every occurrence of T with a wider type.
+
+The proof must account for fields, stored operations, applicable methods, constraints, private invariants, and access/copy contracts. Widening must not fabricate capabilities, bypass nominal family identity, reinterpret bytes, or change an existing stored implementation's promises. It also does not convert a caller-location write grant into a wider grant. [Unchecked narrowing remains rejected](#unchecked-narrowing-is-rejected).
+
+This selects the acceptance criterion, not a complete generic proof algorithm. Generic declaration/application syntax, how variance is declared or inferred, specialization and representation, constraint/invariant checking, reference aliasing, and the complete treatment of recursive families remain open. Generic fields' flow refinement remains distinct from changing the enclosing type argument.
+
 ## Templates
 
 ```text
@@ -191,11 +212,11 @@ The explicit [reserved-storage marker](reserved-storage.md) uses value: Type = ?
 
 The [generic User example](aggregate-patterns.md#generic-aggregate-example) requires `User(: Int, == outVal)` to recognize the exposed aggregate family/schema, type-match its first field, and value-match its second, without introducing bindings. This interpretation is conditional on a valid generic type-test and matching-schema contract; it does not select generic declaration syntax.
 
-A component's successful type test does not automatically identify a generic parameter or permit a cast of the enclosing generic value. Preserve the distinction between field-value refinement and the type argument of its container. Specialization, erasure/reification, constraints, variance, and legal tests of unknown generic parameters remain open.
+A component's successful type test does not automatically identify a generic parameter or permit a cast of the enclosing generic value. Preserve the distinction between field-value refinement and the type argument of its container. [Generic widening](#generic-widening-requires-complete-compatibility) now requires proof of complete instantiated-contract compatibility; a field refinement alone supplies no such proof. Specialization, erasure/reification, constraints, the generic variance proof system, and legal tests of unknown generic parameters remain open.
 
 ## Major open decisions
 
-Numeric widths and overflow rules; generic syntax and inference; standalone inferred record literal types; variance; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
+Numeric widths and overflow rules; generic syntax and inference; standalone inferred record literal types; the complete generic variance proof system; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.
 
 Higher-kinded types, dependent types, unrestricted compile-time evaluation, and dynamic typing are not established requirements.
 

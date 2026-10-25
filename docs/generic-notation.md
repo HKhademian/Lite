@@ -28,6 +28,10 @@ Likewise, future notation changes must preserve whichever array-length, slice-ac
 
 `Result<User, LoadError>` is conceptual type-family notation. The selected source fallibility form User ! LoadError and its postfix propagation rules retain their independent established status; this convention does not reopen them.
 
+## Selected compatibility criterion
+
+The selected [generic widening criterion](types-and-inference.md#generic-widening-requires-complete-compatibility) permits a value conversion only when the compiler can prove compatibility of the complete instantiated contracts. Int fitting Int | String does not automatically make an arbitrary G<Int> fit G<Int | String>; stored callbacks and other contracts can prevent it. This semantic criterion does not settle generic punctuation, variance declarations/inference, or the complete proof algorithm.
+
 ## Deferred generic design
 
 The future review should consider declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. These are topics for that review, not newly selected features or a replacement syntax proposal.
