@@ -71,7 +71,7 @@ Finish iteration when a receiver fails, rather than skipping that item. This res
 
 ### 4. A per-item mismatch branch
 
-Run an alternative body for each item that fails to match. The current loop else is a completion clause, not a per-item handler; reusing its spelling would require an unambiguous new attachment rule. An inner if/else or match already expresses both paths.
+Run an alternative body for each item that fails to match. The current loop completion hook is `then`, not an `else` clause or a per-item handler; adding a per-item branch would require an unambiguous new attachment rule. An inner if/else or match already expresses both paths.
 
 ### 5. A recoverable mismatch error
 
@@ -84,7 +84,7 @@ Treat mismatch as a programming fault under a separately requested assertion con
 ## Questions before revisiting these alternatives
 
 - Count examined source items or body entries? Current body selection does not prevent body entry; any new filtering behavior must specify its counting effect.
-- Does mismatch contribute to or preserve the accumulator? Do not infer this from missing payload bindings.
+- Does mismatch contribute to or preserve `.value`? Do not infer this from missing payload bindings.
 - How do empty/nonempty completion hooks behave when a nonempty source yields no accepted items?
 - When are source items consumed, borrowed, moved, or destroyed?
 - Which patterns may perform fallible or effectful comparisons, and how are their outcomes handled?
