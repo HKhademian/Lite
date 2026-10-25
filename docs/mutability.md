@@ -35,7 +35,7 @@ For an owned value, reference, handle, or view, distinguish access permissions:
 - Read access: inspect the data through that access path.
 - Write access: modify permitted data through that access path.
 
-A fixed binding may provide write access. A reassignable binding may provide only read access. The selected declarations express the four combinations:
+A fixed binding may provide write access. `var` alone provides whole-binding reassignment with read-only access; adding `mut` provides writable access. The selected declarations express the four combinations:
 
 ```text
 x := make_user();         /* fixed binding; read-only access */
