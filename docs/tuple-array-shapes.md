@@ -176,7 +176,7 @@ only_tail: (...rest:) = (1, 2, ...right);
 
 strict follows its two-fixed-input destination shape. The complete supplied sequence guarantees two Int values; its first two values fill those slots, and they need not be the literal 1 and 2. only_tail instead has no fixed components because its annotation explicitly requests a rest-only shape; infer Int for its omitted element type.
 
-Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. The simple named-slot discovery cases below are now selected; general composition of rest-bearing tuple sources, already-declared tail merging/collisions, and multiple stored rest segments remain open.
+Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. The simple named-slot discovery cases below are now selected; logical unpacking now merges supported singly-tailed source tuples; declarations storing multiple rest segments and their other composition rules remain open.
 
 ### Named slot discovery does not reserve a value
 
@@ -195,7 +195,7 @@ If items contains [1, 2, 3], the first construction routes 1 into the unfilled s
 
 Retain the leading fixed components established by the existing positional rule. Additional statically named fixed entries establish their slots in first-declaration order before the final array tail. Normal explicit-label uniqueness and fixed-slot collision rules still apply. The inferred destination's slots start unfilled; route every contribution once in written order, filling the next unfilled fixed slot positionally or selecting a slot by name, and then collecting remaining positional inputs into the tail. Later positional values do not bypass an unfilled inferred fixed slot merely because a runtime spread occurred earlier.
 
-These simple named-entry cases extend the earlier purely positional defaults; the five unnamed examples keep their selected outcomes. A named field does not become an unlabeled array element or a fixed suffix after the tail. Infer its final contract using the existing surviving-contribution rules; all expressions must remain valid, and final slot types/access and complete coverage must be proven for every admitted runtime routing. General composition of rest-bearing tuple sources, tail-label collisions beyond the selected default-name check, multiple stored tails, and complete constraint solving remain separate.
+These simple named-entry cases extend the earlier purely positional defaults; the five unnamed examples keep their selected outcomes. A named field does not become an unlabeled array element or a fixed suffix after the tail. Infer its final contract using the existing surviving-contribution rules; all expressions must remain valid, and final slot types/access and complete coverage must be proven for every admitted runtime routing. Logical unpacking also exposes known fixed labels from supported rest-bearing sources while emitting their tail elements anonymously. Multiple stored tails and complete constraint solving remain separate.
 
 An explicit/established expected schema is still the reference contract. Adding the same inferred schema explicitly does not change routing:
 
@@ -224,7 +224,7 @@ For items = [1, 2, 3], value first consumes 1 into score and 2 into rank, collec
 
 This is the statically expanded form of the existing named-entry rule. Fixed named components establish slots in their existing first-contribution order; fixed unnamed components follow ordinary positional routing at the spread's place in the source sequence. Infer final contracts under surviving-contribution rules and prove coverage/types/access. Names contributed by a spread retain their existing distinction from explicitly written labels of the enclosing constructor: validate each source's own labels, preserve explicit-label uniqueness, and apply established permitted replacement rules. The default rest-label collision check remains in force.
 
-No labels are discovered by inspecting runtime array elements. A tuple-valued array element remains one value unless separately spread. This selection covers fully fixed tuple sources; general composition involving already declared array tails, multi-tail storage, and tail-label collision/merge policy remain separate. Explicit destination types stay authoritative, and no ownership, alias, or physical copying rule is selected here.
+No labels are discovered by inspecting runtime array elements. A tuple-valued tail element remains one value unless separately spread. The revised logical unpacking rule also exposes statically known fixed labels from a supported rest-bearing source while discarding only its tail-container label. This merges logical input streams without selecting multiple stored rest declarations, anonymous segment syntax, or a new copy/ownership policy.
 
 ### Destination-guided repacking
 
@@ -238,12 +238,13 @@ p: Prefix = (1, 2, ...rest = [3]);
 q: TailOnly = (...rest = [1, 2, 3]);
 /* p.rest contains [3]; q.rest contains [1, 2, 3] */
 
-copy := (...p);               /* infer and preserve Prefix */
+copy := p;                   /* ordinary copy preserves Prefix */
+items := (...p);              /* reconstruct three fixed Int components here */
 packed: TailOnly = (...p);    /* collect the fixed prefix and tail */
 unpacked: Prefix = (...q);    /* requires proof of at least two inputs */
 ```
 
-Without an expected destination requesting a different shape, (...p) preserves the source schema. An explicit expected tuple schema can instead guide checked reconstruction: gather p's two unnamed fixed values followed by its tail elements into packed.rest. All contributions must satisfy the destination element type and access/ownership requirements. This is explicit reconstruction through the spread constructor; a plain stored-value initializer still follows ordinary compatibility and does not silently repack incompatible tuple schemas.
+Ordinary copy := p retains the source organization under normal copy/compatibility rules. Expression (...p) instead emits logical items: fixed components retain labels, and the declared tail emits its elements without its container label. The destination reconstructs them. In this example the known count gives three fixed Int components when no expected shape requests a tail; packed explicitly collects them into TailOnly. Prove every destination requirement and infer only omitted information. See [logical tuple unpacking](tuple-unpacking.md).
 
 Reconstructing Prefix from a rest-only source takes the first two supplied values for its fixed components and collects the remainder into its array tail. The compiler must prove coverage and compatible possible slot types/access. The TailOnly schema alone guarantees no minimum length; the unpacked line is admitted only when additional established static facts prove at least two elements. A runtime arity check or synthesized value does not replace that proof. Known-size local tail constructions retain their concrete extent as selected below; the complete policy for propagating those facts across effects and API boundaries remains open.
 
@@ -299,9 +300,9 @@ b1 := (...rest = arr1);
 /* (...rest: Int): declared tail with one element */
 ```
 
-The explicit spread marker already identifies tuple construction, so (...arr1) needs no singleton comma in its value expression; its resulting unnamed singleton type is still written (:Int,). Its .0 component holds 1. b1 instead exposes its array through .rest. The concrete b0.rest and b1.rest arrays retain the known source extents zero and one; the common (...rest: Int) tuple contract does not itself encode either exact count.
+The explicit spread marker identifies tuple construction, so (...arr1) needs no singleton comma in its expression; its resulting unnamed singleton type is still (:Int,). b1 instead exposes its stored array through .rest. Ordinary copies of b0/b1 keep those declared tails. Under the revised expression-unpacking rule, (...b0) emits zero items and reconstructs Unit, while (...b1) emits one Int item and reconstructs a fixed singleton. The concrete tail extents zero/one remain distinct from the general (...rest: Int) contract, which encodes no exact count.
 
-A declared tail never normalizes away because its array is empty. b0 is not Unit: its rest member exists, while Unit has no components or declared tail. An empty runtime-sized source also preserves the inferred tail-bearing shape. Likewise, a one-element declared tail does not become a fixed singleton or its scalar element. Identity/equivalence with a bare array remains a separate question.
+A stored or ordinarily copied declared tail does not disappear because its array is empty: b0 is not Unit, and b1 is not a fixed singleton or scalar. Explicit logical unpacking followed by reconstruction can remove that grouping when its extent is known. An unknown runtime extent instead yields the appropriate inferred tail; runtime emptiness does not change the inferred type. Bare-array type identity remains separate.
 
 Under call expansion, a0/b0 each contribute zero inputs and a1/b1 each contribute one Int input. Ordinary required-input/type/access checks still apply. Without expansion, each tuple remains one supplied value of its own type. Empty tuple patterns retain their Unit-only contract and do not become tests for empty rest arrays. Preserve source-once evaluation even for zero-element expansion. This selects no new ownership, copy/move, allocation, or layout-equivalence rule.
 
@@ -337,32 +338,23 @@ Both full and shorthand forms evaluate their source once and preserve existing a
 
 ### Spreading a rest-bearing tuple
 
-Selected in the follow-up discussion, 2026-10-25: spreading an existing tuple into tuple construction without an expected destination preserves its fixed shape and declared array-tail schema. An explicit expected tuple schema can guide checked repacking as described above. Spreading it into call inputs instead supplies each tail array element as a positional input. The tail's stored label does not become a named argument containing one array.
+Selected revised model, 2026-10-25: expression spread emits logical items in stored order. Fixed component labels and types survive. A declared tail emits its array elements as unnamed items; its container label is not emitted. The destination then constructs the result. This supersedes the earlier claim that inferred (...pack) preserves the declared tail schema.
 
 ```text
-/* Assume total has the contract fn (...rest: Int): Int. */
 pack := (...numbers = [1, 2, 3]);
+copy := pack;
+/* retains the named numbers tail */
 
-copy := (...pack);
-/* same rest-only tuple schema; copy.numbers accesses the array */
+items := (...pack);
+/* (1, 2, 3): known extent reconstructs three fixed components */
 
-total(...pack);
-total.call pack;
-/* both supply the three positional Int inputs 1, 2, 3 */
-
-ordinary := (numbers = [1, 2, 3]);
-variadic := (...numbers = [1, 2, 3]);
-/* call spread of ordinary supplies one named array-valued input */
-/* call spread of variadic supplies three positional Int inputs */
+packed: (...rest: Int) = (...pack);
+/* explicit reference schema recollects those items into rest */
 ```
 
-The ellipsis declaration identifies the stored rest segment; an ordinary array-valued field does not acquire tail behavior. Inferred tuple-to-tuple spread preserves the tail's name and element contract without enumerating runtime elements into new fixed tuple positions. Destination-guided reconstruction can repack values only into a statically established shape whose requirements are proven. Ordinary fixed components retain their existing construction/call routing rules: fixed labels select named call inputs, and unnamed fixed components supply positional inputs. A tail's elements enter the call sequence in array order at that operand's written position; each tuple-valued element remains one input unless separately spread. An empty tail contributes zero inputs.
+Spreading two supported rest-bearing source tuples therefore merges their emitted items, not their container labels. Same-named tails do not replace one another. Real fixed labels still follow ordinary replacement/routing. Unknown extents remain represented by an inferred array tail, while known counts may reconstruct fixed components. Tuple-valued elements and ordinary array-valued fixed fields remain intact unless separately spread. Unit items count as items despite zero payload size.
 
-The callee's tail label may differ from the stored tuple's label, as rest differs from numbers above. This does not select direct named tail supply such as total(rest = pack.numbers), inline call-entry ...name = expression syntax, or new pattern forms. Calls without explicit expansion still receive the tuple as one value when their contract admits it.
-
-Apply the existing whole-composition proof to every forwarded call. The stored tail guarantees its element type, but its schema alone supplies no minimum length for required fixed inputs. Any such coverage must follow from established static facts. Known-size concrete tail construction retains its extent as selected below; general fact propagation beyond those constructions remains open. The total example needs no fixed inputs and therefore accepts any compatible tail length.
-
-Evaluate the callee first and each supplied operand once in written order, then invoke after successful input preparation. Neither preserving a tail schema nor forwarding its elements selects copying, moving, borrowed-storage identity, heap materialization, writable grants, or lifetime extension. Multiple stored tails, general tuple-constructor tail composition, label collisions, and complete recursive integration remain separate decisions.
+Call spread and intrinsic .call use the same emitted sequence under the receiving contract. Keep static coverage/final-type/access proofs, source-once written evaluation, explicit destination precedence, and normal copy/effect rules. Type-level spread and pattern remainder capture retain their own roles. Anonymous ...= expression syntax, multiple stored rest declarations, and general runtime owner/ABI/lifetime details remain unselected. See [the full revised model and examples](tuple-unpacking.md).
 
 ### A colon distinguishes inferred rest declarations from type spread
 
