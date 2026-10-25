@@ -2,6 +2,8 @@
 
 Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract open; arithmetic uses typed panics and target-level typed `else` recovery**.
 
+Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
+
 ## Purpose
 
 Represent recoverable failure in a function's return type and support ordinary conditional pattern handling rather than an implicit exception channel.

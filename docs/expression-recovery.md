@@ -2,6 +2,8 @@
 
 Status: **target-level `else` recovery, typed filtering, declaration-ordered member-wise filter chains, order-insensitive `A & B` co-occurrence patterns, and ordered failure tuples selected, 2026-10-25; the `&` form binds no value, while evaluation boundary, mixed receiver type, representation/inspection, and implementation contracts remain pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
 
+Normative page for the recovery surface: target-level `else`, typed filters, `A & B` co-occurrence, and ordered failure tuples. The Result model is in [result and errors](result-and-errors.md); fault channels and triggers are in [checked fault policy](checked-fault-policy.md); cleanup ordering is in [finally](finally.md).
+
 ## Direct use and local recovery
 
 ```text
