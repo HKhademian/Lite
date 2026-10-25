@@ -270,7 +270,29 @@ Reject the known repeated location regardless of matching parameter types or whe
 
 Preserve callee-first/source-argument evaluation, select each element location once, and keep its containing storage valid throughout the call. Ordinary initialization, bounds, access, lifetime, and entry-type obligations still apply. This selection neither constructs uninitialized elements nor changes the bounds-fault contract, public pointer syntax, or physical/zero-sized layout rules.
 
-Runtime-index cases such as swap(var values[i], var values[j]) still require a separate rule for proving or checking distinctness; different index names alone are insufficient. No blanket acceptance, runtime alias check, or blanket rejection of all uncertain cases is selected here. Reference-target aliases, overlapping views/slices, callbacks/reentrancy, resizing/location invalidation, and full overlap enforcement remain open.
+The explicit stable Int inequality case is selected below; other runtime-index cases such as unguarded swap(var values[i], var values[j]) still require a separate rule for proving or checking distinctness. Different index names alone are insufficient. No blanket acceptance, runtime alias check, or blanket rejection of all uncertain cases is selected here. Reference-target aliases, overlapping views/slices, callbacks/reentrancy, resizing/location invalidation, and full overlap enforcement remain open.
+
+## Guarded runtime-index grants selected
+
+Selected on **2026-10-25**: an explicit built-in Int inequality guard may prove that two stable runtime indices select different element locations in the same initialized fixed array. With writable array access and compatible element contracts, allow the two var grants in the successful branch:
+
+```text
+mut values := [10, 20, 30];
+i := read_index();
+j := read_index();
+
+if i =!= j {
+    swap(var values[i], var values[j]);
+}
+```
+
+Assume read_index returns Int and swap takes two var Int parameters and returns Unit. Each index-producing call runs once, binding its result to the fixed local i or j. The reached guard uses the ordinary built-in Int =!= comparison; on its true path, i and j differ. Successful indexing into the same fixed array therefore designates separate element slots. The parent mut authority supplies one var grant per element while the array binding stays fixed.
+
+The inequality proves distinctness, not bounds. Preserve the ordinary bounds checks and typed fault behavior for each reached access. Evaluate the callee first, then select the supplied element locations once in source order. If either selection fails or otherwise exits, swap is not invoked; prior effects keep their ordinary behavior. The explicit comparison is the program's distinctness check, not an additional hidden alias check inserted for the call.
+
+Require the proof to apply to the actual selected indices and containing storage. In the illustrated case, i and j are stable fixed Int locals and no intervening effects invalidate their values or the array. Changed indices, fresh getters/calls substituted for the tested values, or invalidated containing storage cannot reuse a stale proof; preservation needs its own supported justification. Keep initialization, field/element authority, location lifetime, entry read/write compatibility, and rejection of known duplicate or parent/child overlapping grants.
+
+This selects the direct successful-guard case for built-in Int inequality and stable locals on the same fixed array. It does not select arbitrary arithmetic or predicate solving, disjointness from overloaded comparisons, overlapping slice/view analysis, reference-target alias detection, callbacks/reentrancy, or a general runtime alias-repair policy. Unguarded/uncertain runtime-index overlap retains its separate open contract. No bounds check is erased solely because i and j differ.
 
 ## Nested forwarding of a write grant selected
 

@@ -226,6 +226,12 @@ Selected on **2026-10-24**: when supported type-test flow proves a conditional b
 
 Unreachable branches contribute no normally produced result, including no implicit Unit. A genuine Unit input alternative remains reachable if other members are excluded. The existing missing-else zero(T) fallback is explicitly preserved. Public Never and the user's requested Never | T / Never & T exploration remain future topics, not selected algebra or syntax. See [Never and unreachable flow](never-and-unreachable-flow.md) for checking limits and the recorded agenda.
 
+## Integer distinctness for element grants selected
+
+Selected on **2026-10-25**: the true branch of a direct built-in Int i =!= j guard may carry the supported fact that stable existing Int locals i and j differ. Use that fact to permit separate var element grants into the same initialized writable fixed array, as in swap(var values[i], var values[j]). This proves distinct locations only if the reached accesses are valid; ordinary bounds checks remain. It neither changes the indices' Int types nor exports a new binding.
+
+The fact must remain justified for the selected values and containing storage. Relevant writes/effects invalidate it unless preservation is supported; fresh calls/getters are not the stable tested locals. This selects the illustrated direct successful-guard case, without a general arithmetic/predicate solver, overloaded-comparison inference, broader false-path propagation, or alias analysis for arbitrary views. See [guarded runtime-index grants](call-replacement-flow.md#guarded-runtime-index-grants-selected).
+
 ## Flow types after direct assignment selected
 
 Selected on **2026-10-24**: a binding has a declared value/storage contract and a flow-sensitive read type at each program point. Direct local assignment checks the replacement against the declared contract and required write capability. After successful assignment, reads use the supported type facts of the newly assigned value, replacing stale facts about the previous value. This applies in ordinary straight-line code and nested blocks, not only inside a type-tested branch:
