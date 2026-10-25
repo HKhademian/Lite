@@ -292,6 +292,8 @@ The whole-value assignment preserves stored positions while exposing destination
 
 A literal and a stored value are different syntactic inputs to construction. Merely writing a stored value where a literal was accepted does not enable contextual rerouting. More elaborate expected-type propagation through branches, generic calls, or overloads must not silently erase the stored-value boundary.
 
+Existing stored tuples now support [component-wise value widening](types-and-inference.md#tuple-values-widen-component-by-component) without reconstruction when every corresponding payload fits. Preserve positions, nesting, labels under ordinary transfers, and ordinary/segment roles and extent contracts; no name-based rerouting or new array/container conversion follows.
+
 ### Label compatibility — selected
 
 Selected 2026-10-25, superseding the earlier label-mismatch rejection: an explicitly typed receiving declaration can rename, add, or remove labels when the ordered shape, resolved component types, and access/copy requirements match. The destination exposes its labels; source positions, values, and contract are preserved. The written destination annotation at that conversion site is required. Plain assignment to an existing target, argument passing, and returns remain label-sensitive; convert explicitly first. See [explicit conversion and ordinary label checks](tuple-label-conversions.md#ordinary-transfers-check-labels).
@@ -313,7 +315,7 @@ first: (cake: Int, tea: Int) = (1, 2);
 second: (cake: Int, tea: Int) = first; /* valid: same tuple type */
 ```
 
-Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. An ordinary array field and a declared segment retain different roles even when member access returns the same array type; label-only conversion does not change those roles or extents. See [segment identity](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity). A different component label, order, resolved type, role, or extent contract describes a different tuple type; general assignability between different component types remains a separate type-system rule. Label-only conversion under an explicit destination is now selected; identity remains label-sensitive and no implicit stored-tuple permutation is introduced. Separately declared records retain their selected nominal identities.
+Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. An ordinary array field and a declared segment retain different roles even when member access returns the same array type; label-only conversion does not change those roles or extents. See [segment identity](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity). A different component label, order, resolved type, role, or extent contract describes a different tuple type; [Component-wise tuple widening](types-and-inference.md#tuple-values-widen-component-by-component) now permits ordinary value widening of corresponding payloads when the ordered shape and other contracts fit; distinct types need not be identical to be assignable. Other component conversions still need their own type-system rules. Label-only conversion under an explicit destination is now selected; identity remains label-sensitive and no implicit stored-tuple permutation is introduced. Separately declared records retain their selected nominal identities.
 
 ### Named and unnamed conversion — selected
 

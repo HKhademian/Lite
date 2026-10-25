@@ -244,6 +244,10 @@ meal.i; /* "named field", not meal.1 */
 
 Computed compile-time position syntax is not introduced by this decision. Writes through numeric access still need their own assignment/access contract; this selection does not grant mutation authority.
 
+## Whole-value component compatibility
+
+[Component-wise tuple widening](types-and-inference.md#tuple-values-widen-component-by-component) is selected: an existing tuple can be copied to the same ordered shape with wider compatible payload types when each component and the remaining label/access contracts fit. Ordinary assignments, arguments, and returns retain label checks; an explicitly typed receiving declaration can separately use the label-conversion bypass. Preserve nested grouping, segment roles/extents, and source type. Different compatible tuple types remain distinct identities, and type widening may require representation adaptation.
+
 ## Explicit reconstruction examples
 
 ```text

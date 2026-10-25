@@ -10,7 +10,7 @@ Students can write ordinary code without annotations while the compiler still re
 
 Selected 2026-10-25: safe widening is generally accepted when established compatibility rules prove that a source value satisfies the destination contract. It preserves the represented value and active alternatives while allowing the destination to admit more possibilities. No source-level wrapper or cast is required for a supported widening, and the source keeps its own type. An inferred declaration keeps the source type unless another expected contract supplies a wider destination.
 
-The selected proofs include [plain-union widening](union-widening.md), [stored Result widening](result-and-errors.md#stored-result-values-widen-safely), and [safe callable adaptation](callable-value-variance.md). Callable inputs/results follow their specified directions; widening does not mean replacing every type argument with a broader type. Ordinary initialization, assignment, arguments, and returns use the applicable value-compatibility proof along with their other checks.
+The selected proofs include [plain-union widening](union-widening.md), [component-wise tuple widening](#tuple-values-widen-component-by-component), [stored Result widening](result-and-errors.md#stored-result-values-widen-safely), and [safe callable adaptation](callable-value-variance.md). Callable inputs/results follow their specified directions; widening does not mean replacing every type argument with a broader type. Ordinary initialization, assignment, arguments, and returns use the applicable value-compatibility proof along with their other checks.
 
 The compiler preserves ordinary copy behavior and observable effects while adapting representation when needed. This does not require identical bytes, select an ABI, or authorize an in-place reinterpretation. [Label checks](tuple-label-conversions.md#ordinary-transfers-check-labels), nominal identity, initialization, omission promises, and access contracts still apply. In particular, a copied value's widening does not widen a caller-location write grant; [basic var parameters remain invariant](callable-value-variance.md#var-parameters-keep-their-value-type).
 
@@ -31,6 +31,32 @@ inspect := fn(value: Int | String): Unit {
 ```
 
 This applies to ordinary initialization, assignment, arguments, and returns, including stored Result payload contracts and callable compatibility. An earlier widening does not authorize an unchecked reverse conversion. Existing static assignment-flow facts can justify narrowing without adding a redundant runtime test; their validity and invalidation rules still apply. Safe callable adaptation continues to use its own input/result directions, and writable grants retain their separate checks.
+
+## Tuple values widen component by component
+
+Selected 2026-10-25: a tuple groups component values under one value. For compatible ordered tuple shapes, apply the ordinary value-widening proof separately to each corresponding component. Accept the whole transfer when every component fits and all label, initialization, access, and copy checks hold. The grouping does not implicitly grant var or mut permission.
+
+```text
+source := (value = 7, label = "score");
+wider: (value: Int | String, label: String) = source;
+```
+
+The destination contains the same Int value 7 and String label. Source retains its original tuple type. No manual reconstruction or explicit spread is required. This component-wise value compatibility applies to initialization, ordinary assignment, arguments, and returns under an established destination contract. Without that context, copy := source preserves the source type instead of choosing a wider one.
+
+Nested tuple components follow the same rule recursively, retaining each nesting level:
+
+```text
+nested := (payload = (value = 7, label = "score"), ready = true);
+nested_wider: (payload: (value: Int | String, label: String), ready: Bool) = nested;
+```
+
+Keep positions and grouping fixed. Ordinary transfers still require matching labels; [explicit typed-declaration label conversion](tuple-label-conversions.md#ordinary-transfers-check-labels) can separately change labels while each corresponding payload satisfies its ordinary compatibility proof. Neither rule routes an existing tuple by field name, reorders values, flattens nested tuples, changes arity, drops fields, or invents defaults. Fresh construction and explicit spread retain their separate routing rules.
+
+Each component uses its own complete contract. For example, an Int payload can widen to Int | String, while a stored fn(value: Int): Unit callback cannot become fn(value: Int | String): Unit. A field containing a generic/container value requires that family's compatibility proof; tuple grouping does not establish array or generic covariance. Declared segments retain their roles and extent contracts and require the existing array/segment compatibility proofs.
+
+The transfer follows ordinary value-copy semantics. A compatible inline payload in an independent widened copy does not change the original source's accepted types; referenced targets are not implicitly deep-cloned. Preserve source evaluation and observable copy effects, and adapt representation when necessary. Different component types can require different storage layouts: this is not an in-place cast or a promise of identical offsets, size, ABI, or allocation cost.
+
+[Unchecked narrowing is rejected](#unchecked-narrowing-is-rejected), including an attempted reverse whole-tuple conversion without justified component proofs. Ordinary value compatibility also does not widen a caller-location write grant; var tuple parameters keep their existing read/write checks. Distinct component types can therefore describe distinct structural tuple types while permitting a safe directed conversion; widening does not redefine tuple identity or merge correlated whole-tuple union alternatives.
 
 ## Generic widening requires complete compatibility
 

@@ -38,7 +38,11 @@ size.width;  /* still 640; the source contract is unchanged */
 
 Only an explicitly written destination type at the receiving declaration supplies the label-conversion bypass. Plain assignment to an already typed target, declared tuple-valued argument admission, and expected return types do not silently convert mismatched labels. Inference preserves source labels: inferred := size still exposes width/height. See the ordinary-transfer rule above.
 
-This is a type-directed label conversion under a known destination, not byte-size-based reinterpretation. Equal byte counts do not justify Int/Float punning, scalar/singleton conversion, changed component types, a new shape, different permissions, or an invalid copy. Ordinary value transfers retain copy semantics; this does not select shared source storage or implicit references. Same ordered concrete component types retain their established size/alignment/offsets regardless of labels, without selecting a new ABI or measuring an implementation.
+This is a type-directed label conversion under a known destination, not byte-size-based reinterpretation. Equal byte counts do not justify Int/Float punning, scalar/singleton conversion, arbitrary changes of component types, a new shape, different permissions, or an invalid copy. Supported component widening instead needs its independent value-compatibility proof. Ordinary value transfers retain copy semantics; this does not select shared source storage or implicit references. Same ordered concrete component types retain their established size/alignment/offsets regardless of labels, without selecting a new ABI or measuring an implementation.
+
+## Component widening is a separate compatibility proof
+
+[Tuple value widening](types-and-inference.md#tuple-values-widen-component-by-component) applies ordinary value compatibility to corresponding components while preserving ordered shape. It may be combined with this explicit label-conversion bypass when each payload proof and the other contracts hold. Without the bypass, ordinary transfers still check labels. Label-only conversion with unchanged component types preserves the established layout; component widening may require compiler representation adaptation and carries no same-layout guarantee.
 
 ## Label conversion does not reorder components
 
