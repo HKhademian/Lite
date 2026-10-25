@@ -29,7 +29,7 @@ The prefix means **allowed to be unused**, not required to be unused. Reading su
 
 ## Parameters, receivers, and fields
 
-The rule applies to named value bindings at local or module scope, pattern bindings, function/closure parameters, loop or hook receivers, and declared record/type fields wherever unused-name diagnostics apply. For example:
+The rule applies to named value bindings at local or module scope, pattern bindings, function/closure parameters, hook/recovery receivers, and declared record/type fields wherever unused-name diagnostics apply. For example:
 
 ```text
 on_event := fn(_event: Event): Unit {
@@ -39,7 +39,7 @@ on_event := fn(_event: Event): Unit {
 
 A field called _cache remains a real field and can be read or updated under its normal type, visibility, mutability, and ownership rules. The prefix alone does not make it private, remove it from a type, or exempt it from initialization requirements. Field declaration and representation grammar remain open independently.
 
-With a field alias, evaluate the introduced local name independently from the source field's name. Giving a source field an underscore prefix does not automatically grant an unprefixed local alias the same diagnostic intent, and naming a local alias _left does not rename the original field. Alias punctuation itself remains a proposal.
+With a field alias, evaluate the introduced local name independently from the source field's name. Giving a source field an underscore prefix does not automatically grant an unprefixed local alias the same diagnostic intent, and naming a local alias _left does not rename the original field. The selected destination = sourceField alias punctuation is defined in [pattern aliases](pattern-aliases.md).
 
 ## Normal semantics remain
 
