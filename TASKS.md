@@ -4,6 +4,8 @@
 **Scope:** gaps, contradictions, stale statuses, wrong examples, and grammar/index/ledger defects found across the documentation reviews through 2026-10-23. This is an internal backlog, not language documentation.
 **Topic view:** [ISSUES-BY-TOPIC.md](ISSUES-BY-TOPIC.md) groups these items by topic and adds review-level findings. Both files are verified at the same snapshot.
 
+**2026-10-25 update:** the corpus has since resolved many of these items, including T-051's conditional fallback through the guarded-update rule. The statuses below describe the 2026-10-23 snapshot and are not live; use [the decision ledger](docs/decisions-and-open-questions.md) and the concept pages for current rules.
+
 **Priority legend**
 
 - **P0** — wrong selected semantics, an unusable surface, or a contradiction that changes what a handler/exit does.
