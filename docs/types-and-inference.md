@@ -41,7 +41,7 @@ Binding reassignment and read/write access to held data are distinct capabilitie
 ## Intended type-system foundation
 
 - Primitive values and explicit numeric representations.
-- Records, tuples, and tagged unions.
+- Records, tuples, tagged unions, and plain unions of existing types. Plain-union normalization and widening have selected rules; see [union normalization](union-normalization.md).
 - Parametric generics with interface constraints.
 - Functions and closures as values.
 - Pattern matching and destructuring.
