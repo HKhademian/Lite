@@ -79,7 +79,7 @@ student: Student = { id = 7, name = "Ali", age = 18, }
 
 Construction may also explicitly name Student: student := Student { ... }. The type head may be omitted when a unique expected record type is known, including in an annotated binding or nested predefined record field. Unknown/ambiguous expected types need explicit information; do not search unrelated types by field names.
 
-Named patterns need no redundant type head. Their source establishes the exposed fields, and the general clause is destination pattern = sourceField. Compact field == expected compares without binding; field: Type type-tests and binds that same-named field. Type-only alias syntax is : Type = sourceField. This supersedes both field-colon routing and the reversed field = destinationPattern recommendation. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
+Named patterns need no redundant type head. Their source establishes the exposed fields, and the general clause is destination pattern = sourceField. Compact field == expected compares without binding; field: Type type-tests and binds that same-named field. The type-only test is : Type = sourceField; it introduces no local name. This supersedes both field-colon routing and the reversed field = destinationPattern recommendation. See [aggregate clauses](aggregate-patterns.md#named-field-clauses).
 
 Recommend partial named selection over exposed fields, with explicit stable schemas for positional matching. Omitted private fields remain private; a pattern does not invoke a constructor, expose hidden layout, or automatically call arbitrary getters. Exact omission, duplicate field selection, aliases, and construction syntax remain under review in [aggregate patterns](aggregate-patterns.md).
 
