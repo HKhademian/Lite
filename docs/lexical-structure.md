@@ -35,7 +35,7 @@ Selected 2026-10-24: a complete ordinary Boolean expression or condition may sta
 
 ## Comment neutrality
 
-Well-formed ordinary/raw comments are neutral lexical trivia: a commented-out chain entry contributes no operator or operand. In ready := /* and authenticated */ and connected;, the remaining singleton initializer is valid and tests connected as Bool. Removing the comment preserves token separation; it does not glue tokens or insert separators. This parsing rule is independent of comment-aware formatting, which remains under review. See [comment neutrality](comments.md#neutrality-in-code-and-parsing) and [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition).
+Well-formed ordinary/raw comments are neutral lexical trivia: a commented-out chain entry contributes no operator or operand. In ready := /* and authenticated */ and connected;, the remaining singleton initializer is valid and tests connected as Bool. Removing the comment preserves token separation; it does not glue tokens or insert separators. Formatting separately preserves opaque contents and attachment to nearby code while allowing indentation/surrounding line breaks to change; comment text supplies no implicit directive or vertical-layout requirement. See [comment neutrality](comments.md#neutrality-in-code-and-parsing), the [formatting contract](comments.md#selected-formatting-contract), and [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition).
 
 ## Formatter presentation of chains
 

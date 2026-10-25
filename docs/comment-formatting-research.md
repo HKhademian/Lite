@@ -1,6 +1,6 @@
 # Comments in modern formatters
 
-Status: **research snapshot, 2026-10-25; not a selected LiteScript comment-layout policy**. Ali's editing sequence and ordinary/raw comment neutrality in parsing are selected separately. No LiteScript parser or formatter implementation is claimed.
+Status: **research snapshot, 2026-10-25; opaque-content/attachment-preserving LiteScript comment formatting subsequently selected on 2026-10-25; exact layout algorithms, singleton normalization, and explicit directives remain open**. Ali's editing sequence and ordinary/raw comment neutrality in parsing are selected separately. No LiteScript parser or formatter implementation is claimed.
 
 ## Question and result
 
@@ -87,6 +87,8 @@ These languages do not support LiteScript's leading and spelling. The probes iso
 
 Selected: comments contribute no operand, including when their text resembles and authenticated. Ali may comment out or delete the first entry while the remaining and connected singleton remains valid. See [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition) and [comment neutrality](comments.md#neutrality-in-code-and-parsing).
 
-Recommended for the upcoming formatting decision: retain comment text and useful attachment, never parse ordinary comment bodies as phantom entries, and allow comment placement to constrain printing without affecting code parsing. A formatter can retain comments separately from the executable syntax tree. This is an implementation possibility inferred from the behavior above, not a selected internal representation.
+Subsequently selected on 2026-10-25: retain ordinary/raw comment contents as opaque text and preserve their attachment to the same nearby code, while allowing indentation at the source position and surrounding line breaks to change. Count only real chain entries. Comment text is neither a phantom entry nor an implicit formatting command and does not itself require a specific vertical layout. This is the [selected comment-formatting contract](comments.md#selected-formatting-contract), not an adoption of another formatter's exact output.
 
-Still open: whether an own-line block comment always preserves a particular vertical layout, normalization of an explicitly written singleton leader, detailed attachment and movement rules, comment-body reflow, and whether LiteScript should have any explicit formatting escape/directive mechanism. The previous suggestion to pin Ali's layout is a proposal, not an accepted consequence of comment neutrality. Existing compact/multiline formatting for real multi-entry chains remains selected.
+A formatter can retain comments separately from the executable syntax tree. This remains an implementation possibility inferred from the behavior above, not a selected internal representation. Ordinary comment bodies are not reflowed or formatted as code/prose under the selected opaque-content rule.
+
+Still open: exact attachment and line-placement algorithms, normalization of an explicitly written singleton leader, documentation-comment syntax/tooling, and any explicit formatting escape/directive mechanism. The previous suggestion to pin Ali's layout is not a blanket rule: comment presence alone requires no vertical layout. Existing compact/multiline formatting for real multi-entry chains remains selected. The external research findings and captured probes above are unchanged by this follow-up language decision.

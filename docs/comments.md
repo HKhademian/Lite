@@ -1,6 +1,6 @@
 # Comments
 
-Status: **nested and raw comment forms accepted; ordinary/raw comment neutrality in code parsing confirmed 2026-10-25; comment-aware formatting and documentation-comment syntax open**.
+Status: **nested and raw comment forms accepted; ordinary/raw comment neutrality in parsing and opaque-content/attachment-preserving formatting selected 2026-10-25; exact layout algorithms, formatter escapes, and documentation-comment syntax open**.
 
 ## Purpose
 
@@ -74,7 +74,18 @@ Only connected is an operand. The active leading and is still valid for that sin
 
 ## Comments and formatting
 
-Parser neutrality does not require a formatter to discard comment text, placement, or attachment. The formatter must preserve comments under its existing meaning-preservation requirement; how own-line comments constrain layout remains open. The comment's apparent code content is not parsed to infer a phantom operand or a hidden formatting command. Documentation-comment attachment and any explicit formatter-directive syntax require separate decisions. The [formatter investigation](comment-formatting-research.md) distinguishes verified behavior in other tools from possible LiteScript policies.
+Selected 2026-10-25 after the [formatter investigation](comment-formatting-research.md): ordinary/raw comments are opaque text to the formatter and remain neutral to executable parsing. Their contents and their attachment to nearby code are preserved; indentation at the comment's source position and surrounding line breaks may change.
+
+### Selected formatting contract
+
+- Preserve comment contents as opaque text. Do not parse, reflow, or format the body as LiteScript, prose, or a recognized disabled chain entry. Preserve ordinary delimiters and raw fences under their existing lexical rules.
+- Keep each comment attached to the same nearby code. Layout may move without reassigning the comment to an unrelated operand, pattern, member, or item. Exact attachment/trivia representation and line-placement algorithms remain open.
+- Count only real operands, patterns, and type members when formatting chains. Comment contents supply no entries and do not choose and/or or change precedence, binding flow, or evaluation.
+- Give ordinary comment text no implicit formatter-control meaning. The apparent and authenticated inside a comment is neither a phantom condition nor a command to keep the initializer multiline.
+
+Ali's commented-out initializer remains valid, and its comment stays with that initializer's nearby code. The comment alone does not require the original vertical layout. The existing compact/multiline policy applies to real multi-entry chains; normalization of an explicitly written singleton leader remains open. Preserve its Bool requirement rather than repairing a type-invalid expression by removing punctuation.
+
+This selects an observable formatter contract, not a parser/trivia data structure or an implementation. Documentation-comment markers/attachment and any explicit leave-this-region-unformatted mechanism require separate future decisions. No special directive syntax is selected by these ordinary comment rules.
 
 ## Missing delimiters
 
