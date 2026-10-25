@@ -14,7 +14,7 @@ zeroed: [Int; 1024];
 pending: [Int; 1024] = ?;
 ```
 
-The first supplies all elements. The second applies the selected semantic-zero contract for the established extent. The third reserves the complete fixed layout without initialized elements; indexed first construction remains open. Zero/default element eligibility must not be bypassed by the array. Known-size literals infer this fixed family by default even without the annotation; var/mut affect permissions rather than N or collection family.
+The first supplies all elements. The second applies the selected semantic-zero contract for the established extent. The third reserves the complete fixed layout without initialized elements; indexed first construction remains open. Each element receives its type's valid zero; no element type is excluded. Known-size literals infer this fixed family by default even without the annotation; var/mut affect permissions rather than N or collection family.
 
 An array field contributes its inline elements to a containing record, consistent with nested record values. Permitted copies copy those inline values under their element contracts and preserve references inside elements without cloning reference targets. Noncopyable/resource elements require their eventual copy policy.
 

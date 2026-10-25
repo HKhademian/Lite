@@ -40,7 +40,7 @@ Plain-union widening does not automatically make `List<A>` compatible with `List
 
 ## Initialization and empty sequences
 
-The selected omitted/0/{}/? modes need type-specific definitions. For fixed compile-time arrays, a candidate zero recursively initializes every element when eligible. For lists, a valid empty container can have length zero and reserved uninitialized capacity. An ordinary slice must expose only initialized elements.
+The selected omitted/0/{}/? modes need type-specific definitions. For fixed compile-time arrays, zero recursively initializes every element; every element type has a valid zero mapping. For lists, a valid empty container can have length zero and reserved uninitialized capacity. An ordinary slice must expose only initialized elements.
 
 Reserve payload storage separately from exposing live elements. In particular, = ? on an owning descriptor does not by itself choose the number of runtime elements to allocate. Empty lists and slices should be valid empty values rather than public nullable states.
 
