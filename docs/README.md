@@ -22,10 +22,12 @@ These are reading paths, not separate index entries; each linked document has on
 
 ## How to read this reference
 
-- **Established direction** records an explicit user choice or a rule retained by the subsequent discussion.
-- **Working proposal** is a concrete design suggestion that still needs confirmation or formalization.
+- **Selected / established** records an explicit user choice or a rule retained by the subsequent discussion. Status lines use “selected” for a specific decision and “established” for the broader direction; both have the same normative weight.
+- **Working proposal** is a concrete design suggestion that still needs confirmation or formalization. Status lines may say “proposal” or “proposed.”
 - **Open** means examples cannot settle the contract without another decision.
-- **Superseded** identifies earlier suggestions that should not be implemented as the current design.
+- **Superseded / historical** identifies earlier suggestions that should not be implemented as the current design. “Historical” marks a retained record rather than live status.
+
+These four categories are the intended filter; status lines may use the synonyms above.
 
 Examples use `text` fences because no LiteScript syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
 
