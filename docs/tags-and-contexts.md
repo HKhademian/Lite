@@ -53,6 +53,8 @@ The context exists for result construction even when it has no tag. Its read-onl
 
 Leading-dot enum cases are a selected [type-directed form](enums-and-variants.md#inferred-case-names). The disambiguation policy must define how an expected enum case and a current-context field are distinguished; selecting case shorthand does not silently replace the established metadata rule. Explicit `@name.field` remains the way to select named metadata.
 
+After an exit keyword, the target is exactly `@name`; a dot-attached payload is rejected as ambiguous. Use `@name (.value)` for the target's current metadata, or `@name @other.value` for an explicit context payload. See [exit target and payload boundaries](control-flow.md#target-and-payload-boundaries).
+
 ```text
 @users loop users as user {
     if eligible(user) {

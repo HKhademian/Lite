@@ -9,6 +9,7 @@ return;
 return value;
 return @tag;
 return @tag value;
+return @tag @other.value;
 break;
 break value;
 break @loop;
@@ -17,9 +18,14 @@ continue;
 continue value;
 continue @loop;
 continue @loop value;
+continue @loop (.value);
 ```
 
 Semicolons separate ordinary items; a newline never decides whether an exit operand follows. An exit whose payload ends directly in an unparenthesized complete block construct ends at that construct, with an optional trailing semicolon.
+
+## Target and payload boundaries
+
+An optional target is exactly one `@` identifier; the payload, when present, starts at the next token. If a target is present and the next token is `.`, the exit is rejected as ambiguous: `continue @scan.value` could be a target plus `.value` or an untagged payload `@scan.value`. Whitespace and comments never choose. Write `continue @scan (.value)` for the target plus the current loop's `.value`, or `continue (@scan.value)` for an untagged payload. A context-reference payload is written explicitly after the target, as in `return @outer @inner.value`; because the payload starts with `@`, the reading is unambiguous. An untagged `continue .value` remains valid.
 
 ## Plain return
 

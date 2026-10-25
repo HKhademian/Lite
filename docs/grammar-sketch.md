@@ -483,11 +483,15 @@ The tag scope includes its header, so a loop condition may reference initialized
 ## Exits
 
 ```text
-return_exit := "return" ["@" identifier] [expression]
-break_exit := "break" ["@" identifier] [expression]
-continue_exit := "continue" [expression]
-               | "continue" "@" identifier [expression]
+return_exit := "return" [exit_target] [exit_payload]
+break_exit := "break" [exit_target] [exit_payload]
+continue_exit := "continue" [exit_target] [exit_payload]
+
+exit_target := "@" identifier
+exit_payload := expression
 ```
+
+An optional target is exactly one `@` identifier; the payload, when present, begins at the next token. Target recognition is greedy, so `@scan.value` after an exit keyword is not a context-reference payload: it is a target followed by a leading-dot payload and is rejected as ambiguous. Whitespace and comments never choose a reading. Write `continue @scan (.value)` to target `@scan` with the current loop's grouped `.value`, or `continue (@scan.value)` for an untagged payload. A context-reference payload can instead be repeated explicitly after the target: `return @outer @inner.value` targets `@outer` and supplies `@inner.value`; this form is unambiguous because the payload begins with `@`, not `.`.
 
 Break value commits a value of body type T, stops the nearest loop, and runs then if present. Bare break preserves .value and follows normal completion. An optional `@tag` selects an enclosing loop explicitly; without it, break targets the nearest loop, tagged or untagged. A break target that is not a loop is invalid. `continue @tag [value]` advances the named loop; with a value, it commits that T value before advancing. An untagged continue targets the nearest loop. `continue` also requires a loop target. Tagged `return` may target a loop, conditional, general result block, or function; plain `return` targets the nearest function/closure. Unsupported operation–target pairs are invalid. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
@@ -611,7 +615,6 @@ Lexical/syntax failures do not authorize formatter repair or partial-file rewrit
 ## Open parser interactions
 
 - A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.
-- Prefix tags must be distinguishable from targeted exits and context references through grammar, not whitespace.
 - `Unit` in type and expression positions needs a deliberate built-in rule.
 - Adjacent string literal tokens join before ordinary expression separation is interpreted.
 - Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.

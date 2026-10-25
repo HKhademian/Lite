@@ -21,7 +21,7 @@ summary := @scan loop numbers as number {
     print(.count);
 
     if number == 0 {
-        continue @scan.value;
+        continue @scan (.value);
     }
 
     .value + number
@@ -31,7 +31,7 @@ summary := @scan loop numbers as number {
 }
 ```
 
-The shown input enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. If an input reaches the cancellation branch, return @scan 0 supplies the loop's Int T and the loop's then runs format_total(0); the old String payload was invalid for this body type.
+The shown input enters five iterations. Value starts at Int zero, then becomes 3, stays 3 after the skip, is explicitly recommitted as 3, becomes 8, and remains 8 on break. The value 99 is never visited. Then sees count 5 and value 8. During active entries, index is 0 through 4 while count is 1 through 5. If an input reaches the cancellation branch, return @scan 0 supplies the loop's Int T and the loop's then runs format_total(0); the old String payload was invalid for this body type. The target is `@scan`; `(.value)` is its grouped payload. The unparenthesized `@scan.value` form is rejected as ambiguous.
 
 An empty source or all-skipped source leaves Int value 0. Count distinguishes no entries from some entries; value cannot distinguish no commit from a genuine result of zero. A skipped last entry preserves the prior value. No Option is automatically inserted.
 
