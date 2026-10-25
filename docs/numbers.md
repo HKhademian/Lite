@@ -44,18 +44,21 @@ A signed 64-bit default `Int` was suggested, with explicit sized types and an op
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / // % %%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / _/ % _%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
 
 ## Division
 
-The [arithmetic-method and division review](arithmetic-methods-and-division-revision.md) records the user's request for ordinary numeric methods, proposed Int / Int truncation, and a punctuation-only %/% plus %% recommendation after setting aside the underscore family under the user's compact/spaced equivalence requirement. ASCII ~/ remains an earlier alternative. Those proposed numeric/symbol changes are not yet adopted. For already established operand types, the recommendation is to keep the operation stable across destination annotations; mixed operands and conversion/inference policy remain separate.
+Selected 2026-10-25: / uses established operand types. Int / Int truncates toward zero; admitted fractional operands produce a fractional quotient. The integer floor operator is _/:
 
 ```text
-ratio := 7 / 2;     /* fractional quotient: 3.5 */
-quotient := 7 // 2; /* integer quotient: 3 */
+quotient := -7 / 2;  /* -3 */
+floored := -7 _/ 2;  /* -4 */
+ratio := 7.0 / 2.0;  /* 3.5 */
 ```
 
-`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Selected 2026-10-25: integer `%` is remainder with a truncating mathematical quotient and the dividend's sign when nonzero; `%%` is modulo paired with floor // and the divisor's sign when nonzero. -7 % 2 is -1, while -7 %% 2 is 1; 7 %% -2 is -1. The operators use Odin's symbols and Zig's names; `%=` and `%%=` preserve the respective meanings, superseding the earlier floor-paired `%` rule. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or exact arithmetic fault triggers.
+Remainder % pairs with truncating integer / and follows the dividend when nonzero. Modulo _% pairs with floor _/ and follows the divisor when nonzero: -7 % 2 is -1, -7 _% 2 is 1, and 7 _% -2 is -1. The corresponding updates are /=, _/=, %=, and _%=.
+
+This replaces the earlier always-fractional / and // / %% floor spellings. Destination types do not select different arithmetic for already established operands; exact assignment conversions, mixed operands, literal typing, representation, and fault rules remain open. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the unresolved compact underscore/identifier boundary; [division](division.md) defines the signed values.
 
 ## Ranges
 

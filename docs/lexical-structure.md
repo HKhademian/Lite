@@ -33,6 +33,10 @@ These trailing-separator rules do not make interior separators optional: commas 
 
 Selected 2026-10-24: a complete ordinary Boolean expression or condition may start with one optional `and` or `or`, including initializers, Boolean loop sources, subjectless match Boolean headers, if/else-if conditions, subject-based guards, and explicitly grouped expressions/conditions. Parentheses are not required around an already delimited initializer or loop source: ready := and a and b; and loop and a and b { body } use existing item/header boundaries. A complete initial match-arm or supported nested constructor-payload/tuple-component pattern-alternative list may start with one optional or and retains one shared continuation. A plain-union chain in type context may start with one optional |. Removing that first token preserves the valid expression/condition/type meaning, including ordinary precedence, evaluation, and binding flow. A prefixed value expression must type-check as Bool. Require at least one real operand, pattern, or member; stacked leaders, interior extra leaders, and trailing operators are invalid. Whitespace and line breaks have no structural role; a semicolon may occupy its own line without becoming a newline rule. This does not add unary operators or general punctuation repetition. Leading & remains conditional on future intersection-type selection; see [optional leading separators](leading-separators.md).
 
+## Selected underscore arithmetic and open scanning
+
+The selected floor operators are _/ and _%, alongside operand-directed / and remainder %. The user still requires compact/spaced operator equivalence. Ordinary longest-identifier scanning around a_/b and a_%b conflicts with that requirement, so exact recognition remains open; no mandatory operator-space rule or identifier-stealing convention is adopted. This symbol selection does not introduce // line comments. See [the selected arithmetic family](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+
 ## Identity leading plus
 
 Complete additive-chain entries separately permit one optional leading +, selected 2026-10-25. It is an identity prefix, not an implicit zero operand; a singleton remains valid after an earlier contribution is commented out. Minus retains negation, and leading * or / is not admitted by analogy. Comments/newlines do not change those meanings or supply a missing operand. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
@@ -156,7 +160,7 @@ Comments are explicitly delimited:
 
 Ordinary comments nest; raw comments end only at the matching fence and do not nest. Neither form parses its contents as source code. Comments separate tokens but do not insert item separators. Missing closing delimiters are errors, without guessing where code resumes. See [comments](comments.md) for fence matching and interactions between the forms.
 
-Newline-terminated comments were not retained as the strict whitespace-independent default. Outside comments and strings, `//` is the integer-division operator and `//=` is its compound-update token. Recognize the longest valid slash operator token. Documentation-comment markers remain open.
+Newline-terminated comments were not retained as the strict whitespace-independent default. The former `//` arithmetic spelling is superseded by `_/`, without adopting `//` comments. Once a boundary is established, recognize longer update tokens such as `_/=` before their operator prefixes; compact underscore/identifier scanning remains unresolved. Documentation-comment markers remain open.
 
 ## Return boundaries
 

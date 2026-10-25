@@ -66,7 +66,7 @@ Identifier normalization must not silently establish a normalization rule for st
 
 ## Open decisions
 
-- The [underscore floor-operator review](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree) sets aside _/ and _% under the user's compact/spaced equivalence requirement: a_/b naturally reads a_ / b. Preserve ordinary a_ and _ identifiers rather than stealing identifier characters for operators. Punctuation-only alternatives remain proposals; no lexer change is adopted.
+- The selected _/ and _% arithmetic symbols retain the user's compact/spaced equivalence requirement, which conflicts with ordinary a_/b -> a_ / b scanning. Exact integration with ordinary a_ and _ identifiers remains unresolved; selection of symbols does not silently waive that requirement or impose mandatory spaces. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 - Pin the Unicode version and complete the identifier profile.
 - Confirm case sensitivity and normalization behavior.
 - Define any restrictions on format-control characters and any identifier escaping syntax.

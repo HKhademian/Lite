@@ -18,18 +18,18 @@
       "b": -2
     }
   ],
-  "scope": "Representative division/remainder/modulo operators and named operations on integer inputs; values derived from the cited rules, with V playground observations captured separately. Not exhaustive APIs or a LiteScript runtime claim.",
+  "scope": "Representative division/remainder/modulo operators and named operations, mostly on integer inputs; fractional LiteScript operands are separate. Values derive from cited rules, with V playground observations captured separately. Not exhaustive APIs or a LiteScript runtime claim.",
   "rows": [
     {
       "language": "LiteScript",
       "operands": "Int",
       "expression": "a / b",
-      "rule": "fractional",
+      "rule": "trunc_div",
       "results": [
-        "3.5",
-        "-3.5",
-        "-3.5",
-        "3.5"
+        "3",
+        "-3",
+        "-3",
+        "3"
       ],
       "source": "division.md",
       "note": "Selected design; not an implemented runtime."
@@ -37,7 +37,7 @@
     {
       "language": "LiteScript",
       "operands": "Int",
-      "expression": "a // b",
+      "expression": "a _/ b",
       "rule": "floor_div",
       "results": [
         "3",
@@ -65,7 +65,7 @@
     {
       "language": "LiteScript",
       "operands": "Int",
-      "expression": "a %% b",
+      "expression": "a _% b",
       "rule": "mod",
       "results": [
         "1",
@@ -75,6 +75,20 @@
       ],
       "source": "division.md",
       "note": "Selected design; not an implemented runtime."
+    },
+    {
+      "language": "LiteScript",
+      "operands": "Float",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "division.md",
+      "note": "Selected fractional-operand design; illustrative decimal values, representation remains open. Not an implemented runtime."
     },
     {
       "language": "Odin",

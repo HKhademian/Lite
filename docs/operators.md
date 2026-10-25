@@ -5,11 +5,11 @@ Status: **all ten positive/negated comparison operators selected at one shared c
 ## Working operator set
 
 ```text
-+  -  *  /  //  %  %%  **
++  -  *  /  _/  %  _%  **
 ==  =!=  >  >!  <  <!  >=  >!=  <=  <!=
 and  or  not
 =
-+=  -=  *=  /=  //=  %=  %%=
++=  -=  *=  /=  _/=  %=  _%=
 ```
 
 `=` is assignment, not comparison. `:=` and `: Type =` belong to declarations. No increment or decrement operator has been selected.
@@ -18,14 +18,14 @@ and  or  not
 
 Selected 2026-10-25: a complete additive-chain entry permits one optional leading +, including a singleton. total := + rent + groceries + transport has the same meaning as the form without the first +; the ordinary initializer can be written over several lines without parentheses. For an admitted operand, +A preserves A's value/type and evaluates that occurrence once. No implicit zero, extra addition/overload call, numeric conversion, promotion, or new effect/failure is introduced.
 
-This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading //, %, or %% rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Basic arithmetic grouping is selected below; complete unary integration and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading _/, %, or _% rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Basic arithmetic grouping is selected below; complete unary integration and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
 ## Basic arithmetic grouping selected
 
 Selected 2026-10-25: within the selected arithmetic operator set, precedence runs from tighter to looser:
 
 1. Prefix negation: `-a`.
-2. Multiplicative operations: `*`, `/`, `//`, `%`, `%%`.
+2. Multiplicative operations: `*`, `/`, `_/`, `%`, `_%`.
 3. Additive operations: binary `+`, `-`.
 
 Binary operators at each level associate left to right. Parentheses override grouping:
@@ -33,7 +33,7 @@ Binary operators at each level associate left to right. Parentheses override gro
 ```text
 2 + 3 * 4;   /* 2 + (3 * 4): 14 */
 20 - 5 - 2;  /* (20 - 5) - 2: 13 */
-20 // 5 * 2; /* (20 // 5) * 2: 8 */
+20 _/ 5 * 2; /* (20 _/ 5) * 2: 8 */
 -2 * 3;      /* (-2) * 3: -6 */
 ```
 
@@ -49,11 +49,11 @@ This selects the spelling and grouping requirement, not a complete power contrac
 
 ## Division
 
-`/` produces a fractional quotient; `//` performs integer floor division on integer operands. `7 / 2` produces `3.5`, while `7 // 2` produces the integer quotient `3`. `-7 // 2` produces `-4`, rounding toward negative infinity. `//=` is the corresponding integer update, so ordinary integer arithmetic does not require named division helpers or floating-point conversions.
+Selected 2026-10-25: / follows established operand types. Int / Int truncates toward zero; admitted fractional operands produce a fractional quotient. Integer _/ performs floor division. Thus -7 / 2 is -3, -7 _/ 2 is -4, and 7.0 / 2.0 is 3.5. Destination annotations check the resulting value rather than changing an established Int calculation into fractional division.
 
-Selected 2026-10-25: `%` is remainder using a truncating mathematical quotient, and `%%` is modulo paired with floor `//`. A nonzero remainder follows the dividend's sign; a nonzero modulo result follows the divisor's sign. Thus -7 % 2 is -1, -7 %% 2 is 1, 7 % -2 is 1, and 7 %% -2 is -1. Mathematically, a == b * (a // b) + (a %% b). The names follow Zig and the symbols follow Odin; this supersedes the earlier floor-paired `%` rule. `%=` and `%%=` use their corresponding operation's semantics.
+Integer % is truncating remainder and _% is floor modulo. A nonzero remainder follows the dividend; a nonzero modulo follows the divisor. The successful integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). The corresponding updates are /=, _/=, %=, and _%=.
 
-Numeric representations, noninteger remainder/modulo, implicit conversions, and operator failure contracts remain open. See [division](division.md). `//` is an operator, not a newline-terminated comment.
+This supersedes always-fractional /, // floor division, and %% modulo. Exact conversions, mixed operands, representations, noninteger floor/remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
 
 ## Equality and negation
 
@@ -90,7 +90,7 @@ Chains compare adjacent operands, evaluate each operand at most once from left t
 The intended relative precedence, from tighter to looser, is:
 
 1. Prefix arithmetic negation.
-2. Multiplicative `* / // % %%`.
+2. Multiplicative `* / _/ % _%`.
 3. Additive `+ -`.
 4. Comparison.
 5. `not`.
@@ -196,7 +196,7 @@ enabled = not enabled;
 
 ## Notes and open decisions
 
-The user requests ordinary named arithmetic methods in addition to symbols, including a.plus(b), a.div(b), and a.floorDiv(b). The [division revision review](arithmetic-methods-and-division-revision.md) proposes operand-directed Int / Int truncation and now recommends punctuation-only %/% plus %% for the floor pair, following R. The user requires compact and spaced forms to agree, setting aside _/ and _% because a_/b ordinarily scans as identifier a_ followed by / and b. ASCII ~/ remains an earlier alternative. These are under review: current /, //, %, and %% contracts above are not silently changed, no complete operator-overload/method-dispatch API is selected, and future infix calls remain deferred.
+The user selects /, _/, %, and _% and requests named methods in addition, including a.plus(b), a.div(b), and a.floorDiv(b). Working div/rem/floorDiv/mod names follow the matching operations. Complete signatures/dispatch remain open, as does underscore-operator scanning under the retained compact/spaced equivalence requirement. See [the selected family](arithmetic-methods-and-division-revision.md); future infix methods remain deferred.
 
 Ordering and equality support for user-defined types, reference identity, floating-point comparison details, exact arithmetic fault cases and payloads, noninteger remainder, bitwise operators, and short-circuit update forms remain open. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` with typed filters supports local recovery. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification. See [arithmetic fault boundaries](arithmetic-faults.md).
 

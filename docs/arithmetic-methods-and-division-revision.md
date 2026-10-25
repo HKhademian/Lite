@@ -1,181 +1,98 @@
-# Arithmetic methods and division revision
+# Arithmetic methods and the selected division family
 
-Status: **additive arithmetic-method surface requested 2026-10-25; compact/spaced operator equivalence required; operand-directed division and punctuation-only floor symbols remain proposals under review**. The underscore _/ and _% family is set aside under that boundary requirement; the current recommendation is R-style %/% floor division with %% modulo. The currently selected contract remains fractional `/`, floor `//`, remainder `%`, and modulo `%%` until a revision is selected. No numeric API, overload mechanism, lexer change, or implementation is claimed here.
+Status: **/, _/, %, and _% selected 2026-10-25; ordinary arithmetic methods requested in addition; compact/spaced equivalence required, with underscore/identifier scanning unresolved**. The user retained this family after reviewing underscore boundaries and punctuation-only alternatives. This is a language-design selection, not an implemented lexer, compiler, or numeric API.
 
-## Requested method surface
+## Selected operations
 
-Provide explicit math operations as ordinary methods in addition to symbolic operators:
-
-```text
-a.plus(b)
-a.div(b)
-a.floorDiv(b)
-```
-
-These are the user's requested examples. A coherent candidate family is plus, minus, times, div, floorDiv, rem, and mod. Exact signatures, numeric type coverage, mixed operands, method lookup, and operator-to-method dispatch remain to be specified. This request does not introduce Kotlin-style infix calls; any future a floorDiv b form is a separate topic.
-
-Named methods should expose the same numeric operation as their corresponding operator for established operand types: preserve its values, result type, evaluation count/order, and defined typed-panic behavior. Built-in arithmetic returns its result without implicitly replacing the receiver. Normal assignment/update permissions still govern any later write. A name alone must not imply another rounding rule or silently add conversion.
-
-The selected division contract and the proposed revised one give div different integer behavior. Therefore the div/operator mapping must be finalized with the division decision, rather than documenting Int.div(Int) as truncating while still calling it an alias of the currently fractional Int / Int operator. The floorDiv name itself states floor rounding independently of the eventual symbol.
-
-## Proposed operand-directed division
-
-The user proposes restoring convenient truncating integer division and choosing another floor-division spelling. The recommended interpretation is based on already established operand types:
-
-- Int divided by Int produces a truncating integer quotient.
-- Division on admitted fractional operand types produces a fractional quotient.
-- Floor division remains an explicitly distinct operation.
-
-For illustration only, under that proposed revision:
+For established Int operands:
 
 ```text
 b: Int = -7;
 c: Int = 2;
 
-q: Int = b / c;          /* proposed: -3 */
-same := b.div(c);        /* proposed: -3 */
-floor := b.floorDiv(c);  /* proposed: -4 */
-remainder := b.rem(c);   /* proposed: -1 */
-modulo := b.mod(c);      /* proposed: 1 */
+b / c;  /* truncating quotient: -3 */
+b _/ c; /* floor quotient: -4 */
+b % c;  /* remainder: -1 */
+b _% c; /* modulo: 1 */
 ```
 
-The initialized operands make the intended signed cases visible. The examples are proposals, not executable LiteScript verification or permission to infer omitted numeric contracts.
+The truncating pair is / and %; the floor pair is _/ and _%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. Fractional operands retain fractional /; mixed operands, conversions, numeric representation, and exact faults remain separate.
 
-### Destination types check the result
+The old always-fractional Int / Int behavior, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](division.md) and the updated [signed table](signed-division-table.md). Foreign-language spellings and observed probe results are unchanged.
 
-For b and c already established as Int, recommend that b / c keep the same operation in an inferred binding, a typed binding, a return, or a call argument. Changing the destination annotation must not by itself switch an already established integer calculation to fractional division:
+## Ordinary named operations in addition
+
+The user's requested surface remains ordinary dot calls, including a.plus(b), a.div(b), and a.floorDiv(b). Working operation names correspond to the selected meanings:
 
 ```text
-q := b / c;        /* proposed Int calculation */
-q: Int = b / c;    /* same proposed Int calculation */
-f: Float = b / c;  /* same Int calculation; assignment conversion is separate */
+a.plus(b)     /* actual binary addition */
+a.div(b)      /* division for the established operand types */
+a.floorDiv(b) /* floor quotient */
+a.rem(b)      /* truncating remainder */
+a.mod(b)      /* floor modulo */
 ```
 
-The last line must either satisfy an independently selected numeric conversion rule or be rejected. Its Float destination alone must not manufacture the fractional quotient -3.5. To request fractional division, establish suitable fractional operand types or use a future explicitly specified conversion/API. No concrete conversion-method spelling is selected here.
+Minus/times are coherent additional names, while exact complete method names, signatures, numeric coverage, lookup, and general operator-to-method dispatch still require specification. A method form must preserve its corresponding operation's result, result type, evaluation count/order, and defined failure behavior. Built-in arithmetic returns a value without implicitly replacing the receiver; later assignment retains ordinary var/mut authority requirements.
 
-This recommendation applies to operands whose types are already fixed. It does not prohibit expected-type inference for unresolved literals or type parameters; those general rules remain open. Mixed numeric operands, promotions, fractional representations, and explicit narrowing still need independent contracts.
+The method spelling need not force a runtime function call: admitted built-in operations may lower to the same arithmetic as the symbolic form. This is an implementation direction, not a fixed CPU instruction-count guarantee or a completed custom-overload facility. Kotlin-style infix methods remain an explicitly future topic.
 
-### Pair the two integer quotients correctly
+The optional identity-leading + remains a no-op entry prefix. It must not invoke plus/unaryPlus, supply an implicit zero, or acquire an extra conversion or failure through this method surface. Actual binary addition is a separate operation.
 
-Under the revised proposal, truncating integer / pairs with remainder %, while floor division pairs with floor modulo. The previously selected remainder/modulo sign rules would stay unchanged: a nonzero remainder follows the dividend and a nonzero modulo follows the divisor. The current selected floor symbols are // and %%; the underscore _/ and _% family was explored, then set aside under the user's compact/spaced equivalence requirement. The current recommendation is %/% and %% respectively.
+## Operand types determine division
 
-The existing [signed table](signed-division-table.md) records the currently selected LiteScript operators, not this proposed change. If operand-directed / and a new floor symbol are accepted, migrate the normative docs, grammar, samples, update operators, and LiteScript table rows together. Keep the foreign-language rows and captured observations intact.
-
-## Floor-operation symbol candidates
-
-### Compact and spaced forms must agree
-
-The user requires a_%b and a _% b to denote the same proposed operation, likewise for floor division, while retaining ordinary identifiers. The examples a_b and a_ b expose a different issue: a_b is one identifier, whereas a_ b is two identifier tokens and does not become one name. Ordinary identifier boundaries remain meaningful; they must not force these symbolic operators to require surrounding spaces.
-
-Preserve ordinary a_ and _ names. Under the existing identifier direction, underscore is an identifier character, so the previously explored _/ and _% family fails this compact/spaced requirement without special scanning rules. Do not adopt a rule that steals a trailing underscore from a valid identifier or changes the operation according to surrounding spaces.
-
-Simply reversing the composition to /_ and %_ moves the collision to an underscore-prefixed right operand: a/_b could be mistaken for a / _b. The recommendation is to use punctuation outside the identifier character set for these compact symbolic operators.
-
-Whitespace around a complete operator must not change which operation is recognized. This requirement does not make whitespace inside a multi-character operator ignorable or change the ordinary separation of identifiers.
-
-### Punctuation-only recommendation: percent-delimited floor division
-
-[R's base arithmetic reference](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) supplies an established spelling with the required floor semantics: %/% is floor division, and %% is modulo paired with that quotient. This is a new comparison reference for the spelling review; its coercions, vector operations, noninteger behavior, and fault results are not imported into LiteScript.
-
-The recommended LiteScript candidate family is:
+For b and c already typed Int, b / c keeps the same truncating operation in an inferred binding, typed binding, return, or supplied argument:
 
 ```text
-a / b;    /* proposed truncating quotient for established Int operands */
-a % b;    /* truncating remainder */
-a %/% b;  /* proposed floor quotient */
-a %% b;   /* floor modulo */
+q := b / c;       /* Int result: -3 */
+q: Int = b / c;   /* same Int calculation */
+f: Float = b / c; /* Int calculation; assignment compatibility is separate */
 ```
 
-The floor symbol is longer than //, but avoids both the line-comment association and identifier-character collision. All characters in %/% and %% are punctuation under the current identifier direction:
+The final line must satisfy an independently selected conversion rule or be rejected. Its Float destination does not manufacture a fractional -3.5 quotient. Establish fractional operand types to request fractional arithmetic; no concrete conversion-method spelling is newly selected. General expected-type inference for unresolved literals/type parameters remains open and is not prohibited by this fixed-operand rule.
+
+## Compact and spaced forms must agree
+
+The user requires compact/spaced equivalence for these operators, including a_%b and a _% b. The distinct identifier spellings a_b and a_ b still mean one identifier and two identifier tokens respectively; ordinary identifier separation is not removed.
+
+There is an unresolved conflict with the current identifier direction:
 
 ```text
-a%/%b;    /* candidate tokens: a, %/%, b */
-a %/% b;  /* the same candidate tokens */
+a _/ b; /* selected floor operator spelling with an explicit boundary */
+a_/b;   /* ordinary longest-identifier scanning would instead read a_ / b */
 
-a%%b;     /* tokens: a, %%, b */
-a %% b;   /* the same tokens */
+a _% b; /* selected modulo spelling with an explicit boundary */
+a_%b;   /* ordinary longest-identifier scanning would instead read a_ % b */
 ```
 
-The mathematical floor identity would be a == b * (a %/% b) + (a %% b). Existing named-method candidates remain div, rem, floorDiv, and mod. This recommendation keeps the currently selected %% spelling instead of replacing both floor symbols unnecessarily.
+Selecting the symbols does not resolve that conflict or waive the compact/spaced requirement. Do not silently impose mandatory operator spaces, steal trailing underscores from names, reserve all underscore identifiers, or choose tokenization by type-check/lookup success. The exact lexical integration remains open and must be settled before claiming a complete unambiguous grammar or implementing it. Standalone _ remains an ordinary readable name under its existing contract.
 
-Selection would require a fixed %/% token recognized before its shorter operator prefixes and a decision on precedence/update integration. It does not imply R's general percent-delimited custom operators, a new infix-function facility, or a %/%= update. Both the Int / Int revision and replacement floor symbol remain proposals; the current operator table is not migrated by this review.
+The corresponding update family is /=, _/=, %=, and _%=. Once the operator boundary is established, recognize a complete longer update token before its shorter prefix. Precedence remains the shared multiplicative level with left association. No redundant prefix floor operator, missing left operand, or implicit seed follows from the symbol choice.
 
-### Underscore floor family explored
+## Comments and earlier alternatives
 
-The user's earlier composition used underscore as a common floor marker:
+The earlier R-style %/% and %% recommendation was not chosen. R remains a reference for floor arithmetic, not the selected LiteScript spelling or a source of general percent-delimited infix operators. The earlier ~/ candidate is likewise unselected; Dart uses it for truncation, not floor division. ASCII tilde and the user's earlier small-tilde glyph are not implicit aliases.
 
-```text
-b: Int = -7;
-c: Int = 2;
+Retiring // as an arithmetic spelling does not itself adopt // line comments. Current nested/raw block comments remain selected. The proposed future spacing-dependent line comment still requires its own lexical decision; no formatter whitespace rule introduces it.
 
-q := b / c;    /* proposed truncating Int division: -3 */
-r := b % c;    /* remainder: -1 */
-f := b _/ c;   /* proposed floor division: -4 */
-m := b _% c;   /* proposed floor modulo: 1 */
-```
+## Separate open contracts
 
-The family is visually regular: / and % form the truncating pair, while _/ and _% form the floor pair. The floor pair would preserve a == b * (a _/ b) + (a _% b), mathematically. Candidate method mappings are div, rem, floorDiv, and mod. These examples do not adopt the symbols, destination-directed rounding, a numeric API, or new result/fault contracts.
-
-### Identifier boundary tradeoff
-
-Underscore is already admitted in ordinary identifiers, and standalone _ is a readable name. Under normal longest-identifier scanning, the compact forms would have a different tokenization from the spaced operator forms:
-
-```text
-a _/ b;  /* candidate tokens: a, _/, b */
-a_/b;    /* ordinary identifier tokens: a_, /, b */
-
-a _% b;  /* candidate tokens: a, _%, b */
-a_%b;    /* ordinary identifier tokens: a_, %, b */
-```
-
-The candidate therefore needs an ordinary token boundary before its underscore after an identifier. Spaces provide that boundary; another admitted delimiter may also do so. This is analogous to separating a and b instead of writing aandb: whitespace separates different tokens, rather than changing the meaning of an already recognized operator. It is not the proposed spacing-dependent switch between an arithmetic token and a line comment.
-
-Preserve a_ as an identifier and _ as an ordinary readable binding. Do not split an existing identifier retroactively because an operator might fit, use type/lookup success to choose the tokenization, or reserve underscore globally for math. A declared _ / b and an adjacent _/b would likewise need distinct lexical treatment if the candidate is adopted; no prefix floor operator or implicit left operand follows.
-
-This is the reason to set the family aside under the user's new requirement: a _/ b cannot uniformly compact to a_/b while preserving its tokens and ordinary identifier rules. No underscore operators or updates are selected. See [identifiers](identifiers.md) and [lexical structure](lexical-structure.md).
-
-### Earlier tilde candidate
-
-ASCII `~/` remains the earlier candidate replacement for `//`:
-
-```text
-q: Int = b ~/ c; /* proposed floor result: -4 */
-```
-
-Use ASCII tilde U+007E in this candidate. The visually similar small tilde in b˜/c is U+02DC and is not silently an alias. Any Unicode operator aliases would need an explicit lexical decision.
-
-The candidate avoids the widespread // line-comment association, but carries another reference-language difference: [Dart's ~/](https://api.dart.dev/dart-core/num/operator_truncate_divide.html) truncates toward zero rather than flooring. Reusing its spelling for floor division is possible, but must be a deliberate LiteScript choice. `a.floorDiv(b)` expresses the rounding unambiguously while the symbolic choice remains under review. The candidate's precedence, tokenization, and ~/= update are not selected by this proposal.
-
-The current // and %% spellings remain selected until replacements are accepted. Ordinary named methods can coexist with whichever symbols are eventually chosen; they are additional access to numeric operations, not a reason to remove operator syntax.
-
-## Future line comments and spacing
-
-The user raises a future spacing-dependent // line comment. This remains a proposal and does not change current block/raw comment syntax or the current // division token.
-
-Recommend an unambiguous lexical distinction if // is ever reclaimed for comments. With a spacing-dependent interpretation, inserting ordinary spaces could turn a division into a comment and change or remove executable code. That would revise the current guarantees that spacing does not choose arithmetic meaning and comments are neutral parser trivia. Reserving // consistently for one role would avoid that specific ambiguity, but neither line comments nor a replacement floor symbol are adopted here.
-
-Any future comment decision must specify exact opener recognition, end-of-line behavior, token separation, and compatibility with existing source. It requires a dedicated language decision rather than an implied formatter convention. See [comments](comments.md) and [lexical structure](lexical-structure.md).
-
-## Operator and method implementation boundaries
-
-Ordinary method calls evaluate the receiver, then supplied arguments in source order, under the existing [evaluation contract](evaluation-order.md). Built-in numeric methods may lower directly to the same arithmetic operation as their operator forms; method spelling need not force a runtime function call. This is an implementation direction, not a fixed instruction-count guarantee or a completed custom-overload design.
-
-The identity leading + remains presentation punctuation at its selected entry boundaries. It adds no actual numeric operation or plus/unaryPlus method invocation and must not acquire a synthetic zero argument through this proposal. Actual binary addition and its plus method are separate from that redundancy.
-
-Power method names and domains, assignment-method names, operator declaration syntax, extension-method resolution, generic specialization, and future user-defined infix syntax remain open. Preserve the already selected explicit grouping restriction for signed power bases; this proposal changes none of those cases.
+- Resolve compact underscore-operator scanning against ordinary identifier rules.
+- Complete fractional/mixed operand types, literal inference, numeric conversions, and fixed-width/large-integer representation.
+- Specify exact typed arithmetic panic cases and payloads, including zero divisors and minimum-integer/-1 cases; preserve the existing failure channels.
+- Specify exact numeric method signatures and general lookup/overloading/extension behavior.
+- Define noninteger floor/remainder/modulo domains, optional combined quotient/remainder APIs, power methods, and any future infix syntax independently.
 
 ## Primary comparisons
 
-- [R arithmetic](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) defines %/% as floor division and %% as its paired modulo. The reference's successful integer formulas support the punctuation-only recommendation; R's wider numeric and failure contracts are separate.
-- [Kotlin operator overloading](https://kotlinlang.org/docs/operator-overloading.html) maps binary +, -, *, /, and % to plus, minus, times, div, and rem. Kotlin distinguishes these actual operations from unary operator methods; LiteScript's identity entry prefix keeps its own contract.
-- [Kotlin numbers](https://kotlinlang.org/docs/numbers.html#integer-division) provides integer division based on numeric operands and requires a fractional operand for a fractional quotient. Its conversion, overflow, and inference rules are not adopted automatically.
-- [Kotlin floorDiv](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/floor-div.html) and [mod](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/mod.html) supply named floor operations in addition to ordinary division/remainder.
-- [Dart operators](https://dart.dev/language/operators) use / for fractional division, and the [~/ API contract](https://api.dart.dev/dart-core/num/operator_truncate_divide.html) specifies truncating division. That spelling must not be described as an existing floor-division convention.
+- [Kotlin operator methods](https://kotlinlang.org/docs/operator-overloading.html) and [numeric division](https://kotlinlang.org/docs/numbers.html#integer-division) inform the additional named surface and operand-directed behavior. Their wider inference, conversion, and overflow rules are not automatically imported.
+- [Kotlin floorDiv](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/floor-div.html) and [mod](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/mod.html) provide named floor operations.
+- [Dart ~/](https://api.dart.dev/dart-core/num/operator_truncate_divide.html) is truncating division; [R arithmetic](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) uses %/% and %% for a floor pair. These earlier spelling alternatives remain comparative history.
 
 ## Related documents
 
-- [Current division, remainder, and modulo](division.md)
+- [Division](division.md)
 - [Operators](operators.md)
-- [Numbers and ranges](numbers.md)
-- [Signed reference table](signed-division-table.md)
+- [Identifiers](identifiers.md)
+- [Lexical structure](lexical-structure.md)
+- [Evaluation order](evaluation-order.md)
 - [Decision ledger](decisions-and-open-questions.md)

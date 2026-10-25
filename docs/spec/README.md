@@ -16,7 +16,7 @@ Selected:
 - Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
 - Operands and named call inputs evaluate left to right in written order.
-- Operator grouping, tighter to looser: prefix `-`; `* / // % %%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.
+- Operator grouping, tighter to looser: prefix `-`; `* / _/ % _%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.
 - All ten comparison forms share one precedence. A comparison chain compares adjacent operands, evaluates each operand at most once left to right, and stops at the first false comparison.
 - `=` is assignment, `==` is equality, and `=!=` is inequality. `**` is power; an unparenthesized unary-minus/power spelling is rejected, and chained-power association remains open.
 - Conditions require `Bool`; there is no implicit truthiness. A complete Boolean expression may start with one optional `and`/`or`, which adds no operand and no binding.

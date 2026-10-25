@@ -52,14 +52,14 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
 - [Operators](operators.md): selected basic arithmetic precedence and binary left association, comparison/logical operations, optional leading logical separators and identity additive +, and selected power spelling with explicit unary-minus grouping.
 - [Power and negation](power-and-negation.md): reject -base `**` exponent, require the negative-base or outer-negation group, and retain open power typing/association/domain contracts.
-- [Arithmetic operators across languages](arithmetic-operators-comparison.md): Java, C, C++, C#, Python, and modern references; division/remainder/modulo, selected Odin symbols with Zig names, power and unary signs, identity versus promotion/conversion, primary sources, and seven versioned local toolchain probes.
-- [Signed division, remainder, and modulo table](signed-division-table.md): 55 operation rows across 18 languages, all four sign combinations, integer versus fractional division, named floor/Euclidean alternatives, and captured V playground results.
+- [Arithmetic operators across languages](arithmetic-operators-comparison.md): Java, C, C++, C#, Python, and modern references; division/remainder/modulo, current / _/ % _% family with rem/mod meanings, power and unary signs, identity versus promotion/conversion, primary sources, and seven versioned local toolchain probes.
+- [Signed division, remainder, and modulo table](signed-division-table.md): 56 operation rows across 18 languages, all four sign combinations, integer versus fractional division, named floor/Euclidean alternatives, and captured V playground results.
 - [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, identity leading + without conversion or implicit zero, range direction, and stride.
-- [Division](division.md): fractional `/`, integer floor `//`, remainder `%`, modulo `%%`, compound updates, and numeric fault cases.
-- [Arithmetic methods and division revision](arithmetic-methods-and-division-revision.md): requested dot-call math operations; proposed operand-directed division, required compact/spaced operator equivalence, R-style %/% and %% recommendation, underscore-family boundary rejection, and deferred comments/infix questions.
+- [Division](division.md): operand-directed /, integer floor _/, remainder %, modulo _%, corresponding updates, signed results, and open numeric/lexical contracts.
+- [Arithmetic methods and selected family](arithmetic-methods-and-division-revision.md): / _/ % _%, additional named methods, fixed-operand division, retained compact/spaced requirement, and unresolved underscore/identifier scanning.
 - [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, local typed-`else` recovery, and unresolved fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 
