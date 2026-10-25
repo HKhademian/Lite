@@ -4,11 +4,21 @@ Status: **cleanup-only `finally`, completion ordering, panic unwinding, returned
 
 Body-wide special cleanup sections are now explicitly deferred for a joint [defer and resource-management review](deferred-cleanup-and-resources.md). The illustrations here do not finalize that feature or its syntax.
 
+## Scope vocabulary
+
+- **Construct-level `finally`:** attached to a complete loop, conditional, or general block and runs when that construct is left. Selected.
+- **Operation/recovery-level `finally`:** attached to one operation or block recovery expression, such as `operation() else (...) { ... } finally { ... }`. The surface is selected; exact attachment scope remains open.
+- **Body-wide cleanup section:** a `finally`/cleanup region covering an entire function, loop, or conditional body. Deferred, not selected.
+
+Examples below name their scope. “`finally`” without a qualifier means one of the two selected scopes, not a body-wide section.
+
 ## Placement correction
 
 The full example below predates the user's [body-owned recovery rule](body-recovery.md). Error-catching clauses attached outside complete if/loop/match constructs are superseded; keep the example as cleanup-order history rather than current complete syntax. The selected construct-level order is `then`, then `finally`; body-wide cleanup-section syntax remains open.
 
-## Template and selected typed-panic order
+## Operation/recovery-level template and typed-panic order
+
+This is an operation-level example.
 
 ```text
 operation() else (p: BoundPanic) {
@@ -22,7 +32,7 @@ When a typed panic matches a handler in the same scope that owns `finally`, the 
 
 For a loop or conditional with both hooks, execution reaches `then` after normal body/branch completion; `then` computes the final result, and `finally` performs cleanup as the construct exits. The construct's value is the `then` result (or its ordinary result when no `then` is present); the cleanup block's `Unit` does not replace it when cleanup succeeds. `finally` is not a recovery clause: it does not catch a failure or receive a failure value. Operation or body recovery remains a separate construct. Exact attachment syntax/scope remains open.
 
-For example, assuming `values` contains `Int` values and `report.close()` returns `Unit`:
+For example, assuming `values` contains `Int` values and `report.close()` returns `Unit`. This is a construct-level loop example:
 
 ```text
 total: Int = @sum loop values as value {
@@ -38,7 +48,7 @@ The normal trace is: finish loop iterations, run the `then` body, run `report.cl
 
 The same cleanup shape can be proposed for an explicit inner block expression and for the complete conditional. It is not a finally after each individual loop iteration unless that iteration creates its own protected region. A construct-level loop finally runs when that loop is left.
 
-## Current body-local example
+## Current construct-level conditional example
 
 The handler belongs inside the selected branch; it is not attached to the complete conditional.
 
@@ -59,6 +69,8 @@ result: Int = @run if ready(path) {
 `read_text` handles its own returned error in the branch. The conditional's `finally` runs when the conditional exits; the branch-level operation handler is not an external conditional-recovery tail. The `then` result is the final conditional result, and cleanup does not replace it. This is the current placement; the full example below is retained for its cleanup-order history.
 
 ## Historical full conditional example
+
+This historical example mixes operation-level and construct-level `finally`; its external conditional-recovery placement is superseded.
 
 Assumptions: read_quantity returns Int ! ReadError; read_text returns String ! ReadError. The other helpers return ordinary values or Unit and can raise typed panics. All cleanup helpers in this trace finish normally with Unit. Their possible failure is a separate contract, not silently ignored. The conditions are plain Bool values supplied by their helpers.
 
@@ -134,9 +146,13 @@ Language-managed typed panics run applicable `finally` blocks for exited scopes 
 
 ## Historical full loop counterpart
 
+The [loop recovery example](loop-recovery.md) is historical; its operation and construct cleanup spellings are not body-wide cleanup-section syntax.
+
 The [loop recovery example](loop-recovery.md) adds operation cleanup, per-entered-iteration cleanup, then completion processing, and whole-loop cleanup. Continue leaves the iteration region but does not finish the loop; loop-level cleanup runs when the whole region is left. Its grouping also separates normal no-contribution else from failure recovery, a collision that the conditional receiver distinction cannot solve by itself.
 
 ## A handler does not protect its own finally
+
+The following statements concern selected construct-level and operation/recovery-level boundaries, not body-wide cleanup sections.
 
 The operation's recovery handler covers its protected subject, not itself or its finally. A new panic from an operation's finally can reach a surrounding branch recovery boundary. A panic from a branch finally can reach surrounding conditional recovery. A panic from finish_run must travel to an enclosing eligible boundary or the unhandled-fault policy; it does not re-enter report_remaining_failure.
 
