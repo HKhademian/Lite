@@ -75,7 +75,7 @@ Fixed-slot value origins may depend on a runtime length while the destination tu
 
 Selected clarification, 2026-10-24: the guaranteed contract is the statically known input tuple shape. The compiler must prove that the composition of supplied arguments satisfies it. This includes coverage of required fixed slots, existing positional/named routing, final surviving slot types and access permissions, and the declared element type of every tail input. Known length alone is not sufficient if types, labels, or permissions are incompatible. Applicable explicitly declared defaults retain their existing role; this rule introduces no implicit argument values.
 
-The proof applies to the supplied argument composition; not every source needs a statically known element count. A runtime-sized array can feed the declared array tail without changing the tuple's fixed shape. Runtime tail length is not a runtime tuple arity or a source of new tuple fields. Exact tail representation and numeric access remain separate questions.
+The proof applies to the supplied argument composition; not every source needs a statically known element count. A runtime-sized array can feed the declared array tail without changing the tuple's fixed shape. Runtime tail length is not a runtime tuple arity or a source of new tuple fields. Exact tail representation remains separate. The later selected stored-position rule gives each declared tail one numeric tuple position, selecting its array member rather than an element.
 
 For an ordinary runtime-sized extra with no established sufficient-length proof, max(...extra) and max(1, ...extra) are rejected: the supplied arguments cannot be proven to cover both required fixed inputs. Both orders of the fixed/runtime spread examples are accepted because the complete composition proves coverage and compatible types. A runtime spread need not occur only after the fixed inputs have been filled. A known minimum total length alone does not admit incompatible possible slot types or permissions. A runtime arity check is not a substitute for the required compile-time proof. General length-refinement syntax, defaults interacting with spreads, and full mixed named/runtime-spread routing remain open.
 
@@ -96,7 +96,7 @@ pack := (...rest = fixed);
 written: (...rest: Int; 3) = (...rest = fixed);
 ```
 
-Known local counts, public extent guarantees, and storage remain distinct. A general ...rest: T contract does not promise a particular count merely because one caller supplies it. Fixed zero/Unit segments retain semantic grouping/count despite zero element bytes. Middle collectors remain future discussion: fixed extents can delimit a middle segment; multiple unspecified extents need a partition rule. Direct numeric segment positions remain open. See [array-segment types and future middle collectors](tuple-array-segments.md).
+Known local counts, public extent guarantees, and storage remain distinct. A general ...rest: T contract does not promise a particular count merely because one caller supplies it. Fixed zero/Unit segments retain semantic grouping/count despite zero element bytes. Middle collectors remain future discussion: fixed extents can delimit a middle segment; multiple unspecified extents need a partition rule. Each declared segment now occupies one stored tuple position, with numeric and labeled access selecting the same array member. See [array-segment types and future middle collectors](tuple-array-segments.md).
 
 ## Rest access, storage, and retention
 
@@ -442,7 +442,7 @@ inspect := fn (first: Int, ...rest: Int) {
 }
 ```
 
-For callable input schemas, arguments.rest uses the declared input-tail name; an implementation-local collector name does not rename the schema member. This named access does not select named call routing into a variadic segment, numeric tuple access to the tail, its exact numeric position/component-count model, or bare-array normalization/equivalence. An empty declared tail remains distinct from Unit. Multiple declared rest segments remain a future discussion. Array indexing syntax and behavior are outside this tuple-access clarification.
+For callable input schemas, arguments.rest uses the declared input-tail name; an implementation-local collector name does not rename the schema member. A declared tail also occupies one stored numeric tuple position: arguments.rest and arguments at that numeric position select the same array member. Its element count does not add tuple positions. An expected schema automatically packs matching inputs into that member, while grouping examples must retain ...rest to distinguish its unpacking role from an ordinary array field. See [automatic packing and tuple positions](tuple-array-segments.md#automatic-packing-and-tuple-positions). This does not select named call routing into a variadic segment or bare-array normalization/equivalence. An empty declared tail remains distinct from Unit. Multiple declared rest segments remain a future discussion. Array indexing syntax and behavior are outside this tuple-access clarification.
 
 ### Pattern remainders preserve the tail
 
@@ -450,7 +450,7 @@ A pattern rest capture preserves unselected fixed components and the existing ta
 
 Ordinary fixed tuples keep their existing pattern-rest rule: zero fixed remaining components give Unit/(), one gives a singleton tuple, and heterogeneous remaining components preserve their individual types and labels. That pattern operation does not become a homogeneous array merely because it uses the same ellipsis marker. A declared ...rest: T array segment and a pattern ...remainder have distinct syntactic roles: one declares accepted input elements, the other collects the source's remainder.
 
-Rest-only and mixed named/positional patterns preserve their existing source-once, no-duplicate-selection, and ownership requirements. Exact coverage without a rest collector remains required. Rest-only tuple schemas and runtime-array construction inference are selected above; bare-array normalization/equivalence, nested tail composition, numeric access to a tail segment, and full header/type/pattern integration remain open. No runtime variable indexing of ordinary tuple components is added; the tail is accessed using its array contract.
+Rest-only and mixed named/positional patterns preserve their existing source-once, no-duplicate-selection, and ownership requirements. Exact coverage without a rest collector remains required. Rest-only tuple schemas and runtime-array construction inference are selected above; bare-array normalization/equivalence, nested tail composition, and full header/type/pattern integration remain open. Numeric access to the declared segment now selects its one stored array member; it does not expand the elements. No runtime variable indexing of ordinary tuple components is added; the tail is accessed using its array contract.
 
 ## Known-size arrays and fixed tuples can construct each other
 

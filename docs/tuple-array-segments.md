@@ -35,19 +35,53 @@ Without an expected destination overriding the result, named-tail construction r
 
 The existing explicit/expected type remains the reference contract. Writing (...rest: Int) requests a general segment; its missing count is not an instruction to infer a new ; C type from the literal. Stronger valid local construction facts may still support proofs or optimization without changing that declared contract. The existing (...rest:) form infers an omitted element type; this revision adds no new partial-extent or combined omitted-element/fixed-extent syntax. Full inference and compatibility across effects/API boundaries remain separate.
 
-The type distinction is observable through the member contracts: a fixed segment exposes [T; C], including its selected literal numeric dot access; a general runtime-sized segment uses ordinary array brackets. No direct numeric tuple position for the segment is selected here. Passing through a general parameter guarantees only its declared contract; specialization must not make source validity depend on a particular caller's count.
+The type distinction is observable through the member contracts: a fixed segment exposes [T; C], including its selected literal numeric dot access; a general runtime-sized segment uses ordinary array brackets. Each declared segment occupies one stored tuple position; numeric access and its label select the same array member, as specified below. Passing through a general parameter guarantees only its declared contract; specialization must not make source validity depend on a particular caller's count.
+
+## Automatic packing and tuple positions
+
+Selected clarification, **2026-10-25**: an expected segment-bearing tuple type automatically packs the matching supplied elements into its declared array member. Each declared segment occupies one stored tuple position, regardless of its array length. Positional and labeled access select the same member.
+
+```text
+value: (head: Int, ...rest: Int; 3) =
+    (10, 20, 30, 40);
+/* stored grouping: (head = 10, ...rest = [20, 30, 40]) */
+
+value.0;       /* 10: same member as value.head */
+value.1;       /* [20, 30, 40]: same array member as value.rest */
+value.1[0];    /* 20 */
+value.rest[0]; /* 20 */
+value.1.0;     /* 20: this array has the fixed type [Int; 3] */
+/* value.2 is rejected: there are only two stored tuple components */
+```
+
+The destination still controls coverage, exact count, types, and access; automatic packing does not invent missing elements, discard excess inputs, or insert runtime arity repairs. A general runtime-sized segment also occupies one tuple position. Its elements use array brackets; numeric array dot access requires the selected compile-time-sized array contract. Accessing the tuple position itself does not index or expand the array and introduces no runtime tuple indexing or new write permission.
+
+The number of stored tuple components differs from the number of logical items emitted through unpacking. Here the stored tuple has two components and unpacking emits four items. A rest-only tuple has one stored array component, even when its fixed array extent is zero. References to a fixed prefix or fixed components elsewhere describe the ordinary components outside the segment; the segment's own tuple position is statically fixed too. Count information stays in its static extent or enclosing array contract, not in additional tuple positions.
+
+```text
+empty: (head: Int, ...rest: Int; 0) = (10, ...rest = []);
+/* stored grouping: (head = 10, ...rest = []) */
+empty.1;       /* the empty array, also available as empty.rest */
+items := (...empty);
+/* (head = 10): one emitted component */
+```
+
+Keep ...rest in examples that describe a segment-bearing value's stored grouping. Rewriting that entry as an ordinary rest = array field would erase its declared segment role. That role belongs to the static type and needs no per-value runtime marker; external member access returns an array in either case. Copy retains the role, while expression unpacking uses it to decide whether to emit the array or its elements.
 
 ## Grouping changes unpacking behavior
 
 ```text
-ordinary := (rest = [2, 3, 4]);
-grouped := (...rest = [2, 3, 4]);
+ordinary := (head = 10, rest = [20, 30, 40]);
+grouped := (head = 10, ...rest = [20, 30, 40]);
 
-one_item := (...ordinary);
-/* one labeled array-valued component */
+ordinary.1;  /* same array member as ordinary.rest */
+grouped.1;   /* same array member as grouped.rest */
 
-three_items := (...grouped);
-/* three unnamed Int components */
+ordinary_items := (...ordinary);
+/* (head = 10, rest = [20, 30, 40]): two components */
+
+grouped_items := (...grouped);
+/* (head = 10, 20, 30, 40): four components */
 ```
 
 An ordinary array-valued component stays one item when its containing tuple is unpacked. A declared segment emits each element as an unnamed item and omits the container label. Copying the tuple retains its stored grouping. A fixed extent therefore serves a real purpose even though it contributes no variable arity: named array access plus logical element emission. See [logical unpacking](tuple-unpacking.md).
@@ -120,6 +154,6 @@ Multiple runtime-sized collectors can leave boundaries underdetermined:
 /* first = 1; mid = [2, 3]; second = 4; rest = [5] */
 ```
 
-Both partitions satisfy the shown element types. A future design needs explicit boundaries, a deterministic policy, or rejection where the split is ambiguous. None is selected. Numeric tuple positions must also decide how segments participate in stored-component versus emitted-item numbering; value.mid[index] already has the clear named-array interpretation. General multi-segment type spread, collisions, construction, patterns, call routing, and grammar remain open.
+Both partitions satisfy the shown element types. A future design needs explicit boundaries, a deterministic policy, or rejection where the split is ambiguous. None is selected. The selected stored-position rule would give the fixed-middle example four positions: .0 for the first Int, .1 for mid, .2 for the second Int, and .3 for rest. Segment element counts do not shift those positions. This consequence does not enable the future declarations or settle their matching. Named and positional array-member access would keep the same meaning. General multi-segment type spread, collisions, construction, patterns, call routing, and grammar remain open.
 
-The optional extent syntax therefore leaves middle collectors possible without enabling them now or selecting their partition/access rules.
+The optional extent syntax and stored-position rule leave middle collectors possible without enabling them now or selecting their partition rules, multi-segment grammar, or pattern/call integration.

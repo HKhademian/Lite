@@ -18,6 +18,23 @@ y := (...x);
 
 The example's concrete tail extent is statically known from construction. The selected ...rest: T; C syntax can now state an exact extent in the tuple type; a general ...rest: T schema still guarantees no exact count. See [array-segment types](tuple-array-segments.md). Ordinary copy keeps the source organization and follows the current copy/eligibility rules; an explicit destination conversion retains its separately selected compatibility rules. Copy does not mean a reference alias or a guaranteed physical copy instruction.
 
+## Stored grouping keeps the segment marker
+
+```text
+segmented := (head = 10, ...rest = [20, 30, 40]);
+ordinary := (head = 10, rest = [20, 30, 40]);
+
+segmented.1; /* same array member as segmented.rest */
+ordinary.1;  /* same array member as ordinary.rest */
+
+expanded := (...segmented);
+/* (head = 10, 20, 30, 40) */
+kept := (...ordinary);
+/* (head = 10, rest = [20, 30, 40]) */
+```
+
+Both stored values have two components, and both expose an array at position one. Only the declared segment emits its elements when the containing tuple is unpacked. Keep ...rest visible when illustrating that stored grouping; writing an ordinary rest field would describe different unpacking behavior. Automatic destination packing and member access do not erase the segment role. See [stored tuple positions](tuple-array-segments.md#automatic-packing-and-tuple-positions).
+
 ## What unpacking emits
 
 Evaluate the operand once. Emit its ordinary fixed components in stored order, preserving their labels and types. For a declared array-tail segment, emit each array element as an unnamed item in array order. The tail container's label is not itself emitted as a labeled array-valued item.
