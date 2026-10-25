@@ -141,6 +141,7 @@ Selected:
 - Consumers request capabilities rather than one concrete collection type.
 - Fixed arrays, growable lists, and slice views are the sequence storage roles.
 - A fresh nonempty bracket literal with an established element type and statically known total length `N` infers `[T; N]` unless an expected concrete collection type selects another family.
+- Statically known spreads contribute their lengths to `[T; N]`. `var`/`mut` and later operations do not by themselves change the inferred family or extent; an expected concrete growable collection can request a list.
 - Indexed reads/writes and pops use ordinary syntax; invalid bounds are typed faults recoverable by an attached `else`.
 - Iteration does not require conversion to a standard list or exposure of static size.
 
@@ -152,6 +153,7 @@ Selected:
 
 - Modules default to private visibility.
 - The official formatter is `lite fmt`. `lite fmt --check` is read-only and suitable for CI.
+- Formatting is a presentation transform. It requires syntactically valid source but is not a type checker or name resolver.
 - The formatter preserves meaning, is idempotent, and leaves a malformed or unverified file unchanged while reporting a diagnostic and failure status.
 - The project remains planning-only; no compiler implementation is claimed.
 
