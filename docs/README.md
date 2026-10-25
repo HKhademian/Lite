@@ -200,6 +200,8 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.
 - [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteScript contract, and remaining open implementation details.
 - [Language design review handoff](language-design-review-handoff.md): historical review log and completed plan; current rules are in the ledger and concept pages.
+- [Documentation review backlog](../TASKS.md): historical 2026-10-23 snapshot of documentation defects; current rules are in the ledger.
+- [Backlog by topic](../ISSUES-BY-TOPIC.md): topic-grouped view of the same historical snapshot.
 - [References](references.md): primary language documentation and relevant research.
 
 ## Suggested reading order

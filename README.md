@@ -13,5 +13,7 @@ The project is currently **planning only**. These documents record the design di
 - [Optional leading separators for expressions, additive chains, patterns, and unions](docs/leading-separators.md)
 - [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [External references](docs/references.md)
+- [Documentation review backlog](TASKS.md): historical 2026-10-23 snapshot; current rules are in the decision ledger.
+- [Backlog by topic](ISSUES-BY-TOPIC.md): topic-grouped view of the same snapshot.
 
 Each concept has its own document containing its purpose, working syntax, examples, constraints, and unresolved details. Earlier alternatives are retained only when they explain a decision or an outstanding choice.
