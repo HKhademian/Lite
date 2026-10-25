@@ -6,4 +6,4 @@ second := 2;
 sum := first + second;        /* 9 */
 difference := first - second; /* 5 */
 product := first * second;    /* 14 */
-quotient := first / second;   /* 3.5 — division keeps the fractional part */
+quotient := first / second;   /* 3 — integer division truncates toward zero */

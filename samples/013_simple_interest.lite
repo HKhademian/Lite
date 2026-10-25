@@ -7,5 +7,5 @@ years := 3;
 
 interest_hundredths := (savings_cents * annual_percent) * years;
 /* Round to the nearest cent; half a cent rounds up. */
-interest_cents := (interest_hundredths + 50) // 100; /* 1500 cents earned */
+interest_cents := (interest_hundredths + 50) / 100; /* 1500 cents earned */
 balance_cents := savings_cents + interest_cents;   /* 11500 cents = 115 euros */

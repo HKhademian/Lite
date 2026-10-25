@@ -3,7 +3,7 @@
 
 total_seconds := 3661;
 
-hours := total_seconds // 3600;           /* 1 hour */
+hours := total_seconds / 3600;           /* 1 hour */
 seconds_after_hours := total_seconds % 3600;
-minutes := seconds_after_hours // 60;     /* 1 minute */
+minutes := seconds_after_hours / 60;     /* 1 minute */
 seconds := seconds_after_hours % 60;      /* 1 second */

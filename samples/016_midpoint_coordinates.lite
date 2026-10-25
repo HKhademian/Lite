@@ -1,10 +1,10 @@
 /* Find the point halfway between two places on a map.
    Each place has a horizontal position (x) and a vertical position (y). */
 
-first_x := -3;
-first_y := 2;
-second_x := 4;
-second_y := -5;
+first_x := -3.0;
+first_y := 2.0;
+second_x := 4.0;
+second_y := -5.0;
 
-midpoint_x := (first_x + second_x) / 2; /* 0.5 */
-midpoint_y := (first_y + second_y) / 2; /* -1.5 */
+midpoint_x := (first_x + second_x) / 2.0; /* 0.5 */
+midpoint_y := (first_y + second_y) / 2.0; /* -1.5 */

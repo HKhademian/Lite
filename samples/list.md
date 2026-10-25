@@ -33,7 +33,7 @@ Needs: numeric values, bindings, expressions. Design pressure: inferred numeric 
 Status: **implemented but unverified** for all 20 files below. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
 
 1. `samples/001_add_two_numbers.lite` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
-2. `samples/002_arithmetic_operations.lite` — **Four arithmetic operations:** Compute sum, difference, product, and fractional quotient for two numbers with a nonzero divisor.
+2. `samples/002_arithmetic_operations.lite` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.
 3. `samples/003_rectangle_measurements.lite` — **Rectangle measurements:** Calculate area and perimeter from positive width and height.
 4. `samples/004_triangle_area.lite` — **Triangle area:** Calculate a triangle's area from its base and perpendicular height, including a fractional result.
 5. `samples/005_circle_measurements.lite` — **Circle measurements:** Use a supplied approximation of pi to calculate circumference and area from a radius.

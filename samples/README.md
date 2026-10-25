@@ -21,10 +21,10 @@ Read `first_basket := 7` as “give the name first_basket to the number 7.” Th
 - `;` ends a step.
 - `/* ... */` contains a note for the reader.
 - `+` adds, `-` subtracts, and `*` multiplies.
-- `/` divides, keeping the fractional part: `7 / 2` is `3.5`.
-- `//` divides into whole units: `7 // 2` is `3`.
+- `/` divides: `7 / 2` is `3` for integers; `7.0 / 2.0` is `3.5` for fractional inputs.
+- `_/` divides with rounding down: `-7 _/ 2` is `-4`.
 - `%` finds the remainder: `7 % 2` is `1`. Its nonzero result follows the first number's sign.
-- `%%` finds the modulo: `-7 %% 2` is `1`. Its nonzero result follows the second number's sign.
+- `_%` finds the modulo: `-7 _% 2` is `1`. Its nonzero result follows the second number's sign.
 - Parentheses say which calculation to do first.
 
 The last lesson introduces changeable values: `var` allows a named value to change, and `=` replaces it. Earlier lessons only need fixed values.

@@ -6,5 +6,5 @@ discount_percent := 15;
 
 discount_hundredths := price_cents * discount_percent;
 /* Adding 50 before whole-number division rounds to the nearest cent. */
-discount_cents := (discount_hundredths + 50) // 100; /* 300 cents saved */
+discount_cents := (discount_hundredths + 50) / 100; /* 300 cents saved */
 pay_cents := price_cents - discount_cents;         /* 1699 cents = 16.99 euros */
