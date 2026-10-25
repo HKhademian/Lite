@@ -2,6 +2,8 @@
 
 Status: **mandatory braces, unified actions/values, existing-name type tests, and declaration-shaped pattern conditions selected; no-else conditionals as noncontributing guarded updates, explicit `?` no-initialization branches, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-25; condition metadata is hidden. Conditional `then` requires a final `else`; `then`-before-`finally` cleanup order and cleanup-failure precedence are selected; exact cleanup attachment scope and the `&` form's public value/operations remain open**.
 
+Normative page: this page owns conditional result construction, no-match/guarded-update behavior, `?` branches, and `then`. Tag naming/access and its lifecycle are in [tags and contexts](tags-and-contexts.md); condition grammar is in the [grammar sketch](grammar-sketch.md); pattern-chain binding is in [condition chains](condition-chains.md). See the [normative page map](normative-pages.md).
+
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
 ## Template
