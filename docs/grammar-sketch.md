@@ -576,6 +576,10 @@ When a forwarded call fails, restore the immediate caller's same-location grant 
 
 These are semantic rules, not consequences of associativity or whitespace. [Evaluation order](evaluation-order.md) records the details and separates them from unchosen argument-passing, aliasing, and cleanup contracts.
 
+## Formatter presentation
+
+The selected [formatter presentation](leading-separators.md#formatter-presentation-selected) uses no leader on compact multi-entry chains and a leader on multiline ones. These are output conventions, not separate grammar productions or newline-dependent parses. The optional-prefix grammar remains valid for either layout; formatting must preserve complete-chain boundaries, existing precedence, and nonempty-list requirements. Singleton leaders are not automatically synthesized.
+
 ## Open parser interactions
 
 - A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.

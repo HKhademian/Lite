@@ -1,6 +1,6 @@
 # Tooling and learning
 
-Status: **official formatter requested; broader toolchain and teaching approach proposed**.
+Status: **official formatter required; compact/multiline leading-separator presentation selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
 ## Purpose
 
@@ -18,7 +18,13 @@ The formatter must not infer missing semicolons from line breaks, change final-e
 
 Its selected presentation omits optional semicolons after complete block/record items at every nesting depth, including function/lambda definitions and declarations with braced initializers. Keep necessary ordinary-item separators and enclosing call/list/tuple punctuation. Recognize complete syntax rather than deleting every semicolon after a brace character; import-list braces and proposed special delimiters have different roles. See the [semicolon style rule](lexical-structure.md#semicolon-style-after-closing-braces). This is a formatter requirement, not an implemented tool claim.
 
-The selected [optional leading separators](leading-separators.md) permit aligned Boolean-expression/condition entries beginning with and/or, including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives beginning with or, and union members beginning with |. Formatting must preserve their semantic equivalence with the form without the leading token, including short-circuiting and binding flow. The policy for preserving, adding, or removing these optional leaders remains open; this does not add missing operands or general punctuation repetition.
+### Compact and multiline chains
+
+Selected 2026-10-25: for chains with at least two real entries, the formatter omits the optional leader in a compact layout and includes a separator before every entry in a multiline layout. This applies to Boolean expressions/conditions, initial/nested pattern alternatives, and plain unions. It may add or remove the first separator as it expands or compacts a chain; source validity remains independent of this presentation choice.
+
+Use the outer chain's operator under existing grouping: multiline a and b or c uses leading or and still means (a and b) or c. Pattern alternatives use or and union members use |. Only admitted complete-chain/group boundaries can receive a leader; an interior operator is not another prefix position. Surrounding multiline bodies or multiline content inside one entry do not alone trigger an outer leader. A singleton receives no automatic leader; explicit-singleton normalization, exact wrap width, and comment-aware line breaking remain open.
+
+Preserve grouping, Bool requirements, evaluation/effects, binding flow, matching/guard behavior, type identity, comments, and required delimiters. Existing syntactic alternatives remain legal; malformed/type-invalid inputs must not be silently repaired by removing punctuation. See the [formatter presentation rule](leading-separators.md#formatter-presentation-selected) for examples and remaining boundaries. No formatter implementation is claimed.
 
 ## Run and build proposals
 

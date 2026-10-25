@@ -53,7 +53,7 @@ The loop's optional item identifier uses the selected `as` separator; header des
 
 ## Beginner-facing defaults
 
-The compiler infers types; it does not remove them. A mutable integer binding cannot later hold text. Braces always delimit bodies. The official formatter chooses presentation without changing behavior. Early returns are encouraged when they make the main path flatter.
+The compiler infers types; it does not remove them. A mutable integer binding cannot later hold text. Braces always delimit bodies. The official formatter chooses presentation without changing behavior. Its selected [chain presentation](leading-separators.md#formatter-presentation-selected) keeps multi-entry chains compact without a leader or aligns multiline entries with leading separators; source layout remains semantically irrelevant. Early returns are encouraged when they make the main path flatter.
 
 Advanced facilities should be introduced as students need them. This is a teaching progression within one language, not a dynamically typed beginner dialect and a separate systems dialect.
 

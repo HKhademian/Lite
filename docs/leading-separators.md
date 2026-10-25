@@ -1,6 +1,6 @@
 # Optional leading separators
 
-Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives with leading or, and plain-union type expressions; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
+Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives with leading or, and plain-union type expressions; compact/multiline formatter presentation selected 2026-10-25; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
 
 ## Purpose
 
@@ -225,4 +225,47 @@ At an arm's initial-pattern boundary, `or { body }`, `or or .Email(address) { bo
 
 The [condition grammar](grammar-sketch.md#conditionals) and [Boolean expression fragment](grammar-sketch.md#logical-grouping) put the optional logical leader at each complete expression/condition entry, outside the precedence ladder. They do not independently prefix the first operand again. The [pattern fragment](grammar-sketch.md#match) places one optional `or` on each complete nonempty initial/component alternative list; its individual patterns do not independently admit another bare leader at that same boundary. The [type fragment](grammar-sketch.md#optional-leading-union-separator-selected) places `|` on a nonempty union chain. This prevents accidental admission of stacked leaders or leading operators after every interior `and`/`or` token. Special pattern-source and comparison-pattern operand grammars retain their existing boundaries; use explicit grouping when those grammars reserve ungrouped top-level logical operators as separators.
 
-Formatting can align the entries and place braces consistently without changing meaning. A policy for preserving, adding, or removing optional leading separators remains open; no formatter implementation is claimed. Diagnostics should identify the missing operand or extra separator at the relevant token. These examples require future parser/type-checker conformance tests; documentation checks do not verify execution.
+### Formatter presentation selected
+
+Selected 2026-10-25: the official formatter uses compact chains without a leading separator and multiline chains with a separator before every entry, including the first. This policy applies to chains with at least two real entries: Boolean expressions/conditions, initial/nested pattern alternatives, and plain unions. Both source spellings remain legal independently of formatter presentation.
+
+For a compact layout:
+
+```text
+ready := connected and authenticated;
+Value := type String | Int;
+```
+
+For a multiline layout:
+
+```text
+ready :=
+    and connected
+    and authenticated
+    and permitted
+;
+
+Value := type
+    | String
+    | Int
+    | Float;
+```
+
+The formatter may add the optional leader when expanding a chain and remove it when compacting that same multi-entry chain. It aligns the repeated entries consistently. The policy follows the chosen output layout; exact width and comment-aware line-breaking rules remain open. A multiline surrounding body or a multiline expression inside one entry does not by itself make the containing chain multiline.
+
+For a mixed logical expression, use the operator of the outer chain according to the existing grouping. Thus a multiline rendering of `a and b or c` uses `or`:
+
+```text
+ready :=
+    or a and b
+    or c
+;
+```
+
+This preserves `(a and b) or c`. Explicitly grouped inner chains can be formatted independently. An interior operator is not a new prefix boundary; wrapping must never synthesize stacked/interior extra leaders, change precedence, or require a different parse. Pattern lists use `or` and union lists use `|`; one shared arm body and an optional shared guard retain their boundaries. Unsupported leading `&` and logical and/not subpatterns are not formatter options.
+
+Do not automatically insert a leader for a singleton or invent a choice between `and` and `or` when no binary chain establishes it. The existing singleton spellings remain valid; normalization of an explicitly written singleton leader remains open. Preserve the Bool requirement of prefixed value expressions and ordinary type errors rather than silently repairing an invalid program through punctuation removal. No empty operand, pattern, member, or Unit contribution is introduced.
+
+These transformations preserve evaluation order, short-circuiting, effects/failures, binding joins/narrowing, pattern first-success/no-retry behavior, and type identity. Preserve comments, literal data, required ordinary item/list separators, and the selected omission of unnecessary semicolons after completed block items. Line layout remains a formatter choice with no grammatical meaning. This selects a formatter requirement, not an implemented tool or a change to source validity; the earlier preservation-versus-normalization question is superseded for multi-entry chains.
+
+Diagnostics should identify the missing operand or extra separator at the relevant token. These examples require future parser/type-checker and formatter conformance tests; documentation checks do not verify execution or formatting.

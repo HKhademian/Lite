@@ -4,7 +4,7 @@ LiteScript is a language-design project for readable, strongly typed programs wi
 
 **Start with the [LiteScript white paper](docs/white-paper.md)** for the language's philosophy, goals, and design criteria.
 
-The project is currently **planning only**. These documents record the design discussion through **2026-10-24**. They are not an implemented compiler specification, and the examples have not been compiled.
+The project is currently **planning only**. These documents record the design discussion through **2026-10-25**. They are not an implemented compiler specification, and the examples have not been compiled.
 
 - [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)

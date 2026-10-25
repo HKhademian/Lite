@@ -116,7 +116,7 @@ The goal is useful performance near C on suitable workloads with a modest runtim
 
 A person or agent reading a function should be able to identify its inputs, outputs, access permissions, and failure paths from a manageable amount of source. Predictable syntax and consistent rules make both writing and review easier.
 
-The design should favor visible contracts, consistent composition, explicit effects, and diagnostics that explain the cause of a problem and the action needed to fix it. Formatting should be consistent and preserve meaning. Names and types should carry useful information without forcing a reader through layers of generated or implicit behavior.
+The design should favor visible contracts, consistent composition, explicit effects, and diagnostics that explain the cause of a problem and the action needed to fix it. Formatting should be consistent and preserve meaning. The selected [chain presentation](leading-separators.md#formatter-presentation-selected) keeps short chains compact and uses aligned leading separators for multiline chains, while both source forms retain the same meaning. Names and types should carry useful information without forcing a reader through layers of generated or implicit behavior.
 
 Conciseness can coexist with optional redundancy that makes code pleasant to write and edit. The selected [leading-separator rule](leading-separators.md) allows every Boolean-expression, condition, pattern-alternative, or union entry to start with its separator, including the first, while preserving exactly the compact form's meaning. Explicit tokens, rather than line layout, still establish the boundaries.
 
