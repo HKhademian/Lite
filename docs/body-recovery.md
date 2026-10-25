@@ -63,7 +63,7 @@ inspect_file := fn(path: String) {
 }
 ```
 
-Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; body-wide `finally` placement remains under review. For construct-level loop/conditional hooks, the selected normal order is `then` followed by cleanup `finally`. During language-managed panic propagation, applicable `finally` blocks run for exited scopes before an outer matching handler.
+Assume read_text returns String ! ReadError and all other shown helpers return Unit. Prepare/inspect can raise typed panics. The read's own returned error is handled explicitly by its local receiverless else. This is proposed body-section grammar, not currently selected source syntax; body-wide `finally` placement remains under review. For construct-level loop/conditional hooks, the selected normal order is `then` followed by cleanup `finally`. During language-managed panic propagation, applicable `finally` blocks run for exited scopes before an outer matching handler. Returned-error propagation via `!` runs the same applicable construct-level cleanup before the error leaves the enclosing function; body-wide forwarding interactions remain part of this deferred review.
 
 ### How it executes
 
