@@ -22,6 +22,8 @@ For copyable records whose fields are inline Int values, the same evaluated-valu
 
 Where a record and its reference fields already have valid copy contracts, its ordinary input follows shallow value mapping: inline fields are preserved and copied references retain their target and permitted access. A copied read-only reference remains read-only; copying grants no new mutation capability or caller-location access. Reference syntax and memory safety, including which capabilities may be copied and the ownership/lifetime/alias model, are explicitly deferred by the user. See [copyable reference-bearing records](parameter-values-and-slots.md#copyable-reference-bearing-record-values-selected).
 
+Copyable fixed tuples and fixed arrays likewise supply evaluated values as ordinary inputs, including the corresponding simple fixed temporary. Replacing a source through a separate var parameter leaves those evaluated components unchanged. This grants no caller-location or payload-write authority, implies no physical-copy ABI, and preserves special variadic rest contracts. A future reference-copy/borrowed-view mode must be explicitly stated; its syntax and the user-deferred memory-safety design remain for later review. See [fixed aggregate values](parameter-values-and-slots.md#copyable-fixed-tuple-and-array-values-selected).
+
 ## Mut: update held data
 
 ```text

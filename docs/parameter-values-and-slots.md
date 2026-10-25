@@ -1,6 +1,6 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable record evaluated-value semantics are selected on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-25**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int, copyable records, and copyable fixed tuple/array evaluated-value semantics are selected on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
@@ -10,7 +10,7 @@ The type-side mut parameter qualifier requests writable caller-data access, as i
 
 ## 2. Semantic passing versus physical calling convention
 
-Beyond the selected ordinary Int and copyable record cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+Beyond the selected ordinary Int, copyable record, and copyable fixed aggregate cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
@@ -106,7 +106,54 @@ The referenced User remains shared. If another access is authorized to change it
 
 ### Reference syntax and memory safety deferred
 
+A future reference-copy or borrowed-view mode must be explicitly stated in the source contract, with syntax deferred. This differs from preserving references already declared in a copied field; such fields retain their agreed shallow mapping without turning the containing record into a caller-location alias.
+
 **Explicitly deferred by the user on 2026-10-25:** reference syntax, memory safety, ownership and borrowing, lifetime/escape rules, alias enforcement, and the complete resource model must be discussed later. This selection specifies the shallow value mapping only when those required contracts are already valid; it is neither a memory-safety design nor evidence of a safe implementation. In particular, it does not decide which owned or mutable reference capabilities are copyable, how sharing/cleanup is implemented, or how noncopyable resources are passed. Do not fabricate a copy or choose a reference-counting, garbage-collection, pointer, or allocation policy to fill those gaps.
+
+## Copyable fixed tuple and array values selected
+
+Selected on **2026-10-25**: ordinary inputs for fixed tuples and fixed arrays with valid component copy contracts preserve their evaluated aggregate values, like the selected copyable record cases. Replacing the source location through a separate var grant does not replace those already-evaluated components:
+
+```text
+read_original := fn(target: var [Int; 2], original: [Int; 2]): Int {
+    target = [20, 30];
+    original[0]
+}
+
+var values := [10, 11];
+saved := read_original(var values, values);
+/* saved is 10; values is [20, 30]. */
+```
+
+The ordinary array input preserves [10, 11] while the var input designates the caller's replaceable [Int; 2] location. From the same initial source value, the explicit temporary form is:
+
+```text
+var values := [10, 11];
+tmp := values; /* preserves [10, 11] */
+saved := read_original(var values, tmp);
+/* saved is 10; values is [20, 30]; tmp remains [10, 11]. */
+```
+
+A fixed tuple follows the same value rule:
+
+```text
+read_original_pair := fn(target: var (:Int, :Int), original: (:Int, :Int)): Int {
+    target = (20, 30);
+    original.0
+}
+
+var pair: (:Int, :Int) = (10, 11);
+saved_pair := read_original_pair(var pair, pair);
+/* saved_pair is 10; pair is (20, 30). */
+```
+
+These alternative examples preserve existing tuple component order, types, and labels, and fixed-array element type and extent. They select no tuple/array type identity or implicit conversion. Ordinary aggregate values and their fixed temporaries remain readable without gaining caller-location or held-data mutation authority. A var input replaces its source location under its declared contract; no extra mut is needed for that whole-location replacement.
+
+Keep callee-first/source-argument evaluation, initialized compatible reads, granted authority, location/lifetime validity, and observable effects. The temporary equivalence uses stable callable names and simple source locals; it is not a general argument-hoisting rewrite. Apply each valid component copy contract, preserving already-copyable reference values/targets/permissions under the selected shallow rule. No deep clone, new reference capability, universal copyability, or physical-copy ABI is selected.
+
+Value semantics can require copying substantial inline data when an old value must survive replacement. Optimizations may avoid physical copies only while preserving that old value and ordinary effects. A future reference-copy or borrowed-view mode must be explicitly stated in its source contract; its syntax remains deferred. Backend indirect passing is not that source-level mode and cannot silently turn these inputs into live views of caller storage.
+
+This selection covers copyable fixed aggregates. Runtime-sized owners, slices/views, and variadic rest retain their separate existing contracts; fixed size does not override a special rest access/retention contract or make a noncopyable component copyable. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain explicitly deferred by the user.
 
 ## 3. Explicit operation on the caller's location
 
@@ -153,7 +200,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Beyond the selected Int and copyable record value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+Beyond the selected Int, copyable record, and copyable fixed aggregate value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 

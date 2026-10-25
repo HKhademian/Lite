@@ -56,6 +56,10 @@ Spreading a stored rest-bearing tuple into another tuple preserves the declared 
 
 An explicit (...rest:) schema names the rest segment while inferring its element type from sufficient static initializer/expected-contract information. (...Params) in type position retains tuple-type expansion meaning; the colon disambiguates the declaration without type-name lookup. This scoped omission does not admit ordinary dangling name: fields or add an infer keyword. See [rest declaration inference](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
 
+## Ordinary fixed-tuple value inputs selected
+
+Selected on **2026-10-25**: an ordinary fixed-tuple input with valid component copy contracts preserves the evaluated component values, stored order, types, and labels. Replacing its source through a separate var grant does not replace the ordinary input's components: an original (:Int, :Int) value (10, 11) still yields 10 at .0 after the caller location becomes (20, 30). A simple fixed tmp := pair captures the same tuple value. This grants no mutation/caller-location authority, requires no physical copy instruction, and selects no tuple/array identity. Apply already-valid reference-field/component copy contracts shallowly; array-tailed tuples, runtime owners, and variadic rest keep their separate contracts. Future explicit reference-copy/borrowed-view syntax, memory safety, and ownership remain deferred; see [fixed aggregate values](parameter-values-and-slots.md#copyable-fixed-tuple-and-array-values-selected).
+
 ## Empty tuple and Unit selected
 
 Selected by the user, 2026-10-22: Unit is the zero-component tuple, with () as an equivalent value/type spelling. This is identity, not a conversion or another union case. Unit | () normalizes to Unit. The singleton (Unit,) still contains one component and is a distinct product shape. Empty tuple access .0 is rejected at compile time. Call argument lists and lambda headers retain their own syntactic roles; f() passes zero arguments while f(()) explicitly passes one Unit value. A Unit parameter still needs an argument or applicable declared default. See [Unit](unit.md).
