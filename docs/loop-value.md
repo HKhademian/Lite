@@ -2,6 +2,8 @@
 
 Status: **typed, universally zero-initialized .value replaces the optional accumulator, selected by the user 2026-10-19; complete inference and lifetime contracts open**.
 
+Normative page for `.value` type, initialization, and commit rules. Loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md); inference is in [loop type inference](loop-type-inference.md).
+
 ## Core rule
 
 Every loop owns a .value with a compile-time type T inferred from the body's value-producing paths and any applicable expected type. It is initialized once to T's language-defined all-zero value before the first condition check. All-zero storage must map to a valid T value. This is not an automatically inserted Option<T> or an untyped cell.

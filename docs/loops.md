@@ -2,6 +2,8 @@
 
 Status: **one keyword, three source modes, one optional item name, and metadata-only state selected; optional leading and/or on unparenthesized Boolean sources selected 2026-10-24; full protocol/inference contracts open**.
 
+Normative page: loop forms, source modes, item naming, and the metadata surface. [Loop value](loop-value.md) owns `.value` type/initialization/commit rules; [loop completion](loop-completion.md) owns `then` and targeted exits; [loop type inference](loop-type-inference.md) owns body/result inference; [last item](loop-last-item.md) owns completion-time item state. See the [normative page map](normative-pages.md).
+
 ## Template
 
 ```text

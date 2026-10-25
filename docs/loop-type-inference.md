@@ -2,6 +2,8 @@
 
 Status: **body type `T`, final result type `R`, destination-side expectations, and the no-contributor `Unit` default are selected; full numeric/operator and inference algorithms remain open**.
 
+Normative page for body `T` and final `R` inference. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md).
+
 ## Body and destination cooperate
 
 A loop's value type is inferred from its body together with the expected type of the surrounding expression. The destination may be an annotated binding, a function result, an argument position, or another established expression context; there is no new loop receiver syntax.

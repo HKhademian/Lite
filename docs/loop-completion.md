@@ -2,6 +2,8 @@
 
 Status: **one receiverless then block using loop metadata selected; .value typed and zero-initialized; tagged return, explicit targeted break/continue, and then execution selected, 2026-10-19. Remaining open: complete loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
+Normative page for `then`, targeted exits, and the completion result. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); inference is in [loop type inference](loop-type-inference.md).
+
 ## Template
 
 ```text
