@@ -180,7 +180,36 @@ typed_empty: (...extra: Int) = (...extra = []);
 
 This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty/heterogeneous inference beyond such established constraints remains separate.
 
-Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed-entry composition, collisions involving tail labels, multiple rest segments, and complete recursive grammar remain open. It does not select named variadic call supply or new pattern syntax.
+Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed-entry composition, collisions involving tail labels, multiple rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
+
+### Spreading a rest-bearing tuple
+
+Selected in the follow-up discussion, 2026-10-25: spreading an existing tuple into tuple construction preserves its fixed shape and declared array-tail schema. Spreading it into call inputs instead supplies each tail array element as a positional input. The tail's stored label does not become a named argument containing one array.
+
+```text
+/* Assume total has the contract fn (...rest: Int): Int. */
+pack := (...numbers = [1, 2, 3]);
+
+copy := (...pack);
+/* same rest-only tuple schema; copy.numbers accesses the array */
+
+total(...pack);
+total.call pack;
+/* both supply the three positional Int inputs 1, 2, 3 */
+
+ordinary := (numbers = [1, 2, 3]);
+variadic := (...numbers = [1, 2, 3]);
+/* call spread of ordinary supplies one named array-valued input */
+/* call spread of variadic supplies three positional Int inputs */
+```
+
+The ellipsis declaration identifies the stored rest segment; an ordinary array-valued field does not acquire tail behavior. Tuple-to-tuple spread preserves the tail's name and element contract without enumerating runtime elements into new fixed tuple positions. Ordinary fixed components retain their existing construction/call routing rules: fixed labels select named call inputs, and unnamed fixed components supply positional inputs. A tail's elements enter the call sequence in array order at that operand's written position; each tuple-valued element remains one input unless separately spread. An empty tail contributes zero inputs.
+
+The callee's tail label may differ from the stored tuple's label, as rest differs from numbers above. This does not select direct named tail supply such as total(rest = pack.numbers), inline call-entry ...name = expression syntax, or new pattern forms. Calls without explicit expansion still receive the tuple as one value when their contract admits it.
+
+Apply the existing whole-composition proof to every forwarded call. The stored tail guarantees its element type, but its schema alone supplies no minimum length for required fixed inputs. Any such coverage must follow from separate established static facts; general retention of constructor-length refinements remains open. The total example needs no fixed inputs and therefore accepts any compatible tail length.
+
+Evaluate the callee first and each supplied operand once in written order, then invoke after successful input preparation. Neither preserving a tail schema nor forwarding its elements selects copying, moving, borrowed-storage identity, heap materialization, writable grants, or lifetime extension. Multiple stored tails, general tuple-constructor tail composition, label collisions, and complete recursive integration remain separate decisions.
 
 ### A colon distinguishes inferred rest declarations from type spread
 

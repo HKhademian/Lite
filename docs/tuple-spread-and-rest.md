@@ -85,6 +85,12 @@ Access a declared tail by its schema name: mytuple.rest obtains the array throug
 
 A rest declaration can infer its element type with (...rest:) when an initializer or expected contract supplies sufficient static information. The colon distinguishes a named declaration from (...Params), which expands an existing tuple type. (...rest: T) remains the explicitly typed form; no infer keyword is selected, and ordinary dangling name: entries remain invalid. See [inferred rest declarations](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
 
+## Spreading a stored array tail selected
+
+For pack := (...numbers = [1, 2, 3]), tuple construction copy := (...pack) preserves the named numbers tail and its element contract. Passing op(...pack), or applying op.call pack, supplies the three tail elements as positional Int inputs when op's contract admits them. The stored tail label does not select a named call slot. Ordinary labeled array-valued fields retain their existing one-named-input behavior instead of expanding their arrays. Fixed components keep their existing label/position routing. Empty tails contribute no inputs, and tuple-valued tail elements stay intact.
+
+This is governed by the whole-composition proof, written-order single evaluation, permissions, and lifetime rules. A tail type alone proves no minimum length for required fixed inputs. Direct named variadic call supply, multiple stored tails, general mixed tuple construction, and tail-label collisions remain separate. Preserving the tuple schema does not select copying or ownership identity. See [rest-bearing tuple spread](tuple-array-shapes.md#spreading-a-rest-bearing-tuple).
+
 ## Positional tuple rest selected
 
 Selected by the user, 2026-10-22: a positional tuple pattern may contain one ...rest capture, placed last. It binds the remaining components as a tuple, preserving their individual types and stored order.

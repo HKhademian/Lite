@@ -106,7 +106,9 @@ operation.call(4);      /* rejected: scalar pack operand */
 operation.call;         /* rejected: missing required Int input */
 ```
 
-`f.call ()` supplies zero inputs; `f.call (Unit,)` supplies one Unit input, like `f(Unit)`. An empty supplied pack does not synthesize missing parameters: every unfilled input still needs an applicable explicitly declared default. Pack application preserves labels and routes them like explicit call spread; it does not silently relabel a stored tuple-valued component.
+`f.call ()` supplies zero inputs; `f.call (Unit,)` supplies one Unit input, like `f(Unit)`. An empty supplied pack does not synthesize missing parameters: every unfilled input still needs an applicable explicitly declared default. Pack application preserves fixed-component labels and routes them like explicit call spread; it does not silently relabel a stored tuple-valued component. Declared tails use the positional forwarding rule below.
+
+For a supplied tuple with a declared array tail, f(...pack) and f.call pack expand that tail's elements as positional inputs in array order. Its stored tail label is not a named array-valued call argument; the callee's own tail name may differ. Ordinary fixed labeled array-valued components still supply one named input each, and tuple-valued tail elements remain intact. Tuple construction (...pack) instead preserves the named tail schema. Every forwarded call still needs the static whole-composition proof; a tail schema alone guarantees no minimum length for required fixed inputs. See [spreading rest-bearing tuples](tuple-array-shapes.md#spreading-a-rest-bearing-tuple).
 
 Evaluate the callable first and the supplied pack expression once. Ordinary call sugar evaluates its supplied expressions once in written order before invocation. Superseded contributions, ignored inputs, and zero-initialized callables retain their required effects and cleanup. General `.call` operand precedence, chaining, reserved-member policy, and recursive expression integration remain open; the examples do not select parsing by expected type or whitespace.
 
