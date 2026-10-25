@@ -152,7 +152,35 @@ b := (...extra);   /* zero fixed components plus an Int array tail */
 
 A tuple may have an empty fixed prefix and still contain its declared rest array. Therefore b := (...extra) is a valid inference direction once extra's element type is known; it is not rejected merely because the array length is runtime-sized or there is no expected destination. The statically known shape is a rest-only tuple, not a tuple with a runtime-selected number of fixed components. An empty extra produces an empty tail while preserving that same rest-only shape; this does not select identity with Unit or a bare array.
 
-The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. For unannotated b, the inferred tail's name and label-sensitive compatibility with explicitly named schemas remain open. Exact representation and normalization/equivalence with a bare array also remain open. named above explicitly establishes the tail name rest through OnlyRest; this example does not invent a member name for b. Multiple rest segments remain a future discussion.
+The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. The selected default label for an unannotated inferred rest-only tail is rest: b has the inferred schema (...rest: Int), and b.rest accesses its array. This label is independent of the source expression's spelling, so (...read_numbers()) gets the same label. rest remains an ordinary member label, not a reserved keyword. An expected schema or explicit named-tail construction can choose another label. Existing label-sensitive tuple rules still apply; full tail compatibility, exact representation, and normalization/equivalence with a bare array remain open. Multiple rest segments remain a future discussion.
+
+### Named rest values and same-name shorthand
+
+Selected in the follow-up discussion, 2026-10-25: a tuple value can explicitly name its array tail, with the same-name shorthand following the ordinary label convention.
+
+```text
+/* Assume extra is a readable runtime-sized Int array. */
+b := (=...extra);
+/* shorthand for b := (...extra = extra); */
+
+c := (...extra = read_numbers());
+d := (...extra = []);
+e := (...extra = [1, 2, 3, 4]);
+```
+
+In a tuple value entry, ...name = expression declares an array-tail segment named name and initializes it from the compatible array expression. The name before = is a literal member label, not assignment to an existing variable; it need not already be bound. The shorthand =...name expands to ...name = name, reading the ordinary lexical value once and using the same identifier as the tail label. Like ordinary =name shorthand, it requires one identifier rather than a member access, call, or arbitrary expression.
+
+Thus b and c expose their arrays as b.extra and c.extra. e also has zero fixed components and a tail named extra holding four Int elements: the explicit ellipsis declares a tail even though the source literal has a known fixed extent. Without that explicit tail declaration, spreading a fixed array continues to infer fixed tuple components. An ordinary name = array entry remains an ordinary array-valued component; it does not acquire the variadic construction contract merely from containing an array.
+
+For d, the rest-only shape and label extra are explicit, but [] alone supplies no established element type under the current empty-literal rules. This spelling alone does not select a default element type. An expected element contract can supply the missing information:
+
+```text
+typed_empty: (...extra: Int) = (...extra = []);
+```
+
+This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty/heterogeneous inference beyond such established constraints remains separate.
+
+Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed-entry composition, collisions involving tail labels, multiple rest segments, and complete recursive grammar remain open. It does not select named variadic call supply or new pattern syntax.
 
 ### A colon distinguishes inferred rest declarations from type spread
 

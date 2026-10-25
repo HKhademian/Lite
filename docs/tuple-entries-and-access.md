@@ -23,6 +23,8 @@ tuple_value_entry := expression
                    | identifier "=" expression
                    | "=" identifier
                    | "..." expression
+                   | "..." identifier "=" expression
+                   | "=" "..." identifier
 ```
 
 This outlines entries inside an established tuple value. Singleton value forms are selected below, and basic construction spread is now [selected](tuple-spread-and-rest.md#tuple-construction-spread-selected). Assignment and complete recursive expression grammar remain separate. This selection applies to tuple values; [tuple pattern shorthand](named-input-routing.md#same-name-tuple-pattern-shorthand-selected) was selected separately on 2026-10-23. Same-name call shorthand and explicit tuple call spread are now selected separately. This does not automatically extend to record or tuple type syntax.
@@ -46,7 +48,9 @@ The 2026-10-24 [type/array shape extension](tuple-array-shapes.md) selects tuple
 
 Declared rest segments already have names: mytuple.rest uses ordinary named member access to obtain that array. A following mytuple.rest[index] is array access, whose bounds, failures, and permissions belong to the array contract rather than tuple-position access. This clarification adds no numeric slot/component-count rule for the tail and does not select multiple rest segments. See [declared tail names](tuple-array-shapes.md#declared-names-access-array-tails).
 
-A rest-only tuple has zero fixed components and an array tail; this is a valid static shape. Spreading a runtime-sized array with an established element type into (...extra) can infer that shape without an expected destination. An expected tuple schema can also establish a fixed prefix plus tail when the supplied composition provably satisfies it, even if fixed-slot value origins depend on runtime lengths. Inferred tail names, exact numeric exposure, and identity with a bare array remain open. See [rest-only construction](tuple-array-shapes.md#rest-only-tuples-need-no-fixed-components).
+A rest-only tuple has zero fixed components and an array tail; this is a valid static shape. Spreading a runtime-sized array with an established element type into (...extra) can infer that shape without an expected destination, using the default label rest independently of the source expression's name. An expected tuple schema can also establish a fixed prefix plus tail when the supplied composition provably satisfies it, even if fixed-slot value origins depend on runtime lengths. Exact numeric exposure, full tail compatibility, and identity with a bare array remain open. See [rest-only construction](tuple-array-shapes.md#rest-only-tuples-need-no-fixed-components).
+
+In tuple value construction, (...extra = expression) explicitly declares a tail named extra; (=...extra) is its same-name shorthand for (...extra = extra), reading the lexical source once. This distinguishes an explicitly named tail from the default rest label inferred by (...extra), and explicitly requests a tail even for a fixed-size array source. The label before = is not a variable assignment target. (...extra = []) establishes shape/name but still needs an element-type source; the syntax adds no global empty-literal default. General mixed entries, tail-label collisions, and multiple tails remain open. See [named rest values](tuple-array-shapes.md#named-rest-values-and-same-name-shorthand).
 
 An explicit (...rest:) schema names the rest segment while inferring its element type from sufficient static initializer/expected-contract information. (...Params) in type position retains tuple-type expansion meaning; the colon disambiguates the declaration without type-name lookup. This scoped omission does not admit ordinary dangling name: fields or add an infer keyword. See [rest declaration inference](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
 
