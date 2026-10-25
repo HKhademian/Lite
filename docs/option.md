@@ -59,7 +59,7 @@ Examples use a proposed library helper:
 total := previous.value_or(0);
 ```
 
-Its spelling is not frozen. It means use the contained value, or an explicitly supplied fallback. There is no implicit numeric zero for every empty optional.
+Its spelling is not frozen. It means use the contained value, or an explicitly supplied fallback. `zero(Option<T>)` is `.None`, so zero-initialization yields the absent state rather than `Some(zero(T))`. Extraction still has no implicit numeric fallback.
 
 ## Search-loop completion
 
