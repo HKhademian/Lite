@@ -41,7 +41,7 @@ Evaluate the operand once. Emit its ordinary fixed components in stored order, p
 
 This is one-level expansion. An ordinary array-valued fixed field remains one labeled item; a tuple-valued tail element remains one item with its own nested shape. A Unit element remains one Unit item. Unpacking does not recursively discard zero-sized values or expand nested arrays/tuples without another explicit spread.
 
-Type-level ...Params and pattern ...receiver keep their selected type-construction and remainder-capture roles. This revised item-emission rule applies to expression/call unpacking, not every syntactic use of ellipsis.
+Type-level ...Params and pattern ...receiver keep their selected type-construction and remainder-capture roles. This revised item-emission rule applies to expression/call unpacking, not every syntactic use of ellipsis. The later [pattern review](tuple-segment-pattern-review.md) reopens segmented-source capture; it does not automatically apply this emitter to every pattern rest. Universal array collection would be an explicit semantic revision with label/type and empty-inference consequences.
 
 ## The destination defines the resulting shape
 

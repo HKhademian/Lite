@@ -71,15 +71,15 @@ renamed: (left: Int, top: Int) = plain;
 /* plain.0 = renamed.left = 640; plain.1 = renamed.top = 480 */
 ```
 
-The same explicit typed-conversion rule applies to mixed named/unnamed positions; ordinary transfers still require their label/absence contracts to match. It does not repack a fixed prefix or array tail, change extent/family, flatten a nested tuple, erase an actual member, or invent defaults. Any whole-composition proof already required for a shape remains required. Optional ordinary stored-tuple elements and their absence semantics remain separate.
+The same explicit typed-conversion rule applies to mixed named/unnamed positions; ordinary transfers still require their label/absence contracts to match. It preserves ordinary/segment roles and their extent contracts. It does not turn an ordinary array field into a declared segment, repack a fixed prefix or array tail, change extent/family, flatten a nested tuple, erase an actual member, or invent defaults. Any whole-composition proof already required for a shape remains required. Optional ordinary stored-tuple elements and their absence semantics remain separate.
 
 ## Callable public labels follow the destination
 
 An explicit typed receiving declaration may likewise convert a stored callable's public input labels while preserving its ordered slots and otherwise compatible contracts. Plain reassignment, passing, and return do not perform that conversion implicitly. The implementation's local names and default definitions remain its own:
 
 ```text
-source := fn(n: Int = 2): Int { n * 10 }
-target: fn(amount?: Int): Int = source;
+source := fn (n: Int = 2): Int { n * 10 }
+target: fn (amount?: Int): Int = source;
 
 target(amount = 3);  /* 30 */
 source(n = 3);       /* 30 */
@@ -94,8 +94,8 @@ The caller resolves amount to input position 0 using target's visible contract. 
 Earlier-parameter defaults keep their implementation-local bindings too:
 
 ```text
-source_pair := fn(start = 1, end = start + 1) { (start, end) }
-renamed_pair: fn(first?: Int, last?: Int): (:Int, :Int) = source_pair;
+source_pair := fn (start = 1, end = start + 1) { (start, end) }
+renamed_pair: fn (first?: Int, last?: Int): (:Int, :Int) = source_pair;
 renamed_pair(first = 10);  /* (10, 11): end still reads implementation-local start */
 ```
 
@@ -107,7 +107,7 @@ Intrinsic .call and ordinary named-call routing still use the visible callable's
 
 ## Identity, inference, and remaining boundaries
 
-Labels still participate in structural tuple identity: identical ordered labels and resolved component types describe the same type. Differently labeled types can be distinct while permitting this selected conversion. Inference and union normalization do not erase or arbitrarily choose labels just because layouts match. Separately declared records remain nominal; this rule does not create structural record compatibility.
+Labels still participate in structural tuple identity. For segment-bearing schemas, identity also retains each ordinary/segment role and its extent contract; identical externally accessed member types do not erase different unpacking behavior. Identical ordered labels, resolved types, roles, and extent contracts describe the same structural tuple type. See the [segment identity review](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity). Differently labeled types can be distinct while permitting this selected conversion. Inference and union normalization do not erase or arbitrarily choose labels just because layouts match. Separately declared records remain nominal; this rule does not create structural record compatibility.
 
 Reference syntax, memory safety, alias enforcement, resource/copy eligibility, new ownership modes, general generic/overload inference, full recursive grammar, and optional stored-tuple semantics remain open or deferred under their existing contracts.
 

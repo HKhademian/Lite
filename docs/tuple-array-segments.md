@@ -2,6 +2,8 @@
 
 Status: **array-segment model and optional static extent selected in the 2026-10-25 discussion; current declarations remain tail-only**. Middle collectors and multiple stored segments are future discussion. This is design documentation, not parser/runtime verification.
 
+The later [pattern re-evaluation](tuple-segment-pattern-review.md) keeps this segment model and reopens destructuring of segment-bearing sources. The requested equality of an ordinary array receiver and a trailing rest receiver is not yet reconciled with the current structural tuple-remainder rule. Universal array-producing pattern rest remains a proposal; the assistant's earlier claim that the examples already selected it is withdrawn.
+
 ## Element type and extent
 
 The rest operator declares a named homogeneous array segment within a tuple. Its type entry uses ...name: T, with an optional ; C static extent. The surrounding tuple-entry syntax supplies the array meaning, so the element/extent portion needs no additional array brackets.
@@ -97,6 +99,10 @@ TwoArrays := type (...rest: [Int; 3]; 2);
 ```
 
 Neither form implicitly flattens the elements' nested arrays. Likewise, ...rest: EachRestType; C collects C intact EachRestType elements when that type is a tuple.
+
+## Segment role belongs to structural identity
+
+An ordinary array-valued field and a declared segment can expose the same array member type and positions while unpacking differently. Structural identity therefore includes the ordinary/segment role and its extent contract, in addition to ordered labels and resolved types. Label-only conversion preserves these roles and extents; it cannot silently change unpacking behavior or repack a segment. The role needs no per-value runtime tag. Further role/extent adaptation and type-spread replacement details remain separate. See [identity and conversion review](tuple-segment-pattern-review.md#segment-roles-and-extents-participate-in-identity).
 
 ## Callable contracts expose the extent they guarantee
 

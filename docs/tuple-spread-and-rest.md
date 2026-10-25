@@ -115,6 +115,12 @@ The same discovery applies to fully fixed tuple spreads: (...items, ...base), fo
 
 An explicit expected tuple schema can guide spread reconstruction between a compatible fixed prefix plus array tail and a rest-only tuple, selected 2026-10-25. For Prefix := type (:Int, :Int, ...rest: Int) and TailOnly := type (...rest: Int), packed: TailOnly = (...prefix_value) gathers the fixed values and original tail into packed.rest. Reconstructing Prefix from a TailOnly source requires proof of at least two compatible values; the rest-only schema alone supplies no such minimum. Without a requested destination shape, (...prefix_value) reconstructs the emitted items using known-count/unknown-tail inference; ordinary copy := prefix_value retains its organization. Plain stored assignment retains its compatibility rules. Existing labels, access, ownership, evaluation, and cleanup requirements remain; no implicit cast, array/tuple identity, zero-copy guarantee, or general mixed-label collision policy is selected. See [repacking examples and limits](tuple-array-shapes.md#destination-guided-repacking).
 
+## Pattern rest re-evaluation
+
+The [2026-10-25 re-evaluation](tuple-segment-pattern-review.md) reopens how a final rest receiver handles segment-bearing sources. The user requests the same array result from (h, tail) and (h, ...tail) when only an existing trailing array segment remains, and a different result when the remaining ordinary component is scalar. The current structural rule below preserves a tuple wrapper, so that equality is unresolved. These examples do not themselves select universal homogeneous array capture.
+
+Keep the structural label/type-preserving rule as the current documented baseline. Projection of a sole remaining declared segment and universal array collection are alternative proposed revisions. Result kind, heterogeneous labels/types, empty element inference, named selectors, and callable receiver alignment need a deliberate decision; no candidate is adopted here. The ordinary tuple examples below retain their current meanings.
+
 ## Positional tuple rest selected
 
 Selected by the user, 2026-10-22: a positional tuple pattern may contain one ...rest capture, placed last. It binds the remaining components as a tuple, preserving their individual types and stored order.

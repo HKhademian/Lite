@@ -446,6 +446,8 @@ For callable input schemas, arguments.rest uses the declared input-tail name; an
 
 ### Pattern remainders preserve the tail
 
+Review status, 2026-10-25: the [segment/pattern re-evaluation](tuple-segment-pattern-review.md) explicitly reopens the segmented-source case below. The user's requested trailing array equality does not follow from the current structural wrapper rule. Universal array-producing rest and projection of a sole remaining declared segment remain proposed alternatives; neither is selected by the examples. The structural remainder remains the documented baseline pending that decision.
+
 A pattern rest capture preserves unselected fixed components and the existing tail in their order. It must not convert a remaining fixed field into an unrelated array element or manufacture tuple fields from the runtime tail's current length. In a callable implementation whose local header consumes all fixed inputs, its trailing collector receives the declared array tail, as myrest does above. General tail-only tuple normalization and whole-value/array identity are not selected merely by that collector behavior.
 
 Ordinary fixed tuples keep their existing pattern-rest rule: zero fixed remaining components give Unit/(), one gives a singleton tuple, and heterogeneous remaining components preserve their individual types and labels. That pattern operation does not become a homogeneous array merely because it uses the same ellipsis marker. A declared ...rest: T array segment and a pattern ...remainder have distinct syntactic roles: one declares accepted input elements, the other collects the source's remainder.
