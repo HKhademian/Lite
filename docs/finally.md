@@ -128,7 +128,7 @@ Cleanup is not rollback: it does not undo earlier successful writes or side effe
 
 The user selected cleanup-only behavior: `finally` has no implicit receiver or completion descriptor and cannot transform the pending outcome. When cleanup completes normally, the protected expression's value, control-flow exit, or propagated recoverable error remains pending. The quantity binding therefore receives the successful/read-recovery Int, not the cleanup's Unit. Ordinary lexical names remain available to cleanup.
 
-If cleanup succeeds, the pending outcome is preserved. If cleanup fails while any failure is already pending, that failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels pending normal completion. A locally recovered failure is no longer pending when `finally` begins. The aggregate carrier, how handlers inspect its parts, attachment syntax, and behavior on hard process abort remain unresolved.
+If cleanup succeeds, the pending outcome is preserved. If cleanup fails while any failure is already pending, that failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels pending normal completion. A locally recovered failure is no longer pending when `finally` begins. The bound aggregate's public type/operations, how handlers inspect its parts, attachment syntax, and behavior on hard process abort remain unresolved.
 
 Any Result-producing operation inside cleanup still requires its own explicit handling or valid forwarding under the eventual cleanup policy. Neither finally nor a surrounding outer handler automatically unwraps an ignored Result.
 
