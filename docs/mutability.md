@@ -46,7 +46,7 @@ var mut x := make_user(); /* reassignable binding; writable access */
 
 These lines show four inferred alternatives for comparison. Sequential declarations may also shadow a name in one block. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
 
-Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var`. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
+Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var` after initialization; the first write to `x: T = ?` is the exception. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
 
 Selected on **2026-10-25**: mut parent access may supply var replacement grants for accessible inline fields. In swap(var pair.left, var pair.right), distinct inline Int fields have separate storage and one active write holder each; parent-binding reassignment remains unavailable for fixed mut pair. Reject repeated-field and overlapping whole-parent/field write grants. This projects existing field authority, without granting write access to unrelated payloads or deciding reference-target aliasing. See [disjoint inline fields](call-replacement-flow.md#disjoint-inline-field-grants-selected).
 
@@ -107,7 +107,7 @@ mut user := make_user();
 user.age += 1; /* updates held data; mut is required */
 ```
 
-The compound update follows the target: a whole-binding update needs `var`, while a field or element update through the binding needs `mut`. `mut count := 0; count += 1;` is rejected because the update assigns the fixed `count` binding. `var count` does not introduce reference qualifiers or mutation of a separate referenced object.
+The compound update follows the target: a whole-binding update needs `var` after initialization (the first write to `= ?` is the exception), while a field or element update through the binding needs `mut`. `mut count := 0; count += 1;` is rejected because the update assigns the fixed `count` binding. `var count` does not introduce reference qualifiers or mutation of a separate referenced object.
 
 For a union receiver, mut grants no exemption from the selected [all-target field write rule](union-field-writes.md). The assigned value must fit every possible target field type; the combined read type alone does not describe its write contract. Explicitly representable [access contracts](union-values-and-access.md) remain a proposal.
 
