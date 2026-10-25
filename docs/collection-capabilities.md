@@ -24,10 +24,12 @@ The names are not universal synonyms across languages: Haskell Traversable suppo
 
 ## Independent extra abilities
 
+`Indexable` is the general keyed-lookup role: it has a key type and its own lookup result/failure contract, and it need not be positional, sized, or iterable. `Indexed<T>` is the positional refinement used by `[T]`: finite exact count, zero-based constant-time reads, and traversal in positional order with duplicates preserved. The two names are not synonyms.
+
 - Sized: obtain an exact size under a documented cheap-cost requirement, without exhausting the source. A traversal estimate is a different operation. Collection length and a cursor's remaining count need distinct definitions.
 - Repeatable: create independent traversals while the source remains valid under its access contract. This does not promise a frozen snapshot across external mutation.
 - Order guarantees: distinguish preserved sequence positions, insertion order, comparator-sorted order, and unspecified traversal order. A plain list needs no element comparator or uniqueness rule. An iterable set can participate without promising persistent positions. Exact capability names and their graph remain open; see [order and shared traversal](collection-order-and-traversal.md).
-- `Indexed<T>`: access a valid logical index with a specified complexity contract. Linked-list indexing must not pretend to have constant-time random access.
+- `Indexed<T>`: access a valid logical positional index with the selected constant-time read contract. Linked-list indexing must not pretend to satisfy it; use a traversal-only contract instead.
 - `Contiguous<T>`: provide an appropriate bounded view over physically consecutive initialized elements. This would refine relevant size/index requirements; the exact graph remains open.
 - Reversible: traverse in reverse without silently buffering a one-shot stream. Its relationship to repeatability and cursor movement needs definition.
 - `Membership<T>`: answer a membership query under specified equality semantics, potentially using a provider's efficient lookup.

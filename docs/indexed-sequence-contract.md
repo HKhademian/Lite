@@ -6,6 +6,8 @@ Status: **[T] indexed-sequence direction accepted, 2026-10-19; full generic and 
 
 A general lookup operation can accept a key such as a String or an enum value. Its successful result and failure policy belong to that lookup contract. Merely supporting brackets does not imply integer positions, traversal, a count, insertion order, or contiguous storage.
 
+`Indexable` names that general keyed-lookup role. `Indexed<T>` names the positional `[T]` refinement: finite exact count, zero-based constant-time reads, and traversal in positional order with duplicates preserved. A bracket spelling alone does not tell which role is required; the declared contract does.
+
 The accepted ordinary sequence combines a useful subset into one visible standard contract. Beginners can use its shorthand without separately listing each underlying interface. More general library contracts remain available when the complete bundle is unnecessary.
 
 ## Readable [T]

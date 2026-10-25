@@ -97,7 +97,7 @@ third_required := fn (values): Int! {
 
 Here the declared success type additionally constrains the returned element to Int, and the declared general Error contract must cover the indexing error. Parameter omission does not infer an undeclared escaping error. The ordinary explicit grant rules still apply to any caller mutation or replacement.
 
-Compatible arrays, lists, slices, and custom indexable providers can satisfy the inferred input requirement. A traversal-only set or generator is rejected at the call with a concrete diagnostic such as "This argument does not support positional indexing." Do not silently enumerate, sort, buffer, or copy it to make indexing available. No particular index complexity follows from hiding a requirement name; cost laws still need their contract.
+Compatible arrays, lists, slices, and custom `Indexed` providers can satisfy the inferred input requirement. A traversal-only set or generator is rejected at the call with a concrete diagnostic such as "This argument does not support positional indexing." Do not silently enumerate, sort, buffer, or copy it to make indexing available. No particular index complexity follows from hiding a requirement name; cost laws still need their contract.
 
 The earlier conversation's Indexed<Int> example expressed the semantic requirement, not a mandatory beginner annotation. A body that only loops infers a weaker traversal requirement and can still accept suitable sets. The required operations are derived from the definition and checked at each call, rather than inferred as one concrete List type from its first caller.
 

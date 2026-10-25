@@ -14,7 +14,7 @@ user := users[5] else {
 }
 ```
 
-Conceptually, the loop obtains an appropriate traversal and advances it through its protocol. The bracket operation invokes the selected read-lookup contract. Iterable and Indexable describe the protocol roles. The accepted [T] direction identifies get_index, set_index, and iterable hooks; complete interface/implementation syntax remains deferred. General keyed lookup does not automatically imply the positional sequence bundle. This does not add for as another loop keyword.
+Conceptually, the loop obtains an appropriate traversal and advances it through its protocol. The bracket operation invokes the selected read-lookup contract. `Iterable`, `Indexable`, and `Indexed<T>` are distinct roles: `Iterable` traverses, `Indexable` is general keyed lookup, and `Indexed<T>` is the positional `[T]` refinement. The accepted `[T]` direction identifies get_index, set_index, iterable, and count hooks; complete interface/implementation syntax remains deferred. General keyed lookup does not automatically imply the positional sequence bundle. This does not add for as another loop keyword.
 
 Resolve the implementation from the receiver's static type, generic requirements, and explicit conformance/implementation rules. The compiler does not inspect arbitrary runtime objects for similarly named methods. If multiple implementations could apply, require a defined coherence/disambiguation rule rather than guessing.
 
