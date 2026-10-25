@@ -25,7 +25,7 @@ Student := record {
 }
 ```
 
-Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. It does not choose the use of type for aliases or other type definitions.
+Student names the record type, name is a String field, and grade is an Int field. This replaces the earlier `Student := type { ... }` record sketch. Transparent type aliases are separate and selected as `Alias := type TypeExpression`; see [type aliases](type-aliases.md).
 
 ## Field values and named patterns
 
