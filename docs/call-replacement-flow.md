@@ -106,6 +106,10 @@ These are alternative fragments. Require definite initialization and a compatibl
 
 The callee still receives ordinary read/write Int access to initialized storage. It is not asked to construct an uninitialized input, and var remains neither write-only nor a mandatory-write promise. Fixed storage's one first write does not authorize supplying it to a var parameter that may replace it; the var declaration in this example supplies the needed replacement authority. Keep declared accepted writes, single active holder, same-local duplicate rejection, single location selection, and callee-first/source-argument evaluation. The temporary form does not authorize general effect hoisting or change lifetimes. Partial field/element construction, uninitialized inputs received by callees, and future single-write-only/multi-write-only parameters remain separate open contracts.
 
+## Ordinary Int values alongside a var grant
+
+Selected on **2026-10-25**: a plain Int argument supplies its evaluated value while a var argument supplies its location grant. For count initially 10, read_original(var count, count) returns the supplied ordinary Int 10 even when the callee writes 20 through the var parameter. The user's tmp := count; saved := read_original(var count, tmp); expansion preserves that same value and leaves count at 20. The ordinary input adds no write grant or live source-location view. Keep callee-first/source-argument evaluation and input/access obligations; general aggregate transport remains open. See [ordinary Int evaluated values](parameter-values-and-slots.md#ordinary-int-evaluated-values-selected).
+
 ## Later argument reads of a selected local allowed
 
 Selected on **2026-10-24**: selecting an initialized local for an earlier var argument does not prohibit later supplied argument expressions from reading that local to compute scalar values before invocation:

@@ -1,6 +1,6 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary read-only parameter value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int evaluated-value semantics are selected on 2026-10-25; aggregate and other-type value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
@@ -10,7 +10,7 @@ The type-side mut parameter qualifier requests writable caller-data access, as i
 
 ## 2. Semantic passing versus physical calling convention
 
-An ordinary parameter needs a language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+Beyond the selected ordinary Int case below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
@@ -19,6 +19,36 @@ In particular, passing an immutable aggregate indirectly as an optimization does
 Recommendation: define observable semantics first, then let the compiler optimize representation. Default record value/reference semantics and the copy/move/borrow contract still need a separate decision.
 
 The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. This does not select ordinary parameter transport or a general escaping-reference syntax. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
+
+## Ordinary Int evaluated values selected
+
+Selected on **2026-10-25**: an ordinary Int argument supplies the value evaluated at its source-order argument position. Subsequent replacement of the source local through a var grant does not change that supplied Int value:
+
+```text
+read_original := fn(target: var Int, original: Int): Int {
+    target = 20;
+    original
+}
+
+var count: Int = 10;
+saved := read_original(var count, count);
+/* saved is 10; count is 20. */
+```
+
+Evaluate the callee first, select count's location once for the var input, and then read the ordinary Int input as 10 before invocation. The target parameter receives the caller-location grant. The ordinary original parameter receives the evaluated Int value and remains 10 when target writes 20 to count. There is only one write grant; the ordinary Int input is not a second storage grant or a live view of count.
+
+From the same starting state, the user's explicit temporary form is equivalent:
+
+```text
+var count: Int = 10;
+tmp := count; /* 10 */
+saved := read_original(var count, tmp);
+/* saved is 10; count is 20; tmp remains 10. */
+```
+
+The simple tmp binding holds the Int value read from count. Its value is preserved when count is replaced. The snippets are alternative fragments, and their equivalence uses this stable callable name and simple local, preserving ordinary callee-first/source-argument evaluation. It is not permission to hoist an argument ahead of effectful earlier expressions or change scope/lifetimes. Ordinary Int input evaluation still requires initialized readable data and ordinary type compatibility; it grants no caller-write authority.
+
+This selects observable Int value semantics, including the illustrated scalar temporary, not a physical copy instruction or calling convention. Registers, indirect transport, inlining, or eliding unobservable storage must preserve the evaluated value and source-order effects. A backend may not make original observe 20 through an alias merely to avoid materializing 10. No heap allocation, deep clone, public reference syntax, or performance result is implied. General aggregate and other-type copying/moving/borrowing, ownership, and reference-alias contracts remain separate.
 
 ## 3. Explicit operation on the caller's location
 
@@ -65,7 +95,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Decide ordinary parameter semantics independently of writable-var semantics. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+Beyond the selected Int evaluated-value case, decide ordinary parameter semantics independently of writable-var semantics. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 

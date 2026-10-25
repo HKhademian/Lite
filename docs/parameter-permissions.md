@@ -16,6 +16,8 @@ inspect := fn(user: User): String {
 
 The parameter binding is fixed and its data access is read-only. It does not request replacement of the caller's binding. This alone does not choose copying versus borrowing or imply globally frozen data.
 
+For ordinary Int inputs, evaluated-value behavior is selected on **2026-10-25**: read_original(var count, count) with count initially 10 supplies the ordinary input as 10. Replacing count with 20 through the var input leaves that ordinary Int value unchanged. The user's tmp := count form captures the same Int value without adding another write grant. This is an observable value rule, not a required physical copy or a general aggregate transport contract. See [ordinary Int evaluated values](parameter-values-and-slots.md#ordinary-int-evaluated-values-selected).
+
 ## Mut: update held data
 
 ```text
