@@ -2,6 +2,8 @@
 
 Status: **iteration capabilities required; collection and iterator protocols open**.
 
+Entry page for collection-consumer direction and iteration. Narrower contracts are owned by [collection operation contracts](collection-operation-contracts.md), [sequence types](sequence-types.md), and the [indexed sequence contract](indexed-sequence-contract.md); capability rationale is in [collection abstractions](collection-abstractions.md). See the [normative page map](normative-pages.md).
+
 ## Purpose
 
 Build consumer APIs around required collection abilities while allowing one iteration syntax. Compatible providers should not need conversion to a standard List or exposure of their static size merely to supply elements. Keep direction, stepping, keys, and entry views outside the loop keyword set. See [consumer abstractions](collection-abstractions.md) and [proposed capabilities](collection-capabilities.md).
