@@ -1,6 +1,6 @@
 # Universal zero initialization
 
-Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction. Concrete mappings for the remaining type categories still need design.
+Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Unit, Result, callable, record, tuple, and fixed-array mappings are selected; enum, plain-union member selection, reference/access, resource, and constrained-domain mappings remain open. Zero-dependent contracts are conditional until those mappings are defined. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction.
 
 ## Plain-union construction restriction
 
@@ -41,6 +41,12 @@ Every type must have a meaningful zero value represented by all-zero storage. A 
 Zero is neither a universal null expression nor automatically absence for every type. A zero function must be callable with defined behavior. A zero reference/access value, resource wrapper, enum, union, or constrained domain must have defined language meaning too. Their operations may have ordinary specified outcomes/faults, but zero state alone cannot be dismissed as an invalid value or unchecked memory access.
 
 There is no generic zeroability constraint excluding some types. Full type layouts, ownership/disposal, and mappings for the categories below remain open; the universal requirement is selected independently of those details.
+
+## Mapping dependency and conformance
+
+Universal zero is a design requirement, not yet a completed mapping for every type category. Unit, Result, callable, record, tuple, and fixed-array mappings have selected rules. Enum case selection, plain-union member selection, reference/access values, resource wrappers, and constrained domains remain open.
+
+Until a category's mapping is defined, any loop `.value` initialization, conditional missing-`else` fallback, omitted typed initializer, or recursive aggregate zero that depends on zero of that category is conditional and not implementation-ready. Do not reject the type, invent a different default, or treat zero as an invalid state; complete the mapping before claiming conformance. The dependent contracts remain selected as requirements, not as evidence that every mapping is finished.
 
 ## Meaning of 0
 
