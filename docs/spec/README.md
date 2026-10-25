@@ -76,9 +76,11 @@ Open: field-default mechanics, partial construction, and allocation/cleanup deta
 Selected:
 
 - Function types and literals use `fn`; ordinary parameters are written `name: Type`.
+- A function type is its signature without a body; function literals are ordinary value expressions.
 - Access qualifiers follow the colon: `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement.
 - A zero-initialized callable is callable, performs no user-body work, and returns `zero(R)` after ordinary argument evaluation and required cleanup.
 - Argument omission is rejected unless an applicable explicitly declared default supplies a valid value. Supplied arguments take precedence.
+- Call evaluation prepares the callee, supplied arguments, then missing defaults. An exit stops later preparation.
 - Missing defaults evaluate at call time, after supplied expressions, in declared slot order.
 
 Open: complete default grammar and lookup, generic callable compatibility, signature/implementation placement, and ownership/ABI details.
@@ -93,9 +95,10 @@ Selected:
 - Assignment: no match performs no write.
 - Loop body: no match contributes nothing and preserves `.value`.
 - Value-required context — argument, return, arithmetic, nested expression, or `then` — requires a final `else`.
-- `then` requires a final `else`, receives the selected `T`, and produces `R`.
-- `else { ? }` is an explicit no-initialization/no-write/no-contribution branch. `?` is not `Unit`, `None`, or `zero(T)`.
+- `then` requires a final `else`, receives the selected `T`, and produces `R`. A partial no-`else` conditional cannot carry `then`.
+- `else { ? }` is an explicit no-initialization/no-write/no-contribution branch. `?` is a control-flow marker, not a value: it cannot be stored, passed, returned, compared, or used in arithmetic.
 - A conditional's tagged `.value` is readable only inside its attached `then` via `@tag.value`; condition metadata is hidden.
+- A returned error or unhandled panic supplies no conditional `T`, so result-processing `then` is skipped. A locally recovered failure may still complete a branch normally.
 - A multi-member union declaration initializer requires an explicit `else` or `?`; assignment and loop no-match paths do not.
 
 Open: exact cleanup attachment scope, the `&` form's public value/operations, and general coverage proofs.
