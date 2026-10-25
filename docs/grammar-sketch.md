@@ -588,24 +588,31 @@ target else (failure) { recovery_body }
 target else (_) { recovery_body }
 target else (name: FailureType) { recovery_body }
 target else (: FailureType) { recovery_body }
-target else (name: FailureType & FailureType) { recovery_body }
 target else (: FailureType & FailureType) { recovery_body }
+target else (name: (: FailureType, : FailureType)) { recovery_body }
+target else (: (: FailureType, : FailureType)) { recovery_body }
 
 recovery_expression := target { else_clause } [ finally_clause ]
 else_clause := "else" [recovery_receiver] block
-recovery_receiver := "(" [recovery_pattern] ")"
+recovery_receiver := "(" [recovery_pattern] ")" | recovery_pattern
 recovery_pattern := identifier
                   | "_"
-                  | identifier ":" recovery_failure_type
+                  | identifier ":" FailureType
+                  | identifier ":" ordered_failure_tuple
                   | ":" recovery_failure_type
-recovery_failure_type := FailureType { "&" FailureType }
+recovery_failure_type := FailureType { "&" FailureType } | ordered_failure_tuple
+ordered_failure_tuple := "(" ordered_failure_entry "," ordered_failure_entry
+                             { "," ordered_failure_entry } [","] ")"
+ordered_failure_entry := ":" FailureType | identifier ":" FailureType
 ```
 
 These are selected surface templates, not complete productions. Postfix `!` extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. It participates in left-to-right postfix chaining, so `load_user(id)!.load_profile()!.name` needs no grouping around each extraction. `!.` is the `!` token followed by the ordinary `.` token, not a nullable-access token; token-separating whitespace changes no meaning.
 
 A recovery expression has one or more `else` clauses. Each later clause wraps the entire preceding recovery, so it can catch a new matching failure raised by an earlier handler. The optional `finally` is cleanup-only: it runs as the protected expression exits, preserves any pending result, exit, or failure, and does not recover. This reuses the loop/conditional `finally_clause`; its attachment scope and interaction with body-wide cleanup remain under review. A recovery chain does not add an external `else` tail to a whole `if`, loop, or match; body-owned recovery remains selected.
 
-An aggregate receiver uses a `&` chain. `: A & B` matches when both A and B are pending, without binding; `e: A & B` also binds `e` to an opaque pending-failure aggregate. `B & A` is the same pattern: occurrence order is not part of the match. A combined pattern consumes all members it names and leaves any other pending failures. Individual filters such as `: A` and `: B` consume one matching member each, so both run when both are pending; clause order is observable. Raw tuple patterns remain ordered: `(A, B)` and `(B, A)` are different value patterns. The bound aggregate has no selected public type or operations; an ordered tuple `(A, B, …)` preserving actual occurrence order is the leading future candidate. `&` is recovery-pattern notation, not a general type operator. Duplicates, exact-set versus subset matching, representation, and public inspection remain open.
+An aggregate receiver has two selected forms. A `&` chain is an unordered co-occurrence pattern: `: A & B` matches when both A and B are pending, `B & A` is the same pattern, and a combined clause consumes all named members, leaving extras. It binds no value for now; use the type-only `: A & B`, not `e:`. An ordered failure tuple uses the existing tuple type spelling: `e: (: A, : C, : B)` or `e: (a: A, c: C, b: B)` matches exactly that ordered sequence and binds a real tuple. Positional `.0/.1/.2` access works in both; labeled access works only in the named tuple. Individual filters such as `: A`, `: B`, or `e: A` consume one matching member each, so both run when both are pending. Clause order is observable: an exact tuple first, then a `&` set pattern, then individual filters, then `!` for the remainder. Raw tuple patterns remain ordered: `(A, B)` and `(B, A)` are different value patterns. `&` is recovery-pattern notation, not a general type operator. Duplicates, exact-set versus subset matching, representation, and public inspection remain open.
+
+The outer receiver parentheses are optional when the receiver is unambiguous: `else a:A { ... }` is equivalent to `else (a:A) { ... }`, and `else (: A & B) { ... }` has the same type-only set pattern as `else : A & B { ... }`. Keep the wrapper when the receiver's type begins with `{`, when an outer grouping is needed for readability, or when the following body brace could be confused with pattern syntax. Tuple parentheses are part of the tuple pattern, not the optional receiver wrapper. `else { ... }` has no receiver and is the body-only form. The first outer-level ungrouped `{` after the complete receiver starts the body.
 
 Receiverless `else`, an untyped readable binding such as `failure` or `_`, and a typed receiver pattern have distinct binding behavior. The three untyped recovery forms match every failure supported by the target. `_` remains an ordinary readable binding and can be used in the handler. A typed receiver pattern matches only its named failure type: `: BoundPanic` handles that panic category without binding, while `: Panic` matches the panic family and does not match returned Result errors. `name: FailureType` also binds the narrowed failure. A bare identifier remains a catch-all binding even when spelled like a type name. An unmatched panic propagates implicitly; an unmatched returned error remains an explicit Result obligation and can be propagated with `!`. Exact grammar precedence, mixed-channel broad receiver typing, nested-operand scope, and cleanup-failure aggregate handling remain open; cleanup-failure precedence is selected under [finally](finally.md#pending-outcomes).
 
