@@ -91,6 +91,8 @@ Comment layout and attachment must also satisfy the selected [formatter idempote
 
 Under selected [verification before writing](tooling-and-learning.md#verification-before-writing), compare opaque comment contents and attachment separately from the reparsed executable structure before applying formatter output. A comparison that ignores comment data cannot establish this contract. Changes to indentation at the source position/surrounding breaks remain allowed; dropped, altered, or unrelatedly reattached comments reject the proposed output and leave the file/buffer unchanged. Exact attachment identities/checker internals remain open; comment bodies never become executable verification input.
 
+The selected [--check mode](tooling-and-learning.md#read-only-check-mode-for-ci) runs the same comment-preservation verification without writing files. A verification failure is an overall check failure even when the source already appears formatted; matching layout does not establish comment preservation by itself.
+
 ## Missing delimiters
 
 An unterminated ordinary comment or raw fence is a compile-time error. The compiler reports the unmatched opener; it must not guess where executable code resumes.

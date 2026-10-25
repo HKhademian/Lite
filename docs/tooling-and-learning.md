@@ -1,6 +1,6 @@
 # Tooling and learning
 
-Status: **official formatter required; compact/multiline leading-separator presentation, unchanged-file handling of malformed/incomplete source, idempotence, and verification before writing selected 2026-10-25; broader toolchain and teaching approach proposed**.
+Status: **official formatter required; compact/multiline presentation, unchanged malformed files, idempotence, verification before writing, and read-only --check mode selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Students should spend their early effort understanding programs rather than choo
 lite fmt
 ```
 
-An official formatter is an established requirement. Its exact argument syntax and file discovery rules remain open. It should choose one presentation and preserve meaning.
+An official formatter is an established requirement. The command lite fmt and its read-only --check mode are selected; remaining argument syntax and file/configuration discovery rules remain open. It should choose one presentation and preserve meaning.
 
 The formatter must not infer missing semicolons from line breaks, change final-expression results by adding separators, or modify literal string data. Repeated separators may be normalized because their count has no semantic role.
 
@@ -46,7 +46,7 @@ This is an equation describing the tool's output, not new LiteScript source synt
 
 Leading separators, compact/multiline choices, indentation, line wrapping, comment placement/attachment, ordinary item separators, and final whitespace must not oscillate between layouts on successive passes. Preserve opaque comment contents and the other selected meaning-preservation contracts. Exact width, singleton-leader normalization, and attachment algorithms remain open, but their eventual rules must satisfy this requirement.
 
-Idempotence is a required formatter conformance check: for each successful-format fixture, capture the first output, format it again under the same version/settings, require both passes to succeed, and compare the complete outputs. Cover compact/multiline and mixed chains, grouped/nested expressions, pattern alternatives/shared guards, plain unions, singletons, ordinary/raw comments, and semicolon boundaries. A failed or skipped second pass is not evidence of idempotence. This does not require full type checking before formatting or create a new CLI verification flag.
+Idempotence is a required formatter conformance check: for each successful-format fixture, capture the first output, format it again under the same version/settings, require both passes to succeed, and compare the complete outputs. Cover compact/multiline and mixed chains, grouped/nested expressions, pattern alternatives/shared guards, plain unions, singletons, ordinary/raw comments, and semicolon boundaries. A failed or skipped second pass is not evidence of idempotence. This does not require full type checking before formatting; it is distinct from the separately selected --check mode, which compares source against verified formatted output without requiring an extra runtime formatting pass.
 
 Malformed input retains the separate unchanged-file/failure contract below; it is not a successful formatting fixture. This selects a future conformance requirement, not an implemented formatter, an executed LiteScript check, or proof that all inputs satisfy it.
 
@@ -88,6 +88,22 @@ For a request containing several files, continue formatting the other valid file
 Format-on-save follows the same rule: apply no formatter text edits to an invalid buffer and surface its diagnostic. Normal editing/saving remains an editor operation; this formatter rule does not discard or repair the user's unfinished buffer.
 
 This contract covers incomplete/malformed lexical syntax, including missing operands/braces or unterminated comments. It does not require full compilation, name resolution, or type checking before formatting syntactically valid source. The existing obligation to preserve meaning and not silently repair type-invalid code through punctuation changes remains. Diagnostic rendering, parser recovery internals, and precise editor protocol remain open; no formatter implementation is claimed.
+
+## Read-only check mode for CI
+
+Selected 2026-10-25:
+
+```text
+lite fmt --check
+```
+
+Check mode writes no files and applies no editor-buffer edits. It generates the same proposed output as normal formatting, in memory, using the same formatter version, effective configuration, presentation rules, parsing, and preservation verification. It does not substitute a weaker whitespace-only check or skip the separate comment/typing-requirement checks.
+
+For each requested source file, compare the original bytes with the successfully verified formatted bytes. A matching file passes. A difference is reported as requiring formatting, identifying the affected file, while leaving it unchanged. Malformed source produces its source diagnostic; failed or unestablished output verification produces a formatter-verification error. Both failure kinds identify the affected file and preserve it.
+
+Continue checking other requested valid files. Report overall success only when every requested file parses, verifies, and already matches the formatted output. Report overall failure if any file would change, cannot parse, or fails verification. Ordinary formatting may still rewrite other successfully verified files; --check never writes any files. This lets local formatting and CI enforcement share the same decisions and configuration.
+
+The existing future two-pass idempotence conformance requirement remains independent; --check does not require a second format pass on every invocation. It adds no full-compilation or name/type-check prerequisite. Exact numeric exit codes, diagnostic/diff presentation, file/configuration discovery, and empty-selection behavior remain open. This is a selected command contract, not an implemented CLI or an executed CI result.
 
 ## Run and build proposals
 
