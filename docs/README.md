@@ -8,7 +8,8 @@ Design snapshot: **2026-10-25**. Stage: **planning; no implementation**.
 2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
 3. [Current decisions and open questions](decisions-and-open-questions.md): selected contracts and work still to settle.
 4. [Provisional grammar sketch](grammar-sketch.md): the current syntax outline and its remaining boundaries.
-5. [Normative page map](normative-pages.md): which page owns each current rule and which pages are historical.
+5. [Current design specification](spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
+6. [Normative page map](normative-pages.md): which page owns each current rule and which pages are historical.
 
 The detailed reference below develops these foundations one concept at a time.
 

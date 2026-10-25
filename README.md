@@ -10,6 +10,7 @@ The project is currently **planning only**. These documents record the design di
 - [Principles and goals](docs/principles.md)
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)
+- [Current design specification](docs/spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
 - [Optional leading separators for expressions, additive chains, patterns, and unions](docs/leading-separators.md)
 - [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [Logical tuple unpacking](docs/tuple-unpacking.md): emit labeled fixed items and tail elements, then reconstruct under the destination contract.

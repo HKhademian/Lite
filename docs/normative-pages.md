@@ -6,6 +6,8 @@ A **normative page** states a selected or established rule. A **supporting page*
 
 If two pages conflict, the normative page for that area and the [decision ledger](decisions-and-open-questions.md) win. Report the conflict rather than synthesizing a third rule.
 
+The [current design specification](spec/README.md) provides stable area IDs and a condensed summary. It is subordinate to these normative pages and the ledger.
+
 ## Map
 
 | Area | Start with | Also normative for narrower contracts |
