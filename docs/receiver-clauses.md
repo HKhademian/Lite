@@ -1,6 +1,6 @@
 # Receiver clauses
 
-Status: **optional hook receivers requested; typed/pattern-dispatch chains exploratory**.
+Status: **historical hook-receiver exploration; hook receivers are retired, while Result recovery receivers and typed `else` filters are selected and mixed-channel receiver typing remains open**.
 
 **Loop update, 2026-10-19:** the loop-completion receiver examples and action/result distinction below are historical. Current loop completion uses then { ... } with .count/.value from the owning context, including untagged loops, and ordinary tail-expression results. Then(result), then(done), and then(_) are retired for loops. Result recovery receivers remain unchanged; body-wide cleanup remains deferred. See [current loop completion](loop-completion.md).
 
@@ -18,7 +18,7 @@ then(_) { replacement_value }
 
 Receivers for `else` and `finally` were considered historically. The user selected cleanup-only `finally` with no pending-outcome receiver or transformation; recovery receivers remain separate from completion metadata.
 
-Result recovery has selected forms `operation() else(error) { fallback }` and `operation() else { fallback }`. When a Result-only handler includes a receiver, it receives the operation's statically typed recoverable error. Omitting the receiver introduces no implicit error binding. Both forms produce values: success type `T` and normal fallback type `D` form `T | D`. An explicitly exiting recovery branch adds no local alternative. This differs from the loop completion hooks below: omitting a Result recovery receiver does not select action-only behavior. The later shared else direction also supports typed panic capture. Its combined receiver type and selective typed patterns remain proposals in [recovery receiver types](recovery-receiver-types.md); general dispatch chains remain separate. See [Result and errors](result-and-errors.md).
+Result recovery has selected forms `operation() else(error) { fallback }` and `operation() else { fallback }`. When a Result-only handler includes a receiver, it receives the operation's statically typed recoverable error. Omitting the receiver introduces no implicit error binding. Both forms produce values: success type `T` and normal fallback type `D` form `T | D`. An explicitly exiting recovery branch adds no local alternative. This differs from the loop completion hooks below: omitting a Result recovery receiver does not select action-only behavior. The later shared else direction also supports typed panic capture. Typed receiver filters are selected; the combined mixed-channel receiver type, origin representation, and general dispatch chains remain open. See [recovery receiver types](recovery-receiver-types.md) and [Result and errors](result-and-errors.md).
 
 ## Action versus result
 
@@ -51,7 +51,7 @@ then(result) {
 
 This was the earlier receiver-based exploration for optional loop accumulators. Current loops use typed zero-initialized `.value` without an automatic `Option` wrapper or completion receiver. General Option values still represent explicit presence/absence; loop completion reads the owning loop context directly.
 
-## Typed clause proposal
+## Historical typed hook proposal
 
 The discussion also considered:
 
@@ -81,4 +81,4 @@ Current loop `then` has no receiver: it reads the owning context's `.value`, `.c
 - [Option](option.md)
 - [Tuples and patterns](tuples-and-patterns.md)
 - [Loop completion](loop-completion.md)
-- These hook and dispatch forms are design proposals. Existing language references in [references](references.md) do not establish their semantics.
+- The hook forms on this page are historical. Result recovery receivers and typed `else` filters are selected. Existing language references in [references](references.md) do not establish the retired hook semantics.

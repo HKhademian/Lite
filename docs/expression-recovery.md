@@ -164,13 +164,13 @@ Typed receiver filtering is selected: a filter handles only its matching type. T
 
 For returned-error handling alone, the receiver retains the operation's declared E. A known intrinsic fault can have a precise fault category. If arbitrary called code can panic without public panic-effect declarations, a general boundary needs a defined typed panic carrier or another explicit typing mechanism; it cannot claim to know a finite precise union merely by looking at T ! E.
 
-When one boundary handles both channels, preserve their origin if payload types overlap. A discriminated returned-error versus panic representation is one candidate; flattening both into an untagged payload union loses that distinction. Carrier variants, receiver-pattern syntax, payload ownership, category extensibility, and representation remain proposals. Receiverless else avoids binding a payload but does not settle the missing type contract.
+When one boundary handles both channels, preserve their origin if payload types overlap. A discriminated returned-error versus panic representation is one candidate; flattening both into an untagged payload union loses that distinction. Typed receiver patterns are selected; carrier variants, mixed-channel receiver typing, payload ownership, category extensibility, and origin representation remain open. Receiverless else avoids binding a payload but does not settle the missing type contract.
 
 Handling a panic does not require listing it in every function's Result error declaration. Explicitly converting it into return .err(mapped_error) does require that returned error to fit the enclosing function's declared contract. No implicit catch-and-convert or broadening of E is introduced.
 
 ## State, cleanup, and runtime
 
-An invalid index or empty pop must be detected before that operation performs invalid access or changes the collection. Recovery does not roll back earlier successful mutations or argument effects. General cross-call recovery must define cleanup, partially constructed values, and mutable access after failure. Cleanup-failure precedence is selected, while aggregate representation and typed-handler inspection remain open.
+An invalid index or empty pop must be detected before that operation performs invalid access or changes the collection. Recovery does not roll back earlier successful mutations or argument effects. General cross-call recovery must define cleanup, partially constructed values, and mutable access after failure. Cleanup-failure precedence is selected, while the `&` form's public value/operations and inspection remain open.
 
 This is expression-scoped exception handling for panics, even though its source syntax reuses else. Its implementation might use exception-style unwinding or explicit compiler/runtime fault transport; that mechanism and its ABI must be designed. A local intrinsic handler can often compile to a check and branch. That does not establish the costs of arbitrary cross-call capture or prove C-level performance. No mechanism, cost-free unwinding, or absence of runtime support is claimed.
 

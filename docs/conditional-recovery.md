@@ -179,7 +179,7 @@ conditional_core := "if" condition block
 conditional_recovery := "else" "(" receiver_pattern ")" block
 ```
 
-This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, and cleanup-failure precedence is recorded in [the finally contract](finally.md#pending-outcomes). Exact attachment scope/grammar and aggregate handling remain open. Complete receiver-pattern policy, precedence with condition-local recovery, handler typing, and any filter semantics also remain open.
+This proposal fragment records the retired external conditional-recovery placement; it is not current grammar. The selected construct-level order is `then` followed by cleanup-only `finally`, and cleanup-failure precedence is recorded in [the finally contract](finally.md#pending-outcomes). Exact attachment scope/grammar and the `&` form's public value/operations remain open. Typed receiver filtering is selected; precedence with condition-local recovery and handler typing remain open. Complete receiver-pattern policy and any filter semantics are no longer open.
 
 No newline, indentation, capitalization, or type-checking guess chooses between a false branch and a recovery clause. Parse else if, else followed by a body, and else followed by a receiver header as distinct forms. Existing mandatory braces retain unambiguous nesting.
 
