@@ -250,6 +250,28 @@ Assume change_pair requires mut Pair and var Int and returns Unit. Its whole-pay
 
 Preserve callee-first/source-argument evaluation, select each location once, and keep the containing storage valid for the grants' duration. Distinct field slots do not prove that reference-valued payloads inside them have disjoint targets. This selection covers known disjoint inline sibling storage and known same-field/whole-parent overlap; dynamic indices, reference aliases, overlapping views, resource invariants, callbacks/reentrancy, and a complete overlap/borrow enforcement model remain open. Uncertain overlap receives no new blanket acceptance or runtime repair rule here.
 
+## Distinct constant fixed-array element grants selected
+
+Selected on **2026-10-25**: known-valid distinct constant positions in an initialized fixed array designate separate element locations and may each supply one active var grant. The caller must already have writable array access, and every element must satisfy its parameter's ordinary read/write contract. Using swap from the inline-field example:
+
+```text
+mut values := [10, 20];
+swap(var values[0], var values[1]);
+/* values[0] is 20; values[1] is 10. */
+```
+
+The fresh literal infers [Int; 2]. Positions 0 and 1 are in bounds and designate separate Int slots in this array. Sharing an array owner does not make them the same source location. The array's mut access supplies var replacement access to each element while the values binding stays fixed. There is one active write holder per element, with no additional whole-binding var declaration, detached copy, or implicit copy-back.
+
+```text
+swap(var values[0], var values[0]); /* Rejected: one element location twice. */
+```
+
+Reject the known repeated location regardless of matching parameter types or whether the body writes. Compare selected location identity, not equal element contents or merely different source spellings. The existing parent/child overlap principle also prevents an overlapping whole-array write grant from bypassing active element holders.
+
+Preserve callee-first/source-argument evaluation, select each element location once, and keep its containing storage valid throughout the call. Ordinary initialization, bounds, access, lifetime, and entry-type obligations still apply. This selection neither constructs uninitialized elements nor changes the bounds-fault contract, public pointer syntax, or physical/zero-sized layout rules.
+
+Runtime-index cases such as swap(var values[i], var values[j]) still require a separate rule for proving or checking distinctness; different index names alone are insufficient. No blanket acceptance, runtime alias check, or blanket rejection of all uncertain cases is selected here. Reference-target aliases, overlapping views/slices, callbacks/reentrancy, resizing/location invalidation, and full overlap enforcement remain open.
+
 ## Nested forwarding of a write grant selected
 
 Selected on **2026-10-24**: a var-qualified parameter may explicitly forward its existing caller-location grant to one nested call. This is a temporary handoff of the same write authority, not a second active grant or new local storage:

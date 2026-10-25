@@ -50,6 +50,8 @@ Updating a field or collection element requires `mut`, an accessible writable ta
 
 Selected on **2026-10-25**: mut parent access may supply var replacement grants for accessible inline fields. In swap(var pair.left, var pair.right), distinct inline Int fields have separate storage and one active write holder each; parent-binding reassignment remains unavailable for fixed mut pair. Reject repeated-field and overlapping whole-parent/field write grants. This projects existing field authority, without granting write access to unrelated payloads or deciding reference-target aliasing. See [disjoint inline fields](call-replacement-flow.md#disjoint-inline-field-grants-selected).
 
+Selected on **2026-10-25**: mut access to an initialized fixed array may supply var grants for known-valid distinct constant element positions. In swap(var values[0], var values[1]) for mut values := [10, 20], each Int slot has one active writer and the array binding stays fixed. Reject the same position twice; runtime-index distinctness and reference-target aliases remain open. See [fixed-array element grants](call-replacement-flow.md#distinct-constant-fixed-array-element-grants-selected).
+
 Fresh construction can supply writable access without a redundant copy. A mutable declaration initialized from an existing copyable record, such as mut x := x, explicitly creates a mutable shallow copy: all inline nested records are copied, while reference fields preserve their targets and permissions. It does not upgrade access to the original or recursively clone referenced data. General transfer, resource copy eligibility, and ownership rules remain open; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 ### Read-only access versus frozen data

@@ -18,6 +18,10 @@ The first supplies all elements. The second applies the selected semantic-zero c
 
 An array field contributes its inline elements to a containing record, consistent with nested record values. Permitted copies copy those inline values under their element contracts and preserve references inside elements without cloning reference targets. Noncopyable/resource elements require their eventual copy policy.
 
+## Constant-position write grants selected
+
+Selected on **2026-10-25**: an initialized fixed array with writable mut access may supply separate var grants for known-valid distinct constant element positions. For mut values := [10, 20], swap(var values[0], var values[1]) is valid when swap requires two var Int parameters: positions 0 and 1 are distinct locations in [Int; 2]. The binding stays fixed while each element receives one replacement grant. Repeating position 0 is rejected. Preserve location validity, initialization, bounds, and ordinary compatibility; runtime-index distinctness checks remain open. See [fixed-array element grants](call-replacement-flow.md#distinct-constant-fixed-array-element-grants-selected).
+
 ## Runtime size fixed after construction
 
 `Array<T>` is the candidate for an owner whose length is chosen at runtime and never changes afterward. Its size is not part of the static type. It owns its separately allocated element region; its descriptor can be stored inline in another record, while its runtime-sized elements cannot all contribute to that record's compile-time layout.
