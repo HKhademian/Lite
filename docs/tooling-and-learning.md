@@ -1,6 +1,6 @@
 # Tooling and learning
 
-Status: **official formatter required; compact/multiline leading-separator presentation, unchanged-file handling of malformed/incomplete source, and formatter idempotence selected 2026-10-25; broader toolchain and teaching approach proposed**.
+Status: **official formatter required; compact/multiline leading-separator presentation, unchanged-file handling of malformed/incomplete source, idempotence, and verification before writing selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
 ## Purpose
 
@@ -49,6 +49,20 @@ Leading separators, compact/multiline choices, indentation, line wrapping, comme
 Idempotence is a required formatter conformance check: for each successful-format fixture, capture the first output, format it again under the same version/settings, require both passes to succeed, and compare the complete outputs. Cover compact/multiline and mixed chains, grouped/nested expressions, pattern alternatives/shared guards, plain unions, singletons, ordinary/raw comments, and semicolon boundaries. A failed or skipped second pass is not evidence of idempotence. This does not require full type checking before formatting or create a new CLI verification flag.
 
 Malformed input retains the separate unchanged-file/failure contract below; it is not a successful formatting fixture. This selects a future conformance requirement, not an implemented formatter, an executed LiteScript check, or proof that all inputs satisfy it.
+
+## Verification before writing
+
+Selected 2026-10-25: generate a file's proposed formatted output in memory, parse it again, and verify it against the original before writing the file or applying formatter edits to an editor buffer. Successful output parsing alone is not the complete check; require preservation of executable structure, source-imposed typing requirements, and the separate comment contract.
+
+The verifier may account only for explicitly approved formatting differences, such as optional leading separators at admitted boundaries and redundant separators under their selected rules. Preserve grouping, item/body boundaries and tail results, operation order, binding scopes, and declared constraints. Do not erase a typing requirement during normalization: ready := and connected; requires Bool even for one operand, so dropping its leader cannot be accepted merely because an unprefixed connected parses as an expression. This does not select singleton-leader removal or a type-check-dependent formatter rewrite.
+
+Check ordinary/raw comment contents and attachment to the same nearby code separately from executable structure. Parsing that structure without comments cannot establish preservation of opaque comment text or attachment. Permit the selected indentation/surrounding line-break changes while rejecting dropped or changed comment contents and attachment to unrelated code. The verifier must not parse a comment body as code to perform this check.
+
+Write/apply the proposed output only after verification succeeds. If the generated output cannot parse, its checked structure or requirements differ, comment checks fail, or equivalence cannot be established, discard that proposed output and leave the entire affected file/buffer unchanged. Report a formatter-verification error rather than presenting a generated-output defect as an error in the user's original source. Continue processing other valid requested files, but return overall failure if any file fails verification; exact numeric exit codes remain open. This uses the same per-file preservation scope as malformed input, without rolling back other successfully formatted files.
+
+No full compilation, name resolution, type checking, or execution is required by this check. The comparison must retain syntactically imposed constraints even when symbol types are unavailable. Exact comparison normal forms, attachment identity, approved-normalization implementation, diagnostic rendering, and write/editor protocols remain open. Do not claim a successful verification when the implementation cannot establish the required preservation.
+
+Future formatter conformance must cover accepted approved rewrites and rejected generated-output changes, including lost singleton Bool requirements, regrouped/reordered operations, changed binding/item boundaries, and dropped/altered/reassociated comments. The separately selected idempotence check remains required as well. This is a formatter contract and future verification requirement, not an implemented checker or an executed LiteScript conformance result.
 
 ## Incomplete or malformed source
 

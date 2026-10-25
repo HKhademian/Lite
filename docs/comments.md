@@ -89,6 +89,8 @@ This selects an observable formatter contract, not a parser/trivia data structur
 
 Comment layout and attachment must also satisfy the selected [formatter idempotence rule](tooling-and-learning.md#formatter-stability-and-idempotence): a second successful pass with the same version/settings leaves the complete output unchanged. Allowing surrounding line breaks or indentation to change on the first pass does not permit repeated movement on later passes. Future conformance fixtures must cover ordinary/raw comments without interpreting their opaque bodies as code.
 
+Under selected [verification before writing](tooling-and-learning.md#verification-before-writing), compare opaque comment contents and attachment separately from the reparsed executable structure before applying formatter output. A comparison that ignores comment data cannot establish this contract. Changes to indentation at the source position/surrounding breaks remain allowed; dropped, altered, or unrelatedly reattached comments reject the proposed output and leave the file/buffer unchanged. Exact attachment identities/checker internals remain open; comment bodies never become executable verification input.
+
 ## Missing delimiters
 
 An unterminated ordinary comment or raw fence is a compile-time error. The compiler reports the unmatched opener; it must not guess where executable code resumes.
