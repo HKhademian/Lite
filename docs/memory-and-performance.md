@@ -67,7 +67,7 @@ For the same ordered concrete storable component types, adding, removing, or cha
 (teacherId: Int, studentId: Int)
 ```
 
-All three have the same ordered component types and storage layout. The labels give different semantic roles, so structural identity still distinguishes their contracts, while an explicit compatible destination can add, remove, or change labels without moving values. See [labels under an explicit destination type](tuple-label-conversions.md). Naming a slot studentId does not create a new nominal scalar type for its Int payload. Numeric and named access to one labeled position select the same component.
+All three have the same ordered component types and storage layout. The labels give different semantic roles, so structural identity still distinguishes their contracts, while a written destination type at an explicit receiving declaration can add, remove, or change labels without moving values. Ordinary assignments, arguments, and returns retain label checks; a type merely known elsewhere is not the bypass. See [labels under an explicit destination type](tuple-label-conversions.md). Naming a slot studentId does not create a new nominal scalar type for its Int payload. Numeric and named access to one labeled position select the same component.
 
 The user's schematic ...T1.T2.T3... describes the ordered component product. The dots are writing separators, not stored bytes or a packed-layout directive. Exact target layout and ABI remain separate; labels alone never change the chosen layout. This does not promise layout equality after changing component types or their order, or after replacement changes a slot's eventual resolved type.
 

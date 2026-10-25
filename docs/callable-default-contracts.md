@@ -139,7 +139,7 @@ This supersedes the earlier claim that applicable user default expressions must 
 
 ## Remaining boundaries
 
-The public n?/?: omission marker supersedes the earlier = ... form. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission and selected destination input-label adaptation, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
+The public n?/?: omission marker supersedes the earlier = ... form. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission and explicit typed-declaration input-label conversion (ordinary transfers still check labels), lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
 
 Zero-callable omission is now selected above: no actual default definition or execution is required. Its internal omitted-input representation remains explicitly deferred, including the possible non-public unvalued state; no public undefined semantics are selected.
 

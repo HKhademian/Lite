@@ -1,6 +1,6 @@
 # Named arguments and named tuples
 
-Status: **named call permutations and validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit destination label conversion, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Tuple label compatibility and structural identity are also selected: differently labeled stored tuples now admit positional label conversion under explicit compatible destination types; identical ordered labels and component types describe the same tuple type. Complete recursive grammar, other shape/type conversions, remaining callable compatibility beyond label adaptation, and explicitly marked extensions remain open**.
+Status: **named call permutations and validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit destination label conversion, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Tuple label compatibility and structural identity are also selected: differently labeled stored tuples admit explicit typed conversion, while ordinary transfers check labels; identical ordered labels and component types describe the same tuple type. Complete recursive grammar, other shape/type conversions, remaining callable compatibility beyond label adaptation, and explicitly marked extensions remain open**.
 
 The [concrete routing case catalogue](named-input-routing.md) records the selected mapping algorithm and construction/storage boundary with valid and rejected examples. Remaining recommendations are explicitly marked.
 
@@ -65,9 +65,9 @@ result := area(width = 640, height = 480);
 
 Public labels come from the caller-visible destination callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
 
-A full independent definition such as fn(width: Int, height: Int): Int { ... } supplies its inferred public labels. Selected 2026-10-25: a stored callable may be assigned to an established compatible destination with other labels; callers through that destination use its labels, while the implementation retains its local bindings and default expressions. For source := fn(n: Int = 2): Int { n * 10 }, target: fn(amount?: Int): Int = source admits target(amount = 3) and target(), while target(n = 3) is rejected. Source still accepts n, not amount.
+A full independent definition such as fn(width: Int, height: Int): Int { ... } supplies its inferred public labels. Selected 2026-10-25: a stored callable may be converted by an explicitly typed receiving declaration with other public labels; ordinary reassignment/passing/return remain label-sensitive; callers through that destination use its labels, while the implementation retains its local bindings and default expressions. For source := fn(n: Int = 2): Int { n * 10 }, target: fn(amount?: Int): Int = source admits target(amount = 3) and target(), while target(n = 3) is rejected. Source still accepts n, not amount.
 
-This selects the positional label-adaptation policy and supersedes the earlier recommendation to require matching public labels. Other type/access/result/error/omission checks remain enforced. General callable variance, overloads, captures, and full grammar remain separate. Underscore remains an ordinary readable identifier; public name adaptation does not turn it into an unnamed-input marker. See [labels under an explicit destination type](tuple-label-conversions.md).
+This selects an explicit positional label-conversion bypass; ordinary transfers still require matching public labels. A destination type merely known elsewhere is not a conversion site. See [explicit conversion and ordinary label checks](tuple-label-conversions.md#ordinary-transfers-check-labels). Other type/access/result/error/omission checks remain enforced. General callable variance, overloads, captures, and full grammar remain separate. Underscore remains an ordinary readable identifier; public name adaptation does not turn it into an unnamed-input marker. See [labels under an explicit destination type](tuple-label-conversions.md).
 
 ## Selected shorthand and numeric access
 
@@ -103,18 +103,18 @@ Label propagation through inference, branches, unions, generic APIs, and tuple s
 
 A width/height tuple would not automatically fit a left/top tuple, even when both contain two Int values. Explicit reconstruction could rename components. This protects meaning conveyed by labels but introduces additional compatibility rules alongside nominal record declarations.
 
-The initial comparison offered label-sensitive rejection versus positional adaptation. The later user clarification on 2026-10-25 selects explicit destination label conversion: preserve component positions and concrete types, and expose the destination labels. This supersedes the earlier requirement to reconstruct every differently labeled stored tuple.
+The initial comparison offered label-sensitive rejection versus positional adaptation. The later user clarification on 2026-10-25 selects explicit typed-declaration label conversion, with ordinary transfers remaining label-sensitive: preserve component positions and concrete types, and expose the destination labels. This supersedes the earlier requirement to reconstruct every differently labeled stored tuple.
 
 ### Selected: names identify contracts, explicit destinations may rename
 
-Labels retain semantic meaning and structural identity while adding no storage footprint. An explicit destination can give the same positions different labels:
+Labels retain semantic meaning and structural identity while adding no storage footprint. A written destination type on the receiving declaration can give the same positions different labels:
 
 ```text
 size := (width = 640, height = 480);
 point: (x: Int, y: Int) = size; /* valid: x = 640, y = 480 */
 ```
 
-A stored (r = 20, l = 10) admitted as (l: Int, r: Int) yields l = 20 and r = 10, with no permutation. To obtain source l then source r, reconstruct by name. Named/unnamed label conversion is likewise selected when positions/types/access agree. Inference retains source labels, and ordinary stored tuple identity remains the ordered labels plus resolved component types. Separate record declarations remain nominal.
+A stored (r = 20, l = 10) admitted as (l: Int, r: Int) yields l = 20 and r = 10, with no permutation. To obtain source l then source r, reconstruct by name. Named/unnamed label conversion is likewise selected at an explicit typed receiving declaration when positions/types/access agree. Plain assignment, tuple-valued argument passing, and returning existing values do not implicitly bypass label checks. Inference retains source labels, and ordinary stored tuple identity remains the ordered labels plus resolved component types. Separate record declarations remain nominal.
 
 Fresh constructors still route their named contributions into the destination by label. Stored whole-value admission uses positions instead. Source expressions evaluate once; ordinary copies and permissions remain applicable. Static label adaptation introduces no runtime label dictionary, shared-storage alias, byte reinterpretation, or mandated wrapper. General type conversion and recursive grammar remain separate. See [labels under an explicit destination type](tuple-label-conversions.md).
 

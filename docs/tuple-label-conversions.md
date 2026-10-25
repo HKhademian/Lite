@@ -1,6 +1,27 @@
 # Tuple labels under an explicit destination type
 
-Status: **selected 2026-10-25, superseding the earlier rejection of differently labeled stored tuples; design-only, not compiler/runtime verification**.
+Status: **selected 2026-10-25: explicit typed label conversion is allowed, while ordinary assignments/arguments/returns check labels; design-only, not compiler/runtime verification**.
+
+## Ordinary transfers check labels
+
+Selected on **2026-10-25**, clarified by the user: ordinary tuple/callable compatibility remains label-sensitive. A known expected type alone does not authorize relabeling. Plain assignment to an existing binding, argument passing, and returning an already constructed value must satisfy the destination's label contract as well as its ordinary type/access/omission requirements.
+
+```text
+size := (width = 640, height = 480);
+var point := (x = 0, y = 0);
+
+point = size; /* rejected: labels differ */
+
+/* Explicitly written destination type permits positional relabeling */
+renamed: (x: Int, y: Int) = size;
+point = renamed; /* valid: labels now match */
+```
+
+The bypass is an explicitly written destination tuple or callable type on the receiving declaration, including a valid transparent type alias or an established partially inferred type schema. It must appear at the conversion site; a parameter/result annotation elsewhere, or the already known type of a mutable variable, is not that bypass. A new binding with := preserves source labels instead of renaming them.
+
+For calls and returns, first create a compatible value through such an explicit typed declaration, then pass or return it normally. No inline cast syntax is selected by this rule. Fresh contextual constructors and implementation literals retain their existing rules: choosing labels while constructing a new value or defining a contextual callable is distinct from implicitly relabeling an existing value.
+
+This narrows the earlier 2026-10-25 rule that also admitted relabeling through any already typed target, declared parameter, or expected return contract. Those ordinary transfers now check labels; explicit typed conversion remains allowed.
 
 ## Labels can change while positions stay fixed
 
@@ -15,7 +36,7 @@ point.y;     /* 480: destination position 1 */
 size.width;  /* still 640; the source contract is unchanged */
 ```
 
-An annotated binding, assignment into an already established destination type, or admission to a declared tuple-valued parameter can supply that destination contract. Inference alone preserves source labels: inferred := size still exposes width/height. No new cast spelling is needed for the selected assignment/admission cases.
+Only an explicitly written destination type at the receiving declaration supplies the label-conversion bypass. Plain assignment to an already typed target, declared tuple-valued argument admission, and expected return types do not silently convert mismatched labels. Inference preserves source labels: inferred := size still exposes width/height. See the ordinary-transfer rule above.
 
 This is a type-directed label conversion under a known destination, not byte-size-based reinterpretation. Equal byte counts do not justify Int/Float punning, scalar/singleton conversion, changed component types, a new shape, different permissions, or an invalid copy. Ordinary value transfers retain copy semantics; this does not select shared source storage or implicit references. Same ordered concrete component types retain their established size/alignment/offsets regardless of labels, without selecting a new ABI or measuring an implementation.
 
@@ -50,11 +71,11 @@ renamed: (left: Int, top: Int) = plain;
 /* plain.0 = renamed.left = 640; plain.1 = renamed.top = 480 */
 ```
 
-The same label-only rule applies to mixed named/unnamed positions under an established destination schema. It does not repack a fixed prefix or array tail, change extent/family, flatten a nested tuple, erase an actual member, or invent defaults. Any whole-composition proof already required for a shape remains required. Optional ordinary stored-tuple elements and their absence semantics remain separate.
+The same explicit typed-conversion rule applies to mixed named/unnamed positions; ordinary transfers still require their label/absence contracts to match. It does not repack a fixed prefix or array tail, change extent/family, flatten a nested tuple, erase an actual member, or invent defaults. Any whole-composition proof already required for a shape remains required. Optional ordinary stored-tuple elements and their absence semantics remain separate.
 
 ## Callable public labels follow the destination
 
-A callable assignment may likewise change public input labels while preserving its ordered input slots and otherwise compatible contracts. The implementation's local names and default definitions remain its own:
+An explicit typed receiving declaration may likewise convert a stored callable's public input labels while preserving its ordered slots and otherwise compatible contracts. Plain reassignment, passing, and return do not perform that conversion implicitly. The implementation's local names and default definitions remain its own:
 
 ```text
 source := fn(n: Int = 2): Int { n * 10 }
@@ -68,7 +89,7 @@ target(n = 3);       /* rejected: target's public label is amount */
 source(amount = 3);  /* rejected: source's public label is n */
 ```
 
-The caller resolves amount to input position 0 using target's visible contract. The implementation still binds that position as n. Both contracts can coexist without runtime label strings or rewriting the implementation's names. The same rule applies when passing, returning, or replacing an otherwise compatible callable under an established destination contract. No runtime lookup of implementation names or required physical wrapper is introduced.
+The caller resolves amount to input position 0 using target's visible contract. The implementation still binds that position as n. Both contracts can coexist without runtime label strings or rewriting the implementation's names. After explicit conversion, the resulting callable can be passed, returned, or assigned where its new public label contract matches. A destination contract known only from ordinary passing/return/reassignment does not authorize conversion. No runtime lookup of implementation names or required physical wrapper is introduced.
 
 Earlier-parameter defaults keep their implementation-local bindings too:
 
@@ -82,7 +103,7 @@ Names absent from the destination are unavailable to named callers; an unnamed d
 
 Only label adaptation is selected here. Shape, component types, access, result/error contracts, and omission handling must still satisfy their established checks. Required public views continue to require arguments; omission-capable views need valid implementation handling, including the selected zero-callable behavior. No default expression is copied into the public type, changed, or executed merely by relabeling. General variance, unrelated callable/result conversions, captures, lifetime/ownership, and calling convention remain separate.
 
-Intrinsic .call and ordinary named-call routing still use the visible callable's labels. A tuple-valued parameter is one payload whose destination type can admit a label conversion; that is distinct from applying a supplied-input pack whose components are routed as call arguments.
+Intrinsic .call and ordinary named-call routing still use the visible callable's labels. A tuple-valued parameter is one payload whose labels must already match, or be explicitly converted before passing; that is distinct from applying a supplied-input pack whose components are routed as call arguments.
 
 ## Identity, inference, and remaining boundaries
 
