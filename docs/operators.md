@@ -1,11 +1,11 @@
 # Operators
 
-Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; identity leading plus on additive chains selected 2026-10-25; basic arithmetic grouping selected 2026-10-25; comparison chaining and logical direction established; remaining expression integration and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; identity leading plus on additive chains selected 2026-10-25; basic arithmetic grouping selected 2026-10-25; comparison chaining and logical direction established; power spelling and explicit unary-minus grouping selected 2026-10-25; remaining expression integration and numeric semantics open**.
 
 ## Working operator set
 
 ```text
-+  -  *  /  //  %  %%
++  -  *  /  //  %  %%  **
 ==  =!=  >  >!  <  <!  >=  >!=  <=  <!=
 and  or  not
 =
@@ -39,7 +39,13 @@ Binary operators at each level associate left to right. Parentheses override gro
 
 An optional leading + at a complete additive-chain entry leaves this grouping unchanged. Binary associativity does not authorize regrouping or reordering actual operations; ordinary operands still evaluate left to right under the separate [evaluation contract](evaluation-order.md#operator-operands).
 
-This selects the basic ladder, not a completed expression grammar. Exponentiation (`**` or another spelling), its relationship to unary minus, power updates, bitwise operations, complete unary/call/access/range/recovery integration, and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
+This selects the basic ladder, not a completed expression grammar. The `**` power spelling and explicit grouping at the unary-minus/base boundary are selected separately below. Power association, complete precedence/integration, operand/result typing, power updates, bitwise operations, and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
+
+## Power and unary minus selected
+
+Selected 2026-10-25: use `**` for power and reject an unparenthesized unary-minus/power spelling such as -2 `**` 2 or -base `**` exponent. Require (-base) `**` exponent for a negative base, or -(base `**` exponent) to negate the completed power. The odd case -2 `**` 3 is also invalid even though its two mathematical interpretations both give -8. Outer grouping alone, (-2 `**` 2), does not clarify the inner boundary. This is a syntax restriction, independent of values, types, whitespace, comments, and constant folding.
+
+This selects the spelling and grouping requirement, not a complete power contract. Chained-power association, right-operand forms, full precedence/recursive grammar, result types, and exact numeric/fault rules remain open; `**=` is not selected. See [power and negation](power-and-negation.md) for primary-source comparisons and the selected distinction from Python/Lua precedence.
 
 ## Division
 
@@ -107,7 +113,7 @@ To negate only `a` before comparing:
 (not a) == b
 ```
 
-The basic arithmetic levels and left association above are selected. The full grammar must still integrate unary forms, ranges, calls/access, and recovery; power remains unselected. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
+The basic arithmetic levels and left association above are selected. The full grammar must still integrate unary forms, ranges, calls/access, and recovery; power requires explicit grouping at the unary-minus/base boundary, while its remaining contracts stay open. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
 ## Optional leading logical separators selected
 

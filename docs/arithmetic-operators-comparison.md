@@ -1,6 +1,6 @@
 # Arithmetic operators across languages
 
-Status: **primary-source comparison researched 2026-10-25; basic LiteScript arithmetic grouping selected; exponentiation and additional operators remain open**. This document compares language contracts. It does not establish a LiteScript parser or runtime.
+Status: **primary-source comparison researched 2026-10-25; basic LiteScript arithmetic grouping selected; remainder/modulo symbols and names and explicit signed-power grouping subsequently selected; remaining power contracts and other additional operators stay open**. This document compares language contracts. It does not establish a LiteScript parser or runtime.
 
 ## Selected LiteScript baseline
 
@@ -12,11 +12,11 @@ Within the selected arithmetic set, precedence runs from tighter to looser:
 
 Binary operators at each level associate left to right. Parentheses override grouping. Thus `a - b - c` groups as `(a - b) - c`, and `a / b * c` as `(a / b) * c`. Associativity does not permit algebraic reassociation. Operands retain LiteScript's separate left-to-right evaluation contract.
 
-The optional leading `+` at a complete additive-chain entry is identity punctuation, including for one operand. It preserves value and type without promotion, conversion, an implicit zero, or an extra operator invocation. Minus retains negation. No redundant leading `*`, `/`, `//`, `%`, `%%`, or prospective power operator follows from that rule.
+The optional leading `+` at a complete additive-chain entry is identity punctuation, including for one operand. It preserves value and type without promotion, conversion, an implicit zero, or an extra operator invocation. Minus retains negation. No redundant leading `*`, `/`, `//`, `%`, `%%`, or power operator follows from that rule.
 
 `/` produces a fractional quotient. Integer // rounds down. Selected 2026-10-25: % is remainder using a truncating mathematical quotient and the dividend's sign when nonzero; %% is modulo paired with floor // and the divisor's sign when nonzero. This uses Odin's symbols and Zig's names, superseding the earlier floor-paired % choice. These choices are independent of numeric representation and exact fault cases. See [operators](operators.md), [division](division.md), [leading separators](leading-separators.md), and [evaluation order](evaluation-order.md).
 
-`**`, `^`, power updates, bitwise operators, and wrapping/saturating arithmetic are not selected. The precedence of negation relative to a future power operator is also unselected. A complete expression grammar still needs integration with calls, access, ranges, types, and recovery.
+Power uses `**` with explicit unary-minus/base grouping, selected after this comparison; see [power and negation](power-and-negation.md). Chained-power association, full precedence/grammar, and numeric contracts remain open. ^, power updates, bitwise operators, and wrapping/saturating arithmetic are not selected. A complete expression grammar still needs integration with calls, access, ranges, types, and recovery.
 
 ## Java, C, C++, C#, and Python
 
@@ -116,20 +116,20 @@ For positive divisors, floor modulo and Euclidean modulo agree. Keeping the sele
 
 `//` is also a lexical choice: several C-family references use it for line comments. LiteScript already reserves it for division and uses its own block-comment rules. Adjacent stars need equal care: C/C++ can parse multiplication followed by dereference; Zig 0.15.2 gives `**` an array meaning. Preserve the selected [comment token boundaries](comments.md) rather than importing another lexer.
 
-### Power is the next independent decision
+### Power spelling selected; remaining contracts open
 
-My recommendation, still a proposal, is `**` with right association if LiteScript adopts a numeric power operator. That gives `2 ** 3 ** 2` the familiar power-tower grouping `2 ** (3 ** 2)`. The comparison supports two serious unary-minus policies:
+The user subsequently selected `**` power spelling and rejection of an unparenthesized unary-minus/base boundary. My recommendation of right association remains a separate proposal. That gives `2 ** 3 ** 2` the familiar power-tower grouping `2 ** (3 ** 2)`. The comparison supports two serious unary-minus policies:
 
 - Python/Lua-style precedence: ungrouped `-2 ** 2` means `-(2 ** 2)`, producing `-4`.
 - JavaScript-style restriction: reject that spelling and require the author to choose `(-2) ** 2` or `-(2 ** 2)`.
 
-The accepted basic ladder does not decide between them. The first follows conventional mathematical notation; the second forces the ambiguity into visible grouping. Either needs a separate grammar decision about signed exponents. Do not treat `^` as a universally familiar power symbol: it is bitwise XOR in Java, C, C++, C#, JavaScript, and Rust, while Lua uses it for power.
+The user selected the second policy on 2026-10-25: reject -2 `**` 2 and -2 `**` 3 and require (-2) `**` exponent or -(2 `**` exponent). The odd exponent is not an exception just because both interpretations give -8. Signed right operands, complete grammar, and numeric acceptance still need separate decisions. Do not treat `^` as a universally familiar power symbol: it is bitwise XOR in Java, C, C++, C#, JavaScript, and Rust, while Lua uses it for power.
 
 Power also needs operand/result typing, integer versus fractional exponents, negative bases, negative exponents, `0 ** 0`, zero to a negative exponent, overflow/precision, and exact typed-panic contracts. `**=` requires its own update decision. No decision here selects those behaviors, generic overloads, or new redundant leading operators.
 
 ### Base sign, exponent sign, and outer negation
 
-The power symbol and the signs of its operands require separate decisions. The following mathematical examples use proposed `**` notation; they are not accepted LiteScript syntax or typing rules:
+The power symbol and the signs of its operands require separate decisions. The following mathematical examples use the selected `**` spelling with explicit grouping; they do not establish complete LiteScript typing or numeric-domain rules:
 
 ```text
 (-2) ** 3;  /* -8: odd integer exponent preserves the negative sign */
@@ -144,7 +144,7 @@ Parity controls the sign for a finite nonzero negative base and integer exponent
 
 A negative base with a noninteger exponent is another domain decision. Python's `(-4) ** 0.5` produces a complex value; JavaScript Number power produces NaN. For zero to a negative exponent, Python raises ZeroDivisionError, while JavaScript Number power on positive zero produces positive infinity. These are foreign contracts, not LiteScript defaults. Sources: [Python expressions](https://docs.python.org/3/reference/expressions.html#the-power-operator) and [ECMAScript Number exponentiation](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html#sec-numeric-types-number-exponentiate).
 
-Keep four questions explicit: the power symbol, association, unary-minus grouping, and operand/result domains. Choosing `**` alone settles none of the other three. The inspected V appendix lists that symbol but does not establish its signed-power cases; Odin, Dart, Rust, and Zig do not gain a numeric power operator through this comparison. No complex-number default, implicit integer-to-fractional promotion, NaN/infinity policy, or new fault trigger is selected for LiteScript here.
+Keep four questions explicit: the power symbol, association, unary-minus grouping, and operand/result domains. The symbol and required grouping are now selected; association and complete domains remain open. The inspected V appendix lists that symbol but does not establish its signed-power cases; Odin, Dart, Rust, and Zig do not gain a numeric power operator through this comparison. No complex-number default, implicit integer-to-fractional promotion, NaN/infinity policy, or new fault trigger is selected for LiteScript here.
 
 ### Identity and evaluation remain independent contracts
 

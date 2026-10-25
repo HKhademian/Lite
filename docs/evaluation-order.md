@@ -24,7 +24,7 @@ with grouping `left() + (middle() * right())`, evaluation is:
 4. Compute the multiplication.
 5. Compute the addition.
 
-Multiplication binds more tightly than addition, but left() still runs first. The basic arithmetic ladder and binary left association are selected; exponentiation and the complete expression grammar remain open.
+Multiplication binds more tightly than addition, but left() still runs first. The basic arithmetic ladder and binary left association are selected; power spelling and explicit unary-minus grouping are selected separately, while remaining power contracts and the complete expression grammar stay open.
 
 Each executed operand occurrence is evaluated once. `read() + read()` contains two separate calls and executes both; evaluation order does not imply memoization.
 
@@ -189,7 +189,7 @@ Temporaries may be retained according to the eventual ownership model. This orde
 
 ## Open decisions
 
-Exponentiation, complete expression-grammar integration, record/collection initializer ordering, default-argument behavior, temporary lifetimes and destruction, borrow activation, and assignment aliasing rules remain open. No unspecified initializer or cleanup order is selected by this document.
+Remaining power contracts, complete expression-grammar integration, record/collection initializer ordering, default-argument behavior, temporary lifetimes and destruction, borrow activation, and assignment aliasing rules remain open. No unspecified initializer or cleanup order is selected by this document.
 
 ## Related concepts and references
 

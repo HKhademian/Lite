@@ -44,7 +44,7 @@ A signed 64-bit default `Int` was suggested, with explicit sized types and an op
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / // % %%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Exponentiation and its result types, signed-exponent rules, and precedence relative to negation remain open; [the language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / // % %%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
 
 ## Division
 

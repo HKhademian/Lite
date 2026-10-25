@@ -650,11 +650,17 @@ multiplicative_expression := arithmetic_unary { ("*" | "/" | "//" | "%" | "%%") 
 arithmetic_unary := "-" arithmetic_unary | arithmetic_primary
 ```
 
-Selected 2026-10-25: this is a nonempty arithmetic fragment, not a complete expression grammar. Fold each binary repetition left: a - b - c means (a - b) - c; multiplication/division/remainder bind above addition/subtraction, and prefix negation binds above those selected binary levels. Parentheses override grouping. Arithmetic_primary is a placeholder for tightly bound operands, including admitted grouped expressions; complete call/access/literal integration remains open. No power production or precedence relative to a future power operator is selected.
+Selected 2026-10-25: this is a nonempty arithmetic fragment, not a complete expression grammar. Fold each binary repetition left: a - b - c means (a - b) - c; multiplication/division/remainder bind above addition/subtraction, and prefix negation binds above those selected binary levels. Parentheses override grouping. Arithmetic_primary is a placeholder for tightly bound operands, including admitted grouped expressions; complete call/access/literal integration remains open. This fragment covers the basic ladder; it is not a complete production for the separately selected `**` power surface and unary-minus restriction below.
 
 The optional leading + is admitted only at a complete additive-chain entry. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
 
 Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; //, %, and %% gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+
+## Power and unary-minus boundary selected
+
+Selected 2026-10-25: `**` is the power spelling; reject -base `**` exponent without grouping. Require (-base) `**` exponent or -(base `**` exponent). This includes -2 `**` 3 despite equal mathematical results for the two interpretations; (-base `**` exponent) remains invalid inside its outer group. Whitespace, comments, leading identity +, constant values, and type-check success do not resolve the boundary. See [power and negation](power-and-negation.md).
+
+The arithmetic fragment above does not complete recursive power integration. Do not extend its generic unary production in a way that admits an ungrouped unary-minus/power form. Chained-power association, full precedence, signed/right-operand forms, and numeric domains remain open. No `**=` or redundant power prefix is introduced.
 
 ## Logical grouping
 
