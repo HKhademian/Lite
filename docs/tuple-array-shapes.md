@@ -140,6 +140,44 @@ Assume extra is a readable runtime-sized Int array. This construction is valid b
 
 Runtime-dependent source routing is not a lack of type/shape knowledge. The compiler must prove that every admitted routing satisfies the destination contract, including final-slot types, permissions, and required fixed coverage. Preserve written-order source evaluation and the selected storage/lifetime rules. Do not introduce implicit tuple defaults, dynamic tuple fields, or an allocation guarantee.
 
+### Destination types take precedence over inferred shape
+
+Selected in the follow-up discussion, 2026-10-25: an explicit or established expected tuple type is the reference contract for construction. Its fixed components, labels, and rest segment determine the destination shape. Infer only the information it leaves unspecified, such as the element type in (...rest:). Source-driven shape defaults apply only when no destination shape has been established; they never override an explicit one.
+
+For the following inferred examples, assume left and right are readable runtime-sized Int arrays:
+
+```text
+a := (...left);
+/* (...rest: Int); tail contains left's elements */
+
+b := (...left, ...right);
+/* (...rest: Int); tail contains left, then right */
+
+c := (...left, 1, 2);
+/* (...rest: Int); tail contains left, then 1, 2 */
+
+d := (1, 2, ...right);
+/* (:Int, :Int, ...rest: Int); fixed values 1, 2; tail contains right */
+
+e := (...left, 1, 2, ...right);
+/* (...rest: Int); tail contains left, then 1, 2, then right */
+```
+
+For these unnamed positional constructions, infer fixed components before the first runtime-sized array spread. That first spread opens one trailing array segment; subsequent positional values and array spreads contribute to the same segment in written order. Its inferred label is rest. Multiple array operands contribute values to one tail rather than declaring multiple named rest segments. Ordinary values after the first runtime spread do not become fixed suffix components.
+
+The tail's element type is the normalized union of established contribution types entering that tail; fixed-prefix components retain their individual types. Evaluate each operand once in written order. Fixed-size array spreads expand their statically known components at their written position before applying this inference rule. If every contribution has a statically known count and no explicit tail declaration requests otherwise, infer a fully fixed tuple.
+
+These defaults do not decide construction when a destination schema is given:
+
+```text
+strict: (:Int, :Int, ...rest: Int) = (...left, 1, 2);
+only_tail: (...rest:) = (1, 2, ...right);
+```
+
+strict follows its two-fixed-input destination shape. The complete supplied sequence guarantees two Int values; its first two values fill those slots, and they need not be the literal 1 and 2. only_tail instead has no fixed components because its annotation explicitly requests a rest-only shape; infer Int for its omitted element type.
+
+Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. General mixed named-entry composition, already-declared tail merging/collisions, and multiple stored rest segments remain open.
+
 ### Destination-guided repacking
 
 Selected in the follow-up discussion, 2026-10-25: a fixed-prefix-plus-tail tuple and a rest-only tuple can supply the same ordered inputs without being the same tuple type. Their fixed guarantees and observable tail members differ.
@@ -203,7 +241,7 @@ typed_empty: (...extra: Int) = (...extra = []);
 
 This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty literals without element-type evidence remain separate; known-type heterogeneous construction follows the union inference rule below.
 
-Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed-entry composition, collisions involving tail labels, multiple rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
+Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed named-entry composition, collisions involving tail labels, multiple stored rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
 
 ### Spreading a rest-bearing tuple
 

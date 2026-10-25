@@ -40,6 +40,8 @@ Underscore remains an ordinary identifier; = _ refers to its visible binding and
 
 Evaluate each supplied value once in written order. Shorthand adds no extra lookup, evaluation, clone, allocation, or mutation permission beyond the equivalent full entry.
 
+Without an established expected shape, unnamed positional construction infers its fixed prefix up to the first runtime-sized array spread, then one final rest array containing all following positional contributions. Thus (...left, 1, 2) is rest-only, while (1, 2, ...right) has two fixed components plus rest, for runtime-sized Int arrays. An explicit/expected tuple schema is authoritative and can request a different checked partition; infer only its omitted types. This does not select fixed suffixes or merging independently named tails. See [shape defaults and destination precedence](tuple-array-shapes.md#destination-types-take-precedence-over-inferred-shape).
+
 ## Storage layout selected
 
 The user selected identical component/singleton storage layouts, 2026-10-22: a singleton has exactly its component's size and alignment, with that component at offset zero and no wrapper metadata. Unit/() has zero payload bytes. Static type/shape distinctions remain; erased identical payloads cannot be distinguished at runtime without retained type information. Union alternatives still use their existing discriminator contract. See [layout rules and static versus runtime distinction](memory-and-performance.md#empty-and-singleton-tuple-layout). This storage guarantee does not by itself select parameter/return ABI, identity-erasing conversions, aliasing, or a runtime reflection mechanism.
