@@ -120,7 +120,7 @@ Existing-name stability and further logical/guard flow are tracked in [type test
 
 ## Match-specific comparison and recommendations
 
-This section evaluates the next match decisions; it does not mark the proposals as selected.
+This section records selected match outcomes and remaining proposals.
 
 ### Required pattern families
 
