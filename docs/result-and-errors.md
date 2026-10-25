@@ -31,7 +31,11 @@ Every recoverable error that can escape a function must be covered by its declar
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
 - The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
 
-Exact error-set composition, generic error contracts, and conversion rules remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
+Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. General error-set composition, generic error contracts, and standalone/nested Result conversion remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
+
+## Wider fallible callable views
+
+Selected 2026-10-25: source := fn(value: Int): Int ! ReadError { value } may be used directly as fn(value: Int): Int ! (ReadError | ParseError), as fn(value: Int): (Int | String) ! ReadError, or as a view widening both payload/error types. Assume those error types are established. Each source success must fit the destination success type and each source error the destination error type. Source keeps its own contract; narrowing from a broader view is rejected unless additional errors are explicitly handled/mapped. The compiler preserves the outcome branch and required representation/copy behavior without requiring a manual source wrapper. No automatic unwrap, new escaping-error inference, panic conversion, or general stored/nested Result coercion follows. See [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes).
 
 ## Conceptual definition
 

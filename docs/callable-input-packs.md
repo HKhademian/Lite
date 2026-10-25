@@ -118,6 +118,8 @@ Evaluate the callable first and the supplied pack expression once. Ordinary call
 
 Omission-capable callable views also retain the source implementation's promise when the supplied-input type is narrowed safely. Both .call and ordinary invocation preserve omitted slots for implementation handling; neither a public signature nor pack adapter supplies/alters a default or fills a narrowed-type zero. A source contract without omission permission cannot acquire it through adaptation. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
 
+For callable views with matching outer fallible outcomes, success payloads and declared error payloads may be widened safely under [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes). Both .call and ordinary invocation still produce an outcome under the visible contract; neither unwraps it or grants additional input values/defaults. The implementation retains its original error promise.
+
 ## Inline callback probes
 
 Assume each illustrative library operation has a known contract. These do not select standard-library APIs, collection materialization, generic syntax, or capture behavior.

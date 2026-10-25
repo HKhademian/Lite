@@ -1,6 +1,6 @@
 # Safe callable input and result adaptation
 
-Status: **selected 2026-10-25 for ordinary value adaptation and basic var T invariance, including required and omission-capable ordinary input views; design-only, not compiler/runtime verification**.
+Status: **selected 2026-10-25 for ordinary value/fallible outcome adaptation and basic var T invariance, including required and omission-capable ordinary input views; design-only, not compiler/runtime verification**.
 
 ## Direct assignment is valid
 
@@ -67,6 +67,49 @@ adapted_empty(7);  /* Int zero admitted into Int | String */
 ```
 
 Adaptation invokes the obtained source callable's semantics. Here the source zero callable returns zero(Int), which is then admitted as an Int result member. This is not fresh zero construction of the destination function type, and it does not choose zero(Int | String) or settle the pending general union-zero mapping. A compiler cannot discard necessary adaptation just because the source is zero.
+
+## Fallible callable views may widen outcomes
+
+Selected on **2026-10-25**: a callable returning an established outer T ! E outcome can be used through a compatible view that permits a wider success payload type, a wider declared recoverable-error type, or both. Every source success payload must fit the public success type, and every source error payload must fit the public error type. Other input/shape/label/access/omission rules remain enforced.
+
+Assume ReadError and ParseError are established distinct error types:
+
+```text
+source := fn(value: Int): Int ! ReadError { value }
+
+error_view: fn(value: Int): Int ! (ReadError | ParseError) = source;
+result_view: fn(value: Int): (Int | String) ! ReadError = source;
+both_view: fn(value: Int): (Int | String) ! (ReadError | ParseError) = source;
+
+same_contract: fn(value: Int): Int ! ReadError = source;
+/* all valid; each receives the original source callable value */
+```
+
+The user explicitly confirms that source itself can be used directly under wider compatible types. The bindings above can coexist. Making error_view does not retype source or enlarge its implementation's declared ReadError contract. A subsequent use of source is checked against source's own contract, not against another view previously made from it. These are designed examples, not executed LiteLang programs.
+
+### Narrowing a broader view remains checked
+
+```text
+bad: fn(value: Int): Int ! ReadError = error_view;
+/* rejected: error_view's declared contract permits ParseError */
+```
+
+Use the source expression's established contract. Do not recover a stronger promise by inspecting the current body, observing that one run succeeded, or following a hidden origin through a broader view. A genuinely broader error contract needs explicit handling or a defined mapping for its additional errors before it can expose a narrower contract. Using the original narrow source directly is still valid, as shown above.
+
+### Preserve the outcome branch and payload
+
+For the selected matching outer Result layer, compiler adaptation preserves the outcome:
+
+- A source .ok payload remains .ok and is admitted into the view's success type. An Int success can become the Int member of Int | String.
+- A source .err payload remains .err and is admitted into the view's declared error type. A ReadError remains that active error when admitted into ReadError | ParseError.
+
+The wider view does not make the implementation produce ParseError or authorize its body/defaults to escape errors outside their original declaration. The view's broader error allowance is explicitly written, not silently inferred. No error is swallowed, converted to success, replaced by a different error, duplicated, or combined with another error by this widening.
+
+The compiler supplies any required safe outcome representation adaptation; a manually written wrapper is not required. It may not reinterpret incompatible result bytes. Preserve source single evaluation, ordinary copies/effects, selected implementation defaults, argument order, failures/cleanup, and original zero-callable behavior. A zero source returning .ok(zero(Int)) still contributes that Int success through a wider view, rather than becoming fresh zero construction of a different result type.
+
+Callers still receive a fallible outcome under the view's declared contract and must inspect, recover, propagate, or retain it under existing rules. This adds no implicit success extraction, automatic returned-error propagation, or new panic handling. Ordinary input contravariance and var T invariance remain separate; a wider output contract does not permit callers to supply input values the implementation cannot accept.
+
+This selects callable adaptation between matching outer fallible outcomes using established payload admission, including normalized exact-member error-union widening. It does not choose a new nominal error hierarchy, arbitrary stored/nested Result conversion, Result layer flattening/reassociation, general nonfallible-to-fallible callable conversion, error-co-occurrence composition, generic variance, or a panic/effect conversion policy. Standalone Result value compatibility remains a separate integration question beyond this callable rule.
 
 ## Omission remains an implementation promise
 
@@ -164,13 +207,15 @@ Normal callable transfers still check public labels. An explicitly typed receivi
 
 Safe ordinary input adaptation now applies to required and omission-capable views under the implementation-promise rule above. Supplied inputs are checked contravariantly; allowed omission must be promised by the source contract and must reach its selected implementation unchanged. A narrower public input type does not revalidate an already established implementation default against that narrower type. Required views can still hide omission, and ordinary result widening retains its selected rule.
 
-No new type widening/narrowing is authorized through var/mut grants by this ordinary-value rule. Their existing read/write, initialization, caller-location, and permission compatibility checks remain necessary. Basic var T callable parameters are now invariant as specified above, while individual argument-flow checks remain unchanged. Variance for mut or more general split access contracts, changing error/effect contracts, Result type composition, variadics/overloads, generic constraints, unrelated callable shape changes, and recursive inference remain separate. No implicit returned-error extraction or new escaping recoverable-error contract is introduced.
+No new type widening/narrowing is authorized through var/mut grants by this ordinary-value rule. Their existing read/write, initialization, caller-location, and permission compatibility checks remain necessary. Basic var T callable parameters are now invariant as specified above, while individual argument-flow checks remain unchanged. Variance for mut or more general split access contracts, other error/effect transformations, standalone/nested Result type composition beyond the selected callable outcome rule, variadics/overloads, generic constraints, unrelated callable shape changes, and recursive inference remain separate. No implicit returned-error extraction or new escaping recoverable-error contract is introduced.
 
 Captures, reference syntax, memory safety, ownership/lifetimes, alias enforcement, resource/copy eligibility, and concrete calling convention remain deferred. This selection is a static semantic rule, not an implemented compiler feature or a claim of zero overhead.
 
 ## Reference context
 
 Official TypeScript documentation checks function parameter positions contravariantly with strictFunctionTypes (with method/constructor exceptions), and describes covariant result compatibility. Those are supporting precedents, not adoption of TypeScript's other optional/rest, label, or unsound compatibility rules. Sources checked 2026-10-25: [strict function types](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-6.html#strict-function-types), [comparing function results](https://www.typescriptlang.org/docs/handbook/type-compatibility.html#comparing-two-functions).
+
+Zig also documents error-set subset-to-superset coercion as a related error-widening precedent. Source checked 2026-10-25: [error set types](https://ziglang.org/documentation/0.17.0/#Error-Set-Type). Its global numeric error encoding, inferred error sets, and ABI are not selected by this comparison.
 
 ## Related documents
 

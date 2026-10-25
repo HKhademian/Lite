@@ -77,6 +77,7 @@ Selected:
 
 - Function types and literals use `fn`; ordinary parameters are written `name: Type`.
 - A function type is its signature without a body; function literals are ordinary value expressions.
+- A compatible fallible callable view may widen success and/or declared error payload types in one outer `T ! E` result, preserving `.ok`/`.err`; narrowing extra errors requires explicit handling/mapping. The original source retains its contract. See [callable outcome widening](../callable-value-variance.md#fallible-callable-views-may-widen-outcomes).
 - Access qualifiers follow the colon: `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement.
 - Basic `var T` parameter types stay invariant when converting callable signatures: reading and writing require the same resolved `T`. Explicit public-label conversion cannot change that value/access contract. Individual `var` argument admission still uses current read facts and accepted writes; see [callable var invariance](../callable-value-variance.md#var-parameters-keep-their-value-type).
 - A zero-initialized callable is callable, performs no user-body work, and returns `zero(R)` after ordinary argument evaluation and required cleanup.

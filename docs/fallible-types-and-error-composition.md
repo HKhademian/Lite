@@ -119,7 +119,7 @@ An alias is a declaration of coverage, not automatic inference from the body. Ch
 
 For example, if `parse_age` changes its declared error type to `ParseError | EncodingError`, its propagation into `ReadError | ParseError` must fail to type-check until the caller handles, maps, or declares the additional `EncodingError` alternative.
 
-Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Their complete integration with propagation and Result compatibility remains to be specified. In particular, widening an error payload does not by itself select an implicit conversion between arbitrary Result types or a completed subtyping system.
+Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) now integrates those payload-widening proofs for callable views, preserving .ok/.err and admitting success/error payloads separately. Full propagation, standalone/nested Result compatibility, and a completed subtyping system remain separate; widening an error payload still does not authorize arbitrary Result coercion or layer flattening.
 
 ## Grouping
 

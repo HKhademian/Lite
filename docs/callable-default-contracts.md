@@ -109,6 +109,8 @@ For ordinary user implementations, keep [selected timing](evaluation-order.md#de
 
 Supplied final inputs skip their defaults. Permitted spread replacement, [earlier-parameter reads](parameter-default-inference.md#defaults-may-read-earlier-parameters), static default validation, ordinary copies, and entry-time permission/initialization checks retain their contracts. Both ordinary invocation and intrinsic .call use the same public omission checks and selected implementation's handling. No general implicit-zero argument fallback is added; zero-callable omission is the specific rule below.
 
+A view may also expose a wider declared error/success output under [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes). This does not alter implementation defaults or authorize their code to escape errors outside the implementation's own declared error contract. The adapter preserves the outcome branch; caller handling remains explicit.
+
 ## Zero-callable omission selected
 
 Selected on **2026-10-25**, clarified by the user: default definitions and handling belong to the selected implementation. A zero-initialized callable runs no user body and no default expressions, and returns zero(R) for its declared result type R. Its built-in behavior satisfies public omission permission without requiring an actual default-expression definition for an omitted ordinary input.
