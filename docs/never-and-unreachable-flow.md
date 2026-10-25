@@ -45,7 +45,7 @@ An exhausted branch contributes no normally produced value to the enclosing cond
 
 Unit remains a real one-value type, spelled Unit or (). An empty remainder does not add Unit to x. With input String | Int | Unit, however, failed String and Int tests leave the genuine Unit alternative and the final branch is reachable.
 
-The existing missing-else rule is explicitly retained. Given user: User, value := if flag { user; } infers User and uses zero(User) when the false path is normally reached, under the existing single-type fallback contract. It does not implicitly become User | Unit. An explicit reachable empty else body can contribute Unit under ordinary branch-result inference. A missing branch, a reachable Unit-producing branch, and an unreachable branch remain distinct cases.
+The no-final-`else` rule is explicitly retained as a noncontributing path. Given user: User, value := if flag { user } infers User; when the false path is normally reached, the conditional contributes nothing and the declaration's default `zero(User)` remains. The conditional does not produce a zero result and does not implicitly become User | Unit. An explicit reachable empty `else` body can contribute Unit under ordinary branch-result inference. A missing branch, a reachable Unit-producing branch, and an unreachable branch remain distinct cases.
 
 The internal state selected here is not an ordinary constructible/storage type and creates no new zero value or exception to ordinary value initialization. Public Never requires its own future contract.
 

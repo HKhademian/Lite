@@ -310,7 +310,7 @@ choose := (flag: Bool): (Int | String) {
 }
 ```
 
-Genuine Unit completion payloads participate like other types. A missing conditional else still supplies zero(T), not an added Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Escaping recoverable errors still require an explicitly declared error contract, directly or through the expected callable.
+Genuine Unit completion payloads participate like other types. A no-`else` conditional is noncontributing; a declaration default uses zero(T) and does not add a Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Escaping recoverable errors still require an explicitly declared error contract, directly or through the expected callable.
 
 Requiring an explicit or expected union for distinct local completion payloads was considered and not chosen. A changed completion payload can change the inferred local result; an annotation can pin the contract. This decision concerns lambda completion payloads. [Conditional and match results](branch-result-inference.md) now use the same selected normalized-union inference when no expected result contract supplies their type. Recursive inference, context/capture work, and union representation remain separate.
 

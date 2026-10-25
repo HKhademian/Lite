@@ -79,7 +79,7 @@ found: Option<User> = @search loop users as user {
 }
 ```
 
-On a match, the tagged exit supplies `Some(user)` as the loop's `T`; since this loop has no `then`, that is also its result. On a non-match, the conditional has no final `else`, so it returns its zero `Option<User>` (`.None`), which the loop commits as its body value. Exhaustion therefore yields `.None` without a `None` body or explicit `continue`. The explicit destination types both the loop result and the conditional fallback. `return @search;` supplies `Unit` and is valid only if the loop's `T` accepts `Unit`.
+On a match, the tagged exit supplies `Some(user)` as the loop's `T`; since this loop has no `then`, that is also its result. On a non-match, the conditional has no final `else` and contributes nothing that iteration; the loop's `.value` remains its zero `Option<User>` (`.None`). Exhaustion therefore yields `.None` without a `None` body or explicit `continue`. The explicit destination types the loop result; the conditional does not produce a fallback value. `return @search;` supplies `Unit` and is valid only if the loop's `T` accepts `Unit`.
 
 ## Tagged return and completion
 
@@ -97,13 +97,15 @@ outcome: Int = @choose if use_choice {
         return @choose "early"
     }
     "normal"
+} else {
+    "none"
 } then {
     record_choice(@choose.value);
     @choose.value.length
 }
 ```
 
-Here the conditional's T is String and R is Int. The tagged return supplies "early" as T, then record_choice runs and the then produces its length.
+Here the conditional's T is String and R is Int. The tagged return supplies "early" as T; the normal branch supplies "normal"; the final else supplies "none" when no earlier branch matches. `then` always receives a T, runs `record_choice`, and produces its length.
 
 ### Returning through nested constructs to an outer target
 
@@ -133,7 +135,7 @@ The outer loop's body value T is Int, and its then produces String. If should_st
 
 An operation-level handler inside a conditional branch can turn a returned error or matching typed panic into a fallback value. If the handler and the rest of the branch complete with `T`, the conditional has its ordinary branch result and its selected `then` processes that result. For example, a failed `read_text()` recovered locally to `""` still gives a string result for a following normalization `then`.
 
-Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or the missing-`else` zero for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. Neither path runs the conditional's result-processing `then`; during panic propagation, applicable `finally` blocks in exited scopes run before an outer matching handler. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
+Postfix `!` forwards a returned error from the nearest function or closure; it is not a conditional fallback. That path does not provide a branch value or a `T` for the conditional to transform. An unhandled panic also propagates on its separate channel and supplies no conditional `T`. Neither path runs the conditional's result-processing `then`; during panic propagation, applicable `finally` blocks in exited scopes run before an outer matching handler. A recovery tail attached outside the complete conditional is superseded; body-wide recovery sections remain deferred.
 
 ## Explicit loop targets
 

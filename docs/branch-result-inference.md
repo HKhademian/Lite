@@ -45,13 +45,15 @@ An expected result remains a constraint: `value: Int = if flag { 1 } else { "non
 
 A conditional branch proven unreachable by the supported type-test exhaustion rules contributes no normally produced result, even when its syntactic body contains Unit-producing statements. Its exhausted binding has an internal Never read type for supported ordinary value checking. This selects reachable-result collection, not public Never | T or Never & T algebra; see [Never and unreachable flow](never-and-unreachable-flow.md).
 
-## Unit, missing else, and then
+## Unit, no final else, and then
 
-An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` infers Int | Unit. By contrast, `if flag { 1 }` retains the selected missing-else policy: infer Int from its contributing branch and supply zero(Int) when unmatched. Missing else never adds Unit merely because no branch ran.
+An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` infers Int | Unit. By contrast, `if flag { 1 }` is partial: it infers Int from its contributing branch, and no match is a noncontributing path. It does not add Unit, and it does not produce `zero(Int)` as a conditional result. The context supplies the meaning: a declaration keeps its zero default, an assignment performs no write, a loop body contributes nothing, and a value-required context rejects the missing `else`.
 
-For a conditional with then, this inference determines the pre-then value type T. The then body still produces final type R. An expected R does not by itself force the branch type T to equal R.
+A multi-member union declaration still needs an explicit `else` or `?` branch because its default zero cannot select a member. Assignment and loop noncontributing paths do not require a union member.
 
-The selected [conditional union-fallback rule](conditional-union-fallback.md) requires an explicit fallback when resolved T is a normalized multi-member plain union and selection can normally complete without a contributor. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). Single-type zero fallbacks remain available; a wider destination alone does not force a union fallback.
+A conditional with `then` requires a final `else`; inference determines the pre-then value type `T` from the total chain. The then body still produces final type `R`. An expected `R` does not by itself force the branch type `T` to equal `R`.
+
+The selected [conditional union-fallback rule](conditional-union-fallback.md) remains for declaration initializers whose default `zero(T)` is a normalized multi-member plain union. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). A wider destination alone does not force a union fallback.
 
 ## Alternatives and tradeoff
 
@@ -61,4 +63,4 @@ Requiring an explicit/expected union contract for mixed conditional and match re
 
 ## References
 
-Checked 2026-10-21. [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) require one type across outcomes, and use Unit when no branch executes; LiteScript has already chosen a different missing-else zero policy. [Zig peer type resolution](https://ziglang.org/documentation/master/#Peer-Type-Resolution) finds a common type for constructs such as if and switch under Zig's coercion rules; it is not LiteScript's plain-union policy. [TypeScript union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) show inferred union results. These are comparison points, not requirements for LiteScript's representation or runtime.
+Checked 2026-10-21. [Rust if expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html) require one type across outcomes, and use Unit when no branch executes; LiteScript instead makes a missing final `else` noncontributing in guarded-update contexts and rejects it where a value is required. [Zig peer type resolution](https://ziglang.org/documentation/master/#Peer-Type-Resolution) finds a common type for constructs such as if and switch under Zig's coercion rules; it is not LiteScript's plain-union policy. [TypeScript union examples](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) show inferred union results. These are comparison points, not requirements for LiteScript's representation or runtime.

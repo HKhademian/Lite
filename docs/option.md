@@ -73,7 +73,7 @@ found: Option<User> = @search loop users as user {
 }
 ```
 
-The declared destination `Option<User>` establishes the loop result. A matching exit supplies `Some(user)`; a non-match follows the conditional's missing-`else` zero fallback (`Option<User>.None`), which the loop commits. Exhaustion therefore yields `None` without a required trailing `None` in the body or a redundant `else { None }`.
+The declared destination `Option<User>` establishes the loop result. A matching exit supplies `Some(user)`; on a non-match the conditional contributes nothing, so `.value` remains its default `Option<User>.None`. Exhaustion therefore yields `None` without a required trailing `None` in the body or a redundant `else { None }`.
 
 This is not an implicit optional-completion rule and does not insert an Option accumulator. Unannotated tagged-result inference remains open; the destination supplies the type in this example, and no nullable ordinary values, implicit zero, or arbitrary default error values are introduced.
 

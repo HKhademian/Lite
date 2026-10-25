@@ -96,7 +96,7 @@ Explicit outcome-side matching uses the selected lowercase patterns `.ok(value)`
 
 ## Match expressions and coverage
 
-The same type patterns should work in general `match` arms. Every match over a closed union must cover every possible alternative or use an explicit catch-all, including actions. An empty fallback _ {} explicitly ignores remaining alternatives with Unit. An action conditional that inspects one alternative still needs no replacement body for the others; a value-producing conditional without a final `else` now returns zero of its inferred or expected result type on mismatch. See [conditional result rules](conditionals.md#missing-final-else).
+The same type patterns should work in general `match` arms. Every match over a closed union must cover every possible alternative or use an explicit catch-all, including actions. An empty fallback `_ {}` handles remaining alternatives with Unit. An action conditional that inspects one alternative still needs no replacement body for the others; a no-`else` value conditional is partial and noncontributing: a declaration keeps its default, an assignment performs no write, a loop contributes nothing, and a value-required context requires `else`. See [conditional result rules](conditionals.md#no-final-else-guarded-update).
 
 A narrowed binding exists only where its pattern matched. The producer is evaluated once; matching does not repeat a function call. Exact coverage for guarded patterns, overlapping type relationships, and open interfaces remains to be formalized. The general `Error` contract still needs its own definition; selecting union patterns does not finalize that contract as an open interface.
 

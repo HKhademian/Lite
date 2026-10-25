@@ -1,6 +1,6 @@
 # Conditionals
 
-Status: **mandatory braces, unified actions/values, existing-name type tests and declaration-shaped pattern conditions selected; missing-`else` zero results, the no-contributor `Unit` default, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-20; condition metadata is hidden. Conditional `then` behavior, `then`-before-`finally` cleanup order, and cleanup-failure precedence are selected; exact cleanup attachment scope and aggregate handling remain open**.
+Status: **mandatory braces, unified actions/values, existing-name type tests, and declaration-shaped pattern conditions selected; no-else conditionals as noncontributing guarded updates, explicit `?` no-initialization branches, explicit-tag conditional metadata lookup, and a post-selection `then` with `@tag.value` readable only inside it selected 2026-10-25; condition metadata is hidden. Conditional `then` requires a final `else`; `then`-before-`finally` cleanup order and cleanup-failure precedence are selected; exact cleanup attachment scope and the `&` form's public value/operations remain open**.
 
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
@@ -18,7 +18,7 @@ if condition {
 }
 ```
 
-All branch bodies require braces. A `then` block may follow the complete conditional chain, after its optional final `else`; it processes the selected branch result or the missing-`else` zero result. The old `endif` and unblocked single-statement forms are superseded.
+All branch bodies require braces. A `then` block may follow a complete conditional chain with a final `else`; it processes the selected `T`. A partial no-`else` conditional has no `T` on its noncontributing path and cannot carry `then`. The old `endif` and unblocked single-statement forms are superseded.
 
 ## Optional leading and/or selected
 
@@ -75,21 +75,26 @@ price := if premium {
 
 - Ordinary expression conditions require `Bool`; pattern and type-test conditions succeed by matching. There is no implicit truthiness.
 - Normally completing value branches must satisfy an expected result contract when one exists. Otherwise infer their normalized plain union, collapsing duplicate type identities.
-- Every conditional owns a result context, whether tagged or untagged. Its result has type `T`, constructed from the selected branch or, where allowed, the missing-else zero fallback. Exhaustive union-valued chains do not require an initial undirected `zero(T)` before selecting a member. If the conditional has an attached `then`, that block produces the final result of type `R`; without `then`, the conditional produces `T`. Read-only `@tag.value` access to `T` is available only inside that conditional's attached `then`. It requires an explicit tag and does not expose branch or condition metadata.
-- A normally completing selected branch supplies the conditional result. If the chain has no final `else` and no branch matches, an allowed single-type zero fallback supplies `zero(T)`. When resolved `T` is a normalized multi-member plain union, require an explicit fallback if selection can normally complete without a contributor.
-- This fallback does not form `Option<T>` or handle an error. For example, a conditional expected as `Option<User>` returns that type's zero state, `.None`, when no pattern matches.
-- A conditional whose normally completing branches produce `Unit` remains `Unit` on the unmatched path too. A non-`Unit` branch makes a missing-`else` conditional a value-producing expression, including when it is the final item of a loop body.
-- Zero initialization does not infer `T` by itself. Normally completing branch values and the surrounding expected type constrain `T`. When no normally completing branch constrains `T`, it defaults to `Unit`; an expected type can override that default.
+- A conditional's result type `T` comes from its normally completing value branches. A final `else` makes it total: every normal path supplies `T`. Without a final `else` it is **partial**: a matching branch supplies `T`, while no match is a noncontributing path.
+- A noncontributing path is interpreted by its context:
+  - declaration initializer: the declaration's default remains (`zero(T)` normally, or reserved with an explicit `?` branch);
+  - assignment: no write; the target keeps its current state;
+  - loop body contribution: no contribution; `.value` is preserved;
+  - value-required context such as a call argument, return, arithmetic operand, nested expression, or `then`: invalid without a final `else`.
+- A conditional with `then` requires a final `else`; `then` needs a selected `T` to process. A partial conditional cannot carry `then`.
+- A multi-member union declaration initializer still needs an explicit `else` or `?` branch because `zero(T)` cannot choose an active member. Assignment and loop noncontributing paths do not need a union member.
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
 - Mixed branch results infer a plain union without inventing conversions or an escaping error channel. Explicit/expected result contracts remain constraints.
 
-The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. An allowed missing-else path supplies zero(T), without adding Unit. A normally reachable unmatched multi-member union result requires an explicit fallback.
+The selected [branch-result inference rule](branch-result-inference.md) applies to conditional branches and match arms, consistently with local-lambda completion inference. A missing final `else` does not add `Unit` or `zero(T)` to the value paths; it makes the path noncontributing.
 
-The selected [union fallback rule](conditional-union-fallback.md) requires an explicit fallback when resolved T is a multi-member plain union and selection can normally finish without a contributor. Exhaustive chains construct their chosen member directly; conditional then receives a valid T. This supersedes unconditional pre-selection zero initialization of conditional result storage.
+Exhausted conditional type-test branches warn and give exhausted bindings an internal Never read type, preserving ordinary checking without contributing a normally produced branch result. This does not inject Unit or create a value on the noncontributing path; see [Never and unreachable flow](never-and-unreachable-flow.md).
 
-Exhausted conditional type-test branches warn and give exhausted bindings an internal Never read type, preserving ordinary checking without contributing a normally produced branch result. This does not inject Unit or change the missing-else zero fallback; see [Never and unreachable flow](never-and-unreachable-flow.md).
+## No final `else`: guarded update
 
-## Missing final `else`
+A conditional without a final `else` is partial. On a match, its branch supplies `T`. On no match, it produces no value and does not write, initialize, or contribute.
+
+In a declaration initializer, the declaration's default remains:
 
 ```text
 message: String = if ready {
@@ -97,17 +102,7 @@ message: String = if ready {
 }
 ```
 
-When `ready` is false, this returns the zero value of `String` (the empty string). In a chain, the same fallback is used only after every condition is false or every pattern/guard fails:
-
-```text
-message: String = if use_cache {
-    "Cached"
-} else if use_guest {
-    "Guest"
-}
-```
-
-If neither branch matches, `message` is the zero `String`. An explicit final `else` supplies its ordinary branch result instead.
+When `ready` is false, `message` is the zero `String` (`""`) because the declaration default supplies the value; the conditional itself does not produce a zero result.
 
 ```text
 found: Option<User> = @lookup if .Some(user) := find_user(id) {
@@ -115,33 +110,75 @@ found: Option<User> = @lookup if .Some(user) := find_user(id) {
 }
 ```
 
-On pattern mismatch, `found` is the zero value of `Option<User>`, `.None`; no explicit `.None` branch is needed. The expected type establishes `T` here. `@lookup` names the conditional context; its `.value` is readable only in an attached `then`. Case-specific zero mappings beyond the selected `Option` rule remain in [zero initialization](zero-initialization.md).
+On pattern mismatch, `found` remains the declaration default `.None`. No trailing `.None` body is needed. The expected type establishes `T`.
 
-The conditional's normal result is supplied by the selected branch or by the zero fallback. The attached `then` runs after that result is selected and may transform `T` into `R`; only its body can read the original result as `@tag.value`. Neither conditions nor branch bodies can read the conditional's `.value` metadata.
+In an assignment, no match means no write:
 
-For an allowed missing-else zero fallback, `then` receives `zero(T)` just as it receives a selected branch's result. An unmatched multi-member union path requires an explicit fallback first; `then` cannot repair a missing T after the fact.
+```text
+var total := 0
+total = if ready { 1 }
+```
+
+If `ready` is false, `total` keeps its current value. A fixed target may be first-initialized only on paths where it is definitely uninitialized; replacing an initialized fixed binding requires `var`. A `var` target accepts the write on a match.
+
+In a loop body contribution, no match means no contribution:
+
+```text
+total := @sum loop values as v {
+    if v > 0 { @sum.value + v }
+}
+```
+
+Nonpositive values contribute nothing and `@sum.value` is preserved. If the conditional is not the body tail, its no-match path only skips the conditional; a later tail item still contributes normally. In particular, `x := if v > 0 { v }; x` still has `x: Int` with `x == 0` on no match, so the tail `x` contributes zero; put the conditional itself in tail position or use `else { ? }`/`continue` to skip.
+
+Value-required contexts require a final `else`:
+
+```text
+f(if ready { 1 })          // rejected: add else
+return if ready { 1 }      // rejected: add else
+1 + (if ready { 1 })       // rejected: add else
+```
+
+### Explicit no-initialization with `?`
+
+An explicit `?` branch makes the noncontributing path visible:
+
+```text
+y: User = if flag { new_user() } else { ? }
+```
+
+If `flag` is true, `y` is initialized. If false, `y` remains reserved. `y` is not readable until initialized on every reaching path. For a fixed `y`, the first write is permitted only where `y` is definitely reserved; after initialization, replacement requires `var`. A `var y` accepts replacement on initialized paths.
+
+The same `?` branch is valid as an assignment no-write or loop no-contribution path:
+
+```text
+x = if flag { new_value } else { ? }   // same no-write behavior as no else
+if flag { v } else { ? }               // same no-contribution behavior as no else
+```
+
+`?` is not `Unit`, `Option.None`, or `zero(T)`. It is a no-value marker and cannot be stored, passed, returned, compared, or used in arithmetic. `x: T = ?` remains the reserved declaration form. `else { ? }` is the explicit no-value block; it contains exactly `?` and is not a record initializer.
 
 ### Result processing with conditional `then`
 
-The selected `then` spelling reuses the loop's result-processing clause for a conditional. It follows the complete chain, receives the branch/zero result of type `T`, and its tail expression produces the conditional expression's final type `R`. The conditional tag's `.value` is readable only in this block, using explicit `@tag.value` access.
+The selected `then` spelling reuses the loop's result-processing clause for a conditional. It requires a complete chain with a final `else`, receives the selected result of type `T`, and its tail expression produces the conditional expression's final type `R`. The conditional tag's `.value` is readable only in this block, using explicit `@tag.value` access.
 
 ```text
 label: String = @notice if should_warn {
     "Warning"
+} else {
+    ""
 } then {
     normalize_notice(@notice.value)
 }
 ```
 
-Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the conditional first produces the zero `String`; `then` sees that result and produces the final `String`. The explicit tag is required for conditional metadata access.
+Assume `normalize_notice` accepts and returns `String`, mapping an empty string to `"No notice"` and otherwise passing the warning through. If `should_warn` is false, the explicit `else` supplies `""`; `then` sees that `T` and produces the final `String`. The explicit tag is required for conditional metadata access.
 
-`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result, so its result-processing `then` is skipped. If this conditional has both hooks, `then` completes before `finally` performs cleanup as the conditional exits. On an outer-target return, error, or panic, applicable `finally` cleanup still runs while leaving even though this conditional's `then` is skipped. `finally` does not recover failures; recovery is a separate construct. Exact attachment syntax/scope remains open. Cleanup-failure precedence is selected; aggregate handling remains open.
+`then` is result processing, not an all-exit cleanup guarantee. A return targeting this conditional supplies its `T` and runs its attached `then`; a return targeting an outer construct exits this conditional without running its `then`. Propagated errors and unhandled panics supply no conditional result, so its result-processing `then` is skipped. If this conditional has both hooks, `then` completes before `finally` performs cleanup as the conditional exits. On an outer-target return, error, or panic, applicable `finally` cleanup still runs while leaving even though this conditional's `then` is skipped. `finally` does not recover failures; recovery is a separate construct. Exact attachment syntax/scope remains open. Cleanup-failure precedence is selected; the `&` form's public value/operations remain open.
 
 ### Interaction with loop bodies
 
-Without `then`, the selected branch's final expression is the `if` expression's result. With `then`, the `then` block's final expression is the conditional's result. That result flows to its parent expression; when the `if` is the loop body's final item, the loop commits it as the next `.value`. Inside the conditional, use the loop tag to read the outer accumulator explicitly.
-
-This no-`else` version has type `Int`, but it is still the wrong summation:
+Without `then`, the selected branch's final expression is the `if` expression's result. With `then`, the `then` block's final expression is the conditional's result. That result flows to its parent expression. A partial no-`else` conditional used as the loop body's final item contributes on a match and does not contribute on no match, so `.value` is preserved:
 
 ```text
 total: Int = @sum loop numbers as number {
@@ -151,9 +188,9 @@ total: Int = @sum loop numbers as number {
 }
 ```
 
-When `should_add` is false, no branch matches. The conditional contributes its zero `Int`, and the loop commits that zero, losing the earlier total. This does not create `Int | Unit`; the conditional has one result type `T`, constrained to `Int` here.
+When `should_add` is false, no branch matches and the conditional contributes nothing. The loop keeps its previous `.value`; it does not commit `zero(Int)`. `total` is the sum of the selected numbers.
 
-To keep the previous total when the condition is false, return it explicitly:
+To make the no-match path explicit, either return the previous total or use `continue`:
 
 ```text
 total: Int = @sum loop numbers as number {
@@ -165,11 +202,13 @@ total: Int = @sum loop numbers as number {
 }
 ```
 
-The `if` now returns either the updated total or the previous total, and the loop commits that `Int`. A separate guard with `continue` is another way to skip an iteration. The zero fallback is a value contribution, not implicit loop continuation. The explicit `@sum` access follows the selected rule for outer loop metadata inside conditionals. See [loop value inference](loop-type-inference.md).
+The `if` now returns either the updated total or the previous total, and the loop commits that `Int`. A guard with `continue` is another way to skip an iteration. The explicit `@sum` access follows the selected rule for outer loop metadata inside conditionals. See [loop value inference](loop-type-inference.md).
+
+A conditional used in a declaration initializer is different: `x := if should_add(number) { number }` makes `x: Int` with `x == 0` on no match, so a following tail `x` contributes zero. Put the conditional itself in tail position, or use `else { ? }`/`continue`, to skip the contribution.
 
 ### Conditional metadata requires explicit tags
 
-The conditional still owns its branch result and zero fallback. Its `.value` is readable only in its attached `then`, through explicit `@tag.value`. Conditional metadata has no implicit leading-dot target: an untagged `if` neither establishes a leading-dot context nor falls through to the enclosing loop. Inside a conditional, leading-dot metadata has no target; name the intended context explicitly with `@loop.field` for the loop or `@tag.value` only in the conditional's attached `then`, and reject ambiguous leading-dot metadata reads rather than guessing or searching outward.
+A total conditional with a final `else` owns a result of type `T`; a partial no-`else` conditional has no `T` on its noncontributing path. `.value` is readable only in an attached `then`, through explicit `@tag.value`, and `then` itself requires a final `else`. Conditional metadata has no implicit leading-dot target: an untagged `if` neither establishes a leading-dot context nor falls through to the enclosing loop. Inside a conditional, leading-dot metadata has no target; name the intended context explicitly with `@loop.field` for the loop or `@tag.value` only in the conditional's attached `then`, and reject ambiguous leading-dot metadata reads rather than guessing or searching outward.
 
 For example, both the updated and unchanged paths explicitly read the loop accumulator:
 
@@ -332,7 +371,7 @@ Braces establish which conditional owns `else`; indentation is irrelevant.
 
 The user rejects an external error-catching else(failure) attached to the whole conditional. Recovery belongs inside fn/if/loop/match bodies; ordinary else retains false-selection meaning. Operation-level handlers inside each branch remain valid with optional receivers. Body-wide handler syntax and coverage are deferred for the joint cleanup/resource review; see [body-owned recovery](body-recovery.md).
 
-The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target or implicitly unwrap inner Results. When conditional `then` and construct-level `finally` are both attached, `then` precedes cleanup; exact attachment syntax/scope remains open. Cleanup-failure precedence is selected; aggregate handling remains open.
+The earlier [conditional recovery investigation](conditional-recovery.md) is retained as superseded placement history. This correction does not give ! a new return target or implicitly unwrap inner Results. When conditional `then` and construct-level `finally` are both attached, `then` precedes cleanup; exact attachment syntax/scope remains open. Cleanup-failure precedence is selected; the `&` form's public value/operations remain open.
 
 ## Tags and completion
 
@@ -346,9 +385,9 @@ The earlier [conditional recovery investigation](conditional-recovery.md) is ret
 
 The tag names the entire conditional chain and can identify a tagged exit target. No `.condition` metadata is exposed, either for a simple condition or an `else if` chain. Conditions are evaluated only as needed for branch selection and are not reevaluated by `then`. If later logic needs branch identity, include that identity in the branch result `T`.
 
-The conditional owns a result of type `T`, initialized to `zero(T)`, and that result supplies the normal result when no arm matches and there is no final `else`. An attached `then` transforms that result to final type `R`; read-only access to `T` is available there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
+A total conditional with a final `else` owns a result of type `T`; a partial no-`else` conditional has no `T` on its noncontributing path. An attached `then` requires a final `else`, transforms the selected `T` to final type `R`, and exposes `T` there as `@access.value` when the conditional is tagged. Conditional metadata has no implicit leading-dot target.
 
-A conditional `then` follows the complete branch chain, not a separate condition or branch body. Normal branch completion, including the missing-`else` zero path, supplies `T` to `then`. A tagged return to this conditional also supplies `T` and runs its `then`; a return to an outer target skips it. A propagated error or unhandled panic supplies no `T`, so conditional result processing does not run. A locally recovered failure can still lead to a normal branch value and `then`. When an applicable construct-level `finally` is attached, it follows `then` on normal completion and runs during scope exit on abrupt paths; it performs cleanup only and does not recover failures. Exact attachment scope remains open. Cleanup-failure precedence is selected; aggregate handling remains open. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
+A conditional `then` follows a complete chain with a final `else`, not a separate condition or branch body. Normal branch completion supplies `T` to `then`. A tagged return to this conditional also supplies `T` and runs its `then`; a return to an outer target skips it. A propagated error or unhandled panic supplies no `T`, so conditional result processing does not run. A locally recovered failure can still lead to a normal branch value and `then`. When an applicable construct-level `finally` is attached, it follows `then` on normal completion and runs during scope exit on abrupt paths; it performs cleanup only and does not recover failures. Exact attachment scope remains open. Cleanup-failure precedence is selected; the `&` form's public value/operations remain open. Typed filtering applies to operation/block recovery targets; it does not add a recovery receiver after the conditional chain.
 
 ## Related concepts and references
 

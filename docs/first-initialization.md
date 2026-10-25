@@ -1,6 +1,6 @@
 # First initialization and definite initialization
 
-Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
+Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19; conditional `else { ? }` reservation and branch-correlated initialization selected 2026-10-25**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
 
 The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? when normalization leaves several distinct union members. Bare omission is rejected, not implicit reservation. Other ordinary typed locals retain their selected omitted-initializer policy. Explicitly reserved union storage reuses the no-read-before-initialization rules below.
 
@@ -95,6 +95,50 @@ use(x); /* rejected: the false path leaves the payload uninitialized */
 Do not silently supply zero, declared defaults, None, or a runtime initialization check on the missing path. Branches that return or otherwise cannot reach the use do not contribute an uninitialized path to that continuation.
 
 A fixed target's first write requires proof that it has not already been initialized on any reaching path. If some paths already initialized it, a subsequent assignment is not universally a first write; reject it without var. Loops also need proof: a possibly empty loop does not establish initialization, and a potentially repeated assignment cannot initialize a fixed binding multiple times. Complete loop analysis remains to formalize.
+
+## Conditional reservation
+
+An explicit `?` branch can make initialization conditional:
+
+```text
+y: User = if flag {
+    new_user()
+} else {
+    ?
+}
+```
+
+`y` is initialized when `flag` is true and reserved when it is false. The state is correlated with `flag`:
+
+```text
+if flag {
+    use(y);        /* ok: this path initialized y */
+}
+
+if not flag {
+    use(y);        /* rejected: y is reserved here */
+}
+```
+
+For a fixed `y`, the only permitted write is the first initialization on a path where `y` is definitely reserved:
+
+```text
+if not flag {
+    y = fallback_user();   /* first initialization */
+    use(y);                /* ok */
+}
+/* both paths now initialized; use(y) is allowed */
+```
+
+A write under `if flag` is rejected for a fixed binding because that path already initialized `y`; `var y` permits replacement there. After `if not flag { y = ... }`, both the true path (initialized by the declaration) and the false path (initialized by the write) are initialized.
+
+A declaration without `?` uses its normal default instead, so it is initialized on every path:
+
+```text
+x: User = if flag { new_user() }   /* new_user() or zero(User) */
+```
+
+The compiler must retain the branch correlation between `flag` and `y`'s state. A merely conservative "maybe uninitialized" state would reject the valid first write under `if not flag`; exact correlation and loop/branch proof rules remain to formalize.
 
 ## Reads and right-hand-side evaluation
 

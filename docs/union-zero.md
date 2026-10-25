@@ -42,7 +42,7 @@ value := if number_mode {
 }
 ```
 
-Selected branch inference gives T = Int | String, and the missing-else path supplies zero(T). Its exact active member remains unresolved when neither condition matches. An explicit final else can supply a known result now, but requiring one everywhere would not define zero for stored unions or zero-result callables.
+Selected branch inference gives T = Int | String. No match is noncontributing, but the declaration default would need `zero(T)`, whose active member remains unresolved. The declaration therefore requires an explicit final `else` or `?`; this is a declaration-default requirement, not a general conditional-zero definition. An explicit final else can supply a known result, but requiring one everywhere would not define zero for stored unions or zero-result callables.
 
 ## User's storage rule and the remaining conflict
 
@@ -141,7 +141,7 @@ Recommendation: prefer Unit when it is a listed member. It has one inhabitant an
 
 Normalize transparent aliases and nested plain unions first. A transparent alias of Unit counts as Unit; an independently declared nominal empty record or an Option containing a None case does not become Unit. Unit priority never adds Unit to a union that did not list it, unwraps another type, or changes an explicitly stored Int zero into Unit.
 
-Adding Unit to the set of allowed alternatives would make the expanded type's own zero Unit under this proposal. Membership and widening still preserve the source's active value; widening an Int zero to Int | Unit remains Int. Missing conditional else continues to use zero(T), and an explicit empty branch contributes Unit through the separately selected inference rule.
+Adding Unit to the set of allowed alternatives would make the expanded type's own zero Unit under this proposal. Membership and widening still preserve the source's active value; widening an Int zero to Int | Unit remains Int. A no-`else` conditional is noncontributing; a declaration default uses `zero(T)`, and an explicit empty branch contributes Unit through the separately selected inference rule.
 
 The alternative gives Unit no special priority and uses the future general ordering for every member. That avoids a dedicated preference but can select a payload-bearing member even when Unit is explicitly available. Neither choice settles Int versus String, arbitrary nominal-type keys, or other primitive priorities. No choice is selected yet.
 
@@ -172,9 +172,9 @@ value := if ready {
 }
 ```
 
-The inferred type is Int | Unit. On the unmatched path, Unit-first returns Unit; an Int-first ordering returns an Int zero. The ready branch remains Int(7) and the intentionally_empty branch remains Unit under both policies. No priority changes a value that an actual branch produced.
+The inferred type is Int | Unit. A no-`else` declaration in a multi-member union requires an explicit `else` or `?`, so the unmatched path is noncontributing rather than selecting a union zero. If a `zero(Int | Unit)` value is needed elsewhere, Unit-first returns Unit and an Int-first ordering returns an Int zero; the ready branch remains Int(7) and the intentionally_empty branch remains Unit under both policies. No priority changes a value that an actual branch produced.
 
-Contrast the already selected `if ready { 7 }`, which infers Int and returns zero(Int) when unmatched, with `if ready { 7 } else {}`, which infers Int | Unit and explicitly returns Unit when false. Their false outcomes are fixed by their branches/types, independently of how the union's own zero is chosen.
+Contrast a declaration initialized by the partial `if ready { 7 }`, which infers Int and leaves the declaration default `zero(Int)` on no match, with the total `if ready { 7 } else {}`, which infers Int | Unit and explicitly returns Unit when false. Their false outcomes are fixed by the declaration default versus the explicit branch, independently of how the union's own zero is chosen.
 
 #### Unit alongside an explicit optional value
 

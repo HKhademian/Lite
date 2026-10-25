@@ -43,9 +43,9 @@ If Unit is explicitly listed, A | Unit can contain an active A, an active Unit, 
 
 The selected rule A | A = A currently removes duplicate identities, and nested plain unions flatten. If every union spelling adds an empty state even after collapsing to one member, A | A would no longer simply be A unless A also gained that state. One possible scope is to add empty only when normalization leaves at least two distinct alternatives. Another is to revise normalization or make emptiness an explicit type constructor. No scope is selected. Nested multi-member unions would also need one coherent empty state and equivalent zero behavior after flattening.
 
-### Existing zero fallback and inference
+### Existing zero defaults and inference
 
-For a conditional whose inferred T is a union admitting empty, its missing-else zero(T) would be empty under the proposal. This does not add Unit. A conditional inferred as Int still returns numeric zero when unmatched. Zero-result callables and stored union fields would use the same empty union zero. Explicitly supplied branch/member values retain their active identities.
+For a declaration default whose inferred T is a union admitting empty, `zero(T)` would be empty under the proposal; a no-`else` conditional itself is noncontributing, not a zero-producing path. An Int declaration default is still numeric zero. Zero-result callables and stored union fields would use the same empty union zero. Explicitly supplied branch/member values retain their active identities.
 
 ## Comparison and review boundary
 

@@ -115,7 +115,7 @@ explicit_zero: Int ! ReadError = 0; // .ok(0)
 
 An ordinary success expression `0` in an `Int ! E` function likewise remains implicit success with numeric zero. A stored zero outcome has no error payload to handle. Recursive zero initialization preserves outcome boundaries: the zero of `(T ! E1) ! E2` is `.ok(.ok(zero(T)))`.
 
-This mapping also applies wherever a conditional's missing-else path or a loop's value context uses zero of a fallible type. Representation, tag layout, and FFI adaptation must honor this semantic mapping and remain to be specified.
+This mapping also applies where a declaration default or a loop's value context uses zero of a fallible type. A no-`else` conditional is noncontributing; its declaration default supplies the zero on no match. Representation, tag layout, and FFI adaptation must honor this semantic mapping and remain to be specified.
 
 ## Grammar and runtime boundaries
 

@@ -64,9 +64,9 @@ found: Option<User> = loop users as user {
 }
 ```
 
-The explicit destination types the loop result and `.value` as `Option<User>`. A matching `break value` commits `Some(user)` and stops the loop. On a non-match, the final `if` has no selected arm, so its conditional context returns zero `Option<User>` (`.None`) and the loop commits that value. No explicit `continue` or `None` body is needed.
+The explicit destination types the loop result and `.value` as `Option<User>`. A matching `break value` commits `Some(user)` and stops the loop. On a non-match, the final `if` contributes nothing, so `.value` remains its default `Option<User>.None`. No explicit `continue` or `None` body is needed.
 
-This is a deliberate value contribution, not a skip. If the loop already held a nonzero value, an unmatched conditional would replace it with zero. Use `continue` for a noncontributing loop path that must preserve `.value`, or write an explicit `else` that returns the desired existing value.
+This is a noncontributing path, not a zero-contribution. A prior committed value is preserved. A declaration such as `x := if cond { value }; x` is different: `x` is zero-initialized on no match, and the tail `x` contributes that zero. Put the conditional itself in tail position, or use `else { ? }`/`continue`, to skip the contribution. An explicit `else` can contribute a replacement value.
 
 A tagged return contributes its payload as the target's T. With no then, T is also the target's result type; with then, the target's then determines R from the committed T. The example in [control flow](control-flow.md#loop-distinction) shows a targeted search without then. Exact unannotated inference for targeted-result-only searches remains formalization work, especially when zero(T) and an independent then result are involved.
 

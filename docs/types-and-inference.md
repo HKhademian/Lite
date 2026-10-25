@@ -117,7 +117,7 @@ Type declarations give union `|` higher precedence than binary fallible type `!`
 
 ## Results and control flow
 
-A conditional whose resolved branch-result T is a normalized multi-member plain union requires an explicit fallback if selection can normally finish without a contributor. Exhaustive chains construct the chosen member directly; an allowed single-type missing-else path still supplies zero(T). A wider destination alone is not the criterion, and then must receive a valid T before producing R. See [conditional union fallback](conditional-union-fallback.md).
+A declaration initializer whose resolved branch-result T is a normalized multi-member plain union requires an explicit `else` or `?` if selection can normally finish without a contributor, because its default `zero(T)` cannot choose a member. Assignment and loop no-match paths are noncontributing and need no union member. Exhaustive chains construct the chosen member directly. A wider destination alone is not the criterion, and `then` requires a final `else` and a valid T before producing R. See [conditional union fallback](conditional-union-fallback.md).
 
 Reachable completion paths must fit the enclosing type contract. Result recovery has a selected union-forming rule: success type `T` and normally completing fallback type `D` produce `T | D`, whether or not the error receiver is named. [Conditional and match branches](branch-result-inference.md) also infer normalized plain unions without an expected result contract; expected contracts still constrain every normally completing branch. Union syntax, narrowing, conversions, ownership, and layout remain open; see [Result and errors](result-and-errors.md#recovery-result-type).
 

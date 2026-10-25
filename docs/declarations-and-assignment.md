@@ -52,6 +52,8 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 - `var mut` opts into both capabilities, in that order.
 - Either capability leaves the binding's declared value contract fixed; a flow-sensitive read type may narrow without narrowing the accepted replacement contract.
 - `=` does not declare a name. For a binding explicitly reserved with = ?, its first whole-value = may initialize it without var, subject to definite-initialization checks. Later whole-binding replacement requires var. A field or element update through an initialized binding requires mut, permitted field/element access, and a compatible ownership contract. Partial construction has a separate open contract.
+- An assignment RHS that is a partial no-`else` conditional is a guarded update: a matching branch supplies the value to assign; no match performs no write. A final `else { ? }` is the explicit no-write form. The target's fixed/var first-write or replacement rules still apply.
+- A conditional initializer without a final `else` leaves the declaration default on no match. With `else { ? }` it leaves the binding reserved on that path, subject to definite-initialization checks.
 - `:=` never means "declare if absent, otherwise update."
 - Declarations and assignments are statements producing `Unit`.
 - Assignment cannot be embedded in a condition or chained as a value-producing expression.
