@@ -31,11 +31,37 @@ Every recoverable error that can escape a function must be covered by its declar
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
 - The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
 
-Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. General error-set composition, generic error contracts, and standalone/nested Result conversion remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
+Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. [Stored Result widening](#stored-result-values-widen-safely) now applies the same payload proofs to ordinary outcome values and matching nested layers. General error-set composition, generic error contracts, and other Result conversions remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
+
+## Stored Result values widen safely
+
+Selected 2026-10-25: an existing `S ! E` value fits a destination `T ! F` when the selected value-compatibility rules prove safe widening of both payload types: `S` to `T` and `E` to `F`. An unchanged payload type also fits. This applies to ordinary typed initialization, assignment, arguments, and returns, subject to the other destination checks. It is an instance of [general safe widening](types-and-inference.md#safe-widening).
+
+Assume `ReadError` and `ParseError` are established distinct error types:
+
+```text
+source: Int ! ReadError = .ok(7);
+wider: (Int | String) ! (ReadError | ParseError) = source;
+```
+
+The destination still holds `.ok(7)`. For an arbitrary initialized source holding `.err(error)`, the destination instead retains `.err` with the same active `ReadError` payload. Widening permits additional outcomes in the destination contract; it neither produces a String/ParseError nor changes the source contract. The entire source contract must fit, rather than relying only on the particular `.ok(7)` shown here.
+
+Every existing Result layer and its success/error position is preserved. Matching nested layers can widen recursively when the corresponding payload proofs hold:
+
+```text
+nested: (Int ! ReadError) ! ReadError = .ok(source);
+nested_wider: ((Int | String) ! (ReadError | ParseError)) ! ReadError = nested;
+```
+
+Here the explicit `.ok(source)` constructs the outer layer. The later widening adds no layer, removes none, and does not reassociate error and success payloads. Widening an existing outcome uses its matching-layer proof; failure of that proof is not repaired by silently wrapping the whole source as a success. Deliberately adding an outer layer can use an explicit `.ok(...)`; other ambiguous success-construction cases remain separate.
+
+The transfer follows ordinary value-copy semantics, leaves the source available under its original contract, and may require compiler representation adaptation. It does not implicitly unwrap, propagate, handle, or flatten an outcome. Widening a zero source preserves its `.ok(zero(source success type))` value, rather than replacing it with a fresh destination zero. No bitwise-layout, allocation, or ABI guarantee follows.
+
+The reverse direction requires independently justified narrowing or explicit handling/reconstruction. An arbitrary `(Int | String) ! (ReadError | ParseError)` cannot be assigned to `Int ! ReadError`: it may contain a String success or ParseError failure. Result widening does not authorize arbitrary error casts, broaden the errors allowed to escape an implementation, or change writable grants. A parameter accepting a Result by value may use this rule; a `var` parameter still follows its caller-location read/write contract.
 
 ## Wider fallible callable views
 
-Selected 2026-10-25: source := fn(value: Int): Int ! ReadError { value } may be used directly as fn(value: Int): Int ! (ReadError | ParseError), as fn(value: Int): (Int | String) ! ReadError, or as a view widening both payload/error types. Assume those error types are established. Each source success must fit the destination success type and each source error the destination error type. Source keeps its own contract; narrowing from a broader view is rejected unless additional errors are explicitly handled/mapped. The compiler preserves the outcome branch and required representation/copy behavior without requiring a manual source wrapper. No automatic unwrap, new escaping-error inference, panic conversion, or general stored/nested Result coercion follows. See [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes).
+Selected 2026-10-25: source := fn(value: Int): Int ! ReadError { value } may be used directly as fn(value: Int): Int ! (ReadError | ParseError), as fn(value: Int): (Int | String) ! ReadError, or as a view widening both payload/error types. Assume those error types are established. Each source success must fit the destination success type and each source error the destination error type. Source keeps its own contract; narrowing from a broader view is rejected unless additional errors are explicitly handled/mapped. The compiler preserves the outcome branch and required representation/copy behavior without requiring a manual source wrapper. This uses the same payload proofs as [stored Result widening](#stored-result-values-widen-safely). No automatic unwrap, new escaping-error inference, panic conversion, flattening, or arbitrary Result coercion follows. See [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes).
 
 ## Conceptual definition
 
@@ -63,7 +89,7 @@ The user has proposed throw error as exact shorthand for return .err(error). Its
 
 ## Proposed conversion boundary
 
-- An already compatible `Result` passes through unchanged.
+- An already compatible `Result` retains its outcome branch and layers; [stored Result widening](#stored-result-values-widen-safely) may adapt its payload representation.
 - A plain `T` can be lifted to success when `Result<T, E>` is expected.
 - A plain error payload is not silently made an error result; construct the error explicitly.
 - Without an expected `Result`, an ordinary value does not become fallible by default.

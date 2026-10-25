@@ -97,6 +97,8 @@ The selected [safe callable value adaptation](callable-value-variance.md) permit
 
 Matching outer fallible callable results may also widen success/error payload contracts under [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes). Any needed outcome adaptation preserves branch, payload identity, normal copies/effects, and source zero behavior; this is not raw memory reinterpretation, implicit result extraction, or a selected zero-overhead/ABI guarantee.
 
+[Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) likewise preserves each existing Result layer and the active success/error value through ordinary copying, including matching nested payload widening. A widened zero preserves the source zero outcome; it need not have the destination zero encoding. Representation adaptation is a compiler responsibility, not an in-place cast or a new alias.
+
 ## Future in-place casting discussion
 
 The user requested [future in-place memory-compatible casts](tuple-label-conversions.md#future-in-place-memory-compatible-casts) on 2026-10-25, including a nested pair-plus-Int versus flat three-Int tuple shape. This is a future explicit cast topic. Current label conversion preserves shape, and ordinary transfers keep label checks; no layout equivalence, flattening, cast grammar, alias/source-validity rule, copy bypass, or new ABI is selected by this note.

@@ -88,7 +88,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Lists](lists.md): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
 - [Slices](slices.md): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
-- [Types and inference](types-and-inference.md): static contracts and the intended type-system scope.
+- [Types and inference](types-and-inference.md): static contracts, general safe widening, and the intended type-system scope.
 - [Record literal boundaries](record-literal-boundaries.md): optional semicolons after record initializers and unresolved inferred-literal versus executable-block classification.
 - [Records](records.md): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
 - [Record type identity](record-type-identity.md): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
@@ -152,7 +152,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, plain-union targets, branch-local bindings, and intact Result distinctions.
 - [Unit](unit.md): one zero-component value/type spelled Unit or (), zero mapping and storage, preserved Unit-valued positions, fixed Unit arrays, and runtime counts owned by enclosing containers.
 - [Option](option.md): explicit absence without universal nullability.
-- [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
+- [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, safe stored-outcome widening across matching layers, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
 - [Throw as an error return](error-return-sugar.md): proposed throw error shorthand for return .err(error), declared error coverage, function/closure boundaries, and unchanged caller handling.
 - [Propagation and call chaining](propagation-and-chaining.md): selected postfix `!`, per-step extraction, stored Results, and reference-language comparisons.
 - [Recovery receivers and fallback types](recovery-and-fallbacks.md): optional error naming, lazy fallbacks, union results, narrowing, and reference-language comparisons.

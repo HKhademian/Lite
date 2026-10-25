@@ -2,6 +2,8 @@
 
 Status: **selected 2026-10-18: a source plain union widens automatically to a destination plain union when every normalized source alternative is an exact destination member**. Subtype/interface conversions, container variance, ownership, and representation remain separate contracts.
 
+This is one selected proof of [general safe widening](types-and-inference.md#safe-widening). [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) uses these payload proofs while preserving Result branches and layers. Neither rule establishes arbitrary container covariance.
+
 ## Description and template
 
 ```text

@@ -119,7 +119,7 @@ An alias is a declaration of coverage, not automatic inference from the body. Ch
 
 For example, if `parse_age` changes its declared error type to `ParseError | EncodingError`, its propagation into `ReadError | ParseError` must fail to type-check until the caller handles, maps, or declares the additional `EncodingError` alternative.
 
-Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) now integrates those payload-widening proofs for callable views, preserving .ok/.err and admitting success/error payloads separately. Full propagation, standalone/nested Result compatibility, and a completed subtyping system remain separate; widening an error payload still does not authorize arbitrary Result coercion or layer flattening.
+Plain-union exact-member admission and [exact-member union widening](union-widening.md) are selected as the value-level foundation. Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) now integrates those payload-widening proofs for callable views, preserving .ok/.err and admitting success/error payloads separately. [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) also applies these proofs to ordinary outcomes and matching nested layers, preserving each branch and layer. Other Result conversions, full propagation compatibility, and a completed subtyping system remain separate; widening an error payload does not authorize arbitrary Result coercion or layer flattening.
 
 ## Grouping
 
@@ -164,7 +164,7 @@ Type and expression contexts distinguish `T!` from `outcome!`: one declares an o
 
 - Define the general `Error` contract and its relationship to refined recoverable error types.
 - Complete the selected alias production's scope, generic parameters, cycles, and type-expression boundaries.
-- Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Subtype relations, flow-refinement validity, and complete Result compatibility remain open. See [union normalization](union-normalization.md) and [union widening](union-widening.md).
+- Plain-union normalization, exact-member admission, exact-member union widening, and checked member narrowing are selected. Stored Result widening is selected for matching layers with compatible success/error payloads. Other subtype relations, flow-refinement validity, and Result conversions remain open. See [union normalization](union-normalization.md) and [union widening](union-widening.md).
 - Define generic error-family parameters and explicit conversion/mapping notation.
 - Complete precedence with other type constructors and associativity for repeated fallible type operators; the relative precedence of `|` and binary `!` is selected above.
 - Preserve the distinction between transparent aliases and new nominal error types.

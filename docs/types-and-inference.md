@@ -6,6 +6,16 @@ Status: **static typing and inference established; full type system remains a de
 
 Students can write ordinary code without annotations while the compiler still rejects incompatible operations and assignments before execution.
 
+## Safe widening
+
+Selected 2026-10-25: safe widening is generally accepted when established compatibility rules prove that a source value satisfies the destination contract. It preserves the represented value and active alternatives while allowing the destination to admit more possibilities. No source-level wrapper or cast is required for a supported widening, and the source keeps its own type. An inferred declaration keeps the source type unless another expected contract supplies a wider destination.
+
+The selected proofs include [plain-union widening](union-widening.md), [stored Result widening](result-and-errors.md#stored-result-values-widen-safely), and [safe callable adaptation](callable-value-variance.md). Callable inputs/results follow their specified directions; widening does not mean replacing every type argument with a broader type. Ordinary initialization, assignment, arguments, and returns use the applicable value-compatibility proof along with their other checks.
+
+The compiler preserves ordinary copy behavior and observable effects while adapting representation when needed. This does not require identical bytes, select an ABI, or authorize an in-place reinterpretation. [Label checks](tuple-label-conversions.md#ordinary-transfers-check-labels), nominal identity, initialization, omission promises, and access contracts still apply. In particular, a copied value's widening does not widen a caller-location write grant; [basic var parameters remain invariant](callable-value-variance.md#var-parameters-keep-their-value-type).
+
+This principle does not by itself establish numeric coercions, arbitrary container covariance, structural conversion of nominal records, or unchecked narrowing. Those families still require their own compatibility rules. Success construction, which adds a Result layer, is distinct from widening an already stored outcome.
+
 ## Templates
 
 ```text

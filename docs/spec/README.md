@@ -127,6 +127,7 @@ Open: complete body/result inference, nonzero `.value` initialization, lifetime/
 Selected:
 
 - Returned errors use `T ! E`; postfix `!` forwards them. It does not assert success, catch a panic, or handle an untyped failure. Typed panics are a separate fault channel.
+- Stored `S ! E` values widen to `T ! F` when both payload types fit by selected safe widening, recursively across matching layers. Preserve `.ok`/`.err`, active payloads, ordinary copies, and the source contract; no flattening, added layer, unwrap, unchecked narrowing, or writable-grant widening. See [stored Result widening](../result-and-errors.md#stored-result-values-widen-safely) and [general safe widening](../types-and-inference.md#safe-widening).
 - `else` recovery is target-level: an operation or block expression.
 - Typed filters may select an error/panic type, preserve declared order, and bind a receiver where selected.
 - `A | B` is an alternative; `A & B` is an order-insensitive co-occurrence set and binds no value.
