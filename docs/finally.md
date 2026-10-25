@@ -38,7 +38,27 @@ The normal trace is: finish loop iterations, run the `then` body, run `report.cl
 
 The same cleanup shape can be proposed for an explicit inner block expression and for the complete conditional. It is not a finally after each individual loop iteration unless that iteration creates its own protected region. A construct-level loop finally runs when that loop is left.
 
-## Full conditional example
+## Current body-local example
+
+The handler belongs inside the selected branch; it is not attached to the complete conditional.
+
+```text
+result: Int = @run if ready(path) {
+    text := read_text(path) else (e: ReadError) {
+        report_read_error(e);
+        ""
+    }
+    text.length
+} then {
+    @run.value
+} finally {
+    finish_run()
+}
+```
+
+`read_text` handles its own returned error in the branch. The conditional's `finally` runs when the conditional exits; the branch-level operation handler is not an external conditional-recovery tail. The `then` result is the final conditional result, and cleanup does not replace it. This is the current placement; the full example below is retained for its cleanup-order history.
+
+## Historical full conditional example
 
 Assumptions: read_quantity returns Int ! ReadError; read_text returns String ! ReadError. The other helpers return ordinary values or Unit and can raise typed panics. All cleanup helpers in this trace finish normally with Unit. Their possible failure is a separate contract, not silently ignored. The conditions are plain Bool values supplied by their helpers.
 
@@ -95,11 +115,11 @@ run := fn(mode: Int, path: String) {
 }
 ```
 
-This is a complete recovery/cleanup structure under the proposed syntax, not a runnable implemented program or a definition of the illustrative helper functions. The same-scope typed-panic ordering is selected; grouped inner-block and call-level `finally` attachment remain under review. The example's external conditional-recovery tail is superseded. The function literal itself has no trailing `finally`: such an attachment must not ambiguously mean cleanup during function creation versus each invocation.
+This historical example illustrates cleanup ordering and the retired external handler placement; it is not current complete syntax. The current placement uses body-local handlers, as in the example above. The same-scope typed-panic ordering is selected; grouped inner-block and call-level `finally` attachment remain under review. The function literal itself has no trailing `finally`: such an attachment must not ambiguously mean cleanup during function creation versus each invocation.
 
-## Scope and execution traces
+## Historical execution traces
 
-Each entered construct runs its own finally once when it is left, provided cleanup itself completes. An unselected branch has not entered its local region, so its finally does not run.
+The following traces describe the historical example above. Each entered construct runs its own finally once when it is left, provided cleanup itself completes. An unselected branch has not entered its local region, so its finally does not run.
 
 - Normal import: finish_quantity_read, finish_import, then finish_run.
 - Returned ReadError from read_quantity with successful local recovery: report, replacement quantity 1, finish_quantity_read, remaining import work, finish_import, then finish_run.
@@ -112,7 +132,7 @@ Each entered construct runs its own finally once when it is left, provided clean
 
 Language-managed typed panics run applicable `finally` blocks for exited scopes before reaching an outer matching handler. The transfer implementation remains open. Hard process aborts are outside this cleanup guarantee.
 
-## Full loop counterpart
+## Historical full loop counterpart
 
 The [loop recovery example](loop-recovery.md) adds operation cleanup, per-entered-iteration cleanup, then completion processing, and whole-loop cleanup. Continue leaves the iteration region but does not finish the loop; loop-level cleanup runs when the whole region is left. Its grouping also separates normal no-contribution else from failure recovery, a collision that the conditional receiver distinction cannot solve by itself.
 
