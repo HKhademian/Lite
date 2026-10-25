@@ -87,9 +87,13 @@ A rest declaration can infer its element type with (...rest:) when an initialize
 
 ## Spreading a stored array tail selected
 
-For pack := (...numbers = [1, 2, 3]), tuple construction copy := (...pack) preserves the named numbers tail and its element contract. Passing op(...pack), or applying op.call pack, supplies the three tail elements as positional Int inputs when op's contract admits them. The stored tail label does not select a named call slot. Ordinary labeled array-valued fields retain their existing one-named-input behavior instead of expanding their arrays. Fixed components keep their existing label/position routing. Empty tails contribute no inputs, and tuple-valued tail elements stay intact.
+For pack := (...numbers = [1, 2, 3]), inferred tuple construction copy := (...pack) preserves the named numbers tail and its element contract. Passing op(...pack), or applying op.call pack, supplies the three tail elements as positional Int inputs when op's contract admits them. The stored tail label does not select a named call slot. Ordinary labeled array-valued fields retain their existing one-named-input behavior instead of expanding their arrays. Fixed components keep their existing label/position routing. Empty tails contribute no inputs, and tuple-valued tail elements stay intact.
 
 This is governed by the whole-composition proof, written-order single evaluation, permissions, and lifetime rules. A tail type alone proves no minimum length for required fixed inputs. Direct named variadic call supply, multiple stored tails, general mixed tuple construction, and tail-label collisions remain separate. Preserving the tuple schema does not select copying or ownership identity. See [rest-bearing tuple spread](tuple-array-shapes.md#spreading-a-rest-bearing-tuple).
+
+## Destination-guided prefix and tail repacking selected
+
+An explicit expected tuple schema can guide spread reconstruction between a compatible fixed prefix plus array tail and a rest-only tuple, selected 2026-10-25. For Prefix := type (:Int, :Int, ...rest: Int) and TailOnly := type (...rest: Int), packed: TailOnly = (...prefix_value) gathers the fixed values and original tail into packed.rest. Reconstructing Prefix from a TailOnly source requires proof of at least two compatible values; the rest-only schema alone supplies no such minimum. Without a requested destination shape, copy := (...prefix_value) still infers and preserves the source schema. Plain stored assignment retains its compatibility rules. Existing labels, access, ownership, evaluation, and cleanup requirements remain; no implicit cast, array/tuple identity, zero-copy guarantee, or general mixed-label collision policy is selected. See [repacking examples and limits](tuple-array-shapes.md#destination-guided-repacking).
 
 ## Positional tuple rest selected
 

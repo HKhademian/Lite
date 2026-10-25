@@ -140,6 +140,29 @@ Assume extra is a readable runtime-sized Int array. This construction is valid b
 
 Runtime-dependent source routing is not a lack of type/shape knowledge. The compiler must prove that every admitted routing satisfies the destination contract, including final-slot types, permissions, and required fixed coverage. Preserve written-order source evaluation and the selected storage/lifetime rules. Do not introduce implicit tuple defaults, dynamic tuple fields, or an allocation guarantee.
 
+### Destination-guided repacking
+
+Selected in the follow-up discussion, 2026-10-25: a fixed-prefix-plus-tail tuple and a rest-only tuple can supply the same ordered inputs without being the same tuple type. Their fixed guarantees and observable tail members differ.
+
+```text
+Prefix := type (:Int, :Int, ...rest: Int);
+TailOnly := type (...rest: Int);
+
+p: Prefix = (1, 2, ...rest = [3]);
+q: TailOnly = (...rest = [1, 2, 3]);
+/* p.rest contains [3]; q.rest contains [1, 2, 3] */
+
+copy := (...p);               /* infer and preserve Prefix */
+packed: TailOnly = (...p);    /* collect the fixed prefix and tail */
+unpacked: Prefix = (...q);    /* requires proof of at least two inputs */
+```
+
+Without an expected destination requesting a different shape, (...p) preserves the source schema. An explicit expected tuple schema can instead guide checked reconstruction: gather p's two unnamed fixed values followed by its tail elements into packed.rest. All contributions must satisfy the destination element type and access/ownership requirements. This is explicit reconstruction through the spread constructor; a plain stored-value initializer still follows ordinary compatibility and does not silently repack incompatible tuple schemas.
+
+Reconstructing Prefix from a rest-only source takes the first two supplied values for its fixed components and collects the remainder into its array tail. The compiler must prove coverage and compatible possible slot types/access. The TailOnly schema alone guarantees no minimum length; the unpacked line is admitted only when additional established static facts prove at least two elements. A runtime arity check or synthesized value does not replace that proof. The complete policy for retaining constructor-length facts across bindings, effects, and API boundaries remains open.
+
+The supported example has compatible unnamed fixed components and the same explicit tail label. Preserve existing named-component routing, label-sensitive compatibility, written-order single evaluation, and permissions; this does not select arbitrary relabeling, mixed-label collision rules, multiple stored tails, unchecked casts, zero copying, shared storage identity, or a new allocation policy. Tuple-valued elements stay intact unless separately spread. Call sites retain their established whole-composition proof and tail-forwarding rules.
+
 ### Rest-only tuples need no fixed components
 
 ```text
@@ -184,7 +207,7 @@ Both full and shorthand forms evaluate their source once and preserve existing a
 
 ### Spreading a rest-bearing tuple
 
-Selected in the follow-up discussion, 2026-10-25: spreading an existing tuple into tuple construction preserves its fixed shape and declared array-tail schema. Spreading it into call inputs instead supplies each tail array element as a positional input. The tail's stored label does not become a named argument containing one array.
+Selected in the follow-up discussion, 2026-10-25: spreading an existing tuple into tuple construction without an expected destination preserves its fixed shape and declared array-tail schema. An explicit expected tuple schema can guide checked repacking as described above. Spreading it into call inputs instead supplies each tail array element as a positional input. The tail's stored label does not become a named argument containing one array.
 
 ```text
 /* Assume total has the contract fn (...rest: Int): Int. */
@@ -203,7 +226,7 @@ variadic := (...numbers = [1, 2, 3]);
 /* call spread of variadic supplies three positional Int inputs */
 ```
 
-The ellipsis declaration identifies the stored rest segment; an ordinary array-valued field does not acquire tail behavior. Tuple-to-tuple spread preserves the tail's name and element contract without enumerating runtime elements into new fixed tuple positions. Ordinary fixed components retain their existing construction/call routing rules: fixed labels select named call inputs, and unnamed fixed components supply positional inputs. A tail's elements enter the call sequence in array order at that operand's written position; each tuple-valued element remains one input unless separately spread. An empty tail contributes zero inputs.
+The ellipsis declaration identifies the stored rest segment; an ordinary array-valued field does not acquire tail behavior. Inferred tuple-to-tuple spread preserves the tail's name and element contract without enumerating runtime elements into new fixed tuple positions. Destination-guided reconstruction can repack values only into a statically established shape whose requirements are proven. Ordinary fixed components retain their existing construction/call routing rules: fixed labels select named call inputs, and unnamed fixed components supply positional inputs. A tail's elements enter the call sequence in array order at that operand's written position; each tuple-valued element remains one input unless separately spread. An empty tail contributes zero inputs.
 
 The callee's tail label may differ from the stored tuple's label, as rest differs from numbers above. This does not select direct named tail supply such as total(rest = pack.numbers), inline call-entry ...name = expression syntax, or new pattern forms. Calls without explicit expansion still receive the tuple as one value when their contract admits it.
 

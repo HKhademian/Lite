@@ -200,6 +200,10 @@ meal.2;    /* compile error: position outside this two-component tuple */
 
 Both named and unnamed tuples expose zero-based numeric dot access in stored component order. Each position has its statically known component type; heterogeneous components need no dynamic lookup or union of all component types. The receiver is evaluated once for each access expression. Numeric access does not remove labels from the whole tuple's type and does not bypass its label-sensitive identity. Reading the same component by name or position grants the same existing access permissions.
 
+### Fixed-array dot positions
+
+Fixed arrays [T; N] also support literal numeric dot positions, selected 2026-10-25. arr.0 and arr[0] designate the same element/location, with type T and the same existing permissions; an out-of-range literal position is a compile-time error. arr.ind selects a literal member name rather than substituting an index variable. Computed indexing remains arr[ind] under array rules. This shared access spelling does not make arrays and homogeneous tuples the same type or give tuples runtime indexing. Runtime-sized array dot access remains outside this selection; see [fixed-array dot access](arrays.md#literal-numeric-dot-access-selected).
+
 ### Runtime indexing rejected
 
 Selected by the user, 2026-10-22: tuples do not support runtime variable indexing. This applies to named and unnamed tuples, including tuples whose component types happen to agree:

@@ -18,6 +18,21 @@ The first supplies all elements. The second applies the selected semantic-zero c
 
 An array field contributes its inline elements to a containing record, consistent with nested record values. Permitted copies copy those inline values under their element contracts and preserve references inside elements without cloning reference targets. Noncopyable/resource elements require their eventual copy policy.
 
+## Literal numeric dot access selected
+
+Selected on **2026-10-25**: a fixed array [T; N] supports literal numeric dot access to its statically known positions. arr.0 and arr[0] designate the same element/location and preserve its existing access permissions. For a valid position, the result has type T; positions outside 0 through N - 1 are compile-time errors.
+
+```text
+x := [1, 2, 3];
+x.0;       /* same element as x[0] */
+x.2;       /* valid Int element */
+x.3;       /* rejected: outside the fixed extent */
+```
+
+This gives fixed arrays the same literal positional access as homogeneous fixed tuples, without selecting array/tuple type identity, implicit conversion, or identical ownership/ABI. A dot followed by an identifier still selects that literal member name: arr.ind does not substitute a variable or constant named ind. Computed indexing uses arr[ind] under array bounds rules. Dot access for runtime-sized arrays or additional extent-refinement contracts is not selected here.
+
+The source is evaluated once per access expression. This spelling grants no new writes or caller-location authority; initialization, visibility, ownership, and existing access rules still apply. A permitted var grant through arr.0 refers to the same location as one through arr[0], so the two spellings cannot disguise duplicate access to that element. See [tuple positional access](tuple-entries-and-access.md#fixed-array-dot-positions).
+
 ## Constant-position write grants selected
 
 Selected on **2026-10-25**: an initialized fixed array with writable mut access may supply separate var grants for known-valid distinct constant element positions. For mut values := [10, 20], swap(var values[0], var values[1]) is valid when swap requires two var Int parameters: positions 0 and 1 are distinct locations in [Int; 2]. The binding stays fixed while each element receives one replacement grant. Repeating position 0 is rejected. Preserve location validity, initialization, bounds, and ordinary compatibility; additional supported proof forms remain open. Multiple element grants into the same fixed array without a supported disjointness proof are statically rejected; see [unproven overlap](call-replacement-flow.md#unproven-fixed-array-element-overlap-rejected). An explicit built-in Int i =!= j guard also permits two element grants in its successful branch when the index locals and same fixed array stay stable; ordinary bounds checks remain. The same supported distinctness fact may remain after if i == j { return; } when every equal-index path exits before the call; a continuing equality branch supplies no such proof. See [early-exit distinctness](call-replacement-flow.md#element-distinctness-after-an-early-exit-selected), [guarded runtime indices](call-replacement-flow.md#guarded-runtime-index-grants-selected), and [fixed-array element grants](call-replacement-flow.md#distinct-constant-fixed-array-element-grants-selected).
