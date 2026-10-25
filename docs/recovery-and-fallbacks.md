@@ -2,6 +2,8 @@
 
 Status: **optional error receivers, lazy local recovery, and `T | D` result typing selected; reference-language comparisons do not change those rules**.
 
+Normative for receiver omission and fallback union typing (`T | D`). The recovery surface — target-level `else`, typed filters, `A & B`, and ordered tuples — is owned by [expression recovery](expression-recovery.md); the Result model is owned by [result and errors](result-and-errors.md).
+
 ## Purpose
 
 Separate two questions: whether a handler names the error, and which values the expression can produce after recovery. Omitting the error name does not mean omitting the fallback or suppressing its value.

@@ -2,6 +2,8 @@
 
 Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the exact panic-capture boundary remains under review. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
 
+Supporting analysis: current recovery rules are owned by [expression recovery](expression-recovery.md), [result and errors](result-and-errors.md), and [checked fault policy](checked-fault-policy.md). If this page's proposed capture boundary conflicts with those pages, they win.
+
 ## Result arguments require their own handling
 
 This rule comes before the panic-scope comparison. Suppose exp1 returns A ! E1, exp2 returns B ! E2, and op expects ordinary A and B arguments. The following does not type-check:

@@ -2,6 +2,8 @@
 
 Status: **API design direction selected by the user, 2026-10-19**. Consumers request the operations they need rather than a particular collection implementation or static size. Standard collections are providers of those contracts. Exact protocol names, generic/constraint syntax, yielded access modes, and dispatch remain open.
 
+Supporting rationale for the capability model. Normative operation and sequence contracts are owned by [collection operation contracts](collection-operation-contracts.md), [sequence types](sequence-types.md), and the [indexed sequence contract](indexed-sequence-contract.md).
+
 ## The icons example
 
 Beginners should be able to create and use collections before naming traversal protocols. The [collection-inference proposal](collection-inference.md) explores contextual nested literals and simple fn(icons) definitions. The annotated example below explains the required behavior; it is not a required first-lesson spelling.
