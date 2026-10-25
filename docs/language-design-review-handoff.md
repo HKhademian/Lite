@@ -1,6 +1,6 @@
 ---
 name: litescript-language-design-review
-status: in_progress
+status: completed
 created: 2026-10-19
 todos:
   - id: tagged-return
@@ -29,7 +29,7 @@ plans:
 
 # Agent Handoff: LiteScript language-design review
 
-> **For the next agent.** Continue the documentation-led design review from the selected tagged-return rule and remaining error/panic and multi-branch metadata questions; preserve user-selected rules, label proposals clearly, and do not implement a compiler.
+> **Historical review log.** The original review plan and its todos are complete. Current rules live in [the decision ledger](decisions-and-open-questions.md) and the concept pages; entries below record review history rather than live status. Do not implement a compiler from this log alone.
 
 ## Mission
 
