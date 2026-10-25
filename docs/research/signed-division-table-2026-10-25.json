@@ -1,0 +1,801 @@
+{
+  "review_date": "2026-10-25",
+  "cases": [
+    {
+      "a": 7,
+      "b": 2
+    },
+    {
+      "a": 7,
+      "b": -2
+    },
+    {
+      "a": -7,
+      "b": 2
+    },
+    {
+      "a": -7,
+      "b": -2
+    }
+  ],
+  "scope": "Representative division/remainder/modulo operators and named operations on integer inputs; values derived from the cited rules, with V playground observations captured separately. Not exhaustive APIs or a LiteScript runtime claim.",
+  "rows": [
+    {
+      "language": "LiteScript",
+      "operands": "Int",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "division.md",
+      "note": "Selected design; not an implemented runtime."
+    },
+    {
+      "language": "LiteScript",
+      "operands": "Int",
+      "expression": "a // b",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "division.md",
+      "note": "Selected design; not an implemented runtime."
+    },
+    {
+      "language": "LiteScript",
+      "operands": "Int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "division.md",
+      "note": "Selected design; not an implemented runtime."
+    },
+    {
+      "language": "LiteScript",
+      "operands": "Int",
+      "expression": "a %% b",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "division.md",
+      "note": "Selected design; not an implemented runtime."
+    },
+    {
+      "language": "Odin",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://odin-lang.org/docs/overview/#operators",
+      "note": ""
+    },
+    {
+      "language": "Odin",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://odin-lang.org/docs/overview/#operators",
+      "note": ""
+    },
+    {
+      "language": "Odin",
+      "operands": "int",
+      "expression": "a %% b",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://odin-lang.org/docs/overview/#operators",
+      "note": ""
+    },
+    {
+      "language": "Zig 0.15.2",
+      "operands": "signed integer",
+      "expression": "@divTrunc(a, b)",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://ziglang.org/documentation/0.15.2/#divTrunc",
+      "note": "Derived from versioned builtin contracts; not executed."
+    },
+    {
+      "language": "Zig 0.15.2",
+      "operands": "signed integer",
+      "expression": "@divFloor(a, b)",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "https://ziglang.org/documentation/0.15.2/#divFloor",
+      "note": "Derived from versioned builtin contracts; not executed."
+    },
+    {
+      "language": "Zig 0.15.2",
+      "operands": "signed integer",
+      "expression": "@rem(a, b)",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://ziglang.org/documentation/0.15.2/#rem",
+      "note": "Derived from versioned builtin contracts; not executed."
+    },
+    {
+      "language": "Zig 0.15.2",
+      "operands": "signed integer",
+      "expression": "@mod(a, b)",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://ziglang.org/documentation/0.15.2/#mod",
+      "note": "Derived from versioned builtin contracts; not executed."
+    },
+    {
+      "language": "Rust",
+      "operands": "i32",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://doc.rust-lang.org/reference/expressions/operator-expr.html",
+      "note": ""
+    },
+    {
+      "language": "Rust",
+      "operands": "i32",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://doc.rust-lang.org/reference/expressions/operator-expr.html",
+      "note": ""
+    },
+    {
+      "language": "Rust",
+      "operands": "i32",
+      "expression": "a.div_euclid(b)",
+      "rule": "euclid_div",
+      "results": [
+        "3",
+        "-3",
+        "-4",
+        "4"
+      ],
+      "source": "https://doc.rust-lang.org/std/primitive.i32.html#method.div_euclid",
+      "note": ""
+    },
+    {
+      "language": "Rust",
+      "operands": "i32",
+      "expression": "a.rem_euclid(b)",
+      "rule": "euclid_mod",
+      "results": [
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "source": "https://doc.rust-lang.org/std/primitive.i32.html#method.rem_euclid",
+      "note": ""
+    },
+    {
+      "language": "V 0.5.0",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://play.vlang.io/",
+      "note": "Observed in official playground, V 0.5.0 345b29d."
+    },
+    {
+      "language": "V 0.5.0",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://play.vlang.io/",
+      "note": "Observed in official playground, V 0.5.0 345b29d."
+    },
+    {
+      "language": "Dart",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "https://dart.dev/language/operators",
+      "note": ""
+    },
+    {
+      "language": "Dart",
+      "operands": "int",
+      "expression": "a ~/ b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://dart.dev/language/operators",
+      "note": ""
+    },
+    {
+      "language": "Dart",
+      "operands": "int",
+      "expression": "a.remainder(b)",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://api.dart.dev/dart-core/num/remainder.html",
+      "note": ""
+    },
+    {
+      "language": "Dart",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "euclid_mod",
+      "results": [
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "source": "https://api.dart.dev/dart-core/num/operator_modulo.html",
+      "note": ""
+    },
+    {
+      "language": "Python",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations",
+      "note": ""
+    },
+    {
+      "language": "Python",
+      "operands": "int",
+      "expression": "a // b",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations",
+      "note": ""
+    },
+    {
+      "language": "Python",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations",
+      "note": ""
+    },
+    {
+      "language": "Lua 5.4",
+      "operands": "integer",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "https://www.lua.org/manual/5.4/manual.html#3.4.1",
+      "note": ""
+    },
+    {
+      "language": "Lua 5.4",
+      "operands": "integer",
+      "expression": "a // b",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "https://www.lua.org/manual/5.4/manual.html#3.4.1",
+      "note": ""
+    },
+    {
+      "language": "Lua 5.4",
+      "operands": "integer",
+      "expression": "a % b",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://www.lua.org/manual/5.4/manual.html#3.4.1",
+      "note": ""
+    },
+    {
+      "language": "Java",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://docs.oracle.com/javase/specs/jls/se25/html/jls-15.html#jls-15.17",
+      "note": ""
+    },
+    {
+      "language": "Java",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://docs.oracle.com/javase/specs/jls/se25/html/jls-15.html#jls-15.17",
+      "note": ""
+    },
+    {
+      "language": "Java",
+      "operands": "int",
+      "expression": "Math.floorDiv(a, b)",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Math.html#floorDiv(int,int)",
+      "note": ""
+    },
+    {
+      "language": "Java",
+      "operands": "int",
+      "expression": "Math.floorMod(a, b)",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Math.html#floorMod(int,int)",
+      "note": ""
+    },
+    {
+      "language": "C",
+      "operands": "signed int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf",
+      "note": "C23 committee draft, section 6.5.5; native probes used C17 mode."
+    },
+    {
+      "language": "C",
+      "operands": "signed int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf",
+      "note": "C23 committee draft, section 6.5.5; native probes used C17 mode."
+    },
+    {
+      "language": "C++",
+      "operands": "signed int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://eel.is/c++draft/expr.mul",
+      "note": ""
+    },
+    {
+      "language": "C++",
+      "operands": "signed int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://eel.is/c++draft/expr.mul",
+      "note": ""
+    },
+    {
+      "language": "C#",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/arithmetic-operators",
+      "note": ""
+    },
+    {
+      "language": "C#",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/arithmetic-operators",
+      "note": ""
+    },
+    {
+      "language": "Go",
+      "operands": "int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://go.dev/ref/spec#Integer_operators",
+      "note": ""
+    },
+    {
+      "language": "Go",
+      "operands": "int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://go.dev/ref/spec#Integer_operators",
+      "note": ""
+    },
+    {
+      "language": "Swift",
+      "operands": "Int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://raw.githubusercontent.com/swiftlang/swift-book/main/TSPL.docc/LanguageGuide/BasicOperators.md",
+      "note": ""
+    },
+    {
+      "language": "Swift",
+      "operands": "Int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://raw.githubusercontent.com/swiftlang/swift-book/main/TSPL.docc/LanguageGuide/BasicOperators.md",
+      "note": ""
+    },
+    {
+      "language": "Kotlin",
+      "operands": "Int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://kotlinlang.org/docs/numbers.html#integer-division",
+      "note": ""
+    },
+    {
+      "language": "Kotlin",
+      "operands": "Int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/rem.html",
+      "note": ""
+    },
+    {
+      "language": "Kotlin",
+      "operands": "Int",
+      "expression": "a.floorDiv(b)",
+      "rule": "floor_div",
+      "results": [
+        "3",
+        "-4",
+        "-4",
+        "3"
+      ],
+      "source": "https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/floor-div.html",
+      "note": ""
+    },
+    {
+      "language": "Kotlin",
+      "operands": "Int",
+      "expression": "a.mod(b)",
+      "rule": "mod",
+      "results": [
+        "1",
+        "-1",
+        "1",
+        "-1"
+      ],
+      "source": "https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/mod.html",
+      "note": ""
+    },
+    {
+      "language": "Scala 3 (JVM)",
+      "operands": "Int",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3",
+        "-3",
+        "-3",
+        "3"
+      ],
+      "source": "https://www.scala-lang.org/api/current/scala/Int.html",
+      "note": "Scala Int/JVM integer operations; not locally executed."
+    },
+    {
+      "language": "Scala 3 (JVM)",
+      "operands": "Int",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://www.scala-lang.org/api/current/scala/Int.html",
+      "note": "Scala Int/JVM integer operations; not locally executed."
+    },
+    {
+      "language": "JavaScript",
+      "operands": "Number",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "TypeScript uses the JavaScript runtime numeric rules."
+    },
+    {
+      "language": "JavaScript",
+      "operands": "Number",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "TypeScript uses the JavaScript runtime numeric rules."
+    },
+    {
+      "language": "JavaScript",
+      "operands": "BigInt",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3n",
+        "-3n",
+        "-3n",
+        "3n"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "Use 7n and 2n for the corresponding signed BigInt cases."
+    },
+    {
+      "language": "JavaScript",
+      "operands": "BigInt",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1n",
+        "1n",
+        "-1n",
+        "-1n"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "Use 7n and 2n for the corresponding signed BigInt cases."
+    },
+    {
+      "language": "TypeScript",
+      "operands": "number",
+      "expression": "a / b",
+      "rule": "fractional",
+      "results": [
+        "3.5",
+        "-3.5",
+        "-3.5",
+        "3.5"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "TypeScript uses the JavaScript runtime numeric rules."
+    },
+    {
+      "language": "TypeScript",
+      "operands": "number",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1",
+        "1",
+        "-1",
+        "-1"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "TypeScript uses the JavaScript runtime numeric rules."
+    },
+    {
+      "language": "TypeScript",
+      "operands": "bigint",
+      "expression": "a / b",
+      "rule": "trunc_div",
+      "results": [
+        "3n",
+        "-3n",
+        "-3n",
+        "3n"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "Use 7n and 2n for the corresponding signed BigInt cases."
+    },
+    {
+      "language": "TypeScript",
+      "operands": "bigint",
+      "expression": "a % b",
+      "rule": "rem",
+      "results": [
+        "1n",
+        "1n",
+        "-1n",
+        "-1n"
+      ],
+      "source": "https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html",
+      "note": "Use 7n and 2n for the corresponding signed BigInt cases."
+    }
+  ],
+  "v_playground_probe": {
+    "url": "https://play.vlang.io/",
+    "reported_compiler": "V 0.5.0 345b29d",
+    "source": "fn main() {\n    for a in [7, -7] {\n        for b in [2, -2] {\n            q := a / b\n            r := a % b\n            println('${a},${b}: ${q},${r}')\n        }\n    }\n}\n",
+    "observed_output": "7,2: 3,1\n7,-2: -3,1\n-7,2: -3,-1\n-7,-2: 3,-1",
+    "screenshot": "v-signed-division-2026-10-25.png"
+  }
+}

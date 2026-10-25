@@ -80,7 +80,7 @@ The versioned reference distinguishes ordinary, wrapping, and saturating arithme
 
 ### V
 
-The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, and shows a negative dividend producing a negative remainder. That appendix does not settle power associativity or unary-minus interaction, so this review makes no claim about those cases. Sources: [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) and [current source documentation](https://raw.githubusercontent.com/vlang/v/master/doc/docs.md). No V compiler was executed; do not infer a guarantee for every released version from development documentation.
+The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, and shows a negative dividend producing a negative remainder. That appendix does not settle power associativity or unary-minus interaction, so this review makes no claim about those cases. Sources: [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) and [current source documentation](https://raw.githubusercontent.com/vlang/v/master/doc/docs.md). The subsequent [signed table](signed-division-table.md) records four division/remainder cases executed in the official V playground, which reported V 0.5.0 345b29d. Power was not executed; neither the playground version nor development documentation establishes every released version's behavior.
 
 ## Design consequences for LiteScript
 
@@ -102,7 +102,7 @@ Selected 2026-10-25 after the sign review: LiteScript uses % for remainder and %
 - Odin: `%` uses truncating remainder, while `%%` uses `a - b * floor(a / b)`. Thus `-7 %% 2` is `1`, but `7 %% -2` is `-1`. These values are derived from the [documented formula](https://raw.githubusercontent.com/odin-lang/odin-lang.org/master/content/docs/overview.md), not an executed Odin program.
 - Dart: `%` is [Euclidean modulo](https://api.dart.dev/dart-core/num/operator_modulo.html); [remainder](https://api.dart.dev/dart-core/num/remainder.html) instead follows truncating division. The two coincide for many positive inputs but differ for negative dividends.
 - Zig 0.15.2: [@rem](https://ziglang.org/documentation/0.15.2/#rem) pairs with truncating division and [@mod](https://ziglang.org/documentation/0.15.2/#mod) with floor division. Their documented contracts give `@rem(-7, 2) == -1` and `@mod(-7, 2) == 1`; these are source-derived examples, with no local Zig execution.
-- V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. That establishes the cited negative-dividend example; this review has not executed a full negative-divisor matrix in V.
+- V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. The subsequent [signed table](signed-division-table.md) adds all four signed cases observed in the official V 0.5.0 playground, confirming truncating integer division and dividend-signed remainder for those values.
 
 For LiteScript, % follows the dividend and %% follows the divisor when nonzero. Modulo %% is therefore not always nonnegative for negative divisors; preserve its selected floor identity with //. Floating-point remainder, signed zero, zero divisors, and unrepresentable fixed-width cases need their own numeric/fault contracts.
 
@@ -158,10 +158,11 @@ Associativity describes the expression tree. It does not by itself specify which
 
 The probes cover basic precedence/left association, signed division/remainder, selected unary-plus behavior, and Python/JavaScript power examples. They do not test every profile or every numeric type. Go, C#, Kotlin, Dart, Lua, Odin, Zig, and V were reviewed through primary sources without local execution. C17/C++20 probes do not execute every provision of the newer drafts cited above. No installs or LiteScript execution were performed.
 
-The same capture now includes three focused sign probes in Python, Node, and Rust. They check negative dividends/divisors, Rust Euclidean remainder, odd/even negative-base powers, Python/JavaScript negative exponents and domain outcomes, and Rust integer power. All captured expectations matched. Additional sign examples for Odin, Dart, Zig, and V remain primary-source findings rather than runtime verification.
+The same capture now includes three focused sign probes in Python, Node, and Rust. They check negative dividends/divisors, Rust Euclidean remainder, odd/even negative-base powers, Python/JavaScript negative exponents and domain outcomes, and Rust integer power. All captured expectations matched. Additional sign examples for Odin, Dart, and Zig remain primary-source findings rather than runtime verification. Four V 0.5.0 playground division/remainder cases are captured separately in the [signed table's data](research/signed-division-table-2026-10-25.json); no signed-power execution is claimed there.
 
 ## Related documents
 
+- [Signed division, remainder, and modulo table](signed-division-table.md)
 - [Operators and selected arithmetic grouping](operators.md#basic-arithmetic-grouping-selected)
 - [Provisional grammar](grammar-sketch.md#basic-arithmetic-grouping-and-leading-plus)
 - [Numbers](numbers.md)
