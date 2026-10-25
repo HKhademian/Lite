@@ -47,8 +47,10 @@ Open: partial construction, initialization through callees, and full field/eleme
 Selected:
 
 - `T ! E` is a recoverable outcome type; `T!` is its shorthand. Success and error handling are explicit.
-- `A | B` is a normalized plain union: order-independent, flattened, and duplicate-free.
+- `Option<T>` is a named explicit optional type. There is no implicit null or nullable ordinary value. `Unit` is a real type.
+- `A | B` is a normalized plain union: order-independent, flattened, and duplicate-free. Normalization does not collapse nominal records, enum cases, `Option`, or `Result` into their payloads or into `Unit`.
 - A value is admitted to a union when its normalized type is an exact member; widening preserves the source member. Narrowing is checked.
+- A union field read is valid when every possible alternative exposes that readable field; its type is the normalized union of the field types. A field write must be compatible with every possible target.
 - All-zero storage is a valid language-defined value for every type. Result zero is `.ok(zero(T))` for `T ! E`.
 - A multi-member union's active member for `zero(T)` is still open; do not choose a canonical or leftmost member.
 
@@ -59,9 +61,12 @@ Open: generic declaration/application syntax, union-zero priority, and zero mapp
 Selected:
 
 - An omitted typed local `name: Type` immediately zero-initializes that type.
+- The initializer spelling selects the mechanism: omitted typed local → zero; `= 0` → zero; `= {}` → declared field defaults; `= ?` → reserved storage.
 - `name: Type = 0` uses the language-defined zero. `name: Type = {}` uses declared field defaults.
+- Reserved `= ?` storage is not readable before initialization and adds no `Unit`, `None`, or unknown union member.
 - A bare local whose normalized type has multiple distinct union members requires an initialized expression or `= ?`; `= 0` cannot choose a member.
-- A conditional initializer without `else` leaves the declaration default on no match. `else { ? }` leaves the binding reserved on that path.
+- A conditional initializer without `else` leaves the declaration default on no match. `else { ? }` leaves the binding reserved on that path, correlated with the condition.
+- A fixed binding's first whole-value write initializes it; later replacement requires `var`.
 - Record construction must satisfy required fields and the type's validity contract.
 
 Open: field-default mechanics, partial construction, and allocation/cleanup details.
