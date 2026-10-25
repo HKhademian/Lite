@@ -6,7 +6,7 @@ A **normative page** states a selected or established rule. A **supporting page*
 
 If two pages conflict, the normative page for that area and the [decision ledger](decisions-and-open-questions.md) win. Report the conflict rather than synthesizing a third rule.
 
-The [current design specification](spec/README.md) provides stable area IDs and a condensed summary. It is subordinate to these normative pages and the ledger.
+The [LiteLang current design specification](spec/README.md) provides stable area IDs and a condensed summary. It is subordinate to these normative pages and the ledger.
 
 ## Map
 
@@ -22,6 +22,7 @@ The [current design specification](spec/README.md) provides stable area IDs and 
 | Collections and sequences | [Collections and iterators](collections-and-iterators.md) | [Collection abstractions](collection-abstractions.md), [operation contracts](collection-operation-contracts.md), [sequence types](sequence-types.md), [indexed sequence contract](indexed-sequence-contract.md) |
 | Functions and calls | [Functions](functions.md) | [Named arguments and tuples](named-arguments-and-tuples.md), [callable input packs](callable-input-packs.md), [union parameter defaults](union-parameter-defaults.md) |
 | Modules and packages | [Modules and packages](modules-and-packages.md) | — |
+| Naming and versions | [Naming and versioning](versioning-and-naming.md) | — |
 | Tooling and formatter | [Tooling and learning](tooling-and-learning.md) | [Lexical structure](lexical-structure.md) |
 | Process and history | [Decision ledger](decisions-and-open-questions.md) | [Review handoff](language-design-review-handoff.md), [historical backlog](../TASKS.md) |
 

@@ -4,11 +4,11 @@ Design snapshot: **2026-10-25**. Stage: **planning; no implementation**.
 
 ## Start here
 
-1. [LiteScript white paper](white-paper.md): the foundational philosophy, intended audience, and criteria for every design decision.
+1. [LiteLang white paper](white-paper.md): the LiteLang philosophy, intended audience, and criteria for every design decision.
 2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
 3. [Current decisions and open questions](decisions-and-open-questions.md): selected contracts and work still to settle.
 4. [Provisional grammar sketch](grammar-sketch.md): the current syntax outline and its remaining boundaries.
-5. [Current design specification](spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
+5. [LiteLang current design specification](spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
 6. [Normative page map](normative-pages.md): which page owns each current rule and which pages are historical.
 
 The detailed reference below develops these foundations one concept at a time.
@@ -31,7 +31,7 @@ These are reading paths, not separate index entries; each document has one canon
 
 These four categories are the intended filter; status lines may use the synonyms above.
 
-Examples use `text` fences because no LiteScript syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
+Examples use `text` fences because no LiteLang syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
 
 Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see the component grammar in the named-input routing entry.
 
@@ -205,10 +205,11 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Project and implementation direction
 
+- [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): selected singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, performance goals, and open memory semantics.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.
-- [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteScript contract, and remaining open implementation details.
+- [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteLang formatter contract, and remaining open implementation details.
 - [Language design review handoff](language-design-review-handoff.md): historical review log and completed plan; current rules are in the ledger and concept pages.
 - [Documentation review backlog](../TASKS.md): historical 2026-10-23 snapshot of documentation defects; current rules are in the ledger.
 - [Backlog by topic](../ISSUES-BY-TOPIC.md): topic-grouped view of the same historical snapshot.

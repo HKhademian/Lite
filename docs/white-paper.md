@@ -1,18 +1,18 @@
-# LiteScript White Paper
+# LiteLang White Paper
 
 **A readable language that keeps attention on the problem.**
 
-Status: **foundational design statement, 2026-10-20**. LiteScript is a language-design project. The examples describe selected directions; compiler/runtime implementation and performance measurement remain future work. Detailed documents distinguish selected rules from open mechanisms.
+Status: **foundational design statement, 2026-10-20**. Lite is a language-design project for LiteLang. The examples describe selected directions; compiler/runtime implementation and performance measurement remain future work. Detailed documents distinguish selected rules from open mechanisms.
 
 ## Abstract
 
-LiteScript aims to make strongly typed programming feel as direct as scripting. Its primary purpose is to let people and programming agents spend their attention solving problems, expressing algorithms, and reasoning about behavior. The language should contribute little repetitive syntax, expose the contracts that matter, and make common safe operations easy to write and read.
+LiteLang aims to make strongly typed programming feel as direct as scripting. Its primary purpose is to let people and programming agents spend their attention solving problems, expressing algorithms, and reasoning about behavior. The language should contribute little repetitive syntax, expose the contracts that matter, and make common safe operations easy to write and read.
 
 Convenience must remain compatible with an efficient implementation. The design favors useful defaults, static reasoning, concise explicit operations, and predictable data representations. It aims for native execution with modest runtime support. Readability, safety, and performance are evaluated together throughout the design.
 
 ## 1. Keep the language out of the programmer's way
 
-The central design question is how much language machinery a programmer must carry while working on a problem. Repeated annotations, wrapper construction, defensive absence checks, and indirect control flow consume attention. LiteScript should remove repetition wherever it can preserve a clear contract.
+The central design question is how much language machinery a programmer must carry while working on a problem. Repeated annotations, wrapper construction, defensive absence checks, and indirect control flow consume attention. LiteLang should remove repetition wherever it can preserve a clear contract.
 
 Ordinary code should look like ordinary work: create values, compare them, traverse collections, call functions, update permitted data, and handle failures. A small program should be approachable without first learning a framework, protocol hierarchy, memory-address model, or extensive build configuration.
 
@@ -46,7 +46,7 @@ Presentation should reinforce meaning. For example, the compact type spelling `A
 
 ## 3. Useful defaults reduce defensive work
 
-LiteScript uses defaults to remove recurring bookkeeping while giving values a defined meaning.
+LiteLang uses defaults to remove recurring bookkeeping while giving values a defined meaning.
 
 Every type must have a valid value represented by all-zero storage. A simple typed declaration can therefore create a readable value immediately:
 
@@ -70,7 +70,7 @@ A valid zero value still needs type-specific meaning. Zero initialization alone 
 
 ## 4. Make consequential operations explicit and concise
 
-LiteScript should provide short, readable operations for behavior that affects a caller's reasoning. Failure propagation and mutation are central examples.
+LiteLang should provide short, readable operations for behavior that affects a caller's reasoning. Failure propagation and mutation are central examples.
 
 A recoverable result has a declared success and error contract:
 
@@ -128,7 +128,7 @@ Some implicit behavior is useful and already selected: ordinary type inference, 
 
 Further convenience features must earn their place. A proposal that infers a type must still define its constraints. A proposal that hides copying, allocation, ownership transfer, or failure propagation must explain the resulting observable behavior and cost. Compiler optimization can change representation while preserving those contracts.
 
-The project evaluates mechanisms individually. Existing languages provide references for specific questions; LiteScript's priorities determine which ideas fit. The [reference catalog](references.md) links the focused comparisons and their sources.
+The project evaluates mechanisms individually. Existing languages provide references for specific questions; LiteLang's priorities determine which ideas fit. The [reference catalog](references.md) links the focused comparisons and their sources.
 
 ## 8. Criteria for future decisions
 

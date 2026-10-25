@@ -6,7 +6,7 @@ Snapshot: **2026-10-25**. Source: the language-design discussion in this chat. N
 
 ### Audience and defaults
 
-- The [LiteScript white paper](white-paper.md) is the foundational philosophy: keep ceremony low, make programs simple to read and reason about, and let people and programming agents focus on problem solving. Useful defaults and concise explicit operations should preserve strong contracts and support efficient implementation with modest runtime machinery. Native performance remains a goal requiring implementation and measurement.
+- The [LiteLang white paper](white-paper.md) is the foundational philosophy for LiteLang: keep ceremony low, make programs simple to read and reason about, and let people and programming agents focus on problem solving. Useful defaults and concise explicit operations should preserve strong contracts and support efficient implementation with modest runtime machinery. Native performance remains a goal requiring implementation and measurement.
 - Static, strong typing, with ordinary type inference so first examples need no annotations.
 - Beginner array algorithms such as sorting should use ordinary indexed comparisons and assignments rather than explicit Result handling at every read and write. The user accepts direct positional operations with typed faults and requests attached else for recovery; full capture scope and transfer/cleanup remain open; see [ordinary algorithm code](checked-fault-policy.md#ordinary-algorithm-code-must-remain-direct).
 - Written library contracts must make collection requirements such as positional indexing visible in source. Requiring readers to inspect the body or an IDE is insufficient. Omitted inputs may still use deliberately inferred contracts; an explicit complete contract must not silently gain stronger requirements. Exact contract spellings remain open; see [signature visibility](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations).
@@ -41,6 +41,10 @@ Snapshot: **2026-10-25**. Source: the language-design discussion in this chat. N
 - Small runtime and native performance as goals, not measured achievements.
 
 - The [T] shorthand has an accepted complete indexed-sequence direction: cheap exact count, zero-based constant-time reads, and traversal in positional order with duplicates preserved. Mut access adds supported element replacement. Underlying hooks are get_index, set_index, iterable, and count; general keyed Indexable need not supply the full sequence bundle. Growth, ownership, contiguous storage, full generic/protocol grammar, and stored representations are separate. See [indexed sequences](indexed-sequence-contract.md).
+
+### Project and versioning
+
+- Naming and versioning policy selected 2026-10-25: project **Lite** (`lite`); language **LiteLang** (`litelang`); a program is a **LiteScript** (`litescript`), plural **LiteScripts**; compiler **Lite compiler** (`lite-compiler`, binary `litec`); runtime **Lite runtime** (`lite-runtime`, binary `literun`); CLI `lite`; source extension `.lite`. Language, compiler, runtime, and CLI versions are independent; the runtime also carries an integer ABI version. Language changes require an accepted `LP-NNNN` proposal or a recorded ledger decision. Proposals use `LP-NNNN rN` with status, target version, and supersession links; accepted proposals are never silently edited. Releases use component tags and a manifest rather than one ambiguous project tag. Existing pages that say “LiteScript” for the language are legacy usage; new text uses LiteLang for the language and LiteScript only for a program. See [naming and versioning](versioning-and-naming.md).
 
 ### Syntax and results
 

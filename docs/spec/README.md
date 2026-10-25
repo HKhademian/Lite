@@ -1,10 +1,10 @@
-# LiteScript current design specification
+# LiteLang current design specification
 
 Status: **draft current-design summary, 2026-10-25**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
-- `LS-001` through `LS-010` identify stable design areas. The number does not change when wording is refined.
+- `LS-001` through `LS-011` identify stable design areas. The number does not change when wording is refined.
 - A removed area is marked **superseded** and its ID is never reused.
 - Cite the area ID for the broad decision and the linked normative page for details.
 - “Selected” means a user choice or retained rule. “Open” means no current contract.
@@ -158,6 +158,23 @@ Selected:
 - The project remains planning-only; no compiler implementation is claimed.
 
 Open: package/build syntax, runtime/native ABI, complete formatter implementation, and module resolution details.
+
+## LS-011 — Naming and versioning
+
+Selected:
+
+- The umbrella project is **Lite** (`lite`); the language is **LiteLang** (`litelang`).
+- A program or source unit is a **LiteScript** (`litescript`); the plural is **LiteScripts**.
+- The compiler is the **Lite compiler**, package `lite-compiler`, binary `litec`.
+- The runtime is the **Lite runtime**, package `lite-runtime`, binary `literun`.
+- The command-line tool is `lite`; LiteScript files use `.lite`.
+- Language, compiler, runtime, and CLI have independent semantic versions. The runtime also has an integer ABI version.
+- A language version changes only through an accepted Lite Proposal (`LP-NNNN`) or a recorded ledger decision. Releases use a project manifest tag such as `lite-v1.2.0` plus component tags such as `lang-v1.2.0` and `compiler-v0.4.1`.
+- A proposal uses `LP-NNNN rN` with status, target version, and supersession links. Accepted proposals are not silently edited.
+- Same language MAJOR promises source compatibility; the runtime must match the compiler's declared ABI or a declared compatibility range.
+- Existing pages that say “LiteScript” for the language are legacy usage. New and edited text uses LiteLang for the language and LiteScript only for a program.
+
+Open: package-registry spelling, release automation, and standard-library versioning details beyond the reserved `lite-stdlib` name.
 
 ## Open contracts at a glance
 

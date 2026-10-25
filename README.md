@@ -1,8 +1,8 @@
-# LiteScript
+# Lite
 
-LiteScript is a language-design project for readable, strongly typed programs with scripting convenience. It aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Native execution with modest runtime support is a performance goal.
+Lite is a language-design project for **LiteLang**, a readable, strongly typed language with scripting convenience. LiteLang programs are **LiteScripts**. The project aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Native execution with modest runtime support is a performance goal.
 
-**Start with the [LiteScript white paper](docs/white-paper.md)** for the language's philosophy, goals, and design criteria.
+**Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
 The project is currently **planning only**. These documents record the design discussion through **2026-10-25**. They are not an implemented compiler specification, and the examples have not been compiled.
 
@@ -10,7 +10,8 @@ The project is currently **planning only**. These documents record the design di
 - [Principles and goals](docs/principles.md)
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)
-- [Current design specification](docs/spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
+- [LiteLang current design specification](docs/spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.
+- [Naming and versioning](docs/versioning-and-naming.md): `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, and the version/proposal policy.
 - [Optional leading separators for expressions, additive chains, patterns, and unions](docs/leading-separators.md)
 - [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [Logical tuple unpacking](docs/tuple-unpacking.md): emit labeled fixed items and tail elements, then reconstruct under the destination contract.
