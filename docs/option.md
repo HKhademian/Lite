@@ -66,16 +66,16 @@ Its spelling is not frozen. It means use the contained value, or an explicitly s
 The requested concise form is:
 
 ```text
-found := @search loop users as user {
+found: Option<User> = @search loop users as user {
     if matches(user) {
         return @search Some(user)
     }
 }
 ```
 
-The intended whole-loop result is `Option<User>`. A matching exit supplies `Some(user)`; exhausting the source supplies `None`. There is no required trailing `None` in the body or redundant `else { None }`.
+The declared destination `Option<User>` establishes the loop result. A matching exit supplies `Some(user)`; a non-match follows the conditional's missing-`else` zero fallback (`Option<User>.None`), which the loop commits. Exhaustion therefore yields `None` without a required trailing `None` in the body or a redundant `else { None }`.
 
-This is a specific implicit optional-completion rule. It does not introduce nullable ordinary values, implicit zero, or arbitrary default error values. Its precise inference interaction with the iteration body's `Unit` type is still open.
+This is not an implicit optional-completion rule and does not insert an Option accumulator. Unannotated tagged-result inference remains open; the destination supplies the type in this example, and no nullable ordinary values, implicit zero, or arbitrary default error values are introduced.
 
 ## Explicit optional loop values
 
