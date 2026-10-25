@@ -44,6 +44,8 @@ Adjacent string literal tokens with only whitespace or comments between them con
 
 ## Division, remainder, and modulo tokens
 
+The [arithmetic revision proposal](arithmetic-methods-and-division-revision.md) considers operand-directed Int division, _/ and _% floor-family tokens, and an earlier ~/ alternative, alongside explicit numeric methods. These are not added to the productions below. Identifier boundaries must be resolved before underscore operators are selected; standalone _ remains an ordinary readable name. Future infix methods and spacing-dependent // comments remain deferred.
+
 `/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
 
 Selected 2026-10-25: integer % is remainder paired with a mathematical quotient truncated toward zero; a nonzero remainder follows the dividend's sign. Integer %% is modulo paired with floor //, so a == b * (a // b) + (a %% b) mathematically and a nonzero modulo result follows the divisor's sign. This supersedes the earlier floor-paired % rule. Names follow Zig; symbols follow Odin. %=/%%= are the corresponding update tokens. Recognize %%= and %% before shorter percent-family tokens; a%%b is one modulo expression. This adds no rem/mod callable API or truncating-division operator. Full recursive integration, conversions, noninteger remainder/modulo, and exact failure contracts remain open. See [division](division.md).

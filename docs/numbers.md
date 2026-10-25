@@ -48,6 +48,8 @@ Within the selected set, prefix negation binds above multiplicative * / // % %%,
 
 ## Division
 
+The [arithmetic-method and division review](arithmetic-methods-and-division-revision.md) records the user's request for ordinary numeric methods, proposed Int / Int truncation, and _/ plus _% floor-family candidates, with ~/ as an earlier alternative. Those proposed numeric/symbol changes are not yet adopted. For already established operand types, the recommendation is to keep the operation stable across destination annotations; mixed operands and conversion/inference policy remain separate.
+
 ```text
 ratio := 7 / 2;     /* fractional quotient: 3.5 */
 quotient := 7 // 2; /* integer quotient: 3 */

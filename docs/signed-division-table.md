@@ -2,6 +2,8 @@
 
 Reviewed **2026-10-25**. Each column supplies the same signed values to the row's expression. Most operands are native signed integers; JavaScript/TypeScript Number and BigInt are separated. The selected LiteScript contract is a design, not an implemented runtime.
 
+The later [method and division revision proposal](arithmetic-methods-and-division-revision.md) has not changed the LiteScript rows below. The proposed truncating Int / Int and _/ plus _% floor family must be accepted and migrated explicitly before those rows change.
+
 | Language | Operand type | Expression | Rule | pos:pos (7, 2) | pos:neg (7, -2) | neg:pos (-7, 2) | neg:neg (-7, -2) |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |
 | [LiteScript](division.md) | Int | `a / b` | Fractional quotient | 3.5 | -3.5 | -3.5 | 3.5 |
