@@ -15,23 +15,30 @@ Selected:
 
 - Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
-- Expressions evaluate left to right. An assignment selects its target once, then evaluates the right-hand side. Named call inputs evaluate in written order.
+- Operands and named call inputs evaluate left to right in written order.
+- Operator grouping, tighter to looser: prefix `-`; `* / // % %%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.
+- All ten comparison forms share one precedence. A comparison chain compares adjacent operands, evaluates each operand at most once left to right, and stops at the first false comparison.
+- `=` is assignment, `==` is equality, and `=!=` is inequality. `**` is power; an unparenthesized unary-minus/power spelling is rejected, and chained-power association remains open.
+- Conditions require `Bool`; there is no implicit truthiness. A complete Boolean expression may start with one optional `and`/`or`, which adds no operand and no binding.
 - Postfix `!` forwards a returned recoverable error; typed panics use a separate channel.
-- The [grammar sketch](../grammar-sketch.md) and [lexical structure](../lexical-structure.md) own the detailed syntax.
+- The [grammar sketch](../grammar-sketch.md) and [lexical structure](../lexical-structure.md) own the detailed syntax; [operators](../operators.md) owns the selected precedence ladder, and [evaluation order](../evaluation-order.md) owns sequencing details.
 
-Open: complete grammar/parser, full operator table, and exact diagnosis/recovery rules.
+Open: complete grammar/parser, expression integration, power association and result typing, numeric/fault semantics, and exact diagnosis/recovery rules.
 
 ## LS-002 — Bindings, permissions, and assignment
 
 Selected:
 
 - `name := expression` declares and infers a binding.
-- `name: Type = expression` declares with an explicit type.
+- `name: Type = expression` declares with an explicit type. Declarations use `:=` or `: Type =`; no `let` keyword is added.
 - Bindings are fixed and read-only by default.
 - `var` permits whole-binding replacement. `mut` permits writable access to held data. `var mut` grants both, in that order.
-- `=` does not declare a name. Assignment is a statement producing `Unit` and cannot be used as a value.
+- In typed forms, `var` stays with the binding and `mut` follows the colon, as in `var user: mut User`.
+- `=` does not declare a name. Assignment selects its target once, evaluates the right-hand side, and only then writes. A compound update reads the target's current value before evaluating its right operand.
+- Assignment is a statement producing `Unit` and cannot be used as a value.
 - `name: Type = ?` explicitly reserves storage. The first whole-value write may initialize it without `var`; later replacement requires `var`.
 - Definite initialization is path-sensitive: every path reaching a read must have initialized the binding.
+- Ordinary local shadowing is lexical and sequential; a shadow binding is a distinct binding.
 
 Open: partial construction, initialization through callees, and full field/element construction contracts.
 
