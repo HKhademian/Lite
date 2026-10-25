@@ -59,7 +59,7 @@ Equal size, alignment, and payload layout do not alone select identical paramete
 
 Selected rationale and representation contract, 2026-10-23: a tuple is an ordered product of component slots. Every slot has an implicit positional accessor; a label gives that position an additional semantic name. Labels belong to the static contract and add no per-value label strings, name dictionary, tag, wrapper, or indirection.
 
-For the same ordered concrete storable component types, adding, removing, or changing labels preserves storage size, alignment, and corresponding component offsets. The following compares representation, not implicit assignment compatibility:
+For the same ordered concrete storable component types, adding, removing, or changing labels preserves storage size, alignment, and corresponding component offsets. The following compares representation; the later selected explicit destination conversion may also rename these matching positions:
 
 ```text
 (:Int, :Int)
@@ -67,7 +67,7 @@ For the same ordered concrete storable component types, adding, removing, or cha
 (teacherId: Int, studentId: Int)
 ```
 
-All three have the same ordered component types and storage layout. The labels give different semantic roles, so the existing structural identity and label-sensitive compatibility rules still distinguish their contracts. Naming a slot studentId does not create a new nominal scalar type for its Int payload. Numeric and named access to one labeled position select the same component.
+All three have the same ordered component types and storage layout. The labels give different semantic roles, so structural identity still distinguishes their contracts, while an explicit compatible destination can add, remove, or change labels without moving values. See [labels under an explicit destination type](tuple-label-conversions.md). Naming a slot studentId does not create a new nominal scalar type for its Int payload. Numeric and named access to one labeled position select the same component.
 
 The user's schematic ...T1.T2.T3... describes the ordered component product. The dots are writing separators, not stored bytes or a packed-layout directive. Exact target layout and ABI remain separate; labels alone never change the chosen layout. This does not promise layout equality after changing component types or their order, or after replacement changes a slot's eventual resolved type.
 

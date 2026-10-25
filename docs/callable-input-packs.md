@@ -34,6 +34,10 @@ This is a function-header rule, not a change to ordinary tuple values, types, or
 
 The previously selected contextual receiver rules still apply: an empty header binds no local names while retaining expected inputs, and a nonempty header may bind a positional prefix. Without an expected callable, an empty header means zero inputs. Binding a known tuple's components does not itself replace those rules with exact-coverage pattern matching. Simple trailing rest receivers now follow the array-tail extension. General nested header patterns and any replacement of prefix binding by exact destructuring require a separate decision; ordinary body-local tuple patterns retain their exact-coverage rules.
 
+## Stored callables may expose destination labels
+
+Selected 2026-10-25: a callable value can be admitted under an established compatible destination whose public input labels differ. Callers route by that destination; the implementation keeps its positional receiver bindings and default definitions. For source := fn(n: Int = 2): Int { n * 10 }, target: fn(amount?: Int): Int = source permits target(amount = 3), while source still accepts n. Input shape/types/access and result/error/omission obligations remain enforced. This is label adaptation, not full variance or a required physical wrapper. Existing .call pack routing still uses supplied labels against the visible callable contract; no supplied pack is silently relabeled before routing. See [labels under an explicit destination type](tuple-label-conversions.md).
+
 ## Where the contract comes from
 
 Input shape and component types must be established by annotations, an expected callable type, or selected ordinary [parameter-default inference](parameter-default-inference.md). Defaults can establish omitted ordinary input types equally with and without fn; unknown-input inference from arbitrary body operations remains separate. Once inputs are known, a nonrecursive local implementation may infer its result from its body. An explicit or expected result remains a constraint.
@@ -148,7 +152,7 @@ A Python reference model checked 23 expected-value, input-shape, predicate-resul
 
 - Captures remain private implementation state distinct from the public input/result contract; capture syntax, ownership, and lifetimes remain deferred.
 - Whole-pack access, component moves, aliases, and temporary mut/var caller grants need a compatible ownership/lifetime model. An ordinary stored value tuple must not manufacture or extend caller-location permission.
-- Public labels versus implementation-local names, callable variance/conversions, recursive/generic inference, and complete header/expression grammar remain open.
+- Public labels through an established destination may now differ from implementation-local names, including for stored callable values. Remaining callable variance/conversions, recursive/generic inference, and complete header/expression grammar remain open; see [label conversion](tuple-label-conversions.md).
 - A static input tuple need not allocate a heap object or require a runtime label dictionary. Exact copying, dispatch, materialization, ABI, and specialization/code-size costs depend on the eventual compiler and memory model; no performance result is established.
 
 Related: [functions](functions.md), [types and inference](types-and-inference.md), [call routing](named-input-routing.md), [tuple boundaries](tuple-entries-and-access.md), [ordinary parameter passing](parameter-values-and-slots.md), and [deferred captures](deferred-contexts.md).

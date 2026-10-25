@@ -1,6 +1,6 @@
 # Named input routing: concrete cases
 
-Status: **core named call routing, validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit reconstruction, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples require explicit reconstruction, even when their positional types agree. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, stored named/unnamed conversions, callable compatibility, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement subject to explicit-label uniqueness, =name shorthand, and explicit tuple spread, selected 2026-10-23.
+Status: **core named call routing, validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit destination label conversion, and named/positional destructuring selected by the user, 2026-10-21; not an implemented parser/runtime**. Typed destructuring uses a tuple type after the colon. Tuple type components use name: Type, bare name for an inferred named component, or :Type for an unnamed typed component. The earlier name: form with no type is removed. Differently labeled stored tuples now admit label conversion under an explicit destination with matching positional shape/types, superseding the earlier rejection; reconstruction is still needed to change value order. Identical ordered labels and component types define the same structural tuple type wherever written. Complete recursive grammar, other shape/type conversions, remaining callable compatibility beyond label adaptation, and the explicitly marked extensions remain open. Mixed tuple inference and corresponding stored type layouts now permit named/unnamed interleaving. Tuple construction appends new components and replaces label collisions involving spread in their original slots; duplicate explicit labels are errors, and the surviving contribution determines the inferred field type. Calls now use their fixed declared input shape: next-unfilled positional routing, named replacement subject to explicit-label uniqueness, =name shorthand, and explicit tuple spread, selected 2026-10-23.
 
 ## Selected value shorthand and positional access
 
@@ -283,32 +283,26 @@ stored := (r = op1(), l = op2());
 Its inferred order is r, l. Execution remains op1 then op2. This order belongs to the stored value's tuple contract; a later destination does not retroactively change it.
 
 ```text
-pair: (l: Int, r: Int) = stored; /* rejected: stored order differs */
+pair: (l: Int, r: Int) = stored; /* valid label conversion: l gets stored.0, r gets stored.1 */
 pair: (l: Int, r: Int) = (l = stored.l, r = stored.r); /* explicit reconstruction */
 pair: (l: Int, r: Int) = (...stored); /* explicit spread routes fields by name */
 ```
 
-Both explicit reconstructions use the already produced fields; neither invokes op1/op2 again. No implicit stored-tuple permutation is selected. This is the user-selected boundary, even when component types are identical.
+The whole-value assignment preserves stored positions while exposing destination labels; it does not route by old labels. Both explicit reconstructions instead route the already produced fields by name; neither invokes op1/op2 again. No implicit stored-tuple permutation is selected. See [labels under an explicit destination type](tuple-label-conversions.md).
 
 A literal and a stored value are different syntactic inputs to construction. Merely writing a stored value where a literal was accepted does not enable contextual rerouting. More elaborate expected-type propagation through branches, generic calls, or overloads must not silently erase the stored-value boundary.
 
 ### Label compatibility — selected
 
-Selected by the user, 2026-10-21: different component labels prevent direct stored-tuple compatibility, even when the component types agree. This applies to assignment and tuple-valued function inputs. Labels differing at a position require explicit reconstruction:
+Selected 2026-10-25, superseding the earlier label-mismatch rejection: an established explicit destination can rename, add, or remove labels when the ordered shape, resolved component types, and access/copy requirements match. The destination exposes its labels; source positions, values, and contract are preserved. This applies to annotated bindings, already typed assignment targets, and declared tuple-valued inputs.
 
 ```text
 size := (width = 640, height = 480);
-point: (x: Int, y: Int) = size; /* rejected: names differ */
-point := (x = size.width, y = size.height); /* explicit renaming */
+point: (x: Int, y: Int) = size; /* valid: x = 640, y = 480 */
+plain: (:Int, :Int) = size;    /* valid: same positions without labels */
 ```
 
-The user emphasized that cake/tea and fruit/chocolate describe different roles. Naming those roles prevents accidental interchange of equally typed components. Positional destructuring remains valid and only chooses local binding names:
-
-```text
-(width, height) := size; /* valid: binds the stored positions */
-```
-
-Fresh positional literals can still populate a known named tuple contract, and fresh named literals can still route into its destination order. Those construction rules do not allow a differently labeled stored tuple to be silently renamed. Type aliases do not bypass the label check.
+Inference without a destination retains source names. Fresh constructors keep name-based routing; whole stored-value admission does not reroute by source labels. A source (r = 20, l = 10) admitted as (l: Int, r: Int) gives l = 20 and r = 10; reconstruct explicitly to obtain l = 10 and r = 20. Equal byte size alone does not admit different component types. Positional destructuring continues to choose local names without changing the source contract. See [labels under an explicit destination type](tuple-label-conversions.md).
 
 ### Structural tuple identity — selected
 
@@ -319,11 +313,11 @@ first: (cake: Int, tea: Int) = (1, 2);
 second: (cake: Int, tea: Int) = first; /* valid: same tuple type */
 ```
 
-Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. A different component label, order, or resolved type describes a different tuple type; general assignability between different component types remains a separate type-system rule. The selected same-shape rule does not permit implicit stored-tuple relabeling or permutation. Separately declared records retain their selected nominal identities.
+Different binding names do not change that identity. Transparent component type aliases resolve to their underlying types. A different component label, order, or resolved type describes a different tuple type; general assignability between different component types remains a separate type-system rule. Label-only conversion under an explicit destination is now selected; identity remains label-sensitive and no implicit stored-tuple permutation is introduced. Separately declared records retain their selected nominal identities.
 
-### Remaining conversion policy — recommendation
+### Named and unnamed conversion — selected
 
-Stored unnamed-to-named and named-to-unnamed conversions remain open; recommend explicit reconstruction initially.
+Stored unnamed-to-named, named-to-unnamed, and mixed label-only conversions are now selected under an established destination with unchanged positions/types. Other shape/type/access conversions remain separate; see [labels under an explicit destination type](tuple-label-conversions.md).
 
 ### Mixed tuple inference selected
 
@@ -428,7 +422,7 @@ The latest user clarification replaces the earlier retained-colon omission form.
 
 Each annotated initializer establishes l, r order, with Int types inferred from the corresponding surviving contributions. All four examples bind left = 1 and right = 2. Partial annotations such as (l, r: Int) infer l from its final surviving contribution while checking final r against its explicit type. Labels are static names; inferred types do not depend on runtime values. See [patching and inferred component types](#patching-and-inferred-component-types-selected).
 
-Omitting component types does not omit or default their values. For stored epx in l, r order, (left, right): (l, r) = epx infers component types and binds by position; a stored r, l tuple still requires explicit reconstruction. Missing inference evidence is an error, without assuming Int, Unit, Any, or a dynamic type. Bare label-only schemas are not complete standalone aliases/signatures unless an applicable static contract determines their missing types.
+Omitting component types does not omit or default their values. For stored epx in l, r order, (left, right): (l, r) = epx infers component types and binds by position; a stored r, l tuple can now supply l, r labels positionally, with l receiving position 0 and r position 1; reconstruct explicitly only to reorder values by source label. Missing inference evidence is an error, without assuming Int, Unit, Any, or a dynamic type. Bare label-only schemas are not complete standalone aliases/signatures unless an applicable static contract determines their missing types.
 
 ### Selected tuple type component grammar
 
@@ -466,7 +460,7 @@ All three component forms may contain a nested tuple type where a type is writte
 
 ## 7. Callables, nested inputs, and permissions
 
-Recommend taking public call labels from the statically visible callable contract. Contextual lambda headers retain positional local naming:
+Selected 2026-10-25: public call labels come from the statically visible destination callable contract, including label-adapted stored callables; see [labels under an explicit destination type](tuple-label-conversions.md). Contextual lambda headers retain positional local naming:
 
 ```text
 var difference: fn (l: Int, r: Int): Int;
@@ -474,7 +468,7 @@ difference = (x, y) { x - y }
 difference(r = 2, l = 10); /* proposed public-label routing: result 8 */
 ```
 
-The local x/y names do not become public argument labels. The same holds for empty/partial contextual lambda headers. Stored full-callable compatibility, public label renaming, overloads, unions of different callable contracts, and label-free function types remain separate choices; reject ambiguous routing rather than searching runtime values for names.
+The local x/y names do not become public argument labels. The same holds for empty/partial contextual lambda headers. Stored callable public labels may now be adapted positionally under an established compatible destination, without renaming implementation locals/defaults. Other callable compatibility, overloads, unions of different callable contracts, and full label-free signature grammar remains a separate choice; reject ambiguous routing rather than searching runtime values for names.
 
 Nested expressions follow ordinary recursive evaluation. In op(c = outer_c(), a = nested(inner1(), inner2()), b = outer_b()), execution after evaluating op's callee is outer_c, nested's callee, inner1, inner2, nested's body, outer_b, then op's body, assuming normal completion throughout. Names at each call level route only that call's inputs.
 

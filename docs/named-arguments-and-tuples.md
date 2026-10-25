@@ -1,6 +1,6 @@
 # Named arguments and named tuples
 
-Status: **named call permutations and validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit reconstruction, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Tuple label compatibility and structural identity are also selected: differently labeled stored tuples require explicit reconstruction; identical ordered labels and component types describe the same tuple type. Complete recursive grammar, stored named/unnamed conversions, callable label compatibility, and explicitly marked extensions remain open**.
+Status: **named call permutations and validation, contextual tuple construction extended to fixed destination routing on 2026-10-23, ordered stored tuples with explicit destination label conversion, and typed/inferred positional and named tuple destructuring selected by the user, 2026-10-21. Tuple label compatibility and structural identity are also selected: differently labeled stored tuples now admit positional label conversion under explicit compatible destination types; identical ordered labels and component types describe the same tuple type. Complete recursive grammar, other shape/type conversions, remaining callable compatibility beyond label adaptation, and explicitly marked extensions remain open**.
 
 The [concrete routing case catalogue](named-input-routing.md) records the selected mapping algorithm and construction/storage boundary with valid and rejected examples. Remaining recommendations are explicitly marked.
 
@@ -32,7 +32,7 @@ size := (width = 640, height = 480);
 typed_size: (width: Int, height: Int) = (width = 640, height = 480);
 ```
 
-The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Core component, construction, access, and binding forms are selected. Labels now affect compatibility. Complete recursive grammar and stored named/unnamed conversion policy remain open. Existing record declarations remain nominal; this review does not give record types structural compatibility.
+The call supplies two inputs; the tuple expression illustrates one value with two components. The user selected fresh named initializers routing into a known destination order and explicit reconstruction for a differently ordered stored tuple. Core component, construction, access, and binding forms are selected. Labels retain structural identity while explicit destination types can adapt labels without reordering; see [labels under an explicit destination type](tuple-label-conversions.md). Labels now affect the visible naming contract. Complete recursive grammar and other shape/type/access conversion policy remain open; label-only named/unnamed destination conversions are selected. Existing record declarations remain nominal; this review does not give record types structural compatibility.
 
 For calls, the user selected equals; colon-value call syntax is not the selected form. Equals reuses the selected field-value convention and leaves colon for types and type tests. The complete parser must distinguish a named entry from assignment expressions by syntactic context; it must not choose whichever interpretation type-checks.
 
@@ -51,7 +51,7 @@ The selected omission rule still applies: every unfilled input needs an applicab
 
 Evaluate the callee first, then supplied argument expressions once each in written order, consistent with the existing evaluation contract. In resize(height = read_height(), width = read_width()), read_height runs first even though width is the first parameter. Mapping names to input positions must not reorder side effects. Transfer and permission activation remain subject to the shared memory contract.
 
-The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Fresh contextual named initializers may route by destination names; differently ordered stored tuples require explicit reconstruction. The user clarified the annotated binding as (left, right): (l: Int, r: Int), with a tuple type after the colon. Core call mapping and named tuple patterns are now selected; complete recursive grammar and callable compatibility remain open. See the [concrete cases](named-input-routing.md).
+The user's [op1/op2 evaluation case](evaluation-order.md#named-inputs-and-destination-order) makes that distinction explicit: in (r = op1(), l = op2()), op1 executes first even when the destination lists l before r. Fresh contextual named initializers may route by destination names; stored values keep their positional order; an explicit destination may rename positions, while rearranging values still requires reconstruction. The user clarified the annotated binding as (left, right): (l: Int, r: Int), with a tuple type after the colon. Core call mapping and named tuple patterns are now selected; complete recursive grammar and callable compatibility remain open. See the [concrete cases](named-input-routing.md).
 
 Names can be resolved statically. This feature need not require a runtime name dictionary, reflection, or heap allocation. Exact passing and ABI remain separate.
 
@@ -63,16 +63,11 @@ area = (w, h) { w * h }
 result := area(width = 640, height = 480);
 ```
 
-Recommend obtaining public labels from the caller-visible callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
+Public labels come from the caller-visible destination callable contract. A contextual lambda binds local inputs by position, as already selected; w and h should not rename the public labels width and height. Empty or partial lambda headers likewise leave those public inputs present.
 
-A full definition such as fn (width: Int, height: Int): Int { ... } supplies the identifier labels used by its selected named calls. Public-label compatibility across stored callable assignment remains open, as do broader parameter-pattern and repeated-name declaration rules. Underscore is an ordinary readable identifier in LiteScript; this review must not silently turn it into an unnamed-input marker.
+A full independent definition such as fn(width: Int, height: Int): Int { ... } supplies its inferred public labels. Selected 2026-10-25: a stored callable may be assigned to an established compatible destination with other labels; callers through that destination use its labels, while the implementation retains its local bindings and default expressions. For source := fn(n: Int = 2): Int { n * 10 }, target: fn(amount?: Int): Int = source admits target(amount = 3) and target(), while target(n = 3) is rejected. Source still accepts n, not amount.
 
-Two policies for stored callable compatibility remain open:
-
-- Require public labels to agree when assigning callables. This protects named calls but makes a public rename a compatibility change.
-- Permit positional compatibility between differently labeled signatures, with the destination contract defining labels for calls through that binding. This is easier to adapt, but the same callable can be exposed with different names.
-
-Do not make implementation-local lambda names part of the public contract under either policy. Additional separate external/local label syntax is not proposed yet. Whether a callable with no public labels supports only positional calls also needs a decision.
+This selects the positional label-adaptation policy and supersedes the earlier recommendation to require matching public labels. Other type/access/result/error/omission checks remain enforced. General callable variance, overloads, captures, and full grammar remain separate. Underscore remains an ordinary readable identifier; public name adaptation does not turn it into an unnamed-input marker. See [labels under an explicit destination type](tuple-label-conversions.md).
 
 ## Selected shorthand and numeric access
 
@@ -96,7 +91,7 @@ w := size.width;
 (a, b) := size;
 ```
 
-There are materially different contracts behind that spelling.
+The historical options below preceded the current explicit-destination conversion rule. They distinguish label identity from admission between differently labeled types.
 
 ### A. Positional tuples with access labels
 
@@ -108,44 +103,22 @@ Label propagation through inference, branches, unions, generic APIs, and tuple s
 
 A width/height tuple would not automatically fit a left/top tuple, even when both contain two Int values. Explicit reconstruction could rename components. This protects meaning conveyed by labels but introduces additional compatibility rules alongside nominal record declarations.
 
-The initial comparison offered ordered tuple contracts and unordered named shapes. The user now selected explicit reconstruction for a stored tuple whose component order differs from the destination. Fresh named initializers may still list entries in any written order and route into the known destination order. The user also selected rejection of different labels, even when positional types agree.
+The initial comparison offered label-sensitive rejection versus positional adaptation. The later user clarification on 2026-10-25 selects explicit destination label conversion: preserve component positions and concrete types, and expose the destination labels. This supersedes the earlier requirement to reconstruct every differently labeled stored tuple.
 
-### Selected: names affect compatibility
+### Selected: names identify contracts, explicit destinations may rename
 
-Selected by the user, 2026-10-21: component labels carry meaning and affect compatibility. Clarified 2026-10-23: labels give existing positions semantic roles without changing storage; identical ordered component types retain identical size, alignment, and component offsets. There is no per-value label payload and no representation reason for names to occur only at the end. Equal positional types still do not permit implicit relabeling:
+Labels retain semantic meaning and structural identity while adding no storage footprint. An explicit destination can give the same positions different labels:
 
 ```text
 size := (width = 640, height = 480);
-point: (x: Int, y: Int) = size; /* rejected: labels differ */
+point: (x: Int, y: Int) = size; /* valid: x = 640, y = 480 */
 ```
 
-The assignment is rejected because width/height do not match x/y. Explicit reconstruction expresses the intended renaming:
+A stored (r = 20, l = 10) admitted as (l: Int, r: Int) yields l = 20 and r = 10, with no permutation. To obtain source l then source r, reconstruct by name. Named/unnamed label conversion is likewise selected when positions/types/access agree. Inference retains source labels, and ordinary stored tuple identity remains the ordered labels plus resolved component types. Separate record declarations remain nominal.
 
-```text
-point := (x = size.width, y = size.height);
-```
+Fresh constructors still route their named contributions into the destination by label. Stored whole-value admission uses positions instead. Source expressions evaluate once; ordinary copies and permissions remain applicable. Static label adaptation introduces no runtime label dictionary, shared-storage alias, byte reinterpretation, or mandated wrapper. General type conversion and recursive grammar remain separate. See [labels under an explicit destination type](tuple-label-conversions.md).
 
-The user emphasized that cake/tea and fruit/chocolate express different roles, even when their component types agree. Check labels statically for stored tuple assignments and parameter passing. The user subsequently selected structural tuple identity: the same ordered labels and component types describe the same tuple type wherever written. Separate record declarations retain nominal identities.
-
-The user requested the reference-language behavior before choosing. The [focused width/height-to-x/y comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) shows acceptance by C# and TypeScript, rejection of differently named tuples by Swift and Scala, Dart's name-sensitive but order-independent named fields, and Python's class-based construction. The subsequent user confirmation selects name-sensitive compatibility for LiteScript.
-
-Stored component order is now selected as a compatibility boundary; fresh initializer reordering is permitted. Positional destructuring of named tuples is selected and follows stored component order. Stored unlabeled-tuple admission and explicit name removal remain open. The [concrete routing reference](named-input-routing.md) separates those remaining recommendations from selected binding rules. Existing positional lambda parameter bindings are unaffected: local implementation names do not select signature positions.
-
-### C. Keep tuples positional and use records for named values
-
-Named calls are already selected independently. A Size record already supports named fields, contextual construction, and named extraction. This avoids another named product category but needs a record declaration for reusable named data. Inferred standalone record types are not selected by this alternative.
-
-```text
-Size := record {
-    width: Int;
-    height: Int
-}
-size := Size { width = 640, height = 480 }
-```
-
-Record field declarations require a semicolon between adjacent ordinary fields. Newlines, tabs, and spaces do not supply separators. The final field separator is optional; the complete record declaration ends its outer item without requiring a semicolon. The equivalent compact declaration is Size := record { width: Int; height: Int }. Supplied record-value fields instead use commas. See [lexical structure](lexical-structure.md#separators).
-
-These initial alternatives are retained for comparison. The later selected fresh-initializer/stored-order distinction now constrains the review; stored named/unnamed conversions, complete recursive grammar, and the specifically marked pattern extensions remain open. Named argument support remains a separate capability.
+The [reference comparison](named-arguments-reference-comparison.md#focused-comparison-widthheight-assigned-to-xy) retains its checked foreign-language rules; the current LiteScript decision above supersedes its earlier LiteScript label-rejection conclusion.
 
 ## A tuple argument versus spreading arguments
 
@@ -161,7 +134,7 @@ resize(=height, =width); /* height = height, width = width */
 
 The last form uses identifier-only same-name shorthand. In a spread, labeled components route by public parameter name and unnamed components fill the next unfilled declared slot. The signature fixes available positions and types; unknown labels and excess positional inputs cannot append more parameters. A spread operand evaluates once; components are processed in stored order, and all call entries preserve written evaluation order. Repeated labels contributed through spread may replace the earlier supplied value in the same destination slot; repeated explicit labels, including shorthand, are errors. Only the final surviving input must fit that slot's declared type/access. Superseded expressions must still be valid and evaluate, but need not fit the destination; this permits patching before invocation.
 
-A function taking one tuple remains distinct from a function taking multiple parameters: in ordinary call argument lists, only explicit spread expands components. No intermediate tuple allocation or runtime label dictionary is required. Ordinary permission, default, and cleanup contracts remain applicable. Callable public-label compatibility, superseded-value cleanup, collection call spread, and full recursive grammar remain separate. Named tuple return values remain ordinary single results.
+A function taking one tuple remains distinct from a function taking multiple parameters: in ordinary call argument lists, only explicit spread expands components. No intermediate tuple allocation or runtime label dictionary is required. Ordinary permission, default, and cleanup contracts remain applicable. Callable label adaptation under a compatible destination is selected; remaining callable compatibility, superseded-value cleanup, collection call spread, and full recursive grammar remain separate. Named tuple return values remain ordinary single results.
 
 The 2026-10-24 [intrinsic application](callable-input-packs.md#application-with-an-existing-pack) also permits `resize.call size` and `resize.call(size)` to apply a supplied-input tuple with the same routing as `resize(...size)`. Parentheses after intrinsic `.call` group its operand; ordinary `resize(size)` remains one tuple-valued input. This is explicit pack application, not implicit expansion in ordinary call argument lists. Bare `.call` supplies Unit, with the same declared-default-only omission checks. Full operand precedence and member/chaining integration remain open.
 
@@ -171,7 +144,7 @@ The selected component forms are name: Type, bare name with an inferred type, an
 
 - Singleton values are selected: (value) groups, (value,) constructs an unnamed singleton, and (= value) or (label = expression) constructs a named singleton with an optional trailing comma. See [singleton values](tuple-entries-and-access.md#singleton-values-selected).
 - The empty tuple is Unit, with () as an equivalent value/type spelling. Singleton types are selected: (T) groups, (:T,) is unnamed, (label: T) is named, and (label,) infers the named component type; (:T) is rejected. Pattern grouping and singleton extraction are selected: (pattern) groups, (pattern,) extracts one positional component, and (local = label) extracts by name.
-- The earlier contextual construction cases retain their selected mappings; the 2026-10-23 extension now uses call-style routing for fresh constructors under known tuple destinations, with unique explicit labels, next-unfilled positional routing, permitted replacement, final-slot type/access checks, complete coverage, and no implicit component defaults. Standalone mixed tuple inference now allows named/unnamed interleaving and replaces spread collisions in their earlier slots, with the surviving contribution determining the inferred field type; duplicate explicit construction labels are errors; (42, = tea) infers (:Int, tea: String) when tea is String. Corresponding mixed type components and interleaved stored layouts are selected. Complete recursive grammar, complete generic/overload inference, and stored named/unnamed conversion policy remain open. Function calls now permit interleaving, next-unfilled positional routing, and named replacement against fixed declared slots, with explicit argument labels required to be unique. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Require complete coverage unless one final ...rest captures all unselected components. Named selector rest preserves source order, labels, and types; reject unknown/duplicate source selectors. See [named rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected).
+- The earlier contextual construction cases retain their selected mappings; the 2026-10-23 extension now uses call-style routing for fresh constructors under known tuple destinations, with unique explicit labels, next-unfilled positional routing, permitted replacement, final-slot type/access checks, complete coverage, and no implicit component defaults. Standalone mixed tuple inference now allows named/unnamed interleaving and replaces spread collisions in their earlier slots, with the surviving contribution determining the inferred field type; duplicate explicit construction labels are errors; (42, = tea) infers (:Int, tea: String) when tea is String. Corresponding mixed type components and interleaved stored layouts are selected. Complete recursive grammar, complete generic/overload inference, and other shape/type/access conversion policy remain open; label-only named/unnamed destination conversions are selected. Function calls now permit interleaving, next-unfilled positional routing, and named replacement against fixed declared slots, with explicit argument labels required to be unique. Fixed numeric dot access is selected; runtime variable tuple indexing is rejected. Complete numeric-suffix scanning and computed compile-time position syntax remain separate. Named destructuring uses destination = sourceField; the separately selected = identifier pattern shorthand expands to identifier = identifier. Require complete coverage unless one final ...rest captures all unselected components. Named selector rest preserves source order, labels, and types; reject unknown/duplicate source selectors. See [named rest](tuple-spread-and-rest.md#named-selectors-with-rest-selected).
 - Existing destination-from-source record patterns must not be reversed when named tuple extraction is specified.
 - Naming a component does not add mutation permission, automatic cloning, reference semantics, default initialization, or a nullable state.
 
