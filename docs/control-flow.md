@@ -53,10 +53,10 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 
 - Loops accept `break`, `continue`, and tagged `return`.
 - Tagged `if` and general result blocks accept `return`.
-- Functions accept plain `return` to the nearest function, and tagged `return` when explicitly targeted.
+- Functions and closures accept plain `return`; tagged `return` does not currently target them. Whether a nested function or lambda can return to an enclosing function, and whether function declarations should carry tags for visibility or future metadata, are deferred to the nested-function review.
 - `break` and `continue` cannot target an `if`, general block, or function. Unsupported operation–target pairs are invalid.
 
-For a tagged `return`, the target's kind determines how its supplied `T` completes: a target with `then` runs it once to produce `R`; a function target returns its function result to its caller.
+For a tagged `return`, the target's kind determines how its supplied `T` completes: a loop or conditional with `then` runs it once to produce `R`; a target without `then` returns `T` directly.
 
 ## Loop distinction
 

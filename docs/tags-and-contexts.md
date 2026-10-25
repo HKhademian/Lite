@@ -16,6 +16,8 @@ value := @name { body }
 
 Prefix tags replace the earlier suffix-header and `label: construct` sketches. A tag names the existing construct; it does not add a wrapper block or change its kind.
 
+Function and closure declarations are not current tag targets. They use plain `return`; whether a nested function or lambda can return to an enclosing function, and whether functions should carry tags for visibility or future metadata, are deferred to the nested-function review.
+
 ## Named metadata
 
 ```text

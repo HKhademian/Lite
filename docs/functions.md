@@ -516,7 +516,7 @@ The language needs a declaration-resolution rule allowing recursive definitions 
 
 ## Tagged exits
 
-`return @tag value` exits a lexically enclosing named construct. It cannot jump across a function or closure boundary. Whether function definitions themselves can carry tags, and how that would interact with ordinary `return`, is not yet specified.
+`return @tag value` exits a lexically enclosing named construct. It cannot jump across a function or closure boundary. Functions and closures currently use plain `return`; they are not tagged-return targets. Whether a nested function or lambda can return to an enclosing function, and whether a function declaration can carry a tag for visibility or future metadata, are deferred to the nested-function review.
 
 ## Related concepts and references
 
