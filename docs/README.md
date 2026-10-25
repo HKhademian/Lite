@@ -24,8 +24,6 @@ Tuple type components use `name: Type`, a bare label with an inferred type, or `
 
 Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See [temporary generic notation](generic-notation.md).
 
-As is selected for a loop's one optional item name; the earlier colon separator, receiver lists, and header destructuring are retired. See [loop receivers](loop-receivers.md).
-
 ## Foundations
 
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
@@ -160,7 +158,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` handles remaining cases with an empty Unit body, and `_` binds the subject as an ordinary readable name.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): selected equality, plain/payload enum, destructuring, and type patterns; the selected recursive grammar is outlined, with constructor schemas and coverage still open.
-- [Loops](loops.md): Boolean, iterable, and unconditional sources, with optional leading and/or on unparenthesized Boolean sources.
+- [Loops](loops.md): Boolean, iterable, and unconditional sources, with optional leading and/or on unparenthesized Boolean sources. `as` is selected for one optional item name; the earlier colon separator, receiver lists, and header destructuring are retired.
 - [Loop examples](loop-examples.md): worked loops with one optional item name, metadata state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
 - [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.value on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
 - [Collections and iterators](collections-and-iterators.md): source adapters and capability requirements.
