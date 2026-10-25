@@ -58,6 +58,8 @@ Here _ is the one optional item name and may be read. Loop count/index/value use
 
 The proposed case-sensitive rule distinguishes `score` from `Score`.
 
+Case is stylistic, not semantic. Documentation convention uses UpperCamelCase for types and user-defined enum cases, and snake_case for bindings, functions, modules, and fields. Prelude Option cases `.Some`/`.None` follow enum-case capitalization; prelude Result cases `.ok`/`.err` are the selected fixed exception. Capitalization never selects a binding, test, case, or type. Existing examples may use other casing until normalized; no formatter casing rule is selected.
+
 Normalization is a separate decision from case sensitivity. Before implementation, choose whether canonically equivalent Unicode spellings denote the same identifier, which normalization form applies, and how source spelling is preserved in diagnostics. NFC was suggested but has not been adopted. The relevant forms are defined by [Unicode normalization](https://www.unicode.org/reports/tr15/).
 
 Identifier normalization must not silently establish a normalization rule for string contents.

@@ -70,11 +70,11 @@ Assume progress has the enum type Progress, with started and completed cases:
 
 ```text
 match progress {
-    .started { show_started() }
-    .completed { show_completed() }
+    .Started { show_started() }
+    .Completed { show_completed() }
 }
 
-if progress == .completed {
+if progress == .Completed {
     show_completed()
 }
 ```
@@ -89,13 +89,13 @@ Option pattern examples use `.Some(value)` alongside `.None` for consistent pres
 
 Leading `.field` already denotes current-context metadata. Enum shorthand must not silently reinterpret an existing metadata access, search outer construct contexts, or choose a meaning solely because it happens to type-check.
 
-Recommended disambiguation: enum-pattern positions use the expected enum case; expression positions require an unambiguous enum-member or current-context interpretation. If both interpretations apply, report ambiguity and require `Progress.completed` or an explicit `@tag.completed`. The exact collision rule is still under review; the .case surface itself is selected. Context metadata continues to resolve only against the current construct; expected enum lookup is a separate, type-directed role, not outward context fallback.
+Recommended disambiguation: enum-pattern positions use the expected enum case; expression positions require an unambiguous enum-member or current-context interpretation. If both interpretations apply, report ambiguity and require `Progress.Completed` or an explicit `@tag.Completed`. The exact collision rule is still under review; the .case surface itself is selected. Context metadata continues to resolve only against the current construct; expected enum lookup is a separate, type-directed role, not outward context fallback.
 
 ### Float backing values and conversion policy
 
 The declaration shape `Progress := enum : Float { started = 0.0; completed = 1.0 }` is now selected for an explicit backing type and assigned case values. This does not establish whether those values are physical storage discriminants or an explicit conversion mapping; complete declaration and numeric conversion rules remain open.
 
-Recommend keeping case identity distinct from raw-value equality: a two-case Progress enum has two named cases, not every intermediate Float value. Decide raw-value uniqueness, invalid conversions, NaN and signed-zero treatment, and equality before selecting a float-backed representation. No approximate float comparison is implied by `.completed`.
+Recommend keeping case identity distinct from raw-value equality: a two-case Progress enum has two named cases, not every intermediate Float value. Decide raw-value uniqueness, invalid conversions, NaN and signed-zero treatment, and equality before selecting a float-backed representation. No approximate float comparison is implied by `.Completed`.
 
 Swift supports floating-point raw enum values and inferred member expressions. Zig, Odin, and V also offer leading-dot enum shorthand, with their own type and representation rules. These are independent precedents, not a claim that each supports floating raw enums. See [Swift raw values](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md), [Swift implicit members](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/ReferenceManual/Expressions.md#implicit-member-expression), [Zig enum literals](https://ziglang.org/documentation/master/#Enum-Literals), [Odin implicit selectors](https://odin-lang.org/docs/overview/#implicit-selector-expression), and [V enums](https://docs.vlang.io/type-declarations.html#enums).
 
