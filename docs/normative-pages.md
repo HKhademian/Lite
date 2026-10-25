@@ -12,6 +12,7 @@ The [LiteLang current design specification](spec/README.md) provides stable area
 
 | Area | Start with | Also normative for narrower contracts |
 |---|---|---|
+| Design method | [Continuity and analogical coherence](continuity-and-analogy.md) | [Principles](principles.md), [decision ledger](decisions-and-open-questions.md) |
 | Syntax and tokens | [Grammar sketch](grammar-sketch.md) | [Lexical structure](lexical-structure.md) |
 | Types, inference, and flow | [Types and inference](types-and-inference.md) | [Type categories](type-categories.md), [type tests and narrowing](type-tests-and-narrowing.md) |
 | Unions | [Plain union normalization](union-normalization.md) | [Membership](union-membership.md), [widening](union-widening.md), [values and access](union-values-and-access.md), [field reads](union-field-reads.md), [field writes](union-field-writes.md), [initialization](union-initialization-policy.md), [zero](union-zero.md), [patterns](union-patterns.md) |

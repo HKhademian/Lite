@@ -8,6 +8,7 @@ The project is currently **planning only**. These documents record the design di
 
 - [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)
+- [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)
 - [LiteLang current design specification](docs/spec/README.md): stable-ID summary of selected rules, subordinate to the normative pages.

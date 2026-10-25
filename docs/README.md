@@ -39,6 +39,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Foundations
 
+- [Continuity and analogical coherence](continuity-and-analogy.md): design-method principle of local predictability, visible semantic boundaries, and transferable syntax patterns.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
 - [Optional leading separators](leading-separators.md): selected leading and/or on Boolean expressions/conditions, identity + on additive chains, or on initial/nested pattern alternatives, and | on nonempty unions; equivalent compact forms, unchanged effects/bindings, nonempty boundaries, selected earlier chain presentation, and conditional future leading-& support.

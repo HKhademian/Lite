@@ -2,7 +2,7 @@
 
 Status: **established goals; several implementation choices remain open**.
 
-The [LiteScript white paper](white-paper.md) is the foundational statement of the language's philosophy and design criteria. This page condenses those goals and their current consequences.
+The [LiteLang white paper](white-paper.md) is the foundational statement of the language's philosophy and design criteria. This page condenses those goals and their current consequences.
 
 ## Purpose
 
@@ -28,6 +28,7 @@ Let people and programming agents focus on problem solving through concise, read
 - Small runtime requirements and native execution as an intended implementation direction.
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.
 - Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](leading-separators.md) let every Boolean-expression, condition, pattern-alternative, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
+- A connected design gradient: small source changes should have local, predictable meaning; similar-looking constructs should share rules; any semantic jump needs a visible source/type/target boundary. See [continuity and analogical coherence](continuity-and-analogy.md).
 - One conditional syntax for actions and values.
 - One `loop` keyword for the supported iteration modes.
 
