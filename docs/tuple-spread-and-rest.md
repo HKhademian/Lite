@@ -85,6 +85,12 @@ Access a declared tail by its schema name: mytuple.rest obtains the array throug
 
 A rest declaration can infer its element type with (...rest:) when an initializer or expected contract supplies sufficient static information. The colon distinguishes a named declaration from (...Params), which expands an existing tuple type. (...rest: T) remains the explicitly typed form; no infer keyword is selected, and ordinary dangling name: entries remain invalid. See [inferred rest declarations](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
 
+## Optional static array-segment extent selected
+
+A declared ...name: T; C is a named homogeneous array segment with exactly C elements and member type [T; C]. ...name: T retains its general zero-or-more contract. The enclosing segment syntax supplies the array role without brackets around T; C. Current declarations remain single and trailing. A named-tail construction without an overriding destination retains a fixed source extent in its inferred segment type: (...rest = [1, 2, 3]) infers (...rest: Int; 3). An explicit general schema may retain local count facts without promising an exact count in its type.
+
+Rest describes collection/grouping rather than an inherently unknown length. An ordinary (rest = [1, 2, 3]) contributes one labeled array item when unpacked; (...rest = [1, 2, 3]) emits three elements. ...rest: [Int; 3] still means any number of array-valued elements, while ...rest: [Int; 3]; 2 requires exactly two such elements. The extent does not grant mutability, ownership, a new ABI, or implicit nested flattening. Middle collectors, multiple unspecified lengths, partition rules, and numeric tuple positions remain future work. Pattern rest keeps its separate structural remainder rule. See [array segments and future middle collectors](tuple-array-segments.md).
+
 ## Spreading a stored array tail selected
 
 Expression spread of a rest-bearing tuple now emits its fixed components with labels plus each tail element as an unnamed item. Its tail-container label is not a contributed field. For pack := (...numbers = [1, 2, 3]), copy := pack keeps its organization, but items := (...pack) reconstructs the fixed tuple (1, 2, 3). An explicit destination can collect the same items into its own tail. op(...pack) and op.call pack consume the same logical inputs under the callable contract.

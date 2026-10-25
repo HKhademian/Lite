@@ -16,7 +16,7 @@ y := (...x);
 /* seven fixed components; y.3 is 4; y has no rest member */
 ```
 
-The example's concrete tail extent is statically known from construction. Ordinary copy keeps the source organization and follows the current copy/eligibility rules; an explicit destination conversion retains its separately selected compatibility rules. Copy does not mean a reference alias or a guaranteed physical copy instruction.
+The example's concrete tail extent is statically known from construction. The selected ...rest: T; C syntax can now state an exact extent in the tuple type; a general ...rest: T schema still guarantees no exact count. See [array-segment types](tuple-array-segments.md). Ordinary copy keeps the source organization and follows the current copy/eligibility rules; an explicit destination conversion retains its separately selected compatibility rules. Copy does not mean a reference alias or a guaranteed physical copy instruction.
 
 ## What unpacking emits
 

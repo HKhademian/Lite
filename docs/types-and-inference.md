@@ -44,6 +44,8 @@ A fully fixed tuple spread can supply the same statically discoverable named slo
 
 Expression unpacking now infers from logical items: fixed labels survive, declared tails emit array elements without their container labels, and a destination reconstructs the result. Known counts can yield fixed tuples; runtime-sized portions remain inferred tails. Ordinary copy := source keeps the organization. This does not change type-level spread or pattern capture, and zero-sized Unit elements remain logical items. See [logical unpacking](tuple-unpacking.md).
 
+Named-tail construction also retains an established source extent when no expected general schema overrides it: (...rest = fixed), for fixed: [T; C], infers (...rest: T; C). The optional ; C is an exact compile-time segment count; an explicit ...rest: T destination still requests the general count contract. A runtime-sized array's currently observed length does not establish a new static extent. Existing (...rest:) infers the element type; this revision adds no new partial-extent inference syntax. Middle collectors and their split rules remain future discussion. See [array-segment types](tuple-array-segments.md).
+
 ## Intended type-system foundation
 
 - Primitive values and explicit numeric representations.

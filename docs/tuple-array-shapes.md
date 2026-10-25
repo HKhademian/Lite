@@ -83,7 +83,20 @@ The name rest is a signature declaration; myrest is an implementation-local coll
 
 T may be any valid input type, including a tuple. With ...rest: EachRestType, each additional input is one intact X/Y/Z tuple and the collected value is an array of those tuples. It is not a flat repetition of X, Y, and Z. Explicit spreading at a call site continues to expand the operand's components rather than implicitly preserving it as one input.
 
-The spelling [T; ...] used during discussion was a placeholder, not selected syntax for a runtime-length array. The exact rest-array type notation, allocation, ABI, and complete ownership/lifetime machinery remain open, subject to the selected access and retention rules below. The selected [T] indexed-sequence capability does not by itself select a concrete runtime array owner either.
+The spelling [T; ...] used during discussion was a placeholder, not selected syntax for a runtime-length array. Standalone runtime-array type spelling, allocation, ABI, and complete ownership/lifetime machinery remain open, subject to the selected access and retention rules below. The selected [T] indexed-sequence capability does not by itself select a concrete runtime array owner either.
+
+## Array segments can declare their static extent
+
+Selected clarification, 2026-10-25: the rest operator declares a named homogeneous array segment in a tuple, currently only at the tail. ...name: T permits a runtime-known count; ...name: T; C requires exactly the compile-time extent C and exposes [T; C]. The segment syntax supplies the array meaning without brackets around T; C. Rest describes grouping/collection; it does not require an unknown count. An uncontextual named-tail construction from a fixed [T; C] retains C in its inferred segment type; an explicit general destination remains authoritative. Each T may itself be a tuple or array and stays one element.
+
+```text
+fixed: [Int; 3] = [1, 2, 3];
+pack := (...rest = fixed);
+/* pack: (...rest: Int; 3) */
+written: (...rest: Int; 3) = (...rest = fixed);
+```
+
+Known local counts, public extent guarantees, and storage remain distinct. A general ...rest: T contract does not promise a particular count merely because one caller supplies it. Fixed zero/Unit segments retain semantic grouping/count despite zero element bytes. Middle collectors remain future discussion: fixed extents can delimit a middle segment; multiple unspecified extents need a partition rule. Direct numeric segment positions remain open. See [array-segment types and future middle collectors](tuple-array-segments.md).
 
 ## Rest access, storage, and retention
 
@@ -297,16 +310,16 @@ arr0: [Int; 0] = [];
 a0 := (...arr0);
 /* Unit: zero fixed components and no declared tail */
 b0 := (...rest = arr0);
-/* (...rest: Int): declared tail with zero elements */
+/* (...rest: Int; 0): declared tail with zero elements */
 
 arr1: [Int; 1] = [1];
 a1 := (...arr1);
 /* (:Int,): one fixed Int component; not the Int scalar */
 b1 := (...rest = arr1);
-/* (...rest: Int): declared tail with one element */
+/* (...rest: Int; 1): declared tail with one element */
 ```
 
-The explicit spread marker identifies tuple construction, so (...arr1) needs no singleton comma in its expression; its resulting unnamed singleton type is still (:Int,). b1 instead exposes its stored array through .rest. Ordinary copies of b0/b1 keep those declared tails. Under the revised expression-unpacking rule, (...b0) emits zero items and reconstructs Unit, while (...b1) emits one Int item and reconstructs a fixed singleton. The concrete tail extents zero/one remain distinct from the general (...rest: Int) contract, which encodes no exact count.
+The explicit spread marker identifies tuple construction, so (...arr1) needs no singleton comma in its expression; its resulting unnamed singleton type is still (:Int,). b1 instead exposes its stored array through .rest. Ordinary copies of b0/b1 keep those declared tails. Under the revised expression-unpacking rule, (...b0) emits zero items and reconstructs Unit, while (...b1) emits one Int item and reconstructs a fixed singleton. Uncontextual b0/b1 now infer (...rest: Int; 0) and (...rest: Int; 1); the general (...rest: Int) contract still encodes no exact count.
 
 A stored or ordinarily copied declared tail does not disappear because its array is empty: b0 is not Unit, and b1 is not a fixed singleton or scalar. Explicit logical unpacking followed by reconstruction can remove that grouping when its extent is known. An unknown runtime extent instead yields the appropriate inferred tail; runtime emptiness does not change the inferred type. Bare-array type identity remains separate.
 
@@ -393,11 +406,12 @@ pack: (...rest:) = (...values);
 rest := [1, "tea", true];
 named := (=...rest);
 direct := (...rest = [1, "tea", true]);
-/* each constructed rest array: [Int | String | Bool; 3] */
-/* each tuple has the rest-only contract (...rest: Int | String | Bool) */
+/* named/direct infer (...rest: Int | String | Bool; 3) */
+/* pack explicitly requests a general tail with inferred union element type */
+/* all three constructions establish three elements locally */
 ```
 
-All three constructions collect three elements with the common element type Int | String | Bool. The known extent three is retained as static construction information for these concrete tail arrays; packing does not inherently discard that extent. The tuple notation (...rest: T) states its rest segment's element contract and does not itself promise three elements for every value admitted by that schema. A wider contract or permitted replacement/effect may hide or invalidate stronger local extent facts; complete propagation across API/ownership boundaries remains open. Runtime observation of a length does not make an arbitrary runtime-sized array compile-time-sized.
+All three constructions collect three elements with the common element type Int | String | Bool. Named/direct construction without an expected general destination now retains the fixed extent in the inferred segment type: (...rest: Int | String | Bool; 3). pack's explicit (...rest:) requests the general segment shape and infers its element type; its count three is a stronger local construction fact, not a new declared ; 3 contract. An explicitly written (...rest: T; C) now expresses the exact extent, while (...rest: T) still promises no exact count. A wider contract or permitted replacement/effect may hide or invalidate stronger local extent facts; complete propagation across API/ownership boundaries remains open. Runtime observation of a length does not make an arbitrary runtime-sized array compile-time-sized.
 
 Each array position has the same union element type. The original values.0 has type Int, but the constructed rest array's fixed position has type Int | String | Bool unless a separate established narrowing proof applies. Re-expanding that fixed array into a tuple therefore supplies three union-typed components, not automatically the original heterogeneous per-position tuple types. Actual union members remain governed by ordinary admission; nested tuple-valued elements stay intact unless separately spread.
 
