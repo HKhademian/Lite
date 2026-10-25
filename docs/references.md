@@ -8,7 +8,7 @@ These sources were consulted during the design discussion. They support comparis
 
 The [signed division, remainder, and modulo table](signed-division-table.md), reviewed 2026-10-25, expands the arithmetic comparison to all twelve established references and the additional arithmetic languages, including Scala 3/JVM and separate JavaScript/TypeScript numeric families. It links primary sources per operation and includes four signed V playground cases reported by V 0.5.0 345b29d. Calculated cells, prior local probes, and that remote observation are distinguished in its evidence notes.
 
-The [arithmetic methods and division revision](arithmetic-methods-and-division-revision.md), reviewed 2026-10-25, compares Kotlin's named operator methods and operand-directed numeric division with Dart's truncating ~/ spelling. It also records the user's _/ and _% floor-family proposal and its interaction with LiteScript's identifier rules. Requested methods remain separate from proposed symbol/comment changes; future infix operations remain deferred.
+The [arithmetic methods and division revision](arithmetic-methods-and-division-revision.md), reviewed 2026-10-25, compares Kotlin's named operator methods and operand-directed numeric division with Dart's truncating ~/ spelling. It also records the user's compact/spaced equivalence requirement, the resulting underscore-family rejection, and R's [documented %/% and %% floor pair](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) as a punctuation-only recommendation. Requested methods remain separate from proposed symbol/comment changes; future infix operations remain deferred.
 
 ## Rust
 

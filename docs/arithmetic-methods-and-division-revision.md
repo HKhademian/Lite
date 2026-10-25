@@ -1,6 +1,6 @@
 # Arithmetic methods and division revision
 
-Status: **additive arithmetic-method surface requested 2026-10-25; operand-directed division and replacement floor-operation symbols, including `_/` and `_%`, are proposals under review**. The currently selected contract remains fractional `/`, floor `//`, remainder `%`, and modulo `%%` until a revision is selected. No numeric API, overload mechanism, lexer change, or implementation is claimed here.
+Status: **additive arithmetic-method surface requested 2026-10-25; compact/spaced operator equivalence required; operand-directed division and punctuation-only floor symbols remain proposals under review**. The underscore _/ and _% family is set aside under that boundary requirement; the current recommendation is R-style %/% floor division with %% modulo. The currently selected contract remains fractional `/`, floor `//`, remainder `%`, and modulo `%%` until a revision is selected. No numeric API, overload mechanism, lexer change, or implementation is claimed here.
 
 ## Requested method surface
 
@@ -57,15 +57,52 @@ This recommendation applies to operands whose types are already fixed. It does n
 
 ### Pair the two integer quotients correctly
 
-Under the revised proposal, truncating integer / pairs with remainder %, while floor division pairs with floor modulo. The previously selected remainder/modulo sign rules would stay unchanged: a nonzero remainder follows the dividend and a nonzero modulo follows the divisor. The current selected floor symbols are // and %%; the user's new family candidate is _/ and _% respectively.
+Under the revised proposal, truncating integer / pairs with remainder %, while floor division pairs with floor modulo. The previously selected remainder/modulo sign rules would stay unchanged: a nonzero remainder follows the dividend and a nonzero modulo follows the divisor. The current selected floor symbols are // and %%; the underscore _/ and _% family was explored, then set aside under the user's compact/spaced equivalence requirement. The current recommendation is %/% and %% respectively.
 
 The existing [signed table](signed-division-table.md) records the currently selected LiteScript operators, not this proposed change. If operand-directed / and a new floor symbol are accepted, migrate the normative docs, grammar, samples, update operators, and LiteScript table rows together. Keep the foreign-language rows and captured observations intact.
 
 ## Floor-operation symbol candidates
 
-### Underscore floor family
+### Compact and spaced forms must agree
 
-The user's new composition uses underscore as a common floor marker:
+The user requires a_%b and a _% b to denote the same proposed operation, likewise for floor division, while retaining ordinary identifiers. The examples a_b and a_ b expose a different issue: a_b is one identifier, whereas a_ b is two identifier tokens and does not become one name. Ordinary identifier boundaries remain meaningful; they must not force these symbolic operators to require surrounding spaces.
+
+Preserve ordinary a_ and _ names. Under the existing identifier direction, underscore is an identifier character, so the previously explored _/ and _% family fails this compact/spaced requirement without special scanning rules. Do not adopt a rule that steals a trailing underscore from a valid identifier or changes the operation according to surrounding spaces.
+
+Simply reversing the composition to /_ and %_ moves the collision to an underscore-prefixed right operand: a/_b could be mistaken for a / _b. The recommendation is to use punctuation outside the identifier character set for these compact symbolic operators.
+
+Whitespace around a complete operator must not change which operation is recognized. This requirement does not make whitespace inside a multi-character operator ignorable or change the ordinary separation of identifiers.
+
+### Punctuation-only recommendation: percent-delimited floor division
+
+[R's base arithmetic reference](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) supplies an established spelling with the required floor semantics: %/% is floor division, and %% is modulo paired with that quotient. This is a new comparison reference for the spelling review; its coercions, vector operations, noninteger behavior, and fault results are not imported into LiteScript.
+
+The recommended LiteScript candidate family is:
+
+```text
+a / b;    /* proposed truncating quotient for established Int operands */
+a % b;    /* truncating remainder */
+a %/% b;  /* proposed floor quotient */
+a %% b;   /* floor modulo */
+```
+
+The floor symbol is longer than //, but avoids both the line-comment association and identifier-character collision. All characters in %/% and %% are punctuation under the current identifier direction:
+
+```text
+a%/%b;    /* candidate tokens: a, %/%, b */
+a %/% b;  /* the same candidate tokens */
+
+a%%b;     /* tokens: a, %%, b */
+a %% b;   /* the same tokens */
+```
+
+The mathematical floor identity would be a == b * (a %/% b) + (a %% b). Existing named-method candidates remain div, rem, floorDiv, and mod. This recommendation keeps the currently selected %% spelling instead of replacing both floor symbols unnecessarily.
+
+Selection would require a fixed %/% token recognized before its shorter operator prefixes and a decision on precedence/update integration. It does not imply R's general percent-delimited custom operators, a new infix-function facility, or a %/%= update. Both the Int / Int revision and replacement floor symbol remain proposals; the current operator table is not migrated by this review.
+
+### Underscore floor family explored
+
+The user's earlier composition used underscore as a common floor marker:
 
 ```text
 b: Int = -7;
@@ -95,7 +132,7 @@ The candidate therefore needs an ordinary token boundary before its underscore a
 
 Preserve a_ as an identifier and _ as an ordinary readable binding. Do not split an existing identifier retroactively because an operator might fit, use type/lookup success to choose the tokenization, or reserve underscore globally for math. A declared _ / b and an adjacent _/b would likewise need distinct lexical treatment if the candidate is adopted; no prefix floor operator or implicit left operand follows.
 
-This is a practical cost of the family: a _/ b cannot uniformly compact to a_/b while preserving its tokens. The exact lexical boundaries, compact spelling, _/= and _%= updates, precedence integration, and numeric coverage must be decided before selection. See [identifiers](identifiers.md) and [lexical structure](lexical-structure.md).
+This is the reason to set the family aside under the user's new requirement: a _/ b cannot uniformly compact to a_/b while preserving its tokens and ordinary identifier rules. No underscore operators or updates are selected. See [identifiers](identifiers.md) and [lexical structure](lexical-structure.md).
 
 ### Earlier tilde candidate
 
@@ -129,6 +166,7 @@ Power method names and domains, assignment-method names, operator declaration sy
 
 ## Primary comparisons
 
+- [R arithmetic](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) defines %/% as floor division and %% as its paired modulo. The reference's successful integer formulas support the punctuation-only recommendation; R's wider numeric and failure contracts are separate.
 - [Kotlin operator overloading](https://kotlinlang.org/docs/operator-overloading.html) maps binary +, -, *, /, and % to plus, minus, times, div, and rem. Kotlin distinguishes these actual operations from unary operator methods; LiteScript's identity entry prefix keeps its own contract.
 - [Kotlin numbers](https://kotlinlang.org/docs/numbers.html#integer-division) provides integer division based on numeric operands and requires a fractional operand for a fractional quotient. Its conversion, overflow, and inference rules are not adopted automatically.
 - [Kotlin floorDiv](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/floor-div.html) and [mod](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/mod.html) supply named floor operations in addition to ordinary division/remainder.

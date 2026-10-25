@@ -2,7 +2,7 @@
 
 Status: **fractional `/` and integer floor `//` selected; `%` remainder and `%%` modulo selected 2026-10-25, superseding the earlier floor-paired `%` meaning; arithmetic faults use typed panics, while numeric representations and exact fault cases remain open**.
 
-Revision under review, 2026-10-25: the user proposes convenient truncating Int division, the _/ and _% floor family to replace // and %%, an earlier ~/ floor alternative, and explicit arithmetic methods in addition to operators. The [arithmetic-method and division review](arithmetic-methods-and-division-revision.md) distinguishes requested direction from proposed mappings, records identifier-boundary tradeoffs, and recommends operand-directed semantics rather than destination-selected rounding. This page records the currently selected operators until that revision is accepted; spacing-dependent // comments and future infix calls remain unselected.
+Revision under review, 2026-10-25: the user proposes convenient truncating Int division and explicit arithmetic methods in addition to operators. The _/ and _% floor family is set aside under the user's compact/spaced equivalence requirement; the current recommendation is R-style %/% floor division with the existing %% modulo, with ~/ retained as an earlier alternative. The [arithmetic-method and division review](arithmetic-methods-and-division-revision.md) distinguishes requested direction from proposed mappings, records identifier-boundary tradeoffs, and recommends operand-directed semantics rather than destination-selected rounding. This page records the currently selected operators until that revision is accepted; spacing-dependent // comments and future infix calls remain unselected.
 
 ## Purpose and templates
 

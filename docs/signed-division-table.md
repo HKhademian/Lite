@@ -2,7 +2,7 @@
 
 Reviewed **2026-10-25**. Each column supplies the same signed values to the row's expression. Most operands are native signed integers; JavaScript/TypeScript Number and BigInt are separated. The selected LiteScript contract is a design, not an implemented runtime.
 
-The later [method and division revision proposal](arithmetic-methods-and-division-revision.md) has not changed the LiteScript rows below. The proposed truncating Int / Int and _/ plus _% floor family must be accepted and migrated explicitly before those rows change.
+The later [method and division revision proposal](arithmetic-methods-and-division-revision.md) has not changed the LiteScript rows below. The proposed truncating Int / Int and any replacement floor-division symbol must be accepted and migrated explicitly before those rows change. R was later consulted specifically for the punctuation-only spelling review; it is not included in this earlier 18-language matrix.
 
 | Language | Operand type | Expression | Rule | pos:pos (7, 2) | pos:neg (7, -2) | neg:pos (-7, 2) | neg:neg (-7, -2) |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |

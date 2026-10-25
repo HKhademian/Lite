@@ -44,7 +44,7 @@ Adjacent string literal tokens with only whitespace or comments between them con
 
 ## Division, remainder, and modulo tokens
 
-The [arithmetic revision proposal](arithmetic-methods-and-division-revision.md) considers operand-directed Int division, _/ and _% floor-family tokens, and an earlier ~/ alternative, alongside explicit numeric methods. These are not added to the productions below. Identifier boundaries must be resolved before underscore operators are selected; standalone _ remains an ordinary readable name. Future infix methods and spacing-dependent // comments remain deferred.
+The [arithmetic revision proposal](arithmetic-methods-and-division-revision.md) considers operand-directed Int division and explicit numeric methods, with punctuation-only %/% plus %% now recommended for the floor pair. The user requires compact/spaced operator equivalence, so the underscore family is set aside; ~/ is an earlier alternative. These proposed changes are not added to the productions below, and standalone _ remains an ordinary readable name. Future infix methods and spacing-dependent // comments remain deferred.
 
 `/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
 

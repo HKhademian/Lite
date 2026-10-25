@@ -66,7 +66,7 @@ Identifier normalization must not silently establish a normalization rule for st
 
 ## Open decisions
 
-- The [proposed _/ and _% floor operators](arithmetic-methods-and-division-revision.md#identifier-boundary-tradeoff) need explicit token boundaries without changing ordinary a_ or _ identifiers. Under longest-identifier scanning, a_/b reads a_ / b, while a _/ b could use the candidate operator. This is a proposal, not an adopted lexer rule.
+- The [underscore floor-operator review](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree) sets aside _/ and _% under the user's compact/spaced equivalence requirement: a_/b naturally reads a_ / b. Preserve ordinary a_ and _ identifiers rather than stealing identifier characters for operators. Punctuation-only alternatives remain proposals; no lexer change is adopted.
 - Pin the Unicode version and complete the identifier profile.
 - Confirm case sensitivity and normalization behavior.
 - Define any restrictions on format-control characters and any identifier escaping syntax.
