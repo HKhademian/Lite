@@ -44,7 +44,7 @@ mut fixedUser := make_user();
 replace(var fixedUser); /* rejected: caller binding is fixed */
 ```
 
-For fields and elements, apply their existing write requirements: writable parent access, a valid target, and compatibility with every possible target field type. The parent's binding itself need not be var to update a field.
+For fields and elements, apply their existing write requirements: writable parent access, a valid target, and compatibility with every possible target field type. The parent's binding itself need not be var to update a field. Selected disjoint inline sibling fields may each receive a separate var grant from that parent mut access, as in swap(var pair.left, var pair.right). They have distinct storage identities, while same-field and whole-parent/field grants overlap and are rejected. This derives field replacement permission without granting parent-binding reassignment; see [disjoint inline fields](call-replacement-flow.md#disjoint-inline-field-grants-selected).
 
 Var User alone does not permit modifying fields of the current payload. A call supplies the requested capability, not every capability the caller happens to possess.
 

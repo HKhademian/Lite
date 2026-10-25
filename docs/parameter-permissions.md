@@ -50,6 +50,8 @@ replace := fn(target: var User) {
 
 Target denotes one supplied caller location for the duration of replace(var userVar). Assigning through it replaces that location's content. A whole caller binding must already be var. No additional var is needed on the var parameter to repeat that replacement authority.
 
+For writable inline record fields, parent mut access can supply var field parameters while the parent binding stays fixed. Distinct sibling fields are separate locations and may each supply one grant; repeated-field and overlapping whole-parent/field write grants are rejected. See [disjoint inline fields](call-replacement-flow.md#disjoint-inline-field-grants-selected).
+
 The parameter's association with its caller location remains fixed. Assignment through target does not retarget a reference handle to some other location. No operation to reseat such a handle or create an escaping pointer/reference value has been selected.
 
 The qualifier var User does not by itself permit target.age = 20. That changes the held payload, which requires mut access as well. Conversely, mut User permits held-data updates without implicitly authorizing replacement of the caller location.

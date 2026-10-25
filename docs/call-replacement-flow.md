@@ -212,7 +212,43 @@ Reject the repeated grant even when both parameter value types are identical or 
 
 Do not silently clone/detach a value, create independent copy-back parameters, arbitrate write-back order, or add a runtime alias check to make the rejected call work. Preserve caller-location replacement semantics and existing evaluation order. A rejected call establishes no post-call read fact.
 
-The mandatory selected check is the obvious same-local duplicate in one call, under the single-source grant principle. General alias detection through different names/paths, field/index overlap, parent/child storage, mut payload aliases, callbacks/reentrancy, exclusivity implementation, and exact grant/borrow activation timing remain open. This does not decide read-only argument passing or infer that equal object payloads imply identical local storage.
+The initial selected check rejects the obvious same-local duplicate in one call, under the single-source grant principle; the inline-field extension below adds disjoint sibling and known parent/field overlap cases. General alias detection through different names/paths, field/index overlap, parent/child storage, mut payload aliases, callbacks/reentrancy, exclusivity implementation, and exact grant/borrow activation timing remain open. This does not decide read-only argument passing or infer that equal object payloads imply identical local storage.
+
+## Disjoint inline field grants selected
+
+Selected on **2026-10-25**: distinct accessible inline sibling fields are separate source locations and may each supply their own active var grant when the caller has writable parent access and each field satisfies its parameter's read/write contract.
+
+```text
+Pair := record {
+    left: Int;
+    right: Int;
+}
+
+swap := fn(a: var Int, b: var Int): Unit {
+    old := a;
+    a = b;
+    b = old;
+}
+
+mut pair := Pair { left = 10, right = 20 }
+swap(var pair.left, var pair.right);
+/* pair.left is 20; pair.right is 10. */
+```
+
+The user's symbolic storage positions @x for pair.left and @y for pair.right explain why this is allowed: these inline Int fields designate separate storage. Each location has one active write holder. Sharing a parent record does not turn the two fields into one location. This selects semantic location identity, not public address/pointer syntax, a concrete address layout, or a runtime alias check.
+
+Mutable parent access supplies replacement authority for each permitted field. Thus mut access to pair supports var grants for pair.left and pair.right. The field parameters can replace their supplied Int slots; pair's own binding stays fixed and its fields keep their declared contracts. No whole-binding var declaration, additional mut parameter for replacing the Int field itself, detached copy, or implicit copy-back is required. Field visibility, valid initialization, ownership/lifetime, and read/write compatibility still apply.
+
+Reject known overlapping write grants, independently of whether the callee happens to write:
+
+```text
+swap(var pair.left, var pair.left); /* Rejected: one field location twice. */
+change_pair(mut pair, var pair.left); /* Rejected: whole payload overlaps its field. */
+```
+
+Assume change_pair requires mut Pair and var Int and returns Unit. Its whole-payload write authority includes pair.left, so supplying the field separately would overlap it. The same principle rejects a whole-record replacement grant together with a grant to a contained field whenever both are otherwise available. While field grants are active, overlapping parent write authority cannot be used or granted to bypass their holders. A grant to an accessible disjoint sibling does not overlap merely because the paths share a parent.
+
+Preserve callee-first/source-argument evaluation, select each location once, and keep the containing storage valid for the grants' duration. Distinct field slots do not prove that reference-valued payloads inside them have disjoint targets. This selection covers known disjoint inline sibling storage and known same-field/whole-parent overlap; dynamic indices, reference aliases, overlapping views, resource invariants, callbacks/reentrancy, and a complete overlap/borrow enforcement model remain open. Uncertain overlap receives no new blanket acceptance or runtime repair rule here.
 
 ## Nested forwarding of a write grant selected
 
