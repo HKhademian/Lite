@@ -190,7 +190,7 @@ Union alternatives can be narrowed by matching their type. This applies both to 
 - This is a selected union-forming boundary for Result recovery. It does not automatically make unrelated `if` or `match` branches infer unions.
 - General union syntax, narrowing, conversions, layout, and ownership rules remain open. `T | D` records the type relationship without settling all type grammar.
 
-This Result recovery form is selected. The same target-level `else` syntax can filter typed panics. A filter handles only its matching type: unmatched panics propagate implicitly, while unmatched returned errors remain a `Result` obligation and may be explicitly propagated with postfix `!`. Full precedence and evaluation scope for nested operands remain open. The separate loop-completion hook's rule that a missing receiver denotes action-only behavior does not apply to Result recovery.
+This Result recovery form is selected. The same target-level `else` syntax can filter typed panics. A filter handles only its matching type: unmatched panics propagate implicitly, while unmatched returned errors remain a `Result` obligation and may be explicitly propagated with postfix `!`. Full precedence and evaluation scope for nested operands remain open. Loop completion is receiverless result processing through `then`; Result recovery keeps its optional failure receiver and does not use the retired action-only distinction.
 
 [Recovery receivers and fallback types](recovery-and-fallbacks.md) compares this optional receiver and union result rule with the reference languages. A precise union still requires narrowing before variant-specific use.
 
