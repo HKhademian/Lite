@@ -40,7 +40,7 @@ Snapshot: **2026-10-25**. Source: the language-design discussion in this chat. N
 - Composition and interfaces as the primary reuse direction.
 - Small runtime and native performance as goals, not measured achievements.
 
-- The [T] shorthand has an accepted complete indexed-sequence direction: cheap exact count, zero-based constant-time reads, and traversal in positional order with duplicates preserved. Mut access adds supported element replacement. Underlying hooks are get_index, set_index, and iterable; general keyed Indexable need not supply the full sequence bundle. Growth, ownership, contiguous storage, full generic/protocol grammar, and stored representations are separate. See [indexed sequences](indexed-sequence-contract.md).
+- The [T] shorthand has an accepted complete indexed-sequence direction: cheap exact count, zero-based constant-time reads, and traversal in positional order with duplicates preserved. Mut access adds supported element replacement. Underlying hooks are get_index, set_index, iterable, and count; general keyed Indexable need not supply the full sequence bundle. Growth, ownership, contiguous storage, full generic/protocol grammar, and stored representations are separate. See [indexed sequences](indexed-sequence-contract.md).
 
 ### Syntax and results
 

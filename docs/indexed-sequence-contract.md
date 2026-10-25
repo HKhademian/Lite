@@ -53,17 +53,18 @@ Thus a sort could visibly require mut [T], while append would require a separate
 
 ## Underlying operation hooks
 
-The user identifies get_index, set_index, and iterable as the underlying operation hooks:
+The user identifies get_index, set_index, iterable, and count as the indexed-sequence operation hooks:
 
 - values[index] requests get_index for positional reads.
 - values[index] = replacement requests set_index, requiring mut access and a provider that supports element replacement.
 - loop values requests iterable and its traversal protocol.
+- values.count requests count for the finite exact current element count without traversing the elements.
 
 These names describe the intended hooks; complete interface declarations, associated types, receiver signatures, and implementation syntax remain deferred. Merely defining a similarly named method does not establish conformance. Immutable [T] does not expose a writable operation just because the provider has one.
 
-A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities; see [end operations](sequence-end-operations.md). The exact count still needs its own query contract; get_index, set_index, and iterable alone do not imply cheap exact size.
+A setter must preserve the sequence's current length and positional structure. Push/pop are separate structural capabilities; see [end operations](sequence-end-operations.md). The count hook belongs to the [T] bundle and must not require enumeration.
 
-General Indexable can use nonpositional keys and need not be iterable. The common hook vocabulary does not grant it all [T] laws or require every lookup to return the same failure channel. Bounds behavior remains independently under review.
+General Indexable can use nonpositional keys and need not be iterable or provide the [T] count guarantee. The common hook vocabulary does not grant it all [T] laws or require every lookup to return the same failure channel. Bounds behavior remains independently under review.
 
 ## Size spellings to review separately
 
