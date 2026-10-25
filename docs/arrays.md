@@ -22,6 +22,15 @@ Known-size nonempty heterogeneous literals infer one homogeneous union element t
 
 A known extent zero or one also determines tuple expansion: (...arr0) for [Int; 0] yields Unit, and (...arr1) for [Int; 1] yields a fixed singleton (:Int,). Explicit (...rest = arr0) and (...rest = arr1) instead retain a tail-bearing tuple with an empty or one-element array. Neither stored/copied declared tail collapses to Unit, a scalar, or the other tuple shape. Explicitly unpacking a known zero/one tail instead emits zero/one items and reconstructs under its destination. See [zero/singleton construction examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
 
+## Empty literals remain empty arrays
+
+```text
+x := [];
+pack := (...rest = []);
+```
+
+[] constructs an empty array with known extent zero. An element annotation is not required merely for this value or the declared empty segment. The user deliberately leaves its exact unknown-element versus Unit-element default for later; no public Unknown type or implicit Any/Never default is selected. An expected [Int; 0] may optionally supply Int. Empty array, empty declared segment, and Unit retain their distinct structural meanings. Bare [] is a value spelling, not a newly selected complete type spelling. See [gradual remainder reasoning](tuple-remainder-gradual-reasoning.md#empty-means-empty-exact-element-defaults-can-wait).
+
 ## Zero-sized elements retain their count
 
 [Unit; 5] has five valid positions and one possible initialized element sequence, while [(), (), ()] infers [Unit; 3]. Their element payload occupies zero bytes, and their counts are static type information rather than stored length fields. [Int; 0] likewise has no element payload but keeps its array contract; equal storage does not make it Unit. Iteration count, bounds, and expression effects remain observable. A runtime-sized Unit array still needs runtime count information in its container, with its exact representation open. See [zero storage and shape](unit.md#zero-storage-does-not-erase-shape).

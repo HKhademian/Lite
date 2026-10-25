@@ -1,10 +1,10 @@
 # Tuple array segments and pattern rest: re-evaluation
 
-Status: **review documented at the user's request, 2026-10-25; accepted segment/access/unpacking rules retained, pattern collection reopened**. This review retracts the assistant's inference that the latest examples had already selected universal array-producing pattern rest. It records the user's requested behavior without claiming that its full semantics are settled. There is no LiteScript parser/runtime verification.
+Status: **review and subsequent gradual-change outcome documented at the user's request, 2026-10-25**. The accepted result preserves structural tuple remainders, including a sole empty segment, without automatic array projection or universal array capture. The user clarified that the examples were progressive edge probes. Empty [] is an empty array; its exact unknown-versus-Unit element default is deferred rather than a gate for these examples. There is no LiteScript parser/runtime verification. See [gradual reasoning](tuple-remainder-gradual-reasoning.md).
 
 ## Keep the four operations distinct
 
-A stored tuple schema describes ordinary components and named homogeneous array segments. Each segment occupies one stored position, regardless of its element count. Member access selects a stored component. Expression unpacking emits logical items. Destination construction routes those items and packs matching elements into declared segments. Pattern capture selects components and collects a remainder under its own rule; its meaning must be selected explicitly rather than borrowed automatically from expression spread.
+A stored tuple schema describes ordinary components and named homogeneous array segments. Each segment occupies one stored position, regardless of its element count. Member access selects a stored component. Expression unpacking emits logical items. Destination construction routes those items and packs matching elements into declared segments. Pattern capture selects stored components and preserves the remaining tuple structure, including declared segment markers. It does not borrow the logical item-emission rule from expression spread.
 
 ```text
 value: (head: Int, ...rest: Int; 3) = (10, 20, 30, 40);
@@ -17,78 +17,68 @@ expanded := (...value);
 
 Two stored components can emit four items. A runtime-length array changes the emitted count without adding stored tuple positions. Current declarations remain tail-only; examples with middle segments below are future discussion.
 
-## The user's destructuring examples reopen a real boundary
+## The user's examples were gradual edge probes
 
-The user wants these two patterns over the trailing-segment value above to produce the same array result for the second binding:
+The user progressively carved a full tuple down through fewer ordinary fields, shorter segments, an empty segment, and finally no remaining components. The assistant initially read paired examples as a demand for direct/rest array equality; the user clarified that the purpose was to probe boundaries, not to finalize that interpretation.
 
 ```text
+value := (10, ...rest = [20, 30, 40]);
 (h, direct) := value;
+/* direct = [20, 30, 40] */
 (h, ...captured) := value;
-/* requested outcome: direct and captured both contain [20, 30, 40] */
+/* captured = (...rest = [20, 30, 40]) */
 ```
 
-An ordinary receiver selects the one stored array member. The currently documented structural pattern-rest rule instead preserves the remaining segment-bearing tuple, conceptually (...rest = [20, 30, 40]). That wrapper and its array member remain distinct types. Therefore the requested equality has not yet been reconciled with that rule; it must not be dismissed or presented as already satisfied.
+The distinct capture operators have explicit meanings: direct selects an array member, while captured preserves a remainder tuple. Their value families need not be identical. The subsequent gradient comparison keeps the wrapper when only a segment remains, including at extent zero.
 
-The user's imaginary middle-segment case adds another constraint:
+The imaginary middle-segment example remains future syntax, with structural outcomes:
 
 ```text
 /* future declaration, not admitted current syntax */
 middle: (head: Int, ...parts: Int; 3, tail: Int) =
     (10, 20, 30, 40, 50);
 /* grouping: (head = 10, ...parts = [20, 30, 40], tail = 50) */
-
 (h, b, direct) := middle;
 /* h = 10; b = [20, 30, 40]; direct = 50 */
-
 (h, b, ...captured) := middle;
-/* requested: this capture differs from direct */
-/* structural candidate: captured = (tail = 50) */
-/* array candidate: captured = [50] */
+/* captured = (tail = 50): named singleton tuple */
 ```
 
-The distinction alone does not choose the last capture's type. In particular, it does not establish that every pattern rest creates a homogeneous array. The assistant's previous claim that it did is withdrawn.
+This does not enable middle declarations or make a scalar suffix into an array. See [the full gradual sequence](tuple-remainder-gradual-reasoning.md#carve-down-the-source-one-property-at-a-time).
 
 ## Candidate capture rules and their costs
 
-The current structural rule preserves remaining labels, per-position types, stored order, and existing segment roles. It gives Unit for an exhausted ordinary tuple remainder and preserves ordinary singleton tuple shape. Keeping that rule unchanged does not satisfy the requested trailing-segment array equality.
+The selected structural rule preserves remaining labels, per-position types, stored order, and segment roles. It gives Unit only when no stored components remain. A sole ordinary component remains a singleton tuple; a sole declared segment remains a segment-bearing tuple.
 
-One possible revision would return the array when the only remaining stored component is an existing declared segment, while preserving a structural tuple remainder in other cases. This would distinguish a segment from an ordinary array-valued field by its static role, not by current length or payload size. It could meet both user examples without homogenizing ordinary heterogeneous remainders. It remains a proposal: define the projection, its types, empty-segment behavior, named selectors, and callable alignment before adoption. It would not identify every rest-only tuple with its array member or introduce global singleton collapse.
+Projection of a sole remaining segment was explored and is not selected. Removing the last ordinary field would also erase the unrelated tuple wrapper, segment label, and role. Under the accepted locality criterion, that is an extra semantic jump. There is no automatic projection based on current length, zero payload size, or the presence of only one segment.
 
-Another possible revision is universal homogeneous array collection. Its candidate algorithm is:
-
-1. Ordinary/named receivers select stored components under existing no-duplicate source rules.
-2. The final rest receiver emits the unselected components in stored order, expanding declared segments only.
-3. Collect those emitted values into an array, with a compatible expected element type or normalized-union inference.
-
-Under that candidate, the middle example gives captured = [50]. Capturing after only h gives [20, 30, 40, 50]. An ordinary array-valued field stays one emitted value:
-
-```text
-ordinary := (head = 10, rest = [20, 30, 40]);
-(h, ...captured) := ordinary;
-/* universal-array candidate: [[20, 30, 40]] */
-```
-
-Tuple-valued segment elements likewise stay intact. Recursively flattening nested arrays/tuples would change the selected one-level emission rule. Universal array capture intentionally drops top-level remainder labels and per-position type distinctions; it is not a representation-neutral structural remainder.
+Universal homogeneous array capture was also explored and is not selected for tuple pattern rest. Its candidate algorithm emitted unselected components and gathered them into an array. It would preserve nested array/tuple elements as items but discard top-level labels and individual positional types:
 
 ```text
 (first, ...remaining) := (1, tea = "green", fruit = 30);
-/* current structural rule: (tea: String, fruit: Int) */
-/* array candidate: [String | Int; 2] */
+/* selected: remaining = (tea = "green", fruit = 30) */
+/* unselected array alternative: [String | Int; 2] */
 ```
 
-No candidate is adopted by this review. The current general structural rule remains documented, with the segmented-source behavior explicitly reopened. Do not claim the user's trailing equality is invalid, settled, or equivalent to selecting universal array capture.
+An explicit homogeneous collection/conversion could be discussed separately. This outcome adds no new syntax, recursive flattening, global singleton collapse, or array/tuple identity.
 
-## Empty capture needs element-type evidence
+## Empty arrays and empty remainders
+
+The user explicitly asks to keep the empty case simple:
 
 ```text
-(first, ...remaining) := (1,);
-/* current structural rule: remaining is Unit */
-/* array candidate: zero elements, but no remaining element-type evidence */
+x := [];
+value := (10, ...rest = []);
+(h, ...remaining) := value;
+/* remaining = (...rest = []) */
+
+(first, ...none) := (1,);
+/* none = Unit: there is no remaining stored component */
 ```
 
-A zero extent does not determine an array's element type. The consumed prefix does not automatically supply that type. An annotation/context or a separately selected empty-array default would be needed; no implicit Any, public Never, or Unit element default is selected.
+[] is an empty array, and its extent is zero. No element annotation is required merely to construct it or reason about the segment's presence. Its exact unknown-element versus Unit-element default remains deferred; do not invent a public Unknown/Any/Never type or reject the shape example pending that decision. An expected [Int; 0] may still supply Int when wanted.
 
-A remaining declared segment of type ...rest: Int; 0 already supplies Int even with no elements. That case is different from having no remaining components or segment schema at all. Existing (...rest:) infers an omitted element type; no new partial extent or pattern annotation syntax is adopted here.
+An empty declared segment is one remaining stored component. No remaining components gives Unit. Unknown or deferred element information never authorizes erasing the segment. The previous demand to retain Int as an annotation throughout the zero-length gradient is superseded. See [empty-array clarification](tuple-remainder-gradual-reasoning.md#empty-means-empty-exact-element-defaults-can-wait).
 
 ## Segment roles and extents participate in identity
 
@@ -111,7 +101,7 @@ Whole-composition matching still proves coverage, final surviving types/access, 
 
 ## Middle construction differs from reading stored groups
 
-An already constructed middle-segment value has known component boundaries. Reading its positions or selecting them with ordinary receivers does not need a partition search. A candidate rest operation can emit the unselected groups using those known roles.
+An already constructed middle-segment value has known component boundaries. Reading its positions or selecting them with ordinary receivers does not need a partition search. Structural capture preserves the unselected groups and their known roles; a later explicit expression spread may emit their logical items.
 
 Constructing multiple unspecified-length segments from a flat stream is a different problem. For the hypothetical (:Int, ...mid: Int, :Int, ...rest: Int), five Int values admit four positional partitions. A fixed middle extent establishes its boundary; a single runtime middle with a fixed suffix has a possible suffix-reserving interpretation. Multiple unspecified lengths need explicit boundaries, a deterministic policy, or rejection when ambiguous. Named/default routing, multi-segment type construction, and pattern integration still need separate review. No middle or multiple stored segment declarations are enabled.
 
@@ -129,16 +119,16 @@ Actual array collection can require copying or gathering elements. Collecting a 
 
 Equal capture contents/types do not promise equal storage identity, aliases, or copy effects. Reusing backing storage must preserve ordinary value semantics, access, ownership, lifetime, initialization, source-once evaluation, written effects, and required cleanup. Runtime-array descriptor, allocation/failure policy, and complete copy/resource eligibility remain open. No benchmark or zero-copy/zero-allocation implementation claim follows.
 
-Unit remains one value with zero value bytes. Fixed [Unit; C] arrays have C semantic positions and static counts; runtime-sized Unit containers still need available runtime counts. Empty declared segments keep their stored tuple positions. Explicit unpacking emits zero items for a known empty segment, while real Unit elements remain items. Neither capture candidate selects broad zero-size type collapse.
+Unit remains one value with zero value bytes. Fixed [Unit; C] arrays have C semantic positions and static counts; runtime-sized Unit containers still need available runtime counts. Empty declared segments keep their stored tuple positions. Explicit unpacking emits zero items for a known empty segment, while real Unit elements remain items. Structural capture selects no broad zero-size type collapse.
 
 ## Grammar and next decisions
 
 The selected segment spelling remains ...name: T with optional ; C in type context; T describes one element even when it is itself an array or tuple. The extent suffix belongs to the type entry. Existing type spread, expression spread, declarations, and pattern capture retain distinct syntactic contexts. The standalone runtime-array spelling and combined omitted-element/fixed-extent forms remain open; no new syntax is selected by the capture discussion.
 
-Keep the accepted storage/access/emission model. Before adopting a pattern revision, settle the capture's result kind, labels and per-position types, empty-element inference, named-selector behavior, and contextual callable consistency. Preserve segment roles in identity and label-only conversions. Keep middle construction and multi-segment partitioning deferred.
+Keep the accepted storage/access/emission model and structural pattern capture. The gradual reasoning settles the wrapper boundary without special projection or universal array capture. Existing named-selector coverage and label/type preservation remain. Exact empty-array element defaults, further contextual callable integration, middle construction, and multi-segment partitioning remain separate. Preserve segment roles in identity and label-only conversions.
 
 ## Verification scope
 
-The re-evaluation used nine external candidate-model reference cases: existing trailing segment, consumed/unconsumed middle segment, ordinary nested array field, heterogeneous named fields, no remaining type evidence, typed zero segment, five Unit elements, and a runtime contract whose current length is three. A separate enumeration found four partitions for the five-value/two-unspecified-segment example. These are expected-value/model checks, not LiteScript execution or parser/typechecker conformance. The reference calculation is not a compiler implementation and does not choose a capture rule.
+The re-evaluation used nine external candidate-model reference cases: existing trailing segment, consumed/unconsumed middle segment, ordinary nested array field, heterogeneous named fields, no remaining type evidence, typed zero segment, five Unit elements, and a runtime contract whose current length is three. A separate enumeration found four partitions for the five-value/two-unspecified-segment example. These are expected-value/model checks, not LiteScript execution or parser/typechecker conformance. The reference calculation is not a compiler implementation; the later user-approved gradual reasoning records the structural outcome and supersedes the earlier reopened status. The empty literal itself remains valid while its exact default element-type policy waits.
 
 Related: [array segments](tuple-array-segments.md), [structural pattern rest](tuple-spread-and-rest.md), [logical unpacking](tuple-unpacking.md), [array-tail schemas](tuple-array-shapes.md), [label-only conversion](tuple-label-conversions.md), and [Unit/storage boundaries](unit.md).

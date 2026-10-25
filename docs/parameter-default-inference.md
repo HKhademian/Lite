@@ -7,7 +7,7 @@ Status: **selected 2026-10-25 for ordinary value parameters; language design, no
 A declared default can establish an ordinary parameter's omitted type. This applies equally to parenthesized callable literals with and without `fn`.
 
 ```text
-make := fn(count = 3, label = "item") {
+make := fn (count = 3, label = "item") {
     (count, label)
 }
 
@@ -29,30 +29,30 @@ The default is optional input supply, not a generic specialization mechanism. Es
 When defining a fresh implementation, its explicit parameter annotation establishes the implementation input type; without that annotation an established expected callable contract can supply an omitted type. Check its default against that established implementation input type. Callable compatibility with a distinct public view uses the selected safe variance rule, rather than requiring identical input types. Infer only omitted information; a default does not override established constraints.
 
 ```text
-flexible := fn(value: Int | String = 3) {
+flexible := fn (value: Int | String = 3) {
     value
 }
 
 flexible(value = "ready");  /* valid: declared input is Int | String */
 
-handler: fn (Int | String): Int = fn(value = 3) { 0 }
+handler: fn (Int | String): Int = fn (value = 3) { 0 }
 /* expected input remains Int | String; the default does not narrow it to Int */
 
-bad := fn(count: Int = "three") { count }
+bad := fn (count: Int = "three") { count }
 /* rejected: the default does not fit the declared Int input */
 ```
 
-The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn(Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
+The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn (Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
 
-A later adaptation of an already established implementation does not re-run parameter inference against the view's narrower type or retype its default. For example, an Int | String implementation defaulting to "auto" can fit a public fn(value?: Int): Int view when its result and omission promise fit: the caller may supply Int or omit, and the implementation still handles omission with its own String default. An implementation actually declared to take Int still cannot default to "auto"; the wider implementation input is essential. No signature supplies or alters defaults. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
+A later adaptation of an already established implementation does not re-run parameter inference against the view's narrower type or retype its default. For example, an Int | String implementation defaulting to "auto" can fit a public fn (value?: Int): Int view when its result and omission promise fit: the caller may supply Int or omit, and the implementation still handles omission with its own String default. An implementation actually declared to take Int still cannot default to "auto"; the wider implementation input is essential. No signature supplies or alters defaults. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
 
 ## Static types do not require evaluating defaults
 
 Infer from a default expression's static type under existing expression rules. A helper's established result type is sufficient; the helper does not execute at definition time to discover a type.
 
 ```text
-default_count := fn(): Int | Float { 3 }
-make_count := fn(count = default_count()) { count }
+default_count := fn (): Int | Float { 3 }
+make_count := fn (count = default_count()) { count }
 ```
 
 The input type of count is Int | Float, from the helper's declared result contract. Its current implementation returning 3 does not specialize the caller's parameter to Int. This inference decision does not choose new numeric conversions or bypass ordinary value compatibility.
@@ -66,7 +66,7 @@ Defaults may use otherwise valid runtime expressions such as default_count(); th
 Selected on **2026-10-25**: an ordinary value parameter's default may read earlier ordinary parameters in declaration order, using their final prepared values. An earlier parameter can have been supplied by the call or filled by its own default. This applies equally with and without fn and permits static omitted-type inference from the established earlier input types.
 
 ```text
-make_range := fn(
+make_range := fn (
     start = 0,
     count = 3,
     end = start + count,
@@ -105,10 +105,10 @@ The copied start remains 10 while preparing count changes seed. This example int
 ### Self and later references are rejected
 
 ```text
-bad_forward := fn(a: Int = b, b = 1) { a }
+bad_forward := fn (a: Int = b, b = 1) { a }
 /* rejected: b is declared after a */
 
-bad_self := fn(a: Int = a) { a }
+bad_self := fn (a: Int = a) { a }
 /* rejected: a cannot read itself as its default */
 ```
 
@@ -120,12 +120,12 @@ Kotlin provides a matching precedent for the declaration-order dependency restri
 
 ## Insufficient information and boundaries
 
-If neither an annotation, an established expected input contract, nor valid default-expression inference establishes the omitted type, require more type information. Do not infer an implicit dynamic type, execute code to discover a type, or choose an arbitrary type to break a cycle. Empty literals retain their existing expected-type/inference requirements; this rule does not invent an element type.
+If neither an annotation, an established expected input contract, nor valid default-expression inference establishes the omitted type, require more type information. Do not infer an implicit dynamic type, execute code to discover a type, or choose an arbitrary type to break a cycle. Empty array literals construct empty arrays without a mandatory annotation just for that value/shape; their exact default element-type policy remains deferred and is not invented by parameter-default inference. Complete callable input typing may still need that separate policy when an element contract is required.
 
 A parameter without such evidence remains unresolved:
 
 ```text
-unresolved := fn(value) { value * 2 }
+unresolved := fn (value) { value * 2 }
 /* body operations alone do not establish an arbitrary reusable input contract */
 ```
 

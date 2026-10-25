@@ -119,6 +119,20 @@ Unit has no components and no declared array tail. A tuple with an explicitly de
 
 Explicit unpacking is a reconstruction boundary: a known empty declared tail emits no items and may reconstruct Unit, while a known one-element tail reconstructs a singleton. The original stored value and ordinary copies retain the tail. In contrast, a tail containing two Unit elements emits two Unit items, not zero; unpacking is not recursively applied to each emitted value. See [zero/singleton logical expansion](tuple-unpacking.md#zero-and-singleton-boundaries).
 
+## Empty segment capture stays a tuple
+
+```text
+value := (10, ...rest = []);
+(h, ...remaining) := value;
+/* remaining = (...rest = []) */
+
+single := (10,);
+(h, ...nothing) := single;
+/* nothing = Unit */
+```
+
+The empty array and its segment remain present in remaining. [] needs no element annotation merely to construct an empty array; its exact unknown-versus-Unit default element policy is deferred and does not identify the array or segment with Unit. Structural capture preserves a sole segment wrapper at every extent. See [gradual changes](tuple-remainder-gradual-reasoning.md).
+
 ## Empty tuple pattern selected
 
 The selected pattern () matches only Unit and binds no names. Thus () := operation() is valid when the operation has a Unit result contract; it still evaluates the operation once. An ordinary declaration cannot use this pattern on a scalar, a singleton containing Unit, or a source that may have another type/shape. Conditional and match patterns retain their existing mismatch behavior. This does not give bare Unit a special constant-pattern meaning: ordinary binding-name rules still apply. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected).

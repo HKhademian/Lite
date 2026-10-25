@@ -2,7 +2,7 @@
 
 Status: **array-segment model and optional static extent selected in the 2026-10-25 discussion; current declarations remain tail-only**. Middle collectors and multiple stored segments are future discussion. This is design documentation, not parser/runtime verification.
 
-The later [pattern re-evaluation](tuple-segment-pattern-review.md) keeps this segment model and reopens destructuring of segment-bearing sources. The requested equality of an ordinary array receiver and a trailing rest receiver is not yet reconciled with the current structural tuple-remainder rule. Universal array-producing pattern rest remains a proposal; the assistant's earlier claim that the examples already selected it is withdrawn.
+The subsequent [gradual-change reasoning](tuple-remainder-gradual-reasoning.md) confirms structural pattern rest: remaining labels, types, and segment markers survive even when only an empty segment remains. No sole-segment projection or universal array-producing tuple capture is selected. The earlier [review](tuple-segment-pattern-review.md) retains the evaluated alternatives and their consequences.
 
 ## Element type and extent
 
@@ -121,6 +121,22 @@ sum_three(1, 2, 3, 4);  /* rejected: too many elements */
 The full supplied composition must prove the exact extent as well as element types/access. A runtime arity check does not replace that proof. Defaults and direct named-tail supply keep their separately unresolved interactions; the suffix grants neither omission nor an implicit extra collector.
 
 A parameter declared pack: (...rest: Int) exposes the general member contract, even when a caller supplies three elements. A parameter declared pack: (...rest: Int; 3) exposes [Int; 3] to its body. Compiler specialization may optimize either implementation but must preserve source validity under the declared contract. Passing through general interfaces does not promise preservation of stronger caller-local count facts.
+
+## Structural capture retains the segment wrapper
+
+```text
+value := (10, ...rest = [1, 2]);
+(h, member) := value;       /* member = [1, 2] */
+(h, ...remaining) := value; /* remaining = (...rest = [1, 2]) */
+remaining.rest;            /* array access through the segment label */
+remaining.0;               /* the same array member */
+
+empty := (10, ...rest = []);
+(h, ...empty_remaining) := empty;
+/* empty_remaining = (...rest = []), not Unit */
+```
+
+Pattern rest preserves the tuple wrapper and role; ordinary binding selects a member. Removing the segment declaration, leaving only the consumed prefix, makes the remainder Unit. [] is an empty array without a mandatory element annotation; the exact default element-type policy can wait. See [gradual remainder reasoning](tuple-remainder-gradual-reasoning.md).
 
 ## Storage and zero extents
 
