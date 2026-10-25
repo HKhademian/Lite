@@ -1,6 +1,6 @@
 # Where mut belongs in typed declarations
 
-Status: **name: mut T selected for annotated declarations and parameters, 2026-10-19**. Inferred declarations retain mut name := expression and var mut name := expression; var stays before the name in typed declarations. The earlier typed name-prefix form is superseded. Access permissions, argument passing, and slot semantics are unchanged by this migration.
+Status: **name: mut T selected for annotated declarations and parameters, 2026-10-19**. Inferred declarations retain mut name := expression and var mut name := expression; var stays before the name in typed declarations. The earlier typed name-prefix form is superseded. Access permissions, argument passing, and caller-replacement semantics are unchanged by this migration.
 
 Subsequent naming decision: [type-side var](var-access-qualifier.md) replaces the slot keyword for caller-storage access. This does not change selected mut placement. Historical references to slot below explain the earlier placement discussion; canonical replacement signatures now use fn(target: var T), with local-only var declarations inside the body.
 
@@ -28,7 +28,7 @@ If writable access is only a contract on each named parameter, this is a coheren
 
 ## Qualifier after the colon
 
-The selected fn(target: mut T) groups the name separately from the required access-qualified type. It aligns with the existing type-position slot marker and gives the type grammar a natural place for future composite access contracts.
+The selected fn(target: mut T) groups the name separately from the required access-qualified type. It aligns with the type-position var marker and gives the type grammar a natural place for future composite access contracts.
 
 The four explicit declaration alternatives are:
 
@@ -78,7 +78,7 @@ Alias naming cannot manufacture writable access; a source must supply the requir
 
 Use a grouped operand when qualifying a whole union, as in parent: mut (P | Q): the existing writable access applies to whichever parent alternative is active. This migration preserves the former prefix declaration's full-value access. Per-alternative A | mut B, further nesting, normalization, and flow rules still need separate contracts; they are not selected merely by moving mut after the colon.
 
-Crucially, A | mut B is not the replacement contract A | slot B. Payload mutation and accepted replacements remain distinct. Neither form bypasses the source's permissions, visibility, ownership, or lifetime requirements.
+Crucially, A | mut B is not the replacement contract A | var B. Payload mutation and accepted replacements remain distinct. Neither form bypasses the source's permissions, visibility, ownership, or lifetime requirements.
 
 The physical parameter passing strategy also remains separate. A type-position mut must not silently mean copy a value, borrow caller storage, replace caller bindings, or infer a pointer operation.
 
@@ -94,9 +94,9 @@ These examples compare syntax and semantics separately. None selects public poin
 
 ## Selected rule and migration boundary
 
-Use name: mut T for annotated parameters and declarations, while keeping var on the binding and the existing inferred declaration prefixes. This revises the earlier placement rule because of the direction toward explicit slot/access contracts.
+Use name: mut T for annotated parameters and declarations, while keeping var on the binding and the existing inferred declaration prefixes. This revises the earlier placement rule because of the direction toward explicit var/access contracts.
 
-Canonical typed examples, declaration templates, function/receiver parameter rules, and the grammar have been migrated together. Historical and foreign-language examples are labeled separately. Do not retain both typed forms or change runtime semantics to ease the syntax migration. Keep inference, read-only defaults, var/mut independence, and slot replacement contracts intact.
+Canonical typed examples, declaration templates, function/receiver parameter rules, and the grammar have been migrated together. Historical and foreign-language examples are labeled separately. Do not retain both typed forms or change runtime semantics to ease the syntax migration. Keep inference, read-only defaults, var/mut independence, and caller-replacement contracts intact.
 
 Additional qualified aliases, per-alternative union capabilities, and complete callable-type grammar still need separate contracts. This selection does not adopt ref, public pointers, or a borrowing model.
 

@@ -1,6 +1,6 @@
 # Qualified alternatives in access summaries
 
-Status: **user-proposed notation explored 2026-10-18; not selected**. Existing value-union normalization, var/mut permissions, and all-target field-write safety remain established. The meaning of a type-position mut qualifier and access-summary boundaries still need a decision.
+Status: **historical user-proposed notation explored 2026-10-18; not selected**. Existing value-union normalization, var/mut permissions, and all-target field-write safety remain established. Mut is held-data access and var is the replacement marker; the meaning of a per-alternative `A | mut B` access summary and access-summary boundaries remain unselected.
 
 The subsequent replacement qualifier used slot, then the [var qualifier decision](var-access-qualifier.md) selected canonical A | var B | C. These access summaries distinguish replacement acceptance from held-data mutability. The mut spellings below preserve the original investigation and are superseded for that role. Complete access grammar and boundaries remain open; see [replacement access summaries](slot-access-qualifier.md).
 
@@ -42,7 +42,7 @@ This representation covers exact field contracts whose writable alternatives are
 
 ## Different from mutable payload alternatives
 
-There is another plausible interpretation of A | mut B | C: the active value is a read-only A, a writable B, or a read-only C. That describes permission on the current payload. It does not guarantee that an A-valued slot can be replaced with B.
+There is another plausible interpretation of A | mut B | C: the active value is a read-only A, a writable B, or a read-only C. That describes permission on the current payload. It does not guarantee that an A-valued location can be replaced with B.
 
 Mutating an existing B and replacing a selected field with a B are different operations. For example, a read-only B could be stored through a writable slot without granting permission to mutate B's own fields. Conversely, writable access to an existing B does not inherently allow replacement of its containing binding.
 
@@ -106,7 +106,7 @@ This preserves safety when source ordering changes and when summaries are combin
 
 The common read/write summary describes operations safe without further narrowing. It does not necessarily preserve which parent or access path is active, correlations with other fields, or branch-specific permissions available after a type test. Keep the original alternatives for those purposes rather than replacing their full union type with the summary unconditionally.
 
-In particular, a later value test showing that a field currently holds B does not by itself prove which source path supplied it or which additional writes its slot permits. Stable narrowing of the actual parent/access path needs its own proof.
+In particular, a later value test showing that a field currently holds B does not by itself prove which source path supplied it or which additional writes its location permits. Stable narrowing of the actual parent/access path needs its own proof.
 
 ## Reference comparison
 

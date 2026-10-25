@@ -1,6 +1,6 @@
 # Union values and access contracts
 
-Status: **design investigation dated 2026-10-18**. Common field read/write safety is selected separately. Explicit access types, their spelling, and their first-class status are proposals.
+Status: **historical design investigation dated 2026-10-18; the canonical replacement marker is now var**. Common field read/write safety is selected separately. Explicit access types, their spelling, and their first-class status remain proposals; slot is retired as a source keyword.
 
 ## The apparent discrepancy
 

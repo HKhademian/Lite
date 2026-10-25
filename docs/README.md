@@ -84,8 +84,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Union widening](union-widening.md): selected automatic widening when every normalized source alternative is an exact destination member, with checked narrowing in the reverse direction.
 - [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
-- [Union values and access contracts](union-values-and-access.md): a slot containing a union versus a union of possible slots; proposed explicit read/write contracts and reference-language comparisons.
-- [Qualified access summaries](access-union-qualifiers.md): exploration of A | mut B | C, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
+- [Union values and access contracts](union-values-and-access.md): a storage location containing a union versus a union of possible storage locations; historical access notation and proposed explicit read/write contracts.
+- [Qualified access summaries](access-union-qualifiers.md): historical exploration of `A | mut B | C`, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
 - [Call replacement flow](call-replacement-flow.md): current-read and declared-write compatibility at invocation, later-argument invalidation, single source write grants, nested forwarding and caller recovery, rejected cross-member calls, and deferred write-only access.
 - [Var access qualifier](var-access-qualifier.md): var unifies local replacement permission and received caller-storage access; no local-only header modifier; slot is retired as a source keyword.
 - [Replacement access summaries](slot-access-qualifier.md): canonical var marker, grouped distribution, and var-binding summaries; whole access-contract grammar remains open.
@@ -93,7 +93,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Access ergonomics](slot-ergonomics.md): infer derived mathematical summaries while keeping caller-visible replacement explicit in signatures and calls.
 - [Parameter permissions](parameter-permissions.md): local var declarations, payload mut, and caller-storage var; fixed location associations and open combined-access syntax.
 - [Caller mutation grants](caller-mutation-grants.md): explicit mut for caller-data updates and var for caller-location replacement; existing source authority is required.
-- [Ordinary parameters and slots](parameter-values-and-slots.md): read-only defaults, semantic passing versus compiler representation, and scoped writable locations without adopting public pointers or general references.
+- [Ordinary parameters and caller locations](parameter-values-and-slots.md): read-only defaults, semantic passing versus compiler representation, and scoped writable locations without adopting public pointers or general references.
 - [Caller-location keywords](caller-location-keywords.md): historical ref/mut/slot/mut ref comparison, superseded spelling recommendation, and preserved permission boundaries.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
 - [Record creation and initialization](record-initialization.md): omitted typed initializers and = 0 select zero; = {} uses declared defaults; nested construction, inline forms, and remaining eligibility/grammar questions.

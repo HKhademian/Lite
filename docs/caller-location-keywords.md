@@ -8,7 +8,7 @@ The later [mut qualifier placement decision](mut-qualifier-placement.md) selects
 
 ## The naming concern
 
-The current sketch uses target: slot (A | B). Slot already describes accepted replacement alternatives; its use as a parameter also identifies caller-location access. Decide whether these are one location-capability concept expressed uniformly, or whether parameter passing deserves a separate marker.
+The earlier sketch used target: slot (A | B). Slot already described accepted replacement alternatives; its use as a parameter also identified caller-location access. Decide whether these are one location-capability concept expressed uniformly, or whether parameter passing deserves a separate marker.
 
 The comparison must preserve three different questions:
 
@@ -28,7 +28,7 @@ replace := fn(ref target: A | B) {
 }
 ```
 
-If ref is defined specifically as a writable caller-location mode, this resembles the current full slot contract. The word emphasizes aliasing the caller location and is familiar from C#.
+If ref is defined specifically as a writable caller-location mode, this resembles the earlier full slot contract. The word emphasizes aliasing the caller location and is familiar from C#.
 
 However, ref then grants writes itself. If instead ref means aliasing without mutation authority, the same declaration must be read-only under LiteScript's default-access goal. These are different designs; the name alone cannot decide which one is intended.
 
@@ -57,9 +57,9 @@ Mut already requests writable access to held data. It does not by itself select 
 
 Keeping the word count small is useful, but this would blur the distinction that permits a fixed mut binding and a reassignable read-only var binding. Recommend retaining mut's current role, not using it alone as the new caller-replacement marker.
 
-## 3. slot
+## 3. slot (historical)
 
-The current form is:
+The earlier form was:
 
 ```text
 replace := fn(target: slot (A | B)) {
@@ -93,7 +93,7 @@ This can cleanly compose caller aliasing with permission to mutate the reference
 
 Rust's &mut T permits mutable access to the referent, including assignment through dereferencing; adopting those permissions wholesale would not preserve LiteScript's narrower distinction between held-data mutation and allowed replacements. The analogy is useful, but the permission boundary needs an explicit decision.
 
-If a separate ref parameter mode is introduced, combining ref with mut-qualified access is useful, not necessarily synonymous with the current writable-slot parameter. The user-requested label mut ref names that combination; the current illustrative spelling puts mut after the colon. Ref-mode grammar and interaction with type aliases remain open.
+If a separate ref parameter mode is introduced, combining ref with mut-qualified access is useful, not necessarily synonymous with the selected writable caller-location parameter. The user-requested label mut ref names that combination; the current illustrative spelling puts mut after the colon. Ref-mode grammar and interaction with type aliases remain open.
 
 ## Comparison with reference languages
 
@@ -105,7 +105,7 @@ V uses mut on parameters and at calls for supported caller-data updates. Its doc
 
 ## Assessment
 
-For the currently selected feature of temporary writable caller locations, recommend retaining slot: it already describes the precise replacement capability, including partial-write unions. It is not necessary to add a separate ref word solely to rename that same capability.
+For the earlier temporary writable caller-location feature, this review recommended retaining slot: it already described the precise replacement capability, including partial-write unions. That spelling recommendation is superseded by the selected var marker; the underlying permission boundary remains. No separate ref word is needed solely to rename the same capability.
 
 If the intended next feature is explicit borrowed views with independently specified data mutation and replacement rights, a separate ref mode becomes useful. In that larger design, recommend keeping ref, mut, and slot orthogonal, with plain ref read-only by default. This would be a deliberate feature extension, not a keyword-only substitution.
 
