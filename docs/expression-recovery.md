@@ -1,6 +1,6 @@
 # Shared expression recovery with else
 
-Status: **target-level `else` recovery, typed filtering, and declaration-ordered member-wise filter chains selected, 2026-10-20; evaluation boundary, mixed receiver type, aggregate representation, and implementation contracts pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
+Status: **target-level `else` recovery, typed filtering, declaration-ordered member-wise filter chains, and order-insensitive `A & B` co-occurrence receiver patterns selected, 2026-10-25; the bound aggregate value is opaque, while evaluation boundary, mixed receiver type, aggregate representation/inspection, and implementation contracts remain pending**. A recovery target can be an operation or a block expression. Ordinary indexed reads/writes and pops remain direct, with typed faults on invalid use. An attached else can recover from a typed panic as well as a returned Result error. No additional pop_front_or function is required merely to expose the recoverable form.
 
 ## Direct use and local recovery
 
@@ -61,9 +61,22 @@ target else (: Panic) { recover_any_panic() }
 
 The first two forms match only `BoundPanic`; the binding form exposes the narrowed value, while the type-only form does not bind it. `Panic` is the broad panic type and matches panic categories, not returned `Result` errors. A specific returned-error type can be handled with the same typed-filter rule.
 
-Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause receives the preceding recovery expression's outcome, including any remaining members or a new failure raised by its handler. Thus an aggregate `A & B` reaches both matching clauses in `else (: A) { R1 } else (: B) { R2 }`, in that order. Reversing the clauses processes B before A. Changing clause order can change side-effect order and the recovered outcome. If any failure remains after the chain, that remainder is still subject to the propagation rules below; a partial match never marks the entire aggregate handled. The carrier for such an aggregate and duplicate-member consumption are not selected.
+Multiple typed filters on one target are processed in declaration order. Each clause consumes its matching pending failure member(s); the next clause receives the preceding recovery expression's outcome, including any remaining members or a new failure raised by its handler. `A | B` describes two possible error alternatives; an ordinary `Result` carries at most one. `A & B` is a failure co-occurrence pattern: it matches when both A and B are pending, and occurrence order is not part of the match. `B & A` is therefore the same pattern. The receiver admits both `else (: A & B)` and `else (e: A & B)`. A combined pattern consumes all members it names and leaves any other pending failures; individual filters such as `else (: A)` and `else (: B)` each consume one matching member, so both run when both are pending. Clause order is observable: a combined clause before the individual consumers consumes both first, while an individual consumer before the combined clause removes one member and prevents the combined match. The bound `e` is an opaque pending-failure aggregate today; no public type, member access, conversion, or inspection API is selected. An ordered tuple `(A, B, …)` preserving actual occurrence order is the leading future candidate for that value. Raw tuple patterns remain ordered: `(A, B)` and `(B, A)` are different value patterns. A partial match never marks the whole aggregate handled, and an uncovered remainder still propagates. Duplicate/multiple-occurrence rules, exact-set versus subset matching, representation, and the aggregate's public operations remain open.
 
-When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. For `A & B`, A then B gives `R2`, while B then A gives `R1`. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates. Here `A & B` is illustrative notation for simultaneous pending failures, not a selected type expression or a concrete aggregate carrier. It is distinct from the alternative error payloads in `A | B`.
+When multiple matching handlers complete normally, the last matching handler's value is the target's recovered value. With individual filters `else (: A) { R1 } else (: B) { R2 }` and both pending, both handlers run in clause order and the final value is `R2`; reversing the clauses gives `R1`. With `else (: A & B) { R }` first, the combined pattern consumes both and the later individual filters do not run. The result type remains the union of the possible normal target result and each handler result; an unconsumed failure remainder still propagates. `A & B` is co-occurrence recovery-pattern notation, not a general type expression or an ordinary value. `A | B` remains the alternative error type and can carry only one active member.
+
+```text
+target
+    else (: A) { R1 }        // consumes A; runs
+    else (: B) { R2 }        // consumes B; runs
+
+target
+    else (: A & B) { R }     // consumes both; runs
+    else (: B) { ... }       // skipped for this A-and-B case
+    else (: A) { ... }       // skipped for this A-and-B case
+```
+
+If a third failure C is also pending, the combined `A & B` clause leaves C for a later `: C` clause. A combined pattern matches the named members, not the exact whole set.
 
 For an ordinary returned error union, sequential recovery processes one active alternative. Assume distinct, nonoverlapping error types A and B and normally completing handlers with result types R1 and R2:
 
@@ -75,7 +88,7 @@ x3 := x2 else (: B) { R2 } // T | R1 | R2
 
 The chained spelling `op() else (: A) { R1 } else (: B) { R2 }` composes these recovery expressions from left to right. An original A error runs only the A handler and produces R1; an original B error runs only the B handler and produces R2. Original success runs neither handler. A returned `A | B` does not contain both errors simultaneously. With these disjoint filters and normally completing handlers, reversing the clauses does not change which original error is handled.
 
-The separate aggregate case starts with simultaneous A and B failures, using the illustrative `A & B` notation above. Handling A leaves B pending; handling B then completes recovery with R2. Reversing those clauses completes with R1. This describes the selected member-wise handling policy while leaving the aggregate carrier, source type syntax, and duplicate-member behavior open. The ordinary `T ! (A | B)` trace is not an encoding of that aggregate.
+The separate aggregate case starts from a language-generated failure set, not a `T ! (A | B)` value. For example, a write can fail with `DiskFull` while its cleanup `close()` fails with `CloseFailed`; the pending set contains both. The pattern `DiskFull & CloseFailed` matches regardless of which failure occurred first. Handling `DiskFull` leaves `CloseFailed` pending; handling `CloseFailed` then completes recovery with `R2`. Reversing the clauses completes with `R1`. `else (e: DiskFull & CloseFailed)` also matches and binds an opaque aggregate; the match itself delivers the news that both occurred. The tuple type `(DiskFull, CloseFailed)` is the leading future candidate for `e` and would preserve actual occurrence order, but it is not selected here. The ordinary `T ! (A | B)` trace is not an encoding of that aggregate.
 
 Each later `else` wraps the whole preceding recovery expression, including its handler body. In `(op() else (: A) { R1 }) else (: B) { R2 }`, a new B failure raised while evaluating `R1` can therefore be caught by the outer B recovery. It does not re-enter the A handler. The outer recovery is active while its target is evaluated; if `R2` itself fails, that failure needs a further enclosing recovery.
 
@@ -112,12 +125,12 @@ The original success supplies `T1`; successful recovery supplies `R`; failed rec
 For partial handling, if the original error types are `H | U` and the handler consumes `H`, the resulting type is `(T1 | R) ! (U | E2)`. Equal type alternatives collapse; a type consumed from the original outcome can reappear if the handler introduces it again. When that new failure occurs while an unhandled remainder is still pending, preserve both: the handler's failure joins the remainder rather than replacing it.
 
 ```text
-pending failure: A + B
-after the A handler fails with C: B + C
+pending failure: A & B
+after the A handler fails with C: B and C pending
 after the B handler produces R2: C
 ```
 
-Here `+` illustrates simultaneous failure members, not a selected source operator. A stays consumed when its handler fails with C. The following B recovery can still run, but its `R2` cannot become a successful expression result while C remains unhandled. A later C recovery can consume that remaining failure. The aggregate carrier and treatment of multiple runtime members with the same type remain open; collapsing duplicate alternatives in a static type union does not itself discard failure instances.
+`A & B` is the selected co-occurrence notation. A stays consumed when its handler fails with C. The new C remains pending with B; whether C precedes or follows B is not selected, and the aggregate pattern does not depend on that order. The following B recovery can still run, but its `R2` cannot become a successful expression result while C remains unhandled. A later C recovery can consume that remaining failure. The bound aggregate's public type/operations and treatment of multiple runtime members with the same type remain open; collapsing duplicate alternatives in a static type union does not itself discard failure instances.
 
 This rule composes the handler's outward outcome at the explicit recovery boundary. A Result deliberately carried inside a successful payload remains data; recovery does not recursively flatten that payload. Postfix `!` inside the handler still exits its nearest function/closure rather than producing a local handler outcome. Typed panics retain their separate implicit channel and are not added to `E2` merely because they can occur.
 
@@ -175,7 +188,8 @@ The user retires the proposed external if/loop/match recovery tails. These const
 - Handler precedence and grouping under the selected block-item continuation rule.
 - Indexed assignment recovery: assignment is an item, not a general value expression. In values[index] = replacement else { ... }, attachment to the write versus its RHS cannot be guessed. No production for that spelling is selected here.
 - The broad receiver contract and origin information when returned errors and panics can reach one untyped handler.
-- The aggregate carrier and duplicate-member consumption rules. A new handler failure preserves and joins the already pending remainder; later enclosing `else` clauses can handle matching members from either source.
+- The aggregate receiver's remaining grammar: mixing `&` with `|`, grouping, and duplicate-type occurrences beyond the selected nonempty ordered chain.
+- The bound aggregate value's public type/operations, representation, duplicate-member consumption, and the relative order of a newly joined handler failure and an existing remainder. The `A & B` receiver pattern is selected; a new handler failure preserves and joins the remainder, and later enclosing `else` clauses can handle members from either source.
 - Any first-class capture-as-Result operation without a fallback; a second helper family is not required by the examples above.
 
 Related: [Result and errors](result-and-errors.md), [panics](panics.md), [typed panics](typed-panics.md), [fault-policy history](checked-fault-policy.md), [sequence end operations](sequence-end-operations.md), and [evaluation order](evaluation-order.md).
