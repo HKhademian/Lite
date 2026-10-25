@@ -1,24 +1,61 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-25**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable records, fixed tuples/arrays, unions, and enums have selected evaluated-value semantics on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **general copy semantics for ordinary value transfers, including returns, and no implicit references selected 2026-10-25**. Var/mut remain explicit access grants. Type-specific copy eligibility, future explicit reference modes, reference syntax, memory safety, ownership/lifetimes, aliases, and resources remain deferred; backend representation is not prescribed.
+
+## General copy default selected
+
+Selected on **2026-10-25**, clarified by the user: **ordinary runtime value transfers have copy semantics, including returns; there are no implicit references**. This is the general language rule, not a tentative default for a list of individual types. Ordinary reads supplying values, binding initializers, assignment right-hand sides, call arguments, and ordinary result payloads preserve the evaluated value under the applicable copy contract. Source location replacement does not silently retarget those copied values.
+
+Location selection for an assignment or an explicit access grant is a different operation from reading a payload value. Existing var and mut calls explicitly request caller-location replacement or writable-payload access; they do not become detached-copy operations. An ordinary value expression does not silently create such a grant, a live caller-storage view, or an implicit move. Future reference-copy or borrowed-view modes must be explicitly stated; their source syntax is deferred.
+
+Copy follows the value's valid type/component contract. Inline values are preserved; a reference value already declared as part of a value is copied with its existing target and permitted access under the agreed shallow rule. This is not a recursive graph clone, a permission upgrade, or an implicit reference to the containing source storage. Public result types, union members/enum cases, and existing source evaluation order retain their contracts.
+
+The copy default does not classify every type or resource as copyable. Type-specific copy eligibility/effects, reference syntax, memory safety, ownership, lifetimes/escape, alias enforcement, and noncopyable resources remain explicitly deferred. An unavailable copy contract cannot be repaired by fabricating a copy or silently switching to a reference, borrow, sharing mode, or move.
+
+These are observable semantics, not a requirement to execute a physical copy instruction at every expression. Direct construction, registers, indirect calling conventions, and copy elimination may be used only while preserving evaluated values, valid copy-contract effects, and all other observable behavior. No universal memcpy, deep clone, zero-copy guarantee, or new public reference syntax follows.
+
+## Ordinary return values are copies selected
+
+Selected on **2026-10-25**: ordinary explicit return payloads and implicit function-tail results follow the general copy rule. A plain value result read through a var parameter is a copy of the evaluated value, not an escaping caller-location grant:
+
+```text
+Counter := record {
+    value: Int;
+}
+
+replace_and_read := fn(target: var Counter): Counter {
+    target = Counter { value = 20 }
+    target
+}
+
+var counter := Counter { value = 10 }
+saved := replace_and_read(var counter);
+
+counter = Counter { value = 30 }
+/* saved.value is 20; counter.value is 30. */
+```
+
+Assume Counter has a valid copy contract. The final target reads the Counter value containing 20 for the result; an explicit return target; at that point has the same value behavior. The temporary write grant ends under the ordinary call/cleanup rules, and subsequent caller replacement with value 30 leaves saved at value 20. Existing reference fields, if any are admitted by valid contracts, keep their shallow reference-value behavior; the returned containing value is not a new writable alias.
+
+Preserve declared result typing, control-flow targets, failures/exits, evaluation order, and applicable cleanup. Existing Unit/zero-fallback and tagged-return completion rules are unchanged; copy semantics create no result on a path that does not return normally. Result-storage optimization may avoid physical copying while preserving the evaluated value. Reference-return syntax, eligibility for resource/noncopyable results, and the full safety/lifetime model remain deferred.
 
 ## 1. Access defaults do not choose transport
 
-Bindings and ordinary parameters are fixed and provide read access by default. These rules describe permitted operations, not whether an argument is copied, moved, borrowed, or represented by a machine address.
+Bindings and ordinary parameters are fixed and provide read access by default. Their ordinary value transfers use the selected copy semantics, with no implicit references. Access permissions and physical representation remain separate: read access alone grants no writes, and a backend address does not change source-level copying into reference passing.
 
 The type-side mut parameter qualifier requests writable caller-data access, as in user: mut User, explicitly granted by rename(mut userVar). The updates affect supplied data, without a detached-copy fallback. A var-qualified parameter describes accepted replacements into the caller location, explicitly granted by replace(var userVar). Neither marker manufactures authority, invents a nullable state, bypasses visibility, or changes a location's declared storage type.
 
 ## 2. Semantic passing versus physical calling convention
 
-Beyond the selected ordinary Int, copyable record/fixed aggregate, and copyable union/enum cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+The general ordinary-parameter behavior is copied evaluated values, not an implicit borrowed view. The type's valid copy contract must define its value mapping and eligibility; future reference-copy/borrowed-view contracts must be explicit. The type-specific examples below illustrate this general rule rather than limiting its scope.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
 In particular, passing an immutable aggregate indirectly as an optimization does not grant permission to replace the caller's binding. Avoiding a physical copy is not by itself a public reference feature. Read-only access also does not automatically permit snapshotting a live borrowed value when that would change observable behavior.
 
-Recommendation: define observable semantics first, then let the compiler optimize representation. Default record value/reference semantics and the copy/move/borrow contract still need a separate decision.
+The observable copy semantics are selected; the compiler may optimize representation while preserving them. Copy eligibility, resource effects, and explicit reference/move contracts still need their own later review.
 
-The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. This does not select ordinary parameter transport or a general escaping-reference syntax. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
+The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. These rest contracts do not override the general ordinary-value copy rule or add an implicit live source alias; any backing-storage reuse must preserve that behavior. They select no general escaping-reference syntax or automatic ownership conversion. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
 
 ## Ordinary Int evaluated values selected
 
@@ -225,7 +262,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Beyond the selected Int, copyable record/fixed aggregate, and copyable union/enum value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+The ordinary value default is settled: copy semantics and no implicit references. The remaining review must define type-specific copy eligibility/effects and future explicit reference-copy/borrowed-view contracts, not silently choose a different ordinary default. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, resources, and any move feature remain deferred by the user.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 

@@ -1,6 +1,6 @@
 # Explicit caller grants
 
-Status: **selected 2026-10-19**. Calls grant temporary writable data access with mut and caller-location replacement with var. Source capabilities must already exist. Ordinary read-only input transfer and complete alias/lifetime rules remain open.
+Status: **selected 2026-10-19**. Calls grant temporary writable data access with mut and caller-location replacement with var. Source capabilities must already exist. Ordinary read-only value inputs and results follow copy semantics with no implicit references; type-specific eligibility and complete alias/lifetime rules remain deferred. See [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 ## Change data in a supplied value
 

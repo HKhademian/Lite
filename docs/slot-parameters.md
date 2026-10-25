@@ -23,7 +23,7 @@ local_only := fn(value: A | B) {
 }
 ```
 
-The assignment replaces the new local binding, not the caller's variable. Sequential same-block shadowing is allowed. General input copy/move/share rules remain open; see [local shadowing and copies](local-shadowing-and-copies.md).
+The assignment replaces the new local binding, not the caller's variable. Sequential same-block shadowing is allowed. Ordinary initializer/input transfers follow copy semantics with no implicit references; type-specific eligibility and future explicit modes remain deferred; see [local shadowing and copies](local-shadowing-and-copies.md).
 
 ## Var parameter and explicit call grant
 
@@ -124,6 +124,6 @@ V marks mutable arguments with mut in both declarations and calls. Its documente
 
 ## Remaining decisions
 
-Temporary caller-location access and explicit replace(var value) grants are selected. Local-only var parameter headers are retired in favor of local declarations. Ordinary read-only parameter semantics, exact compatibility, aliasing, computed locations, and a general ownership system remain open. General references and pointers are outside the current feature selection.
+Temporary caller-location access and explicit replace(var value) grants are selected. Local-only var parameter headers are retired in favor of local declarations. Ordinary read-only inputs and ordinary results copy values, without implicitly returning or receiving a location grant. See [the general copy default](parameter-values-and-slots.md#general-copy-default-selected). Type-specific eligibility, full compatibility/aliasing, computed locations, and the ownership/safety system remain deferred. General references and pointers are outside the current feature selection.
 
 Related: [functions](functions.md), [var qualifier](slot-access-qualifier.md), [mutability](mutability.md), [evaluation order](evaluation-order.md), [field writes](union-field-writes.md), and [memory and performance](memory-and-performance.md).

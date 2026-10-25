@@ -102,7 +102,7 @@ extra := read_numbers();
 inspect(1, ...extra);
 ```
 
-Both calls expose the same readable rest-array contract. Explicit extra arguments can populate temporary storage for the call. A compatible existing array may supply storage directly when the lifetime, access, and observable-value rules permit it. Multiple spreads may require gathering elements; no unconditional contiguous layout, zero-copy path, or allocation strategy is selected by these examples. Reusing source storage must not silently change observable aliasing or mutation behavior; their complete rules remain open.
+Both calls expose the same readable rest-array contract. Explicit extra arguments can populate temporary storage for the call. A compatible existing array may supply storage directly when the lifetime, access, and observable-value rules permit it. Multiple spreads may require gathering elements; no unconditional contiguous layout, zero-copy path, or allocation strategy is selected by these examples. Reusing source storage must preserve the general ordinary-value copy semantics and cannot introduce an implicit live source-location alias. Borrowed backing is a conditional representation option, not a reference-passing default or automatic ownership conversion. Type-specific eligibility and complete safety/lifetime rules remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 The selected boundaries are:
 

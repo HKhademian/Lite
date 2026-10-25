@@ -112,7 +112,7 @@ Selected on **2026-10-25**: a plain Int argument supplies its evaluated value wh
 
 ## Copyable inline-Int record values alongside a var grant
 
-Selected on **2026-10-25**: an ordinary input for a copyable record with inline Int fields supplies its evaluated record value. In read_original(var counter, counter), initially Counter { value = 10 }, replacing counter through the var input with Counter { value = 20 } leaves the ordinary original input at value 10. The user's tmp := counter expansion captures the same old record value, so saved is 10 and counter.value is 20. The ordinary input adds no write grant or live source-location view. Backend indirect passing must preserve this behavior; reference-bearing/noncopyable records and general ownership remain open. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+Selected on **2026-10-25**: an ordinary input for a copyable record with inline Int fields supplies its evaluated record value. In read_original(var counter, counter), initially Counter { value = 10 }, replacing counter through the var input with Counter { value = 20 } leaves the ordinary original input at value 10. The user's tmp := counter expansion captures the same old record value, so saved is 10 and counter.value is 20. The ordinary input adds no write grant or live source-location view. Backend indirect passing must preserve this behavior under the general copy default; type-specific eligibility and the reference/safety/ownership contracts remain deferred. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
 
 ## Later argument reads of a selected local allowed
 
@@ -457,6 +457,10 @@ replaceStr(var x); /* Rejected: the current String | Int may still be Int. */
 ```
 
 A rejected call establishes no successful post-call read fact. In particular, the first fragment does not make x read as String. The same input-compatibility rule applies even if the particular function body assigns before reading: a plain var String signature is a read/write String contract, not an output-only special case inferred from its body.
+
+## Ordinary return values copy the read value
+
+Selected on **2026-10-25**: an ordinary result read through a var parameter is copied as a value. Returning target as Counter after installing value 20 preserves that result when the caller later replaces its own Counter with value 30; the temporary grant ends under ordinary call/cleanup rules and is not exported inside the result. Explicit var/mut access remains separate from the general ordinary-value copy default. Copy eligibility and reference/safety/resource contracts remain deferred; see [ordinary result copies](parameter-values-and-slots.md#ordinary-return-values-are-copies-selected) and [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 ## Return paths, stability, and identity
 

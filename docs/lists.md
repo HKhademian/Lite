@@ -1,6 +1,6 @@
 # Growable owning lists
 
-Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24**. Full List<T> generic grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. No owner copy/move/share policy or allocation/error policy is selected here.
+Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24**. Full List<T> generic grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. Ordinary value transfers follow the general copy default, with no implicit references; this does not decide the List owner's copy contract, copy eligibility, storage sharing, explicit move modes, or allocation/error policy. Those type-specific and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 ## Purpose and beginner examples
 

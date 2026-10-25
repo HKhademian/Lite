@@ -51,7 +51,7 @@ Bounded-capacity lists, type-level slice extents, strided views, SIMD operations
 ## Decisions to take in order
 
 1. Complete array/list/slice storage roles; preserve fixed-array inference for fresh known-size literals and explicitly request growable storage.
-2. Choose owner copy/move/share semantics and slice lifetime/invalidation rules.
+2. Define owner/view copy contracts and eligibility, future explicit reference/move modes, and slice lifetime/invalidation rules under the selected [ordinary copy default with no implicit references](parameter-values-and-slots.md#general-copy-default-selected). The default is settled; type-specific ownership and safety are deferred.
 3. Select type/literal/slicing spellings, index origin, and bounds-failure handling.
 4. Specify capacity allocation, bulk initialization, partial cleanup, and generic inference.
 

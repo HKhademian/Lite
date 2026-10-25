@@ -80,7 +80,7 @@ Selected on **2026-10-25**: the simple fixed temporary and ordinary-parameter va
 
 ## Var shadowing does not demand a deep copy
 
-Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. General value transfer, copy/move/share rules for this initializer remain type-dependent and open. The new binding cannot assign into the caller's original binding merely because it shadows the name.
+Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. The initializer follows the general copy default: the new binding receives the evaluated value, not an implicit reference, borrow, shared source location, or move. Type-specific copy eligibility and resource/reference safety remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected). The new binding cannot assign into the caller's original binding merely because it shadows the name.
 
 ## Local parameter work needs no var parameter mode
 
