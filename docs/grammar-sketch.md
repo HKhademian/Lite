@@ -53,9 +53,14 @@ item := declaration
       | assignment
       | exit
       | expression
+      | type_item
+
+type_item := identifier ":=" (record_type | enum_definition | "type" type_expression)
 ```
 
 `closed_item` and `simple_item` are disjoint categories of `item`. A `closed_item` is a complete unparenthesized block construct, including its attached clauses, a complete record-construction expression, or a declaration, assignment, or exit whose outer expression ends directly in either form. Examples include a standalone block, an `if` chain, a `match`, a loop with hooks, and a binding initialized by a function or type body. A `simple_item` is any other item.
+
+`type_item` covers the selected nominal record and enum definitions and transparent type aliases. It is recognized when an identifier followed by `:=` has a `record`, `enum`, or `type` right-hand side; it declares a type, not a value binding. A record/enum definition ending directly in its body is a closed item; a `type` alias is a simple item. The `record_type`, `enum_definition`, and `type_alias` fragments below remain incomplete, and `type_expression` still denotes the unfinished type grammar. No `&` intersection/failure-aggregate production is selected.
 
 The sketch allows leading extra separators and repeated separators after simple items. A final simple item may omit its separator before the enclosing `}` or end of file. A closed item ends itself and permits optional trailing separators. Separators are not AST items and do not produce `Unit`. Declarations and assignments remain items, not general value expressions.
 
