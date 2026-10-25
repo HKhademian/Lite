@@ -219,7 +219,7 @@ A guarded String arm can reject Strings through its guard, so it does not remove
 
 - With a subject, evaluate that input once. Without a subject, evaluate each reached Boolean arm condition once in source order.
 - Subject-based pattern bindings are arm-local; subjectless Boolean headers introduce no pattern bindings.
-- Require exhaustive coverage for every match, including action-only selection; an explicit catch-all can handle ignored cases.
+- Require exhaustive coverage for every match, including action-only selection; an explicit catch-all can handle remaining cases with an empty body.
 - Check normally completing arms against an expected result contract when present; otherwise infer their normalized plain union, collapsing duplicate type identities.
 - Treat early exits as exits to their explicit targets, not locally missing values.
 - Preserve an intact Result's outer success/failure distinction before narrowing its payload. Payload type tests alone cannot distinguish success from failure when those payload types overlap.
@@ -271,7 +271,7 @@ This is proposed literal/fallback syntax, not an extension of the current gramma
 
 Every match must be exhaustive for both actions and values. Partial handling remains available through if. An explicit `_ {}` handles remaining inputs with Unit; `_ { Unit }` is equivalent because an empty block already returns Unit. The separate else fallback remains proposed, not required. For a closed union or enum, prefer enumerating all alternatives when additions should trigger a compiler diagnostic. A fallback intentionally handles future alternatives too and can hide that signal.
 
-An integer or open-interface subject needs a catch-all unless the coverage checker can establish completeness. See [coverage and explicit ignoring](match-coverage.md). A guarded arm does not by itself cover every value of its structural pattern. Do not synthesize `None`, a default payload, or a panic for a missing arm.
+An integer or open-interface subject needs a catch-all unless the coverage checker can establish completeness. See [coverage and catch-all handlers](match-coverage.md). A guarded arm does not by itself cover every value of its structural pattern. Do not synthesize `None`, a default payload, or a panic for a missing arm.
 
 ### Guards and result types
 

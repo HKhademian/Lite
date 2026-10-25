@@ -1,12 +1,12 @@
-# Match coverage and explicit ignoring
+# Match coverage and catch-all handlers
 
-Status: **every match must be exhaustive, including action-only matches; empty-block ignore handlers selected**.
+Status: **every match must be exhaustive, including action-only matches; empty-body catch-all handlers are selected, and `_` binds the subject as an ordinary readable name**.
 
 ## One coverage rule
 
 For a subject-based match, every possible input admitted by the subject's contract must be handled by some arm. For a subjectless match, every possible outcome of the Boolean tests must lead to an arm, including the all-false path when reachable. This applies whether the selected body supplies useful data or only Unit. If the compiler cannot establish completeness from the arms, require an explicit catch-all. Do not synthesize None, Unit, an error, or a panic for an omitted case.
 
-Use if for an intentionally partial condition. A complete match may intentionally ignore cases, but that choice must appear in an arm.
+Use if for an intentionally partial condition. A complete match may handle remaining cases with an explicit empty-body arm, but that choice must appear in an arm.
 
 ## Subjectless fallback
 
@@ -22,7 +22,7 @@ match {
 
 Assume valid equality/Bool inputs and Unit-producing handlers. The whole `_` header is the unconditional fallback and introduces no binding; it explicitly handles the all-false path with Unit. Without it, the match requires a supported proof that its Boolean conditions cover every outcome. The exact proof algorithm remains open. Later conditions and bodies do not run after an arm is selected, and failures do not count as false. An empty fallback in a value match must still satisfy that match's result contract. Subject-based `_` remains an ordinary binding, as described below.
 
-## Explicit ignore
+## Explicit catch-all handler
 
 ```text
 match status {
@@ -35,7 +35,7 @@ The existing _ is an unconstrained readable binding that accepts the remaining w
 
 These braces are an executable arm body. They are distinct from an empty record initializer such as user: User = {}, which constructs record data using its defaults. A match expected to return a record does not turn its empty arm bodies into default record values.
 
-A specific ignored case can likewise have an empty body:
+A specific remaining case can likewise have an empty body:
 
 ```text
 match attempt {

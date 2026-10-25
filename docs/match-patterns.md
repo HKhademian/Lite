@@ -153,7 +153,7 @@ Selected 2026-10-24: complete initial arm-pattern lists and supported nested con
 ## Common contracts still to settle
 
 - Complete expression operand boundaries for the selected binding, type-match, and value-match primitives, together with constructor and enum-case selection schemas. The recursive pattern productions are in the grammar sketch. No interpretation may rely on capitalization or whitespace.
-- Every match must now be exhaustive, including actions; _ {} explicitly ignores remaining values. Specify overlap, unreachable arms, optional else fallback syntax, and the coverage algorithm.
+- Every match must now be exhaustive, including actions; `_ {}` handles remaining values with an empty Unit body, and `_` binds the subject as an ordinary readable name. Specify overlap, unreachable arms, optional else fallback syntax, and the coverage algorithm.
 - Define borrow/copy/move behavior and field access permissions, especially after a nested match fails.
 - Formalize custom comparison applicability/effects, extraction, and ownership without sacrificing the selected once-evaluated subject and RHS-once-when-reached contracts.
 - Share the applicable patterns with conditional matching; do not create an unrelated `if` pattern language.

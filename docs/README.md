@@ -155,7 +155,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, optional leading or on initial patterns and and/or on guards, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based arms, optional leading or on initial/nested pattern lists sharing one body/guard, nested constructor/tuple choices with local first-success, and selected subjectless Boolean selection with optional leading and/or and an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
-- [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
+- [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` handles remaining cases with an empty Unit body, and `_` binds the subject as an ordinary readable name.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
 - [Match pattern capabilities](match-patterns.md): selected equality, plain/payload enum, destructuring, and type patterns; the selected recursive grammar is outlined, with constructor schemas and coverage still open.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources, with optional leading and/or on unparenthesized Boolean sources.

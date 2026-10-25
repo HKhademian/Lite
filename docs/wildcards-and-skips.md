@@ -1,4 +1,4 @@
-# Underscore bindings and skipped pattern fields
+# Underscore bindings and intentional nonuse
 
 Status: **ordinary readable `_` binding selected on 2026-10-18; replaces the nonbinding-wildcard decision**.
 
