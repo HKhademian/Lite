@@ -42,7 +42,7 @@ bad := fn(count: Int = "three") { count }
 /* rejected: the default does not fit the declared Int input */
 ```
 
-The expected-input example establishes typing only. Whether a default on an implementation is available through a separately typed callable remains part of signature-versus-implementation/default-placement design; this example does not select callable conversion or omission compatibility.
+The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn(Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the exact omission-marker syntax and general callable compatibility remain open.
 
 ## Static types do not require evaluating defaults
 
@@ -112,7 +112,7 @@ bad_self := fn(a: Int = a) { a }
 
 These are declaration errors even when a particular call supplies b or supplies a and skips its invalid default. Later supplied slots being available during call preparation does not grant them visibility in an earlier default. Parameter names referring to self or a later parameter do not silently fall back to an enclosing same-named binding. This keeps validity independent of the chosen call arguments and prevents cyclic default dependencies.
 
-The selected visibility is for earlier ordinary value inputs. It does not expose function-body locals, introduce lookup in the caller's local scope, or decide enclosing captures. Broader lexical/helper lookup, access-aware dependencies involving var/mut inputs, defaults on patterns or variadics, and signature-versus-implementation/default-placement rules remain separate. Existing failure, initialization, final-input compatibility, and permission obligations still apply; missing inputs without an applicable declared default remain errors.
+The selected visibility is for earlier ordinary value inputs. It does not expose function-body locals, introduce lookup in the caller's local scope, or decide enclosing captures. Broader lexical/helper lookup, access-aware dependencies involving var/mut inputs, defaults on patterns or variadics, and public omission-marker syntax/general callable integration remain separate. The public contract now controls omission while the implementation owns the default expression. Existing failure, initialization, final-input compatibility, and permission obligations still apply; missing inputs without an applicable declared default remain errors.
 
 Kotlin provides a matching precedent for the declaration-order dependency restriction: its functions guide requires a parameter using another parameter's value to be declared later. Source checked 2026-10-25: [non-constant defaults](https://kotlinlang.org/docs/functions.html#non-constant-expressions-as-default-values). This reference supports the comparison; LiteScript's examples remain design-only.
 
@@ -127,7 +127,7 @@ unresolved := fn(value) { value * 2 }
 /* body operations alone do not establish an arbitrary reusable input contract */
 ```
 
-This selects simple ordinary default receivers of the form name = expression or name: Type = expression in the existing parenthesized callable header. It does not complete recursive header parsing or add defaults to every receiver/type form. In particular, permission-bearing defaults, inferred omitted var/mut value types, variadic defaults, parameter-pattern defaults, general lexical/helper lookup and enclosing captures, access-aware var/mut dependencies, recursive/generic inference, default placement in signatures versus implementations, and stored-callable omission compatibility remain separate. No absent argument is synthesized without an applicable explicitly declared default.
+This selects simple ordinary default receivers of the form name = expression or name: Type = expression in the existing parenthesized callable header. It does not complete recursive header parsing or add defaults to every receiver/type form. In particular, permission-bearing defaults, inferred omitted var/mut value types, variadic defaults, parameter-pattern defaults, general lexical/helper lookup and enclosing captures, access-aware var/mut dependencies, recursive/generic inference, public omission-marker syntax, and remaining stored-callable compatibility beyond omission remain separate. Public omission permission and implementation-owned defaults are selected in [public omission contracts and implementation defaults](callable-default-contracts.md). No absent argument is synthesized without an applicable explicitly declared default.
 
 Reference syntax, memory safety, ownership/lifetimes, aliases, and resource rules remain deferred. Ordinary value copies and explicit access grants keep their existing contracts.
 
