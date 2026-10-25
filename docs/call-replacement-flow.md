@@ -270,7 +270,7 @@ Reject the known repeated location regardless of matching parameter types or whe
 
 Preserve callee-first/source-argument evaluation, select each element location once, and keep its containing storage valid throughout the call. Ordinary initialization, bounds, access, lifetime, and entry-type obligations still apply. This selection neither constructs uninitialized elements nor changes the bounds-fault contract, public pointer syntax, or physical/zero-sized layout rules.
 
-The explicit stable Int inequality case is selected below; other runtime-index cases such as unguarded swap(var values[i], var values[j]) still require a separate rule for proving or checking distinctness. Different index names alone are insufficient. No blanket acceptance, runtime alias check, or blanket rejection of all uncertain cases is selected here. Reference-target aliases, overlapping views/slices, callbacks/reentrancy, resizing/location invalidation, and full overlap enforcement remain open.
+The explicit stable Int inequality case is selected below. Multiple element grants into the same fixed array without a supported disjointness proof are now statically rejected under the selected default below; different index names alone are insufficient. No automatic runtime alias check is selected. Reference-target aliases, overlapping views/slices, callbacks/reentrancy, resizing/location invalidation, and full overlap enforcement remain open.
 
 ## Guarded runtime-index grants selected
 
@@ -292,7 +292,36 @@ The inequality proves distinctness, not bounds. Preserve the ordinary bounds che
 
 Require the proof to apply to the actual selected indices and containing storage. In the illustrated case, i and j are stable fixed Int locals and no intervening effects invalidate their values or the array. Changed indices, fresh getters/calls substituted for the tested values, or invalidated containing storage cannot reuse a stale proof; preservation needs its own supported justification. Keep initialization, field/element authority, location lifetime, entry read/write compatibility, and rejection of known duplicate or parent/child overlapping grants.
 
-This selects the direct successful-guard case for built-in Int inequality and stable locals on the same fixed array. It does not select arbitrary arithmetic or predicate solving, disjointness from overloaded comparisons, overlapping slice/view analysis, reference-target alias detection, callbacks/reentrancy, or a general runtime alias-repair policy. Unguarded/uncertain runtime-index overlap retains its separate open contract. No bounds check is erased solely because i and j differ.
+This selects the direct successful-guard case for built-in Int inequality and stable locals on the same fixed array. It does not select arbitrary arithmetic or predicate solving, disjointness from overloaded comparisons, overlapping slice/view analysis, reference-target alias detection, callbacks/reentrancy, or a general runtime alias-repair policy. The selected fixed-array default below rejects calls whose required disjointness proof is unavailable. No bounds check is erased solely because i and j differ.
+
+## Unproven fixed-array element overlap rejected
+
+Selected on **2026-10-25**: multiple var element grants into the same fixed array require a supported proof that their selected locations are disjoint. Reject the call statically when known overlap exists or the required disjointness proof is unavailable. The rejection does not depend on whether a particular execution or test happens to choose different indices, or on whether the callee's body writes.
+
+Assume read_index returns Int and swap takes two var Int parameters and returns Unit:
+
+```text
+mut values := [10, 20, 30];
+i := read_index();
+j := read_index();
+
+swap(var values[i], var values[j]);
+/* Rejected: no supported proof that i and j select separate locations. */
+```
+
+For the stable indices and array above, the explicit guard supplies the selected proof:
+
+```text
+if i =!= j {
+    swap(var values[i], var values[j]);
+}
+```
+
+Distinct valid constant positions and the selected stable built-in Int inequality guard are supported cases. Different names, separately evaluated calls, distinct values observed in tests, or a claim about an unsupported arithmetic relationship do not supply the required proof. Invalidate stale facts after relevant effects unless preservation is supported. A rejected call establishes no successful post-call fact.
+
+Ordinary bounds checks remain independent. The explicit guard checks distinctness in the source program; this rule adds no automatic runtime alias check, alias-failure Result/panic channel, hidden cloning/copy-back, or write-order arbitration. Every accepted call still requires initialized readable elements, writable caller authority, compatible entry reads/accepted writes, one active holder per location, valid containing storage, and single location selection in ordinary callee-first/source-argument order.
+
+This selects the default for multiple element grants into the same fixed array. Further supported disjointness proofs, overlapping views/slices, reference-target aliases, callbacks/reentrancy, and a complete overlap/effect implementation remain separate work. It does not turn disjointness into a bounds proof or select a universal rejection policy for every unresolved reference/ownership feature.
 
 ## Nested forwarding of a write grant selected
 
