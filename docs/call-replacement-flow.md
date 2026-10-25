@@ -74,6 +74,38 @@ These are alternative fragments. The temporary has type Int. Before use_text sta
 
 Require a supported String read proof on every path reaching invocation; a later expression that may leave Int does not suffice. A plain use_text(var value, 0) with value still reading Int remains rejected. Keep single location selection, ordinary callee-first/source-argument evaluation, permitted writes, location/lifetime validity, and duplicate-grant rejection. The temporary equivalence does not authorize reordering effects from an earlier callee or argument expression. This selects entry-type establishment for initialized simple locals; it adds no uninitialized-input parameter mode, write-only contract, runtime type check, or broader alias/effect inference.
 
+## Initialization during argument preparation selected
+
+Selected on **2026-10-25**: a simple local declared var with = ? may be selected for an earlier var argument while uninitialized, provided later argument evaluation definitely initializes it before invocation. Selecting the local's existing location does not read its unwritten payload or hand an active grant to the pending callee. The caller retains first-initialization authority during preparation.
+
+Assume use_int takes read/write Int access, an Int value, and returns Unit:
+
+```text
+var value: Int = ?;
+
+use_int(var value, ({
+    value = 42;
+    0
+}));
+```
+
+The caller selects the local once, then performs its first whole-value assignment and supplies the scalar input 0. Only after preparation completes does use_int receive the same location, now containing a valid readable Int. From the same uninitialized starting state, the equivalent temporary form for this stable callable name and simple local is:
+
+```text
+var value: Int = ?;
+
+tmp := {
+    value = 42;
+    0
+}
+/* value is initialized and reads as Int; tmp is Int. */
+use_int(var value, tmp);
+```
+
+These are alternative fragments. Require definite initialization and a compatible read type on every path reaching invocation. An uninitialized use_int(var value, 0) remains rejected, as does reading value before the successful first write, including a right-hand side that tries to read value to initialize itself. A conditional later write is insufficient if any continuing path leaves the location uninitialized. If argument evaluation fails or exits before invocation, do not invoke use_int; ordinary initialization and failure/cleanup facts apply to what actually completed.
+
+The callee still receives ordinary read/write Int access to initialized storage. It is not asked to construct an uninitialized input, and var remains neither write-only nor a mandatory-write promise. Fixed storage's one first write does not authorize supplying it to a var parameter that may replace it; the var declaration in this example supplies the needed replacement authority. Keep declared accepted writes, single active holder, same-local duplicate rejection, single location selection, and callee-first/source-argument evaluation. The temporary form does not authorize general effect hoisting or change lifetimes. Partial field/element construction, uninitialized inputs received by callees, and future single-write-only/multi-write-only parameters remain separate open contracts.
+
 ## Later argument reads of a selected local allowed
 
 Selected on **2026-10-24**: selecting an initialized local for an earlier var argument does not prohibit later supplied argument expressions from reading that local to compute scalar values before invocation:

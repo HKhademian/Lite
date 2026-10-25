@@ -110,6 +110,12 @@ An ordinary parameter requiring User, mut User, or var User assumes a valid inco
 
 This decision covers whole-value initialization only. It does not select x.field = ... or indexed writes as construction operations on uninitialized subobjects. Large-array initialization is the main motivating next step: track which elements are valid while the array's storage already exists, without reading untouched elements or requiring a preliminary zero fill.
 
+### Initialization before a pending call begins
+
+Selected on **2026-10-25**: a var local reserved with = ? may have its location selected by an earlier var argument and then receive its first whole value in a later argument before invocation. Selection does not read the payload. For use_int requiring var Int and Int, use_int(var value, ({ value = 42; 0 })) is valid after var value: Int = ?, because the caller initializes value before the callee receives it. The scalar temporary form makes the same order explicit; see [initialization during preparation](call-replacement-flow.md#initialization-during-argument-preparation-selected).
+
+Every path reaching invocation must establish initialization and input compatibility. No read before initialization is allowed. A plain call with the payload still uninitialized is rejected, and this does not let fixed storage supply ongoing var replacement authority. Construction performed by the receiving callee, partial field/element initialization, and future write-only parameters remain open; this case initializes the whole local in caller-side preparation.
+
 ## Reference comparison
 
 Rust permits declaring an immutable binding and assigning its initial value later; the compiler rejects use before initialization. This supports reusing = without granting later mutation. LiteScript retains explicit = ? because its omitted initializer already means zero initialization. Source: [Rust delayed initialization](https://doc.rust-lang.org/rust-by-example/variable_bindings/declare.html).
