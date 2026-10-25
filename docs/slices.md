@@ -1,6 +1,6 @@
 # Borrowed contiguous slices
 
-Status: **proposed view concept, 2026-10-19**. `Slice<T>`, slicing punctuation, access construction, lifetime checks, and index conventions remain proposals. This would add a limited view contract without selecting general raw pointers or freely escaping reference values.
+Status: **proposed view concept, 2026-10-19; direct positional access with typed faults is selected, while `Slice<T>` construction, slicing punctuation, access construction, lifetime checks, and index conventions remain proposals**. This would add a limited view contract without selecting general raw pointers or freely escaping reference values.
 
 ## A view, not another element allocation
 
@@ -57,9 +57,9 @@ The recommended conservative rule rejects this structural mutation while view re
 
 Ordinary slices expose initialized elements only. Spare capacity in a list and reserved-but-unwritten array slots need a construction/output view with a different contract. They must not be passed as readable `Slice<T>` merely because their storage exists.
 
-Empty slices should be valid values with length zero rather than public null states. Indexing or slicing checks logical bounds; exact failure handling remains open. A length-zero view must not permit element reads.
+Empty slices should be valid values with length zero rather than public null states. Indexing or slicing checks logical bounds through the selected direct positional operations and typed faults; only the precise fault type and scope remain open. A length-zero view must not permit element reads.
 
-The [checked-operation proposal](checked-collection-operations.md) considers a typed Result for dynamic indexing, with ordinary else recovery or postfix ! propagation. Static validity proofs and slicing-range errors need their own precise rules; this is not yet a selected indexing contract.
+The [checked-operation page](checked-collection-operations.md) keeps fallible Result indexing as history. The selected direction is direct positional access with typed faults and attached `else` recovery; postfix `!` propagates returned errors, not these faults. Static validity proofs and slicing-range fault rules need their own precise contracts.
 
 ## Keep the base view small
 
