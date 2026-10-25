@@ -119,16 +119,14 @@ receiver := identifier [":" type] ["=" expression] | "..." identifier [":" type]
 lambda := receiver_header [":" type] block
 
 function_type := "fn" "(" [signature_input {"," signature_input} [","]] ")" ":" type
-signature_input := ordinary_signature_input [omission_marker]
+signature_input := type | identifier ["?"] ":" type | "?" ":" type
                  | "..." type | declared_array_tail
-ordinary_signature_input := type | identifier ":" type
-omission_marker := "=" "..."
 
 mut_qualified_type := "mut" type_operand
 var_qualified_access := "var" type_operand
 ```
 
-The selected [public omission marker](callable-default-contracts.md#public-omission-marker) adds = ... to ordinary fixed named or unnamed input types: fn(n: Int = ...): Int and fn(Int = ...): Int. It records omission permission, not an executable default, and adds no Unit or uninitialized state. An implementation still supplies a real default expression; = ... does not satisfy that obligation in a body-bearing header or at a call site. Prefix spread/rest forms keep their existing roles. This extension does not authorize permission-bearing or variadic defaults.
+The selected [public omission marker](callable-default-contracts.md#public-omission-marker) is ? before the slot colon: fn(n?: Int): Int for a named ordinary input and fn(?:Int): Int for an unnamed ordinary input. The earlier = ... marker is retired. These public contracts permit omission without exposing a default expression, changing the input value type, or introducing public undefined/Unit/uninitialized values. Implementation receivers still supply actual default expressions through n: Int = expression or n = expression; ? alone is not a default definition. The existing fn(Int): Int required unnamed spelling and the separate tuple-singleton comma rules remain unchanged. Prefix spread/rest forms keep their roles; permission-bearing/variadic markers and optional ordinary stored tuples are not selected. General recursive type integration remains open.
 
 The explicit function-type template admits named typed inputs, as in `fn (a: Int): Int!`, and unnamed positional types, as in `fn (Int): Int!`, with no executable body. Its last `type` is the result contract. Parentheses immediately after `fn` in type context denote the input signature, so a one-input signature needs no trailing comma; ordinary tuple type/value/pattern grouping remains unchanged. `function` and `lambda` are expressions usable in declarations, assignments, and call arguments. The outline covers simple local receivers; full nested header patterns, complete default integration, parameter-name identity, callable variance/capture rules, and complete recursive type grammar remain open. See [functions](functions.md#function-types-literals-and-reassignment).
 

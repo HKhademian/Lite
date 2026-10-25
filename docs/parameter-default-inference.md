@@ -42,7 +42,7 @@ bad := fn(count: Int = "three") { count }
 /* rejected: the default does not fit the declared Int input */
 ```
 
-The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn(Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public = ... omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
+The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn(Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
 
 ## Static types do not require evaluating defaults
 

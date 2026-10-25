@@ -14,7 +14,7 @@ one();  /* 10 */
 two();  /* 20 */
 ```
 
-These declarations infer public contracts admitting omission of n. They have the same ordinary Int input, Int result, and omission capability; the different default expressions do not distinguish their public callable types. Existing label, type, access, and failure-contract requirements still apply. Public omission capability is now written = ... after a fixed ordinary input type, as specified below.
+These declarations infer public contracts admitting omission of n. They have the same ordinary Int input, Int result, and omission capability; the different default expressions do not distinguish their public callable types. Existing label, type, access, and failure-contract requirements still apply. Public omission capability is now written n?: Int for named inputs or ?:Int for unnamed inputs, as specified below.
 
 If a stored omission-capable operation holds one, operation() uses one's default and yields 10. Replacing it with compatible two makes a subsequent operation() use two's default and yield 20. The replacement changes implementation behavior while retaining the public omission contract. No public default of 1 is injected into two.
 
@@ -22,20 +22,32 @@ The outcomes here are designed examples, not executed LiteScript tests. Replacem
 
 ## Public omission marker
 
-Selected on **2026-10-25**: use = ... after an ordinary fixed input's type in a public function type to record omission permission, without exposing a default expression. The form works for named and unnamed inputs:
+Selected on **2026-10-25**, following the user's named/unnamed proposal: place ? immediately before the slot's colon in a public ordinary-input contract. A named slot is n?: Int; an unnamed slot is ?:Int. This supersedes the earlier = ... public marker. The four component forms read consistently:
 
 ```text
-fn(n: Int): Int         /* required named input */
-fn(n: Int = ...): Int  /* omission-capable named input */
-fn(Int = ...): Int     /* omission-capable unnamed input */
+n: Int    /* required named slot */
+n?: Int   /* omittable named slot */
+:Int      /* required unnamed slot */
+?:Int     /* omittable unnamed slot */
 ```
 
-These are function-type fragments. The marker consists of the existing = and ... tokens; =... and = ... have the same meaning. It belongs to the input contract and does not alter Int or add Unit, Option, or an uninitialized state.
+The unnamed component forms above describe callable input-tuple schemas. If shown as singleton input schemas, retain the tuple comma: (:Int,) and (?:Int,). This does not select optional elements for ordinary stored tuple values: absent-element representation, reads, and construction/default behavior there remain separate. Ordinary tuple constructors still require complete coverage with no implicit component defaults.
 
-An implementation still writes its actual default expression:
+Public function types use the same omission marker:
 
 ```text
-var operation: fn(n: Int = ...): Int =
+fn(n: Int): Int    /* required named input */
+fn(n?: Int): Int   /* omittable named input */
+fn(Int): Int       /* existing required unnamed-input spelling */
+fn(?:Int): Int     /* omittable unnamed input */
+```
+
+Function-type input lists retain their distinct singleton boundary; one input needs no trailing comma. This selection does not add another required-input function-type spelling. The ? and : are existing tokens; n?:Int, n? : Int, and n ?: Int carry the same contract. The marker does not change Int or add Unit, Option, a public undefined value, or uninitialized storage.
+
+An ordinary user implementation still writes its actual default expression:
+
+```text
+var operation: fn(n?: Int): Int =
     fn(n: Int = 1): Int { n * 10 }
 
 operation();  /* 10 */
@@ -44,15 +56,15 @@ operation = fn(n: Int = 2): Int { n * 10 }
 operation();  /* 20 */
 ```
 
-The public type stays the same under this otherwise compatible replacement. The selected implementation supplies the default; the public marker does not supply a value, infer an input type, or freeze the expression.
+The public type stays the same under otherwise compatible replacement. The selected implementation supplies missing-input handling; the public marker does not define a default value, infer the input type, or freeze an expression. The selected zero implementation needs no actual default definition and runs no body/default expressions, as described below.
 
-Omission-capable fixed inputs need not form a trailing suffix. For example, fn(left: Int = ..., right: Int): Int permits omitting left when right is supplied by name, under the existing named-input routing rules. Right remains required. This does not add a positional hole or an omission token at a call site.
+Omittable fixed inputs need not form a trailing suffix. For example, fn(left?: Int, right: Int): Int permits omitting left when right is supplied by name under the existing routing rules. Right remains required. No positional hole, caller-side ? value, or type-directed skipping is added.
 
-The ... after = is a declaration marker only in a public function-type input. It is not an executable expression or a placeholder satisfying an implementation's default-provider obligation. Writing fn(n: Int = ...) { n } does not provide a default; an implementation must use an otherwise valid expression. Similarly, f(n = ...) cannot request omission: leave the input absent instead. Existing ...pack spread and ...rest declarations retain their prefix roles and required operands. This extension does not enable marker defaults on variadic or permission-bearing inputs.
+The marker is public contract syntax, not an actual default definition. An ordinary user implementation cannot satisfy omission merely by writing n?: Int without a default expression; its existing implementation receiver form remains n: Int = expression or n = expression. Existing ...pack spread and ...rest declarations retain their roles. This extension does not enable omission markers on variadic or permission-bearing inputs.
 
-The alternative = ? is not selected for public omission; = ? retains its existing reservation/no-value roles. Nor is a name-side n? marker introduced. The chosen type-side = ... spelling works consistently for unnamed inputs and does not add another meaning to ?.
+The earlier = ... public marker is retired rather than retained as a second spelling. The initializer form = ? keeps its reservation/no-value meaning and is not an omission marker. Public n?/?: syntax also does not add nullable-type syntax such as Int?.
 
-Python's typing specification provides a matching notation for recording a default's presence without its value. Source checked 2026-10-25: [default argument values](https://typing.python.org/en/latest/spec/callables.html#default-argument-values). Its other parameter and runtime rules are not adopted by this comparison.
+TypeScript provides a naming precedent through n?: number for parameters; its unnamed optional tuple elements use a suffix, such as [number?]. LiteScript's unnamed prefix is its own colon-based schema convention. TypeScript's possible undefined reads and variable tuple lengths are not adopted. Sources checked 2026-10-25: [optional parameters](https://www.typescriptlang.org/docs/handbook/2/functions.html#optional-parameters), [tuple types](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types).
 
 ## Required interfaces hide optional supply
 
@@ -103,7 +115,7 @@ Selected on **2026-10-25**, clarified by the user: default definitions and handl
 
 ```text
 one := fn(n: Int = 1): Int { n * 10 }
-var operation: fn(n: Int = ...): Int = one;
+var operation: fn(n?: Int): Int = one;
 operation();  /* 10, using one's implementation default */
 
 operation = 0;
@@ -127,7 +139,7 @@ This supersedes the earlier claim that applicable user default expressions must 
 
 ## Remaining boundaries
 
-The public = ... omission marker is selected. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission, public label versus local receiver-name integration, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
+The public n?/?: omission marker supersedes the earlier = ... form. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission, public label versus local receiver-name integration, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
 
 Zero-callable omission is now selected above: no actual default definition or execution is required. Its internal omitted-input representation remains explicitly deferred, including the possible non-public unvalued state; no public undefined semantics are selected.
 
