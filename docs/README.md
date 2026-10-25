@@ -94,6 +94,12 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
 - [Union values and access contracts](union-values-and-access.md): a storage location containing a union versus a union of possible storage locations; historical access notation and proposed explicit read/write contracts.
+- [Union initialization policy](union-initialization-policy.md): selected rejection of `x: A | B = 0` for multiple distinct normalized members; explicit `?` and initialized member expressions remain; member-qualified zero markers are proposed.
+- [Union zero](union-zero.md): selected universal zero requirement; active-member priority and mappings for unions, enums, references, and resources remain open.
+- [Empty union zero proposal](union-empty-zero-proposal.md): proposed empty state for unions; not selected; compared with Unit and member-priority alternatives.
+- [Conditional union fallback](conditional-union-fallback.md): declaration initializers with a multi-member union require an explicit `else` or `?`; assignment and loop no-match paths are noncontributing.
+- [Branch result inference](branch-result-inference.md): normalized union inference for conditional, match, and local-lambda completion; explicit contracts constrain it, and `then` requires a final `else`.
+- [Union parameter defaults](union-parameter-defaults.md): argument omission is rejected without an applicable explicit default; call-time default ordering and the absence of an automatic zero fallback.
 - [Qualified access summaries](access-union-qualifiers.md): historical exploration of `A | mut B | C`, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
 - [Call replacement flow](call-replacement-flow.md): current-read and declared-write compatibility at invocation, later-argument invalidation, single source write grants, nested forwarding and caller recovery, rejected cross-member calls, and deferred write-only access.
 - [Var access qualifier](var-access-qualifier.md): var unifies local replacement permission and received caller-storage access; no local-only header modifier; slot is retired as a source keyword.
@@ -105,6 +111,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Ordinary parameters and caller locations](parameter-values-and-slots.md): general copy semantics including returns, no implicit references, explicit var/mut grants, physical copy elimination, and deferred reference/safety contracts.
 - [Caller-location keywords](caller-location-keywords.md): historical ref/mut/slot/mut ref comparison, superseded spelling recommendation, and preserved permission boundaries.
 - [Union membership across references](union-membership-comparison.md): entry, narrowing, named cases, hierarchy requirements, default states, and representation across the reference languages.
+- [Union storage and references](union-storage-reference-comparison.md): cross-language comparison of union storage, active-member representation, and reference behavior.
 - [Record creation and initialization](record-initialization.md): omitted typed initializers and = 0 select zero; = {} uses declared defaults; nested construction, inline forms, and remaining eligibility/grammar questions.
 - [Universal zero initialization](zero-initialization.md): valid all-zero values for every type, omitted/explicit zero versus declared defaults, and pending mappings for special types.
 - [Reserved storage](reserved-storage.md): selected value: Type = ? marker; earlier generic reserve() and punctuation alternatives; open initialization-state, partial construction, and allocation/cleanup contracts.
