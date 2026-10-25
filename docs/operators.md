@@ -53,7 +53,9 @@ Selected 2026-10-25: floating operands supply floating division semantics, even 
 
 Integer % is truncating remainder and _% is floor modulo. A nonzero remainder follows the dividend; a nonzero modulo follows the divisor. With an Int quotient, the successful integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). The corresponding updates are /=, _/=, %=, and _%=.
 
-This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. General conversions, mixed floating widths/precision, larger-expression context/rounding boundaries, floating floor result types beyond Int storage, floating remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
+This supersedes always-fractional /, the subsequent operand-only rule, // floor division, and %% modulo. General conversions, mixed floating widths/precision, expected-type propagation through unresolved subexpressions/calls/returns, floating floor result types beyond Int storage, floating remainder/modulo, and fault rules remain open. No // line-comment rule is introduced. See [division](division.md) and [the selected family and open lexical boundary](arithmetic-methods-and-division-revision.md).
+
+Preserve floating intermediates until the complete admitted expression reaches Int storage: a: Int = (7.5 / 2) * 2.0 stores 7. Parentheses group without truncating; half: Int = 7.5 / 2 first stores 3, so a later half * 2 gives 6. This does not postpone explicit floor or other rounding operations. See [storage boundaries](division.md#floating-intermediates-and-storage-boundaries).
 
 ## Equality and negation
 

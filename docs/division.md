@@ -55,7 +55,22 @@ fraction: Float = 7.5 / 2;     /* 3.75 */
 
 Truncation discards the fractional part toward zero; floor chooses the greatest integer no larger than the quotient. They agree for positive quotients but differ for negative inexact quotients. Never truncate 0.5 to a zero divisor or truncate 7.5 before division.
 
-The storage rule applies to these division expressions; it does not select an unrestricted Float-to-Int assignment cast or change a source binding's type/value. Complete context/rounding boundaries inside larger expressions and calls/returns remain open. So do concrete Float/Double precision, mixed floating widths, representability, overflow, zero divisors, non-finite quotients, and floating remainder/modulo. The examples use small finite quotients and establish expected values, not a LiteScript runtime implementation. See [types and inference](types-and-inference.md), [arithmetic faults](arithmetic-faults.md), and [arithmetic methods](arithmetic-methods-and-division-revision.md).
+The storage rule applies to these division expressions; it does not select an unrestricted Float-to-Int assignment cast or change a source binding's type/value. The floating-expression storage boundary is selected below; complete expected-type propagation and call/return conversion boundaries remain open. So do concrete Float/Double precision, mixed floating widths, representability, overflow, zero divisors, non-finite quotients, and floating remainder/modulo. The examples use small finite quotients and establish expected values, not a LiteScript runtime implementation. See [types and inference](types-and-inference.md), [arithmetic faults](arithmetic-faults.md), and [arithmetic methods](arithmetic-methods-and-division-revision.md).
+
+## Floating intermediates and storage boundaries
+
+Selected by the user, 2026-10-25: in the admitted floating calculation, preserve floating intermediates until the complete expression reaches Int storage. Parentheses group calculations without introducing a numeric conversion. An explicitly typed Int binding introduces a storage boundary:
+
+```text
+a: Int = (7.5 / 2) * 2.0; /* 3.75 * 2.0 = 7.5; stores 7 */
+
+half: Int = 7.5 / 2;      /* stores 3 */
+b: Int = half * 2;        /* 6: reads the already stored integer */
+```
+
+The outer Int destination must not truncate the floating 3.75 intermediate to 3 before the multiplication in the first line. This preserves the source expression's ordinary grouping and evaluation order; it does not permit reassociation or recovering a discarded fraction from half. Explicit rounding operations still have their own semantics; this rule does not postpone an explicit floor operation past later arithmetic.
+
+This settles the shown floating-expression storage boundary. Full expected-type propagation through unresolved integer-only subexpressions, calls, returns, custom arithmetic, and mixed floating widths still needs specification. Broader Float-to-Int assignment conversions and out-of-range/non-finite storage remain separate.
 
 ## Integer-only code
 
@@ -65,7 +80,14 @@ remaining /= 2;
 remaining += 3;
 ```
 
-Ordinary integer-only division needs no floating-point intermediate or mandatory named rounding helper. Floor division remains explicit when its negative-input behavior is intended. Named methods are an additional surface, not the only everyday interface.
+Ordinary integer-only division needs no floating-point intermediate or mandatory named rounding helper:
+
+```text
+truncated: Int = -7 / 2;  /* -3: integer calculation */
+floored: Int = -7 _/ 2;   /* -4: integer floor calculation */
+```
+
+The operators have different rounding for negative inexact quotients, so _/ cannot replace truncating /. A typed Int binding already supplies an explicit integer boundary before later calculations. A Float destination such as fraction: Float = 2 / 7 requests fractional division instead; a context-independent integer quotient inside a larger fractional expression is a separate API question. See [the proposed truncDiv method](arithmetic-methods-and-division-revision.md#explicit-truncating-division-proposal). No additional truncation symbol or method is selected by this storage-boundary decision.
 
 ## Compound updates
 
@@ -138,7 +160,7 @@ The former // and %% arithmetic spellings are superseded. This does not introduc
 ## Open numeric contracts
 
 - Preserve typed panics for defined arithmetic faults and local typed-else recovery; returned Result errors remain a separate channel.
-- Define numeric widths, Float/Double precision and mixed-width compatibility, representability/conversion faults, general numeric conversions, and inference/rounding boundaries in larger expressions.
+- Define numeric widths, Float/Double precision and mixed-width compatibility, representability/conversion faults, general numeric conversions, and expected-type propagation through unresolved subexpressions/calls/returns. Preserve the selected floating-expression storage boundary.
 - Define precise zero-divisor and overflow/unrepresentable-result cases and payloads, including minimum-integer/-1 quotient and remainder/modulo cases.
 - Complete floating floor result typing beyond the selected Int-storage cases, floating remainder/modulo, and any combined quotient/remainder API.
 - Resolve identifier/operator scanning while retaining the user's compact/spaced requirement; complete the recursive grammar and numeric method signatures.

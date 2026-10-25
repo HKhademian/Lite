@@ -59,7 +59,20 @@ right := 2 / 7.0;          /* fractional without an integer destination */
 
 This clarifies the earlier result-directed wording: an Int destination accepts the appropriately rounded quotient of a floating calculation; it does not turn the floating operands into integers. The rule includes established floating values, not just whole-valued decimal literals. Without floating evidence or a fractional expected result, integer-only division retains its integer default. No mandatory floating intermediate follows for that integer-only case.
 
-The result contract does not settle general Float-to-Int assignment casts, mixed floating widths/precision, out-of-range or non-finite storage, or expected-type/rounding propagation inside larger expressions/calls/returns. Numeric methods remain an additional requested surface; exact signatures and context flow for div/floorDiv must preserve corresponding admitted arithmetic behavior and still need specification. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+The result contract does not settle general Float-to-Int assignment casts, mixed floating widths/precision, out-of-range or non-finite storage, or complete expected-type propagation through unresolved subexpressions/calls/returns. The user separately selected preservation of floating intermediates until the full value reaches Int storage; see [storage boundaries](division.md#floating-intermediates-and-storage-boundaries). Numeric methods remain an additional requested surface; exact signatures and context flow for div/floorDiv must preserve corresponding admitted arithmetic behavior and still need specification. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+
+## Explicit truncating division proposal
+
+The user asks whether _/ is sufficient for pure Int calculations or whether explicit truncation is needed. Existing / already truncates in an integer-only calculation with an Int destination, while _/ floors; neither requires floating arithmetic. A typed Int intermediate is sufficient to establish that integer result before using it in a later expression.
+
+Recommendation, not selected: add a.truncDiv(b) as an ordinary numeric method for an explicitly truncating integer quotient whose meaning/result contract does not change with a surrounding Float/Double expectation. This complements the requested floorDiv method without requiring another symbolic operator. It would be useful when the programmer wants to choose a quotient inline rather than introduce an Int temporary. Ordinary div remains the requested counterpart of context-sensitive /.
+
+```text
+/* Proposed API, not selected or implemented. */
+whole: Int = numerator.truncDiv(denominator);
+```
+
+For admitted Int operands, such a method should compute integer division directly, not require floating division followed by a generic trunc conversion. Integer and floating operand coverage, exact result types/widths, signatures, lookup, and faults must be specified before adoption. A generic trunc operation on an already computed floating quotient is a separate conversion facility and does not by itself promise a pure integer calculation. This proposal neither changes / defaults nor silently introduces a new builtin or operator.
 
 ## Compact and spaced forms must agree
 
@@ -88,7 +101,7 @@ Retiring // as an arithmetic spelling does not itself adopt // line comments. Cu
 ## Separate open contracts
 
 - Resolve compact underscore-operator scanning against ordinary identifier rules.
-- Complete numeric width/precision compatibility, expected-type and rounding propagation in larger expressions, general conversions, representability faults, and fixed-width/fractional representations.
+- Complete numeric width/precision compatibility, expected-type propagation through unresolved subexpressions/calls/returns, general conversions, representability faults, and fixed-width/fractional representations.
 - Specify exact typed arithmetic panic cases and payloads, including zero divisors and minimum-integer/-1 cases; preserve the existing failure channels.
 - Specify exact numeric method signatures and general lookup/overloading/extension behavior.
 - Complete floating floor result typing beyond the selected Int-storage cases, floating remainder/modulo, optional combined quotient/remainder APIs, power methods, and any future infix syntax independently.
