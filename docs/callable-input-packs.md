@@ -36,7 +36,7 @@ The previously selected contextual receiver rules still apply: an empty header b
 
 ## Where the contract comes from
 
-Input shape and component types must be established by annotations, an expected callable type, or both. Once inputs are known, a nonrecursive local implementation may infer its result from its body. An explicit or expected result remains a constraint.
+Input shape and component types must be established by annotations, an expected callable type, or selected ordinary [parameter-default inference](parameter-default-inference.md). Defaults can establish omitted ordinary input types equally with and without fn; unknown-input inference from arbitrary body operations remains separate. Once inputs are known, a nonrecursive local implementation may infer its result from its body. An explicit or expected result remains a constraint.
 
 ```text
 operation := (x: Int) { x * 3 }

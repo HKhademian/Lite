@@ -1,6 +1,6 @@
 # Default parameters and omitted-type inference across modern languages
 
-Status: **primary references checked 2026-10-25; research and recommendation, not a newly selected LiteScript rule or compiler verification**.
+Status: **primary references checked 2026-10-25; reference research; the LiteScript recommendation below was subsequently selected on 2026-10-25, without compiler verification**.
 
 ## Question and scope
 
@@ -16,7 +16,7 @@ function make(count = 3, label = "item") {
 }
 ```
 
-The parameter types are inferred as `number` and `string`. The defaults do not restrict callers to the literal values `3` and `"item"`. The handbook explicitly includes parameter defaults among inference sites. An annotation can instead establish a broader contract. JavaScript default activation also includes an explicitly supplied `undefined`; that is a separate language behavior, not part of the proposed LiteScript rule. Sources: [type inference](https://www.typescriptlang.org/docs/handbook/type-inference.html), [default-initialized parameters](https://www.typescriptlang.org/docs/handbook/functions.html#optional-and-default-parameters).
+The parameter types are inferred as `number` and `string`. The defaults do not restrict callers to the literal values `3` and `"item"`. The handbook explicitly includes parameter defaults among inference sites. An annotation can instead establish a broader contract. JavaScript default activation also includes an explicitly supplied `undefined`; that is a separate language behavior, not part of the selected LiteScript rule. Sources: [type inference](https://www.typescriptlang.org/docs/handbook/type-inference.html), [default-initialized parameters](https://www.typescriptlang.org/docs/handbook/functions.html#optional-and-default-parameters).
 
 ## Odin: inferred defaults, with a constant restriction
 
@@ -50,11 +50,11 @@ fun make(count: Int = 3, label: String = "item") {}
 
 Kotlin's functions guide requires explicit parameter types. Its default may be an expression, checked against the declared parameter type. Its specification orders supplied arguments by their written call order, followed by only missing defaults in parameter declaration order, followed by invocation. Used defaults are reevaluated per call; overridden defaults do not execute. This is a close precedent for LiteScript's already selected timing, independently of whether types are inferred. Sources: [function parameters](https://kotlinlang.org/docs/functions.html#parameters), [default compatibility](https://kotlinlang.org/spec/declarations.html#function-declaration), [call evaluation order](https://kotlinlang.org/spec/expressions.html#function-calls-and-property-access).
 
-## Recommendation for LiteScript
+## LiteScript rule selected after this comparison
 
 There is no universal rule across these languages. TypeScript and Odin support default-based parameter inference; Dart deliberately does not. V, Rust, and Zig do not directly answer the inference question because they lack native default value parameters. Kotlin demonstrates that type annotations and runtime default evaluation are independent choices.
 
-Retain the proposed inference rule for ordinary value parameters, subject to these boundaries:
+The user accepted this inference rule for ordinary value parameters after the comparison. The canonical [parameter-default inference](parameter-default-inference.md) records the selected rule with these boundaries:
 
 1. An explicit annotation or already established expected callable input contract constrains the parameter and its default. A default does not narrow that public contract or override it.
 2. Without that information, use ordinary declaration-style static inference on the default. Literal defaults use the language's normal inferred types, rather than inventing singleton-value restrictions.
@@ -63,7 +63,7 @@ Retain the proposed inference rule for ordinary value parameters, subject to the
 5. If the existing inference rules cannot establish a valid type, require an annotation or an established context. Do not invent an implicit dynamic type or resolve cycles by executing code. Expected-type handling for empty literals remains governed by its existing rules.
 6. Statically validate a declared default even if a particular call supplies that parameter. Skipping its runtime evaluation does not make an invalid declaration valid.
 
-Under this recommendation, the previously discussed header sketch would behave as follows:
+Under the selected rule, the simple ordinary header behaves as follows:
 
 ```text
 make := fn(count = 3, label = "item") {
@@ -74,7 +74,7 @@ make(count = 5);       /* valid: count is Int */
 make(count = "five");  /* rejected: String does not fit Int */
 ```
 
-This remains a proposed inference extension to that surface sketch. It does not complete default-header grammar, select parameter lookup/dependency rules, choose signature-versus-implementation placement, or introduce permission-bearing defaults.
+Simple ordinary default receivers and their omitted-type inference are now selected. This does not complete default-header grammar, select parameter lookup/dependency rules, choose signature-versus-implementation placement, or introduce permission-bearing defaults.
 
 Keep the [selected default evaluation order](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied arguments in written order, then missing defaults in declaration order before invocation. Keep runtime-expression defaults such as `default_b()`; Odin/Dart's constant restriction is a comparison point, not a reason to change that choice. Reference syntax, ownership, memory safety, and resources remain deferred.
 

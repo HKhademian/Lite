@@ -99,7 +99,7 @@ operation := fn (x: Float): Float { x * 3 }
 /* alternative explicit contracts, checked by ordinary numeric rules */
 ```
 
-The [unified callable model](callable-input-packs.md) uses the same inference with and without `fn`. Input shape and types must be established by annotations, an expected callable contract, or both. The nonrecursive local body can then infer its result; knowing only the shape or result is insufficient to choose unknown input types. Under `operation: fn (Int): Int`, both `(x) { x * 3 }` and `fn (x) { x * 3 }` use that expected contract. Under `operation: fn (Int): Int = fn { arguments.0 * 3 }`, the full implicit input pack is a singleton Int. Independently, headerless fn has Unit inputs, not a guessed generic pack.
+The [unified callable model](callable-input-packs.md) uses the same inference with and without `fn`. Input shape and types must be established by annotations, an expected callable contract, or selected ordinary [parameter-default inference](parameter-default-inference.md). The nonrecursive local body can then infer its result; knowing only the shape or result is insufficient to choose unknown input types. Under `operation: fn (Int): Int`, both `(x) { x * 3 }` and `fn (x) { x * 3 }` use that expected contract. Under `operation: fn (Int): Int = fn { arguments.0 * 3 }`, the full implicit input pack is a singleton Int. Independently, headerless fn has Unit inputs, not a guessed generic pack.
 
 Neither `operation := (x) { x * 3 }` nor `operation := fn (x) { x * 3 }` establishes x's type. Inferring reusable input requirements from body operations remains a separate proposal. The keyword does not grant another inference mode. Parsing recognizes the lambda before checking its destination; a noncallable destination is rejected, not used to choose an immediate-block interpretation.
 
@@ -114,6 +114,10 @@ Explicit signatures at public library boundaries were recommended to prevent imp
 Recoverable failure has a stronger selected rule: all escaping recoverable errors must fit an explicitly declared error contract, including errors forwarded by postfix `!`. `T ! E` declares a refined outcome type; `T!` means `T ! Error` and deliberately declares the general recoverable error contract. A plain `T` declares no recoverable error channel. Inference must not silently add such failures to a function promising an ordinary nonfallible result. The general Error definition, generic error contracts, and error-type composition remain open; see [Result and errors](result-and-errors.md).
 
 Type declarations give union `|` higher precedence than binary fallible type `!`. Ungrouped code is valid; official reference documentation prefers `(A | B | C) ! (D | E | F)` with both union sides grouped. This selects their relative precedence while leaving other type constructors and repeated-`!` associativity for the full type grammar; see [type grouping](fallible-types-and-error-composition.md#grouping).
+
+## Parameter defaults establish ordinary input types
+
+Selected 2026-10-25: an ordinary default can establish an omitted input type using the same static inference as a declaration. fn(count = 3, label = "item") establishes Int and String. Explicit annotations and established expected input types constrain the defaults; later calls do not widen the fixed input contract. Inspect helper result types without executing defaults. Invalid defaults remain invalid even when supplied calls skip their runtime evaluation. Insufficient evidence requires an annotation or established context. This applies with or without fn and enables existing known-input body-result inference. See [parameter-default inference](parameter-default-inference.md) for examples and the remaining grammar, access, dependency, and placement boundaries.
 
 ## Results and control flow
 

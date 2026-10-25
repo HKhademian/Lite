@@ -1,6 +1,6 @@
 # Functions
 
-Status: **one callable model with typed input tuples, intrinsic pack application, and parenthesized lambdas with optional `fn`, clarified 2026-10-24. Context, annotations, or both establish input types; known-input local result inference applies equally with or without the keyword. Complete parsing, captures, ownership, and callable representation remain open. Optional trailing semicolons, colon result types, tail results, and zero-result callable behavior are established**.
+Status: **one callable model with typed input tuples, intrinsic pack application, and parenthesized lambdas with optional `fn`, clarified 2026-10-24. Context, annotations, or selected ordinary parameter defaults establish input types; known-input local result inference applies equally with or without the keyword. Complete parsing, captures, ownership, and callable representation remain open. Optional trailing semicolons, colon result types, tail results, and zero-result callable behavior are established**.
 
 The [callable input-pack model](callable-input-packs.md) records the selected syntax, inline callback probes, and remaining limitations. It supersedes the earlier retirement of contextual `fn` and the distinction between independently typed functions and contextual-only lambdas. This is language design, not compiler/runtime verification.
 
@@ -89,7 +89,7 @@ An argument may be omitted only when an applicable explicitly declared parameter
 
 This supersedes the earlier default-or-zero argument rule. For fn (a: Int): Int! without a declared parameter default, myfn() is rejected; myfn(0) explicitly supplies zero. The rule applies before invoking either a user implementation or a zero-initialized callable, and inputs left unnamed by a lambda implementation still belong to its full callable contract. A genuinely zero-input function may of course be called with ().
 
-Default-expression timing is selected on **2026-10-25**: evaluate the callee first, supplied arguments once in written order, then only missing declared defaults once in declared slot order before invocation. For the user's b, c, a, d header with d and c supplied, execute new_d(), new_c(), default_b(), default_a(); c/d defaults are skipped. See [default evaluation](evaluation-order.md#default-argument-evaluation-selected). Complete default-header grammar/type establishment and lookup scope, references to other parameters, signature-versus-implementation placement, and parameter-pattern integration remain separate. Core named-call omission is selected: every unfilled parameter requires an applicable declared default. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
+Default-expression timing is selected on **2026-10-25**: evaluate the callee first, supplied arguments once in written order, then only missing declared defaults once in declared slot order before invocation. For the user's b, c, a, d header with d and c supplied, execute new_d(), new_c(), default_b(), default_a(); c/d defaults are skipped. See [default evaluation](evaluation-order.md#default-argument-evaluation-selected). Ordinary [parameter-default inference](parameter-default-inference.md) is now selected. Complete default-header grammar and lookup scope, references to other parameters, signature-versus-implementation placement, and parameter-pattern integration remain separate. Core named-call omission is selected: every unfilled parameter requires an applicable declared default. Requiring a declared default is a necessary condition for any argument omission; this does not newly authorize defaults that bypass mut/var permission or caller-location requirements. See [argument omission and union defaults](union-parameter-defaults.md) and [evaluation order](evaluation-order.md#function-calls).
 
 ## Named arguments under review
 
@@ -99,11 +99,11 @@ The [concrete named routing review](named-input-routing.md) records named permut
 
 ## Compact implementations under review
 
-Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or both. A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. Independent unknown-input and recursive result inference remain separate.
+Use one callable-literal model. `fn (parameters) { body }` and `(parameters) { body }` have identical meaning; the latter omits the keyword where the parenthesized header still identifies a function. Input shape/types come from annotations, an expected contract, or selected ordinary [parameter-default inference](parameter-default-inference.md). A nonrecursive local result may be inferred once inputs are established. No signature-only declaration is required. Independent unknown-input and recursive result inference remain separate.
 
 ### Two scenarios: full definition and contextual implementation
 
-**1. An independent definition establishes its input types through annotations.**
+**1. An independent definition establishes its input types through annotations or ordinary parameter defaults.**
 
 ```text
 var x := fn (a: Int): String {
@@ -202,7 +202,7 @@ doubled := map(numbers, fn (n) { n * 2 });
 positive := filter(numbers, fn (n) { n > 0 });
 ```
 
-The 2026-10-24 clarification supersedes the earlier retirement of this form. It has exactly the same semantics as `(parameters) { body }`; retaining `fn` is an explicit function marker, not another inference mode. Both spellings accept contextual or annotated inputs and known-input local result inference. Without an expected input contract, `fn (x) { x * 3 }` and `(x) { x * 3 }` have the same unresolved input type; adding the keyword does not infer an arbitrary numeric/generic contract.
+The 2026-10-24 clarification supersedes the earlier retirement of this form. It has exactly the same semantics as `(parameters) { body }`; retaining `fn` is an explicit function marker, not another inference mode. Both spellings accept contextual, annotated, or default-inferred ordinary inputs and known-input local result inference. Without an expected input contract, `fn (x) { x * 3 }` and `(x) { x * 3 }` have the same unresolved input type; adding the keyword does not infer an arbitrary numeric/generic contract.
 
 ### C. Arrow-free lambda: parameter list followed by a block (current direction)
 
@@ -221,7 +221,7 @@ lambda := "(" [lambda_parameters] ")" [":" type] block
 lambda_parameter := identifier [":" type]
 ```
 
-This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts, or independent inputs when annotations establish their types. The user selected the empty contextual header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. A one-position receiver header needs no singleton comma because it is syntactically a header. Simple trailing rest receivers now follow the array-tail extension; complete nested patterns still need integration with the eventual grammar; ordinary tuple patterns are unchanged.
+This simple version supports `() { ... }`, `(a) { ... }`, and `(a, b) { ... }` under expected callable contracts, or independent inputs when annotations or ordinary defaults establish their types. The user selected the empty contextual header as no local input bindings, not a zero-arity declaration; its actual callable signature comes from the expected contract. A one-position receiver header needs no singleton comma because it is syntactically a header. Simple trailing rest receivers now follow the array-tail extension; complete nested patterns still need integration with the eventual grammar; ordinary tuple patterns are unchanged.
 
 Capture-header syntax and semantics are [pinned for later](deferred-contexts.md). Earlier `[offset]` and `[var offset]` examples remain in the deferred closure review; they are not part of the current lambda grammar outline.
 
@@ -255,7 +255,7 @@ Rust provides a direct reference for optional closure signatures: `|n: i32| -> i
 
 #### Independent lambda result inference
 
-Selected rule: a nonrecursive local function literal, with or without `fn`, can infer its unambiguous result type from the body once all input types are known. An expected callable contract can also supply omitted parameter and result types. A receiver type is therefore one source of the contract, not a requirement when annotations already establish the inputs.
+Selected rule: a nonrecursive local function literal, with or without `fn`, can infer its unambiguous result type from the body once all input types are known. An expected callable contract can also supply omitted parameter and result types. A receiver type is therefore one source of the contract, not a requirement when annotations or ordinary defaults already establish the inputs.
 
 ```text
 double := (n: Int) { n * 2 }
@@ -279,7 +279,7 @@ operation := (x: Float): Float { x * 3 }
 
 Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. Distinct completion payload types form a normalized plain union under the selected rule below.
 
-Keep the scope narrow: input types must already be established by annotations or an expected callable. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
+Keep the scope narrow: input types must already be established by annotations, an expected callable, or selected ordinary parameter defaults. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
 
 Requiring an expected result type or a written result annotation for every independent local lambda was considered and not chosen.
 
