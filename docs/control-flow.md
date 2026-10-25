@@ -64,7 +64,7 @@ For a tagged `return`, the target's kind determines how its supplied `T` complet
 - `continue value`: contribute a value of iteration type `T`, then advance.
 - `break`: stop iteration without contributing, preserving previous state and following loop completion processing.
 - `break value`: commit a body value of type T, stop the nearest loop, and run then if present. No tag is required.
-- `break @loop [value]`: the same stop-and-complete operation, targeting the explicitly named enclosing loop. Adding a tag to a loop does not require changing an untagged `break`; it still targets the nearest loop.
+- `break @loop [value]`: the same stop-and-complete operation, targeting the explicitly named enclosing loop. Without a payload it preserves `.value`; with a payload it commits that `T`. Adding a tag to a loop does not require changing an untagged `break`; it still targets the nearest loop.
 - `return @loop value`: commit a body value `T` to the named loop, stop it, and run that loop's `then` if present. Any inner constructs exited on the way skip their own `then` blocks.
 
 ```text
@@ -133,7 +133,7 @@ Postfix `!` forwards a returned error from the nearest function or closure; it i
 
 ## Explicit loop targets
 
-`continue @loop [value]` explicitly advances a named enclosing loop. With a payload, it commits a value of type `T` to that loop before advancing; without one, it preserves the loop's current `.value`. Any inner constructs exited to reach the target skip their own `then`; the target loop advances, so its `then` does not run. A target that is an `if` or ordinary block cannot continue. `break @loop [value]` explicitly stops a named enclosing loop; an untagged `break` keeps targeting the nearest loop whether or not it has a tag.
+`continue @loop [value]` explicitly advances a named enclosing loop. With a payload, it commits a value of type `T` to that loop before advancing; without one, it preserves the loop's current `.value`. Any inner constructs exited to reach the target skip their own `then`; the target loop advances, so its `then` does not run. A target that is an `if` or ordinary block cannot continue. `break @loop [value]` explicitly stops a named enclosing loop; without a payload it preserves `.value`, and with a payload it commits `T`. An untagged `break` keeps targeting the nearest loop whether or not it has a tag.
 
 Break value commits its operand to .value, stops the nearest loop, and enters normal completion. Its operand has the body value type T, just like continue value; then may transform T into final result type R. Without then, the committed .value is the final result. Bare break performs the same stop/completion without replacing .value.
 
