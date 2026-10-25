@@ -97,7 +97,7 @@ Shadowing hides a name; it does not automatically destroy, copy, borrow, move, o
 
 Unused-name permission also does not suppress initializer effects or promise that field/getter extraction is skipped. Structural extraction effects and ownership commitment remain separate decisions. Proposed rest capture concerns multiple components and still needs its own grammar and result contract.
 
-The same ordinary-block declaration rules apply to `_` as to other names. Permitting repeated names inside one pattern or receiver list does not enable repeated independent declarations in an otherwise duplicate-rejecting block.
+The same ordinary-block declaration rules apply to `_` as to other names. Permitting repeated names inside one pattern does not enable repeated independent declarations in an otherwise duplicate-rejecting block.
 
 ## Superseded rule
 

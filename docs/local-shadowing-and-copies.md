@@ -108,6 +108,6 @@ The mutable shallow copy is distinct from rename(mut userVar), which explicitly 
 
 ## Declaration lists keep separate rules
 
-Sequential local value declarations are not the same as duplicate entries in one parameter list, record field list, or public module namespace. This rule does not automatically permit those duplicates. Ordered repeated names within one pattern and receiver list retain their already selected binding-order rules.
+Sequential local value declarations are not the same as duplicate entries in one parameter list, record field list, or public module namespace. This rule does not automatically permit those duplicates. Ordered repeated names within one pattern retain their already selected binding-order rules.
 
 Related: [declarations](declarations-and-assignment.md), [pattern shadowing](pattern-shadowing.md), [functions](functions.md), [mutability](mutability.md), and [memory and performance](memory-and-performance.md).
