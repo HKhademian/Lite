@@ -504,6 +504,15 @@ Break value commits a value of body type T, stops the nearest loop, and runs the
 
 The [throw proposal](error-return-sugar.md) considers throw expression as shorthand for return .err(expression), with a required operand and the nearest function/closure as its target. This is not yet an adopted exit production; it would not introduce dynamic handler search or a tagged-throw form.
 
+## Unit and empty tuple
+
+```text
+unit_type := "Unit" | empty_tuple_type
+unit_value := "Unit" | empty_tuple_value
+```
+
+`Unit` is the built-in single-inhabitant type and also names its unique value. `()` is the equivalent zero-component tuple type/value spelling. The identifier `Unit` is recognized in both type and value positions; this narrow built-in rule does not generalize to type-name constructors or value/type namespace conversion. Whether built-in names are reserved words and how they interact with lexical shadowing remain part of the open reserved-word and name-resolution work. See [Unit](unit.md).
+
 ## Fallible type templates
 
 ```text
@@ -629,7 +638,6 @@ Lexical/syntax failures do not authorize formatter repair or partial-file rewrit
 ## Open parser interactions
 
 - A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.
-- `Unit` in type and expression positions needs a deliberate built-in rule.
 - Adjacent string literal tokens join before ordinary expression separation is interpreted.
 - Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.
 
