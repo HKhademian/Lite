@@ -14,7 +14,23 @@ The selected proofs include [plain-union widening](union-widening.md), [stored R
 
 The compiler preserves ordinary copy behavior and observable effects while adapting representation when needed. This does not require identical bytes, select an ABI, or authorize an in-place reinterpretation. [Label checks](tuple-label-conversions.md#ordinary-transfers-check-labels), nominal identity, initialization, omission promises, and access contracts still apply. In particular, a copied value's widening does not widen a caller-location write grant; [basic var parameters remain invariant](callable-value-variance.md#var-parameters-keep-their-value-type).
 
-This principle does not by itself establish numeric coercions, arbitrary container covariance, structural conversion of nominal records, or unchecked narrowing. Those families still require their own compatibility rules. Success construction, which adds a Result layer, is distinct from widening an already stored outcome.
+This principle does not by itself establish numeric coercions, arbitrary container covariance, or structural conversion of nominal records. Those families still require their own compatibility rules. Success construction, which adds a Result layer, is distinct from widening an already stored outcome.
+
+### Unchecked narrowing is rejected
+
+Selected 2026-10-25: unchecked narrowing is rejected as a compile-time error. A narrower destination annotation alone is not evidence that the source fits. Narrowing requires an established static proof, such as a valid flow refinement, or checked selection/handling whose successful path proves the narrower contract. The selected type tests and patterns provide such checks; this rule introduces no cast syntax or runtime cast-failure policy.
+
+```text
+inspect := fn(value: Int | String): Unit {
+    narrowed: Int = value; /* rejected: String remains possible */
+
+    if value: Int {
+        checked: Int = value; /* valid: the type test proves Int */
+    }
+}
+```
+
+This applies to ordinary initialization, assignment, arguments, and returns, including stored Result payload contracts and callable compatibility. An earlier widening does not authorize an unchecked reverse conversion. Existing static assignment-flow facts can justify narrowing without adding a redundant runtime test; their validity and invalidation rules still apply. Safe callable adaptation continues to use its own input/result directions, and writable grants retain their separate checks.
 
 ## Templates
 

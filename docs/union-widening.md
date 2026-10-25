@@ -40,7 +40,7 @@ Reordering or repeating an alias cannot make a missing type covered. A separatel
 
 ## Narrowing needs evidence
 
-An arbitrary Account cannot be assigned to Person because Admin remains possible. Use checked selection to handle every alternative, or establish the active member through the selected type-test syntax:
+Unchecked narrowing is rejected, not an open conversion option; see [the general rule](types-and-inference.md#unchecked-narrowing-is-rejected). An arbitrary Account cannot be assigned to Person because Admin remains possible. A narrower annotation alone does not prove otherwise. Use checked selection to handle every alternative, or establish the active member through the selected type-test syntax:
 
 ```text
 match account {
@@ -59,7 +59,7 @@ Every match remains exhaustive. A stable flow refinement may prove a narrower ac
 
 ## Preserve other type constructors
 
-This rule relates plain unions. It does not recursively grant conversions through Option, Result, lists, mutable containers, or function types. In particular, it does not establish automatic conversion from User ! E to (User | Guest) ! (E | F), nor merge a union of Results into one Result. Those need their own compatibility rules.
+This rule relates plain unions and does not by itself recursively grant conversions through other type constructors. [Stored Result widening](result-and-errors.md#stored-result-values-widen-safely) separately permits User ! E to (User | Guest) ! (E | F) when both payload proofs hold, preserving each Result layer. [Callable compatibility](callable-value-variance.md) has its own safe input/result directions. Neither rule merges a union of Results into one Result. Option, lists, mutable containers, and other constructors still need their own compatibility rules.
 
 Named enum alternatives retain their case identity. Neither widening nor normalization constructs or removes a case wrapper.
 
@@ -81,7 +81,7 @@ See the [reference-language comparison](union-membership-comparison.md) for the 
 
 - [Common field reads](union-field-reads.md) and [all-target field writes](union-field-writes.md) are selected separately. Method calls and other operations without narrowing remain open.
 - Interface overlap, subtype admission, and absorption if introduced.
-- Compatibility through generic constructors, containers, functions, and fallible types.
+- Compatibility through generic constructors and containers, and callable/Result transformations beyond the selected widening rules.
 - Mutation, ownership, lifetime, ABI, and public type-evolution contracts.
 
 Related: [normalization](union-normalization.md), [membership](union-membership.md), [type tests](type-tests-and-narrowing.md), [record identity](record-type-identity.md), and [fallible composition](fallible-types-and-error-composition.md).

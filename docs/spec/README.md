@@ -52,6 +52,7 @@ Selected:
 - `A | B` is a normalized plain union: order-independent, flattened, and duplicate-free. Normalization does not collapse nominal records, enum cases, `Option`, or `Result` into their payloads or into `Unit`.
 - A value is admitted to a union when its normalized type is an exact member; widening preserves the source member. Narrowing is checked.
 - A union field read is valid when every possible alternative exposes that readable field; its type is the normalized union of the field types. A field write must be compatible with every possible target.
+- Unchecked narrowing is a compile-time error. A narrower annotation alone is insufficient; an established static proof or checked selection/handling must justify the narrower contract. See [checked narrowing](../types-and-inference.md#unchecked-narrowing-is-rejected).
 - All-zero storage is a valid language-defined value for every type. Result zero is `.ok(zero(T))` for `T ! E`.
 - A multi-member union's active member for `zero(T)` is still open; do not choose a canonical or leftmost member.
 
