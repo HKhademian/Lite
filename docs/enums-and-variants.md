@@ -117,6 +117,8 @@ match event {
 
 The case tag selects the active variant. Its pattern can then bind or constrain that variant's payload. This is not a function invocation. Payload-free and payload-bearing cases may coexist.
 
+Selected on **2026-10-25**: where valid value/payload copy contracts exist, ordinary enum arguments and their corresponding fixed temporaries preserve the evaluated active case identity and payload after the source is replaced. Copying Email(payload) does not become Sms when the source changes; Items(3) and Retries(3) remain different copied cases. Inactive alternatives are not constructed, and already-copyable reference payloads retain their target/permissions under the shallow rule. This selects no tag encoding, physical copy instruction, implicit unwrap, new constructor syntax, or universal copyability. Reference syntax, memory safety, resource eligibility, ownership/lifetimes, and aliases remain deferred; see [copyable union and enum values](parameter-values-and-slots.md#copyable-union-and-enum-values-selected).
+
 All variants can belong to the same declared Event type. Matching the type Event alone does not determine which case is active. Variant cases and the separate union of existing types, such as `User | Guest`, are related selection capabilities but are not assumed to have identical type identity or declaration syntax.
 
 ## Tag-only patterns

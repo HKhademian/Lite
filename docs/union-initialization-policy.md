@@ -88,7 +88,7 @@ Reference comparison checked 2026-10-21: [Rust permits declaration before initia
 
 ## Receiving an existing value
 
-For the member-only model, an ordinary parameter receives an already initialized A | B value. It preserves the supplied active member and payload; it does not choose the leftmost member of its own annotation.
+For the member-only model, an ordinary parameter receives an already initialized A | B value. It preserves the supplied active member and payload; it does not choose the leftmost member of its own annotation. Selected on **2026-10-25**: with valid value/payload copy contracts, ordinary union inputs and fixed temporaries preserve that active value independently of later source replacement. In the explicit Int/String example, tmp keeps Int 42 after value becomes String "ready". Copying constructs no inactive member and selects no zero/default state, implicit unwrap, or new result-narrowing rule. Copyability eligibility and reference/resource safety remain deferred; see [copyable union and enum values](parameter-values-and-slots.md#copyable-union-and-enum-values-selected).
 
 ```text
 consume := fn(value: A | B): Unit {

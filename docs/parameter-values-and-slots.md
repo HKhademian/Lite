@@ -1,6 +1,6 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-25**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int, copyable records, and copyable fixed tuple/array evaluated-value semantics are selected on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-25**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable records, fixed tuples/arrays, unions, and enums have selected evaluated-value semantics on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
@@ -10,7 +10,7 @@ The type-side mut parameter qualifier requests writable caller-data access, as i
 
 ## 2. Semantic passing versus physical calling convention
 
-Beyond the selected ordinary Int, copyable record, and copyable fixed aggregate cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+Beyond the selected ordinary Int, copyable record/fixed aggregate, and copyable union/enum cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
@@ -155,6 +155,31 @@ Value semantics can require copying substantial inline data when an old value mu
 
 This selection covers copyable fixed aggregates. Runtime-sized owners, slices/views, and variadic rest retain their separate existing contracts; fixed size does not override a special rest access/retention contract or make a noncopyable component copyable. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain explicitly deferred by the user.
 
+## Copyable union and enum values selected
+
+Selected on **2026-10-25**: where a union or enum value and its payload have valid copy contracts, an ordinary argument or corresponding simple fixed temporary preserves the evaluated active member/case and its payload. Replacing the source location afterward does not change that copied value:
+
+```text
+var value: String | Int = ?;
+value = 42;
+
+tmp: String | Int = value;
+value = "ready";
+
+/* tmp still holds the Int value 42. */
+/* value now holds the String "ready". */
+```
+
+Assume the illustrated value/payload copy contracts are valid. The typed tmp initializer admits the existing Int member and preserves its payload; it does not choose String because of annotation order, initialize an inactive alternative, or select a new zero/default member. The same evaluated-value behavior applies to an ordinary String | Int argument supplied alongside a separate valid var grant to value: the callee may replace the source without retagging the already-evaluated ordinary input.
+
+For a copyable payload enum, copying .Email(payload) preserves its Email case identity and that payload under its valid copy contract. Changing the source later to Sms does not change the copy's case. Distinct cases such as Items(3) and Retries(3) remain distinct even though their payload types and payload values coincide. This describes copying already-valid enum values; it selects no additional case-construction or declaration syntax.
+
+Semantically preserve the active payload without constructing inactive alternatives. Keep ordinary source evaluation and any required valid copy-contract effects. This does not dictate which physical bytes are copied, the discriminator encoding, padding, allocation, or a copy instruction. Already-copyable reference payloads preserve their reference values, targets, and permitted access under the selected shallow rule; referenced objects are not automatically cloned or frozen.
+
+Declared union/enum types, nominal case identities, normalization, type-test/flow rules, and public function result contracts retain their existing meaning. This is a value-preservation rule, not new call-site result narrowing, an implicit unwrap/match, a conversion, or a choice of union-zero state. Keep initialized reads, compatibility, source order, source-location authority, and valid lifetime/copy preconditions. No second write grant or live source-location view is introduced by the ordinary copy.
+
+This assumes an available valid copy contract; it neither classifies all unions/enums as copyable nor chooses copyability eligibility for resource-bearing or flow-refined cases. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, noncopyable resources, and moves remain explicitly deferred. Future reference-copy/borrowed-view source contracts must remain explicit, with their syntax deferred.
+
 ## 3. Explicit operation on the caller's location
 
 The selected writable-storage feature covers temporary access to a caller variable or field:
@@ -200,7 +225,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Beyond the selected Int, copyable record, and copyable fixed aggregate value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+Beyond the selected Int, copyable record/fixed aggregate, and copyable union/enum value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 
