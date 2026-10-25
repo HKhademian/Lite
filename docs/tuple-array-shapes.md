@@ -176,7 +176,34 @@ only_tail: (...rest:) = (1, 2, ...right);
 
 strict follows its two-fixed-input destination shape. The complete supplied sequence guarantees two Int values; its first two values fill those slots, and they need not be the literal 1 and 2. only_tail instead has no fixed components because its annotation explicitly requests a rest-only shape; infer Int for its omitted element type.
 
-Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. General mixed named-entry composition, already-declared tail merging/collisions, and multiple stored rest segments remain open.
+Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. The simple named-slot discovery cases below are now selected; general named tuple-spread composition, already-declared tail merging/collisions, and multiple stored rest segments remain open.
+
+### Named slot discovery does not reserve a value
+
+Selected in the follow-up discussion, 2026-10-25: when no destination tuple shape is supplied and a runtime array tail is needed, statically named fixed entries may establish fixed components even when written after a runtime-sized spread. Infer the destination schema first, with those fixed components before the final tail; then apply the existing written-order routing. Slot discovery does not mark a slot filled, reserve it for a later value, or evaluate that value early.
+
+```text
+/* Assume items is a readable runtime-sized Int array. */
+value := (...items, score = 10);
+/* inferred shape: (score: Int, ...rest: Int) */
+
+first_named := (score = 10, ...items);
+/* same inferred shape; contributions route in a different order */
+```
+
+If items contains [1, 2, 3], the first construction routes 1 into the unfilled score slot and 2/3 into rest, then replaces score with 10. Its result has score = 10 and rest = [2, 3]. first_named fills score before the array spread, so all three array elements enter its rest. With an empty items array, the later score = 10 still fills the slot and rest is empty; with [1], that 1 is consumed and replaced, leaving an empty tail. An overwritten positional contribution is never rerouted.
+
+Retain the leading fixed components established by the existing positional rule. Additional statically named fixed entries establish their slots in first-declaration order before the final array tail. Normal explicit-label uniqueness and fixed-slot collision rules still apply. The inferred destination's slots start unfilled; route every contribution once in written order, filling the next unfilled fixed slot positionally or selecting a slot by name, and then collecting remaining positional inputs into the tail. Later positional values do not bypass an unfilled inferred fixed slot merely because a runtime spread occurred earlier.
+
+These simple named-entry cases extend the earlier purely positional defaults; the five unnamed examples keep their selected outcomes. A named field does not become an unlabeled array element or a fixed suffix after the tail. Infer its final contract using the existing surviving-contribution rules; all expressions must remain valid, and final slot types/access and complete coverage must be proven for every admitted runtime routing. General named tuple-spread composition, tail-label collisions beyond the selected default-name check, multiple stored tails, and complete constraint solving remain separate.
+
+An explicit/established expected schema is still the reference contract. Adding the same inferred schema explicitly does not change routing:
+
+```text
+explicit_value: (score: Int, ...rest: Int) = (...items, score = 10);
+```
+
+This is tuple-value shape inference, not a change to explicit-destination routing or call matching. Existing fixed-slot rejections remain: a later named override does not release a consumed positional value, and a fixed tuple with any unfilled component is rejected. The selected default-rest collision rejection also applies when a discovered fixed field is named rest; no automatic renaming or field-to-tail overwrite is introduced.
 
 ### Destination-guided repacking
 

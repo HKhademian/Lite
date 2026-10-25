@@ -38,6 +38,8 @@ A simple declaration can supply the type without an initializer: x: User; immedi
 
 Binding reassignment and read/write access to held data are distinct capabilities: var permits reassignment and mut permits writable data access. Inferred var mut x := expression grants both; the typed form is var x: mut T = expression. The declared value contract remains fixed under assignment, while the current read type may narrow from a successful direct local write. For declared String | Int, assigning 42 establishes Int reads without removing String from accepted replacements; see [assignment flow types](type-tests-and-narrowing.md#flow-types-after-direct-assignment-selected). [Mutability](mutability.md) also defines read access as the operation default, with mut in affected typed receiver/parameter annotations and no additional function-level mutation marker. Full method notation and capability inference rules remain open. Inference must not silently upgrade an existing read-only borrowed view to writable access.
 
+For simple named entries mixed with a runtime array spread, discover the omitted tuple schema before routing values: (...items, score = 10) can infer a fixed score slot before its final rest array. Discovery does not fill/reserve that slot; an earlier positional element can be consumed into it and then replaced. Leading fixed components retain their order, later named fixed slots follow first-declaration order, and the purely positional defaults remain unchanged. An explicit expected type still controls shape. See [named tuple-slot inference](tuple-array-shapes.md#named-slot-discovery-does-not-reserve-a-value).
+
 ## Intended type-system foundation
 
 - Primitive values and explicit numeric representations.

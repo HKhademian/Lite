@@ -110,6 +110,24 @@ The signature fixes the input count and destination types. Positional inputs cho
 
 Labels are static selectors, not expressions. A local variable named b does not change what op(b = expression) selects. Parentheses/grouping must not cause the parser to guess between an argument label and ordinary assignment according to whether type checking succeeds. Complete assignment-expression grammar remains separate.
 
+### Slot discovery is not reservation
+
+Discovering a tuple's omitted type is separate from filling its values. In the selected simple mixed case, (...items, score = 10) with a runtime-sized Int array can infer (score: Int, ...rest: Int) before routing. That score slot starts unfilled: a leading array element can fill it, and the later named contribution replaces that value without restoring it to the input sequence. For items = [1, 2, 3], the result is score = 10 with rest = [2, 3]. Explicitly writing the same destination schema gives the same behavior. See [named slot inference](tuple-array-shapes.md#named-slot-discovery-does-not-reserve-a-value).
+
+Known fixed tuple destinations keep the existing rule. These independent examples use the same four-slot schema:
+
+```text
+ok1: (:Int, score: Int, :Int, :Int) = (1, score = 10, 2, 3);
+ok2: (:Int, score: Int, :Int, :Int) = (score = 10, 1, 2, 3);
+/* both produce (1, score = 10, 2, 3) */
+
+bad1: (:Int, score: Int, :Int, :Int) = (1, 2, score = 10, 3);
+bad2: (:Int, score: Int, :Int, :Int) = (1, 2, 3, score = 10);
+/* both rejected: 2 is consumed into score and replaced; final slot missing */
+```
+
+An early named value changes which slot later positional values select. A late named value changes its slot's value without undoing previous routing. No reservation pass or backtracking is introduced. Fixed tuple components have no implicit defaults; call defaults retain their separate declared-contract rules.
+
 ### Selected invalid call cases
 
 Each line below is an independent rejected example for the same op signature; assume a visible a: Int for the shorthand example:
