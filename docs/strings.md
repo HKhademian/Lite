@@ -34,7 +34,7 @@ The join applies to literal tokens, not arbitrary adjacent expressions. Use an e
 message := prefix + name;
 ```
 
-A semicolon separates expressions, so this is not one joined literal:
+A semicolon separates items, so these are two expression items, not one joined literal:
 
 ```text
 "Hello"; "world"
