@@ -2,6 +2,8 @@
 
 Status: **single receiverless then using the owning context, uniform source-less `Unit` item, zero-iteration placeholders, metadata-only state, and typed zero-initialized .value selected 2026-10-19; tagged return, explicit targeted break/continue, and then execution selected. Remaining open: full loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
+Supporting synthesis: normative rules are owned by [loops](loops.md) for forms and metadata surface, [loop value](loop-value.md) for `.value`, [loop completion](loop-completion.md) for `then` and targeted exits, and [last item](loop-last-item.md) for completion-time item/index state. This page combines them for comparison; if wording conflicts, the owners win.
+
 ## Current syntax direction
 
 ```text

@@ -2,6 +2,8 @@
 
 Status: **updated to the one-item-name, typed .value, and tagged-return completion rules, 2026-10-20; design examples, not compiler-verified execution**. As, continue value, bare/value break, explicitly targeted break/continue, tagged return, and normal result rules are selected; adapter names and full inference remain open. Print, format_total, parse_int, and other helpers stand for separately defined operations.
 
+Examples page: normative rules are owned by [loops](loops.md), [loop value](loop-value.md), [loop completion](loop-completion.md), and [loop type inference](loop-type-inference.md). Examples here illustrate those rules and do not add competing conditions.
+
 ## Full worked loop
 
 Assume numbers has Int elements and format_total maps Int to String.
