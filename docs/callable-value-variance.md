@@ -1,6 +1,6 @@
 # Safe callable input and result adaptation
 
-Status: **selected 2026-10-25 for ordinary value callables, including required and omission-capable plain-union input views; design-only, not compiler/runtime verification**.
+Status: **selected 2026-10-25 for ordinary value adaptation and basic var T invariance, including required and omission-capable ordinary input views; design-only, not compiler/runtime verification**.
 
 ## Direct assignment is valid
 
@@ -105,13 +105,66 @@ Evaluate reached supplied expressions in their ordinary written order. For an or
 
 This defines observable behavior without selecting an internal absent-input sentinel, parameter-slot layout, or ABI. A possible non-public unvalued representation remains a future discussion; no public undefined, Unit alternative, nullable input, or uninitialized value is introduced.
 
+## Var parameters keep their value type
+
+Selected on **2026-10-25**: when converting callable signatures, a basic var T parameter keeps the same resolved value type T and the same read/write caller-location contract. Ordinary value-input contravariance does not apply through that grant. Because var T permits both reads and writes, both directions of compatibility are required; the result is invariance in T.
+
+```text
+replace_any := fn(target: var (Int | String)): Unit {
+    target = "ready";
+}
+
+int_view: fn(target: var Int): Unit = replace_any;
+/* rejected: the implementation could write String through an Int-only contract */
+```
+
+The opposite direction also fails:
+
+```text
+replace_int := fn(target: var Int): Unit {
+    target = 1;
+}
+
+union_view: fn(target: var (Int | String)): Unit = replace_int;
+/* rejected: this view could admit a String read, but the implementation requires Int */
+```
+
+An implementation's current body being write-only does not erase its declared read contract. Output-only access and future single/multi-write parameter modes remain separate; do not infer them from the body.
+
+Equal resolved types are sufficient for this dimension, including transparent aliases and normalized unions written in different orders. This is not a requirement for identical spelling. Public labels remain independently checked or explicitly converted:
+
+```text
+int_view: fn(target: var Int): Unit = replace_int; /* valid */
+renamed: fn(item: var Int): Unit = replace_int;   /* explicit label conversion */
+
+var count: Int = 0;
+renamed(item = var count);
+/* count is 1; the implementation still names its caller-location parameter target */
+```
+
+The written destination type can rename the public slot, but cannot change its read/write value type T or the granted permissions. It does not supply a var grant: callers still provide an initialized compatible caller location with the explicit var argument form. Do not repair an incompatible grant by copying into a differently typed temporary, discarding writes, writing back later, or introducing an undeclared runtime failure. Ordinary value adapters are not caller-location replacement adapters.
+
+### Individual argument flow checks remain unchanged
+
+```text
+var value: Int | String = 7;
+replace_int(var value);
+/* valid: value currently reads as Int, and its declared storage accepts Int writes */
+```
+
+This is argument admission under the existing entry-time flow/access checks, not conversion from a callable requiring var (Int | String) into one requiring var Int. The caller location's declared write type may be broader than the parameter's accepted read/write type when those existing checks justify it. Callable type invariance does not require the caller storage declaration itself to be exactly Int, and does not discard current read refinements or declared write capacity.
+
+For mixed signatures, this rule applies to each basic var T position. Ordinary value positions and ordinary results retain their separately selected safe adaptation rules, with label/omission/error contracts still enforced. No new variance is selected for mut or more general split read/write access contracts, reference syntax, lifetimes, or alias enforcement.
+
+Rust likewise lists &'a mut T as invariant in T, providing a related read/write precedent. Source checked 2026-10-25: [variance of built-in types](https://doc.rust-lang.org/reference/subtyping.html#variance). This comparison does not select Rust-style references, lifetime syntax, or ownership rules for this language.
+
 ## Labels, defaults, and access remain separate
 
 Normal callable transfers still check public labels. An explicitly typed receiving declaration can bypass label mismatch under the selected [explicit label-conversion rule](tuple-label-conversions.md#ordinary-transfers-check-labels). That label permission may be composed with a valid safe value adaptation; it cannot reverse the input/result compatibility directions or justify byte reinterpretation. Implementation-local receiver names remain independent of caller-visible labels.
 
 Safe ordinary input adaptation now applies to required and omission-capable views under the implementation-promise rule above. Supplied inputs are checked contravariantly; allowed omission must be promised by the source contract and must reach its selected implementation unchanged. A narrower public input type does not revalidate an already established implementation default against that narrower type. Required views can still hide omission, and ordinary result widening retains its selected rule.
 
-No new type widening/narrowing is authorized through var/mut grants by this ordinary-value rule. Their existing read/write, initialization, caller-location, and permission compatibility checks remain necessary. Variance for writable inputs, changing error/effect contracts, Result type composition, variadics/overloads, generic constraints, unrelated callable shape changes, and recursive inference remain separate. No implicit returned-error extraction or new escaping recoverable-error contract is introduced.
+No new type widening/narrowing is authorized through var/mut grants by this ordinary-value rule. Their existing read/write, initialization, caller-location, and permission compatibility checks remain necessary. Basic var T callable parameters are now invariant as specified above, while individual argument-flow checks remain unchanged. Variance for mut or more general split access contracts, changing error/effect contracts, Result type composition, variadics/overloads, generic constraints, unrelated callable shape changes, and recursive inference remain separate. No implicit returned-error extraction or new escaping recoverable-error contract is introduced.
 
 Captures, reference syntax, memory safety, ownership/lifetimes, alias enforcement, resource/copy eligibility, and concrete calling convention remain deferred. This selection is a static semantic rule, not an implemented compiler feature or a claim of zero overhead.
 

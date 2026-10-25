@@ -20,7 +20,7 @@ The [LiteLang current design specification](spec/README.md) provides stable area
 | Loops | [Loops](loops.md) | [Loop value](loop-value.md), [loop type inference](loop-type-inference.md), [loop completion](loop-completion.md), [last item](loop-last-item.md) |
 | Recovery and errors | [Result and errors](result-and-errors.md) | [Expression recovery](expression-recovery.md), [recovery and fallbacks](recovery-and-fallbacks.md), [checked fault policy](checked-fault-policy.md), [finally](finally.md) |
 | Collections and sequences | [Collections and iterators](collections-and-iterators.md) | [Collection abstractions](collection-abstractions.md), [operation contracts](collection-operation-contracts.md), [sequence types](sequence-types.md), [indexed sequence contract](indexed-sequence-contract.md) |
-| Functions and calls | [Functions](functions.md) | [Named arguments and tuples](named-arguments-and-tuples.md), [callable input packs](callable-input-packs.md), [union parameter defaults](union-parameter-defaults.md) |
+| Functions and calls | [Functions](functions.md) | [Named arguments and tuples](named-arguments-and-tuples.md), [callable input packs](callable-input-packs.md), [safe callable compatibility and var invariance](callable-value-variance.md), [union parameter defaults](union-parameter-defaults.md) |
 | Modules and packages | [Modules and packages](modules-and-packages.md) | — |
 | Naming and versions | [Naming and versioning](versioning-and-naming.md) | — |
 | Tooling and formatter | [Tooling and learning](tooling-and-learning.md) | [Lexical structure](lexical-structure.md) |

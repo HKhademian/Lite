@@ -76,7 +76,7 @@ required(3);  /* 30 */
 required();   /* rejected: this public contract requires n */
 ```
 
-The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete all callable conversions. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately; type-changing omission-capable inputs, writable grants, captures, and representation remain separate.
+The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete all callable conversions. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately; narrowed ordinary omission-capable views preserve implementation-owned default promises. Basic var T inputs are invariant under [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type); mut/other access adaptation, captures, and representation remain separate.
 
 Likewise, in the existing contextual example:
 

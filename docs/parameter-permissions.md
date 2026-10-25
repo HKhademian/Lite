@@ -2,9 +2,13 @@
 
 Status: **selected permissions, updated 2026-10-19**. Type-side mut, temporary caller-location var parameters, and explicit mut/var call grants are selected. Local-only var parameter headers are retired in favor of local declarations. Combined mut/var type grammar remains open.
 
+## Callable var parameter invariance
+
+Selected 2026-10-25: basic var T parameter types remain invariant when converting callable signatures. An implementation accepting readable/writable Int | String cannot fit a public var Int slot because it may write String; an Int-only implementation cannot fit a public var (Int | String) slot because the caller may supply a String read. Equal resolved T/access and existing compatibility checks are required. Explicit typed label conversion can rename the public slot but cannot change T or fabricate access. Existing per-call flow, initialization, and write-capacity checks remain unchanged. See [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type).
+
 ## Three distinct targets
 
-A header can describe permission to change the local parameter binding, permission to update held data, or permission to replace a caller-supplied location. These are different targets. Ordinary parameter copy/move/borrow semantics remain a separate question.
+A header can describe permission to change the local parameter binding, permission to update held data, or permission to replace a caller-supplied location. These are different targets. Ordinary value inputs follow the selected copy default; future explicit reference/move/borrow modes remain separate.
 
 ## Ordinary parameter
 

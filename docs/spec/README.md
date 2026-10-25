@@ -78,6 +78,7 @@ Selected:
 - Function types and literals use `fn`; ordinary parameters are written `name: Type`.
 - A function type is its signature without a body; function literals are ordinary value expressions.
 - Access qualifiers follow the colon: `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement.
+- Basic `var T` parameter types stay invariant when converting callable signatures: reading and writing require the same resolved `T`. Explicit public-label conversion cannot change that value/access contract. Individual `var` argument admission still uses current read facts and accepted writes; see [callable var invariance](../callable-value-variance.md#var-parameters-keep-their-value-type).
 - A zero-initialized callable is callable, performs no user-body work, and returns `zero(R)` after ordinary argument evaluation and required cleanup.
 - Argument omission is rejected unless an applicable explicitly declared default supplies a valid value. Supplied arguments take precedence.
 - Call evaluation prepares the callee, supplied arguments, then missing defaults. An exit stops later preparation.

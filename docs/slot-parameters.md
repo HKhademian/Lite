@@ -73,6 +73,10 @@ put_b(var parent.field);
 
 The argument's common contract reads A/B/C and accepts B, exactly matching the proposed parameter. Its source-parent alternatives and ownership restrictions still exist behind that contract.
 
+## Basic var T callable signature conversion
+
+Selected 2026-10-25: a callable's basic var T parameter is invariant in the resolved value type T, because it promises both readable T and writes of T through the caller location. Converting fn(target: var (Int | String)): Unit to fn(target: var Int): Unit can expose String writes; the reverse can expose String reads to an Int implementation. Both are rejected, even at an explicitly typed conversion site. Public-label-only conversion remains possible with T/access unchanged. This does not change individual argument flow admission: Int | String caller storage currently reading Int can still supply var Int when the existing read/write checks below hold. See [var T callable invariance](callable-value-variance.md#var-parameters-keep-their-value-type).
+
 ## Compatibility in both directions
 
 For the current exact-member model, recommend checking normalized contracts as follows:
