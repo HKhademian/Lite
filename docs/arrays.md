@@ -1,12 +1,12 @@
 # Fixed-length owning arrays
 
-Status: **fixed-array [T; N] source examples, known-size literal inference, and fixed-array/fixed-tuple spread construction selected in the 2026-10-24 discussion**. Runtime-length arrays support variadic tails; their type spelling, ownership, allocation, ABI, and full construction grammar remain open. Array<T, N>/Array<T> remain schematic generic descriptions, not a second selected generic syntax. See [tuple and array shapes](tuple-array-shapes.md).
+Status: **fixed-array [T; N] source examples, known-size literal inference, and fixed-array/fixed-tuple spread construction selected in the 2026-10-24 discussion**. The 2026-10-25 storage contract selects header-free inline layout equal to the corresponding homogeneous unnamed tuple. Runtime-length arrays support variadic tails; their type spelling, ownership, allocation, ABI, and full construction grammar remain open. Array<T, N>/Array<T> remain schematic generic descriptions, not a second selected generic syntax. See [tuple and array shapes](tuple-array-shapes.md).
 
 ## Compile-time size
 
 The angle brackets in examples such as `Array<Float, 3>` are [temporary generic notation](generic-notation.md). Float names the intended element type; 3 names the intended static extent. Their joint spelling does not select a generic parameter mechanism or const-generic syntax. The fixed-array surface used here is [T; N]; runtime-array spelling remains open.
 
-The proposed owning representation of [T; N] has exactly N contiguous inline T slots. N is part of the static type, so lengths 3 and 4 are distinct array types. For ordinary nonzero-sized elements, indexed addressing follows the element stride; zero-sized elements require a representation rule. This layout proposal does not select stack placement or universal copyability.
+The selected representation of [T; N] has exactly N contiguous inline T positions and the same size, alignment, and corresponding offsets as an unnamed fixed tuple of N components of T. It adds no runtime length field, header, tag, wrapper, indirection, or allocation. N is part of the static type, so lengths 3 and 4 remain distinct array types. Ordinary nonzero-sized elements use their normal stride; zero-sized elements keep N semantic positions without element payload bytes. Element-owned metadata remains part of T. This layout contract does not select stack placement, universal copyability, array/tuple type identity, arbitrary reinterpretation, or an identical ABI. See [fixed-array storage](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
 
 ```text
 point: [Float; 3] = [1.0, 2.0, 3.0];
@@ -20,7 +20,11 @@ An array field contributes its inline elements to a containing record, consisten
 
 Known-size nonempty heterogeneous literals infer one homogeneous union element type: [1, "tea", true] has [Int | String | Bool; 3] without a more specific expected element contract. Each index has that union type, while the extent remains three. Collecting these values into a named rest segment retains the known extent in the concrete construction; the general (...rest: T) tuple contract alone states no exact length. See [union inference and tail extents](tuple-array-shapes.md#union-element-inference-and-known-construction-extents).
 
-A known extent zero or one also determines tuple expansion: (...arr0) for [Int; 0] yields Unit, and (...arr1) for [Int; 1] yields a fixed singleton (:Int,). Explicit (...rest = arr0) and (...rest = arr1) instead retain a tail-bearing tuple with an empty or one-element array. Neither declared tail collapses to Unit, a scalar, or the other tuple shape. See [zero/singleton construction examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+A known extent zero or one also determines tuple expansion: (...arr0) for [Int; 0] yields Unit, and (...arr1) for [Int; 1] yields a fixed singleton (:Int,). Explicit (...rest = arr0) and (...rest = arr1) instead retain a tail-bearing tuple with an empty or one-element array. Neither stored/copied declared tail collapses to Unit, a scalar, or the other tuple shape. Explicitly unpacking a known zero/one tail instead emits zero/one items and reconstructs under its destination. See [zero/singleton construction examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+
+## Zero-sized elements retain their count
+
+[Unit; 5] has five valid positions and one possible initialized element sequence, while [(), (), ()] infers [Unit; 3]. Their element payload occupies zero bytes, and their counts are static type information rather than stored length fields. [Int; 0] likewise has no element payload but keeps its array contract; equal storage does not make it Unit. Iteration count, bounds, and expression effects remain observable. A runtime-sized Unit array still needs runtime count information in its container, with its exact representation open. See [zero storage and shape](unit.md#zero-storage-does-not-erase-shape).
 
 ## Literal numeric dot access selected
 
@@ -33,7 +37,7 @@ x.2;       /* valid Int element */
 x.3;       /* rejected: outside the fixed extent */
 ```
 
-This gives fixed arrays the same literal positional access as homogeneous fixed tuples, without selecting array/tuple type identity, implicit conversion, or identical ownership/ABI. A dot followed by an identifier still selects that literal member name: arr.ind does not substitute a variable or constant named ind. Computed indexing uses arr[ind] under array bounds rules. Dot access for runtime-sized arrays or additional extent-refinement contracts is not selected here.
+This gives fixed arrays the same literal positional access as homogeneous fixed tuples, without selecting array/tuple type identity, implicit conversion, or identical ownership/ABI. A dot followed by an identifier still selects that literal member name: arr.ind does not substitute a variable or constant named ind. Computed indexing uses arr[ind] under array bounds rules. Numeric dot access is available only for compile-time-sized arrays [T; N]; runtime-sized arrays use bracket indexing. Additional extent-refinement contracts remain open.
 
 The source is evaluated once per access expression. This spelling grants no new writes or caller-location authority; initialization, visibility, ownership, and existing access rules still apply. A permitted var grant through arr.0 refers to the same location as one through arr[0], so the two spellings cannot disguise duplicate access to that element. See [tuple positional access](tuple-entries-and-access.md#fixed-array-dot-positions).
 
@@ -54,6 +58,8 @@ samples: Array<Int> = generate_array(count, fn (i: Int): Int { i });
 ```
 
 The generator name, generic inference, allocation/failure policy, and callback construction API are proposals. The aim is to allocate an appropriate region and directly construct each required element, with cleanup for a partially completed fill if needed. No preliminary zero pass is inherently required.
+
+A runtime-length array needs available count information even when T is Unit and its elements occupy zero bytes. That count belongs to the array/container, not to T; the exact descriptor layout is not selected. Knowing the current count does not change a runtime representation into the fixed inline [T; N] representation.
 
 Avoid calling a borrowed slice an owning runtime array merely because both have runtime lengths. Ownership determines who keeps storage alive and releases it.
 

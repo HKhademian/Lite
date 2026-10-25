@@ -1,6 +1,6 @@
 # Tuple types, array tails, and fixed-size inference
 
-Status: **selected design direction, 2026-10-24; no compiler, parser, runtime, or performance verification**. Type construction uses label overriding, callable and ordinary tuple schemas support homogeneous array tails, and statically sized fresh bracket literals infer fixed arrays. This supersedes the earlier unconditional growable-List literal default. Complete recursive syntax, ownership, runtime-array type spelling, and some routing details remain open.
+Status: **selected design direction, 2026-10-24; no compiler, parser, runtime, or performance verification**. Type construction uses label overriding, callable and ordinary tuple schemas support homogeneous array tails, and statically sized fresh bracket literals infer fixed arrays. This supersedes the earlier unconditional growable-List literal default. The 2026-10-25 revision makes expression unpacking emit logical items, preserves fixed labels, and separates shape from the selected fixed-array/tuple storage equality. Complete recursive syntax, ownership, runtime-array type spelling, and some routing details remain open.
 
 ## Type spread constructs an input contract
 
@@ -281,6 +281,12 @@ value: (rest: Int, ...numbers: Int) = (rest = 10, ...items);
 The explicit destination is the reference contract. It names the fixed member rest and the array tail numbers, so no default tail label is generated and the collision is removed. Preserve the ordinary coverage, type, label-routing, permission, and source-evaluation requirements; an explicit schema does not bypass those checks.
 
 This is a collision of member declarations during inference, not an ordinary contribution replacing a value in an established fixed slot. Existing fixed-component append-or-replace rules are unchanged. Compare member labels rather than lexical variable names: a positional value expression named rest does not itself declare a fixed member named rest. Likewise, rest remains usable as an ordinary label when no default-tail collision occurs. Other tail-label collision/merge cases and multiple declared rest segments remain separate.
+
+### Storage equality does not erase shape
+
+The selected [fixed-array layout](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage) equals the corresponding homogeneous unnamed fixed tuple, without an array-specific header, runtime length field, or indirection. This is a storage guarantee, not type identity, an ABI choice, or a promise of free repacking. Element representation and normal copy/access rules remain.
+
+A Unit value is still one emitted item. [Unit; 5] has five static positions and zero element bytes, while (...rest: ()) can hold any count of Unit elements and (...rest: [Int; 0]) any count of empty-array elements. Those element types do not declare empty tails. Fixed counts belong to static types; runtime counts belong to their containers. See [zero storage and semantic shape](unit.md#zero-storage-does-not-erase-shape).
 
 ### Zero and singleton fixed expansion versus declared tails
 

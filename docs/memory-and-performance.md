@@ -1,6 +1,6 @@
 # Memory and performance
 
-Status: **performance goals established; memory model and compiler backend unchosen**.
+Status: **performance goals and selected tuple/fixed-array storage contracts documented; complete memory model, compiler backend, and ABI unchosen**.
 
 ## Purpose
 
@@ -55,6 +55,24 @@ An actual runtime choice between T and its singleton, such as a union containing
 
 Equal size, alignment, and payload layout do not alone select identical parameter/return ABI or permit arbitrary foreign reinterpretation. Those are separate contracts. As a reference precedent, Rust documents tuple layout through its default representation, while specially marked transparent wrappers can share their field's layout and ABI. Do not attribute that stronger transparent-wrapper guarantee to all Rust singleton tuples. Sources: [Rust tuple layout](https://doc.rust-lang.org/reference/type-layout.html#tuple-layout), [transparent representation](https://doc.rust-lang.org/reference/type-layout.html#the-transparent-representation).
 
+## Fixed arrays share homogeneous tuple storage
+
+Selected by the user, **2026-10-25**: a compile-time-sized array [T; N] has the same storage size, alignment, and corresponding element offsets as an unnamed fixed tuple of N components of that same concrete storable T. Its elements are inline, in order, with normal element layout. There is no array-specific runtime length field, header, tag, wrapper, indirection, or allocation. N is static type information. This selects representation, not stack placement or universal copyability.
+
+For nonzero-sized T, addressing uses its normal element stride. A zero-sized T still has N semantic positions without requiring N payload bytes. [T; 0] has no element payload; [T; 1] shares its sole element's layout at offset zero. Their source-level array contracts remain distinct from Unit, a scalar, and corresponding tuple types. The exact alignment chosen for Unit/empty products and foreign calling conventions remain separate; the selected array/tuple equality must respect that choice.
+
+Element metadata is still part of T. For example, an array of a union stores the union's selected member-identification information for each element where required; header-free array layout does not erase union tags. An ordinary array field contributes its inline elements to its containing value. Runtime-length arrays instead need available runtime count information; their exact owner/view descriptor, allocation, and ABI remain open. Merely observing a runtime count does not turn that representation into an inline [T; N].
+
+Equal layouts do not identify array and tuple types, grant aliasing or arbitrary reinterpretation, select an identical call ABI, or make every conversion/copy free. Compatible explicit unpacking can reconstruct another shape under its own evaluation, type, access, and copy contracts. Fixed arrays retain computed indexing; tuples retain their static positional-access rules. See [arrays](arrays.md), [logical unpacking](tuple-unpacking.md), and [Unit cardinality](unit.md#zero-storage-does-not-erase-shape).
+
+## Zero-sized elements and enclosing runtime information
+
+Unit itself has one value and zero value bytes. It never stores an element count, runtime shape, or discriminator. [Unit; 5] has five positions but only one possible initialized element sequence; [(), (), ()] infers [Unit; 3]. Both arrays need zero element payload bytes and no runtime length field, because their counts belong to their static types. A bounds-valid read still produces Unit, and traversal still visits the declared number of positions.
+
+A runtime-sized array of Unit can distinguish length zero, three, or five despite having zero element payload. Its runtime count belongs to the enclosing array/container, not to the Unit elements. Likewise, a union with zero-sized alternatives retains its union-level member-identification contract. A general rest-only tuple type (...rest: ()) admits different counts of Unit elements; it is not Unit or a promise of an empty tail.
+
+Zero storage never licenses erasing semantic slots, labels, counts, evaluation, failure, or required copy/cleanup effects. Assuming print returns Unit, [print("A"), print("B")] must evaluate both calls once in written order even though its resulting [Unit; 2] element payload occupies zero bytes. No universal address-uniqueness rule for zero-sized positions or concrete runtime-array descriptor is selected here.
+
 ## Tuple labels describe positions without changing storage
 
 Selected rationale and representation contract, 2026-10-23: a tuple is an ordered product of component slots. Every slot has an implicit positional accessor; a label gives that position an additional semantic name. Labels belong to the static contract and add no per-value label strings, name dictionary, tag, wrapper, or indirection.
@@ -97,7 +115,7 @@ The general language rule selected on **2026-10-25** gives ordinary reads/initia
 
 The selected mut copy := existing_record rule creates a shallow mutable record copy. All inline nested records belong to the outer value layout and are copied with it; reference fields preserve their targets and existing access permissions. The ordinary record argument/simple fixed temporary rule now uses the same shallow mapping where record and reference-field copy contracts are already valid; see [copyable reference-bearing records](parameter-values-and-slots.md#copyable-reference-bearing-record-values-selected). No referenced graph is cloned, and no universal unchecked memcpy contract for managed resources is selected. The user explicitly defers reference syntax and memory safety, including ownership, lifetimes, alias enforcement, capability copyability, resource cleanup, and the implementation strategy. This mapping is conditional on valid contracts, not a memory-safety implementation or a measured performance result. See [local shadowing and copies](local-shadowing-and-copies.md).
 
-The design must still decide general assignment and ordinary parameter move/copy/share/borrow rules for nontrivial values, copy eligibility, and cleanup. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
+The copy default still needs type-specific eligibility and effects for nontrivial values, explicit ownership/reference alternatives, and cleanup contracts. "The compiler infers it" is not enough to define aliasing, lifetime, and destruction behavior.
 
 Variadic rest has selected [access and retention boundaries](tuple-array-shapes.md#rest-access-storage-and-retention): readable array access by default, no mandatory heap allocation, live backing storage for borrowed uses, and explicit copy/ownership operations when independent owned storage is needed. Retaining rest needs lasting ownership or a proven lifetime; there is no implicit copy/heap-promotion repair for invalid escape. Direct source reuse and temporary/gathered call storage are possible implementations only when they preserve the observable contract. Element ownership, mutation observability, allocation/failure policy, and general lifetime machinery remain open; no zero-copy or allocation-free performance claim follows.
 
@@ -125,7 +143,7 @@ See [indexed-sequence contract](indexed-sequence-contract.md#contract-versus-sto
 
 The [sequence-family review](sequence-types.md) distinguishes compile-time inline arrays, runtime-sized fixed array owners, growable list owners, and borrowed slice views. Fixed length does not mandate stack placement. A runtime-sized owner may keep its descriptor inline while managing separately allocated elements. A slice views live initialized elements without an element allocation or copy.
 
-These storage representations remain proposals. Fresh statically sized bracket literals now infer fixed arrays, superseding the earlier unconditional List default; runtime-array storage and type spelling remain open. Copying an owning descriptor cannot establish two independent allocation owners by itself; list move/clone/share rules and slice lifetime/invalidation still need contracts. Explicit spreads construct compatible shapes without guaranteeing shared layout or zero copying. See [tuple/array shapes](tuple-array-shapes.md).
+The header-free inline fixed-array layout above is now selected. Runtime-array owners, growable lists, and view descriptors retain their separate proposal status. Fresh statically sized bracket literals infer fixed arrays, superseding the earlier unconditional List default; runtime-array storage and type spelling remain open. Copying an owning descriptor cannot establish two independent allocation owners by itself; list move/clone/share rules and slice lifetime/invalidation still need contracts. Explicit spreads construct compatible shapes; the selected fixed-array/homogeneous-tuple layout equality does not itself guarantee zero copying. See [tuple/array shapes](tuple-array-shapes.md).
 
 ## Semantic initialization versus physical writes
 

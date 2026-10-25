@@ -1,6 +1,6 @@
 # Unit
 
-Status: **one value, `Unit`, its type/expression spellings, and its zero mapping selected; zero-sized physical representation selected by the user, 2026-10-22; empty tuple identity and () as equivalent type/value syntax selected 2026-10-22; broader name-resolution and ABI details remain open**.
+Status: **one value, `Unit`, its type/expression spellings, and its zero mapping selected; zero-sized physical representation selected by the user, 2026-10-22; empty tuple identity and () as equivalent type/value syntax selected 2026-10-22; zero-storage shape/cardinality boundaries clarified 2026-10-25; broader name-resolution and ABI details remain open**.
 
 ## Purpose
 
@@ -65,6 +65,53 @@ also_done: () = Unit;
 ```
 
 The [cross-context review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
+
+## Zero storage does not erase shape
+
+Selected clarification, **2026-10-25**: Unit stores no per-instance information. Cardinality and product shape belong to static types or enclosing containers. Unit's zero-byte representation does not remove a real Unit-valued component:
+
+```text
+with_unit := (10, (), 20);
+without_unit := (10, 20);
+with_unit.1;     /* Unit: the second of three components */
+without_unit.1;  /* Int: 20, the second of two components */
+
+expanded := (10, ...(), 20);
+/* two components: explicit spread emits the empty tuple's zero items */
+```
+
+Thus the schematic products (A, (), C) and (A, C) have different types and arities. An explicit ...() contributes no components, while an ordinary () entry contributes one Unit value. Nested zero-sized values are not recursively erased. Even a zero-item spread evaluates its operand and preserves required effects.
+
+### A Unit element type does not declare an empty tail
+
+```text
+with_tail: (:Int, ...rest: ()) = (10, (), ());
+without_tail := (10,);
+/* with_tail.rest contains two Unit elements; without_tail has no tail */
+```
+
+The type (...rest: ()) means a declared array tail accepting zero or more Unit elements. It is not the zero-component tuple. Similarly, (...rest: [Int; 0]) accepts zero or more elements each of which is an empty Int array; its element type does not require the outer tail to be empty. A fixed prefix plus either tail is not identified with the prefix-only tuple. Copy retains the stored declaration, even for a known empty tail; explicit logical unpacking may reconstruct a different shape under its destination.
+
+### Fixed Unit arrays keep their static counts
+
+```text
+five: [Unit; 5] = [(), (), (), (), ()];
+three := [(), (), ()];  /* [Unit; 3] */
+three.2;                /* Unit; statically valid */
+three.3;                /* rejected: outside the fixed extent */
+
+empty_ints: [Int; 0] = [];
+done: Unit = ();
+/* zero element/value bytes in each; distinct static contracts */
+```
+
+[Unit; 5] has five semantic positions and one possible initialized element sequence. Its count five belongs to its static type; it needs neither element payload bytes nor a runtime count field. The literal [(), (), ()] similarly has three positions, not zero. [Int; 0] retains its array element type and indexing contract despite having no elements. Neither equal storage nor having one possible initialized value identifies these arrays with Unit or with each other.
+
+A runtime-sized array of Unit can have different observable lengths and traversal counts. Its runtime count must be available from the array/container; Unit does not gain hidden information. The same applies to a runtime-sized Unit tail accessed through value.rest. An established fixed [Unit; N] backing can retain its static count, but a general (...rest: ()) schema alone states no exact N. A length learned only at runtime does not become a compile-time extent.
+
+A union discriminator likewise belongs to the union representation, even when an alternative has no payload. Statically known type distinctions need no tag in each Unit value. Any future runtime-erased type facility must retain its own required information.
+
+Assuming print returns Unit, [print("A"), print("B")] still executes both calls once in written order and constructs a two-position Unit array. Zero-byte storage does not erase evaluation, failures, or required cleanup. See [fixed-array layout and runtime metadata](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).
 
 ## Empty declared tails are distinct
 

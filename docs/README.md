@@ -81,7 +81,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
 - [Sequence storage families](sequence-types.md): fixed-array inference for fresh known-size literals, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
-- [Arrays](arrays.md): [T; N] fixed extents, known-size literal/spread construction, runtime arrays for variadic tails, and open ownership/layout/type details.
+- [Arrays](arrays.md): [T; N] fixed extents, header-free inline layout, zero-sized element counts, literal/spread construction, runtime arrays for variadic tails, and open ownership/runtime representation details.
 - [Lists](lists.md): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
 - [Slices](slices.md): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
@@ -145,7 +145,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Type tests and narrowing](type-tests-and-narrowing.md): existing-name `if person: User` and concise negation, selected condition precedence, direct union targets, warnings for provably constant tests, explicit bindings, selected remaining types in later match arms, else/else-if chains, and later or operands, successful or joins, read types after direct assignment, stable existing-binding refinement after early exits, guard limits, stability, and open broader flow rules.
 - [Never and unreachable flow](never-and-unreachable-flow.md): warnings and internal Never reads for exhausted conditional branches, preserved noncontributing/Unit distinctions, and future public Never, Never | T, and Never & T exploration.
 - [Union type patterns](union-patterns.md): type-based narrowing of success and error alternatives, plain-union targets, branch-local bindings, and intact Result distinctions.
-- [Unit](unit.md): successful completion without useful data; one zero-component value/type spelled Unit or (), selected zero mapping, and selected zero-sized physical representation.
+- [Unit](unit.md): one zero-component value/type spelled Unit or (), zero mapping and storage, preserved Unit-valued positions, fixed Unit arrays, and runtime counts owned by enclosing containers.
 - [Option](option.md): explicit absence without universal nullability.
 - [Result and errors](result-and-errors.md): declared typed failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and stored outcomes.
 - [Throw as an error return](error-return-sugar.md): proposed throw error shorthand for return .err(error), declared error coverage, function/closure boundaries, and unchanged caller handling.
@@ -201,7 +201,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 ## Project and implementation direction
 
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
-- [Memory and performance](memory-and-performance.md): constraints, tradeoffs, and unchosen memory semantics.
+- [Memory and performance](memory-and-performance.md): selected singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, performance goals, and open memory semantics.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.
 - [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteScript contract, and remaining open implementation details.
 - [Language design review handoff](language-design-review-handoff.md): historical review log and completed plan; current rules are in the ledger and concept pages.

@@ -565,6 +565,8 @@ unit_value := "Unit" | empty_tuple_value
 
 `Unit` is the built-in single-inhabitant type and also names its unique value. `()` is the equivalent zero-component tuple type/value spelling. The identifier `Unit` is recognized in both type and value positions; this narrow built-in rule does not generalize to type-name constructors or value/type namespace conversion. Whether built-in names are reserved words and how they interact with lexical shadowing remain part of the open reserved-word and name-resolution work. See [Unit](unit.md).
 
+An ordinary () entry is one Unit value; only explicit ...() emits its zero components. Zero-sized elements never disappear from tuple/array arity. In a type, ...rest: () declares zero or more Unit elements, while ...rest: [Int; 0] declares zero or more empty-array elements; neither means an absent tail. Fixed [Unit; N] counts belong to static types, while runtime-sized containers retain their own count information. This is a semantic/storage clarification, not another tuple normalization or ellipsis production. See [zero storage and shape](unit.md#zero-storage-does-not-erase-shape).
+
 ## Fallible type templates
 
 ```text
