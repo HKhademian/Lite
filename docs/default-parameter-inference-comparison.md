@@ -74,7 +74,7 @@ make(count = 5);       /* valid: count is Int */
 make(count = "five");  /* rejected: String does not fit Int */
 ```
 
-Simple ordinary default receivers and their omitted-type inference are now selected. This does not complete default-header grammar, select parameter lookup/dependency rules, choose signature-versus-implementation placement, or introduce permission-bearing defaults.
+Simple ordinary default receivers and their omitted-type inference are now selected. Ordinary [earlier-parameter defaults](parameter-default-inference.md#defaults-may-read-earlier-parameters) were subsequently selected too: earlier ordinary inputs are visible, while self/later references are rejected independently of call arguments. This does not complete default-header grammar, general lexical/helper lookup or captures, access-aware dependencies, signature-versus-implementation placement, or permission-bearing defaults.
 
 Keep the [selected default evaluation order](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied arguments in written order, then missing defaults in declaration order before invocation. Keep runtime-expression defaults such as `default_b()`; Odin/Dart's constant restriction is a comparison point, not a reason to change that choice. Reference syntax, ownership, memory safety, and resources remain deferred.
 

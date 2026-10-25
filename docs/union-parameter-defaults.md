@@ -1,6 +1,6 @@
 # Argument omission requires declared defaults
 
-Status: **selected 2026-10-21, applying to all function argument types**. The user broadens the proposed union exception: argument omission is always rejected unless an applicable default is explicitly declared. This supersedes automatic zero argument defaults, including for Int and Unit. Default timing is selected on 2026-10-25; ordinary default-based type inference is now selected separately; complete grammar, lookup scope, and signature-versus-implementation placement remain separate.
+Status: **selected 2026-10-21, applying to all function argument types**. The user broadens the proposed union exception: argument omission is always rejected unless an applicable default is explicitly declared. This supersedes automatic zero argument defaults, including for Int and Unit. Default timing is selected on 2026-10-25; ordinary default-based type inference is now selected separately; earlier ordinary parameter dependencies are now selected; complete grammar, general lexical lookup/captures, access-aware dependencies, and signature-versus-implementation placement remain separate.
 
 ## Required arguments without defaults
 
@@ -34,7 +34,7 @@ Local variable initialization, record-field construction defaults, conditional n
 
 ## Remaining default-expression decisions
 
-Call-time default timing is selected: evaluate the callee, supplied expressions in source order, then only missing defaults in declared slot order before invocation. For the b, c, a, d signature with supplied d/c, execute new_d(), new_c(), default_b(), default_a(). See [default timing](evaluation-order.md#default-argument-evaluation-selected). Ordinary [parameter-default inference](parameter-default-inference.md) is selected. Complete syntax, access-aware expression eligibility and lookup/parameter-reference scope, recursive named-call grammar, and default placement in signatures versus implementations remain to be formalized. Core named-call routing and validation are already selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
+Call-time default timing is selected: evaluate the callee, supplied expressions in source order, then only missing defaults in declared slot order before invocation. For the b, c, a, d signature with supplied d/c, execute new_d(), new_c(), default_b(), default_a(). See [default timing](evaluation-order.md#default-argument-evaluation-selected). Ordinary [parameter-default inference](parameter-default-inference.md) is selected. Ordinary [earlier-parameter defaults](parameter-default-inference.md#defaults-may-read-earlier-parameters) are selected: read final prepared earlier inputs and reject self/later references regardless of call arguments. Complete syntax, access-aware expression eligibility/dependencies, general lexical lookup/captures, recursive named-call grammar, and default placement in signatures versus implementations remain to be formalized. Core named-call routing and validation are already selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
 
 ## Modern references
 
