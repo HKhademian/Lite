@@ -111,6 +111,19 @@ Labels still participate in structural tuple identity: identical ordered labels 
 
 Reference syntax, memory safety, alias enforcement, resource/copy eligibility, new ownership modes, general generic/overload inference, full recursive grammar, and optional stored-tuple semantics remain open or deferred under their existing contracts.
 
+## Future in-place memory-compatible casts
+
+Future discussion requested by the user on **2026-10-25**: explore explicit in-place type casting between memory-compatible layouts, including a nested pair plus Int and a flat triple of Int. The user's schematic shape example is retained here, not presented as validated cast/type grammar:
+
+```text
+((:Int, :Int), :Int)
+(:Int, :Int, :Int)
+```
+
+This is a candidate relation for a future explicit cast, not a newly guaranteed layout equivalence. Today these nested/flat shapes remain distinct: current explicit label conversion preserves component shape/order/types and does not flatten nested tuples. Ordinary transfers remain label-sensitive.
+
+The future discussion must define the cast spelling, what proves memory compatibility (including size, alignment, component offsets and representation), and what in-place casting means for the source value, access, lifetime/ownership, and ordinary copy semantics. No cast syntax, shared-storage view, permission upgrade, implicit flattening, scalar/tuple conversion, or changed callable arity/ABI is selected now. The user specifically requests this as future work; no implementation or conformance result is claimed.
+
 ## Related documents
 
 - [Named routing and stored tuple order](named-input-routing.md#5-inference-and-stored-tuples-selected-order-boundary)
