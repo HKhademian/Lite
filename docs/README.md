@@ -29,13 +29,12 @@ These are reading paths, not separate index entries; each linked document has on
 
 Examples use `text` fences because no LiteScript syntax highlighter exists in this project. They illustrate proposed language behavior rather than verified executable programs. `[...]` in grammar templates denotes optional syntax unless the document explicitly says otherwise.
 
-Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see [component grammar](named-input-routing.md#selected-tuple-type-component-grammar).
+Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see the component grammar in the named-input routing entry.
 
-Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See [temporary generic notation](generic-notation.md).
+Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See the temporary generic notation entry.
 
 ## Foundations
 
-- [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
 - [Optional leading separators](leading-separators.md): selected leading and/or on Boolean expressions/conditions, identity + on additive chains, or on initial/nested pattern alternatives, and | on nonempty unions; equivalent compact forms, unchanged effects/bindings, nonempty boundaries, selected earlier chain presentation, and conditional future leading-& support.
@@ -190,8 +189,6 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Memory and performance](memory-and-performance.md): constraints, tradeoffs, and unchosen memory semantics.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.
 - [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteScript contract, and remaining open implementation details.
-- [Grammar sketch](grammar-sketch.md): a deliberately incomplete grammar outline.
-- [Decisions and open questions](decisions-and-open-questions.md): the current design ledger.
 - [References](references.md): primary language documentation and relevant research.
 
 ## Suggested reading order
