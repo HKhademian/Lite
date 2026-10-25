@@ -76,7 +76,7 @@ required(3);  /* 30 */
 required();   /* rejected: this public contract requires n */
 ```
 
-The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete general callable conversion, variance, label adaptation, captures, or representation.
+The shown fn(n: Int): Int spelling has a required input. The default behind the value does not enable omission through that view. This selects the omission dimension of compatibility; it does not complete all callable conversions. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately; type-changing omission-capable inputs, writable grants, captures, and representation remain separate.
 
 Likewise, in the existing contextual example:
 
@@ -97,7 +97,7 @@ For otherwise compatible ordinary input/result/access contracts:
 - An omission-capable public contract requires valid omission handling from its implementation. Ordinary user implementations supply a valid declared default for every omittable input; the zero implementation satisfies omission under the separate no-execution rule below without an expression definition.
 - An ordinary user implementation lacking such a default cannot satisfy the omission-capable contract merely because its input type has a zero value. Reject that assignment or replacement; do not silently create a default or wrapper.
 
-The same obligation applies when passing, returning, or replacing callable values. A value known only through a required-input contract does not acquire public omission capability from a hidden implementation default. Broader conversions or explicit adapters remain separate.
+The same obligation applies when passing, returning, or replacing callable values. A value known only through a required-input contract does not acquire public omission capability from a hidden implementation default. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately without a required manual wrapper; changing an omission-capable input type at the same time remains a separate interaction.
 
 Different compatible implementation defaults can produce different values or perform different otherwise valid effects. Every default must still fit the established input type, failure contract, and ordinary access/initialization obligations. Changing a default from 1 to 2 preserves an inferred Int input; changing it to "two" can change an independently inferred input to String and therefore break compatibility with an Int contract. Implementation ownership does not authorize changing a fixed public type.
 
@@ -139,7 +139,7 @@ This supersedes the earlier claim that applicable user default expressions must 
 
 ## Remaining boundaries
 
-The public n?/?: omission marker supersedes the earlier = ... form. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission and explicit typed-declaration input-label conversion (ordinary transfers still check labels), lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
+The public n?/?: omission marker supersedes the earlier = ... form. Complete function-type/header grammar, recursive/variadic/pattern defaults, remaining callable compatibility beyond omission, explicit typed-declaration input-label conversion, and selected ordinary value adaptation (ordinary transfers still check labels), lexical lookup/captures, and permission-bearing defaults remain separate. No default-specific ABI, storage field, closure layout, implicit reference, or runtime missing-default fallback is selected. Compiler adaptation for separately selected safe callable value compatibility is not a public default definition or a required source wrapper. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
 
 Zero-callable omission is now selected above: no actual default definition or execution is required. Its internal omitted-input representation remains explicitly deferred, including the possible non-public unvalued state; no public undefined semantics are selected.
 

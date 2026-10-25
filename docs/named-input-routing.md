@@ -468,7 +468,7 @@ difference = (x, y) { x - y }
 difference(r = 2, l = 10); /* proposed public-label routing: result 8 */
 ```
 
-The local x/y names do not become public argument labels. The same holds for empty/partial contextual lambda headers. Stored callable public labels may be adapted positionally through an explicitly typed receiving declaration, without renaming implementation locals/defaults; ordinary callable transfers still check labels. Other callable compatibility, overloads, unions of different callable contracts, and full label-free signature grammar remains a separate choice; reject ambiguous routing rather than searching runtime values for names.
+The local x/y names do not become public argument labels. The same holds for empty/partial contextual lambda headers. Stored callable public labels may be adapted positionally through an explicitly typed receiving declaration, without renaming implementation locals/defaults; ordinary callable transfers still check labels. Supported ordinary [safe callable value adaptation](callable-value-variance.md) is selected separately; other callable compatibility, overloads, unions of different callable contracts, and full label-free signature grammar remain separate choices; reject ambiguous routing rather than searching runtime values for names.
 
 Nested expressions follow ordinary recursive evaluation. In op(c = outer_c(), a = nested(inner1(), inner2()), b = outer_b()), execution after evaluating op's callee is outer_c, nested's callee, inner1, inner2, nested's body, outer_b, then op's body, assuming normal completion throughout. Names at each call level route only that call's inputs.
 

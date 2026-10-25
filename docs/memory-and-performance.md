@@ -91,6 +91,10 @@ The user's schematic ...T1.T2.T3... describes the ordered component product. The
 
 There is no representation reason to group labels at the end: named and unnamed positions may interleave. The former prefix/suffix rule was a syntax/routing restriction, now superseded for tuple value construction. A permitted spread collision with an existing label targets that position; it does not store another copy of the name or move the slot. Source evaluation and ownership effects retain their separate contracts. See [tuple insertion](tuple-spread-and-rest.md#append-or-replace-by-label-selected) and [label-sensitive compatibility](named-input-routing.md#label-compatibility--selected).
 
+## Safe callable adaptation and representation
+
+The selected [safe callable value adaptation](callable-value-variance.md) permits direct assignment of a wider-accepting/narrower-returning ordinary implementation to a compatible required-input view. The compiler must preserve normal value admission and copies across any representation difference; a source-level forwarding wrapper is not required. This is distinct from label-only layout preservation and the future in-place cast topic. Adapter layout/allocation, ABI, and performance remain unspecified.
+
 ## Future in-place casting discussion
 
 The user requested [future in-place memory-compatible casts](tuple-label-conversions.md#future-in-place-memory-compatible-casts) on 2026-10-25, including a nested pair-plus-Int versus flat three-Int tuple shape. This is a future explicit cast topic. Current label conversion preserves shape, and ordinary transfers keep label checks; no layout equivalence, flattening, cast grammar, alias/source-validity rule, copy bypass, or new ABI is selected by this note.

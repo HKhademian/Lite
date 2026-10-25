@@ -125,6 +125,10 @@ Type declarations give union `|` higher precedence than binary fallible type `!`
 
 Selected 2026-10-25: an ordinary default can establish an omitted input type using the same static inference as a declaration. fn(count = 3, label = "item") establishes Int and String. Explicit annotations and established expected input types constrain the defaults; later calls do not widen the fixed input contract. Inspect helper result types without executing defaults. Invalid defaults remain invalid even when supplied calls skip their runtime evaluation. Insufficient evidence requires an annotation or established context. This applies with or without fn and enables existing known-input body-result inference. See [parameter-default inference](parameter-default-inference.md) for examples and the remaining grammar, access, dependency, and placement boundaries.
 
+## Callable value compatibility
+
+Selected 2026-10-25: for supported ordinary value inputs, a callable implementation may accept a wider type than a required public input view, while its result may be narrower than the public result. Thus fn(value: Int | String): Int can fit fn(value: Int): Int | String, with unchanged public labels. The compiler supplies any necessary safe argument/result representation adaptation; no user wrapper is required. This uses existing value admission rather than byte reinterpretation, does not re-infer the implementation signature, and leaves writable/defaulted-input interactions and general generic variance separate. See [safe callable value adaptation](callable-value-variance.md).
+
 ## Results and control flow
 
 A declaration initializer whose resolved branch-result T is a normalized multi-member plain union requires an explicit `else` or `?` if selection can normally finish without a contributor, because its default `zero(T)` cannot choose a member. Assignment and loop no-match paths are noncontributing and need no union member. Exhaustive chains construct the chosen member directly. A wider destination alone is not the criterion, and `then` requires a final `else` and a valid T before producing R. See [conditional union fallback](conditional-union-fallback.md).
