@@ -18,6 +18,10 @@ var name: mut Type = initializer;
 name = replacement;
 ```
 
+## Value transfers copy; no implicit references
+
+Selected on **2026-10-25**: ordinary binding initializers and assignment right-hand sides copy their evaluated values under the applicable valid copy contract. In b := a or b = a, later replacement of a does not retarget b. Location selection for the assignment is not a read of uninitialized payload bytes, and var/mut permissions and definite-initialization rules still apply. Already-declared reference fields preserve their shallow reference values and permitted access; this is not a deep graph clone. The compiler may elide unobservable physical copies, but cannot silently substitute a live reference, borrow, sharing mode, or move for an ordinary value transfer. Copy eligibility and future explicit reference/resource/safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+
 ## Boolean initializers with a leading separator
 
 A complete Boolean initializer may begin with one optional `and` or `or` without enclosing parentheses:
@@ -54,7 +58,7 @@ Assume the three inputs are Bool. This infers Bool and evaluates exactly like re
 
 The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](mutability.md).
 
-For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected. For explicitly typed declarations, only var remains before the name; writable data access is written in the annotation, as in user: mut User or var user: mut User. The old typed-prefix spelling mut user: User is superseded and rejected. Typed function parameters follow the same rule, as in fn(user: mut User). No additional function-level mutation marker is required; see [placement](mut-qualifier-placement.md) and [functions](functions.md).
+For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected. For explicitly typed declarations, `var` before the name still marks local binding reassignment; access qualifiers go after the colon, as in user: mut User, var user: mut User, or target: var User. The old typed-prefix spelling mut user: User is superseded and rejected. Typed parameters likewise place qualifiers after the colon, with both fn(user: mut User) for held-data mutation and fn(target: var T) for caller-storage replacement; fn(var target: T) is retired. No additional function-level mutation marker is required; see [placement](mut-qualifier-placement.md) and [functions](functions.md).
 
 ## Omitted, zero, and default initialization
 
