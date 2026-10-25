@@ -1,10 +1,10 @@
 # Division, remainder, and modulo
 
-Status: **operand-directed /, floor _/, remainder %, and modulo _% selected 2026-10-25; compact/spaced equivalence remains required, with identifier-boundary scanning unresolved**. This supersedes always-fractional / and the earlier // / %% floor spellings. Numeric representations, mixed operands, exact conversion/fault rules, and complete parsing remain open.
+Status: **contextual /, floor _/, remainder %, and modulo _% selected 2026-10-25; compact/spaced equivalence remains required, with identifier-boundary scanning unresolved**. Expected Float/Double division retains the fraction; expected Int division truncates, including the selected mixed literal forms. This supersedes the operand-only division rule and the earlier // / %% floor spellings. Complete numeric compatibility, representation, inference, fault rules, and parsing remain open.
 
 ## Selected family
 
-For established integer operands, / truncates toward zero and _/ rounds toward negative infinity. Remainder % pairs with truncating /; modulo _% pairs with floor _/.
+For an Int division result, / truncates toward zero; a Float or Double division result retains the fraction. Without an expected result type, the existing integer-only default truncates, while a decimal literal in either operand selects fractional division in the admitted literal examples. Integer _/ rounds toward negative infinity. Remainder % pairs with integer-result truncating /; modulo _% pairs with floor _/.
 
 ```text
 b: Int = -7;
@@ -16,13 +16,29 @@ remainder := b % c; /* -1 */
 modulo := b _% c;   /* 1 */
 ```
 
-Division on admitted fractional operand types remains fractional:
+## Contextual division selected
+
+An explicit result type constrains the division itself. All of these literal expressions retain the fraction:
 
 ```text
-ratio := 7.0 / 2.0; /* 3.5 */
+from_integers: Float = 2 / 7;    /* approximately 0.285714... */
+as_double: Double = 2 / 7;      /* approximately 0.285714... */
+left_decimal := 2.0 / 7;        /* fractional */
+right_decimal := 2 / 7.0;       /* fractional */
+both_decimal := 7.0 / 2.0;      /* 3.5 */
 ```
 
-The operation follows already established operand types. A destination annotation does not change Int / Int into fractional division; assignment compatibility/conversion is a separate contract. Expected-type inference for unresolved literals/type parameters, mixed operands, implicit conversions, and fractional representation remain open. See [arithmetic methods and the selected family](arithmetic-methods-and-division-revision.md).
+With an Int result context, all three supplied literal shapes truncate toward zero:
+
+```text
+from_integers: Int = 2 / 7;     /* 0 */
+left_decimal: Int = 2.0 / 7;    /* 0 */
+right_decimal: Int = 2 / 7.0;   /* 0 */
+```
+
+The Float/Double rule also applies to the mixed literal shapes; Int context takes precedence over their fractional default. Thus a decimal point does not force fractional division against an explicit Int result. Conversely, 2 / 7 must not first become integer zero and then widen to Float/Double. Division is checked with its expected result type before selecting the admitted arithmetic operation; this is a static rule, not a runtime type change or formatter rule.
+
+These examples select the result behavior and admission of the shown literals. They do not authorize unrestricted conversion of stored numeric values, truncation of operands before dividing, or a universal numeric assignment cast. Compatibility for already typed mixed operands and nonintegral decimal operands, propagation of expectations through larger expressions/calls/returns, concrete Float/Double representations, and full constraint solving remain open. In particular, the result rule alone does not decide whether 2.5 / 7 is admitted under an Int context. See [types and inference](types-and-inference.md) and [arithmetic methods](arithmetic-methods-and-division-revision.md).
 
 ## Integer-only code
 
@@ -46,11 +62,11 @@ var floored := -7;
 floored _/= 2; /* -4 */
 ```
 
-Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= follows its operand types rather than universally producing a fractional result.
+Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= applies the matching contextual division contract, with the target supplying the expected result type; broader mixed-value compatibility still needs specification.
 
 ## Signed floor division
 
-For valid integer operands with nonzero divisor and representable quotient, / discards the fractional part toward zero, while _/ takes the mathematical floor:
+For valid integer operands with an Int division result, a nonzero divisor, and a representable quotient, / discards the fractional part toward zero, while _/ takes the mathematical floor. The unannotated integer-only expressions below retain that default:
 
 ```text
 7 / 2;    /* 3 */
@@ -82,7 +98,7 @@ The selected names remain remainder (rem) and modulo (mod), following the review
 -7 _% -2; /* -1 */
 ```
 
-For successful integer operations, the mathematical identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). They describe mathematical values, not required intermediate fixed-width multiplications or fractional conversions.
+For successful integer operations with an Int quotient, the mathematical identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). They describe mathematical values, not required intermediate fixed-width multiplications or fractional conversions.
 
 A nonzero remainder follows the dividend's sign, with abs(a % b) < abs(b). A nonzero modulo result follows the divisor's sign. For positive b, 0 <= a _% b < b; for negative b, b < a _% b <= 0. Both results are zero for exact division. Modulo is not always nonnegative for negative divisors.
 
@@ -105,7 +121,7 @@ The former // and %% arithmetic spellings are superseded. This does not introduc
 ## Open numeric contracts
 
 - Preserve typed panics for defined arithmetic faults and local typed-else recovery; returned Result errors remain a separate channel.
-- Define numeric widths, fractional representations, mixed operands, conversion/narrowing, and unresolved literal typing.
+- Define numeric widths, Float/Double representations, broader mixed-value compatibility, conversions, nonintegral-decimal admission under Int division, and inference beyond the selected literal/result contexts.
 - Define precise zero-divisor and overflow/unrepresentable-result cases and payloads, including minimum-integer/-1 quotient and remainder/modulo cases.
 - Define noninteger floor/remainder/modulo behavior and any combined quotient/remainder API.
 - Resolve identifier/operator scanning while retaining the user's compact/spaced requirement; complete the recursive grammar and numeric method signatures.

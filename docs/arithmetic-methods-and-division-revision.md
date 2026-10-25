@@ -4,7 +4,7 @@ Status: **/, _/, %, and _% selected 2026-10-25; ordinary arithmetic methods requ
 
 ## Selected operations
 
-For established Int operands:
+For Int operands without a different expected division result:
 
 ```text
 b: Int = -7;
@@ -16,9 +16,9 @@ b % c;  /* remainder: -1 */
 b _% c; /* modulo: 1 */
 ```
 
-The truncating pair is / and %; the floor pair is _/ and _%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. Fractional operands retain fractional /; mixed operands, conversions, numeric representation, and exact faults remain separate.
+With an Int quotient, the truncating pair is / and %; the floor pair is _/ and _%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. Expected Float/Double results retain fractional /; expected Int results truncate, including the selected mixed literal examples. Without a result context, a decimal literal on either side gives fractional division. Broader mixed-value compatibility, conversions, numeric representation, and exact faults remain separate.
 
-The old always-fractional Int / Int behavior, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](division.md) and the updated [signed table](signed-division-table.md). Foreign-language spellings and observed probe results are unchanged.
+The old always-fractional Int division rule, the subsequent operand-only rule, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](division.md) and the updated [signed table](signed-division-table.md). Foreign-language spellings and observed probe results are unchanged.
 
 ## Ordinary named operations in addition
 
@@ -26,7 +26,7 @@ The user's requested surface remains ordinary dot calls, including a.plus(b), a.
 
 ```text
 a.plus(b)     /* actual binary addition */
-a.div(b)      /* division for the established operand types */
+a.div(b)      /* corresponding division; exact method typing remains open */
 a.floorDiv(b) /* floor quotient */
 a.rem(b)      /* truncating remainder */
 a.mod(b)      /* floor modulo */
@@ -38,17 +38,24 @@ The method spelling need not force a runtime function call: admitted built-in op
 
 The optional identity-leading + remains a no-op entry prefix. It must not invoke plus/unaryPlus, supply an implicit zero, or acquire an extra conversion or failure through this method surface. Actual binary addition is a separate operation.
 
-## Operand types determine division
+## Expected result types guide division
 
-For b and c already typed Int, b / c keeps the same truncating operation in an inferred binding, typed binding, return, or supplied argument:
+Selected 2026-10-25: the expected result type participates in / typing and rounding. Float/Double result contexts preserve the quotient's fraction even with integer-spelled literals. Int result contexts truncate even when either supplied literal is decimal-spelled:
 
 ```text
-q := b / c;       /* Int result: -3 */
-q: Int = b / c;   /* same Int calculation */
-f: Float = b / c; /* Int calculation; assignment compatibility is separate */
+fraction: Float = 2 / 7;   /* approximately 0.285714... */
+precise: Double = 2 / 7;   /* approximately 0.285714... */
+whole: Int = 2 / 7;        /* 0 */
+whole: Int = 2.0 / 7;      /* 0 */
+whole: Int = 2 / 7.0;      /* 0 */
+
+left := 2.0 / 7;           /* fractional without an Int result context */
+right := 2 / 7.0;          /* fractional without an Int result context */
 ```
 
-The final line must satisfy an independently selected conversion rule or be rejected. Its Float destination does not manufacture a fractional -3.5 quotient. Establish fractional operand types to request fractional arithmetic; no concrete conversion-method spelling is newly selected. General expected-type inference for unresolved literals/type parameters remains open and is not prohibited by this fixed-operand rule.
+This replaces the earlier requirement that a destination could only check or convert an already chosen quotient. The fractional cases must not truncate first and then widen zero. The shown Int cases are admitted, rather than rejected merely for the decimal literal spelling. No result context leaves the existing integer-only default in place.
+
+The result contract does not settle general stored-value coercion, nonintegral decimal operands under Int division, expected-type propagation through larger expressions/calls/returns, or exact numeric representation. It does not permit truncating operands before division. Numeric methods remain an additional requested surface; complete context flow and signatures for div must preserve corresponding arithmetic behavior when admitted and still need specification. See [the selected literal cases and limits](division.md#contextual-division-selected).
 
 ## Compact and spaced forms must agree
 
@@ -77,14 +84,14 @@ Retiring // as an arithmetic spelling does not itself adopt // line comments. Cu
 ## Separate open contracts
 
 - Resolve compact underscore-operator scanning against ordinary identifier rules.
-- Complete fractional/mixed operand types, literal inference, numeric conversions, and fixed-width/large-integer representation.
+- Complete numeric compatibility beyond the selected contextual literal cases, expected-type propagation, nonintegral-decimal admission, conversions, and fixed-width/fractional representations.
 - Specify exact typed arithmetic panic cases and payloads, including zero divisors and minimum-integer/-1 cases; preserve the existing failure channels.
 - Specify exact numeric method signatures and general lookup/overloading/extension behavior.
 - Define noninteger floor/remainder/modulo domains, optional combined quotient/remainder APIs, power methods, and any future infix syntax independently.
 
 ## Primary comparisons
 
-- [Kotlin operator methods](https://kotlinlang.org/docs/operator-overloading.html) and [numeric division](https://kotlinlang.org/docs/numbers.html#integer-division) inform the additional named surface and operand-directed behavior. Their wider inference, conversion, and overflow rules are not automatically imported.
+- [Kotlin operator methods](https://kotlinlang.org/docs/operator-overloading.html) and [numeric division](https://kotlinlang.org/docs/numbers.html#integer-division) inform the additional named surface. LiteScript separately selects contextual division results; these references do not establish that rule or import their wider inference, conversion, and overflow rules.
 - [Kotlin floorDiv](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/floor-div.html) and [mod](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/mod.html) provide named floor operations.
 - [Dart ~/](https://api.dart.dev/dart-core/num/operator_truncate_divide.html) is truncating division; [R arithmetic](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Arithmetic.html) uses %/% and %% for a floor pair. These earlier spelling alternatives remain comparative history.
 

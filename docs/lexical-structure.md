@@ -35,7 +35,7 @@ Selected 2026-10-24: a complete ordinary Boolean expression or condition may sta
 
 ## Selected underscore arithmetic and open scanning
 
-The selected floor operators are _/ and _%, alongside operand-directed / and remainder %. The user still requires compact/spaced operator equivalence. Ordinary longest-identifier scanning around a_/b and a_%b conflicts with that requirement, so exact recognition remains open; no mandatory operator-space rule or identifier-stealing convention is adopted. This symbol selection does not introduce // line comments. See [the selected arithmetic family](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+The selected floor operators are _/ and _%, alongside contextual / and remainder %. The user still requires compact/spaced operator equivalence. Ordinary longest-identifier scanning around a_/b and a_%b conflicts with that requirement, so exact recognition remains open; no mandatory operator-space rule or identifier-stealing convention is adopted. This symbol selection does not introduce // line comments. See [the selected arithmetic family](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 
 ## Identity leading plus
 

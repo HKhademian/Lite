@@ -18,6 +18,7 @@ Selected:
 - Operands and named call inputs evaluate left to right in written order.
 - Operator grouping, tighter to looser: prefix `-`; `* / _/ % _%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.
 - All ten comparison forms share one precedence. A comparison chain compares adjacent operands, evaluates each operand at most once left to right, and stops at the first false comparison.
+- Division uses expected result types in the selected literal cases: Float/Double retain fractions; Int truncates, even for 2.0 / 7 or 2 / 7.0. Without a result context, either decimal literal supplies a fractional default; integer-only division retains its integer default. See [division](../division.md#contextual-division-selected) for compatibility/inference limits.
 - `=` is assignment, `==` is equality, and `=!=` is inequality. `**` is power; an unparenthesized unary-minus/power spelling is rejected, and chained-power association remains open.
 - Conditions require `Bool`; there is no implicit truthiness. A complete Boolean expression may start with one optional `and`/`or`, which adds no operand and no binding.
 - Postfix `!` forwards a returned recoverable error; typed panics use a separate channel.

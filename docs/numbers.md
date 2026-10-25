@@ -48,17 +48,24 @@ Within the selected set, prefix negation binds above multiplicative * / _/ % _%,
 
 ## Division
 
-Selected 2026-10-25: / uses established operand types. Int / Int truncates toward zero; admitted fractional operands produce a fractional quotient. The integer floor operator is _/:
+Selected 2026-10-25: / uses its expected result type. Float/Double result contexts retain the fraction; Int result contexts truncate toward zero, including 2.0 / 7 and 2 / 7.0. Without an expected result type, either decimal literal supplies a fractional default; integer-only division retains its integer default. The integer floor operator remains _/:
 
 ```text
-quotient := -7 / 2;  /* -3 */
-floored := -7 _/ 2;  /* -4 */
-ratio := 7.0 / 2.0;  /* 3.5 */
+fraction: Float = 2 / 7;   /* approximately 0.285714... */
+fraction: Double = 2 / 7;  /* approximately 0.285714... */
+whole: Int = 2 / 7;        /* 0 */
+whole: Int = 2.0 / 7;      /* 0 */
+whole: Int = 2 / 7.0;      /* 0 */
+left := 2.0 / 7;           /* fractional */
+right := 2 / 7.0;          /* fractional */
+floored := -7 _/ 2;        /* -4 */
 ```
 
-Remainder % pairs with truncating integer / and follows the dividend when nonzero. Modulo _% pairs with floor _/ and follows the divisor when nonzero: -7 % 2 is -1, -7 _% 2 is 1, and 7 _% -2 is -1. The corresponding updates are /=, _/=, %=, and _%=.
+Expected types guide division before its quotient is computed: do not truncate and then widen an integer zero to Float/Double. The selected literal cases do not establish general stored-value conversion, admission of nonintegral decimal operands under Int division, or expected-type propagation through every expression form. Concrete Float/Double representations, broader compatibility, full inference, and exact faults remain open.
 
-This replaces the earlier always-fractional / and // / %% floor spellings. Destination types do not select different arithmetic for already established operands; exact assignment conversions, mixed operands, literal typing, representation, and fault rules remain open. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the unresolved compact underscore/identifier boundary; [division](division.md) defines the signed values.
+Remainder % pairs with Int-result truncating / and follows the dividend when nonzero. Modulo _% pairs with floor _/ and follows the divisor when nonzero: -7 % 2 is -1, -7 _% 2 is 1, and 7 _% -2 is -1. The corresponding updates are /=, _/=, %=, and _%=.
+
+This replaces the operand-only division rule and the earlier // / %% floor spellings. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the unresolved compact underscore/identifier boundary; [division](division.md#contextual-division-selected) owns the contextual cases and their limits.
 
 ## Ranges
 

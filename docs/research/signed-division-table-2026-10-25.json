@@ -23,7 +23,7 @@
     {
       "language": "LiteScript",
       "operands": "Int",
-      "expression": "a / b",
+      "expression": "result: Int = a / b",
       "rule": "trunc_div",
       "results": [
         "3",
@@ -32,7 +32,7 @@
         "3"
       ],
       "source": "division.md",
-      "note": "Selected design; not an implemented runtime."
+      "note": "Selected design with explicit Int result context; contextual division determines truncation versus a fractional quotient. General numeric compatibility and representations remain open. Not an implemented runtime."
     },
     {
       "language": "LiteScript",
@@ -79,7 +79,7 @@
     {
       "language": "LiteScript",
       "operands": "Float",
-      "expression": "a / b",
+      "expression": "result: Float = a / b",
       "rule": "fractional",
       "results": [
         "3.5",
@@ -88,7 +88,7 @@
         "3.5"
       ],
       "source": "division.md",
-      "note": "Selected fractional-operand design; illustrative decimal values, representation remains open. Not an implemented runtime."
+      "note": "Selected design with explicit Float result context; contextual division determines truncation versus a fractional quotient. General numeric compatibility and representations remain open. Not an implemented runtime."
     },
     {
       "language": "Odin",

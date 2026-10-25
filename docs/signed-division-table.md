@@ -2,15 +2,15 @@
 
 Reviewed **2026-10-25**. Each column supplies the same signed values to the row's expression. Most operands are native signed integers; JavaScript/TypeScript Number and BigInt are separated, as are LiteScript Int and Float. The selected LiteScript contract is a design, not an implemented runtime.
 
-The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is `/`, `_/`, `%`, and `_%`. LiteScript integer `/` now truncates; its separate Float row retains fractional division. Compact/spaced equivalence is required, with underscore/identifier scanning unresolved. R was also consulted for the spelling review and is not included in this 18-language matrix.
+The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is `/`, `_/`, `%`, and `_%`. LiteScript `/` rows fix an Int or Float result context explicitly: the Int result truncates and the Float result retains the fraction. Double results likewise retain the fraction. Operand types alone do not select rounding; see [the selected contextual literal cases](division.md#contextual-division-selected). Compact/spaced equivalence is required, with underscore/identifier scanning unresolved. R was also consulted for the spelling review and is not included in this 18-language matrix.
 
 | Language | Operand type | Expression | Rule | pos:pos (7, 2) | pos:neg (7, -2) | neg:pos (-7, 2) | neg:neg (-7, -2) |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| [LiteScript](division.md) | Int | `a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
+| [LiteScript](division.md) | Int | `result: Int = a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
 | [LiteScript](division.md) | Int | `a _/ b` | Floor quotient | 3 | -4 | -4 | 3 |
 | [LiteScript](division.md) | Int | `a % b` | Remainder (dividend sign) | 1 | 1 | -1 | -1 |
 | [LiteScript](division.md) | Int | `a _% b` | Floor modulo (divisor sign) | 1 | -1 | 1 | -1 |
-| [LiteScript](division.md) | Float | `a / b` | Fractional quotient | 3.5 | -3.5 | -3.5 | 3.5 |
+| [LiteScript](division.md) | Float | `result: Float = a / b` | Fractional quotient | 3.5 | -3.5 | -3.5 | 3.5 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a / b` | Truncating quotient | 3 | -3 | -3 | 3 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a % b` | Remainder (dividend sign) | 1 | 1 | -1 | -1 |
 | [Odin](https://odin-lang.org/docs/overview/#operators) | int | `a %% b` | Floor modulo (divisor sign) | 1 | -1 | 1 | -1 |
@@ -71,7 +71,7 @@ The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is
 - Euclidean modulo is nonnegative, including for negative divisors. Its quotient differs from floor division when the divisor is negative and the division is inexact.
 - With positive dividends and positive divisors, several rules agree. The additional neg:pos column exposes differences that pos:pos and neg:neg can hide.
 
-LiteScript's integer pairs are `/` with `%` and `_/` with `_%`: mathematically, `a == b * (a / b) + (a % b)` and `a == b * (a _/ b) + (a _% b)`. See [division, remainder, and modulo](division.md).
+With an Int quotient, LiteScript's integer pairs are `/` with `%` and `_/` with `_%`: mathematically, `a == b * (a / b) + (a % b)` and `a == b * (a _/ b) + (a _% b)`. See [division, remainder, and modulo](division.md).
 
 ## Scope and evidence
 

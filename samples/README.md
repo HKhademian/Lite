@@ -21,7 +21,8 @@ Read `first_basket := 7` as “give the name first_basket to the number 7.” Th
 - `;` ends a step.
 - `/* ... */` contains a note for the reader.
 - `+` adds, `-` subtracts, and `*` multiplies.
-- `/` divides: `7 / 2` is `3` for integers; `7.0 / 2.0` is `3.5` for fractional inputs.
+- `/` divides: without a result annotation, `7 / 2` is `3`, while `7.0 / 2` or `7 / 2.0` is `3.5`.
+- A result type can guide division: `part: Float = 2 / 7` keeps the fraction; `part: Int = 2.0 / 7` truncates to `0`.
 - `_/` divides with rounding down: `-7 _/ 2` is `-4`.
 - `%` finds the remainder: `7 % 2` is `1`. Its nonzero result follows the first number's sign.
 - `_%` finds the modulo: `-7 _% 2` is `1`. Its nonzero result follows the second number's sign.
