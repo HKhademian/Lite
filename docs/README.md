@@ -8,6 +8,7 @@ Design snapshot: **2026-10-25**. Stage: **planning; no implementation**.
 2. [Principles and goals](principles.md): a concise overview of established goals and defaults.
 3. [Current decisions and open questions](decisions-and-open-questions.md): selected contracts and work still to settle.
 4. [Provisional grammar sketch](grammar-sketch.md): the current syntax outline and its remaining boundaries.
+5. [Normative page map](normative-pages.md): which page owns each current rule and which pages are historical.
 
 The detailed reference below develops these foundations one concept at a time.
 
@@ -18,7 +19,7 @@ The detailed reference below develops these foundations one concept at a time.
 - **Control flow and lifecycle:** blocks and results → conditionals → loops → exits → recovery → finally and cleanup.
 - **Modules, performance, and tooling:** modules and packages → memory and performance → tooling and learning.
 
-These are reading paths, not separate index entries; each linked document has one canonical entry below.
+These are reading paths, not separate index entries; each document has one canonical entry in this index.
 
 ## How to read this reference
 
