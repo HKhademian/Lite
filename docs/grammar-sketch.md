@@ -42,11 +42,11 @@ string_value := string_literal { string_literal }
 
 Adjacent string literal tokens with only whitespace or comments between them concatenate without inserted characters and form one value before item separation is interpreted. A semicolon still separates items, so `"Hello"; "world"` is two values, not one joined literal. Joining applies only to literal tokens, not arbitrary expressions. The literal token form, escapes, raw forms, interpolation, and encoding interactions remain open; see [strings](strings.md).
 
-## Division tokens
+## Division, remainder, and modulo tokens
 
 `/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
 
-For valid integer operands, `//` rounds toward negative infinity and `%` gives the paired remainder: mathematically, `a == b * (a // b) + (a % b)`. Nonzero integer remainders have the divisor's sign. `//=` and `%=` preserve those semantics. Full arithmetic productions, numeric conversions, noninteger remainder, and failure contracts remain open. See [division](division.md).
+Selected 2026-10-25: integer % is remainder paired with a mathematical quotient truncated toward zero; a nonzero remainder follows the dividend's sign. Integer %% is modulo paired with floor //, so a == b * (a // b) + (a %% b) mathematically and a nonzero modulo result follows the divisor's sign. This supersedes the earlier floor-paired % rule. Names follow Zig; symbols follow Odin. %=/%%= are the corresponding update tokens. Recognize %%= and %% before shorter percent-family tokens; a%%b is one modulo expression. This adds no rem/mod callable API or truncating-division operator. Full recursive integration, conversions, noninteger remainder/modulo, and exact failure contracts remain open. See [division](division.md).
 
 ## Item separation
 
@@ -646,7 +646,7 @@ See [Result and errors](result-and-errors.md) and [panics](panics.md).
 ```text
 additive_chain_entry := ["+"] additive_expression
 additive_expression := multiplicative_expression { ("+" | "-") multiplicative_expression }
-multiplicative_expression := arithmetic_unary { ("*" | "/" | "//" | "%") arithmetic_unary }
+multiplicative_expression := arithmetic_unary { ("*" | "/" | "//" | "%" | "%%") arithmetic_unary }
 arithmetic_unary := "-" arithmetic_unary | arithmetic_primary
 ```
 
@@ -654,7 +654,7 @@ Selected 2026-10-25: this is a nonempty arithmetic fragment, not a complete expr
 
 The optional leading + is admitted only at a complete additive-chain entry. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
 
-Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; // and % gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; //, %, and %% gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
 ## Logical grouping
 

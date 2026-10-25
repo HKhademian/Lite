@@ -7,14 +7,14 @@ Status: **primary-source comparison researched 2026-10-25; basic LiteScript arit
 Within the selected arithmetic set, precedence runs from tighter to looser:
 
 1. Prefix negation: `-a`.
-2. Multiplicative operations: `*`, `/`, `//`, `%`.
+2. Multiplicative operations: `*`, `/`, `//`, `%`, `%%`.
 3. Additive operations: binary `+`, `-`.
 
 Binary operators at each level associate left to right. Parentheses override grouping. Thus `a - b - c` groups as `(a - b) - c`, and `a / b * c` as `(a / b) * c`. Associativity does not permit algebraic reassociation. Operands retain LiteScript's separate left-to-right evaluation contract.
 
-The optional leading `+` at a complete additive-chain entry is identity punctuation, including for one operand. It preserves value and type without promotion, conversion, an implicit zero, or an extra operator invocation. Minus retains negation. No redundant leading `*`, `/`, `//`, `%`, or prospective power operator follows from that rule.
+The optional leading `+` at a complete additive-chain entry is identity punctuation, including for one operand. It preserves value and type without promotion, conversion, an implicit zero, or an extra operator invocation. Minus retains negation. No redundant leading `*`, `/`, `//`, `%`, `%%`, or prospective power operator follows from that rule.
 
-`/` produces a fractional quotient. Integer `//` rounds down; integer `%` is paired with that floor quotient and a nonzero remainder has the divisor's sign. These choices are independent of numeric representation and exact fault cases. See [operators](operators.md), [division](division.md), [leading separators](leading-separators.md), and [evaluation order](evaluation-order.md).
+`/` produces a fractional quotient. Integer // rounds down. Selected 2026-10-25: % is remainder using a truncating mathematical quotient and the dividend's sign when nonzero; %% is modulo paired with floor // and the divisor's sign when nonzero. This uses Odin's symbols and Zig's names, superseding the earlier floor-paired % choice. These choices are independent of numeric representation and exact fault cases. See [operators](operators.md), [division](division.md), [leading separators](leading-separators.md), and [evaluation order](evaluation-order.md).
 
 `**`, `^`, power updates, bitwise operators, and wrapping/saturating arithmetic are not selected. The precedence of negation relative to a future power operator is also unselected. A complete expression grammar still needs integration with calls, access, ranges, types, and recovery.
 
@@ -88,15 +88,15 @@ The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, an
 
 Negative values expose three distinct contracts:
 
-- Floor quotient with paired remainder, already selected for LiteScript: `-7 // 2` is `-4`; `-7 % 2`, `7 % -2`, and `-7 % -2` produce `1`, `-1`, and `-1` respectively. A nonzero remainder follows the divisor's sign.
-- Truncating integer quotient with paired remainder, as in Java and Rust: `-7 / 2` is `-3`; the same three remainder cases produce `-1`, `1`, and `-1`. A nonzero remainder follows the dividend's sign.
+- Floor quotient with paired modulo, now selected as LiteScript %%: -7 // 2 is -4; -7 %% 2, 7 %% -2, and -7 %% -2 produce 1, -1, and -1 respectively. A nonzero modulo result follows the divisor's sign.
+- Truncating mathematical quotient with paired remainder, now selected for LiteScript %: truncating -7 divided by 2 gives -3; the same three remainder cases produce -1, 1, and -1. A nonzero remainder follows the dividend's sign. Java and Rust use truncating integer division; LiteScript's / remains fractional.
 - Euclidean modulo, as in Dart: all three remainder cases produce `1`, including with a negative divisor. The result satisfies `0 <= r < abs(b)`; exact division still produces zero.
 
-These are semantic choices, not interchangeable names for the same operation. LiteScript need not add multiple everyday remainder spellings merely because another language provides them. Python/Lua are the closest comparisons for the selected integer floor/remainder pairing; their numeric representations and fault rules do not follow automatically.
+These are semantic choices, not interchangeable names for the same operation. The user selected both named meanings with Odin's symbols, rather than inheriting one meaning from every use of %. Python/Lua are close comparisons for the selected integer floor/modulo pairing, with a different modulo spelling; their numeric representations and fault rules do not follow automatically.
 
 ### Symbols and signed results are separate choices
 
-LiteScript has already selected `%` for its floor-paired integer remainder. The word `mod` and an additional `%%` operator are not selected. A familiar symbol alone does not establish a sign rule. The five modern references illustrate the differences directly:
+Selected 2026-10-25 after the sign review: LiteScript uses % for remainder and %% for modulo, taking Odin's symbols and Zig's operation names. The earlier floor-paired % meaning is superseded. This selection adds no word-form mod operator or @rem/@mod callable API. A familiar symbol alone does not establish a sign rule. The five modern references illustrate the differences directly:
 
 - Rust: `%` uses truncating remainder, while integer [rem_euclid](https://doc.rust-lang.org/std/primitive.i32.html#method.rem_euclid) supplies a nonnegative remainder even for a negative divisor. The local sign probe checks all three cases above for both forms.
 - Odin: `%` uses truncating remainder, while `%%` uses `a - b * floor(a / b)`. Thus `-7 %% 2` is `1`, but `7 %% -2` is `-1`. These values are derived from the [documented formula](https://raw.githubusercontent.com/odin-lang/odin-lang.org/master/content/docs/overview.md), not an executed Odin program.
@@ -104,7 +104,15 @@ LiteScript has already selected `%` for its floor-paired integer remainder. The 
 - Zig 0.15.2: [@rem](https://ziglang.org/documentation/0.15.2/#rem) pairs with truncating division and [@mod](https://ziglang.org/documentation/0.15.2/#mod) with floor division. Their documented contracts give `@rem(-7, 2) == -1` and `@mod(-7, 2) == 1`; these are source-derived examples, with no local Zig execution.
 - V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. That establishes the cited negative-dividend example; this review has not executed a full negative-divisor matrix in V.
 
-For LiteScript, using abs(b) as a bound must not silently change `%` into always-nonnegative modulo. Preserve its selected floor identity with `//`. Floating-point remainder, signed zero, zero divisors, and unrepresentable fixed-width cases need their own numeric/fault contracts.
+For LiteScript, % follows the dividend and %% follows the divisor when nonzero. Modulo %% is therefore not always nonnegative for negative divisors; preserve its selected floor identity with //. Floating-point remainder, signed zero, zero divisors, and unrepresentable fixed-width cases need their own numeric/fault contracts.
+
+The selected pair matches Odin's documented successful integer formulas and Zig 0.15.2's documented rem/mod pairing. It is not a claim to match every operation in Rust or V: Rust's % matches remainder, while rem_euclid differs from floor modulo for negative divisors; V's appendix establishes its cited remainder example but not a corresponding modulo operation. Representations and overflow/fault policies remain separate.
+
+### Mathematical consistency and the Euclidean alternative
+
+Both the floor and Euclidean conventions are coherent. Floor modulo keeps a == b * floor(a / b) + modulo for either divisor sign. Euclidean modulo instead requires 0 <= result < abs(b); its quotient rounds down for positive divisors and up for negative divisors. For example, floor modulo gives 7 modulo -2 as -1 with quotient -4, while Euclidean modulo gives 1 with quotient -3. Both reconstruct 7. Lean's [formal integer reference](https://lean-lang.org/doc/reference/latest/Basic-Types/Integers/) explicitly distinguishes Euclidean, truncating, and floor conventions; its zero-divisor policy is not adopted here.
+
+For positive divisors, floor modulo and Euclidean modulo agree. Keeping the selected floor form makes %% pair with LiteScript's existing // for negative divisors too. A future nonnegative Euclidean operation would need its own clear contract; neither the word modulo nor a claim of mathematical correctness should silently switch conventions.
 
 `//` is also a lexical choice: several C-family references use it for line comments. LiteScript already reserves it for division and uses its own block-comment rules. Adjacent stars need equal care: C/C++ can parse multiplication followed by dereference; Zig 0.15.2 gives `**` an array meaning. Preserve the selected [comment token boundaries](comments.md) rather than importing another lexer.
 

@@ -50,12 +50,12 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
 - [Operators](operators.md): selected basic arithmetic precedence and binary left association, comparison/logical operations, optional leading logical separators and identity additive +, and open exponentiation.
-- [Arithmetic operators across languages](arithmetic-operators-comparison.md): Java, C, C++, C#, Python, and modern references; division/remainder, power and unary signs, identity versus promotion/conversion, primary sources, and seven versioned local toolchain probes.
+- [Arithmetic operators across languages](arithmetic-operators-comparison.md): Java, C, C++, C#, Python, and modern references; division/remainder/modulo, selected Odin symbols with Zig names, power and unary signs, identity versus promotion/conversion, primary sources, and seven versioned local toolchain probes.
 - [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
 - [Numbers and ranges](numbers.md): inferred numeric values, identity leading + without conversion or implicit zero, range direction, and stride.
-- [Division](division.md): fractional `/`, integer floor `//`, paired `%`, compound updates, and numeric fault cases.
+- [Division](division.md): fractional `/`, integer floor `//`, remainder `%`, modulo `%%`, compound updates, and numeric fault cases.
 - [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, local typed-`else` recovery, and unresolved fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.
 

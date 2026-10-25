@@ -28,7 +28,7 @@ Integer division keeps the selected rounding rule and uses a typed panic for a d
 quotient := dividend // divisor
 ```
 
-For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer `%` faults on a zero divisor. The minimum `% -1` case still needs its own result rule: the mathematical remainder is representable as zero even though the paired quotient is not, so the quotient rule alone does not settle whether this remainder operation faults.
+For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer remainder % and modulo %% fault on a zero divisor. Their minimum % -1 and minimum %% -1 cases still need independent result rules: each mathematical result is representable as zero even though its associated quotient is not, so the quotient rule alone does not settle whether either operation faults.
 
 The same rule applies to other basic math operators when their numeric contract defines a fault. It does not decide floating-point representation, non-finite results, mixed operands, or conversions.
 
@@ -51,7 +51,7 @@ The selected form does not settle the exact recovery boundary around evaluated o
 - Exact fixed-width integer types and which operations can overflow.
 - The arithmetic panic categories, payloads, and source information.
 - Whether floating-point division by zero produces non-finite values or a typed panic; define other floating-point edge cases separately.
-- The independent result of `min % -1` for fixed-width signed integers.
+- The independent results of min % -1 and min %% -1 for fixed-width signed integers.
 - Exact arithmetic panic type names and the result type of a panic fallback.
 - The boundary around evaluated operands and calls, transfer mechanism, cleanup, and handling of a second panic.
 - Explicit wrapping/saturating operations and conversion behavior.

@@ -44,7 +44,7 @@ A signed 64-bit default `Int` was suggested, with explicit sized types and an op
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / // %, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Exponentiation and its result types, signed-exponent rules, and precedence relative to negation remain open; [the language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / // % %%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Exponentiation and its result types, signed-exponent rules, and precedence relative to negation remain open; [the language comparison](arithmetic-operators-comparison.md) records alternatives.
 
 ## Division
 
@@ -53,7 +53,7 @@ ratio := 7 / 2;     /* fractional quotient: 3.5 */
 quotient := 7 // 2; /* integer quotient: 3 */
 ```
 
-`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Integer `%` is paired with that quotient; a nonzero remainder has the divisor's sign. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or exact arithmetic fault triggers.
+`//` and `//=` support ordinary integer-only arithmetic without floating-point intermediates or named rounding helpers. Integer division rounds toward negative infinity: `-7 // 2` and `7 // -2` both produce `-4`. Selected 2026-10-25: integer `%` is remainder with a truncating mathematical quotient and the dividend's sign when nonzero; `%%` is modulo paired with floor // and the divisor's sign when nonzero. -7 % 2 is -1, while -7 %% 2 is 1; 7 %% -2 is -1. The operators use Odin's symbols and Zig's names; `%=` and `%%=` preserve the respective meanings, superseding the earlier floor-paired `%` rule. See [division](division.md). These rules do not select an implicit casting policy, a floating-point representation, or exact arithmetic fault triggers.
 
 ## Ranges
 
@@ -83,7 +83,7 @@ The proposed body counts are `1, 2, 3, 4`, independent of range values. Reverse 
 
 ## Open decisions
 
-Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder, combined quotient/remainder APIs, exact arithmetic fault triggers and payloads, wrapping operations, and range bounds all remain open.
+Integer widths, floating-point defaults, exact decimal support, arithmetic promotions, literal polymorphism, casts, noninteger remainder/modulo, combined quotient/remainder APIs, exact arithmetic fault triggers and payloads, wrapping operations, and range bounds all remain open.
 
 Arithmetic must support local recovery of an individual operation, including addition overflow, without requiring verbose named checked-arithmetic helpers as its ordinary interface. Basic arithmetic faults use typed panics, not returned `Result` errors. The selected local surface is target-level `else` with typed filters; exact fault cases remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
 

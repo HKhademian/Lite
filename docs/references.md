@@ -4,7 +4,7 @@ These sources were consulted during the design discussion. They support comparis
 
 ## Arithmetic operators, reviewed 2026-10-25
 
-[Arithmetic operators across languages](arithmetic-operators-comparison.md) links the exact primary sources consulted for Java, C, C++, C#, Python, JavaScript/TypeScript, Rust, Go, Swift, Kotlin, Dart, Lua, Odin, Zig, and V. It compares precedence/associativity, division/remainder, unary signs, power, and evaluation order. The review distinguishes drafts, moving documentation, and versioned references; its [captured probes](research/arithmetic-operator-probes-2026-10-25.json) record seven installed toolchains and a separate expected Rust compile rejection. They are foreign-language checks, not LiteScript execution. Only the explicitly selected basic arithmetic ladder is added to LiteScript; power and additional operators remain proposals.
+[Arithmetic operators across languages](arithmetic-operators-comparison.md) links the exact primary sources consulted for Java, C, C++, C#, Python, JavaScript/TypeScript, Rust, Go, Swift, Kotlin, Dart, Lua, Odin, Zig, and V. It compares precedence/associativity, division/remainder, unary signs, power, and evaluation order. The review distinguishes drafts, moving documentation, and versioned references; its [captured probes](research/arithmetic-operator-probes-2026-10-25.json) record seven installed toolchains and a separate expected Rust compile rejection. They are foreign-language checks, not LiteScript execution. LiteScript subsequently selected Odin's % / %% symbols with Zig's remainder / modulo names; that choice supersedes the earlier floor-paired % spelling. Power and other additional operators remain separate proposals.
 
 ## Rust
 
