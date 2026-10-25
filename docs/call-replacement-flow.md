@@ -294,6 +294,26 @@ Require the proof to apply to the actual selected indices and containing storage
 
 This selects the direct successful-guard case for built-in Int inequality and stable locals on the same fixed array. It does not select arbitrary arithmetic or predicate solving, disjointness from overloaded comparisons, overlapping slice/view analysis, reference-target alias detection, callbacks/reentrancy, or a general runtime alias-repair policy. The selected fixed-array default below rejects calls whose required disjointness proof is unavailable. No bounds check is erased solely because i and j differ.
 
+## Element distinctness after an early exit selected
+
+Selected on **2026-10-25**: for stable built-in Int indices into the same initialized writable fixed array, an equality branch that exits before a subsequent call leaves the supported distinctness fact on every path reaching that call:
+
+```text
+swap_distinct := fn(values: mut [Int; 3], i: Int, j: Int): Unit {
+    if i == j {
+        return;
+    }
+
+    swap(var values[i], var values[j]);
+}
+```
+
+Assume swap takes two var Int parameters and returns Unit. The equal-index path returns from swap_distinct, so it does not reach swap. Every reaching path has the false result of built-in Int equality, establishing the same i =!= j fact used by the selected direct guard. Accept the two element grants when the ordinary element/access contracts also hold. No new binding, dependent integer type, or extra runtime alias check is introduced.
+
+If the equality branch merely logs and continues, its equal-index path still reaches the call, so the required proof is absent and the multiple-grant call is rejected. Follow actual exit targets and completion behavior, not an exit keyword inside an unrelated inner construct. At a continuation, retain the fact only when justified on every reaching path.
+
+Indices and containing storage must remain stable through the relevant selections and invocation, or preservation must have a supported proof. Keep ordinary bounds checks/typed faults, initialized compatible elements, writable caller authority, single location selection, source evaluation order, valid lifetimes, and known-overlap rejection. Inequality proves neither index is in range. This selects the illustrated built-in Int equality/early-exit case; arbitrary predicate complements, arithmetic solving, overloaded comparisons, reference/view alias analysis, and complete effect analysis remain open.
+
 ## Unproven fixed-array element overlap rejected
 
 Selected on **2026-10-25**: multiple var element grants into the same fixed array require a supported proof that their selected locations are disjoint. Reject the call statically when known overlap exists or the required disjointness proof is unavailable. The rejection does not depend on whether a particular execution or test happens to choose different indices, or on whether the callee's body writes.
@@ -317,7 +337,7 @@ if i =!= j {
 }
 ```
 
-Distinct valid constant positions and the selected stable built-in Int inequality guard are supported cases. Different names, separately evaluated calls, distinct values observed in tests, or a claim about an unsupported arithmetic relationship do not supply the required proof. Invalidate stale facts after relevant effects unless preservation is supported. A rejected call establishes no successful post-call fact.
+Distinct valid constant positions, the selected stable built-in Int inequality guard, and its selected early-exit continuation fact are supported cases. Different names, separately evaluated calls, distinct values observed in tests, or a claim about an unsupported arithmetic relationship do not supply the required proof. Invalidate stale facts after relevant effects unless preservation is supported. A rejected call establishes no successful post-call fact.
 
 Ordinary bounds checks remain independent. The explicit guard checks distinctness in the source program; this rule adds no automatic runtime alias check, alias-failure Result/panic channel, hidden cloning/copy-back, or write-order arbitration. Every accepted call still requires initialized readable elements, writable caller authority, compatible entry reads/accepted writes, one active holder per location, valid containing storage, and single location selection in ordinary callee-first/source-argument order.
 
