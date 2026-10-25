@@ -31,7 +31,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Principles](principles.md): audience, defaults, scope, and performance goals.
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
-- [Optional leading separators](leading-separators.md): selected leading and/or on complete Boolean expressions/conditions, or on initial/nested pattern alternatives, and | on nonempty unions; equivalent compact forms, unchanged precedence/effects/bindings, invalid separators, selected compact/multiline formatter presentation, and conditional future leading-& support.
+- [Optional leading separators](leading-separators.md): selected leading and/or on Boolean expressions/conditions, identity + on additive chains, or on initial/nested pattern alternatives, and | on nonempty unions; equivalent compact forms, unchanged effects/bindings, nonempty boundaries, selected earlier chain presentation, and conditional future leading-& support.
 - [Comments](comments.md): nested comments, raw fences, parser-neutral trivia, Ali's commented-out condition, delimiter errors, and selected opaque-content/attachment-preserving formatting with surrounding layout changes.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
@@ -40,11 +40,11 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Mutability, access, and operations](mutability.md): the four declaration forms, held-data access, and operation receiver requirements.
 - [Mut qualifier placement](mut-qualifier-placement.md): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
 - [Local shadowing and copies](local-shadowing-and-copies.md): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
-- [Operators](operators.md): arithmetic, comparison, logical operations, optional leading Boolean-expression/condition separators, and unchanged precedence.
+- [Operators](operators.md): arithmetic, comparison, logical operations, optional leading logical separators and identity additive +, preserved negation, and no redundant leading * or / rule.
 - [Negated comparison operators](negated-comparison-operators.md): selected ASCII positive/negative family at one comparison precedence; Boolean complements, adjacent-pair chains, propagation boundaries, type-suffix attachment, and historical alternatives. All ten also support nonbinding comparison-pattern prefixes; general logical patterns remain separate.
 - [Comparison chains](comparison-chains.md): adjacent comparisons, single evaluation, short-circuiting, and grouping.
 - [Evaluation order](evaluation-order.md): left-to-right operands and arguments, var input facts that must survive later arguments, assignment targets, and skipped expressions.
-- [Numbers and ranges](numbers.md): inferred numeric values, range direction, and stride.
+- [Numbers and ranges](numbers.md): inferred numeric values, identity leading + without conversion or implicit zero, range direction, and stride.
 - [Division](division.md): fractional `/`, integer floor `//`, paired `%`, compound updates, and numeric fault cases.
 - [Arithmetic fault boundaries](arithmetic-faults.md): typed panic channel for basic arithmetic, local typed-`else` recovery, and unresolved fault cases.
 - [Strings](strings.md): multiline contents and adjacent literal concatenation.

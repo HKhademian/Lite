@@ -626,6 +626,16 @@ Complete postfix productions, full precedence, nested-operand evaluation scope, 
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 
+## Optional leading plus
+
+```text
+additive_chain_entry := ["+"] additive_chain_without_leader
+```
+
+Selected 2026-10-25: this is a nonempty additive-expression entry fragment, not a complete arithmetic grammar. The placeholder denotes the ordinary additive expression with at least one real operand and no independent redundant leader at the same boundary. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
+
+Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; // and % gain no such prefix either. Full unary forms, nonnumeric/custom operator contracts, arithmetic precedence/associativity, and recursive integration remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+
 ## Logical grouping
 
 ```text

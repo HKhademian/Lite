@@ -28,6 +28,8 @@ This example illustrates order for that grouping; the complete arithmetic preced
 
 Each executed operand occurrence is evaluated once. `read() + read()` contains two separate calls and executes both; evaluation order does not imply memoization.
 
+The selected [identity leading plus](leading-separators.md#additive-chains-with-leading-plus) adds no evaluation or arithmetic operation. + first() + second() evaluates the same real occurrences and performs the same binary addition as first() + second(); + first() alone evaluates that call once and preserves its admitted value/type. Do not insert/evaluate a zero seed or invoke an extra overload. Leading minus retains negation, while leading * and / gain no redundant-prefix rule. Existing grouping, effects, and failures remain unchanged.
+
 ## Function calls
 
 Evaluate the callee expression first, then supplied argument expressions from left to right in source order, then invoke the selected callable.

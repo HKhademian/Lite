@@ -1,6 +1,6 @@
 # Optional leading separators
 
-Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives with leading or, and plain-union type expressions; compact/multiline formatter presentation selected 2026-10-25; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
+Status: **selected 2026-10-24 for conditional and/or chains, ordinary Boolean expressions including unparenthesized initializers and Boolean loop sources, initial/nested pattern alternatives with leading or, and plain-union type expressions; additive-chain leading plus selected 2026-10-25; compact/multiline formatter presentation selected 2026-10-25; intersection-type semantics and complete recursive parsing remain open**. This is a documentation-level language decision, not an implemented parser or formatter claim.
 
 ## Purpose
 
@@ -141,6 +141,39 @@ Assume `running` is Bool, `remaining` is Int, and `process_next` returns Unit an
 
 The leading token requires a Bool source; it does not coerce an iterable to Bool or introduce header pattern matching. Iterable sources retain their existing evaluation-once contract, and an omitted source still selects unconditional iteration. A bare leader without an operand is invalid, not an omitted source. This extension supersedes the earlier restriction of leading logical separators to if/guard conditions.
 
+## Additive chains with leading plus
+
+Selected 2026-10-25: a complete additive-chain entry may start with one optional `+`, including a singleton. Every contribution can use the same written shape:
+
+```text
+total :=
+    + rent
+    + groceries
+    + transport
+;
+```
+
+Assume compatible numeric inputs. Removing only the first `+` gives exactly the same additive expression: rent + groceries + transport. Its grouping, operand evaluation order, actual binary additions, effects/failures, and result contract remain unchanged. The prefix introduces no operation, overload invocation, implicit zero operand, conversion, or promotion. In particular, the rule does not lower the expression to 0 + rent + groceries + transport.
+
+The singleton form `+ amount` has the same value and type as the admitted operand amount and evaluates that occurrence once. Ali can comment out an earlier contribution while leaving the next line intact:
+
+```text
+total :=
+    /* + rent */
+    + groceries
+;
+```
+
+The comment contributes no operator or operand. Removing it still leaves the valid singleton + groceries. Commenting out all real operands remains invalid. No grouping parentheses are required around an already delimited initializer; a parenthesized additive expression can establish another complete chain entry. Whitespace/newlines do not choose the parse. Require a real operand and at most one redundant leading + per entry; no permission for stacked/interior extra leaders or trailing operators follows.
+
+### Negation and other arithmetic operators
+
+The identity that permits this redundancy is +A having the same value as A for an admitted additive operand. It does not justify removing a leading minus: -A retains its ordinary negation meaning and may differ from A. A minus before a later term likewise retains its actual subtraction/negation role; never erase it as presentation punctuation.
+
+Leading `*` and `/` are not admitted as redundant chain separators. Do not infer a multiplication seed of 1, a reciprocal, or another unary operation. This selection adds no corresponding leading `//` or `%` rule either. Existing binary arithmetic retains its contracts; separate uses of prefix operators would require their own language decisions.
+
+This selects an identity prefix at complete additive-chain boundaries, not a general permission to ignore arithmetic operators. The examples do not select nonnumeric/custom-operator contracts, a numeric conversion policy, complete unary productions, arithmetic precedence/associativity, or new ownership/copy behavior. Those existing open questions remain independent. See [operators](operators.md#optional-leading-plus-selected) and [evaluation order](evaluation-order.md#operator-operands).
+
 ## Pattern alternatives with one shared body
 
 Selected 2026-10-24: a complete initial subject-based match-arm pattern list may start with one optional `or`. Every entry is a complete pattern, with its own payload bindings when applicable. The body-opening brace follows the whole list, or its optional shared `if` guard:
@@ -221,8 +254,8 @@ The same presentation is intended for a leading `&` if intersection types are se
 
 ## Boundaries and rejected forms
 
-- Require at least one real Boolean/condition operand, pattern, or union member. A leading separator alone does not form an expression, condition, loop source, pattern list, or type.
-- Permit at most one leading separator at each admitted boundary. Do not stack leading `and`/`or` tokens or repeat leading `|` tokens.
+- Require at least one real Boolean/condition or additive operand, pattern, or union member. A leading separator alone does not form an expression, condition, loop source, pattern list, or type.
+- Permit at most one leading separator at each admitted boundary. Do not stack leading `and`/`or` tokens or repeat redundant leading `+`/`|` tokens.
 - Retain every interior separator and operand. A trailing separator is not selected.
 - Whitespace, indentation, comments, and line breaks do not create or change these boundaries. The same forms work on one line or many.
 
@@ -255,7 +288,7 @@ At an arm's initial-pattern boundary, `or { body }`, `or or .Email(address) { bo
 
 ## Grammar and tooling
 
-The [condition grammar](grammar-sketch.md#conditionals) and [Boolean expression fragment](grammar-sketch.md#logical-grouping) put the optional logical leader at each complete expression/condition entry, outside the precedence ladder. They do not independently prefix the first operand again. The [pattern fragment](grammar-sketch.md#match) places one optional `or` on each complete nonempty initial/component alternative list; its individual patterns do not independently admit another bare leader at that same boundary. The [type fragment](grammar-sketch.md#optional-leading-union-separator-selected) places `|` on a nonempty union chain. This prevents accidental admission of stacked leaders or leading operators after every interior `and`/`or` token. Special pattern-source and comparison-pattern operand grammars retain their existing boundaries; use explicit grouping when those grammars reserve ungrouped top-level logical operators as separators.
+The [condition grammar](grammar-sketch.md#conditionals) and [Boolean expression fragment](grammar-sketch.md#logical-grouping) put the optional logical leader at each complete expression/condition entry, outside the precedence ladder. They do not independently prefix the first operand again. The [additive fragment](grammar-sketch.md#optional-leading-plus) permits one identity + at a complete nonempty additive-chain entry. The [pattern fragment](grammar-sketch.md#match) places one optional `or` on each complete nonempty initial/component alternative list; its individual patterns do not independently admit another bare leader at that same boundary. The [type fragment](grammar-sketch.md#optional-leading-union-separator-selected) places `|` on a nonempty union chain. This prevents accidental admission of stacked/interior extra leaders. Special pattern-source and comparison-pattern operand grammars retain their existing boundaries; use explicit grouping when those grammars reserve ungrouped top-level logical operators as separators.
 
 ### Formatter presentation selected
 

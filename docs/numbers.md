@@ -16,6 +16,10 @@ var total := 0;
 
 The examples assume the same inferred integer family as an explicit `Int`. Capitalization and the full primitive type naming convention have not been frozen.
 
+## Identity leading plus
+
+Selected 2026-10-25: a complete additive-chain entry may start with one optional +. With compatible numeric inputs, total := + rent + groceries; denotes the same expression as total := rent + groceries;. A singleton + amount preserves the admitted operand's value and type, without numeric promotion/conversion or an implicit 0 + amount operation. The prefix has no separate overflow/failure or evaluation step. Minus retains negation; leading * and / are not redundant alternatives and gain no implicit initial operand. Complete numeric and unary-operator contracts remain open. See [leading plus](leading-separators.md#additive-chains-with-leading-plus).
+
 ## Leading zero in fractional literals
 
 Fractional literals require a digit before the decimal point. Write `0.5`; `.5` is rejected.

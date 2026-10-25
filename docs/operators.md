@@ -1,6 +1,6 @@
 # Operators
 
-Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; identity leading plus on additive chains selected 2026-10-25; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
 
 ## Working operator set
 
@@ -13,6 +13,12 @@ and  or  not
 ```
 
 `=` is assignment, not comparison. `:=` and `: Type =` belong to declarations. No increment or decrement operator has been selected.
+
+## Optional leading plus selected
+
+Selected 2026-10-25: a complete additive-chain entry permits one optional leading +, including a singleton. total := + rent + groceries + transport has the same meaning as the form without the first +; the ordinary initializer can be written over several lines without parentheses. For an admitted operand, +A preserves A's value/type and evaluates that occurrence once. No implicit zero, extra addition/overload call, numeric conversion, promotion, or new effect/failure is introduced.
+
+This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading // or % rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Complete unary grammar, arithmetic precedence/associativity, and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
 ## Division
 
