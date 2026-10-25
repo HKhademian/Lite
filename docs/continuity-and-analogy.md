@@ -152,6 +152,32 @@ An explicit reverse traversal must be requested through the source/provider, for
 
 This is the intended reading of “similar input pattern”: similar source shape gives similar **rules**, while capability differences give visibly different **available fields**. The difference must be diagnosed at the capability boundary, not discovered at runtime.
 
+## Pattern families
+
+A pattern family is a group of constructs that should teach each other. Every entry names what is shared, what differs, and the visible boundary that makes the difference predictable.
+
+| Family | Shared shape | Difference | Visible boundary |
+|---|---|---|---|
+| Declaration and reservation | `name := value`, `name: T = value`, `name: T = ?` | inference vs explicit type vs reserved storage | `:=`, `: T =`, and `?` |
+| Block completion | brace body with a tail expression or action | value completion vs `Unit` action | tail value and context |
+| Completion processing | `then { ... }` after a loop or total conditional | loop context is implicit; conditional `then` requires a final `else` and tagged `.value` | `loop` vs `if`, final `else`, `@tag` |
+| Fallback | `else` introduces a fallback path | conditional branch fallback vs operation/block recovery | the construct or recovery target before `else` |
+| No-value marker | `?` means “no value” | declaration reservation vs no-write/no-contribution branch | `= ?` vs `else { ? }` |
+| Explicit target | `@tag` names a construct | loop/conditional/return target matrix | `@tag` and the target construct |
+| Traversal | `loop source as item { ... }` | positional index/order vs element-only set traversal | source type capability |
+| Assignment and comparison | `=` and `==` look related | assignment vs equality | the extra `=` |
+| Alternatives | `A \| B` | type union vs recovery/pattern alternatives | type context vs recovery/pattern context |
+| Pattern binding | `pattern := source` or a match arm | binding is branch-local and success-only | pattern header and branch scope |
+
+These are not claims that the members are identical. They are claims that a reader can carry the shared shape across the family and needs to learn only the marked difference.
+
+A construct that does not fit an existing family must either:
+
+- introduce a new visible boundary that explains why it is different; or
+- be recorded as a deliberate exception with a reason and a diagnostic.
+
+“It looks similar but behaves differently” is not enough.
+
 ## Decision checklist
 
 Use this checklist for every syntax or rule decision.
