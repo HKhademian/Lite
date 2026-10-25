@@ -92,6 +92,10 @@ name := ({ make_user() }).name;
 
 Without grouping, a completed block item ends before any following suffix; the following tokens must form a separate valid item. Newlines never choose between those readings. Within a complete conditional or loop, attached clauses are parsed before deciding that the item has ended.
 
+## Body-opening braces
+
+A construct that owns a braced body consumes the first outer-level ungrouped `{` after its header as the body opener. This covers `if`/`else if`, `loop`, `fn`/lambda bodies, and attached `then`, `finally`, and `else` clauses. A record construction, block value, or conditional used as a source, condition, or match subject must be grouped, so the opening brace cannot be reinterpreted through type checking, whitespace, name lookup, or capitalization. The subjectless `match { ... }` form is the deliberate exception: a brace immediately after `match` selects it, while a brace-starting match subject must be grouped. No trailing-closure call form is selected; `f() { ... }` is not a call with a trailing lambda body, and a lambda argument uses its own parenthesized header and braced body. See [record literal boundaries](record-literal-boundaries.md) and [matches](match.md).
+
 ## Declarations
 
 ```text
@@ -639,17 +643,16 @@ The selected [formatter presentation](leading-separators.md#formatter-presentati
 
 The selected [idempotence contract](tooling-and-learning.md#formatter-stability-and-idempotence) requires a successfully formatted output to remain byte-for-byte unchanged on a second successful pass with the same formatter version and effective configuration. This constrains formatter presentation and future conformance checks, not source grammar or runtime evaluation.
 
-### Malformed source
-
 ### Verification before writing
 
 The selected [verification-before-write contract](tooling-and-learning.md#verification-before-writing) reparses proposed output and checks original executable structure and source-imposed typing requirements under approved formatting normalizations, plus comment contents/attachment separately. Preserve a singleton leading and's Bool requirement rather than normalizing it away merely because an unprefixed expression parses. Verification failure or inability to establish preservation leaves the file/buffer unchanged and reports a formatter error. The normal form and algorithm remain open; this adds no grammar production or full-type-check prerequisite.
+
+### Malformed source
 
 Lexical/syntax failures do not authorize formatter repair or partial-file rewrites. The selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source) leaves the affected file/buffer unchanged, emits a focused diagnostic, permits other requested valid files to be formatted, and reports overall failure. It adds no recovery token, implicit operand, or newline-dependent grammar production; full type checking is not a formatting prerequisite.
 
 ## Open parser interactions
 
-- A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.
 - Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.
 
 ## Related concepts and references
