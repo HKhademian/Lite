@@ -176,7 +176,7 @@ only_tail: (...rest:) = (1, 2, ...right);
 
 strict follows its two-fixed-input destination shape. The complete supplied sequence guarantees two Int values; its first two values fill those slots, and they need not be the literal 1 and 2. only_tail instead has no fixed components because its annotation explicitly requests a rest-only shape; infer Int for its omitted element type.
 
-Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. The simple named-slot discovery cases below are now selected; general named tuple-spread composition, already-declared tail merging/collisions, and multiple stored rest segments remain open.
+Every explicit construction still needs the whole-composition coverage, final-type, label-routing, and access proof. The explicit type does not authorize incompatible values, implicit conversions, or a runtime arity fallback. c/e's constructors guarantee at least two logical supplied values without inferring two fixed tuple slots; their rest-only schemas alone do not encode that minimum. General retention of runtime-tail lower-bound facts across bindings/effects remains separate. An explicit named-tail value entry retains its own selected declaration meaning. The simple named-slot discovery cases below are now selected; general composition of rest-bearing tuple sources, already-declared tail merging/collisions, and multiple stored rest segments remain open.
 
 ### Named slot discovery does not reserve a value
 
@@ -195,7 +195,7 @@ If items contains [1, 2, 3], the first construction routes 1 into the unfilled s
 
 Retain the leading fixed components established by the existing positional rule. Additional statically named fixed entries establish their slots in first-declaration order before the final array tail. Normal explicit-label uniqueness and fixed-slot collision rules still apply. The inferred destination's slots start unfilled; route every contribution once in written order, filling the next unfilled fixed slot positionally or selecting a slot by name, and then collecting remaining positional inputs into the tail. Later positional values do not bypass an unfilled inferred fixed slot merely because a runtime spread occurred earlier.
 
-These simple named-entry cases extend the earlier purely positional defaults; the five unnamed examples keep their selected outcomes. A named field does not become an unlabeled array element or a fixed suffix after the tail. Infer its final contract using the existing surviving-contribution rules; all expressions must remain valid, and final slot types/access and complete coverage must be proven for every admitted runtime routing. General named tuple-spread composition, tail-label collisions beyond the selected default-name check, multiple stored tails, and complete constraint solving remain separate.
+These simple named-entry cases extend the earlier purely positional defaults; the five unnamed examples keep their selected outcomes. A named field does not become an unlabeled array element or a fixed suffix after the tail. Infer its final contract using the existing surviving-contribution rules; all expressions must remain valid, and final slot types/access and complete coverage must be proven for every admitted runtime routing. General composition of rest-bearing tuple sources, tail-label collisions beyond the selected default-name check, multiple stored tails, and complete constraint solving remain separate.
 
 An explicit/established expected schema is still the reference contract. Adding the same inferred schema explicitly does not change routing:
 
@@ -204,6 +204,27 @@ explicit_value: (score: Int, ...rest: Int) = (...items, score = 10);
 ```
 
 This is tuple-value shape inference, not a change to explicit-destination routing or call matching. Existing fixed-slot rejections remain: a later named override does not release a consumed positional value, and a fixed tuple with any unfilled component is rejected. The selected default-rest collision rejection also applies when a discovered fixed field is named rest; no automatic renaming or field-to-tail overwrite is introduced.
+
+### Fixed tuple spreads participate in slot discovery
+
+Selected in the follow-up discussion, 2026-10-25: statically named components of a fully fixed tuple spread establish inferred fixed slots just as directly written named entries do. Discover their labels, stored order, and types from the source's established tuple contract; this does not evaluate the source or fill/reserve those slots early.
+
+```text
+/* Assume items is a readable runtime-sized Int array. */
+base := (score = 10, rank = 20);
+
+value := (...items, ...base);
+/* inferred shape: (score: Int, rank: Int, ...rest: Int) */
+
+first_fixed := (...base, ...items);
+/* same inferred shape, with different written-order routing */
+```
+
+For items = [1, 2, 3], value first consumes 1 into score and 2 into rank, collecting 3 into rest. The later base spread replaces score with 10 and rank with 20, yielding rest = [3]. first_fixed fills both named slots from base first, so all three items enter its tail. Empty or one-element items are also compatible because base supplies both fixed slots before construction completes. The source expressions and their contributions retain normal written-order evaluation.
+
+This is the statically expanded form of the existing named-entry rule. Fixed named components establish slots in their existing first-contribution order; fixed unnamed components follow ordinary positional routing at the spread's place in the source sequence. Infer final contracts under surviving-contribution rules and prove coverage/types/access. Names contributed by a spread retain their existing distinction from explicitly written labels of the enclosing constructor: validate each source's own labels, preserve explicit-label uniqueness, and apply established permitted replacement rules. The default rest-label collision check remains in force.
+
+No labels are discovered by inspecting runtime array elements. A tuple-valued array element remains one value unless separately spread. This selection covers fully fixed tuple sources; general composition involving already declared array tails, multi-tail storage, and tail-label collision/merge policy remain separate. Explicit destination types stay authoritative, and no ownership, alias, or physical copying rule is selected here.
 
 ### Destination-guided repacking
 

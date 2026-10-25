@@ -40,6 +40,8 @@ Binding reassignment and read/write access to held data are distinct capabilitie
 
 For simple named entries mixed with a runtime array spread, discover the omitted tuple schema before routing values: (...items, score = 10) can infer a fixed score slot before its final rest array. Discovery does not fill/reserve that slot; an earlier positional element can be consumed into it and then replaced. Leading fixed components retain their order, later named fixed slots follow first-declaration order, and the purely positional defaults remain unchanged. An explicit expected type still controls shape. See [named tuple-slot inference](tuple-array-shapes.md#named-slot-discovery-does-not-reserve-a-value).
 
+A fully fixed tuple spread can supply the same statically discoverable named slots as direct entries. Its established tuple type supplies labels/order/types before evaluation, while its values are routed only when the operand is evaluated in written order. Thus (...items, ...base) can infer base's fixed score/rank slots and later replace their earlier positional contributions. Explicit destinations, final-slot checks, and normal label rules still govern construction; composition of already rest-bearing sources remains separate. See [fixed tuple source inference](tuple-array-shapes.md#fixed-tuple-spreads-participate-in-slot-discovery).
+
 ## Intended type-system foundation
 
 - Primitive values and explicit numeric representations.

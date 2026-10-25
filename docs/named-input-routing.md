@@ -114,6 +114,8 @@ Labels are static selectors, not expressions. A local variable named b does not 
 
 Discovering a tuple's omitted type is separate from filling its values. In the selected simple mixed case, (...items, score = 10) with a runtime-sized Int array can infer (score: Int, ...rest: Int) before routing. That score slot starts unfilled: a leading array element can fill it, and the later named contribution replaces that value without restoring it to the input sequence. For items = [1, 2, 3], the result is score = 10 with rest = [2, 3]. Explicitly writing the same destination schema gives the same behavior. See [named slot inference](tuple-array-shapes.md#named-slot-discovery-does-not-reserve-a-value).
 
+Fully fixed tuple spreads also expose their named slots to this omitted-schema discovery. With base := (score = 10, rank = 20), (...items, ...base) for Int items [1, 2, 3] infers score/rank before the final tail, consumes 1/2 into those unfilled slots, collects 3, then replaces the fixed values from base. Operand evaluation stays in written order, and spread-provided labels do not become explicit labels of the enclosing constructor. Already rest-bearing source composition remains separate; see [fixed tuple discovery](tuple-array-shapes.md#fixed-tuple-spreads-participate-in-slot-discovery).
+
 Known fixed tuple destinations keep the existing rule. These independent examples use the same four-slot schema:
 
 ```text
