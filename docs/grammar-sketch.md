@@ -34,6 +34,14 @@ Every valid identifier beginning with underscore, including standalone `_`, is a
 
 Fractional literals require a leading digit (`0.5`); standalone `.5` is rejected as a numeric literal. Selected tuple member suffixes such as tuple.5 are positional access, not fractional literals. Leading-dot context access remains distinct. Other numeric-token productions remain open; see [numbers and ranges](numbers.md).
 
+## String scanning
+
+```text
+string_value := string_literal { string_literal }
+```
+
+Adjacent string literal tokens with only whitespace or comments between them concatenate without inserted characters and form one value before item separation is interpreted. A semicolon still separates items, so `"Hello"; "world"` is two values, not one joined literal. Joining applies only to literal tokens, not arbitrary expressions. The literal token form, escapes, raw forms, interpolation, and encoding interactions remain open; see [strings](strings.md).
+
 ## Division tokens
 
 `/` is fractional division; `//` is integer division on integer operands. `/=` and `//=` are their corresponding compound-update tokens. In the slash operator family, recognize the longest valid token, including `//=` before its shorter prefixes. Comment openers retain their lexical roles; outside comments and strings, `//` never starts a line comment.
@@ -633,12 +641,15 @@ The selected [idempotence contract](tooling-and-learning.md#formatter-stability-
 
 ### Malformed source
 
+### Verification before writing
+
+The selected [verification-before-write contract](tooling-and-learning.md#verification-before-writing) reparses proposed output and checks original executable structure and source-imposed typing requirements under approved formatting normalizations, plus comment contents/attachment separately. Preserve a singleton leading and's Bool requirement rather than normalizing it away merely because an unprefixed expression parses. Verification failure or inability to establish preservation leaves the file/buffer unchanged and reports a formatter error. The normal form and algorithm remain open; this adds no grammar production or full-type-check prerequisite.
+
 Lexical/syntax failures do not authorize formatter repair or partial-file rewrites. The selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source) leaves the affected file/buffer unchanged, emits a focused diagnostic, permits other requested valid files to be formatted, and reports overall failure. It adds no recovery token, implicit operand, or newline-dependent grammar production; full type checking is not a formatting prerequisite.
 
 ## Open parser interactions
 
 - A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.
-- Adjacent string literal tokens join before ordinary expression separation is interpreted.
 - Selected match-arm shapes need complete pattern productions; typed hook-dispatch chains remain exploratory.
 
 ## Related concepts and references
