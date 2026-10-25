@@ -93,7 +93,7 @@ There is no representation reason to group labels at the end: named and unnamed 
 
 ## Safe callable adaptation and representation
 
-The selected [safe callable value adaptation](callable-value-variance.md) permits direct assignment of a wider-accepting/narrower-returning ordinary implementation to a compatible required-input view. The compiler must preserve normal value admission and copies across any representation difference; a source-level forwarding wrapper is not required. This is distinct from label-only layout preservation and the future in-place cast topic. Adapter layout/allocation, ABI, and performance remain unspecified.
+The selected [safe callable value adaptation](callable-value-variance.md) permits direct assignment of a wider-accepting/narrower-returning ordinary implementation to a compatible required or omission-capable ordinary view. In the latter case the source contract must promise omission, and the adapter preserves it for implementation-owned handling instead of materializing a narrowed-type default. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise). The compiler must preserve normal value admission and copies across any representation difference; a source-level forwarding wrapper is not required. This is distinct from label-only layout preservation and the future in-place cast topic. Adapter layout/allocation, ABI, and performance remain unspecified.
 
 ## Future in-place casting discussion
 

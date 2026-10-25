@@ -116,6 +116,8 @@ For a supplied tuple with a declared array tail, f(...pack) and f.call pack emit
 
 Evaluate the callable first and the supplied pack expression once. Ordinary call sugar evaluates its supplied expressions once in written order before invocation. Superseded contributions, ignored inputs, and zero-initialized callables retain their required effects and cleanup. General `.call` operand precedence, chaining, reserved-member policy, and recursive expression integration remain open; the examples do not select parsing by expected type or whitespace.
 
+Omission-capable callable views also retain the source implementation's promise when the supplied-input type is narrowed safely. Both .call and ordinary invocation preserve omitted slots for implementation handling; neither a public signature nor pack adapter supplies/alters a default or fills a narrowed-type zero. A source contract without omission permission cannot acquire it through adaptation. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
+
 ## Inline callback probes
 
 Assume each illustrative library operation has a known contract. These do not select standard-library APIs, collection materialization, generic syntax, or capture behavior.

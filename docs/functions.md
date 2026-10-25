@@ -51,7 +51,7 @@ The explicit signature form and function-literal assignment are selected. Callab
 
 ## Safe value input and result adaptation
 
-Selected 2026-10-25: wide := fn(value: Int | String): Int { 0 } can be assigned directly as view: fn(value: Int): Int | String = wide. Every allowed public Int input fits the implementation, and its Int result fits the public union. A manual wrapper is valid but not required; the compiler preserves necessary argument/result adaptation, copies, and effects. Reverse unsafe directions are rejected. Normal label checks and explicit relabeling remain independent; changed input types on omission-capable views, writable grants, error-contract variance, and broader callable grammar remain separate. See [safe callable value adaptation](callable-value-variance.md).
+Selected 2026-10-25: wide := fn(value: Int | String): Int { 0 } can be assigned directly as view: fn(value: Int): Int | String = wide. Every allowed public Int input fits the implementation, and its Int result fits the public union. Omission-capable narrowed views are also valid when the source contract promises omission; the signature cannot provide or alter defaults, and the adapter preserves omission for the implementation. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise). A manual wrapper is valid but not required; the compiler preserves necessary argument/result adaptation, copies, and effects. Reverse unsafe directions are rejected. Normal label checks and explicit relabeling remain independent; writable grants, error-contract variance, and broader callable grammar remain separate. See [safe callable value adaptation](callable-value-variance.md).
 
 ## Whole input tuples and implicit arguments
 
@@ -241,7 +241,7 @@ map(numbers, (n): Int { n * 2 });
 map(numbers, (n: Int): Int { n * 2 });
 ```
 
-The expected callable contract supplies omitted types. Explicit annotations must satisfy that contract; they do not change an existing binding or callback parameter's declared type. Ordinary value [safe callable value adaptation](callable-value-variance.md) is now selected: implementation inputs may accept more values than a required public view supplies, and implementation results may be narrower than the public result. Other variance/callable compatibility remains open. An explicit fallible result uses the same `T ! E` notation as a full `fn` definition.
+The expected callable contract supplies omitted types. Explicit annotations must satisfy that contract; they do not change an existing binding or callback parameter's declared type. Ordinary value [safe callable value adaptation](callable-value-variance.md) is now selected: implementation inputs may accept more values than a public view permits callers to supply, and implementation results may be narrower than the public result. Other variance/callable compatibility remains open. An explicit fallible result uses the same `T ! E` notation as a full `fn` definition.
 
 With all named input types and the result annotated, the lambda can provide its own signature without an expected callable type:
 

@@ -1,6 +1,6 @@
 # Safe callable input and result adaptation
 
-Status: **selected 2026-10-25 for ordinary value callables, including the required-input plain-union case below; design-only, not compiler/runtime verification**.
+Status: **selected 2026-10-25 for ordinary value callables, including required and omission-capable plain-union input views; design-only, not compiler/runtime verification**.
 
 ## Direct assignment is valid
 
@@ -68,11 +68,48 @@ adapted_empty(7);  /* Int zero admitted into Int | String */
 
 Adaptation invokes the obtained source callable's semantics. Here the source zero callable returns zero(Int), which is then admitted as an Int result member. This is not fresh zero construction of the destination function type, and it does not choose zero(Int | String) or settle the pending general union-zero mapping. A compiler cannot discard necessary adaptation just because the source is zero.
 
+## Omission remains an implementation promise
+
+Selected on **2026-10-25**, clarified by the user: a default is an implementation promise. A signature can record omission permission or expose a required view, but cannot define, replace, convert, or otherwise alter the implementation's default definition/handling. This also applies when safe input variance narrows the public type of caller-supplied values.
+
+```text
+wide_default := fn(value: Int | String = "auto"): Int {
+    if value: String { 1 }
+    else { value }
+}
+
+view_default: fn(value?: Int): Int = wide_default;
+
+view_default(7);       /* 7 */
+view_default();        /* 1: implementation uses its own String default */
+view_default("auto");  /* rejected: supplied values must fit the public Int input */
+```
+
+The public Int constrains values the caller supplies. The ? separately permits supplying no value. The implementation's String default fits its own Int | String input; it need not become an Int merely because a narrower view is used. The body retains its implementation input type and local bindings. Its Int result still fits the view's result contract.
+
+For a compatible view, every supplied destination input must fit the implementation input, and every implementation result must fit the destination result. In addition, every omission that the destination permits must be promised by the source callable contract. This extends the earlier required-view variance case to omission-capable ordinary value inputs; it does not introduce a public missing value.
+
+```text
+no_default := fn(value: Int | String): Int { 0 }
+bad_optional: fn(value?: Int): Int = no_default;
+/* rejected: this source contract does not promise omission */
+```
+
+A signature cannot manufacture a default because Int supports zero. A required source view also cannot regain hidden omission capability merely by changing its signature; the existing required-view rule remains. Constructing a fresh zero callable uses its separately selected built-in omission handling rather than discovering a hidden default on an arbitrary required source value.
+
+### Compiler adapters must preserve omission
+
+When a caller supplies an Int, the adapter admits that value into the implementation's Int | String input. When the caller omits it, the adapter preserves omission for the selected implementation's handler. It must not insert zero(Int), synthesize a public default, copy a default into the signature, or attempt to convert "auto" into Int. The source callable value selected during adaptation retains its own handling.
+
+Evaluate reached supplied expressions in their ordinary written order. For an ordinary user implementation, run only its missing defaults once in its declared slot order before the body. Public relabeling does not rename default-expression locals or change dependencies between earlier implementation parameters. Required views still require their inputs and do not run hidden defaults for supplied slots. Zero implementations retain no-body/no-default execution and their original zero-result semantics before any supported result adaptation.
+
+This defines observable behavior without selecting an internal absent-input sentinel, parameter-slot layout, or ABI. A possible non-public unvalued representation remains a future discussion; no public undefined, Unit alternative, nullable input, or uninitialized value is introduced.
+
 ## Labels, defaults, and access remain separate
 
 Normal callable transfers still check public labels. An explicitly typed receiving declaration can bypass label mismatch under the selected [explicit label-conversion rule](tuple-label-conversions.md#ordinary-transfers-check-labels). That label permission may be composed with a valid safe value adaptation; it cannot reverse the input/result compatibility directions or justify byte reinterpretation. Implementation-local receiver names remain independent of caller-visible labels.
 
-Type-changing input adaptation is selected here for required ordinary destination inputs. An implementation may itself have a default that is hidden by that required view under the existing omission rule. For an omission-capable destination input, changing the input type at the same time is a separate interaction still to settle; this selection does not guess how such a default should relate to the narrowed view. Unchanged input types retain all selected public-omission/implementation-default behavior. Ordinary result widening remains possible when the other contracts are already compatible.
+Safe ordinary input adaptation now applies to required and omission-capable views under the implementation-promise rule above. Supplied inputs are checked contravariantly; allowed omission must be promised by the source contract and must reach its selected implementation unchanged. A narrower public input type does not revalidate an already established implementation default against that narrower type. Required views can still hide omission, and ordinary result widening retains its selected rule.
 
 No new type widening/narrowing is authorized through var/mut grants by this ordinary-value rule. Their existing read/write, initialization, caller-location, and permission compatibility checks remain necessary. Variance for writable inputs, changing error/effect contracts, Result type composition, variadics/overloads, generic constraints, unrelated callable shape changes, and recursive inference remain separate. No implicit returned-error extraction or new escaping recoverable-error contract is introduced.
 

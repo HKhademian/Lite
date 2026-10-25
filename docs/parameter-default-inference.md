@@ -26,7 +26,7 @@ The default is optional input supply, not a generic specialization mechanism. Es
 
 ## Annotations and expected contracts constrain inference
 
-An explicit parameter annotation or already established expected callable input type constrains the parameter and its default. Infer only omitted information; reject incompatible constraints rather than replacing a contract with the default's narrower type.
+When defining a fresh implementation, its explicit parameter annotation establishes the implementation input type; without that annotation an established expected callable contract can supply an omitted type. Check its default against that established implementation input type. Callable compatibility with a distinct public view uses the selected safe variance rule, rather than requiring identical input types. Infer only omitted information; a default does not override established constraints.
 
 ```text
 flexible := fn(value: Int | String = 3) {
@@ -43,6 +43,8 @@ bad := fn(count: Int = "three") { count }
 ```
 
 The [public omission contracts and implementation defaults](callable-default-contracts.md) rule now selects omission behavior for this expected-input example: the required fn(Int | String): Int contract hides omission, so handler() is rejected even though its implementation declares a default. The implementation still owns and validates that default. A public contract allowing omission needs a compatible implementation default; the public n?: Int / ?:Int omission marker is now selected, while complete grammar and general callable compatibility remain open. See [public omission marker](callable-default-contracts.md#public-omission-marker).
+
+A later adaptation of an already established implementation does not re-run parameter inference against the view's narrower type or retype its default. For example, an Int | String implementation defaulting to "auto" can fit a public fn(value?: Int): Int view when its result and omission promise fit: the caller may supply Int or omit, and the implementation still handles omission with its own String default. An implementation actually declared to take Int still cannot default to "auto"; the wider implementation input is essential. No signature supplies or alters defaults. See [implementation-owned default promises](callable-value-variance.md#omission-remains-an-implementation-promise).
 
 ## Static types do not require evaluating defaults
 
