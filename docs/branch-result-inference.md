@@ -59,7 +59,7 @@ The selected [conditional union-fallback rule](conditional-union-fallback.md) re
 
 Use automatic normalized union inference for both if and match, matching the selected local-lambda behavior and reducing annotation. A changed branch can widen an inferred local result; an explicit contract can pin it.
 
-Requiring an explicit/expected union contract for mixed conditional and match results was considered and not chosen. This supersedes the older rules rejecting mixed branch results merely because no union annotation was supplied. Loop accumulator inference, recursive function inference, and deferred contexts remain separate.
+Requiring an explicit/expected union contract for mixed conditional and match results was considered and not chosen. This supersedes the older rules rejecting mixed branch results merely because no union annotation was supplied. Loop `.value` inference, recursive function inference, and deferred contexts remain separate.
 
 ## References
 

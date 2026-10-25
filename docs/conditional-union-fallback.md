@@ -57,7 +57,7 @@ This is a selected semantic refinement, not a request to perform or skip particu
 - Implicit member selection, an empty union state, or Unit insertion on no match. These conflict with the requirement that a declaration default choose a real member; no such reversal is implied.
 - Implicit uninitialized storage on no match. The selected explicit `?` branch opts into reservation; a no-`else` declaration without `?` uses its normal zero default.
 
-Require an explicit `else` or `?` for a declaration initializer whose conditional result is a multi-member union. Assignment and loop no-match paths perform no write or contribution and need no union member. Loop accumulator initialization, zero-result callables, and zeroing aggregate union fields remain separate pending cases. Argument omission now requires an applicable explicitly declared default for every parameter type; see [argument defaults](union-parameter-defaults.md).
+Require an explicit `else` or `?` for a declaration initializer whose conditional result is a multi-member union. Assignment and loop no-match paths perform no write or contribution and need no union member. Loop `.value` initialization, zero-result callables, and zeroing aggregate union fields remain separate pending cases. Argument omission now requires an applicable explicitly declared default for every parameter type; see [argument defaults](union-parameter-defaults.md).
 
 ## Reference comparison
 

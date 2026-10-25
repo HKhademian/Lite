@@ -173,4 +173,4 @@ Exit payloads are checked against their target. An expression that exits does no
 - [Tags and contexts](tags-and-contexts.md)
 - [Loop completion](loop-completion.md)
 - [Functions](functions.md)
-- [Rust loop exits](https://doc.rust-lang.org/reference/expressions/loop-expr.html) provide a comparison; LiteScript's generalized `return @tag` and accumulator-preserving bare `break` are separate design choices.
+- [Rust loop exits](https://doc.rust-lang.org/reference/expressions/loop-expr.html) provide a comparison; LiteScript's generalized `return @tag` and value-preserving bare `break` are separate design choices.
