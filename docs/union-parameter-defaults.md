@@ -30,7 +30,7 @@ The rule applies even when a parameter is unused, unnamed in a contextual lambda
 
 Reserved local storage must be initialized before it can be passed as an ordinary value. Caller-access permissions and writable-location requirements still apply. The explicit-default requirement does not independently authorize default mut/var arguments or an output-only construction API.
 
-Local variable initialization, record-field construction defaults, conditional fallback, and callable result initialization remain separate. The user changed function argument omission, not every use of the word default in the language.
+Local variable initialization, record-field construction defaults, conditional no-match behavior, and callable result initialization remain separate. The user changed function argument omission, not every use of the word default in the language.
 
 ## Remaining default-expression decisions
 

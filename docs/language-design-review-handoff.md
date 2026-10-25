@@ -274,10 +274,10 @@ Continue LiteScript's type-safe scripting-language design in `docs/`. Resolve or
 
 **Actions:**
 
-- Preserve the selected rule: every conditional has a result context, optionally named by `@tag`, with a typed zero-initialized result. Its attached `then` transforms T to final R, and read-only `@tag.value` is available only inside that block.
-- Compare simple false conditions, pattern mismatch, guarded `else if` chains, explicit final `else`, `Option<T>` zero, Unit action bodies, and branches that exit abruptly.
+- Preserve the selected rule: a conditional is total only with a final `else`. A total conditional has a result context, optionally named by `@tag`, with typed `T`; a partial no-`else` conditional is noncontributing. Its attached `then` requires a final `else`, transforms T to final R, and read-only `@tag.value` is available only inside that block.
+- Compare simple false conditions, pattern mismatch, guarded `else if` chains, explicit final `else`, declaration defaults, explicit `?` reservation, Unit action bodies, and branches that exit abruptly.
 - Keep the noncontributing no-match path distinct from `continue`: the conditional in tail position skips contribution, while `x := if ...; x` contributes the declaration's zero. Do not restore a conditional zero result.
-- Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep the expected-type and missing-`else` fallback rules coherent.
+- Preserve the selected `.value` type default: if no normally completing arm constrains T, it defaults to `Unit`, overridable by an expected type. Keep expected-type, declaration-default, and noncontributing-path rules coherent; there is no missing-`else` zero fallback.
 - Preserve the selected explicit-tag lookup rule: conditional `.value` requires `@tag.value` and is readable only inside the attached `then`; untagged conditional contexts do not participate in leading-dot lookup, and ambiguous leading-dot metadata reads are rejected without outward fallback. Use an explicit outer-loop tag inside a conditional.
 - Apply the selected target-completion rule to conditional targets. Keep propagated errors and panics separate, do not assert implementation behavior, and reserve finally for cleanup. Preserve the choice to hide condition metadata; do not reevaluate conditions in then.
 
