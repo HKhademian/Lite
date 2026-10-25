@@ -110,6 +110,10 @@ The callee still receives ordinary read/write Int access to initialized storage.
 
 Selected on **2026-10-25**: a plain Int argument supplies its evaluated value while a var argument supplies its location grant. For count initially 10, read_original(var count, count) returns the supplied ordinary Int 10 even when the callee writes 20 through the var parameter. The user's tmp := count; saved := read_original(var count, tmp); expansion preserves that same value and leaves count at 20. The ordinary input adds no write grant or live source-location view. Keep callee-first/source-argument evaluation and input/access obligations; general aggregate transport remains open. See [ordinary Int evaluated values](parameter-values-and-slots.md#ordinary-int-evaluated-values-selected).
 
+## Copyable inline-Int record values alongside a var grant
+
+Selected on **2026-10-25**: an ordinary input for a copyable record with inline Int fields supplies its evaluated record value. In read_original(var counter, counter), initially Counter { value = 10 }, replacing counter through the var input with Counter { value = 20 } leaves the ordinary original input at value 10. The user's tmp := counter expansion captures the same old record value, so saved is 10 and counter.value is 20. The ordinary input adds no write grant or live source-location view. Backend indirect passing must preserve this behavior; reference-bearing/noncopyable records and general ownership remain open. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+
 ## Later argument reads of a selected local allowed
 
 Selected on **2026-10-24**: selecting an initialized local for an earlier var argument does not prohibit later supplied argument expressions from reading that local to compute scalar values before invocation:

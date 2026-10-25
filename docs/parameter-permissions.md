@@ -18,6 +18,8 @@ The parameter binding is fixed and its data access is read-only. It does not req
 
 For ordinary Int inputs, evaluated-value behavior is selected on **2026-10-25**: read_original(var count, count) with count initially 10 supplies the ordinary input as 10. Replacing count with 20 through the var input leaves that ordinary Int value unchanged. The user's tmp := count form captures the same Int value without adding another write grant. This is an observable value rule, not a required physical copy or a general aggregate transport contract. See [ordinary Int evaluated values](parameter-values-and-slots.md#ordinary-int-evaluated-values-selected).
 
+For copyable records whose fields are inline Int values, the same evaluated-value behavior is selected on **2026-10-25**. An ordinary original: Counter input keeps the record value evaluated before invocation even when a separate target: var Counter input replaces its source location. The user's tmp := counter expansion preserves that old record value. Ordinary inputs use value semantics for these selected value types; this does not impose a physical-copy ABI or decide reference-bearing/resource transport. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+
 ## Mut: update held data
 
 ```text

@@ -70,6 +70,10 @@ No general reference or pointer syntax is introduced by describing reference fie
 
 A type without a valid copy contract cannot gain a fabricated copy merely through mut. The diagnostic and exact resource policy remain open. Fresh initialization need not perform a redundant copy when it already supplies a new owned value, and optimization may remove work only when observable semantics are preserved.
 
+## Fixed temporary values for copyable inline-Int records
+
+Selected on **2026-10-25**: for a record with a valid copy contract and inline Int fields, a simple tmp := counter binding preserves the evaluated record value when counter is replaced. Thus the temporary form of read_original(var counter, counter) keeps tmp.value at 10 while the var call installs a new counter with value 20. This fixed temporary and the ordinary record parameter have value semantics for the selected record class; no mut declaration is required to preserve its readable value. It grants neither caller replacement nor mutable access to tmp. Physical copies may be elided only when behavior is preserved. General reference-bearing/noncopyable record initializer and ownership rules remain open; see [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
+
 ## Var shadowing does not demand a deep copy
 
 Var x := x creates a new binding that can receive another compatible value. It does not itself request mutable payload access or a recursive clone of the data. General value transfer, copy/move/share rules for this initializer remain type-dependent and open. The new binding cannot assign into the caller's original binding merely because it shadows the name.

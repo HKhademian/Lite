@@ -1,6 +1,6 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int evaluated-value semantics are selected on 2026-10-25; aggregate and other-type value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable records with inline Int fields have selected evaluated-value semantics on 2026-10-25; other aggregate/type value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
@@ -10,7 +10,7 @@ The type-side mut parameter qualifier requests writable caller-data access, as i
 
 ## 2. Semantic passing versus physical calling convention
 
-Beyond the selected ordinary Int case below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+Beyond the selected ordinary Int and copyable inline-Int record cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
@@ -48,7 +48,42 @@ saved := read_original(var count, tmp);
 
 The simple tmp binding holds the Int value read from count. Its value is preserved when count is replaced. The snippets are alternative fragments, and their equivalence uses this stable callable name and simple local, preserving ordinary callee-first/source-argument evaluation. It is not permission to hoist an argument ahead of effectful earlier expressions or change scope/lifetimes. Ordinary Int input evaluation still requires initialized readable data and ordinary type compatibility; it grants no caller-write authority.
 
-This selects observable Int value semantics, including the illustrated scalar temporary, not a physical copy instruction or calling convention. Registers, indirect transport, inlining, or eliding unobservable storage must preserve the evaluated value and source-order effects. A backend may not make original observe 20 through an alias merely to avoid materializing 10. No heap allocation, deep clone, public reference syntax, or performance result is implied. General aggregate and other-type copying/moving/borrowing, ownership, and reference-alias contracts remain separate.
+This selects observable Int value semantics, including the illustrated scalar temporary, not a physical copy instruction or calling convention. Registers, indirect transport, inlining, or eliding unobservable storage must preserve the evaluated value and source-order effects. A backend may not make original observe 20 through an alias merely to avoid materializing 10. No heap allocation, deep clone, public reference syntax, or performance result is implied. Other aggregate and other-type copying/moving/borrowing, ownership, and reference-alias contracts remain separate.
+
+## Copyable records with inline Int fields selected
+
+Selected on **2026-10-25**: for a record with a valid copy contract whose fields are inline Int values, an ordinary argument supplies the evaluated record value. It follows the selected ordinary Int value behavior rather than a live view of the caller's replaceable location:
+
+```text
+Counter := record {
+    value: Int;
+}
+
+read_original := fn(target: var Counter, original: Counter): Int {
+    target = Counter { value = 20 }
+    original.value
+}
+
+var counter := Counter { value = 10 }
+saved := read_original(var counter, counter);
+/* saved is 10; counter.value is 20. */
+```
+
+Assume Counter has a valid copy contract and its field is accessible in this context. Evaluate the callee first, select counter's location for the var input, then evaluate the ordinary Counter input with value 10. Target receives the caller-location grant; original keeps the evaluated record value after target installs Counter { value = 20 } in that source location. Its field read therefore produces 10. The ordinary record input adds no second write grant or live source-location view.
+
+From the same initial counter value, the equivalent temporary form is:
+
+```text
+tmp := counter; /* captures Counter { value = 10 } */
+saved := read_original(var counter, tmp);
+/* saved is 10; counter.value is 20; tmp.value remains 10. */
+```
+
+The simple fixed tmp binding preserves the evaluated record value when counter is replaced. These are alternative fragments with the same stable callable name and simple local. Preserve source evaluation order and scope/lifetimes; this is not general argument hoisting past effects. All reads still require initialized compatible values, and var replacement requires ordinary caller authority.
+
+For Int and this copyable record class, ordinary inputs thus have value semantics by default; explicit var receives a caller location, while mut retains its separate writable-payload access meaning. This is an observable contract, not a requirement that the machine ABI copy every argument. A backend may use registers, indirect passing, inlining, or copy elimination only while preserving the old evaluated value and ordinary effects. Preserving a larger inline value across replacement can require copying its data; no zero-copy/performance guarantee is selected.
+
+This scoped rule assumes copyability; it does not introduce a copy trait or classify every record as copyable. Records with reference-bearing fields, noncopyable resources, other aggregate kinds, moves, and general borrowed-view/ownership contracts remain separate decisions. This example selects no deep clone, resource-copy operation, universal byte copy, public reference syntax, or new aliasing permission.
 
 ## 3. Explicit operation on the caller's location
 
@@ -95,7 +130,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Beyond the selected Int evaluated-value case, decide ordinary parameter semantics independently of writable-var semantics. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+Beyond the selected Int and copyable inline-Int record value cases, decide ordinary parameter semantics independently of writable-var semantics. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 
