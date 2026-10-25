@@ -73,6 +73,8 @@ This identity describes mathematical integer values, not a required fixed-width 
 
 A combined quotient/remainder API and noninteger `%` behavior remain open. The behavior of `%` when the mathematical quotient is unrepresentable also needs a failure contract; the signed-minimum/`-1` case must not acquire accidental wrapping semantics.
 
+The symbol `%` does not universally imply this sign rule. Other languages distinguish truncating remainder, floor-paired remainder, and always-nonnegative Euclidean modulo using different operators or named operations. LiteScript retains its selected floor-paired rule, including negative divisors. See the [focused symbol and sign comparison](arithmetic-operators-comparison.md#symbols-and-signed-results-are-separate-choices).
+
 ## Lexer interaction
 
 Outside comments and strings, `//` denotes integer division, not a line comment. `//=` is a single compound-update token. Within the slash operator family, recognize the longest valid token; do not split `//=` into `//` and `=`.

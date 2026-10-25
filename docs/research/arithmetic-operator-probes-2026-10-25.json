@@ -242,5 +242,92 @@
       "expected": "compile rejection of unary plus",
       "matched": true
     }
+  ],
+  "sign_probes": [
+    {
+      "language": "Python",
+      "version": {
+        "command": [
+          "python3",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "Python 3.15.1\n",
+        "stderr": ""
+      },
+      "filename": "signs.py",
+      "source": "print(-7 % 2, 7 % -2, -7 % -2)\nprint((-2) ** 3, (-2) ** 4, (-2) ** -3, (-2) ** -4)\nprint(-2 ** 2, (-2) ** 2, 2 ** -2)\nz = (-4) ** 0.5\nprint(type(z).__name__, abs(z.real) < 1e-12, abs(z.imag - 2) < 1e-12)\ntry:\n    0 ** -1\nexcept Exception as error:\n    print(type(error).__name__)\n",
+      "expected_stdout": "1 -1 -1\n-8 16 -0.125 0.0625\n-4 4 0.25\ncomplex True True\nZeroDivisionError\n",
+      "execute": {
+        "command": [
+          "python3",
+          "signs.py"
+        ],
+        "exit_code": 0,
+        "stdout": "1 -1 -1\n-8 16 -0.125 0.0625\n-4 4 0.25\ncomplex True True\nZeroDivisionError\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "JavaScript (Node)",
+      "version": {
+        "command": [
+          "node",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "v24.16.0\n",
+        "stderr": ""
+      },
+      "filename": "signs.js",
+      "source": "console.log(-7 % 2, 7 % -2, -7 % -2);\nconsole.log((-2) ** 3, (-2) ** 4, (-2) ** -3, (-2) ** -4);\nconsole.log((-2) ** 2, 2 ** -2);\nconsole.log(Number.isNaN((-4) ** 0.5), 0 ** -1);\ntry { 2n ** -1n; } catch (error) { console.log(error.name); }\n",
+      "expected_stdout": "-1 1 -1\n-8 16 -0.125 0.0625\n4 0.25\ntrue Infinity\nRangeError\n",
+      "execute": {
+        "command": [
+          "node",
+          "signs.js"
+        ],
+        "exit_code": 0,
+        "stdout": "-1 1 -1\n-8 16 -0.125 0.0625\n4 0.25\ntrue Infinity\nRangeError\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "Rust",
+      "version": {
+        "command": [
+          "rustc",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "rustc 1.97.1 (8bab26f4f 2026-07-14)\n",
+        "stderr": ""
+      },
+      "filename": "signs.rs",
+      "source": "fn main() {\n    let a: i32 = -7;\n    let b: i32 = 7;\n    println!(\"{} {} {}\", a % 2, b % -2, a % -2);\n    println!(\"{} {} {}\", a.rem_euclid(2), b.rem_euclid(-2), a.rem_euclid(-2));\n    println!(\"{} {}\", (-2_i32).pow(3), (-2_i32).pow(4));\n}\n",
+      "expected_stdout": "-1 1 -1\n1 1 1\n-8 16\n",
+      "compile": {
+        "command": [
+          "rustc",
+          "signs.rs",
+          "-o",
+          "signs-rust"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "execute": {
+        "command": [
+          "<probe-dir>/signs-rust"
+        ],
+        "exit_code": 0,
+        "stdout": "-1 1 -1\n1 1 1\n-8 16\n",
+        "stderr": ""
+      },
+      "matched": true
+    }
   ]
 }

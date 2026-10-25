@@ -88,11 +88,23 @@ The inspected operator appendix lists numeric `**` above `* / %`, then `+ -`, an
 
 Negative values expose three distinct contracts:
 
-- Floor quotient with paired remainder, already selected for LiteScript: `-7 // 2` is `-4`, `-7 % 2` is `1`, and `7 % -2` is `-1`.
-- Truncating integer quotient with paired remainder, as in Java and Rust: the corresponding quotient is `-3`, with remainders `-1` and `1`.
-- Euclidean modulo, as in Dart: both remainder examples produce `1`, including with a negative divisor.
+- Floor quotient with paired remainder, already selected for LiteScript: `-7 // 2` is `-4`; `-7 % 2`, `7 % -2`, and `-7 % -2` produce `1`, `-1`, and `-1` respectively. A nonzero remainder follows the divisor's sign.
+- Truncating integer quotient with paired remainder, as in Java and Rust: `-7 / 2` is `-3`; the same three remainder cases produce `-1`, `1`, and `-1`. A nonzero remainder follows the dividend's sign.
+- Euclidean modulo, as in Dart: all three remainder cases produce `1`, including with a negative divisor. The result satisfies `0 <= r < abs(b)`; exact division still produces zero.
 
 These are semantic choices, not interchangeable names for the same operation. LiteScript need not add multiple everyday remainder spellings merely because another language provides them. Python/Lua are the closest comparisons for the selected integer floor/remainder pairing; their numeric representations and fault rules do not follow automatically.
+
+### Symbols and signed results are separate choices
+
+LiteScript has already selected `%` for its floor-paired integer remainder. The word `mod` and an additional `%%` operator are not selected. A familiar symbol alone does not establish a sign rule. The five modern references illustrate the differences directly:
+
+- Rust: `%` uses truncating remainder, while integer [rem_euclid](https://doc.rust-lang.org/std/primitive.i32.html#method.rem_euclid) supplies a nonnegative remainder even for a negative divisor. The local sign probe checks all three cases above for both forms.
+- Odin: `%` uses truncating remainder, while `%%` uses `a - b * floor(a / b)`. Thus `-7 %% 2` is `1`, but `7 %% -2` is `-1`. These values are derived from the [documented formula](https://raw.githubusercontent.com/odin-lang/odin-lang.org/master/content/docs/overview.md), not an executed Odin program.
+- Dart: `%` is [Euclidean modulo](https://api.dart.dev/dart-core/num/operator_modulo.html); [remainder](https://api.dart.dev/dart-core/num/remainder.html) instead follows truncating division. The two coincide for many positive inputs but differ for negative dividends.
+- Zig 0.15.2: [@rem](https://ziglang.org/documentation/0.15.2/#rem) pairs with truncating division and [@mod](https://ziglang.org/documentation/0.15.2/#mod) with floor division. Their documented contracts give `@rem(-7, 2) == -1` and `@mod(-7, 2) == 1`; these are source-derived examples, with no local Zig execution.
+- V: the [operator appendix](https://docs.vlang.io/appendix-ii-operators.html) explicitly gives `-10 % 7 == -3`. That establishes the cited negative-dividend example; this review has not executed a full negative-divisor matrix in V.
+
+For LiteScript, using abs(b) as a bound must not silently change `%` into always-nonnegative modulo. Preserve its selected floor identity with `//`. Floating-point remainder, signed zero, zero divisors, and unrepresentable fixed-width cases need their own numeric/fault contracts.
 
 `//` is also a lexical choice: several C-family references use it for line comments. LiteScript already reserves it for division and uses its own block-comment rules. Adjacent stars need equal care: C/C++ can parse multiplication followed by dereference; Zig 0.15.2 gives `**` an array meaning. Preserve the selected [comment token boundaries](comments.md) rather than importing another lexer.
 
@@ -107,6 +119,25 @@ The accepted basic ladder does not decide between them. The first follows conven
 
 Power also needs operand/result typing, integer versus fractional exponents, negative bases, negative exponents, `0 ** 0`, zero to a negative exponent, overflow/precision, and exact typed-panic contracts. `**=` requires its own update decision. No decision here selects those behaviors, generic overloads, or new redundant leading operators.
 
+### Base sign, exponent sign, and outer negation
+
+The power symbol and the signs of its operands require separate decisions. The following mathematical examples use proposed `**` notation; they are not accepted LiteScript syntax or typing rules:
+
+```text
+(-2) ** 3;  /* -8: odd integer exponent preserves the negative sign */
+(-2) ** 4;  /* 16: even integer exponent produces a positive value */
+2 ** -3;    /* 0.125: negative exponent means reciprocal, not negation */
+(-2) ** -3; /* -0.125: reciprocal of a negative odd power */
+(-2) ** -4; /* 0.0625: reciprocal of a positive even power */
+-(2 ** 4);  /* -16: explicitly negate the completed power */
+```
+
+Parity controls the sign for a finite nonzero negative base and integer exponent; negative exponents additionally require a reciprocal-capable result domain. Ordinary integer power need not admit them. Rust's integer pow method takes an unsigned exponent; JavaScript BigInt power rejects a negative exponent. Python instead converts integer operands to floating point for negative exponents. Sources: [Rust integer pow](https://doc.rust-lang.org/std/primitive.i32.html#method.pow), [ECMAScript BigInt exponentiation](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html#sec-numeric-types-bigint-exponentiate), and [Python power](https://docs.python.org/3/reference/expressions.html#the-power-operator).
+
+A negative base with a noninteger exponent is another domain decision. Python's `(-4) ** 0.5` produces a complex value; JavaScript Number power produces NaN. For zero to a negative exponent, Python raises ZeroDivisionError, while JavaScript Number power on positive zero produces positive infinity. These are foreign contracts, not LiteScript defaults. Sources: [Python expressions](https://docs.python.org/3/reference/expressions.html#the-power-operator) and [ECMAScript Number exponentiation](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html#sec-numeric-types-number-exponentiate).
+
+Keep four questions explicit: the power symbol, association, unary-minus grouping, and operand/result domains. Choosing `**` alone settles none of the other three. The inspected V appendix lists that symbol but does not establish its signed-power cases; Odin, Dart, Rust, and Zig do not gain a numeric power operator through this comparison. No complex-number default, implicit integer-to-fractional promotion, NaN/infinity policy, or new fault trigger is selected for LiteScript here.
+
 ### Identity and evaluation remain independent contracts
 
 Foreign unary `+` may promote, convert, or dispatch to user code. LiteScript's redundant entry prefix must retain its selected identity semantics instead of inheriting those operations. A future general unary operator facility would need a separate contract.
@@ -118,6 +149,8 @@ Associativity describes the expression tree. It does not by itself specify which
 [Captured local probes](research/arithmetic-operator-probes-2026-10-25.json) include exact source, commands, versions, compiler diagnostics, expected output, and observed output. Seven toolchains completed the applicable probes: Python 3.15.1, Node 24.16.0, Apple Clang 21 in C17 and C++20 modes, Rust 1.97.1, Java 25.0.3, and Swift 6.4. A separate Rust compilation confirmed rejection of unary `+`. All recorded expectations matched.
 
 The probes cover basic precedence/left association, signed division/remainder, selected unary-plus behavior, and Python/JavaScript power examples. They do not test every profile or every numeric type. Go, C#, Kotlin, Dart, Lua, Odin, Zig, and V were reviewed through primary sources without local execution. C17/C++20 probes do not execute every provision of the newer drafts cited above. No installs or LiteScript execution were performed.
+
+The same capture now includes three focused sign probes in Python, Node, and Rust. They check negative dividends/divisors, Rust Euclidean remainder, odd/even negative-base powers, Python/JavaScript negative exponents and domain outcomes, and Rust integer power. All captured expectations matched. Additional sign examples for Odin, Dart, Zig, and V remain primary-source findings rather than runtime verification.
 
 ## Related documents
 
