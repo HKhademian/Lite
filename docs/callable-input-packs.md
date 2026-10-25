@@ -72,7 +72,7 @@ Documentation style: omit the optional trailing semicolon whenever a complete de
 
 ## Application with an existing pack
 
-The callable's intrinsic `.call` applies a tuple of supplied inputs. It denotes invocation, not lookup of an ordinary method value. With no operand, the supplied pack is Unit. Ordinary `f(...)` is invocation sugar that constructs/routes the supplied inputs. Both paths retain the existing named/positional routing, defaults, evaluation, permissions, and cleanup requirements.
+The callable's intrinsic `.call` applies a tuple of supplied inputs. It denotes invocation, not lookup of an ordinary method value. With no operand, the supplied pack is Unit. Ordinary `f(...)` is invocation sugar that constructs/routes the supplied inputs. Both paths retain the existing named/positional routing, defaults, evaluation, permissions, and cleanup requirements. Selected on **2026-10-25**: after evaluating/routing supplied inputs, evaluate only missing applicable defaults in declared slot order before invocation. For intrinsic application, evaluate the callee first and the supplied pack once before applying those defaults. This adds no automatic zero or new runtime spread/arity fallback; see [default evaluation](evaluation-order.md#default-argument-evaluation-selected).
 
 ```text
 op1 := fn { 42 }

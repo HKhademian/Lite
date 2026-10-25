@@ -1,6 +1,6 @@
 # Argument omission requires declared defaults
 
-Status: **selected 2026-10-21, applying to all function argument types**. The user broadens the proposed union exception: argument omission is always rejected unless an applicable default is explicitly declared. This supersedes automatic zero argument defaults, including for Int and Unit. Default grammar, timing, and signature-versus-implementation placement remain open.
+Status: **selected 2026-10-21, applying to all function argument types**. The user broadens the proposed union exception: argument omission is always rejected unless an applicable default is explicitly declared. This supersedes automatic zero argument defaults, including for Int and Unit. Default timing is selected on 2026-10-25; complete grammar/type establishment, lookup scope, and signature-versus-implementation placement remain separate.
 
 ## Required arguments without defaults
 
@@ -34,8 +34,8 @@ Local variable initialization, record-field construction defaults, conditional f
 
 ## Remaining default-expression decisions
 
-Complete syntax, expression eligibility, evaluation scope/timing, complete recursive named-call grammar, and defaults in callable signatures versus implementations remain to be formalized. Core named-call routing and validation are already selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
+Call-time default timing is selected: evaluate the callee, supplied expressions in source order, then only missing defaults in declared slot order before invocation. For the b, c, a, d signature with supplied d/c, execute new_d(), new_c(), default_b(), default_a(). See [default timing](evaluation-order.md#default-argument-evaluation-selected). Complete syntax/type establishment, expression eligibility and lookup/parameter-reference scope, recursive named-call grammar, and default placement in signatures versus implementations remain to be formalized. Core named-call routing and validation are already selected. The omission decision is nevertheless selected: without an applicable explicitly declared default, reject it. Do not restore the earlier zero fallback while those details await design.
 
 ## Modern references
 
-Checked 2026-10-21. [Odin default parameters](https://odin-lang.org/docs/overview/#default-values) use explicitly declared defaults when arguments are omitted, with documented compile-time restrictions. This supports the distinction between a declared default and an implicit member choice; LiteScript's expression restrictions/timing remain its own open decisions. [Rust E0061](https://doc.rust-lang.org/error_codes/E0061.html) requires the supplied argument count to match the signature rather than providing ordinary optional arguments. Neither rule supplies an implicit zero member for LiteScript unions.
+Checked 2026-10-21. [Odin default parameters](https://odin-lang.org/docs/overview/#default-values) use explicitly declared defaults when arguments are omitted, with documented compile-time restrictions. This supports the distinction between a declared default and an implicit member choice; LiteScript's expression restrictions/scope remain separate, while its selected [default evaluation order](evaluation-order.md#default-argument-evaluation-selected) supplies call-time timing. [Rust E0061](https://doc.rust-lang.org/error_codes/E0061.html) requires the supplied argument count to match the signature rather than providing ordinary optional arguments. Neither rule supplies an implicit zero member for LiteScript unions.

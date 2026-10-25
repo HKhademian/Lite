@@ -17,7 +17,7 @@ These checks require valid entry refinements and compatible location access thro
 
 ## Entry facts after argument evaluation selected
 
-Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
+Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments and applicable default expressions. The selected [default order](evaluation-order.md#default-argument-evaluation-selected) runs missing defaults after supplied entries and before invocation, so their effects also participate in the required entry proof. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:
 
 ```text
 var x: String | Int = ?;

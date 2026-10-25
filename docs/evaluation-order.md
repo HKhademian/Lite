@@ -44,13 +44,57 @@ For a method-call expression, evaluate the receiver as part of evaluating the ca
 
 For [intrinsic pack application](callable-input-packs.md#application-with-an-existing-pack), evaluate the invokable first, then the supplied pack expression once, then route its components and invoke. Bare `.call` supplies Unit; `f(...)` is invocation sugar with the same effects/order contract. Parentheses and spaces after `.call` do not introduce another argument evaluation or turn it into ordinary method-value lookup. Tuple spread, replaced contributions, unused inputs, and zero callables retain their ordinary observable effects and required cleanup.
 
-Argument order and the value/access contract are separate. Ordinary value arguments copy their evaluated values without implicit references, while explicit var/mut grants follow their selected access rules. Type-specific copy eligibility, future explicit modes, and the full activation/lifetime model remain deferred. An argument may be omitted only with an applicable explicitly declared default; without one, the call is rejected regardless of parameter type. Syntax, scope, and exact evaluation timing of declared default expressions, plus callable public-label compatibility, still need specification. Core named-call routing and validation are selected; see [omitted value arguments](functions.md#omitted-value-arguments).
+Argument order and the value/access contract are separate. Ordinary value arguments copy their evaluated values without implicit references, while explicit var/mut grants follow their selected access rules. Type-specific copy eligibility, future explicit modes, and the full activation/lifetime model remain deferred. An argument may be omitted only with an applicable explicitly declared default; without one, the call is rejected regardless of parameter type. Declared-default evaluation timing is selected below; complete default syntax/type establishment, lookup scope, and callable public-label compatibility remain separate. Core named-call routing and validation are selected; see [omitted value arguments](functions.md#omitted-value-arguments).
 
 Zero-initialized callables follow the same order. Their zero-result behavior does not skip argument evaluation or required argument cleanup. If an argument expression exits before invocation, the zero callable is not invoked. See [zero-initialized functions](zero-initialization.md#zero-initialized-functions).
 
+## Default argument evaluation selected
+
+Selected on **2026-10-25**: for an admitted call, evaluate the callee once, evaluate supplied argument expressions once in written source order, finish their routing/replacement, and then evaluate applicable defaults only for still-unfilled declared inputs. Evaluate those missing defaults once per reached call in declared slot order. Invoke only after successful input preparation. Defaults do not prefill slots and their expressions do not run merely when the function is defined.
+
+The user's header sketch makes the order visible:
+
+```text
+op := fn (
+    b = default_b(),
+    c = default_c(),
+    a = default_a(),
+    d = default_d(),
+) { ... }
+
+_ := op(
+    d = new_d(),
+    c = new_c(),
+);
+```
+
+Assume compatible ordinary input types/defaults and unambiguous helper names are already established. The declared slot order is b, c, a, d. The supplied expressions run as new_d(), then new_c(). Only b and a remain unfilled, so default_b() runs before default_a(). Neither default_c() nor default_d() runs. This is declaration/storage order, not alphabetical label order or a reordering of supplied expressions into signature order.
+
+A conceptual prepared-input trace is:
+
+```text
+tmp_op := op; /* evaluate the callee first, once */
+tmp_d := new_d();
+tmp_c := new_c();
+tmp_b := default_b();
+tmp_a := default_a();
+tmp_resp := tmp_op(tmp_b, tmp_c, tmp_a, tmp_d);
+_ := tmp_resp;
+```
+
+The final call supplies all four inputs in b, c, a, d positional order. These temporary names describe evaluation and the prepared values; they prescribe neither physical temporary allocation nor extra observable copy operations. Ordinary values follow the general copy semantics, and any source transformation must preserve valid copy-contract effects and evaluation order.
+
+A supplied slot skips its default even when the supplied value is zero or Unit, provided it is compatible. Permitted spread/named replacement still evaluates all reached supplied expressions under the existing routing rules; a slot with a final supplied contribution is not defaulted. For op() with all four defaults applicable, evaluate b, c, a, d defaults in that order on each call. An unfilled input without an applicable declared default remains a compile-time error, with no automatic zero or runtime arity fallback.
+
+If supplied-argument or default evaluation exits before input preparation completes, do not evaluate subsequent defaults or invoke the callee. Keep the ordinary effects, failure/exit channels, and cleanup of what was reached; no rollback, implicit unwrap, or new handler/propagation target is selected. Defaults also run before a zero-initialized callable's no-body-work invocation when omission is otherwise valid. Intrinsic application with an existing supplied tuple uses the same rule after evaluating/routing that pack once.
+
+Current-readable entry types, accepted writes, initialization, explicit mut/var permissions, and selected-location validity must hold after all reached supplied arguments and applicable default effects. Copied ordinary inputs are not reevaluated or turned into live aliases. Earlier location selection does not freeze a payload or activate the pending callee; necessary entry facts must include default effects, without adding a general alias/effect solver or authorizing defaults to bypass a required caller grant.
+
+This selects timing and default-to-slot association for established applicable defaults. The name = default_expr header records the user's surface sketch; complete default-header grammar/type establishment, omitted-type inference, name lookup scope, references to other parameters, and signature-versus-implementation placement remain separate. Runtime-dependent spread/default shape proofs, variadic-tail defaults, and permission-bearing default forms are not newly selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
+
 ## Earlier var arguments and later effects
 
-Selected on **2026-10-24**: an earlier var argument's required readable type must hold at callee entry, after later supplied argument expressions have been evaluated. Selecting the location while its value fits is insufficient. For String | Int storage currently reading String, use_text(var x, ({ x = 42; 0 })) is rejected when use_text requires var String and Int: the later argument would leave Int before invocation. The assignment fits storage but invalidates the call's input proof. Preserve evaluation order and single location selection; no snapshot, reordering, or reevaluation repairs the call. This is a static entry obligation, not runtime rechecking or a complete borrow-activation/alias policy; see [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected).
+Selected on **2026-10-24**: an earlier var argument's required readable type must hold at callee entry, after all reached supplied arguments and applicable default expressions have been evaluated. Selecting the location while its value fits is insufficient. For String | Int storage currently reading String, use_text(var x, ({ x = 42; 0 })) is rejected when use_text requires var String and Int: the later argument would leave Int before invocation. The assignment fits storage but invalidates the call's input proof. Preserve evaluation order and single location selection; no snapshot, reordering, or reevaluation repairs the call. This is a static entry obligation, not runtime rechecking or a complete borrow-activation/alias policy; see [entry facts](call-replacement-flow.md#entry-facts-after-argument-evaluation-selected).
 
 The selected [single source write-grant rule](call-replacement-flow.md#single-source-write-grant-selected) also rejects f(var x, var x): one underlying local cannot supply two active replacement grants in the same call. This is independent of the entry-type check and preserves single-location semantics without choosing activation timing, copy-back, or runtime alias checks. Broader overlap and alias detection remain open.
 
