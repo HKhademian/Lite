@@ -1,6 +1,6 @@
 # Unified loop completion
 
-Status: **single receiverless then using the owning context, uniform source-less `Unit` item, zero-iteration placeholders, metadata-only state, and typed zero-initialized .value selected 2026-10-19; full typing/exit contracts open**.
+Status: **single receiverless then using the owning context, uniform source-less `Unit` item, zero-iteration placeholders, metadata-only state, and typed zero-initialized .value selected 2026-10-19; tagged return, explicit targeted break/continue, and then execution selected. Remaining open: full loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
 ## Current syntax direction
 
@@ -65,7 +65,7 @@ Assume score returns Int. Empty input and all-skipped input both leave value 0; 
 
 Then runs after exhaustion, a false condition, any `break` targeting this loop (bare, named without a payload, or with a value), or a tagged return to this loop. Plain `continue` and a payloadless break—bare or `break @loop`—preserve `.value`. `continue value` commits early; ordinary body completion commits its tail expression. `break value` and `break @loop value` commit their operand to `.value`, stop the selected loop, and still run `then`. A `return @loop value` commits T and runs this loop's `then`; a return targeting an outer construct skips this loop's `then`. Function returns, forwarded errors, and panics leave without supplying this loop's T.
 
-Construct-level `finally` is cleanup-only and runs after `then` on normal loop completion; applicable cleanup also runs when an exit skips `then`. Cleanup-failure precedence is selected: any already pending failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure cancels normal completion and becomes primary. Exact attachment scope and aggregate handling remain open. Body-wide cleanup sections, defer, and scoped resources remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Renaming a hook or adding metadata does not settle those remaining lifecycle rules.
+Construct-level `finally` is cleanup-only and runs after `then` on normal loop completion; applicable cleanup also runs when an exit skips `then`. Cleanup-failure precedence is selected: any already pending failure remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure cancels normal completion and becomes primary. Exact attachment scope and the `&` form's public value/operations remain open. Body-wide cleanup sections, defer, and scoped resources remain in the [deferred lifecycle review](deferred-cleanup-and-resources.md). Renaming a hook or adding metadata does not settle those remaining lifecycle rules.
 
 ## Open contracts
 

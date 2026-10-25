@@ -1,6 +1,6 @@
 # Loop completion
 
-Status: **one receiverless then block using loop metadata selected; .value now typed and zero-initialized, 2026-10-19; complete exit/type contracts open**.
+Status: **one receiverless then block using loop metadata selected; .value typed and zero-initialized; tagged return, explicit targeted break/continue, and then execution selected, 2026-10-19. Remaining open: complete loop/result inference, cleanup ordering/attachment, and nonzero initialization**.
 
 ## Template
 
@@ -65,7 +65,7 @@ The final .value stays alive while then computes its result. Count/value are als
 
 Then runs after source exhaustion, a false condition, any `break` targeting this loop (bare, named without a payload, or with a value), or a tagged return to this loop. `continue` stays in iteration. A `return @loop result` commits T and runs this loop's `then` to produce R; if it targets an outer construct instead, this loop's `then` is skipped. Unqualified `return`, forwarded errors via `!`, and panics leave without supplying a loop T. A payloadless break—bare or `break @loop`—preserves the existing value; a break value, including `break @loop value`, commits T and then runs normal completion.
 
-Then is not an all-exit cleanup guarantee. When a loop has both `then` and construct-level `finally`, `then` runs first and `finally` cleans up as the loop exits; successful cleanup preserves the loop result and cleanup does not recover failures. Applicable cleanup still runs on exits that skip `then`. Exact attachment syntax/scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. Aggregate handling remains open. Body-wide recovery/cleanup sections, defer, and disposal remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
+Then is not an all-exit cleanup guarantee. When a loop has both `then` and construct-level `finally`, `then` runs first and `finally` cleans up as the loop exits; successful cleanup preserves the loop result and cleanup does not recover failures. Applicable cleanup still runs on exits that skip `then`. Exact attachment syntax/scope remains open. If any failure is already pending, it remains primary and cleanup failures are retained as secondary; otherwise the first cleanup failure becomes primary and cancels normal completion. The `&` form's public value/operations remain open. Body-wide recovery/cleanup sections, defer, and disposal remain [deferred](deferred-cleanup-and-resources.md). Operation-local recovery inside bodies remains available.
 
 ## Historical forms
 
