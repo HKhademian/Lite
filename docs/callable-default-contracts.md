@@ -14,11 +14,45 @@ one();  /* 10 */
 two();  /* 20 */
 ```
 
-These declarations infer public contracts admitting omission of n. They have the same ordinary Int input, Int result, and omission capability; the different default expressions do not distinguish their public callable types. Existing label, type, access, and failure-contract requirements still apply. Exact spelling for omission capability in an independently written function type is not yet selected.
+These declarations infer public contracts admitting omission of n. They have the same ordinary Int input, Int result, and omission capability; the different default expressions do not distinguish their public callable types. Existing label, type, access, and failure-contract requirements still apply. Public omission capability is now written = ... after a fixed ordinary input type, as specified below.
 
 If a stored omission-capable operation holds one, operation() uses one's default and yields 10. Replacing it with compatible two makes a subsequent operation() use two's default and yield 20. The replacement changes implementation behavior while retaining the public omission contract. No public default of 1 is injected into two.
 
 The outcomes here are designed examples, not executed LiteScript tests. Replacement is an ordinary compatible assignment; this selection introduces no separate API for mutating a callable's default expression in place.
+
+## Public omission marker
+
+Selected on **2026-10-25**: use = ... after an ordinary fixed input's type in a public function type to record omission permission, without exposing a default expression. The form works for named and unnamed inputs:
+
+```text
+fn(n: Int): Int         /* required named input */
+fn(n: Int = ...): Int  /* omission-capable named input */
+fn(Int = ...): Int     /* omission-capable unnamed input */
+```
+
+These are function-type fragments. The marker consists of the existing = and ... tokens; =... and = ... have the same meaning. It belongs to the input contract and does not alter Int or add Unit, Option, or an uninitialized state.
+
+An implementation still writes its actual default expression:
+
+```text
+var operation: fn(n: Int = ...): Int =
+    fn(n: Int = 1): Int { n * 10 }
+
+operation();  /* 10 */
+
+operation = fn(n: Int = 2): Int { n * 10 }
+operation();  /* 20 */
+```
+
+The public type stays the same under this otherwise compatible replacement. The selected implementation supplies the default; the public marker does not supply a value, infer an input type, or freeze the expression.
+
+Omission-capable fixed inputs need not form a trailing suffix. For example, fn(left: Int = ..., right: Int): Int permits omitting left when right is supplied by name, under the existing named-input routing rules. Right remains required. This does not add a positional hole or an omission token at a call site.
+
+The ... after = is a declaration marker only in a public function-type input. It is not an executable expression or a placeholder satisfying an implementation's default-provider obligation. Writing fn(n: Int = ...) { n } does not provide a default; an implementation must use an otherwise valid expression. Similarly, f(n = ...) cannot request omission: leave the input absent instead. Existing ...pack spread and ...rest declarations retain their prefix roles and required operands. This extension does not enable marker defaults on variadic or permission-bearing inputs.
+
+The alternative = ? is not selected for public omission; = ? retains its existing reservation/no-value roles. Nor is a name-side n? marker introduced. The chosen type-side = ... spelling works consistently for unnamed inputs and does not add another meaning to ?.
+
+Python's typing specification provides a matching notation for recording a default's presence without its value. Source checked 2026-10-25: [default argument values](https://typing.python.org/en/latest/spec/callables.html#default-argument-values). Its other parameter and runtime rules are not adopted by this comparison.
 
 ## Required interfaces hide optional supply
 
@@ -65,7 +99,7 @@ Supplied final inputs skip their defaults. Permitted spread replacement, [earlie
 
 ## Remaining boundaries
 
-Public omission-marker syntax, complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission, public label versus local receiver-name integration, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
+The public = ... omission marker is selected. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission, public label versus local receiver-name integration, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
 
 Zero-initialized callables keep their existing successful input-preparation rule whenever an applicable default provider is established. How zero construction of an omission-capable function type supplies implementation-owned default expressions remains a follow-up design question. The public omission flag alone does not provide an expression, and a zero-result body is not a default provider. Do not claim that this selection supplies that missing construction rule.
 
