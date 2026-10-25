@@ -88,7 +88,7 @@ outcome: Int = @choose if use_choice {
     }
     "normal"
 } then {
-    record_choice(@choose.value)
+    record_choice(@choose.value);
     @choose.value.length
 }
 ```
@@ -105,7 +105,7 @@ summary: String = @outer loop users as user {
         }
         0
     } then {
-        log_phone_count(.count)
+        log_phone_count(.count);
         .value
     }
 
