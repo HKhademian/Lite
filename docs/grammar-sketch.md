@@ -262,6 +262,8 @@ The call_argument fragment retains ordinary values and explicit mut/var grants; 
 
 The existing ...expression call entry also forwards a stored tuple's declared array tail: expand its array elements as positional inputs, while its fixed labeled/unnamed components keep existing routing. The stored tail label is not a named array-valued call argument; ordinary labeled array-valued fields remain one named input each. Intrinsic .call pack uses the same input preparation. Tuple construction (...pack) without a destination requesting a different shape preserves the declared tail's name and element schema. An explicit expected schema may instead guide checked prefix/tail repacking with proven coverage and compatible final types/access; plain stored assignment does not implicitly repack. Evaluate operands once in written order and prove the full destination contract, including any required fixed coverage. A tail type alone guarantees no minimum element count. No new inline ...name = expression call-entry syntax or direct named-tail supply is selected. See [rest-bearing tuple spread](tuple-array-shapes.md#spreading-a-rest-bearing-tuple).
 
+Collecting established heterogeneous types through (...rest:) uses the same normalized-union element inference as a nonempty known-size array literal. In the three-value Int/String/Bool example, the constructed tail array retains extent three; its tuple rest schema states the union element contract without encoding that exact extent for every admitted value. Each array position has the common union type. This adds no ...rest[...] declaration production: use ...rest = [...] for a named array tail, since ...rest[index] already spreads an indexed expression. See [element inference and known extents](tuple-array-shapes.md#union-element-inference-and-known-construction-extents).
+
 ## Caller mutation grants
 
 ```text
@@ -323,7 +325,7 @@ The backing-type clause and each case value are independently optional, includin
 
 The selected 2026-10-24 default for a fresh nonempty bracket literal with an established element type and statically known total length N is [T; N], unless an expected concrete collection type selects another family. Thus [1, 2, 3] infers [Int; 3]. Known-size array/fixed-tuple spreads contribute their lengths; var/mut and later operations do not change the inferred family or extent. An expected concrete List can request growable storage. Existing providers retain their contracts. This supersedes the earlier unconditional List default.
 
-This is a type-inference/default rule, not a complete sequence production. Runtime-length spread literals, empty/heterogeneous inference, runtime-array type spelling, indexing/slicing, and ownership remain open. Bracketed sequence patterns keep their own matching contract. See [array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays) and [sequence families](sequence-types.md).
+This is a type-inference/default rule, not a complete sequence production. Known-size nonempty heterogeneous literals with established element types infer their normalized union as the common element type; [1, "tea", true] therefore has [Int | String | Bool; 3]. Runtime-length literal provider selection, empty/unresolved-element inference, runtime-array type spelling, indexing/slicing, and ownership remain open. Bracketed sequence patterns keep their own matching contract. See [array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays) and [sequence families](sequence-types.md).
 
 ## Conditionals
 

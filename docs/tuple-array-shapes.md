@@ -159,7 +159,7 @@ unpacked: Prefix = (...q);    /* requires proof of at least two inputs */
 
 Without an expected destination requesting a different shape, (...p) preserves the source schema. An explicit expected tuple schema can instead guide checked reconstruction: gather p's two unnamed fixed values followed by its tail elements into packed.rest. All contributions must satisfy the destination element type and access/ownership requirements. This is explicit reconstruction through the spread constructor; a plain stored-value initializer still follows ordinary compatibility and does not silently repack incompatible tuple schemas.
 
-Reconstructing Prefix from a rest-only source takes the first two supplied values for its fixed components and collects the remainder into its array tail. The compiler must prove coverage and compatible possible slot types/access. The TailOnly schema alone guarantees no minimum length; the unpacked line is admitted only when additional established static facts prove at least two elements. A runtime arity check or synthesized value does not replace that proof. The complete policy for retaining constructor-length facts across bindings, effects, and API boundaries remains open.
+Reconstructing Prefix from a rest-only source takes the first two supplied values for its fixed components and collects the remainder into its array tail. The compiler must prove coverage and compatible possible slot types/access. The TailOnly schema alone guarantees no minimum length; the unpacked line is admitted only when additional established static facts prove at least two elements. A runtime arity check or synthesized value does not replace that proof. Known-size local tail constructions retain their concrete extent as selected below; the complete policy for propagating those facts across effects and API boundaries remains open.
 
 The supported example has compatible unnamed fixed components and the same explicit tail label. Preserve existing named-component routing, label-sensitive compatibility, written-order single evaluation, and permissions; this does not select arbitrary relabeling, mixed-label collision rules, multiple stored tails, unchecked casts, zero copying, shared storage identity, or a new allocation policy. Tuple-valued elements stay intact unless separately spread. Call sites retain their established whole-composition proof and tail-forwarding rules.
 
@@ -201,7 +201,7 @@ For d, the rest-only shape and label extra are explicit, but [] alone supplies n
 typed_empty: (...extra: Int) = (...extra = []);
 ```
 
-This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty/heterogeneous inference beyond such established constraints remains separate.
+This supplies an Int tail contract for the empty value without choosing a global empty-literal default or a concrete owning-array representation. Empty literals without element-type evidence remain separate; known-type heterogeneous construction follows the union inference rule below.
 
 Both full and shorthand forms evaluate their source once and preserve existing access, lifetime, retention, and cleanup requirements; neither grants mutation nor promises allocation, cloning, or ownership transfer. Reserve ...identifier = at tuple-value entry level for this named-tail form, rather than using type/name lookup to decide whether it is an assignment expression to spread. This selection covers a single declared tail; general mixed-entry composition, collisions involving tail labels, multiple rest segments, and complete recursive grammar remain open. It does not select direct named variadic call supply or new pattern syntax; spreading a stored rest-bearing tuple into a call has the rule below.
 
@@ -230,7 +230,7 @@ The ellipsis declaration identifies the stored rest segment; an ordinary array-v
 
 The callee's tail label may differ from the stored tuple's label, as rest differs from numbers above. This does not select direct named tail supply such as total(rest = pack.numbers), inline call-entry ...name = expression syntax, or new pattern forms. Calls without explicit expansion still receive the tuple as one value when their contract admits it.
 
-Apply the existing whole-composition proof to every forwarded call. The stored tail guarantees its element type, but its schema alone supplies no minimum length for required fixed inputs. Any such coverage must follow from separate established static facts; general retention of constructor-length refinements remains open. The total example needs no fixed inputs and therefore accepts any compatible tail length.
+Apply the existing whole-composition proof to every forwarded call. The stored tail guarantees its element type, but its schema alone supplies no minimum length for required fixed inputs. Any such coverage must follow from established static facts. Known-size concrete tail construction retains its extent as selected below; general fact propagation beyond those constructions remains open. The total example needs no fixed inputs and therefore accepts any compatible tail length.
 
 Evaluate the callee first and each supplied operand once in written order, then invoke after successful input preparation. Neither preserving a tail schema nor forwarding its elements selects copying, moving, borrowed-storage identity, heap materialization, writable grants, or lifetime extension. Multiple stored tails, general tuple-constructor tail composition, label collisions, and complete recursive integration remain separate decisions.
 
@@ -250,9 +250,42 @@ Assume extra is a readable runtime-sized Int array and fixed has a statically kn
 
 In type position, (...Params) expands an existing tuple schema; (...rest: Int) declares a named rest segment with an explicit element type; (...rest:) declares that segment with an inferred element type. The colon distinguishes declaration from type expansion syntactically, without capitalization or name lookup choosing the parse. When its type is omitted, the next token ends the entry with a comma or closing parenthesis.
 
-Inference must be supported by the initializer or an established expected contract. A typed empty array still supplies its element type; an untyped empty source does not acquire one from this syntax alone. Unresolved or incompatible constraints require an explicit type or a diagnostic, not runtime element inspection or an implicit Any. General heterogeneous element inference, generic aliases, and unknown callable-input inference are not selected by this rule.
+Inference must be supported by the initializer or an established expected contract. A typed empty array still supplies its element type; an untyped empty source does not acquire one from this syntax alone. Unresolved or incompatible constraints require an explicit type or a diagnostic, not runtime element inspection or an implicit Any. Heterogeneous contributions with established types use the normalized-union rule below; unresolved generic aliases and unknown callable-input inference remain separate.
 
 This is a scoped exception for declared rest segments. Ordinary name: components still require a following type, and their existing bare-name inference form is unchanged. (...rest) cannot serve as an inferred named rest declaration in type position because it retains tuple-type expansion meaning. The unannotated value expression (...extra) remains valid under the rest-only inference rule above; an explicit schema is optional for readability and naming.
+
+### Union element inference and known construction extents
+
+Selected in the follow-up discussion, 2026-10-25: collecting established heterogeneous value types into an inferred rest array uses their normalized plain union as the common element type. A nonempty known-size bracket literal uses the same rule when no expected element contract selects another compatible type. Preserve existing union admission and normalization rules; no implicit Any, value-to-string conversion, or new numeric promotion is selected.
+
+```text
+values := (1, "tea", true);
+pack: (...rest:) = (...values);
+
+rest := [1, "tea", true];
+named := (=...rest);
+direct := (...rest = [1, "tea", true]);
+/* each constructed rest array: [Int | String | Bool; 3] */
+/* each tuple has the rest-only contract (...rest: Int | String | Bool) */
+```
+
+All three constructions collect three elements with the common element type Int | String | Bool. The known extent three is retained as static construction information for these concrete tail arrays; packing does not inherently discard that extent. The tuple notation (...rest: T) states its rest segment's element contract and does not itself promise three elements for every value admitted by that schema. A wider contract or permitted replacement/effect may hide or invalidate stronger local extent facts; complete propagation across API/ownership boundaries remains open. Runtime observation of a length does not make an arbitrary runtime-sized array compile-time-sized.
+
+Each array position has the same union element type. The original values.0 has type Int, but the constructed rest array's fixed position has type Int | String | Bool unless a separate established narrowing proof applies. Re-expanding that fixed array into a tuple therefore supplies three union-typed components, not automatically the original heterogeneous per-position tuple types. Actual union members remain governed by ordinary admission; nested tuple-valued elements stay intact unless separately spread.
+
+The retained extent also settles the original homogeneous forwarding example:
+
+```text
+ints := (...numbers = [1, 2, 3]);
+/* concrete ints.numbers: [Int; 3] */
+max(...ints); /* three known Int inputs cover max's two required inputs */
+```
+
+For a known-size nonempty construction with N contributed elements, infer [U; N], where U is the normalized union of established element contribution types, including types supplied by known-size tuple/array spreads. An explicit expected element contract remains a constraint: incompatible contributions are rejected rather than widening that contract. Unknown/overloaded element types still need resolution before this rule applies. Runtime-length literal provider selection, numeric conversions, and element ownership/layout remain separate.
+
+Zero contributions do not provide an element type by themselves. A typed empty source or an established expected contract can supply it; an otherwise unconstrained [] still has no selected default element type. This rule does not introduce an empty-union or Never default.
+
+The discussion's (...rest[1, "tea", true]) is treated as explanatory shorthand, not an adopted additional value syntax. The unambiguous named-tail construction is (...rest = [1, "tea", true]); ...rest[0] already has the expression role of spreading an indexed operand. Do not choose a new declaration parse using type/name lookup.
 
 ### Declared names access array tails
 
@@ -296,7 +329,7 @@ u := (...x, ...y, ...z);
 
 The [T; N] spelling records the fixed-array form used in this discussion; N is a compile-time extent. Spreading such an array into a fixed tuple contributes exactly N unnamed components. Spreading a fixed tuple into an array supplies its values in stored order; each must fit the destination element type. Known lengths add when constructing combined spreads. A tuple-valued array element remains one component unless separately spread.
 
-Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. General heterogeneous-literal inference and numeric common-type selection remain open; no implicit Any or unchecked conversion is introduced.
+Homogeneous tuples give a direct element type. Heterogeneous tuples can populate an explicitly compatible common element contract, including an explicitly chosen union where ordinary admission rules permit it. Known-size nonempty heterogeneous literals now infer the normalized union of their established contribution types. Numeric conversions and unresolved element types remain separate; no implicit Any or unchecked conversion is introduced.
 
 Evaluate each source expression once in written order. Type/length compatibility does not prove identical layout, zero copying, ownership transfer, alias safety, or no allocation. Construction and cleanup must obey the eventual memory rules. A runtime-length array can supply a declared array tail; it cannot determine a statically enumerated fixed tuple's component count without an additional proven extent.
 
@@ -322,7 +355,7 @@ Readable access is implicit; writable access and binding replacement remain expl
 
 The rule applies to fresh construction. Receiving an existing List/provider preserves its contract; read-only access does not freeze it, convert it into a fixed array, or establish a compile-time length. A read_numbers result whose size is known only at runtime remains runtime-sized. An abstract traversal/indexed capability supplies element/access requirements without inventing a concrete collection provider.
 
-An established expected concrete collection type may select a different constructor family, including List. Runtime-length spread literal inference, empty literals without an element-type source, heterogeneous literals, explicit adaptation, and allocation policy need separate rules. Do not infer a fixed extent merely from a runtime length observed once, or treat the unresolved cases as an automatic growable-List fallback.
+An established expected concrete collection type may select a different constructor family, including List. Known-type heterogeneous contributions infer their normalized union. Runtime-length spread literal provider inference, empty literals without an element-type source, unresolved element types, explicit adaptation, and allocation policy need separate rules. Do not infer a fixed extent merely from a runtime length observed once, or treat the unresolved cases as an automatic growable-List fallback.
 
 ## Header candidates that were not selected
 

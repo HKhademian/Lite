@@ -46,9 +46,9 @@ render_icons([
 ]);
 ```
 
-Assume render_icons has an established requirement to traverse Icon values. It supplies an element requirement without choosing a concrete provider. The known-size fresh literal therefore uses fixed-array inference. An expected concrete List type can instead request growable construction. Do not infer Set or an arbitrary provider from traversal alone. Empty/heterogeneous and runtime-length literals remain separate decisions.
+Assume render_icons has an established requirement to traverse Icon values. It supplies an element requirement without choosing a concrete provider. The known-size fresh literal therefore uses fixed-array inference. An expected concrete List type can instead request growable construction. Do not infer Set or an arbitrary provider from traversal alone. Known-type heterogeneous contributions use normalized-union element inference. Empty/unresolved-element and runtime-length literal provider inference remain separate decisions.
 
-When no expected element type is available, an explicit Icon constructor can supply it. Standalone anonymous record identity, empty literals, heterogeneous literals, overloaded calls, and conflicting expected types remain separate inference decisions.
+When no expected element type is available, an explicit Icon constructor can supply it. Known-size nonempty heterogeneous literals with established element types use their normalized union. Standalone anonymous record identity, empty literals without element evidence, overloaded calls, and conflicting expected types remain separate inference decisions.
 
 ## Let simple functions omit machinery
 
