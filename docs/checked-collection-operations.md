@@ -1,6 +1,6 @@
 # Checked indexing and flat destructuring
 
-Status: **design proposal, 2026-10-19**. The user wants individual collection accesses to support explicit recovery/propagation and successful destructuring bindings to remain at the surrounding scope. This document proposes operation contracts and a new checked-binding extension; neither indexing fallibility nor that extension is selected grammar yet.
+Status: **historical design proposal, 2026-10-19; fallible-default indexing is superseded by direct positional access with typed faults and attached `else`, while the flat checked-binding extension remains a proposal and is not selected grammar**. The user wants individual collection accesses to support explicit recovery/propagation and successful destructuring bindings to remain at the surrounding scope.
 
 The later [fault-policy review](checked-fault-policy.md) compares this fallible-default indexing model with ordinary asserting access plus explicit typed checked operations. The later [shared-recovery direction](expression-recovery.md) selects direct ordinary positional access with typed faults and attached else recovery. Examples below preserve the older fallible-default interpretation for this alternative; users[index]! must not be read as panic capture. The flat destructuring extension remains a proposal.
 
