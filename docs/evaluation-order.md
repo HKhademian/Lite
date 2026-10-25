@@ -10,7 +10,7 @@ Make expressions with calls and other observable effects predictable independent
 
 Evaluate the left operand expression before the right operand expression. Apply this rule recursively to the grouped expression. Operator precedence determines grouping; it does not mean evaluating every higher-precedence expression before the left operand.
 
-Assuming the usual grouping in this arithmetic example:
+Under the selected [basic arithmetic grouping](operators.md#basic-arithmetic-grouping-selected):
 
 ```text
 left() + middle() * right()
@@ -24,7 +24,7 @@ with grouping `left() + (middle() * right())`, evaluation is:
 4. Compute the multiplication.
 5. Compute the addition.
 
-This example illustrates order for that grouping; the complete arithmetic precedence specification remains open.
+Multiplication binds more tightly than addition, but left() still runs first. The basic arithmetic ladder and binary left association are selected; exponentiation and the complete expression grammar remain open.
 
 Each executed operand occurrence is evaluated once. `read() + read()` contains two separate calls and executes both; evaluation order does not imply memoization.
 
@@ -145,7 +145,7 @@ Temporaries may be retained according to the eventual ownership model. This orde
 
 ## Open decisions
 
-Complete arithmetic precedence and associativity, record/collection initializer ordering, default-argument behavior, temporary lifetimes and destruction, borrow activation, and assignment aliasing rules remain open. No unspecified initializer or cleanup order is selected by this document.
+Exponentiation, complete expression-grammar integration, record/collection initializer ordering, default-argument behavior, temporary lifetimes and destruction, borrow activation, and assignment aliasing rules remain open. No unspecified initializer or cleanup order is selected by this document.
 
 ## Related concepts and references
 

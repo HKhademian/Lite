@@ -90,7 +90,7 @@ This has the same tokens and meaning as the spaced example. Ordinary and raw blo
 - Define arithmetic panic categories and payloads. The channel does not settle which floating-point cases are faults or make operators return `Result`.
 - Choose floating-point result representations, large-integer precision handling, and mixed numeric operand rules.
 - Define noninteger remainder behavior and any combined quotient/remainder API.
-- Set arithmetic precedence and associativity in the complete operator grammar.
+- Preserve the selected shared multiplicative level for * / // % and binary left association; complete integration with other expression forms and any future exponentiation remains open. See [arithmetic grouping](operators.md#basic-arithmetic-grouping-selected).
 - Choose implicit conversion and explicit narrowing policies independently of the operator spelling.
 
 Examples illustrate successful values rather than selecting a failure mechanism. These decisions must preserve the goal of explicit recoverable errors and cannot introduce null or undefined results.

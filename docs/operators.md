@@ -1,6 +1,6 @@
 # Operators
 
-Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; identity leading plus on additive chains selected 2026-10-25; comparison chaining and logical direction established; complete arithmetic precedence and numeric semantics open**.
+Status: **all ten positive/negated comparison operators selected at one shared comparison precedence on 2026-10-23; optional leading and/or in conditions and ordinary Boolean expressions selected 2026-10-24; identity leading plus on additive chains selected 2026-10-25; basic arithmetic grouping selected 2026-10-25; comparison chaining and logical direction established; remaining expression integration and numeric semantics open**.
 
 ## Working operator set
 
@@ -18,7 +18,28 @@ and  or  not
 
 Selected 2026-10-25: a complete additive-chain entry permits one optional leading +, including a singleton. total := + rent + groceries + transport has the same meaning as the form without the first +; the ordinary initializer can be written over several lines without parentheses. For an admitted operand, +A preserves A's value/type and evaluates that occurrence once. No implicit zero, extra addition/overload call, numeric conversion, promotion, or new effect/failure is introduced.
 
-This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading // or % rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Complete unary grammar, arithmetic precedence/associativity, and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+This identity rule does not extend to minus: -A retains negation and cannot be ignored as redundant punctuation. Leading * or / is not selected; no implicit 1 seed, reciprocal, or other unary meaning follows. There is likewise no automatic leading // or % rule. Preserve every actual interior operator and the original grouping/evaluation contracts. Require a real operand and no stacked/interior extra redundant leaders. Basic arithmetic grouping is selected below; complete unary integration and nonnumeric/custom arithmetic contracts remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+
+## Basic arithmetic grouping selected
+
+Selected 2026-10-25: within the selected arithmetic operator set, precedence runs from tighter to looser:
+
+1. Prefix negation: `-a`.
+2. Multiplicative operations: `*`, `/`, `//`, `%`.
+3. Additive operations: binary `+`, `-`.
+
+Binary operators at each level associate left to right. Parentheses override grouping:
+
+```text
+2 + 3 * 4;   /* 2 + (3 * 4): 14 */
+20 - 5 - 2;  /* (20 - 5) - 2: 13 */
+20 // 5 * 2; /* (20 // 5) * 2: 8 */
+-2 * 3;      /* (-2) * 3: -6 */
+```
+
+An optional leading + at a complete additive-chain entry leaves this grouping unchanged. Binary associativity does not authorize regrouping or reordering actual operations; ordinary operands still evaluate left to right under the separate [evaluation contract](evaluation-order.md#operator-operands).
+
+This selects the basic ladder, not a completed expression grammar. Exponentiation (`**` or another spelling), its relationship to unary minus, power updates, bitwise operations, complete unary/call/access/range/recovery integration, and numeric conversions remain open. The [cross-language arithmetic comparison](arithmetic-operators-comparison.md) records primary sources and foreign-runtime probes without adopting their extra operators or numeric contracts.
 
 ## Division
 
@@ -62,11 +83,13 @@ Chains compare adjacent operands, evaluate each operand at most once from left t
 
 The intended relative precedence, from tighter to looser, is:
 
-1. Arithmetic.
-2. Comparison.
-3. `not`.
-4. `and`.
-5. `or`.
+1. Prefix arithmetic negation.
+2. Multiplicative `* / // %`.
+3. Additive `+ -`.
+4. Comparison.
+5. `not`.
+6. `and`.
+7. `or`.
 
 ```text
 not a == b and ready
@@ -84,7 +107,7 @@ To negate only `a` before comparing:
 (not a) == b
 ```
 
-The full grammar must still specify arithmetic precedence, unary minus, ranges, and arithmetic associativity. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
+The basic arithmetic levels and left association above are selected. The full grammar must still integrate unary forms, ranges, calls/access, and recovery; power remains unselected. Comparison chaining is selected rather than ordinary binary left/right association of comparisons. Whitespace never selects a different grouping.
 
 ## Optional leading logical separators selected
 

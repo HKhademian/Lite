@@ -630,15 +630,20 @@ Complete postfix productions, full precedence, nested-operand evaluation scope, 
 
 See [Result and errors](result-and-errors.md) and [panics](panics.md).
 
-## Optional leading plus
+## Basic arithmetic grouping and leading plus
 
 ```text
-additive_chain_entry := ["+"] additive_chain_without_leader
+additive_chain_entry := ["+"] additive_expression
+additive_expression := multiplicative_expression { ("+" | "-") multiplicative_expression }
+multiplicative_expression := arithmetic_unary { ("*" | "/" | "//" | "%") arithmetic_unary }
+arithmetic_unary := "-" arithmetic_unary | arithmetic_primary
 ```
 
-Selected 2026-10-25: this is a nonempty additive-expression entry fragment, not a complete arithmetic grammar. The placeholder denotes the ordinary additive expression with at least one real operand and no independent redundant leader at the same boundary. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
+Selected 2026-10-25: this is a nonempty arithmetic fragment, not a complete expression grammar. Fold each binary repetition left: a - b - c means (a - b) - c; multiplication/division/remainder bind above addition/subtraction, and prefix negation binds above those selected binary levels. Parentheses override grouping. Arithmetic_primary is a placeholder for tightly bound operands, including admitted grouped expressions; complete call/access/literal integration remains open. No power production or precedence relative to a future power operator is selected.
 
-Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; // and % gain no such prefix either. Full unary forms, nonnumeric/custom operator contracts, arithmetic precedence/associativity, and recursive integration remain open. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+The optional leading + is admitted only at a complete additive-chain entry. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
+
+Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; // and % gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
 ## Logical grouping
 
@@ -659,7 +664,7 @@ Keep logical_or, logical_and, logical_not, or_condition, and and_condition unpre
 
 All ten comparison operators share exactly this one precedence level, binding more tightly than `not`; a leading `not` applies to the whole chain. Each comparison operator checks adjacent operands and produces `Bool`; the result of one comparison is not the next operator's operand. Negated operators complement one corresponding positive comparison: =!= negates ==, >! negates >, >!= negates >=, <! negates <, and <!= negates <=. Chain operands evaluate at most once in source order, and subsequent comparisons and operands are skipped after a false result. All adjacent comparisons are statically checked. Recognize the longest comparison token in expression context; grammatical type context retains the selected attached type-suffix/initializer boundary. Parentheses establish separate comparisons when required. All ten nonbinding comparison-pattern prefixes are selected separately; that does not add implicit-subject pattern chains.
 
-`comparison_operand` is a placeholder for expressions binding more tightly than comparisons, including grouping and arithmetic; its full production remains open. With no comparison operator, the production passes through the operand expression. Arithmetic, ranges, calls, member access, literals, type syntax, and pattern grammar are intentionally not completed here. See [comparison chains](comparison-chains.md).
+`comparison_operand` is a placeholder for expressions binding more tightly than comparisons, including grouping and arithmetic; its full production remains open. With no comparison operator, the production passes through the operand expression. The arithmetic subset above is selected; its full recursive integration with ranges, calls, member access, literals, type syntax, and patterns is intentionally not completed here. See [comparison chains](comparison-chains.md).
 
 ## Evaluation semantics
 

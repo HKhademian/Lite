@@ -1,0 +1,246 @@
+{
+  "date": "2026-10-25",
+  "scope": "Foreign-language arithmetic probes; no LiteScript parsing or execution was performed.",
+  "probes": [
+    {
+      "language": "Python",
+      "version": {
+        "command": [
+          "python3",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "Python 3.15.1\n",
+        "stderr": ""
+      },
+      "filename": "probe.py",
+      "source": "print(2 + 3 * 4, 20 - 5 - 2, 20 // 5 // 2)\nprint(7 / 2, -7 // 2, -7 % 2, 7 % -2)\nprint(-2 ** 2, (-2) ** 2, 2 ** -2, 2 ** 3 ** 2)\n",
+      "expected_stdout": "14 13 2\n3.5 -4 1 -1\n-4 4 0.25 512\n",
+      "execute": {
+        "command": [
+          "python3",
+          "probe.py"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n3.5 -4 1 -1\n-4 4 0.25 512\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "JavaScript (Node)",
+      "version": {
+        "command": [
+          "node",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "v24.16.0\n",
+        "stderr": ""
+      },
+      "filename": "probe.js",
+      "source": "console.log(2 + 3 * 4, 20 - 5 - 2, 20 / 5 / 2);\nconsole.log(-7 / 2, -7 % 2, 7 % -2);\nconsole.log(String(-7n / 2n), String(-7n % 2n), String(7n % -2n));\nconsole.log((-2) ** 2, 2 ** -2, 2 ** 3 ** 2);\ntry { new Function('return -2 ** 2;'); } catch (e) { console.log(e.name); }\nconsole.log(typeof +'12', +'12');\ntry { +1n; } catch (e) { console.log(e.name); }\n",
+      "expected_stdout": "14 13 2\n-3.5 -1 1\n-3 -1 1\n4 0.25 512\nSyntaxError\nnumber 12\nTypeError\n",
+      "execute": {
+        "command": [
+          "node",
+          "probe.js"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3.5 -1 1\n-3 -1 1\n4 0.25 512\nSyntaxError\nnumber 12\nTypeError\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "C (C17 mode)",
+      "version": {
+        "command": [
+          "cc",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n",
+        "stderr": ""
+      },
+      "filename": "probe.c",
+      "source": "#include <stdio.h>\nint main(void) {\n    short small = 2; int value = 3; int *p = &value;\n    printf(\"%d %d %d\\n\", 2 + 3 * 4, 20 - 5 - 2, 20 / 5 / 2);\n    printf(\"%d %d %d\\n\", -7 / 2, -7 % 2, 7 % -2);\n    printf(\"%d %d\\n\", (int)(sizeof(+small) == sizeof(int)), 2 **p);\n    return 0;\n}\n",
+      "expected_stdout": "14 13 2\n-3 -1 1\n1 6\n",
+      "compile": {
+        "command": [
+          "cc",
+          "-std=c17",
+          "-Wall",
+          "-Wextra",
+          "probe.c",
+          "-o",
+          "probe-c"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "execute": {
+        "command": [
+          "<probe-dir>/probe-c"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3 -1 1\n1 6\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "C++ (C++20 mode)",
+      "version": {
+        "command": [
+          "c++",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n",
+        "stderr": ""
+      },
+      "filename": "probe.cpp",
+      "source": "#include <stdio.h>\nint main(void) {\n    short small = 2; int value = 3; int *p = &value;\n    printf(\"%d %d %d\\n\", 2 + 3 * 4, 20 - 5 - 2, 20 / 5 / 2);\n    printf(\"%d %d %d\\n\", -7 / 2, -7 % 2, 7 % -2);\n    printf(\"%d %d\\n\", (int)(sizeof(+small) == sizeof(int)), 2 **p);\n    return 0;\n}\n",
+      "expected_stdout": "14 13 2\n-3 -1 1\n1 6\n",
+      "compile": {
+        "command": [
+          "c++",
+          "-std=c++20",
+          "-Wall",
+          "-Wextra",
+          "probe.cpp",
+          "-o",
+          "probe-cpp"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "execute": {
+        "command": [
+          "<probe-dir>/probe-cpp"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3 -1 1\n1 6\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "Rust",
+      "version": {
+        "command": [
+          "rustc",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "rustc 1.97.1 (8bab26f4f 2026-07-14)\n",
+        "stderr": ""
+      },
+      "filename": "probe.rs",
+      "source": "fn main() {\n    println!(\"{} {} {}\", 2 + 3 * 4, 20 - 5 - 2, 20 / 5 / 2);\n    println!(\"{} {} {}\", -7 / 2, -7 % 2, 7 % -2);\n    println!(\"{}\", 2_i32.pow(9));\n}\n",
+      "expected_stdout": "14 13 2\n-3 -1 1\n512\n",
+      "compile": {
+        "command": [
+          "rustc",
+          "probe.rs",
+          "-o",
+          "probe-rust"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "execute": {
+        "command": [
+          "<probe-dir>/probe-rust"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3 -1 1\n512\n",
+        "stderr": ""
+      },
+      "matched": true
+    },
+    {
+      "language": "Java",
+      "version": {
+        "command": [
+          "java",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "openjdk 25.0.3 2026-04-21 LTS\nOpenJDK Runtime Environment Temurin-25.0.3+9 (build 25.0.3+9-LTS)\nOpenJDK 64-Bit Server VM Temurin-25.0.3+9 (build 25.0.3+9-LTS, mixed mode, sharing)\n",
+        "stderr": ""
+      },
+      "filename": "Probe.java",
+      "source": "class Probe {\n    public static void main(String[] args) {\n        byte small = 2;\n        System.out.println((2 + 3 * 4) + \" \" + (20 - 5 - 2) + \" \" + (20 / 5 / 2));\n        System.out.println((-7 / 2) + \" \" + (-7 % 2) + \" \" + (7 % -2));\n        System.out.println(((Object)(+small)).getClass().getSimpleName());\n    }\n}\n",
+      "expected_stdout": "14 13 2\n-3 -1 1\nInteger\n",
+      "compile": {
+        "command": [
+          "javac",
+          "Probe.java"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "matched": true,
+      "execute": {
+        "command": [
+          "java",
+          "-cp",
+          "<probe-dir>",
+          "Probe"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3 -1 1\nInteger\n",
+        "stderr": ""
+      }
+    },
+    {
+      "language": "Swift",
+      "version": {
+        "command": [
+          "swift",
+          "--version"
+        ],
+        "exit_code": 0,
+        "stdout": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0\n",
+        "stderr": "swift-driver version: 1.168.6 "
+      },
+      "filename": "probe.swift",
+      "source": "print(2 + 3 * 4, 20 - 5 - 2, 20 / 5 / 2)\nprint(-7 / 2, -7 % 2, 7 % -2)\nlet small: Int8 = 2\nprint(type(of: +small))\n",
+      "expected_stdout": "14 13 2\n-3 -1 1\nInt8\n",
+      "execute": {
+        "command": [
+          "swift",
+          "-module-cache-path",
+          "<probe-dir>/swift-cache",
+          "probe.swift"
+        ],
+        "exit_code": 0,
+        "stdout": "14 13 2\n-3 -1 1\nInt8\n",
+        "stderr": ""
+      },
+      "matched": true
+    }
+  ],
+  "negative_probes": [
+    {
+      "command": [
+        "rustc",
+        "no-plus.rs",
+        "-o",
+        "no-plus"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "error: leading `+` is not supported\n --> no-plus.rs:1:21\n  |\n1 | fn main() { let _ = +2; }\n  |                     ^ unexpected `+`\n  |\nhelp: try removing the `+`\n  |\n1 - fn main() { let _ = +2; }\n1 + fn main() { let _ = 2; }\n  |\n\nerror: aborting due to 1 previous error\n\n",
+      "source": "fn main() { let _ = +2; }\n",
+      "expected": "compile rejection of unary plus",
+      "matched": true
+    }
+  ]
+}
