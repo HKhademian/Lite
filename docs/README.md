@@ -32,7 +32,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Immutability by default](immutability-by-default.md): selected language goal of fixed bindings and readable access first, with explicit, practical mutation capabilities.
 - [Lexical structure](lexical-structure.md): whitespace, tokens, ordinary separators, optional leading chain separators, block boundaries, and the shared rule to omit unnecessary semicolons after complete block items at every nesting depth.
 - [Optional leading separators](leading-separators.md): selected leading and/or on complete Boolean expressions/conditions, or on initial/nested pattern alternatives, and | on nonempty unions; equivalent compact forms, unchanged precedence/effects/bindings, invalid separators, selected compact/multiline formatter presentation, and conditional future leading-& support.
-- [Comments](comments.md): nested comments, raw fences, and delimiter errors.
+- [Comments](comments.md): nested comments, raw fences, parser-neutral trivia, Ali's commented-out condition, delimiter errors, and open formatting policy.
 - [Identifiers](identifiers.md): Unicode names, ordinary underscore bindings, proposed character classes, and normalization questions.
 - [Unused-name intent](unused-name-intent.md): readable _user/_left names that explicitly allow nonuse without unused-name warnings.
 - [Blocks and results](blocks-and-results.md): final expressions, statement results, block boundaries, and grouped value continuation.
@@ -179,7 +179,8 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): constraints, tradeoffs, and unchosen memory semantics.
-- [Tooling and learning](tooling-and-learning.md): official formatter, selected compact chains without leaders and multiline chains with aligned leaders, diagnostics, and gradual teaching.
+- [Tooling and learning](tooling-and-learning.md): official formatter, selected compact chains without leaders and multiline chains with aligned leaders, comment-neutral parsing versus open comment-aware formatting, diagnostics, and gradual teaching.
+- [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, and unselected LiteScript formatting recommendations.
 - [Grammar sketch](grammar-sketch.md): a deliberately incomplete grammar outline.
 - [Decisions and open questions](decisions-and-open-questions.md): the current design ledger.
 - [References](references.md): primary language documentation and relevant research.

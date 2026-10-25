@@ -1,6 +1,6 @@
 # Comments
 
-Status: **nested and raw comment forms accepted; documentation-comment syntax open**.
+Status: **nested and raw comment forms accepted; ordinary/raw comment neutrality in code parsing confirmed 2026-10-25; comment-aware formatting and documentation-comment syntax open**.
 
 ## Purpose
 
@@ -56,6 +56,25 @@ The opening fence takes the entire consecutive run of `#` characters. A closing 
 - Comments separate tokens as whitespace does. `first/* note */second` does not become the identifier `firstsecond`.
 - Comments do not insert item separators. `first() /* note */ second()` still needs `;` between the calls.
 - Newlines have no terminating effect. There is no newline-terminated `//` comment form; outside comments and strings, `//` and `//=` are integer-division operators. See [division](division.md).
+
+## Neutrality in code and parsing
+
+Confirmed 2026-10-25: well-formed ordinary and raw comments at admitted lexical boundaries are neutral trivia. Their contents are not code and do not supply expressions, operators, patterns, bindings, values, or item/list separators. After lexical scanning, the parser sees the remaining real tokens with the normal token boundaries. This is equivalent to appropriate separating whitespace, not concatenating tokens on either side of a removed comment. Existing token-attachment rules and missing-comment-delimiter errors remain in force.
+
+For example, in Ali's initializer:
+
+```text
+ready :=
+    /* and authenticated */
+    and connected
+;
+```
+
+Only connected is an operand. The active leading and is still valid for that singleton Bool expression. Deleting the comment, or restoring the earlier real condition, requires no repair of the first remaining line's punctuation. Commenting out the final real operand would still leave an invalid empty initializer. See [Ali's editing sequence](leading-separators.md#ali-removes-the-first-condition).
+
+## Comments and formatting
+
+Parser neutrality does not require a formatter to discard comment text, placement, or attachment. The formatter must preserve comments under its existing meaning-preservation requirement; how own-line comments constrain layout remains open. The comment's apparent code content is not parsed to infer a phantom operand or a hidden formatting command. Documentation-comment attachment and any explicit formatter-directive syntax require separate decisions. The [formatter investigation](comment-formatting-research.md) distinguishes verified behavior in other tools from possible LiteScript policies.
 
 ## Missing delimiters
 

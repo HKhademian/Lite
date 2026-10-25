@@ -94,6 +94,38 @@ This initializer infers `Bool` and means exactly `connected and authenticated an
 
 The same expression rule applies to supplied assignment values, call arguments, return payloads, block tail expressions, and subjectless match Boolean headers. Existing delimiters and result/type contracts still apply. It introduces no condition-pattern binding into an ordinary value expression, loop source, or subjectless header. Prefix recognition is syntactic; a well-formed expression with a leading `and`/`or` must type-check as `Bool`, including a singleton. `flag := or cached;` is valid for a Bool `cached`; `flag := and "text";` is a type error rather than a String-valued initializer. Do not choose a different parse based on expected types or lookup.
 
+### Ali removes the first condition
+
+Confirmed 2026-10-25: a chain still accepts one real operand after an earlier entry is commented out or deleted. Ali starts with:
+
+```text
+ready :=
+    and authenticated
+    and connected
+;
+```
+
+Then Ali temporarily disables the first entry:
+
+```text
+ready :=
+    /* and authenticated */
+    and connected
+;
+```
+
+Deleting the comment leaves another valid spelling:
+
+```text
+ready :=
+    and connected
+;
+```
+
+Assume both flags are Bool. The last two snippets have exactly one real operand and compute connected with its ordinary evaluation/failure behavior. The comment contributes no operand, operator, implicit true value, binding, or separator. The remaining leading and is the one optional leader at the expression entry; it does not require a second operand. Reordering or restoring real entries retains ordinary written-order evaluation. Commenting out every operand still leaves an invalid empty expression.
+
+Well-formed ordinary/raw comments are [lexical trivia](comments.md#neutrality-in-code-and-parsing): their bodies are not parsed as code or counted as chain entries. Comment removal here means replacement by token-separating whitespace, not concatenating neighboring tokens. This syntax rule does not settle whether a formatter keeps this vertical layout or how it normalizes an explicitly written singleton leader. See the [formatter comment investigation](comment-formatting-research.md).
+
 ### Boolean loop sources
 
 ```text
@@ -269,3 +301,5 @@ Do not automatically insert a leader for a singleton or invent a choice between 
 These transformations preserve evaluation order, short-circuiting, effects/failures, binding joins/narrowing, pattern first-success/no-retry behavior, and type identity. Preserve comments, literal data, required ordinary item/list separators, and the selected omission of unnecessary semicolons after completed block items. Line layout remains a formatter choice with no grammatical meaning. This selects a formatter requirement, not an implemented tool or a change to source validity; the earlier preservation-versus-normalization question is superseded for multi-entry chains.
 
 Diagnostics should identify the missing operand or extra separator at the relevant token. These examples require future parser/type-checker and formatter conformance tests; documentation checks do not verify execution or formatting.
+
+Ordinary comments remain neutral to parsing even when a formatter preserves their source position or uses their presence in layout decisions. Counting /* and authenticated */ as a disabled-but-real operand, or making its text an implicit formatter directive, is not selected. Own-line-comment layout and explicit-singleton normalization remain open after the [comparison of current formatters](comment-formatting-research.md).

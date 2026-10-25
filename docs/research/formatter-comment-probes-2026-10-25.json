@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-25",
+  "purpose": "Foreign-language formatter probes of comment layout; not LiteScript verification",
+  "executed": {
+    "deno": "2.7.14",
+    "rustfmt": "1.9.0-stable (8bab26f4f6 2026-07-14)"
+  },
+  "not_executed": {
+    "bun": "Installed 1.3.10: bun fmt --help reports Script not found",
+    "dart": "Not installed on PATH",
+    "flutter": "Not installed on PATH",
+    "prettier": "Official documentation inspected; no independent runtime probe"
+  },
+  "rustfmt_config": "max_width = 100\n",
+  "probes": [
+    {
+      "case": "singleton_plain",
+      "formatter": "deno 2.7.14",
+      "command": [
+        "deno",
+        "fmt",
+        "--no-config",
+        "--ext",
+        "ts",
+        "-"
+      ],
+      "input": "const ready =\n  connected;\n",
+      "output": "const ready = connected;\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "singleton_plain",
+      "formatter": "rustfmt 1.9.0-stable",
+      "command": [
+        "rustfmt",
+        "--emit",
+        "stdout",
+        "--edition",
+        "2024",
+        "--config-path",
+        "/private/tmp/litescript-formatter-comment-probes/rustfmt.toml"
+      ],
+      "input": "fn main() {\n    let ready =\n        connected;\n}\n",
+      "output": "fn main() {\n    let ready = connected;\n}\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "singleton_disabled_entry",
+      "formatter": "deno 2.7.14",
+      "command": [
+        "deno",
+        "fmt",
+        "--no-config",
+        "--ext",
+        "ts",
+        "-"
+      ],
+      "input": "const ready =\n  /* authenticated && */\n  connected;\n",
+      "output": "const ready =\n  /* authenticated && */\n  connected;\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "singleton_disabled_entry",
+      "formatter": "rustfmt 1.9.0-stable",
+      "command": [
+        "rustfmt",
+        "--emit",
+        "stdout",
+        "--edition",
+        "2024",
+        "--config-path",
+        "/private/tmp/litescript-formatter-comment-probes/rustfmt.toml"
+      ],
+      "input": "fn main() {\n    let ready =\n        /* authenticated && */\n        connected;\n}\n",
+      "output": "fn main() {\n    let ready =\n        /* authenticated && */\n        connected;\n}\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "binary_disabled_entry",
+      "formatter": "deno 2.7.14",
+      "command": [
+        "deno",
+        "fmt",
+        "--no-config",
+        "--ext",
+        "ts",
+        "-"
+      ],
+      "input": "const ready =\n  authenticated &&\n  /* connected && */\n  permitted;\n",
+      "output": "const ready = authenticated &&\n  /* connected && */\n  permitted;\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "binary_disabled_entry",
+      "formatter": "rustfmt 1.9.0-stable",
+      "command": [
+        "rustfmt",
+        "--emit",
+        "stdout",
+        "--edition",
+        "2024",
+        "--config-path",
+        "/private/tmp/litescript-formatter-comment-probes/rustfmt.toml"
+      ],
+      "input": "fn main() {\n    let ready =\n        authenticated &&\n        /* connected && */\n        permitted;\n}\n",
+      "output": "fn main() {\n    let ready = authenticated &&\n        /* connected && */\n        permitted;\n}\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "own_line_comment",
+      "formatter": "deno 2.7.14",
+      "command": [
+        "deno",
+        "fmt",
+        "--no-config",
+        "--ext",
+        "ts",
+        "-"
+      ],
+      "input": "const ready =\n  // auth is disabled\n  connected;\n",
+      "output": "const ready =\n  // auth is disabled\n  connected;\n",
+      "exit": 0,
+      "idempotent": true
+    },
+    {
+      "case": "own_line_comment",
+      "formatter": "rustfmt 1.9.0-stable",
+      "command": [
+        "rustfmt",
+        "--emit",
+        "stdout",
+        "--edition",
+        "2024",
+        "--config-path",
+        "/private/tmp/litescript-formatter-comment-probes/rustfmt.toml"
+      ],
+      "input": "fn main() {\n    let ready =\n        // auth is disabled\n        connected;\n}\n",
+      "output": "fn main() {\n    let ready =\n        // auth is disabled\n        connected;\n}\n",
+      "exit": 0,
+      "idempotent": true
+    }
+  ]
+}

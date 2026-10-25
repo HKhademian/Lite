@@ -16,6 +16,8 @@ Angle-bracket generic examples elsewhere are [temporary documentation notation](
 
 Before parsing items, the lexer recognizes [nested and raw comments](comments.md) as token-separating whitespace. A raw opener takes precedence over its ordinary `/*` prefix. Raw fences match their exact hash count; unterminated comments are errors. No comment form inserts `;`.
 
+Comment bodies are neutral trivia to the parser, not disabled AST entries. Thus ready := /* and authenticated */ and connected; contains one active operand and one optional leading and, not two operands or stacked leaders. It remains valid without the comment; removing all real operands does not. Source comments retain their own data/positions for formatting tools without affecting these expression productions. See [comment neutrality](comments.md#neutrality-in-code-and-parsing).
+
 ## Identifier scanning
 
 ```text

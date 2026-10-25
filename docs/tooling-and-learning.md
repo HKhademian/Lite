@@ -26,6 +26,12 @@ Use the outer chain's operator under existing grouping: multiline a and b or c u
 
 Preserve grouping, Bool requirements, evaluation/effects, binding flow, matching/guard behavior, type identity, comments, and required delimiters. Existing syntactic alternatives remain legal; malformed/type-invalid inputs must not be silently repaired by removing punctuation. See the [formatter presentation rule](leading-separators.md#formatter-presentation-selected) for examples and remaining boundaries. No formatter implementation is claimed.
 
+## Comment neutrality and layout investigation
+
+Comments are neutral to code parsing, so a commented-out entry does not count toward a chain's arity or choose its operator. Ali's ready := /* and authenticated */ and connected; remains a valid singleton initializer, as does the form with the comment deleted. This establishes source validity; it does not automatically pin the initializer to a vertical formatter layout.
+
+The [current formatter comparison](comment-formatting-research.md) covers Deno, Bun, Rustfmt, Dart/Flutter, and Prettier. It includes versioned local Deno/Rustfmt probes and separately labels documentation-only findings for tools unavailable locally. Other tools retain comments as layout/attachment information and may recognize explicit control directives. Their behavior is comparison material, not a selected LiteScript directive or comment-pinning rule. Preserve comments; leave exact comment placement, singleton normalization, and any explicit formatting escapes open.
+
 ## Run and build proposals
 
 ```text
