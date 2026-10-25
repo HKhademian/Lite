@@ -169,7 +169,7 @@ The `if` now returns either the updated total or the previous total, and the loo
 
 ### Conditional metadata requires explicit tags
 
-The conditional still owns its branch result and zero fallback. Its `.value` is readable only in its attached `then`, through explicit `@tag.value`. Conditional metadata has no implicit leading-dot target: an untagged `if` does not shadow the enclosing loop, and leading-dot access does not fall through to that loop. In a conditional nested in a loop, name the intended context explicitly; reject ambiguous leading-dot metadata reads rather than guessing or searching outward.
+The conditional still owns its branch result and zero fallback. Its `.value` is readable only in its attached `then`, through explicit `@tag.value`. Conditional metadata has no implicit leading-dot target: an untagged `if` neither establishes a leading-dot context nor falls through to the enclosing loop. Inside a conditional, leading-dot metadata has no target; name the intended context explicitly with `@loop.field` for the loop or `@tag.value` only in the conditional's attached `then`, and reject ambiguous leading-dot metadata reads rather than guessing or searching outward.
 
 For example, both the updated and unchanged paths explicitly read the loop accumulator:
 
