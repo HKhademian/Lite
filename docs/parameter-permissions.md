@@ -20,6 +20,8 @@ For ordinary Int inputs, evaluated-value behavior is selected on **2026-10-25**:
 
 For copyable records whose fields are inline Int values, the same evaluated-value behavior is selected on **2026-10-25**. An ordinary original: Counter input keeps the record value evaluated before invocation even when a separate target: var Counter input replaces its source location. The user's tmp := counter expansion preserves that old record value. Ordinary inputs use value semantics for these selected value types; this does not impose a physical-copy ABI or decide reference-bearing/resource transport. See [ordinary record values](parameter-values-and-slots.md#copyable-records-with-inline-int-fields-selected).
 
+Where a record and its reference fields already have valid copy contracts, its ordinary input follows shallow value mapping: inline fields are preserved and copied references retain their target and permitted access. A copied read-only reference remains read-only; copying grants no new mutation capability or caller-location access. Reference syntax and memory safety, including which capabilities may be copied and the ownership/lifetime/alias model, are explicitly deferred by the user. See [copyable reference-bearing records](parameter-values-and-slots.md#copyable-reference-bearing-record-values-selected).
+
 ## Mut: update held data
 
 ```text

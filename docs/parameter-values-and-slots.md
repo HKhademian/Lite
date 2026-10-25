@@ -1,6 +1,6 @@
 # Ordinary parameters and writable slots
 
-Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable records with inline Int fields have selected evaluated-value semantics on 2026-10-25; other aggregate/type value/borrow semantics, general copying/moving, and alias rules remain open. Public pointers and general reference values are not current selected features.
+Status: **scope clarification, updated 2026-10-19**. Read-only defaults, temporary caller-location access, and explicit mut/var call grants are selected. Ordinary Int and copyable record evaluated-value semantics are selected on 2026-10-25, including shallow reference-field mapping where valid copy contracts exist; reference syntax and memory safety are explicitly deferred, and other aggregate/type transport, ownership, and alias rules remain open. Public pointers and general reference values are not current selected features.
 
 ## 1. Access defaults do not choose transport
 
@@ -10,7 +10,7 @@ The type-side mut parameter qualifier requests writable caller-data access, as i
 
 ## 2. Semantic passing versus physical calling convention
 
-Beyond the selected ordinary Int and copyable inline-Int record cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
+Beyond the selected ordinary Int and copyable record cases below, ordinary parameters need language-defined behavior. Possible choices include a value with the type's copy/move rules, or a read-only borrowed view whose lifetime and alias behavior are specified. Immutability by default does not select between those choices.
 
 The compiler may then choose registers, memory, inlining, or an indirect representation where the observable contract is preserved. This implementation choice must not silently change whether updates through another path are visible, whether ownership is transferred, whether a value is independently stored, or how long the caller must keep it alive.
 
@@ -83,7 +83,30 @@ The simple fixed tmp binding preserves the evaluated record value when counter i
 
 For Int and this copyable record class, ordinary inputs thus have value semantics by default; explicit var receives a caller location, while mut retains its separate writable-payload access meaning. This is an observable contract, not a requirement that the machine ABI copy every argument. A backend may use registers, indirect passing, inlining, or copy elimination only while preserving the old evaluated value and ordinary effects. Preserving a larger inline value across replacement can require copying its data; no zero-copy/performance guarantee is selected.
 
-This scoped rule assumes copyability; it does not introduce a copy trait or classify every record as copyable. Records with reference-bearing fields, noncopyable resources, other aggregate kinds, moves, and general borrowed-view/ownership contracts remain separate decisions. This example selects no deep clone, resource-copy operation, universal byte copy, public reference syntax, or new aliasing permission.
+This scoped rule assumes copyability; it does not introduce a copy trait or classify every record as copyable. The conditional shallow mapping for already-copyable reference fields is selected below. Reference syntax and memory safety are deferred by the user; reference-capability copyability, noncopyable resources, other aggregate kinds, moves, and general borrowed-view/ownership contracts remain separate decisions. This example selects no deep clone, resource-copy operation, universal byte copy, public reference syntax, or new aliasing permission.
+
+## Copyable reference-bearing record values selected
+
+Selected on **2026-10-25**: for a record whose value and reference fields already have valid copy contracts, ordinary argument evaluation and the corresponding simple fixed temporary preserve a shallow record value. Reuse the established rule: copy inline value fields under their contracts and preserve each copied reference field's reference value, target, and permitted access, without cloning the referenced target.
+
+```text
+Profile := record {
+    score: Int;
+    user: UserRef;
+}
+
+tmp := profile;
+```
+
+Here UserRef is a descriptive placeholder for an already valid, copyable read-only reference type. Assume profile is an initialized copyable Profile. No spelling for constructing or declaring a reference capability is selected by this placeholder.
+
+Tmp.score preserves the evaluated Int value. Tmp.user preserves the evaluated reference value and designates the same User target as profile.user did at the copy point. Replacing profile later does not retarget tmp.user or replace tmp's inline fields. The same mapping applies when the evaluated Profile is supplied as an ordinary argument alongside a separate valid var grant to its source location. The evaluated record value is preserved; the reachable object graph is not an automatic snapshot.
+
+The referenced User remains shared. If another access is authorized to change it under its eventual lifetime/alias contract, a read through tmp.user may observe that change. This does not authorize that access, freeze the target, make a read-only reference writable, or create a new reference capability. Existing permissions can be preserved only where their copy contract permits it. Preserve ordinary initialized reads, field visibility, argument/source order, caller-grant rules, and observable behavior under backend optimization; no deep clone or physical byte-copy requirement is added.
+
+### Reference syntax and memory safety deferred
+
+**Explicitly deferred by the user on 2026-10-25:** reference syntax, memory safety, ownership and borrowing, lifetime/escape rules, alias enforcement, and the complete resource model must be discussed later. This selection specifies the shallow value mapping only when those required contracts are already valid; it is neither a memory-safety design nor evidence of a safe implementation. In particular, it does not decide which owned or mutable reference capabilities are copyable, how sharing/cleanup is implemented, or how noncopyable resources are passed. Do not fabricate a copy or choose a reference-counting, garbage-collection, pointer, or allocation policy to fill those gaps.
 
 ## 3. Explicit operation on the caller's location
 
@@ -130,7 +153,7 @@ Rust's shared and mutable references borrow data. A mutable reference permits wr
 
 ## Next contract to settle
 
-Beyond the selected Int and copyable inline-Int record value cases, decide ordinary parameter semantics independently of writable-var semantics. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
+Beyond the selected Int and copyable record value cases, decide ordinary parameter semantics independently of writable-var semantics, keeping the user-deferred reference and memory-safety design for later review. In particular, define whether a read-only parameter provides an independent value or a borrowed view, what the type's copy/move rules are, and which other aliases may operate during the call. Only then decide whether an additional explicit read-only view is useful.
 
 No new ref keyword, pointer syntax, or general reference-value system is proposed for adoption in this review.
 
