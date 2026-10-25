@@ -20,6 +20,8 @@ An array field contributes its inline elements to a containing record, consisten
 
 Known-size nonempty heterogeneous literals infer one homogeneous union element type: [1, "tea", true] has [Int | String | Bool; 3] without a more specific expected element contract. Each index has that union type, while the extent remains three. Collecting these values into a named rest segment retains the known extent in the concrete construction; the general (...rest: T) tuple contract alone states no exact length. See [union inference and tail extents](tuple-array-shapes.md#union-element-inference-and-known-construction-extents).
 
+A known extent zero or one also determines tuple expansion: (...arr0) for [Int; 0] yields Unit, and (...arr1) for [Int; 1] yields a fixed singleton (:Int,). Explicit (...rest = arr0) and (...rest = arr1) instead retain a tail-bearing tuple with an empty or one-element array. Neither declared tail collapses to Unit, a scalar, or the other tuple shape. See [zero/singleton construction examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+
 ## Literal numeric dot access selected
 
 Selected on **2026-10-25**: a fixed array [T; N] supports literal numeric dot access to its statically known positions. arr.0 and arr[0] designate the same element/location and preserve its existing access permissions. For a valid position, the result has type T; positions outside 0 through N - 1 are compile-time errors.

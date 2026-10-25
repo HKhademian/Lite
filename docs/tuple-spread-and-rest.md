@@ -273,6 +273,10 @@ Ordinary tuple construction also accepts runtime-sized spreads against an establ
 
 A destination (...rest:) can collect (1, "tea", true) into a rest array with the inferred homogeneous element type Int | String | Bool and known extent three. The ordinary literal [1, "tea", true] uses the same known-size inference, and (=...rest) preserves the explicitly requested tail label. Every resulting array position has the union type; re-expansion does not restore the original heterogeneous per-position types. Concrete known-size tail construction retains its extent, while the general (...rest: T) schema alone promises no exact length. Empty/unresolved-element and wider API/ownership fact propagation remain separate; see [union element inference](tuple-array-shapes.md#union-element-inference-and-known-construction-extents).
 
+## Zero and singleton source extents selected
+
+Without a destination requesting another shape, (...arr0) for [Int; 0] produces Unit and (...arr1) for [Int; 1] produces a fixed singleton (:Int,), not a scalar. Explicit (...rest = arr0) and (...rest = arr1) instead preserve a named tail containing zero or one element. An empty tail does not normalize to Unit; a one-element tail does not become a fixed singleton. Concrete tail extents remain known under the construction rule. Call spread supplies zero or one input respectively, without making the tuple values/types identical. Preserve source evaluation and ordinary destination proofs. See [the boundary examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+
 ## Evaluation and placement
 
 Evaluate tuple entries from left to right. Evaluate each spread operand once, then insert its components in their original positional order. A nested tuple remains one component unless its expression is explicitly spread.

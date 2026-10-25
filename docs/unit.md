@@ -66,6 +66,10 @@ also_done: () = Unit;
 
 The [cross-context review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts) retains the evaluated alternatives and remaining type/pattern questions. A singleton containing Unit remains distinct from Unit. Unit has no .0 component; f() passes zero arguments while f(()) explicitly passes one Unit argument. The existing zero mapping, Option/Result distinctions, and declared-default-only omission rule apply unchanged. Empty tuple identity does not select a new ABI or automatic conversion of nominal empty records.
 
+## Empty declared tails are distinct
+
+Unit has no components and no declared array tail. A tuple with an explicitly declared rest segment remains tail-bearing when that array is empty: b := (...rest = arr0), for arr0: [Int; 0], has a rest member and is not Unit. By contrast, inferred (...arr0) contributes zero fixed components and yields Unit. A one-element fixed-array spread yields a fixed singleton tuple, while an explicit one-element rest declaration remains a tail-bearing tuple. Call expansion can supply the same input sequence from these different shapes; that does not make the tuple values/types identical or broaden the Unit-only () pattern. See [zero/singleton expansion boundaries](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+
 ## Empty tuple pattern selected
 
 The selected pattern () matches only Unit and binds no names. Thus () := operation() is valid when the operation has a Unit result contract; it still evaluates the operation once. An ordinary declaration cannot use this pattern on a scalar, a singleton containing Unit, or a source that may have another type/shape. Conditional and match patterns retain their existing mismatch behavior. This does not give bare Unit a special constant-pattern meaning: ordinary binding-name rules still apply. See [empty tuple patterns](tuple-entries-and-access.md#empty-tuple-pattern-selected).

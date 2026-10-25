@@ -220,6 +220,8 @@ In tuple value entries, ...name = expression declares a tail with an explicit la
 
 An explicit or established expected tuple schema is the reference construction contract and determines shape; infer only omitted information. Without one, unnamed positional construction infers fixed components before the first runtime-sized array spread, then collects that spread and all subsequent positional contributions into one final array named rest. Multiple array spreads feed the same tail. Known-size spreads expand their fixed contributions; fully static counts infer a fixed tuple unless an explicit tail is declared. The whole supplied composition must still prove an explicit destination's required slots/types/access. No fixed suffix or multi-named-tail merge is selected. See [shape inference and explicit precedence](tuple-array-shapes.md#destination-types-take-precedence-over-inferred-shape).
 
+Fixed-array spread with static extent zero contributes no fixed components and yields Unit when no expected schema requests another shape. Static extent one yields an unnamed singleton tuple even without a trailing comma in the spread expression; its type remains (:T,). Explicit ...rest = array construction retains a declared tail at both extents: an empty tail is not Unit, and a one-element tail is not the fixed singleton/scalar. Runtime tail emptiness does not select another tuple shape. These boundaries do not change the Unit-only empty pattern or bare-array identity rules. See [zero/singleton expansion](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
+
 Selected singleton value forms distinguish grouping by syntax:
 
 ```text
