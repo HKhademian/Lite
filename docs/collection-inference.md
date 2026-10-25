@@ -1,6 +1,6 @@
 # Collection syntax for beginners
 
-Status: **beginner ergonomics goal selected by the user, 2026-10-19; inference mechanisms and shorthand remain proposals**. Students should be able to create, pass, traverse, and write simple functions over collections before learning names such as Iterable or Collection.
+Status: **beginner ergonomics goal selected by the user, 2026-10-19; `[T]` is selected as the indexed-sequence contract, while `Iterable<T>` is the traversal-only form and inference mechanisms remain proposals**. Students should be able to create, pass, traverse, and write simple functions over collections before learning names such as Iterable or Collection.
 
 ## Start with values
 
@@ -101,11 +101,11 @@ Compatible arrays, lists, slices, and custom indexable providers can satisfy the
 
 The earlier conversation's Indexed<Int> example expressed the semantic requirement, not a mandatory beginner annotation. A body that only loops infers a weaker traversal requirement and can still accept suitable sets. The required operations are derived from the definition and checked at each call, rather than inferred as one concrete List type from its first caller.
 
-This proposal does not silently strengthen an explicitly complete public traversal-only contract when its implementation adds indexing. Inferred generic functions, expected callable types, explicit complete constraints, and public-signature stability still require a generalization policy. The [T] shorthand's meaning also remains open; this example requires no new indexable keyword or capability punctuation.
+This proposal does not silently strengthen an explicitly complete public traversal-only contract when its implementation adds indexing. Inferred generic functions, expected callable types, explicit complete constraints, and public-signature stability still require a generalization policy. The selected `[T]` meaning is the indexed sequence; a traversal-only contract uses `Iterable<T>`. This example requires no new indexable keyword or capability punctuation.
 
 The later [signature review](collection-function-signatures.md) recommends distinguishing inferred input requirements from complete published contracts and separating inferred concrete results, static abstract results, and explicit runtime-varying representations. It preserves input/output type and lifetime relationships rather than treating every contract as a boxed value type.
 
-The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Inferring omitted parameters remains a candidate convenience; silently supplementing a complete-looking collection annotation is no longer recommended. The short [T] meaning remains open, with indexed-sequence shorthand now another recommended candidate for beginner ergonomics.
+The subsequent [source-visibility correction](collection-signature-ergonomics.md#revised-recommendation-complete-visible-annotations) requires a written library contract to reveal indexing requirements. Inferring omitted parameters remains a candidate convenience; silently supplementing a complete-looking collection annotation is no longer recommended. The selected `[T]` meaning is the indexed sequence; `Iterable<T>` remains the traversal-only form for beginner ergonomics.
 
 ## Could a short collection annotation help?
 
@@ -144,11 +144,11 @@ Both are source-spelling candidates; no ownership or representation is selected 
 
 The resemblance to slices is real. Rust writes its dynamically sized slice type as [T], usually accessed through a borrowed &[T] or &mut [T]; [T; N] is a fixed-size array type. Zig and Odin use []T for slices and [N]T for fixed arrays. Sources: [Rust slices](https://doc.rust-lang.org/reference/types/slice.html), [Rust arrays](https://doc.rust-lang.org/reference/types/array.html), [Zig 0.15.1 slices](https://ziglang.org/documentation/0.15.1/#Slices), and [Odin slices](https://odin-lang.org/docs/overview/#slices).
 
-A contiguous slice can give an array or list a shared input representation without copying elements. An arbitrary set, chunked source, or generator cannot generally provide that same representation without materialization. Consequently, choosing slice semantics for fn (icons: [Icon]) would narrow the earlier provider-independent traversal goal.
+A contiguous slice can give an array or list a shared input representation without copying elements. An arbitrary set, chunked source, or generator cannot generally provide that same representation without materialization. Consequently, choosing contiguous slice semantics for fn (icons: [Icon]) would add a stronger guarantee than the selected indexed contract and narrow the earlier provider-independent traversal goal.
 
-For that consumer goal, the working recommendation is to evaluate [Icon] as a concise read-only traversal requirement and retain an explicit slice concept when contiguity is required. The [Icon; 10] candidate needs its own decision: inline fixed-array storage, an exact-length view, or a requirement with a statically known extent. Length and ownership are separate properties. A lazy or one-shot source must not be counted or materialized implicitly to establish the extent.
+For that consumer goal, use `Iterable<Icon>` as the concise read-only traversal requirement, and use `[Icon]` only when finite count, positional reads, and traversal are genuinely required. The `[Icon; 10]` candidate needs its own decision: inline fixed-array storage, an exact-length view, or a requirement with a statically known extent. Length and ownership are separate properties. A lazy or one-shot source must not be counted or materialized implicitly to establish the extent.
 
-This recommendation does not select those meanings. A final choice must also cover fields, results, stored abstract values, expected literal construction, and mutation. The provider-independent form must not become a contiguous slice solely because it appears in a parameter.
+The `[T]` indexed meaning is selected; `[T;]` extent/storage still needs a decision. A final choice must also cover fields, results, stored abstract values, expected literal construction, and mutation. The provider-independent form must not become a contiguous slice solely because it appears in a parameter.
 
 The later [order and shared-traversal review](collection-order-and-traversal.md) clarifies that compatible ordinary sets can satisfy a minimal element-source input. Traversal yields values in the provider's order without promising stable positions, sorting, uniqueness for every provider, or indexed storage. The user's ordinary sequence examples preserve supplied positions and duplicates without requiring value comparison.
 

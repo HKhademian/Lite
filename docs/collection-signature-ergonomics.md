@@ -1,6 +1,6 @@
 # Collection shorthand and API overconstraint
 
-Status: **tradeoff review, 2026-10-19**. The user identifies an ecosystem risk: if easy collection spellings imply both traversal and indexing, library authors may require both even when their operations need traversal only. No bracket meaning or partial-signature model is selected here.
+Status: **tradeoff review, 2026-10-19; `[T]` is selected as the indexed-sequence contract, while `Iterable<T>` is the traversal-only form**. The user identifies an ecosystem risk: if easy collection spellings imply both traversal and indexing, library authors may require both even when their operations need traversal only. The partial-signature model below is retained as historical; published contracts must reveal indexing requirements.
 
 The subsequent user correction requires source-visible library requirements: a reader must not need the body or an IDE to discover that an annotated input additionally requires indexing. The partial model below is retained as an explored alternative, not the current recommendation for published contracts.
 
@@ -8,7 +8,7 @@ The subsequent user correction requires source-visible library requirements: a r
 
 If [T], [T;], or [T; count] aliases a complete contract that includes indexing, a function using that annotation genuinely requires indexing. The compiler cannot accept a traversal-only set or generator merely because the implementation happens not to index. Doing so would make the signature's stated guarantee unreliable or introduce an implicit adapter.
 
-Different extent spellings should express their chosen size/shape distinction independently of operation requirements. The meaning of each form, especially [T;], is not established by the user's list of candidates. Static extent does not by itself select storage ownership, contiguity, or an indexed API.
+Different extent spellings should express their chosen size/shape distinction independently of operation requirements. `[T]` is selected as the indexed sequence; the meaning of `[T;]` and `[T; count]` is not established by the user's list of candidates. Static extent does not by itself select storage ownership, contiguity, or an indexed API.
 
 Short strong contracts can attract unnecessarily restrictive APIs. Long weak contracts can burden ordinary authors. This cannot be solved solely by selecting an attractive name for Indexable or Traversable.
 

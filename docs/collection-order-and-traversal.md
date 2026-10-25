@@ -1,6 +1,6 @@
 # Collection order and shared traversal
 
-Status: **user clarification and reference review, 2026-10-19**. Ordinary sequences preserve the user-specified sequence and allow duplicates. Consumer APIs should accept compatible enumerable providers without requiring set-specific behavior. Exact order capabilities, set defaults, traversal views, and positional set-pattern support remain proposals.
+Status: **user clarification and reference review, 2026-10-19**. Ordinary sequences preserve the user-specified sequence and allow duplicates. Consumer APIs should accept compatible enumerable providers without requiring set-specific behavior. `[T]` is selected as the indexed-sequence contract; a traversal-only consumer uses `Iterable<T>`. Set defaults, exact order guarantees, traversal views, and positional set-pattern support remain proposals.
 
 ## Sequence order is not sorted order
 
@@ -101,8 +101,8 @@ For LiteScript, ordinary public enumerable element collections should provide tr
 
 ## Direction for the short input syntax
 
-This review supports the earlier candidate [Icon] as a minimal read-only element-source contract that a set can satisfy. Additional stable-order, indexing, size, uniqueness, or contiguous-view guarantees must be independently expressible and checked when needed. A runtime traversal yields a sequence of values without making every provider a positional storage sequence.
+This review supports `Iterable<Icon>` as a minimal read-only element-source contract that a set can satisfy. `[Icon]` is the selected indexed-sequence contract and is stronger: it requires finite count, positional reads, and traversal, so a set that only traverses does not satisfy it. Additional stable-order, indexing, size, uniqueness, or contiguous-view guarantees must be independently expressible and checked when needed. A runtime traversal yields a sequence of values without making every provider a positional storage sequence.
 
-The bracket meaning, qualification syntax, inferred contracts, and stored abstract representation are still open. Do not require beginners to name every advanced guarantee in an ordinary loop, or silently add them to a traversal-only public signature.
+Generic `Iterable` qualification syntax, inferred contracts, and stored abstract representation remain open. Do not use `[T]` for a traversal-only public signature; use the traversal-only contract. Do not require beginners to name every advanced guarantee in an ordinary loop.
 
 Related: [capabilities](collection-capabilities.md), [consumer abstractions](collection-abstractions.md), [collection inference](collection-inference.md), [sequence patterns](sequence-patterns.md), and [tuple spread](tuple-spread-and-rest.md).
