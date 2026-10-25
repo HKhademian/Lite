@@ -4,7 +4,7 @@ Status: **selected 2026-10-25 for ordinary value parameters; language design, no
 
 ## Public contract and implementation responsibilities
 
-The public callable contract records whether an input may be omitted. The implementation owns the default expression used to supply that missing input. The public contract does not prescribe the expression or freeze its resulting value.
+The public callable contract records whether an input may be omitted. The implementation owns default definitions and handling. Ordinary user implementations own the default expressions used to supply missing inputs; the zero implementation has the selected no-execution behavior below. The public contract does not prescribe the expression or freeze its resulting value.
 
 ```text
 one := fn(n: Int = 1): Int { n * 10 }
@@ -82,26 +82,54 @@ For otherwise compatible ordinary input/result/access contracts:
 
 - A required-input public contract can be implemented by a required-input implementation.
 - A required-input public contract can also use an implementation with a default. The public contract still requires the argument.
-- An omission-capable public contract requires an implementation that supplies a valid declared default for every input that contract allows callers to omit.
-- An implementation lacking such a default cannot satisfy the omission-capable contract merely because its input type has a zero value. Reject that assignment or replacement; do not silently create a default or wrapper.
+- An omission-capable public contract requires valid omission handling from its implementation. Ordinary user implementations supply a valid declared default for every omittable input; the zero implementation satisfies omission under the separate no-execution rule below without an expression definition.
+- An ordinary user implementation lacking such a default cannot satisfy the omission-capable contract merely because its input type has a zero value. Reject that assignment or replacement; do not silently create a default or wrapper.
 
 The same obligation applies when passing, returning, or replacing callable values. A value known only through a required-input contract does not acquire public omission capability from a hidden implementation default. Broader conversions or explicit adapters remain separate.
 
 Different compatible implementation defaults can produce different values or perform different otherwise valid effects. Every default must still fit the established input type, failure contract, and ordinary access/initialization obligations. Changing a default from 1 to 2 preserves an inferred Int input; changing it to "two" can change an independently inferred input to String and therefore break compatibility with an Int contract. Implementation ownership does not authorize changing a fixed public type.
 
-## Call preparation still runs defaults before invocation
+## Call preparation follows the selected implementation
 
-Omission permission is checked against the public contract, and compatibility ensures a provider exists. The default expression comes from the callable implementation selected when the callee is evaluated once. Subsequent preparation does not reselect a different implementation merely because a caller variable holding a callable changes.
+Omission permission is checked against the public contract, and compatibility ensures valid implementation handling. For an ordinary user implementation, its default expression comes from the callable selected when the callee is evaluated once. The selected zero implementation instead skips body/default execution as described below. Subsequent preparation does not reselect a different implementation merely because a caller variable holding a callable changes.
 
-Keep [selected timing](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied expressions in written order and finish routing, then only missing applicable defaults in declaration order, then invoke. Owning the expression does not move its evaluation into the user body, evaluate it at definition time, cache its first result, or make it a caller-owned expression.
+For ordinary user implementations, keep [selected timing](evaluation-order.md#default-argument-evaluation-selected): evaluate the callee, supplied expressions in written order and finish routing, then only missing applicable defaults in declaration order, then invoke. Owning the expression does not move its evaluation into the user body, evaluate it at definition time, cache its first result, or make it a caller-owned expression.
 
-Supplied final inputs skip their defaults. Permitted spread replacement, [earlier-parameter reads](parameter-default-inference.md#defaults-may-read-earlier-parameters), static default validation, ordinary copies, and entry-time permission/initialization checks retain their contracts. Both ordinary invocation and intrinsic .call use the same public omission checks and selected implementation's defaults. No missing input receives implicit zero.
+Supplied final inputs skip their defaults. Permitted spread replacement, [earlier-parameter reads](parameter-default-inference.md#defaults-may-read-earlier-parameters), static default validation, ordinary copies, and entry-time permission/initialization checks retain their contracts. Both ordinary invocation and intrinsic .call use the same public omission checks and selected implementation's handling. No general implicit-zero argument fallback is added; zero-callable omission is the specific rule below.
+
+## Zero-callable omission selected
+
+Selected on **2026-10-25**, clarified by the user: default definitions and handling belong to the selected implementation. A zero-initialized callable runs no user body and no default expressions, and returns zero(R) for its declared result type R. Its built-in behavior satisfies public omission permission without requiring an actual default-expression definition for an omitted ordinary input.
+
+```text
+one := fn(n: Int = 1): Int { n * 10 }
+var operation: fn(n: Int = ...): Int = one;
+operation();  /* 10, using one's implementation default */
+
+operation = 0;
+operation();    /* 0: zero implementation; no default expression runs */
+operation(42);  /* 0: supplied input is ignored by the zero implementation */
+
+required: fn(Int): Int = 0;
+required();    /* rejected: required input is still required */
+required(42);  /* 0 */
+```
+
+These are designed outcomes, not executed LiteScript tests. The zero value of the omission-capable type remains valid and callable; an ordinary user implementation lacking a required default does not gain the same privilege. This behavior belongs specifically to the zero-initialized callable value, not to any ordinary function body that happens to return 0.
+
+Caller-side preparation still evaluates the callee once and every reached supplied expression in written order, with normal routing, copies, type/access/initialization checks, failures, and required cleanup. Thus operation(make_value()) still evaluates make_value(); an exit there can prevent invocation. What is skipped is zero-implementation body/default execution. No former implementation's default expressions execute through the zero value, and no default-expression effects or failures are manufactured. Intrinsic .call follows the same rule after evaluating its supplied pack.
+
+For an omitted ordinary input of type TP, zero(TP) is a safe conceptual value when reasoning about this no-body implementation. This does not require materializing a parameter value, executing a synthetic default, zero-filling unused argument storage, or performing observable construction/copy work for an absent argument. The public observable result is zero(R); the zero implementation exposes no body that can inspect an omitted input.
+
+The user explicitly defers the internal representation: a special non-public unvalued state, analogous to undefined, is a possible future discussion, not a selected representation. No public undefined value/type, Unit alternative, missing tuple element, readable uninitialized argument, or null-like value is introduced. This rule does not choose an ABI, parameter-slot layout, sentinel, or new var/mut grant. Existing zero mappings for TP/R remain a separate type-design responsibility; their unresolved categories are not solved here.
+
+This supersedes the earlier claim that applicable user default expressions must execute before invoking a zero callable, and resolves the previously open zero-callable default-provider question without inventing such expressions. Normal user implementations retain the selected missing-default evaluation order and earlier-parameter visibility.
 
 ## Remaining boundaries
 
 The public = ... omission marker is selected. Complete function-type/header grammar, recursive/variadic/pattern defaults, general callable compatibility beyond omission, public label versus local receiver-name integration, lexical lookup/captures, and permission-bearing defaults remain separate. No new ABI, storage field, closure layout, implicit reference, adapter, or runtime missing-default fallback is selected. Reference syntax, memory safety, ownership/lifetimes, alias enforcement, and resources remain deferred.
 
-Zero-initialized callables keep their existing successful input-preparation rule whenever an applicable default provider is established. How zero construction of an omission-capable function type supplies implementation-owned default expressions remains a follow-up design question. The public omission flag alone does not provide an expression, and a zero-result body is not a default provider. Do not claim that this selection supplies that missing construction rule.
+Zero-callable omission is now selected above: no actual default definition or execution is required. Its internal omitted-input representation remains explicitly deferred, including the possible non-public unvalued state; no public undefined semantics are selected.
 
 ## Related documents
 
