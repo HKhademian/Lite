@@ -152,7 +152,27 @@ b := (...extra);   /* zero fixed components plus an Int array tail */
 
 A tuple may have an empty fixed prefix and still contain its declared rest array. Therefore b := (...extra) is a valid inference direction once extra's element type is known; it is not rejected merely because the array length is runtime-sized or there is no expected destination. The statically known shape is a rest-only tuple, not a tuple with a runtime-selected number of fixed components. An empty extra produces an empty tail while preserving that same rest-only shape; this does not select identity with Unit or a bare array.
 
-The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. The inferred tail's name, its label-sensitive compatibility with explicitly named schemas, exact representation, and normalization/equivalence with a bare array remain open. named above explicitly establishes the tail name rest through OnlyRest; this example does not invent a member name for b. Multiple rest segments remain a future discussion.
+The discussion's (...(), ...rest) describes this empty-prefix-plus-tail decomposition. It does not add a second type-construction spelling or require a runtime prefix value. For unannotated b, the inferred tail's name and label-sensitive compatibility with explicitly named schemas remain open. Exact representation and normalization/equivalence with a bare array also remain open. named above explicitly establishes the tail name rest through OnlyRest; this example does not invent a member name for b. Multiple rest segments remain a future discussion.
+
+### A colon distinguishes inferred rest declarations from type spread
+
+Selected in the follow-up discussion, 2026-10-24/25: a declared rest segment may omit its element type after the required colon when static inference supplies it. No infer keyword is required or selected.
+
+```text
+Params := type (:Int, :Int);
+expanded: (...Params) = (1, 2);
+
+inferred: (...rest:) = (...extra);
+collected: (...rest:) = (...fixed);
+```
+
+Assume extra is a readable runtime-sized Int array and fixed has a statically known number of Int elements. Both inferred and collected explicitly request a rest-only tuple whose tail is named rest and whose inferred element type is Int. In particular, the expected tail schema collects the fixed source into an array tail rather than inferring fixed tuple components. inferred.rest and collected.rest use the established named-array access rule.
+
+In type position, (...Params) expands an existing tuple schema; (...rest: Int) declares a named rest segment with an explicit element type; (...rest:) declares that segment with an inferred element type. The colon distinguishes declaration from type expansion syntactically, without capitalization or name lookup choosing the parse. When its type is omitted, the next token ends the entry with a comma or closing parenthesis.
+
+Inference must be supported by the initializer or an established expected contract. A typed empty array still supplies its element type; an untyped empty source does not acquire one from this syntax alone. Unresolved or incompatible constraints require an explicit type or a diagnostic, not runtime element inspection or an implicit Any. General heterogeneous element inference, generic aliases, and unknown callable-input inference are not selected by this rule.
+
+This is a scoped exception for declared rest segments. Ordinary name: components still require a following type, and their existing bare-name inference form is unchanged. (...rest) cannot serve as an inferred named rest declaration in type position because it retains tuple-type expansion meaning. The unannotated value expression (...extra) remains valid under the rest-only inference rule above; an explicit schema is optional for readability and naming.
 
 ### Declared names access array tails
 

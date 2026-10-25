@@ -99,7 +99,7 @@ lambda := receiver_header [":" type] block
 
 function_type := "fn" "(" [signature_input {"," signature_input} [","]] ")" ":" type
 signature_input := type | identifier ":" type
-                 | "..." type | "..." identifier ":" type
+                 | "..." type | declared_array_tail
 
 mut_qualified_type := "mut" type_operand
 var_qualified_access := "var" type_operand
@@ -159,17 +159,20 @@ This is an intentionally incomplete expression-boundary outline. Intrinsic `.cal
 
 ```text
 tuple_type_entry := identifier ":" type | identifier | ":" type | "..." type
-declared_array_tail := "..." identifier ":" type
+                  | declared_array_tail
+declared_array_tail := "..." identifier ":" [type]
 fixed_array_type := "[" type ";" static_extent "]"
 ```
 
 These fragments extend the incomplete tuple/callable type grammar. ...Params in type position expands a tuple schema with unnamed append and labeled replacement in the original slot. A final ...rest: T declares an array tail whose additional inputs each have type T; T may itself be a tuple. It does not annotate the entire collected remainder. This segment is valid in ordinary tuple schemas as well as callable inputs. The corresponding implementation collector may have a different name. Arrays with known or runtime-known length may feed a declared tail. The supplied arguments must provably satisfy the statically known input tuple shape; runtime tail length does not change that shape. Runtime-array spelling, tail normalization/composition, general length proofs, and complete recursive grammar remain open; [T; ...] was only a placeholder. See [selected examples and constraints](tuple-array-shapes.md).
 
+The colon also disambiguates an inferred rest declaration: (...rest:) declares a named tail and infers its element type from sufficient initializer/expected-contract information; (...Params) expands an existing tuple type. A comma or closing parenthesis terminates an omitted element type. No infer keyword or ordinary dangling name: component is selected. This does not add body-based inference of unknown callable inputs or a general type-hole feature; complete implementation-header/pattern integration remains open. See [inferred rest declarations](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
+
 ## Named calls and tuples under review
 
 The [named-call review](named-arguments-and-tuples.md) has selected name = expression call entries, positional calls, and positional prefixes followed by named arguments for simple identifier parameters. The 2026-10-23 extension selects interleaved positional/named inputs, =name shorthand, and explicit tuple call spread. Unnamed inputs fill the next unfilled declared slot; named inputs select a declared slot and replace an earlier supplied value. Explicit argument labels, including shorthand, must be unique; spread collisions may replace an earlier value. Reject unknown/ambiguous labels, excess positions, missing required inputs, and type/access mismatches. Complete recursive call grammar, superseded-value cleanup, and callable label compatibility remain open. Core tuple construction and binding forms are selected, while complete recursive productions remain to be formalized. Tuple patterns permit interleaved positional entries and destination = sourceField clauses: process left to right, selecting the next unselected source component for positional entries and the named field for named entries; reject duplicate source selection. A whole-tuple type annotation supplies named types such as (l: Int, r: Int); := infers the source contract. Within that direction, the user selected fresh named initializer reordering into a known destination and explicit reconstruction for differently ordered stored tuples; different stored tuple labels likewise require explicit reconstruction. Identical ordered labels and component types define the same structural tuple type wherever written. Stored named/unnamed conversions remain open. See [concrete named routing](named-input-routing.md). Assignment expressions, typed patterns, singleton/grouping forms, contextual lambda headers, and call-spread syntax must retain explicit syntactic boundaries. Named inputs preserve supplied-expression source order and the selected declared-default requirement for omission.
 
-The selected tuple type component forms are identifier ":" type, bare identifier with an inferred type, and ":" type without a name. Examples are (l: Int, r: Int), (l, r), and (:Int, :Int). In type context, bare identifiers are labels rather than positional type operands; bare (Int, Int) no longer spells an unnamed typed tuple. A written colon requires a following type, so (l:, r:) and bare-colon components are rejected. Value expressions and binding patterns retain their own parenthesized roles. See [tuple component grammar](named-input-routing.md#selected-tuple-type-component-grammar). The empty tuple is Unit, also spelled () in type and value contexts. Complete recursive integration and inference diagnostics remain to be formalized. Singleton value construction is selected below.
+The selected tuple type component forms are identifier ":" type, bare identifier with an inferred type, and ":" type without a name. Examples are (l: Int, r: Int), (l, r), and (:Int, :Int). In type context, bare identifiers are labels rather than positional type operands; bare (Int, Int) no longer spells an unnamed typed tuple. For ordinary tuple components, a written colon requires a following type, so (l:, r:) and bare-colon components remain rejected. Declared rest segments have the scoped (...rest:) exception described above. Value expressions and binding patterns retain their own parenthesized roles. See [tuple component grammar](named-input-routing.md#selected-tuple-type-component-grammar). The empty tuple is Unit, also spelled () in type and value contexts. Complete recursive integration and inference diagnostics remain to be formalized. Singleton value construction is selected below.
 
 Selected tuple value entries and numeric access are outlined separately from tuple type components:
 

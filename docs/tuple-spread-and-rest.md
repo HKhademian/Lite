@@ -83,6 +83,8 @@ A declared ...rest: T accepts zero or more additional T values collected as an a
 
 Access a declared tail by its schema name: mytuple.rest obtains the array through existing named tuple access. mytuple.rest[index] then follows array-indexing rules, outside tuple access. This does not introduce runtime tuple positions, a numeric position for the tail, or multiple declared rest segments. See [named tail access](tuple-array-shapes.md#declared-names-access-array-tails).
 
+A rest declaration can infer its element type with (...rest:) when an initializer or expected contract supplies sufficient static information. The colon distinguishes a named declaration from (...Params), which expands an existing tuple type. (...rest: T) remains the explicitly typed form; no infer keyword is selected, and ordinary dangling name: entries remain invalid. See [inferred rest declarations](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread).
+
 ## Positional tuple rest selected
 
 Selected by the user, 2026-10-22: a positional tuple pattern may contain one ...rest capture, placed last. It binds the remaining components as a tuple, preserving their individual types and stored order.

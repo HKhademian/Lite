@@ -428,7 +428,7 @@ tuple_type_component := identifier ":" type
                       | ":" type
 ```
 
-The bare identifier production supplies a label, never a positional type selected by capitalization or name lookup. Thus (Int, Int) no longer spells a pair of unnamed Int types; bare entries would be labels and duplicate labels are rejected. Write (:Int, :Int). The former (l:, r:) spelling is removed: a written colon requires a following type. A component containing only : is likewise invalid. Ordinary identifier and tuple-shape rules still apply.
+The bare identifier production supplies a label, never a positional type selected by capitalization or name lookup. Thus (Int, Int) no longer spells a pair of unnamed Int types; bare entries would be labels and duplicate labels are rejected. Write (:Int, :Int). The former (l:, r:) spelling is removed: an ordinary component's written colon requires a following type. A component containing only : is likewise invalid. A declared rest segment has the scoped (...rest:) exception: the colon declares its name while sufficient initializer/expected-contract information supplies its element type. Without that colon, (...Params) retains tuple-type expansion meaning. See [rest element inference](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread). Ordinary identifier and tuple-shape rules still apply.
 
 These declarations are now valid in the selected direction:
 

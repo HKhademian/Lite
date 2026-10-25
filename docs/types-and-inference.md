@@ -69,7 +69,7 @@ Tuple type components use the selected three forms:
 (:Int, :Int)    /* unnamed, explicit types */
 ```
 
-Bare entries in type context are labels; a colon requires a following type. The earlier dangling name: form is removed, and bare (Int, Int) is not an unnamed typed pair. Ordinary tuple values and binding patterns keep their context-specific meanings.
+Bare ordinary entries in type context are labels; their colon requires a following type. The earlier dangling name: form is removed, and bare (Int, Int) is not an unnamed typed pair. Declared rest segments have a scoped exception: (...rest:) names an array tail and infers its element type from sufficient static initializer/expected-contract information. (...Params) retains tuple-type expansion meaning. See [rest element inference](tuple-array-shapes.md#a-colon-distinguishes-inferred-rest-declarations-from-type-spread). Ordinary tuple values and binding patterns keep their context-specific meanings.
 
 ```text
 (left, right): (l, r) = (r = 2, l = 1);
