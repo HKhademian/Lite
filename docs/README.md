@@ -11,6 +11,15 @@ Design snapshot: **2026-10-25**. Stage: **planning; no implementation**.
 
 The detailed reference below develops these foundations one concept at a time.
 
+## Reading paths
+
+- **Foundations and types:** white paper → principles → decisions → grammar sketch → type categories → unions → patterns → errors.
+- **Collections and sequences:** collections and iterators → sequence types → arrays/lists/slices → collection contracts and algorithms.
+- **Control flow and lifecycle:** blocks and results → conditionals → loops → exits → recovery → finally and cleanup.
+- **Modules, performance, and tooling:** modules and packages → memory and performance → tooling and learning.
+
+These are reading paths, not separate index entries; each linked document has one canonical entry below.
+
 ## How to read this reference
 
 - **Established direction** records an explicit user choice or a rule retained by the subsequent discussion.
