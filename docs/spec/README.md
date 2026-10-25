@@ -110,7 +110,9 @@ Selected:
 - One `loop` keyword supports iterable, Boolean, and unconditional sources.
 - `as` names one optional item. Destructuring happens inside the body; positional receiver lists and completion receivers are retired.
 - `.item`, `.index`, `.count`, and `.value` are loop metadata. `.value` has static type `T` and starts at `zero(T)`.
+- `.item` is `Unit` in Boolean and unconditional loops. After zero body entries, `then` exposes type-directed zero placeholders and `.count == 0`.
 - A normally completing tail value, `continue value`, or `break value` commits to `.value`. Plain `continue` and bare `break` preserve it.
+- A no-`else` conditional in loop tail position contributes nothing on no match; a declaration such as `x := if ...; x` still contributes `x`'s declaration default.
 - A receiverless `then` processes the completion result. Without `then`, the selected result is final `.value`.
 - `break`, `continue`, and `return` may target an explicit `@tag`. A targeted return runs only the named target's `then`.
 - If no path contributes and no expected type constrains `T`, `T` defaults to `Unit`.
@@ -121,13 +123,14 @@ Open: complete body/result inference, nonzero `.value` initialization, lifetime/
 
 Selected:
 
-- Returned errors use `T ! E`; postfix `!` forwards them. Typed panics are a separate fault channel.
+- Returned errors use `T ! E`; postfix `!` forwards them. It does not assert success, catch a panic, or handle an untyped failure. Typed panics are a separate fault channel.
 - `else` recovery is target-level: an operation or block expression.
 - Typed filters may select an error/panic type, preserve declared order, and bind a receiver where selected.
 - `A | B` is an alternative; `A & B` is an order-insensitive co-occurrence set and binds no value.
 - Ordered failure tuples use existing tuple syntax and bind a real tuple; positional access works, labels only in the named form.
 - `finally` is cleanup-only: it has no receiver, does not recover failures, and does not replace a pending result/exit.
-- `then` runs before `finally` on normal loop/conditional completion. Cleanup failures follow the selected primary/secondary precedence.
+- `finally` runs on normal and abrupt exits and preserves the pending outcome when cleanup completes normally. Cleanup failures follow the selected primary/secondary precedence.
+- `then` runs before `finally` on normal loop/conditional completion. A handler in the same scope recovers a matching typed panic before that scope's `finally` runs once on exit.
 
 Open: `Error`'s full contract, the `&` form's public value/operations, exact `finally` attachment scope, and hard-abort behavior.
 
