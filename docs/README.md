@@ -62,7 +62,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Collection signature ergonomics](collection-signature-ergonomics.md): the risk of overconstrained library APIs, complete shorthand versus partial element annotations, and explicit stable contracts.
 - [Collection and source contracts](collection-source-contracts.md): static/runtime/unknown size, hot/cold production, replay, stability, and future generator consumption.
 - [Collection order and shared traversal](collection-order-and-traversal.md): positional/insertion/sorted/unspecified order, iterable sets, noniterable membership stores, and reference examples.
-- [Checked collection operations](checked-collection-operations.md): proposed fallible indexing, mismatch versus extraction failure, and flat checked declarations with explicit recovery.
+- [Checked collection operations](checked-collection-operations.md): policy comparison; selected direct positional operations with typed faults and attached `else` recovery; fallible-default indexing is historical.
 - [Provider-neutral algorithms](collection-algorithms.md): proposed fast customization hooks, generic fallbacks, lazy results, caller-selected output providers, and open extension rules.
 - [Generic collection performance](generic-collection-performance.md): unified scalar/record APIs, static specialization versus runtime erasure, element representation, and reference comparisons.
 
@@ -134,10 +134,10 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): selected typed filtering, unmatched-channel behavior, and open broad receiver representation.
-- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, declaration-ordered member-wise handling, pending evaluation scope, broad receiver typing, no-handler policy, aggregate representation, and runtime design; primary/secondary precedence is selected.
-- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, aggregate representation/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
+- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, declaration-ordered member-wise handling, order-insensitive `&` co-occurrence patterns, ordered failure tuples, optional receiver parentheses, pending evaluation scope, broad receiver typing, no-handler policy, and the `&` form's public value; primary/secondary precedence is selected.
+- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, `&` public value/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
 - [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, aggregate representation, duplicate-member behavior, and no-handler policy still open.
-- [Bounds and arithmetic policy](checked-fault-policy.md): fallible defaults versus asserting operations with explicit checked capture, source-level burden, panic scope, and unchanged propagation rules.
+- [Bounds and arithmetic policy](checked-fault-policy.md): historical comparison of fallible defaults and asserting operations; the selected direction is direct positional operations with typed faults, arithmetic typed panics, and explicit `else` recovery.
 - [Functions](functions.md): one callable model with typed input tuples, optional `fn` before parenthesized lambdas, contextual/annotated inputs, known-input result inference, intrinsic pack application, declared-default-only omission, zero callables, and sourced reference comparisons; complete grammar and representation remain open.
 - [Callable input packs and lambda shorthand](callable-input-packs.md): implicit `arguments`, whole-pack/component bindings, unnamed function-type inputs, `.call` versus invocation sugar, singleton boundaries, inline callback probes, and unresolved ownership/capture/grammar contracts.
 - [Closures](closures.md): function values and return boundaries, with capture/context proposals and reference comparisons retained as deferred review history.
@@ -150,14 +150,14 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Body-owned recovery](body-recovery.md): selected internal recovery placement; body-wide section examples and delimiter candidates are explicitly deferred.
 - [Deferred cleanup and resources](deferred-cleanup-and-resources.md): future joint review of body-wide sections, defer, scoped resource management, cleanup ordering, and lifetimes.
 - [Conditional recovery](conditional-recovery.md): historical external-handler proposal, superseded by body-owned recovery; ordinary branch selection and explicit Result handling remain.
-- [Conditionals](conditionals.md): one syntax for actions and values, optional leading and/or, and irrefutable matching conditions allowed with a warning for proven complete-condition success.
+- [Conditionals](conditionals.md): one conditional form with a typed branch/zero result, attached `then`, read-only `@tag.value` only in `then`, optional leading and/or, and irrefutable matching conditions allowed with a warning for proven complete-condition success.
 - [Conditional pattern chains](condition-chains.md): and chains, optional leading and/or without extra operands, binding-producing or alternatives with Unit for absent names, normalized union binding types, ordered shadowing, source-before-binding scope, short-circuiting, failure-path narrowing of stable existing bindings into later or operands and their successful-path joins, concise Boolean/type-test negation under not/and/or precedence, and grouped source-pattern negation with no exported bindings.
 - [Pattern syntax comparison](pattern-syntax-comparison.md): conditional bindings, narrowing, arm delimiters, and scope across reference languages.
 - [Match arm guards](match-guards.md): selected pattern-if separator, optional leading or on initial patterns and and/or on guards, and chains and payload-or-Unit or alternatives, additional pattern matches, nested extraction, scope, and rejection of an arm.
 - [Match](match.md): subject-based arms, optional leading or on initial/nested pattern lists sharing one body/guard, nested constructor/tuple choices with local first-success, and selected subjectless Boolean selection with optional leading and/or and an underscore fallback; exhaustive action/value selection, with the coverage algorithm and ownership details still open.
 - [Match coverage](match-coverage.md): all matches are exhaustive; `_ {}` explicitly ignores remaining cases, and empty blocks already return Unit.
 - [Match keyword placement](match-keyword-placement.md): prefix versus subject-first selection, reference precedents, and expression/block-boundary tradeoffs.
-- [Match pattern capabilities](match-patterns.md): required equality, plain/payload enum, destructuring, type patterns, selected arm chains, and remaining composition rules.
+- [Match pattern capabilities](match-patterns.md): selected equality, plain/payload enum, destructuring, and type patterns; the selected recursive grammar is outlined, with constructor schemas and coverage still open.
 - [Loops](loops.md): Boolean, iterable, and unconditional sources, with optional leading and/or on unparenthesized Boolean sources.
 - [Loop examples](loop-examples.md): worked loops with one optional item name, metadata state, nested exits, adapters, and operation-local error handling, with provisional contracts marked.
 - [Unified loop completion](unified-loop-completion.md): selected receiverless then with .count/.value on tagged or untagged loops, final-expression results, and completion distinguished from deferred cleanup.
@@ -168,12 +168,12 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 - [Loop type inference](loop-type-inference.md): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
 - [Last item during completion](loop-last-item.md): .item/.index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
 - [Historical accumulator](loop-accumulator.md): retired Option/previous-value receiver model.
-- [Finally](finally.md): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching panic handler, primary/secondary cleanup-failure precedence, and declaration-ordered member-wise handling; aggregate representation/inspection, duplicate-member behavior, attachment scope, no-handler policy, and hard-abort behavior remain open.
+- [Finally](finally.md): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching handler, primary/secondary cleanup-failure precedence, declaration-ordered member-wise handling, order-insensitive `&` co-occurrence patterns, and ordered failure tuples; the `&` form's public value, attachment scope, no-handler policy, and hard-abort behavior remain open.
 - [Loop recovery](loop-recovery.md): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
-- [Loop completion](loop-completion.md): receiverless `then`, its result and metadata, and its distinction from deferred cleanup.
-- [Receiver clauses](receiver-clauses.md): action hooks, value hooks, and possible pattern dispatch.
+- [Loop completion](loop-completion.md): receiverless `then`, tagged returns, explicit targeted break/continue, result/metadata behavior, and its distinction from deferred cleanup.
+- [Receiver clauses](receiver-clauses.md): historical hook-receiver exploration; Result recovery receivers and typed `else` filters are selected, while hook receivers are retired.
 - [Tags and contexts](tags-and-contexts.md): prefix tags, typed metadata, shadowing, and leading-dot access.
-- [Control-flow exits](control-flow.md): `return`, targeted return, `break`, and `continue`.
+- [Control-flow exits](control-flow.md): plain/targeted `return`, `break`, and `continue`, the sparse target matrix, payloadless named-break value preservation, and explicit exit target/payload boundaries.
 
 ## Project and implementation direction
 
