@@ -594,6 +594,10 @@ These are semantic rules, not consequences of associativity or whitespace. [Eval
 
 The selected [formatter presentation](leading-separators.md#formatter-presentation-selected) uses no leader on compact multi-entry chains and a leader on multiline ones. These are output conventions, not separate grammar productions or newline-dependent parses. The optional-prefix grammar remains valid for either layout; formatting must preserve complete-chain boundaries, existing precedence, and nonempty-list requirements. Singleton leaders are not automatically synthesized.
 
+### Malformed source
+
+Lexical/syntax failures do not authorize formatter repair or partial-file rewrites. The selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source) leaves the affected file/buffer unchanged, emits a focused diagnostic, permits other requested valid files to be formatted, and reports overall failure. It adds no recovery token, implicit operand, or newline-dependent grammar production; full type checking is not a formatting prerequisite.
+
 ## Open parser interactions
 
 - A body-opening brace must not be confused with a record literal or trailing closure in a source/condition.

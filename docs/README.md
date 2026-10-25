@@ -179,7 +179,7 @@ As is selected for a loop's one optional item name; the earlier colon separator,
 
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): constraints, tradeoffs, and unchosen memory semantics.
-- [Tooling and learning](tooling-and-learning.md): official formatter, selected compact chains without leaders and multiline chains with aligned leaders, parser-neutral comments with opaque contents/preserved attachment and flexible surrounding layout, diagnostics, and gradual teaching.
+- [Tooling and learning](tooling-and-learning.md): official formatter, selected compact/multiline chain and opaque-comment policies, unchanged malformed files with focused diagnostics, continued formatting of valid files with overall failure status, format-on-save preservation, and gradual teaching.
 - [Comments in modern formatters](comment-formatting-research.md): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteScript contract, and remaining open implementation details.
 - [Grammar sketch](grammar-sketch.md): a deliberately incomplete grammar outline.
 - [Decisions and open questions](decisions-and-open-questions.md): the current design ledger.

@@ -1,6 +1,6 @@
 # Tooling and learning
 
-Status: **official formatter required; compact/multiline leading-separator presentation selected 2026-10-25; broader toolchain and teaching approach proposed**.
+Status: **official formatter required; compact/multiline leading-separator presentation and unchanged-file handling of malformed/incomplete source selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
 ## Purpose
 
@@ -33,6 +33,31 @@ Comments are neutral to code parsing, so a commented-out entry does not count to
 Selected 2026-10-25: preserve ordinary/raw comment contents as opaque text and retain their attachment to the same nearby code. Indentation at a comment's source position and surrounding line breaks may change; do not parse or reflow the body as code or prose. Only real operands/patterns/members count when formatting chains. An apparent disabled condition is neither a phantom entry nor an implicit keep-multiline directive. See the [selected comment-formatting contract](comments.md#selected-formatting-contract).
 
 The [formatter comparison](comment-formatting-research.md) covers Deno, Bun, Rustfmt, Dart/Flutter, and Prettier. Its versioned local probes and documentation findings remain comparison evidence, not an adoption of another tool's directives. Exact attachment/line-placement algorithms, explicit-singleton normalization, documentation-comment syntax, and any future formatting escape mechanism remain open. No LiteScript formatter implementation is claimed.
+
+## Incomplete or malformed source
+
+Selected 2026-10-25: when a file has a lexical or syntax error, lite fmt reports the problem and leaves that entire file unchanged. It does not partially rewrite valid-looking regions, drop unfinished tokens, or invent missing operands. This preserves unfinished work during ordinary editing.
+
+Ali may temporarily have:
+
+```text
+ready :=
+    and connected
+    and
+;
+```
+
+The formatter leaves the file as supplied and reports a focused diagnostic at the dangling operator/missing operand:
+
+```text
+Expected an operand after 'and'.
+```
+
+For a request containing several files, continue formatting the other valid files. At completion, report an overall failure status if any requested file failed to parse, even when other files were formatted successfully. Exact numeric exit codes remain open. This is per-file preservation, not an all-files rollback.
+
+Format-on-save follows the same rule: apply no formatter text edits to an invalid buffer and surface its diagnostic. Normal editing/saving remains an editor operation; this formatter rule does not discard or repair the user's unfinished buffer.
+
+This contract covers incomplete/malformed lexical syntax, including missing operands/braces or unterminated comments. It does not require full compilation, name resolution, or type checking before formatting syntactically valid source. The existing obligation to preserve meaning and not silently repair type-invalid code through punctuation changes remains. Diagnostic rendering, parser recovery internals, and precise editor protocol remain open; no formatter implementation is claimed.
 
 ## Run and build proposals
 

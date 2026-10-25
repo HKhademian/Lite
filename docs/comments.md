@@ -91,6 +91,8 @@ This selects an observable formatter contract, not a parser/trivia data structur
 
 An unterminated ordinary comment or raw fence is a compile-time error. The compiler reports the unmatched opener; it must not guess where executable code resumes.
 
+It is also a lexical failure for the formatter. Under the selected [incomplete-source rule](tooling-and-learning.md#incomplete-or-malformed-source), report the missing closer and leave the entire file/buffer unchanged. Do not guess an ending delimiter or rewrite apparently valid code around the unfinished comment. Other requested valid files can still be formatted, while the request reports failure.
+
 ## Open decisions
 
 Documentation-comment markers and their tooling contract remain open. Neither ordinary nor raw comments imply a documentation attachment rule.
