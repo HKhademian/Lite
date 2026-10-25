@@ -480,7 +480,7 @@ Named tags are prefixes on the construct. Leading-dot metadata shorthand applies
 
 Contextual enum cases also use `.case`, with the owning enum inferred from a single established expected type. The template above shows this selected case surface; pattern_list and full enum productions remain incomplete. Its identical leading-dot token shape requires a deliberate disambiguation rule against metadata; see [inferred case names](enums-and-variants.md#inferred-case-names). Whitespace cannot choose either meaning, and unqualified bare-case contextual lookup is not selected.
 
-The tag scope includes its header, so a loop condition may reference initialized count or typed value state even when receiver declarations follow the source textually. Current items are not available before body entry.
+The tag scope includes its header, so a loop condition may reference initialized count or typed value state. Current items are not available before body entry.
 
 ## Exits
 
