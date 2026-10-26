@@ -80,6 +80,8 @@ For schematic (ErrA1, ErrA2, ErrB), where ErrA1 and ErrA2 are distinct occurrenc
 
 This constraint does not yet choose how a repeated-type match invokes its handler or binds payloads: per-occurrence handler execution and a grouped receiver are different proposals. Payload preservation, handler failure behavior, result selection within a repeated match, and iteration order need their own contract. Written `else` order remains selected; do not silently add handler repetition, a collection receiver type, or count syntax to settle the gap.
 
+The user's expensive cache-to-database fallback exposes a problem with automatic handler repetition. [LP-0005 r1](proposals/LP-0005-handler-execution-and-exits.md) records the counterexample and an at-most-once body candidate, with execution count, multiple-payload binding, and nonlocal exits still under review. The assistant's default-repetition recommendation is withdrawn; the draft does not change selected munching or scope rules.
+
 The ordinary Result still has one active success/error outcome. Its ErrA | ErrB payload admits one active alternative; it is not itself an aggregate of both. Language-generated failure aggregation and implicit panic propagation retain their separate contracts, and a Result E does not enumerate all possible panics. See [declared error coverage](result-and-errors.md#declared-error-coverage).
 
 ### Receiver forms and aggregate patterns

@@ -144,7 +144,7 @@ Selected:
 - `finally` runs on normal and abrupt exits and preserves the pending outcome when cleanup completes normally. Cleanup failures follow the selected primary/secondary precedence.
 - `then` runs before `finally` on normal loop/conditional completion. A handler in the same scope recovers a matching typed panic before that scope's `finally` runs once on exit.
 
-Open: `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
+Open: [handler execution count, repeated-payload binding, and exits with a remainder](../proposals/LP-0005-handler-execution-and-exits.md), `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
 
 ## LS-009 — Collections and sequences
 

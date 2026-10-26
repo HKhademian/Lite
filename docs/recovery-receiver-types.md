@@ -22,6 +22,18 @@ text := read_text(path) else {
 
 This supplies String on success or a String fallback, without introducing an implicit failure name. It still needs operation fault attribution, block/chain integration, and complete cleanup/transport contracts. There is no additional argument-result unwrapping: Result-producing arguments retain their individual explicit handling requirement.
 
+## Handler execution and expensive fallbacks
+
+Status: **open review, 2026-10-26; [LP-0005 r1](proposals/LP-0005-handler-execution-and-exits.md) is a draft, not an accepted execution rule**.
+
+The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
+
+The revised candidate runs each matching clause's body at most once per evaluation of its target and consumes its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation alone does not expose several payloads. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. These remain proposals.
+
+The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](proposals/LP-0005-handler-execution-and-exits.md#type-owned-repetition-information).
+
+A handler's own new failure does not re-enter that handler under the existing selected rule. A nonlocal exit from a handler with an unmatched remainder is a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
+
 ## Candidate A: direct union of the handled values
 
 Recommend the direct receiver type E | Panic when a boundary handles a T ! E outcome and typed panics. A panic-only boundary receives Panic; a Result-only inspection receives E. Which channels a boundary covers is part of its source contract, not a type change introduced by an optimizer.
