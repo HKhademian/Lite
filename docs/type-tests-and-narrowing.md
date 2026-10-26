@@ -258,6 +258,12 @@ Replacement invalidates old tests and relationships that depended on the prior s
 
 The declared writable storage contract remains var (String | Int) in the example; reading x as Int does not turn it into a var Int access contract, grant an escaping writable reference, or settle general access variance/call compatibility. Mut permissions, borrowing/moving/copying, cleanup, and ownership obligations remain unchanged. No new binding, implicit conversion, copy/freeze, or dynamically changing declared type is introduced.
 
+### Payload access and whole-union replacement
+
+The user confirmed on 2026-10-26 that narrowing a union for a branch does not restrict its declared whole-value replacements. For var x: Int | String, an Int branch can write x = 42 and retain the Int tag, then write x = "hello" and establish a String tag/read type. Following reads use String, including before leaving that same branch. No old Int fact is restored merely because the if condition originally selected Int.
+
+Checked ordinary reads/arguments use the active payload while the underlying storage retains its union representation. Passing x to an ordinary Int parameter needs no manual extraction while its Int proof holds and follows ordinary copying. Writes need existing authority; a type test grants none. See [checked payload reads and ordinary arguments](union-membership.md#checked-payload-reads-and-ordinary-arguments) for the source and abstract-memory examples.
+
 ## Flow types after explicit var calls selected
 
 Selected on **2026-10-24**: a var T parameter reads and may write T. A call requires every currently justified readable alternative to fit its input and every permitted replacement to fit the caller's declared accepted writes. For x declared String | Int and currently reading Int, replace(var x) may leave String | Int when it accepts both; replaceInt(var x) is valid and leaves Int, while replaceStr(var x) requiring readable String is rejected. A no-write path does not invalidate the single-member conclusion because that member was already required on entry.

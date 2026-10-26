@@ -55,6 +55,39 @@ match person {
 
 The subject is evaluated once and arm selection remains source ordered. Exhaustiveness and the ordinary branch-result contract both apply. No unchecked assertion or panic-producing extraction syntax is introduced by this decision.
 
+## Checked payload reads and ordinary arguments
+
+Clarified 2026-10-26: a successful, still-valid member refinement changes the binding's readable type without changing its declared union storage contract. The compiler keeps track of that storage's actual representation and accesses the proven active payload. It must not interpret the complete tag-plus-payload representation as the naked member value.
+
+Assume choose_value returns Int | String and use_int/use_string accept ordinary Int/String values without invalidating the relevant local facts:
+
+```text
+var x: Int | String = choose_value();
+
+if x: Int {
+    use_int(x); /* ordinary Int argument: supply the checked payload */
+    x = 42;    /* storage still permits Int; active tag stays Int */
+    use_int(x);
+    x = "hello"; /* whole-union replacement: active tag becomes String */
+    use_string(x); /* x now reads as String; the old Int fact is gone */
+}
+```
+
+No manual extraction is required when an ordinary parameter expects the proven member type. The call follows the [ordinary value-copy rule](parameter-values-and-slots.md#general-copy-default-selected): supply the member value in the callee's required representation, not the whole union wrapper or an implicit reference to the caller's slot. The type test itself introduces no copy, storage shrink, freeze, or write permission. If the parameter expects a compatible union instead, supply a valid value in that union representation, preserving the active member.
+
+The following is abstract memory notation, not a byte layout or source grammar:
+
+```ini
+x before               = [Int][7]
+argument to use_int     =      [7]
+x after x = 42          = [Int][42]
+x after x = "hello"     = [String]["hello"]
+```
+
+Writes require existing authority. A valid same-member payload write can retain the tag, while replacing the original union binding with another admitted member updates its active tag and payload and establishes the replacement's read facts. The narrowed read type never becomes a permanent restriction on the binding's declared accepted replacements. Exact physical store counts, tag encoding, atomicity, and concurrency rules are not selected by this model.
+
+Refinement must remain valid at the point of use; replacement or other invalidating effects cannot leave a stale member interpretation active. Explicit var/mut grants retain their separate admission and write contracts. These rules concern plain-union members and do not introduce implicit Option/Result extraction, unchecked casts, or general escaping payload-reference syntax.
+
 ## Preserve named case boundaries
 
 Plain-union entry does not automatically construct an enum case or unwrap a payload. Option still needs its selected case constructors/patterns. Result keeps .ok/.err identity and the independently selected implicit-success construction rule; union membership must not swallow errors or recursively unwrap outcomes.

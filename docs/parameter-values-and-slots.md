@@ -57,6 +57,10 @@ The observable copy semantics are selected; the compiler may optimize representa
 
 The selected [variadic rest access and retention rules](tuple-array-shapes.md#rest-access-storage-and-retention), 2026-10-24, add a scoped boundary: rest arrays are readable by default, collecting them does not mandate heap allocation, and borrowed backing storage must remain valid. Retaining rest requires valid ownership or a proven lifetime; creating independent owned storage requires an explicit copy/ownership operation, without an automatic escape-repair copy. These rest contracts do not override the general ordinary-value copy rule or add an implicit live source alias; any backing-storage reuse must preserve that behavior. They select no general escaping-reference syntax or automatic ownership conversion. Writable rest still needs an explicit contract and caller grant; its full syntax and alias rules remain open.
 
+## Checked union-member arguments
+
+A valid [plain-union member refinement](union-membership.md#checked-payload-reads-and-ordinary-arguments) lets an ordinary member-typed parameter receive the active payload automatically. With x stored as [Int][7] and proven Int, use_int(x) supplies the Int value [7] under normal copy semantics and the callee's required representation. It does not pass the union wrapper as Int memory or grant caller-location access. A union-typed parameter instead receives its appropriate union representation. Explicit var/mut inputs retain their separate checks, and stale refinements cannot justify payload access.
+
 ## Ordinary Int evaluated values selected
 
 Selected on **2026-10-25**: an ordinary Int argument supplies the value evaluated at its source-order argument position. Subsequent replacement of the source local through a var grant does not change that supplied Int value:
