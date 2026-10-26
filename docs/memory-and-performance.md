@@ -19,6 +19,54 @@ Make a convenient language compatible with predictable data representation and a
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
 
+## Runtime-cost review
+
+Status: **supporting design review, 2026-10-26; consequences of current contracts and recommendations, not new language selections**.
+
+The goal is readable, strongly typed source whose ordinary operations can lower to native code with little support machinery. Reducing runtime needs means moving decisions into compilation where their inputs are static, while preserving behavior when values are known only during execution. Shortening syntax alone does not remove work.
+
+### Separate compilation, generated code, and shared support
+
+- **Compilation:** resolve names, tuple labels, fixed extents, supported operations, static type compatibility, and the selected initialization/access proofs. These facts do not inherently need a per-value dictionary or runtime type checker.
+- **Generated execution:** evaluate expressions, copy observable values, select a union alternative, check an unknown index, and run required cleanup. Native instructions and local state can implement these operations; their existence does not imply an interpreter or managed VM.
+- **Shared support:** allocation, failure transport, aggregation, or other facilities may need reusable code and metadata under the eventual contracts. Whether that support is inline, statically linked, dynamically linked, or provided by a runner remains open.
+
+The selected name `literun` does not settle which programs need a separate runtime executable. Naming a runtime and ABI does not establish a mandatory execution dependency. See [naming and versioning](versioning-and-naming.md) and the candidate execution experience below.
+
+### Work that can remain static
+
+Tuple field labels and fixed array extents already have selected static representation contracts. Named input routing, context-tag lookup, and capability resolution can use known source/type structure rather than runtime string lookup. The concrete lowering and full proof systems remain unimplemented.
+
+The recommended generic path retains concrete provider and element types for specialization and direct calls. A value whose provider is chosen at runtime still needs a defined representation and selection mechanism. Specialization does not remove element computation, copying, bounds obligations, or provider-specific costs, and can increase code size. See [generic collection requirements](#generic-collection-requirements).
+
+Keep source-admission proofs separate from optimization proofs. The selected [fixed-array write-grant rules](call-replacement-flow.md#unproven-fixed-array-element-overlap-rejected) reject a call when required disjointness cannot be proved; an implementation must not silently add a runtime alias check to admit it. An otherwise valid indexed read instead keeps its typed bounds-fault behavior unless bounds are proved. Failure to optimize that read does not make its source invalid.
+
+### Information that cannot simply disappear
+
+The selected [pending-failure munching model](expression-recovery.md#pending-occurrences-and-munching-selected) uses schematic singleton/aggregate/empty tuples for recovery reasoning. It does not require allocating an ordinary tuple or a general-purpose collection for every failure. A compiler can specialize statically known matching/exhaustion paths while preserving each occurrence and its payload. Dynamic aggregation still needs an eventual representation and storage policy; the schematic () remainder is not a failure value or a request for an allocation.
+
+A runtime-sized sequence needs its count available when observed, including for zero-sized elements. A runtime union choice needs enough information to distinguish its active alternatives. That information may be optimized or derived where a proof permits, but erasing it without preserving observations changes the contract. Neither obligation inherently requires boxing or a heap allocation.
+
+Likewise, an index supplied by external input is not made safe by its static `Int` type alone. A compiler can remove a redundant check only with a valid proof; the runtime case still needs defined bounds behavior. All-zero initialization can lose physical stores when unobservable, but cannot lose a defined value or observable cleanup effect.
+
+### Contracts most likely to add machinery
+
+1. **Ordinary copies and resource ownership.** [Ordinary transfers copy evaluated values](parameter-values-and-slots.md#general-copy-default-selected). Copying an owning descriptor is not a complete rule for duplicating, sharing, or disposing of its resource. Copy eligibility, resource effects, and explicit ownership/reference alternatives remain deferred. Do not assume hidden reference counting, a deep clone, an implicit borrow, or a tracing collector to close that gap. Avoiding a physical copy must preserve the selected observable copy contract.
+2. **Zero callables.** All-zero callable storage must invoke the selected zero implementation safely. A raw zero code address cannot simply be invoked as an ordinary native function address. A compiler could generate a zero-case branch or another suitable representation; no encoding or ABI is selected. A statically known zero callable can return the appropriate zero without user-body/default execution, while preserving reached supplied-argument effects and cleanup. Unknown callable values still need a mechanism that honors both zero and ordinary implementations. See [zero callables](zero-initialization.md#zero-initialized-functions).
+3. **Typed panic transfer and cleanup.** Local checks can branch directly to a local handler where the boundary is known. The selected propagation through exited scopes must also preserve applicable cleanup before an outer matching handler. The selected [operation/block distinction](expression-recovery.md#explicit-whole-block-panic-boundary-selected) keeps a bare operation handler specific to its defined faults and uses an explicit block for broad recovery, including argument/callee panics. Operation fault attribution, cross-call transfer, complete attachment/chain rules, metadata, and foreign boundaries remain open. Removing a shared unwinder would require another implementation of those same observable guarantees; returning faults through generated paths can also add code and calling-convention costs. See [typed panics](typed-panics.md) and [finally](finally.md).
+4. **Retaining secondary failures.** The selected cleanup policy retains each secondary failure behind the primary. If arbitrarily many failure occurrences must survive for later inspection, fixed bounded storage alone cannot retain arbitrary payloads. Representation, duplicate handling, capacity/failure policy, and inspection remain open. Static scope structure or a linked representation can help particular cases; neither proves bounded total retained storage. Do not silently truncate failures, invent an allocation policy, or replace the selected handling semantics. See [failure aggregation](finally.md#failure-aggregation-and-open-design).
+
+### Review order and syntax boundaries
+
+Recommend defining the ordinary static execution path first: concrete values, fixed aggregates, statically resolved calls/capabilities, and known control-flow targets. List its remaining checks, copies, cleanup, and support dependencies explicitly. Review runtime-sized/erased values and failure paths separately, so an efficient success path does not disguise an undefined failure path. Ownership/reference syntax remains deferred; this review identifies its dependency without selecting a memory model.
+
+Two current syntax gaps block a complete parser independently of runtime strategy:
+
+- Compact `a_/b` and `a_%b` conflict with ordinary longest-identifier scanning that would retain `a_`. The operator spellings and compact/spaced equivalence are selected; the recognition rule is not. No runtime disambiguation or mandatory spaces should be inferred. See [the lexical conflict](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+- Intrinsic `.call` has selected pack meanings but incomplete operand precedence/chaining. A spelling such as `f.call pack!` needs an explicit parse before reasoning about which Result is extracted. Parenthesized examples do not complete that grammar. See [pack application](callable-input-packs.md#application-with-an-existing-pack).
+
+This review adds no new syntax, mandatory runtime dependency, no-GC guarantee, panic mechanism, or zero-cost performance claim. Measurements remain future work.
+
 ## Empty and singleton tuple layout
 
 Status: **storage-layout contract selected by the user, 2026-10-22; not implementation or ABI verification**.

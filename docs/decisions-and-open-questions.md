@@ -454,6 +454,8 @@ For an `if` chain, distinguish the selected branch from conditions that were nev
 
 Choose generics, nominal identity, interfaces, variance, borrowing/moves/copies, shared values, and type-level values. Callable capture/context and environment context are [postponed](deferred-contexts.md), rather than part of the next foundation review. Define general type/value namespace rules; the Unit-specific `Unit` type and expression spellings are selected, while broader name resolution remains open.
 
+Supporting review, 2026-10-26: the [runtime-cost review](memory-and-performance.md#runtime-cost-review) identifies static lowering opportunities and unresolved costs in ordinary copies/resource ownership, zero callables, typed-panic transfer, and secondary-failure retention. It also tracks the underscore-operator scanning and `.call` operand-boundary gaps. This records review findings and recommendations, not new syntax, a memory-model selection, a mandatory runner, or a zero-cost guarantee. Reference/ownership design remains deferred.
+
 Binding reassignment (`var`) and held-data access (`mut`) are independent. Complete method notation and receiver/parameter passing rules, define how read-only access propagates, and decide whether a stronger frozen-value guarantee exists. Mutation is marked on affected receiver/parameter bindings, without an additional function-level marker. Do not infer purity or global immutability from a read-only receiver.
 
 ### 6. Standard library and project boundaries
