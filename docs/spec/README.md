@@ -66,9 +66,9 @@ Open: generic declaration/application syntax, union-zero priority, and zero mapp
 
 Selected:
 
-- An omitted typed local `name: Type` immediately zero-initializes that type.
-- The initializer spelling selects the mechanism: omitted typed local → zero; `= 0` → zero; `= {}` → declared field defaults; `= ?` → reserved storage.
-- `name: Type = 0` uses the language-defined zero. `name: Type = {}` uses declared field defaults.
+- An admitted omitted typed local `name: Type` immediately zero-initializes that type, subject to the multi-member union restriction below and the unresolved zero mappings in LS-003.
+- Where admitted, the initializer spelling selects the mechanism: omitted typed local → zero; `= 0` → zero; `= {}` → declared field defaults; `= ?` → reserved storage.
+- Where zero construction is admitted, `name: Type = 0` uses the language-defined zero. `name: Type = {}` uses declared field defaults.
 - Reserved `= ?` storage is not readable before initialization and adds no `Unit`, `None`, or unknown union member.
 - A bare local whose normalized type has multiple distinct union members requires an initialized expression or `= ?`; `= 0` cannot choose a member.
 - A conditional initializer without `else` leaves the declaration default on no match. `else { ? }` leaves the binding reserved on that path, correlated with the condition.
@@ -87,9 +87,9 @@ Selected:
 - Access qualifiers follow the colon: `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement.
 - Basic `var T` parameter types stay invariant when converting callable signatures: reading and writing require the same resolved `T`. Explicit public-label conversion cannot change that value/access contract. Individual `var` argument admission still uses current read facts and accepted writes; see [callable var invariance](../callable-value-variance.md#var-parameters-keep-their-value-type).
 - A zero-initialized callable is callable, performs no user-body work, and returns `zero(R)` after ordinary argument evaluation and required cleanup.
-- Argument omission is rejected unless an applicable explicitly declared default supplies a valid value. Supplied arguments take precedence.
-- Call evaluation prepares the callee, supplied arguments, then missing defaults. An exit stops later preparation.
-- Missing defaults evaluate at call time, after supplied expressions, in declared slot order.
+- The public callable contract must permit argument omission. Ordinary user implementations need an applicable declared default; supplied arguments take precedence.
+- Call evaluation prepares the callee and supplied arguments in source order. Ordinary user implementations then evaluate missing applicable defaults in declared slot order at call time. An exit stops later preparation.
+- A zero implementation runs no defaults and needs no actual default definition for omission-capable ordinary inputs. It preserves supplied-argument evaluation and required cleanup, returns `zero(R)`, and grants no omission of required inputs or fabricated access permission. See [zero-callable omission](../callable-default-contracts.md#zero-callable-omission-selected).
 
 Open: complete default grammar and lookup, generic callable compatibility, signature/implementation placement, and ownership/ABI details.
 

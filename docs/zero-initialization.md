@@ -113,8 +113,8 @@ The selected zero value of a fallible outcome is success with a zero-initialized
 ```text
 zero(T ! E) = .ok(zero(T))
 
-attempt: Int ! ReadError; // .ok(0)
-explicit_zero: Int ! ReadError = 0; // .ok(0)
+attempt: Int ! ReadError; /* .ok(0) */
+explicit_zero: Int ! ReadError = 0; /* .ok(0) */
 ```
 
 An ordinary success expression `0` in an `Int ! E` function likewise remains implicit success with numeric zero. A stored zero outcome has no error payload to handle. Recursive zero initialization preserves outcome boundaries: the zero of `(T ! E1) ! E2` is `.ok(.ok(zero(T)))`.

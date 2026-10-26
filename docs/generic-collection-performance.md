@@ -28,7 +28,7 @@ Specialization can increase compilation work and code size. Sharing compatible i
 
 ## Logical element type and physical access
 
-Yielding an Icon might provide a borrowed readable view or an owned value under the eventual traversal contract. It must not require a large copy merely because a generic function reads the element, nor may it invent a borrow whose backing data expires. Single-pass cursor consumption and explicit mutation grants must remain visible in the access contract.
+An ordinary Icon value supplied to render follows the selected [ordinary value-copy contract](parameter-values-and-slots.md#general-copy-default-selected), subject to valid type-specific copy semantics. Read-only access and generic capability syntax do not silently turn that value into a live borrowed view. A future explicit reference/view contract needs its own lifetime and alias rules. The compiler may avoid physical copies when it preserves the evaluated value and every required copy/cleanup effect; this is not a promise that every element transfer is free. Single-pass cursor consumption and explicit mutation grants must remain visible in the access contract.
 
 Alternative layouts can still participate. For example, chunked storage can provide traversal without a contiguous slice, and packed data can produce logical values without exposing addressable native element slots. Decoding/adapting data may have genuine costs; a common protocol does not erase them or promise every provider the same performance.
 
