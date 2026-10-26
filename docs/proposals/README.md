@@ -12,14 +12,18 @@ Proposals follow [the selected versioning policy](../versioning-and-naming.md#8-
 
 - [LP-0004 r1: Count-free error contracts](LP-0004-count-free-error-contracts.md). Target language and compiler/runtime versions: unassigned. Error declarations admit types without occurrence counts; complete recovery cannot require a caller to predict multiplicity or write one clause per unknown occurrence.
 
+- [LP-0006 r1: Whole-match failure consumption](LP-0006-whole-match-failure-consumption.md). Target language and compiler/runtime versions: unassigned. Ordinary catches consume all their matches; the later LP-0007 selects explicit ellipsis collection, including singleton capture.
+
+- [LP-0007 r1: Typed recovery collectors and occurrence order](LP-0007-typed-recovery-collectors.md). Target language and compiler/runtime versions: unassigned. Selects ...errs: Error with errs typed [Error], singleton capture, once-per-clause execution, and stable filtered occurrence order. The all-failures marker remains unselected.
+
 These are the first actual proposal records in this repository; LP numbers used as illustrative examples in the naming/versioning page do not reserve proposal IDs. Historical ledger entries are not retroactively renumbered.
 
 ## Drafts under review
 
-- [LP-0005 r1: Recovery-handler execution and pending exits](LP-0005-handler-execution-and-exits.md). Target language and compiler/runtime versions: unassigned. Records the expensive-fallback counterexample, an at-most-once body candidate, payload-binding alternatives, optional type-owned count/details, and nonlocal exits with unhandled remainders. No new handler execution rule is accepted.
+- [LP-0005 r3: Recovery-handler execution and pending exits](LP-0005-handler-execution-and-exits.md). Target language and compiler/runtime versions: unassigned. Retains the expensive-fallback and earlier bracket-capture proposal history, follows the selected LP-0007 collector, and reviews residual scalar binding, optional domain-owned count/details, retention/transport, and nonlocal exits with unhandled remainders.
 
 ## Current reference and release boundary
 
 The [decision ledger](../decisions-and-open-questions.md), [expression recovery](../expression-recovery.md), [grammar sketch](../grammar-sketch.md), and [LS-008 summary](../spec/README.md#ls-008--errors-recovery-and-cleanup) describe current selected contracts and remaining gaps. Detailed normative pages own the current rules; proposal records preserve the accepted decisions. [Recovery-boundary traces](../recovery-boundaries.md) are supporting analysis, while unbraced whole-call broad capture is retained as a historical alternative.
 
-Acceptance alone does not bump the language, compiler, runtime, CLI, or ABI version. Target versions and the release manifest are assigned when changes ship. No release tag, compatibility claim, compiler implementation, or conformance result is created here. The count-independent repeated-type invocation/binding mechanism, carrier representation, operation fault attribution, and complete recovery-chain/assignment integration remain open.
+Acceptance alone does not bump the language, compiler, runtime, CLI, or ABI version. Target versions and the release manifest are assigned when changes ship. No release tag, compatibility claim, compiler implementation, or conformance result is created here. Whole-match consumption, typed ellipsis collectors, and once-per-clause execution are selected. Scalar multi-value binding, the all-failures marker, complete collector element-filter parsing, carrier representation, operation fault attribution, and complete recovery-chain/assignment/exit integration remain open.

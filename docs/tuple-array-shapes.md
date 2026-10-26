@@ -48,6 +48,8 @@ max(...x);                /* two fixed inputs and three tail elements */
 
 In a signature, ...rest: T means zero or more additional inputs, each checked against T. The callee receives the collected tail as an array of T, including when there are no extra inputs. It is not a fixed tuple specialized to each call's argument count. The array length may be known at a particular call site or only at runtime; both call forms are valid in this model. No minimum tail length or automatic zero-valued T element is introduced.
 
+The selected [recovery collector](expression-recovery.md#typed-recovery-collectors-selected), `else ...errs: Error { ... }`, uses the same element-type/collection distinction and binds errs as [Error]. Recovery has its own matching gate: one error gives a singleton, while no matching failure skips the catch body. This analogy does not change structural tuple-pattern rest or select common storage/ownership for callable tails and recovery collections.
+
 ```text
 extra := read_numbers();
 max(1, 2, ...extra);

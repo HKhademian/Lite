@@ -1,7 +1,7 @@
-# LP-0005 r1: Recovery-handler execution and pending exits
+# LP-0005 r3: Recovery-handler execution and pending exits
 
 - ID: `LP-0005`
-- Revision: `r1`
+- Revision: `r3`
 - Status: **draft, 2026-10-26; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
@@ -17,15 +17,47 @@
 
 The explicit block can expose several pending errors or supported typed panics. Automatically invoking the fallback once per occurrence can turn one failed cache attempt into several expensive database operations. The user raises this as a problem with the proposed per-occurrence execution rule and asks for more attention to exits from the handler's scope.
 
-Consuming matched failures and executing a recovery computation are distinct design decisions. The earlier assistant recommendation to repeat an ordinary handler automatically for each matching occurrence is withdrawn as a general default. No execution-count rule is adopted by this draft.
+Consuming matched failures and executing a recovery computation are distinct design decisions. The earlier assistant recommendation to repeat an ordinary handler automatically for each matching occurrence is withdrawn as a general default. This draft originally left execution count open. The later accepted [LP-0007 r1](LP-0007-typed-recovery-collectors.md) selects once-per-matching-clause execution and typed ellipsis collectors; this draft now tracks the remaining scalar binding and exit questions.
 
-## Revised candidate: one recovery action per matching clause
+## Recovery action follow-up
 
-Recommend evaluating each matching `else` body at most once for one evaluation of its target, after selecting its matched pending failures. A receiverless catch-all would consume the supported pending group and evaluate the database fallback once, regardless of that group's occurrence count. A typed clause would select its covered category/group and leave unmatched categories for later clauses. Clauses would retain written source order.
+The candidate below was subsequently selected in LP-0007: evaluate each matching `else` body at most once for one evaluation of its target, after selecting its matched pending failures. A receiverless catch-all would consume the supported pending group and evaluate the database fallback once, regardless of that group's occurrence count. A typed clause would select its covered category/group and leave unmatched categories for later clauses. Clauses would retain written source order.
 
-This candidate still needs a payload-binding contract for several same-type occurrences. An annotation `error: ErrA` must not silently bind an arbitrary occurrence and discard others, or pretend that one ErrA value is a group. Do not invent a group type/syntax here. Explicit iteration could support per-occurrence work once an inspection/iteration API exists; no such API is selected by this draft.
+An annotation `error: ErrA` must not silently bind an arbitrary occurrence and discard others, or pretend that one ErrA value is a group. The user's explicit sequence-capture candidate below provides a concrete way to review multiple-payload access. Scalar receiver behavior remains open. The collector grammar and binding direction are now selected separately in LP-0007; this draft does not finalize scalar multi-payload binding or an escaping inspection API.
 
 An alternative would repeat named scalar handlers while running receiverless handlers once. That makes adding or removing a receiver name change side-effect counts. Review that cost explicitly against optional-receiver semantics; it is not selected. Distinguishing per-occurrence processing with an explicit source form is another open alternative.
+
+## Explicit sequence capture candidate
+
+Historical r2 spelling, superseded by the selected ellipsis collector in LP-0007:
+
+```text
+{ read_cached() }
+    else errs: [ErrA] {
+        loop errs as err { report_failure(err) }
+    }
+```
+
+The historical candidate captured all pending ErrA matches as a sequence and runs the catch body once; the written loop performs per-error work explicitly. For one ErrA occurrence, errs has one element. For several, it contains all of them. With no ErrA match, skip the clause rather than run it with an empty sequence. Other failure categories remain for later written clauses. This form does not require a multi-error aggregate to be useful.
+
+The user explicitly reaffirms in [LP-0006 r1](LP-0006-whole-match-failure-consumption.md) that simple receiverless and ordinary typed catches still consume all their matches. The sequence receiver exposes matched payloads; it does not create the all-match behavior or restrict ordinary forms to one occurrence. No automatic error count field or signature multiplicity is added.
+
+Using the existing [readable indexed-sequence contract](../indexed-sequence-contract.md#readable-t) would provide traversal, a cheap exact count, and positional reads with default read access. It does not itself choose List ownership, contiguous storage, allocation, copying, or escape lifetimes. Filtering a heterogeneous pending group may require storage/indexing adaptation to meet the complete [T] contract; do not promise a free materialized array or silently weaken [T] to traversal only. LP-0007 now selects stable occurrence order; provider/storage choices remain open.
+
+LP-0007 resolves the group-capture spelling with `...errs: ErrA`, which binds errs as [ErrA]. The former `errs: [ErrA]` candidate is not selected as an alternative spelling. Complete element-filter parsing, union-valued group filters, channel-origin access, and ownership/retention remain open.
+
+With whole-match consumption, explicit iteration is work on captured failures, not the operation that incrementally consumes the pending set. Breaking out of the explicit loop stops reporting without reviving matched ErrA failures under the selected collector direction. Returning from the enclosing scope still raises the separate question of an unmatched ErrB remainder; spelling a loop does not resolve that conflict. A new report_failure failure follows the existing outward handler rules and does not re-enter this same catch.
+
+## Selected collector follow-up
+
+```text
+{ read_cached() }
+    else ...errs: Error {
+        loop errs as err { report_failure(err) }
+    }
+```
+
+LP-0007 selects this typed collector and the [Error] type of errs. It handles one or many matches, skips no-match clauses, preserves occurrence order in each filtered group, and keeps per-error work in an explicit loop. Error filters returned errors only; a symbol for an all-failures collector remains unselected. See that accepted record and the normative expression-recovery page for current rules. Nonlocal exits with an unmatched remainder remain the open concern below.
 
 ## Type-owned repetition information
 
@@ -56,5 +88,9 @@ A catch-all that has consumed the whole original group has no original remainder
 ## Revision history
 
 `r1` records the expensive-fallback counterexample, the withdrawn default recommendation, the at-most-once candidate, payload-binding alternatives, exploratory type-owned count/details, and nonlocal exits with a pending remainder. It changes no accepted proposal, grammar, or runtime behavior.
+
+`r2` adds the user's explicit `errs: [ErrA]` capture candidate, singleton support, explicit iteration, the complete [T] capability/storage implications, and the array-payload parsing ambiguity. It links the separately accepted all-match clarification in LP-0006. The capture syntax and remaining handler execution/exit rules stay under review.
+
+`r3` records the accepted follow-up in LP-0007: ellipsis spelling, [Error] bound type, once-per-clause execution, and stable filtered occurrence order. The former bracket-annotation capture is retained as history. This proposal remains draft for unresolved scalar binding, lifetime/transport, and nonlocal exits with unmatched failures.
 
 Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).

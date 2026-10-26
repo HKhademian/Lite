@@ -24,15 +24,33 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r1](proposals/LP-0005-handler-execution-and-exits.md) is a draft, not an accepted execution rule**.
+Status: **open review, 2026-10-26; [LP-0005 r3](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 
-The revised candidate runs each matching clause's body at most once per evaluation of its target and consumes its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation alone does not expose several payloads. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. These remain proposals.
+The revised candidate was selected in LP-0007: run each matching clause's body at most once per evaluation of its target and consume its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation alone does not expose several payloads. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. Those contrasting execution-count alternatives are unselected; the ellipsis collector below is selected.
 
 The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](proposals/LP-0005-handler-execution-and-exits.md#type-owned-repetition-information).
 
 A handler's own new failure does not re-enter that handler under the existing selected rule. A nonlocal exit from a handler with an unmatched remainder is a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
+
+## Typed collector capture selected
+
+Selected 2026-10-26 in [LP-0007 r1](proposals/LP-0007-typed-recovery-collectors.md):
+
+```text
+{ read_cached() }
+    else ...errs: Error {
+        /* errs: [Error]; err: Error */
+        loop errs as err { report_failure(err) }
+    }
+```
+
+The ellipsis declares a collector; Error is its element/filter type. The binding errs has the readable [Error] indexed-sequence contract. The clause captures all matches, including one element for a singular error, and its body runs once. No match skips it. The explicit loop performs per-error work. Receiverless and ordinary typed catches retain [all-match consumption](expression-recovery.md#whole-match-consumption-selected), independently of whether the programmer asks to bind the collected values.
+
+Each collector preserves the occurrence order of its matched pending remainder. Error selects returned errors only. A source marker for collecting errors and supported typed panics together is still open; symbolOfAny remains an explanatory placeholder. Separate ErrA and ErrB collectors preserve order within each group but process those groups in written clause order, which can change their original interleaving. A complete mixed sequence requires one suitable capture before earlier clauses consume its entries.
+
+The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; scalar binding of several such values remains open. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; nonlocal exits with a different pending category remain under review.
 
 ## Candidate A: direct union of the handled values
 
