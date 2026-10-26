@@ -84,7 +84,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Temporary generic notation](generic-notation.md): angle brackets explain type-family concepts while generic source syntax remains deferred; type inputs and compile-time values are distinct concerns.
 
 - [Sequence types compared](sequence-types-comparison.md): fixed arrays, growable lists, slices, and copy/storage tradeoffs across Odin, Rust, Zig, V, Go, Swift, Kotlin, and Dart.
-- [Sequence storage families](sequence-types.md): fixed-array inference for fresh known-size literals, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
+- [Sequence storage families](sequence-types.md): fixed-array inference for fresh known-size literals, element-wise fixed-array value widening without added write permission, explicit growable Lists, proposed owners/views, and separate permissions and storage contracts.
 - [Arrays](arrays.md): [T; N] fixed extents, header-free inline layout, zero-sized element counts, literal/spread construction, runtime arrays for variadic tails, and open ownership/runtime representation details.
 - [Lists](lists.md): explicitly selected growable storage, length versus uninitialized capacity, explicit mutation, and open owner-copy semantics; no unconditional List literal default.
 - [Slices](slices.md): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.

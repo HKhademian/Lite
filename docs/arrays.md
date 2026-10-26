@@ -22,6 +22,25 @@ Known-size nonempty heterogeneous literals infer one homogeneous union element t
 
 A known extent zero or one also determines tuple expansion: (...arr0) for [Int; 0] yields Unit, and (...arr1) for [Int; 1] yields a fixed singleton (:Int,). Explicit (...rest = arr0) and (...rest = arr1) instead retain a tail-bearing tuple with an empty or one-element array. Neither stored/copied declared tail collapses to Unit, a scalar, or the other tuple shape. Explicitly unpacking a known zero/one tail instead emits zero/one items and reconstructs under its destination. See [zero/singleton construction examples](tuple-array-shapes.md#zero-and-singleton-fixed-expansion-versus-declared-tails).
 
+## Fixed-array values widen element by element
+
+Selected 2026-10-26: an initialized fixed-array value [S; N] can be copied into [T; N] when ordinary value compatibility proves S can safely widen to T and the initialization, access, and element-copy contracts hold. Each destination index receives the corresponding widened source element. Preserve N, order, and values. This is the array counterpart of [component-wise tuple widening](types-and-inference.md#tuple-values-widen-component-by-component).
+
+```text
+source: [Int; 3] = [1, 2, 3];
+wider: [Int | String; 3] = source;
+```
+
+The shown destination provides ordinary readable access and holds Int values 1, 2, and 3. Widening itself grants no write permission: it cannot authorize writing a String through the source's Int locations or acquire var/mut authority. Any replacement or element-mutation permission must be independently requested and satisfy the existing access rules. Source retains its [Int; 3] contract and values. Corresponding slots mean the same logical indices in the copied value, not shared source locations or a newly created reference.
+
+Apply this value-compatibility proof to typed initialization, ordinary assignment, arguments, and returns when the destination requires the same extent. Inferred copy := source keeps the original array type. Nested fixed-array or tuple elements can widen recursively under their own established proofs. A stored callback or generic payload still needs its complete compatibility proof; element grouping cannot make an Int-only callback accept String.
+
+Read each executed source expression once and preserve ordinary copy effects and initialized element values. Inline destination elements follow the destination element layout; union tags, element size/alignment, stride, and total storage size can differ from the source. Compiler representation adaptation needs no source-level loop or wrapper. Referenced targets inside copied elements retain their established copy/access contracts and are not implicitly deep-cloned.
+
+This keeps the selected header-free layout for each fixed-array type; it does not require the source and destination layouts or ABIs to match. No source allocation policy, universal copyability, new alias, or in-place reinterpretation follows. [Unchecked reverse narrowing is rejected](types-and-inference.md#unchecked-narrowing-is-rejected) without justified narrower-value proofs.
+
+This rule preserves the fixed extent and array family. It does not convert arrays into tuples, resize arrays, reinterpret slices, widen caller-location write grants, or select List/runtime-owner cloning, shared-view adaptation, and reference-safety policies. Those contracts remain separate. Empty literals' deferred exact element-type policy is unchanged; the rule above starts from established source and destination element contracts.
+
 ## Empty literals remain empty arrays
 
 ```text

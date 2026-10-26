@@ -36,6 +36,8 @@ The existing shallow record-copy rule preserves stored references and permission
 
 Var permits replacing a collection binding. Mut permits permitted changes to held data, such as indexed writes or list growth. Slice formation must not upgrade read-only source access. Public pointer syntax is not necessary just to introduce a bounded view, but lifetime and alias rules are necessary.
 
+[Fixed-array value widening](arrays.md#fixed-array-values-widen-element-by-element) is separately selected for ordinary [S; N] to [T; N] copies when each element fits: preserve extent/order/values, adapt representation if needed, and grant no write permission. This does not select an adapting slice view or a cloning policy for heap-owned providers.
+
 Plain-union widening does not automatically make `List<A>` compatible with `List<A | B>` or permit a contiguous `Slice<A>` to be reinterpreted as `Slice<A | B>`. Accepted writes and element representation/stride must remain valid. A union of whole collection alternatives also differs from one collection of union-valued elements. Generic variance, conversion, and any adapting view need separate rules; no implicit payload reinterpretation is selected.
 
 ## Initialization and empty sequences

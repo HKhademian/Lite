@@ -65,6 +65,8 @@ Element metadata is still part of T. For example, an array of a union stores the
 
 Equal layouts do not identify array and tuple types, grant aliasing or arbitrary reinterpretation, select an identical call ABI, or make every conversion/copy free. Compatible explicit unpacking can reconstruct another shape under its own evaluation, type, access, and copy contracts. Fixed arrays retain computed indexing; tuples retain their static positional-access rules. See [arrays](arrays.md), [logical unpacking](tuple-unpacking.md), and [Unit cardinality](unit.md#zero-storage-does-not-erase-shape).
 
+[Fixed-array value widening](arrays.md#fixed-array-values-widen-element-by-element) preserves N and each logical element value while converting compatible element representations. Source [S; N] and destination [T; N] each obey their own header-free inline layout; different S/T may require different size, alignment, stride, tags, and total storage. Compiler adaptation preserves normal copies/effects without requiring identical layouts, an in-place cast, or additional write permission. No shared source storage or borrowed-view reinterpretation is introduced.
+
 ## Zero-sized elements and enclosing runtime information
 
 Unit itself has one value and zero value bytes. It never stores an element count, runtime shape, or discriminator. [Unit; 5] has five positions but only one possible initialized element sequence; [(), (), ()] infers [Unit; 3]. Both arrays need zero element payload bytes and no runtime length field, because their counts belong to their static types. A bounds-valid read still produces Unit, and traversal still visits the declared number of positions.
