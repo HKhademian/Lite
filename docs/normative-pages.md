@@ -8,6 +8,8 @@ If two pages conflict, the normative page for that area and the [decision ledger
 
 The [LiteLang current design specification](spec/README.md) provides stable area IDs and a condensed summary. It is subordinate to these normative pages and the ledger.
 
+The [Lite Proposal register](proposals/README.md) links accepted decision records with their LP IDs, revisions, statuses, and release targets. It records proposal/version history; the owning normative page and decision ledger remain the current-rule reference. Acceptance does not itself create a release or bump a component version.
+
 ## Map
 
 | Area | Start with | Also normative for narrower contracts |

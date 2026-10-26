@@ -1,6 +1,6 @@
 # Adding and removing sequence ends
 
-Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. The later user request accepts direct ordinary pops/indexing and selects attached else recovery for typed faults; full capture scope and mechanics remain pending. Names, allocation failures, and API signatures remain under review.
+Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. The later user request accepts direct ordinary pops/indexing and selects attached else recovery for typed faults; operation-specific and explicit whole-block scopes are selected 2026-10-26; fault attribution and mechanics remain pending. Names, allocation failures, and API signatures remain under review.
 
 ## Proposed operations
 
@@ -30,7 +30,7 @@ print(first);
 print(last);
 ```
 
-The user accepts these direct sequence operations: an empty pop faults safely rather than returning Option. Attached else provides the requested recovery surface; its full scope and implementation remain open. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change fixed-array literal inference; the example explicitly requests growable List storage using provisional generic notation. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
+The user accepts these direct sequence operations: an empty pop faults safely rather than returning Option. Attached else provides the requested recovery surface; the operation-specific scope handles its defined empty-removal faults, while argument panics bypass it. An explicit block can provide broader recovery. Fault attribution and implementation remain open. These examples use free functions to avoid selecting an additional method-receiver grant syntax. The names could ultimately be public methods or library operations backed by explicit implementations. They do not create a new loop mode or change fixed-array literal inference; the example explicitly requests growable List storage using provisional generic notation. Push failure handling is still deferred; the example spelling assumes no escaping recoverable allocation error. If an API returns a declared Result, the established !/else rules apply.
 
 The same operation supports explicit local recovery without a second helper:
 
@@ -62,13 +62,13 @@ Recommend one source-level failure policy for ordinary positional operations:
 
 - In the accepted direct sequence-operation direction, indexed reads and pops produce T; indexed writes produce Unit. An invalid position or empty removal triggers the appropriate safe typed fault before that operation changes storage.
 - Under the earlier alternative recoverable default, reads and pops produce typed Results, and writes produce a typed Result with Unit success. Their errors can distinguish BoundsError from EmptySequence; these names are illustrative. The established explicit handling/propagation rules apply.
-- The later shared-recovery direction selects operation() else { ... } for typed faults as well as returned errors. Its capture scope and receiver typing remain pending. A separate capture-as-Result spelling is still open; no additional checked helper is required merely for a fallback.
+- The later shared-recovery direction selects operation() else { ... } for typed faults as well as returned errors. Operation-specific versus explicit whole-block scope is selected; operation fault attribution, complete chain/attachment, and receiver typing remain pending. A separate capture-as-Result spelling is still open; no additional checked helper is required merely for a fallback.
 
 A separate deliberately optional query/removal may return Option<T>. This expresses an expected absence rather than a request to assert availability. Such a helper is an alternative API, not the proposed ordinary-pop default; names and whether it is needed initially remain open. No implicit conversion between Option and Result is introduced.
 
 This proposal unifies the choice of failure mode, not all error payloads or mutation contracts. A successful read returns an element under its read/access contract; a successful write returns Unit; a successful pop removes and returns an element. The removed value is not a borrowed view into the vacated slot, and its transfer/copy rules must follow the eventual ownership contract.
 
-An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. General panic capture boundaries and cleanup-failure aggregation/inspection remain separate decisions; cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes). Language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](checked-fault-policy.md).
+An empty removal leaves the sequence unchanged. This is an operation-local guarantee, not rollback of earlier mutations or argument side effects. Explicit block recovery supplies the selected broad panic boundary; complete chain/attachment and cleanup-failure aggregation/inspection remain open; cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes). Language-managed panic propagation runs applicable exited-scope `finally` blocks before an outer matching handler. See [bounds and checked fault policy](checked-fault-policy.md).
 
 ## Costs depend on storage
 
@@ -80,7 +80,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-- Confirm canonical names and specify the chosen direct-operation/else recovery direction, including capture scope and mixed failure typing. Keep optional removal as a distinct alternative rather than the assumed default.
+- Confirm canonical names and specify the chosen direct-operation/else recovery direction, including operation fault attribution and mixed failure typing under the selected operation/block scopes. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.
 - Specify ownership transfer, exception/fault safety during element construction, and cleanup.
 - Define view/cursor invalidation and overlapping mutation. Structural mutation may relocate or invalidate storage even when indexed replacement is permitted.

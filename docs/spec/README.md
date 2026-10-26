@@ -1,6 +1,6 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-25**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
+Status: **draft current-design summary, 2026-10-26**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
@@ -133,15 +133,16 @@ Selected:
 
 - Returned errors use `T ! E`; postfix `!` forwards them. It does not assert success, catch a panic, or handle an untyped failure. Typed panics are a separate fault channel.
 - Stored `S ! E` values widen to `T ! F` when both payload types fit by selected safe widening, recursively across matching layers. Preserve `.ok`/`.err`, active payloads, ordinary copies, and the source contract; no flattening, added layer, unwrap, unchecked narrowing, or writable-grant widening. See [stored Result widening](../result-and-errors.md#stored-result-values-widen-safely) and [general safe widening](../types-and-inference.md#safe-widening).
-- `else` recovery is target-level: an operation or block expression.
+- `else` recovery is target-level. An operation handles only its defined faults; argument/operand panics bypass that handler ([LP-0001 r1](../proposals/LP-0001-operation-specific-panic-recovery.md)). An explicit `{ ... } else { ... }` block covers supported typed panics from its contents, argument evaluation, and synchronously called code ([LP-0002 r1](../proposals/LP-0002-explicit-block-panic-recovery.md)). The block boundary is active before its first item; the handler is outside its own protection.
 - Typed filters may select an error/panic type, preserve declared order, and bind a receiver where selected.
+- Recovery munches pending occurrences in written else order, independently of error occurrence order ([LP-0003 r1](../proposals/LP-0003-pending-failure-munching.md)). A single failure is schematically (ErrSingle,), an aggregate contains several occurrences, and () means none. A match consumes only its match; no match runs no handler and consumes nothing. A proven empty remainder needs no further catch or returned-error propagation for those handled failures, provided no new failures are introduced. This is a recovery-state model, not a selected tuple ABI or primary-promotion rule.
 - `A | B` is an alternative; `A & B` is an order-insensitive co-occurrence set and binds no value.
 - Ordered failure tuples use existing tuple syntax and bind a real tuple; positional access works, labels only in the named form.
 - `finally` is cleanup-only: it has no receiver, does not recover failures, and does not replace a pending result/exit.
 - `finally` runs on normal and abrupt exits and preserves the pending outcome when cleanup completes normally. Cleanup failures follow the selected primary/secondary precedence.
 - `then` runs before `finally` on normal loop/conditional completion. A handler in the same scope recovers a matching typed panic before that scope's `finally` runs once on exit.
 
-Open: `Error`'s full contract, the `&` form's public value/operations, exact `finally` attachment scope, and hard-abort behavior.
+Open: `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
 
 ## LS-009 — Collections and sequences
 

@@ -19,6 +19,7 @@ Let people and programming agents focus on problem solving through concise, read
 - Optional data through `Option`; recoverable failure through `Result`.
 - Express ordinary source programs through values and explicit access permissions without requiring a raw pointer vocabulary; memory and foreign-interface contracts remain to be designed.
 - Declared typed recoverable errors, implicit success construction, postfix `!` propagation at each extracted Result step, and local `else` recovery with optional error receivers.
+- Operation-level `else` handles faults defined by its operation, excluding evaluated argument/operand panics. An explicit `{ ... } else { ... }` block selects broad recovery for supported typed panics from its executed contents and synchronous calls. See [recovery scopes](expression-recovery.md#operation-specific-panic-boundary-selected).
 - A separate typed panic path that unwinds exited scopes and runs applicable `finally` blocks before outer matching handlers; cleanup preserves any already pending failure as primary if cleanup also fails. Typed recovery filters consume matching aggregate members in declaration order. No-handler policy, hard aborts, aggregate representation/inspection, and duplicate-member handling remain open.
 - Immutability by default: fixed bindings and read-only access, with practical, explicit mutation capabilities through var and mut. See [the design goal](immutability-by-default.md).
 - Minimal visibility and capability exposure by default.

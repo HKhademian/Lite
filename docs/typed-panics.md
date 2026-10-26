@@ -1,6 +1,6 @@
 # Future strongly typed panics
 
-Status: **strongly typed panic information requested, the panic channel selected for basic arithmetic faults, and typed target-level `else` recovery selected, 2026-10-20**. Panic/fault events should carry typed categories and appropriate structured information. Capture scope, transfer mechanism, exact operation triggers, payload details, and ABI remain future work.
+Status: **strongly typed panic information requested, the panic channel selected for basic arithmetic faults, and typed target-level `else` recovery selected, 2026-10-20**. Panic/fault events should carry typed categories and appropriate structured information. Operation-specific and explicit whole-block recovery were selected 2026-10-26: argument panics bypass the outer operation handler, while an explicit block covers supported typed panics across its executed contents and synchronous calls. Operation fault attribution, block/chain integration, transfer mechanism, triggers, payload details, and ABI remain future work.
 
 ## Intended categories
 
@@ -15,11 +15,11 @@ Names such as NullAccess, DivisionByZero, IntegerOverflow, and BoundsFault are e
 
 ## Preserve the existing channel distinction
 
-Panics propagate implicitly without ! or a Result error declaration, as explicitly confirmed by the user. The exact eligible handler scope and transfer/cleanup mechanism remain under review.
+Panics propagate implicitly without ! or a Result error declaration, as explicitly confirmed by the user. An operation handler covers only its defined faults, excluding evaluated argument/operand panics. An explicit `{ ... } else { ... }` block covers supported typed panics from its contents and synchronous calls. Complete chain/attachment rules and the transfer/cleanup mechanism remain under review.
 
 Typed panic information remains separate from a returned T ! E outcome. It does not automatically add every possible panic category to every function's declared recoverable error type. The proposed throw error continues to mean return .err(error), not a panic trigger.
 
-Typed target-level `else` filters are selected for local panic recovery. A matching handler handles only its named category; chained filters consume matching members in declaration order, and unmatched panics propagate implicitly after the chain through applicable exited-scope `finally` blocks before an outer matching handler. Cleanup-failure precedence is selected: the pending work failure stays primary and cleanup failures are retained as secondary. Aggregate representation, duplicate-member behavior, supported evaluation scope, transfer implementation, no-handler policy, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
+Typed target-level `else` filters are selected for local panic recovery. A matching handler handles only its named category; chained filters consume matching members in declaration order, and unmatched panics propagate implicitly after the chain through applicable exited-scope `finally` blocks before an outer matching handler. Cleanup-failure precedence is selected: the pending work failure stays primary and cleanup failures are retained as secondary. Aggregate representation, duplicate-member behavior, operation fault attribution, block/chain integration, transfer implementation, no-handler policy, and any capture-as-Result conversion still require contracts. A future panic-effect declaration or restriction is not adopted by this typing requirement.
 
 If a checked operation converts a selected fault into a returned error, the resulting Result and any outward propagation obey the existing explicitly declared error contract. Which panic information is retained by such conversion remains open.
 

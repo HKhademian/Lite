@@ -46,7 +46,7 @@ sum := left + right else (p: OverflowPanic) {
 
 `OverflowPanic` is an illustrative category name, not a selected declaration. A matching typed handler runs; a nonmatching panic propagates implicitly. If the target can also return a `Result` error, that error remains explicit and can be forwarded with `!` after the typed handler. A larger surrounding function or unrelated computation need not be the only recovery boundary.
 
-The selected form does not settle the exact recovery boundary around evaluated operands/callees, the broad mixed-channel receiver type, fallback typing for panic recovery, or behavior when recovery code faults. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; capture scope, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes).
+The selected [operation-specific boundary](expression-recovery.md#operation-specific-panic-boundary-selected), 2026-10-26, handles faults defined by the arithmetic operation; panics while evaluating its operands bypass that handler. Operation fault attribution, the broad mixed-channel receiver type, fallback typing, and block/chain integration remain open. Language-managed panic propagation runs applicable `finally` blocks for exited scopes before an outer matching handler; operation fault contracts, hard aborts, and cleanup-failure aggregation/inspection remain open. Cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes).
 
 ## Decisions still open
 
@@ -55,7 +55,7 @@ The selected form does not settle the exact recovery boundary around evaluated o
 - Whether floating-point division by zero produces non-finite values or a typed panic; define other floating-point edge cases separately.
 - The independent results of min % -1 and min _% -1 for fixed-width signed integers.
 - Exact arithmetic panic type names and the result type of a panic fallback.
-- The boundary around evaluated operands and calls, transfer mechanism, cleanup, and handling of a second panic.
+- Operation fault attribution through helpers, transfer mechanism, block/chain integration, cleanup, and handling of a second panic.
 - Explicit wrapping/saturating operations and conversion behavior.
 
 Related: [numbers and ranges](numbers.md), [division](division.md), [panics](panics.md), [shared expression recovery](expression-recovery.md), [Result and errors](result-and-errors.md), and [bounds/arithmetic policy history](checked-fault-policy.md).

@@ -1,6 +1,6 @@
 # Language documentation
 
-Design snapshot: **2026-10-25**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-26**. Stage: **planning; no implementation**.
 
 ## Start here
 
@@ -159,11 +159,11 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Propagation and call chaining](propagation-and-chaining.md): selected postfix `!`, per-step extraction, stored Results, and reference-language comparisons.
 - [Recovery receivers and fallback types](recovery-and-fallbacks.md): optional error naming, lazy fallbacks, union results, narrowing, and reference-language comparisons.
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
-- [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, panic-scope comparison, evaluation traces, and implementation tradeoffs.
+- [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, selected operation-specific and explicit whole-block scopes, current and historical evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): selected typed filtering, unmatched-channel behavior, and open broad receiver representation.
-- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, declaration-ordered member-wise handling, order-insensitive `&` co-occurrence patterns, ordered failure tuples, optional receiver parentheses, pending evaluation scope, broad receiver typing, no-handler policy, and the `&` form's public value; primary/secondary precedence is selected.
-- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel, and open recovery, execution, `&` public value/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
-- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with capture scope, transfer, aggregate representation, duplicate-member behavior, and no-handler policy still open.
+- [Shared expression recovery](expression-recovery.md): selected catch-all and typed-filter `else` forms for returned errors and panics, declaration-ordered occurrence munching with singleton/aggregate/empty remainders, order-insensitive `&` co-occurrence patterns, ordered failure tuples, optional receiver parentheses, selected operation-specific and explicit whole-block scopes, open operation fault attribution and broad receiver typing, no-handler policy, and the `&` form's public value; primary/secondary precedence is selected.
+- [Panics and failure channels](panics.md): typed panic propagation, the selected arithmetic channel and operation/block scopes, and open fault attribution, execution, `&` public value/inspection, and no-handler policies; cleanup-failure precedence and declaration-ordered member-wise handling are selected.
+- [Future typed panics](typed-panics.md): requested structured fault categories for underlying null access, zero division, overflow, and related faults, with operation-specific versus explicit whole-block recovery selected; operation fault attribution, transfer, aggregate representation, duplicate-member behavior, and no-handler policy remain open.
 - [Bounds and arithmetic policy](checked-fault-policy.md): historical comparison of fallible defaults and asserting operations; the selected direction is direct positional operations with typed faults, arithmetic typed panics, and explicit `else` recovery.
 - [Safe callable input and result adaptation](callable-value-variance.md): direct safe ordinary value compatibility, wider implementation inputs/narrower results, basic var T invariance with unchanged argument-flow checks, unsafe reverse cases, compiler adaptation without a required manual wrapper, preserved implementation default promises through narrowed omission-capable views, widened fallible success/error contracts directly from the source, and remaining access/effect interactions.
 - [Public omission contracts and implementation defaults](callable-default-contracts.md): public omission permission, implementation-owned expressions, required views, omission compatibility under replacement, the selected n?: Int / ?:Int public markers for fixed named/unnamed inputs, zero-callable omission with no default/body execution, and deferred internal omitted-input representation.
@@ -209,6 +209,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 ## Project and implementation direction
 
 - [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.
+- [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001 through LP-0003, revision/status records, unassigned target versions, and the boundary between acceptance and release.
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): selected singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, performance goals, and open memory semantics.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.

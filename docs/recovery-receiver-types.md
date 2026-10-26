@@ -1,6 +1,6 @@
 # Types received by recovery handlers
 
-Status: **typed failure filtering selected, 2026-10-20; broad mixed-channel receiver representation remains open**. Shared else can match all failures or filter for one type. This review assumes a boundary that can receive both channels; it does not choose the remaining panic-evaluation scope. Panic, Failure, and generic notation below are explanatory names, not final declarations or ABI.
+Status: **typed failure filtering selected, 2026-10-20; broad mixed-channel receiver representation remains open**. Shared else can match all failures or filter for one type. This review assumes a boundary that can receive both channels; operation targets exclude argument panics, while an explicit block target covers supported typed panics across its contents and synchronous calls. Complete chain/attachment integration remains open. Panic, Failure, and generic notation below are explanatory names, not final declarations or ABI.
 
 ## The question
 
@@ -20,7 +20,7 @@ text := read_text(path) else {
 }
 ```
 
-This supplies String on success or a String fallback, without introducing an implicit failure name. It still needs a defined capture scope and cleanup contract. There is no additional argument-result unwrapping: Result-producing arguments retain their individual explicit handling requirement.
+This supplies String on success or a String fallback, without introducing an implicit failure name. It still needs operation fault attribution, block/chain integration, and complete cleanup/transport contracts. There is no additional argument-result unwrapping: Result-producing arguments retain their individual explicit handling requirement.
 
 ## Candidate A: direct union of the handled values
 
@@ -106,7 +106,7 @@ target else (failure) { report(failure); recover() }
 
 Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.
 
-This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending members. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. An unmatched panic propagates implicitly after the chain. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
+This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending occurrences. Single, aggregated, and empty remainders follow [the munching model](expression-recovery.md#pending-occurrences-and-munching-selected); no pending occurrence means no failure match, and a nonmatch neither runs the body nor consumes anything. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. An unmatched panic propagates implicitly after the chain. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
 
 Each later filter wraps the preceding recovery expression, including its handler body. A matching failure raised by an earlier handler can be caught by that later recovery; the earlier handler does not catch its own failure. See the [sequential recovery example](expression-recovery.md#match-all-failures-or-filter-by-type) for the distinction between nested active recovery and separate eager assignments.
 
@@ -129,6 +129,6 @@ A public receiver contract must remain stable across inlining and separate compi
 - Direct E | Panic versus a tagged Failure<E> wrapper as the public receiver.
 - The typed Panic carrier/category model and any failure-origin metadata API.
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
-- Panic boundary scope, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.
+- Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.
 
 Related: [shared expression recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [typed panics](typed-panics.md), [Result errors](result-and-errors.md), [receiver clauses](receiver-clauses.md), and [union matching](union-patterns.md).

@@ -1,8 +1,32 @@
 # Whole-call and argument-level recovery
 
-Status: **outcome comparison requested by the user, 2026-10-19**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The examples below evaluate the proposed whole-evaluation boundary against operation-specific capture; the exact panic-capture boundary remains under review. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
+Status: **operation-specific and explicit whole-block recovery selected 2026-10-26**. Panics propagate implicitly without ! or a Result declaration, and language-managed propagation unwinds exited scopes through applicable `finally` blocks before an outer matching handler. The current operation boundary is [selected in LP-0001 r1](proposals/LP-0001-operation-specific-panic-recovery.md): argument panics bypass the outer operation handler. Whole-evaluation recovery requires the explicit block selected in [LP-0002 r1](proposals/LP-0002-explicit-block-panic-recovery.md); the earlier unbraced broad-call alternative is retained as history. The user explicitly requires Result-producing arguments to have their own handling/extraction before being passed as ordinary values, and prefers the nested local-fallback example.
 
-Supporting analysis: current recovery rules are owned by [expression recovery](expression-recovery.md), [result and errors](result-and-errors.md), and [checked fault policy](checked-fault-policy.md). If this page's proposed capture boundary conflicts with those pages, they win.
+Supporting analysis: current recovery rules are owned by [expression recovery](expression-recovery.md), [result and errors](result-and-errors.md), and [checked fault policy](checked-fault-policy.md). If this supporting analysis conflicts with those pages, they win.
+
+## Selected operation-specific outcomes
+
+For `multiply(values[0], values[1]) else { 0 }`, a missing position panics during argument evaluation and bypasses the multiply handler. With an empty sequence, the first access fails; the second access, multiply, and outer fallback never run. With only [5], the second access fails after the first succeeds; multiply and its fallback still never run. With [5, 7], ordinary successful multiplication produces 35. Only faults defined by multiply's operation contract are eligible for its attached handler.
+
+With the local argument fallbacks shown below, empty values instead supplies 2 and 3 and produces 6; [5] produces 15. These are distinct outcomes, preserving the user's local-fallback preference. A typed outer filter does not change argument coverage. Operation fault attribution, complete attachment, and recovery-chain integration remain open; see [the normative boundary](expression-recovery.md#operation-specific-panic-boundary-selected).
+
+## Selected explicit block outcomes
+
+```text
+answer := { multiply(values[0], values[1]) } else { 0 }
+```
+
+The block boundary is active before its first item. With empty values or [5], a missing position panics and the block handler produces 0 without invoking multiply. With [5, 7], ordinary successful multiplication produces 35. A supported panic in multiply or synchronous code it calls can also reach this boundary. Earlier effects remain and applicable inner cleanup runs before recovery; the interrupted call is not resumed.
+
+An inner operation handler does not hide excluded argument panics from an explicit outer block:
+
+```text
+answer := {
+    multiply(values[0], values[1]) else { 1 }
+} else { 0 }
+```
+
+An empty sequence produces 0 through the block handler. An eligible multiply fault handled by the inner clause produces 1. Normal successful multiplication supplies its result. Exact fault categories and operation attribution remain open. See [the normative block boundary](expression-recovery.md#explicit-whole-block-panic-boundary-selected).
 
 ## Result arguments require their own handling
 
@@ -40,7 +64,7 @@ result := op(exp1()!, exp2()!) else {
 
 On an argument's .err, its ! exits the nearest enclosing function/closure under that function's declared compatible error contract. It does not hand the returned error to the outer call's else. Normal return is not a panic. A function intentionally accepting Result data can instead receive an intact Result argument; the extraction requirement applies when the parameter needs its plain payload.
 
-## Panic-only scope comparison
+## Historical unbraced whole-call comparison
 
 
 
@@ -54,7 +78,7 @@ result := op(exp1(), exp2()) else {
 }
 ```
 
-Under the recommended whole-evaluation interpretation:
+Under the unselected whole-evaluation interpretation for this unbraced call:
 
 1. Establish the outer recovery boundary before evaluating the call expression, including the callee/receiver expression and its executed arguments.
 2. Evaluate exp1, then exp2, following the selected left-to-right evaluation order.
@@ -75,7 +99,7 @@ result := op(
 }
 ```
 
-The outer evaluation contains both inner recovery expressions. The nearest applicable active handler gets the panic first:
+In this historical broad-call interpretation, the outer evaluation contains both inner recovery expressions. The nearest applicable active handler gets the panic first:
 
 - If exp1 panics, its local fallback supplies argument one. When that fallback completes normally, evaluate exp2 next.
 - If exp2 panics, its local fallback supplies argument two. When that fallback completes normally, invoke op with the computed/replacement arguments.
@@ -99,7 +123,7 @@ answer := multiply(
 ) else { 0 }
 ```
 
-With an empty values sequence, local recovery supplies 2 and 3 and multiply produces 6. With values containing only 5, it produces 15. With [5, 7], it produces 35. The outer fallback remains available for faults within multiply under its eventual capture contract.
+With an empty values sequence, local recovery supplies 2 and 3 and multiply produces 6. With values containing only 5, it produces 15. With [5, 7], it produces 35. The outer fallback remains available for faults defined by multiply's operation contract; arbitrary callee panics are not automatically included.
 
 For comparison, the earlier broader-boundary candidate was:
 
@@ -108,17 +132,17 @@ For comparison, the earlier broader-boundary candidate was:
 answer := multiply(values[0], values[1]) else { 0 }
 ```
 
-Under whole-evaluation panic capture, this yields 0 without calling multiply if either position is missing. It does not establish the legality of analogous calls with unhandled Result arguments. The user's preference for local argument recovery is recorded without treating it as a final choice of panic-capture scope.
+Under whole-evaluation panic capture, this yields 0 without calling multiply if either position is missing. It does not establish the legality of analogous calls with unhandled Result arguments. The user's later 2026-10-26 choice rejects this whole-evaluation behavior for an operation target.
 
 Thus local recovery and whole-call recovery are useful simultaneously. Supporting the broader outer boundary does not make argument-level handlers redundant: their fallback values serve different positions in the computation.
 
-## What operation-specific capture would change
+## Selected operation-specific capture
 
-Under the narrower alternative, the outer else does not cover arbitrary panics while computing arguments. In the first form, an exp1 or exp2 panic skips the visible outer fallback and propagates to some enclosing eligible handler or the unhandled-fault policy. In the second form, each local handler could still recover its argument's specified operation fault, permitting op to run.
+Under the selected operation-specific boundary, the outer else does not cover arbitrary panics while computing arguments. In the first form, an exp1 or exp2 panic skips the visible outer fallback and propagates to some enclosing eligible handler or the unhandled-fault policy. In the second form, each local handler could still recover its argument's specified operation fault, permitting op to run.
 
 A call's operation-specific faults would need a compiler/provider contract. They cannot be defined by inspecting which machine instruction happened to fail, or by whether a helper was inlined. This alternative can support a checked intrinsic such as positional access, but is harder to explain as general panic recovery for an ordinary library call.
 
-Recommendation: use the whole selected expression as the panic boundary and let nearer handlers supply local recovery. Preserve operation-specific checked primitives as an implementation/API facility where useful, rather than silently narrowing the scope of the same else syntax. This recommendation remains under review.
+The earlier recommendation favored whole-evaluation capture. The user instead selected operation-specific recovery for a bare operation and an explicit block for broad recovery on 2026-10-26. Keep the historical unbraced comparison above to explain the tradeoff. Operation attribution and explicit block coverage must remain stable across helpers and inlining.
 
 ## Result errors do not propagate like panics
 
@@ -136,7 +160,7 @@ Evaluate each executed operation once. After a panic, skip the unfinished remain
 
 ## Implementation consequences and references
 
-Nested whole-expression boundaries need a consistent active-handler/cleanup model across ordinary calls, callbacks executed within the expression, and compiler inlining. Work scheduled to execute later is outside the expression's active evaluation; asynchronous propagation requires its own future design.
+The selected explicit block boundary needs a consistent active-handler/cleanup model across ordinary calls, callbacks executed within the expression, and compiler inlining. Work scheduled to execute later is outside the expression's active evaluation; asynchronous propagation requires its own future design.
 
 A local intrinsic can lower directly to a bounds check and branch. General cross-call panic recovery additionally needs fault transport and cleanup. LLVM documents table-based exception handling for keeping speculative handler code out of the normal instruction path; that still involves metadata and an unwind mechanism. It is an implementation option, not a LiteScript performance guarantee. Source: [LLVM exception handling](https://llvm.org/docs/ExceptionHandling.html).
 

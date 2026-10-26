@@ -94,7 +94,7 @@ text := read_text(path) else {
 
 The recovery block runs on a matching failure and supplies the chosen fallback. Typed filters and composed recovery expressions support more precise handling without requiring a helper function for every variation. A function's error contract remains explicit, and each extracted fallible step has a visible handling or propagation operation.
 
-Typed panics use a separate channel. Basic arithmetic faults follow that channel, so ordinary arithmetic does not acquire a Result wrapper at every operation. An attached typed `else` can provide local recovery. The exact fault and capture boundaries are still under review.
+Typed panics use a separate channel. Basic arithmetic faults follow that channel, so ordinary arithmetic does not acquire a Result wrapper at every operation. An attached typed `else` can provide local recovery. Operation recovery covers that operation's defined faults; an explicit `{ ... } else { ... }` block provides broad recovery across its contents and synchronous calls. Exact fault contracts, payloads, transport, and complete attachment remain under review; see [recovery scopes](expression-recovery.md#operation-specific-panic-boundary-selected).
 
 Mutation follows the same philosophy. Fixed bindings and read-only access are the defaults. `var` permits replacement of a binding or caller location; `mut` permits updates to held data. Caller mutation grants are explicit at the call. These permissions should be practical to use and simple to inspect.
 

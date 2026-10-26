@@ -182,7 +182,7 @@ The user later selected the panic channel for basic arithmetic faults, so this c
 
 ### Expression-local recovery
 
-The later [shared recovery direction](expression-recovery.md) extends the same attached else surface to typed panics from a non-Result operation. Scope, mixed-channel receiver typing, and fault transfer remain pending. The following paragraphs specify returned-Result handling; they do not silently settle panic behavior.
+The later [shared recovery direction](expression-recovery.md) extends the same attached else surface to typed panics from a non-Result operation. Operation-specific recovery is selected; operation fault attribution, block/chain integration, mixed-channel receiver typing, and fault transfer remain pending. The following paragraphs specify returned-Result handling; they do not silently settle panic behavior.
 
 An attached `else` handles the selected Result outcome. Its error receiver is optional:
 
@@ -199,7 +199,7 @@ user := load_user(id) else {
 }
 ```
 
-On success, the expression supplies the successful payload without executing the recovery block. On failure, the block executes and, if declared, its receiver gets the statically typed error. Omitting the receiver introduces no implicit `err` name and does not change value production. The selected outcome is evaluated once. A failure arising in the recovery block is not handled again by that same clause; it requires its own handling or explicit propagation.
+On success, the expression supplies the successful payload without executing the recovery block. On failure, the block executes and, if declared, its receiver gets the statically typed error. Omitting the receiver introduces no implicit `err` name and does not change value production. The selected outcome is evaluated once. Its returned error is treated as one pending occurrence for [recovery munching](expression-recovery.md#pending-occurrences-and-munching-selected); this does not wrap E in a source tuple or change Result representation. After complete recovery leaves no possible outward error, no marker is required merely to propagate the consumed error. New handler errors retain their own obligations. A failure arising in the recovery block is not handled again by that same clause; it requires its own handling or explicit propagation.
 
 ### Recovery result type
 
@@ -222,11 +222,11 @@ Union alternatives can be narrowed by matching their type. This applies both to 
 - This is a selected union-forming boundary for Result recovery. It does not automatically make unrelated `if` or `match` branches infer unions.
 - General union syntax, narrowing, conversions, layout, and ownership rules remain open. `T | D` records the type relationship without settling all type grammar.
 
-This Result recovery form is selected. The same target-level `else` syntax can filter typed panics. A filter handles only its matching type: unmatched panics propagate implicitly, while unmatched returned errors remain a `Result` obligation and may be explicitly propagated with postfix `!`. Full precedence and evaluation scope for nested operands remain open. Loop completion is receiverless result processing through `then`; Result recovery keeps its optional failure receiver and does not use the retired action-only distinction.
+This Result recovery form is selected. The same target-level `else` syntax can filter typed panics. A filter handles only its matching type: unmatched panics propagate implicitly, while unmatched returned errors remain a `Result` obligation and may be explicitly propagated with postfix `!`. Full precedence, operation fault attribution, and block/chain integration remain open; evaluated operand/argument panics bypass the outer operation handler. Loop completion is receiverless result processing through `then`; Result recovery keeps its optional failure receiver and does not use the retired action-only distinction.
 
 [Recovery receivers and fallback types](recovery-and-fallbacks.md) compares this optional receiver and union result rule with the reference languages. A precise union still requires narrowing before variant-specific use.
 
-An arithmetic target can use a typed `else` filter to recover a matching panic. It does not become a `Result` error, and an expected `Result` type does not capture it. Exact arithmetic panic categories and the recovery boundary around operands/calls remain open.
+An arithmetic target can use a typed `else` filter to recover a matching panic. It does not become a `Result` error, and an expected `Result` type does not capture it. Exact arithmetic panic categories and operation fault attribution remain open; evaluated operand/argument panics bypass the arithmetic operation handler.
 
 ## Unit success
 
