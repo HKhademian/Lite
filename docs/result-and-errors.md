@@ -26,6 +26,8 @@ The earlier discussion of ordinary `: Int` signatures hiding recoverable failure
 
 Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a postfix `!` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
 
+Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-error-contracts.md)): a declaration such as `fn(...): T ! (ErrA | ErrB)` describes admitted error types, with no occurrence count. Callers must not predict aggregate multiplicity or repeat a catch clause once per unknown occurrence. Count-independent repeated-type handling still needs its payload/invocation contract; this adds no count syntax, implicit aggregation, or panic categories to E. An ordinary Result retains one active outcome with one active error alternative. See [count-free recovery](expression-recovery.md#error-contracts-do-not-declare-occurrence-counts).
+
 - A function declaring no recoverable failure must handle such failures internally; it cannot use `!` to let them escape.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
