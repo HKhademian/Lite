@@ -96,6 +96,10 @@ For the selected simple local flow cases, entry compatibility uses the current j
 
 A simple var local reserved with = ? may be selected before it is initialized if later argument evaluation definitely performs its first whole-value initialization before invocation. Location selection is not a payload read; the callee receives initialized compatible storage, and reads before that first write remain rejected. This does not grant var replacement authority to fixed storage or select initialization by the receiving callee. See [initialization during preparation](call-replacement-flow.md#initialization-during-argument-preparation-selected).
 
+## Union payload access is not whole-union access
+
+For [union write grants](call-replacement-flow.md#union-payload-grants-and-whole-union-grants), a var Int input from an Int-proven union accesses the original Int payload and can write Int only; reject it if the member proof is unavailable at entry. A var (Int | String) input instead permits complete union replacement, including updating the tag when p = "hello" constructs [String]["hello"]. The latter remains allowed without narrowing. The existing basic var T signature invariance and current-read/accepted-write admission rules remain unchanged; no public reference syntax or new ABI is selected.
+
 ## Lifetime, evaluation, and observable effects
 
 The selected caller-location access is temporary and limited to the call. It does not grant an escaping storage-access handle that can be stored globally, returned, or captured for later use. General reference values and lifetime extension are not selected. One source location supplies only one active write grant: two explicit var arguments identifying the same local in one call are rejected, even if both parameter types match. The same-fixed-array element case requires a supported disjointness proof and rejects calls without one. Other field/index/path overlap, general alias detection, and reentrant/callback enforcement still need rules; the conservative broader proposal for those cases remains separate. See [single source write grant](call-replacement-flow.md#single-source-write-grant-selected).

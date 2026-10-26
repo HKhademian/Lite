@@ -88,6 +88,10 @@ Writes require existing authority. A valid same-member payload write can retain 
 
 Refinement must remain valid at the point of use; replacement or other invalidating effects cannot leave a stale member interpretation active. Explicit var/mut grants retain their separate admission and write contracts. These rules concern plain-union members and do not introduce implicit Option/Result extraction, unchecked casts, or general escaping payload-reference syntax.
 
+## Payload writes versus whole-union replacement
+
+[Union write grants](call-replacement-flow.md#union-payload-grants-and-whole-union-grants) distinguish access to a proven member payload from replacing the tagged union. An Int-proven union may supply var Int access to its original payload; Int writes retain the Int tag. Reject a payload-only write with no valid member proof. A var (Int | String) parameter still may replace the whole union without such narrowing: p = "hello" establishes [String]["hello"], not merely the payload. Existing initialization, authority, accepted-write, and entry checks remain. No general reference syntax or raw payload reinterpretation follows.
+
 ## Preserve named case boundaries
 
 Plain-union entry does not automatically construct an enum case or unwrap a payload. Option still needs its selected case constructors/patterns. Result keeps .ok/.err identity and the independently selected implicit-success construction rule; union membership must not swallow errors or recursively unwrap outcomes.

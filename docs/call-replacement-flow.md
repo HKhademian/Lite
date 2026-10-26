@@ -15,6 +15,60 @@ The current read type and the declared write contract are separate inputs to thi
 
 These checks require valid entry refinements and compatible location access throughout the call. They do not select general access variance, shared-alias concurrency, or a complete subtype/ownership model.
 
+## Union payload grants and whole-union grants
+
+Selected 2026-10-26: distinguish a grant to a proven active union payload from a grant to replace the complete union value. Unnarrowed payload-reference writes are rejected. Whole-union var replacement remains allowed; the user explicitly retained the earlier broad var contract.
+
+### Member-only payload grants
+
+For initialized var x: Int | String with a valid Int proof at invocation, a var Int parameter may receive temporary read/write access to the original Int payload. It may read/write Int only. The outer union remains tagged Int, and the callee cannot acquire the caller's broader accepted replacements or rewrite the tag as String. Preserve the existing single active write holder and entry checks after later arguments/default effects. A supported assignment-flow fact can also establish the member proof; this does not add a requirement for a redundant syntactic if when Int is already proven.
+
+```text
+set_int := fn (target: var Int): Unit {
+    target = 42;
+}
+
+var x: Int | String = choose_value();
+
+if x: Int {
+    set_int(var x);
+}
+```
+
+Assume choose_value returns an initialized Int | String. Abstract memory on the Int path:
+
+```ini
+caller before              = [Int][7]
+callee var Int access      =      [7]
+caller after target = 42   = [Int][42]
+```
+
+The middle line denotes writable access to the original payload, not a detached Int copy. With only an arbitrary Int | String read type and no valid member proof, set_int(var x) is rejected. Do not supply the payload as Int merely because its memory has enough capacity, and do not silently choose an active member or add an unchecked cast. Future payload-reference features must respect this boundary; their syntax and general safety model remain deferred.
+
+### Whole-union replacement grants
+
+A var (Int | String) parameter instead receives the complete union replacement contract. It may change the active member without first narrowing to that member, because the compiler establishes both the new member metadata and its valid payload:
+
+```text
+replace := fn (p: var (Int | String)): Unit {
+    p = "hello";
+}
+
+replace(var x);
+```
+
+This is allowed when x's initialization, current reads, accepted writes, and authority satisfy the existing entry rules. The same original x above remains initialized on either if path. Abstract memory for a call starting with Int:
+
+```ini
+caller before              = [Int][7]
+callee whole-union access  = [tag][payload]
+caller after p = "hello"   = [String]["hello"]
+```
+
+Writing just String payload bytes while leaving an Int tag would violate the contract and is not an allowed lowering. A payload-only grant is insufficient for this operation. The compiler must implement the complete union replacement, whether the backend uses a direct representation or an appropriate access mechanism; no new grant ABI or pointer syntax is selected. Tag/payload are logical parts, not a requirement for exactly two physical stores or an atomicity/concurrency guarantee.
+
+This example's execution writes String, but ordinary post-call inference still follows the declared var union contract: retain Int | String unless a separately supported preservation/postcondition proof applies. Do not infer a String-only result merely from the helper name or inspecting this illustrative body. Direct assignment to the original local also remains allowed under its declared writes and updates its read facts immediately. A narrowed payload grant cannot manufacture whole-union authority; forwarding, suspension/restoration, and failure behavior retain their existing rules. Neither kind of grant creates a new escaping reference or copies changes back from detached storage.
+
 ## Entry facts after argument evaluation selected
 
 Selected on **2026-10-24**: the readable type required by each var argument must be justified when the callee begins, after evaluation of all reached supplied arguments and applicable default expressions. The selected [default order](evaluation-order.md#default-argument-evaluation-selected) runs missing defaults after supplied entries and before invocation, so their effects also participate in the required entry proof. A fact established when an earlier argument location was selected is insufficient if a later argument can invalidate it:

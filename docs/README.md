@@ -95,7 +95,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Record type identity](record-type-identity.md): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
 - [Type aliases](type-aliases.md): selected Alias := type TypeExpression, optional leading | in union initializers, transparent identity, and comparison with the rejected direct-binding alternative.
 - [Plain union normalization](union-normalization.md): selected order independence, flattening, duplicate removal, and unchanged identity with optional leading |, without collapsing nominal records, enum cases, Option, or Result.
-- [Union membership](union-membership.md): selected automatic member admission, checked payload reads/ordinary arguments, unchanged declared replacements under narrowing, nominal identity, and remaining representation contracts.
+- [Union membership](union-membership.md): selected automatic member admission, checked payload reads/ordinary arguments, proven member-payload writes versus whole-union replacement grants, unchanged declared replacements under narrowing, nominal identity, and remaining representation contracts.
 - [Union widening](union-widening.md): selected automatic widening when every normalized source alternative is an exact destination member, with checked narrowing in the reverse direction.
 - [Union field reads](union-field-reads.md): selected availability on every alternative, normalized union of field types, and rejection for missing or inaccessible fields.
 - [Union field writes](union-field-writes.md): selected compatibility with every possible target field, preserving each parent's storage type and mutation permissions.
