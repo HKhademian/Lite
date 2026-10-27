@@ -1,7 +1,7 @@
-# LP-0005 r6: Recovery-handler execution and pending exits
+# LP-0005 r7: Recovery-handler execution and pending exits
 
 - ID: `LP-0005`
-- Revision: `r6`
+- Revision: `r7`
 - Status: **draft, 2026-10-27; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
@@ -73,21 +73,15 @@ The existing rule puts a handler outside its own recovery boundary. A new failur
 
 ## Exiting with a remainder
 
-Assume an enclosing function and a valid return payload:
+Plain function return is now settled in [LP-0015 r1](LP-0015-early-return-recovery-paths.md). In captured/stored recovery, `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure whenever ErrB matches. The declaration does not finish; its residual T ! (ErrA | Panic) type describes only continuing paths. Any unmatched captured ErrA/Panic occurrences are abandoned with that expression, not automatically forwarded or a basis for rejecting this early-return pattern. ErrB filtering did not consume them; the explicit control-flow exit abandoned their processing.
 
-```text
-{ perform_work() }
-    else (: ErrA) { return fallback_value() }
-    else (: ErrB) { recover_b() }
-```
+The earlier recommendations to convert this normal return into failure or reject it until the captured remainder was handled are withdrawn for ordinary function return. Catch-all early returns also retain their normal meaning, with every original match already consumed before the body runs. Required cleanup and any new failure during payload evaluation or cleanup keep their own obligations.
 
-If both ErrA and ErrB were pending, consuming ErrA leaves ErrB. The return exits the enclosing function; it is not normal completion that automatically advances to the next `else`. The language still needs a rule for this conflict between an explicit exit and an unhandled remainder. Static rejection of an exit that cannot preserve/handle the remainder, or continued outward failure transport instead of that exit, are possible policies, not selected behavior. Do not silently treat ErrB as consumed.
-
-A catch-all that has consumed the whole original group has no original remainder at that point; new failures and required cleanup retain their own obligations. Return/break/continue targets, cleanup ordering, no self-catching, and prior mutation effects retain their existing contracts. Broad recovery does not promise rollback or safe capture of arbitrary foreign crashes.
+Other exits remain distinct: failure-directed raise/! or a nonlocal tagged/loop exit from a partial handler still need their remainder rule. Handler-local return is already selected to complete only that body and preserve the remainder for later layers. Do not merge these cases into one unresolved exit category.
 
 ## Tagged handler follow-up
 
-[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. True nonlocal exits with an unmatched remainder remain the unresolved question above. [LP-0011 r1](LP-0011-explicit-failure-raising.md) records explicit raise forwarding alternatives; LP-0010 extraction forwards its entire operand and does not independently settle a partial handler's implicit remainder. Temporary expression/outcome traces should precede decisions on confusing examples.
+[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. LP-0015 now resolves plain early function return. Other nonlocal tagged/failure-directed exits with a remainder remain the narrower unresolved question above. [LP-0011 r4](LP-0011-explicit-failure-raising.md) records explicit raise forwarding alternatives; LP-0010 extraction forwards its entire operand and does not independently settle a partial handler's implicit remainder. Temporary expression/outcome traces should precede decisions on confusing examples.
 
 ## Revision history
 
@@ -102,5 +96,7 @@ A catch-all that has consumed the whole original group has no original remainder
 `r5` links LP-0009's selected Failure/Panic selectors and LP-0011's explicit raise review. The unmatched-remainder policy remains draft; LP-0010 extraction alone does not settle a partial handler's implicit remainder.
 
 `r6` follows LP-0013 typed scalar selection/discard and LP-0014 directed raise targets/groups. Temporary layers already settle handler-local completion; the remaining true nonlocal-exit issue is transport or rejection of an unmatched remainder, not ordinary chain composition.
+
+`r7` records accepted LP-0015: plain early function return abandons unfinished captured recovery, continuing paths alone determine the residual type, and unmatched captured categories are not implicitly forwarded or cause rejection here. Other nonlocal exit policies, untyped binding, and transport remain draft.
 
 Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).

@@ -76,3 +76,6 @@ Recoverable errors do not imply automatic rollback of earlier mutations. Transac
 - [Memory and performance](memory-and-performance.md)
 
 The source for the selected separation is the LiteScript design discussion. Comparisons in [Result and errors](result-and-errors.md#reference-language-distinction) do not adopt another language's panic implementation.
+
+
+Captured panics are stored outcome data. [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) selects ordinary function return from a partial captured recovery handler even when another captured panic remains: that unfinished expression is abandoned, not automatically reactivated as panic propagation. New live panics during return-payload evaluation or cleanup retain their own rules. This does not define general suppression of an already propagating live panic, or settle remainder policy for other exit kinds.

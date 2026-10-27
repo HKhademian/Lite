@@ -41,6 +41,12 @@ Selected on **2026-10-25**: ordinary return payloads copy their evaluated values
 
 Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): raise failure / raise ...failures completes the nearest function/closure with failure for both Error and Panic. raise @outer failure / raise @outer ...failures selects a lexically enclosing executable block instead. Evaluate the operand once, then bypass intervening recovery/capture inside the chosen target while running applicable cleanup. Recovery surrounding the completed target may handle its outgoing failures. Error/Panic origin chooses the channel rather than a different default target. Required operand, preserved order/origins, and no cross-function jump remain selected; unmatched-remainder policy and custom category grammar remain open. This supersedes LP-0012's earlier local interception of bare Panic raise. See [directed raise examples](manual-failures-and-inference.md#directed-raise-boundaries).
 
+## Early return from captured recovery
+
+Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): a plain return from a handler exits the nearest function/closure with its normal value, abandoning that unfinished captured recovery. For tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` has residual type T ! (ErrA | Panic) only on paths that initialize tmp2. A match returns 1 before initialization, even when other captured categories coexist. Those unmatched captured failures are not consumed by the filter, implicitly forwarded, or grounds for an additional handling rejection here. The 1 belongs to the function success contract, not tmp2's value type.
+
+Handler-local return @handler still finishes only the handler and lets later layers process its remainder. Applicable cleanup and newly produced payload/cleanup failures retain their own rules. The plain-return decision does not settle other nonlocal tagged exits or failure-directed raise/! remainder transport. See [the temporary-layer trace](expression-recovery.md#early-function-returns-and-continuing-path-types).
+
 ## Targeted return
 
 ```text
@@ -72,7 +78,7 @@ Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): o
 
 ## Returns inside recovery handlers
 
-[LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. Nonlocal returns with unmatched failures remain under review; do not silently consume the remainder. See [recovery scope traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
+[LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. LP-0015 resolves plain function returns as abandonment of unfinished captured recovery; other nonlocal tagged exits still need their separate remainder rule. See [recovery scope traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
 
 ## Loop distinction
 

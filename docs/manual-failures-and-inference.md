@@ -140,7 +140,7 @@ tmp2 := tmp1 else :ErrA @handler {
 tmp3 := tmp2 else :ErrB { recover_b() }
 ```
 
-This trace already explains local handler completion and the retained ErrB remainder. A temporary binding itself does not unwrap anything. These are expression/outcome layers, not a general eager-statement lowering for live panics. A true nonlocal exit skips later inner layers; what transports another unmatched category across that exit remains [under review](failure-handling-shortfalls.md#1-exits-with-an-unmatched-remainder).
+This trace already explains local handler completion and the retained ErrB remainder. A temporary binding itself does not unwrap anything. These are expression/outcome layers, not a general eager-statement lowering for live panics. LP-0015 now settles plain function return: it skips later layers and abandons the unfinished captured recovery, without forwarding its unmatched categories. The residual type describes only paths reaching the next declaration. Failure-directed raise/! and other nonlocal tagged exits retain the narrower [remainder question](failure-handling-shortfalls.md#1-exits-with-an-unmatched-remainder).
 
 Local manual failure handling uses an explicit block target:
 
@@ -156,11 +156,32 @@ else :InvalidUser { default_session }
 
 The failure exits @validation, and recovery surrounding that block handles it. Omit @validation and raise exits the function instead. A local `({ raise newPanic })?` therefore does not intercept that function-directed transfer; capture the call or surround an explicitly targeted block to handle it locally. The same boundary rule applies to Error raises.
 
+## Handler-local raise changes the stored outcome
+
+Assume op has outward T and may panic, and err2 is an Error value of type Err2:
+
+```text
+tmp1 := op()?;
+/* tmp1: T ! Panic */
+
+tmp2 := tmp1 else @bl2 {
+    raise @bl2 err2;
+}
+/* tmp2: T ! Err2 */
+
+tmp3 := tmp2!;
+/* tmp3: T on paths that continue */
+```
+
+The receiverless catch consumes every original captured panic before its body executes. raise @bl2 fails only that handler block with err2; it does not exit the function. The same handler cannot catch its own failure. Normal op success skips the handler and remains T. Therefore the outer recovery layer can finish as T ! Err2, replacing the original possible Panic with Err2 under these assumed failure-free operand/cleanup contracts.
+
+A later else on tmp2 may handle Err2. The shown ! instead extracts T on success or forwards Err2 from the nearest function/closure. Err2 must fit that function's explicit/expected or eligible inferred error contract. On the ! failure path tmp3 is not initialized. Unlike plain return from the handler, handler-local raise completes its block with a failure outcome and allows the surrounding recovery declaration to finish. This example consumes the full original group, so it does not require a policy for unmatched remainders in other exit cases.
+
 ## Raising and outward forwarding are different
 
 Raise forwards explicitly supplied failures, scalar or spread, to its chosen boundary. outcome! extracts one complete stored outcome's success or forwards all its retained failures to the nearest function/closure. Existing caught values and new Error/Panic values use the same raise target rules. A typed scalar catch exposes the first match and discards other matches under [LP-0013](proposals/LP-0013-scalar-recovery-selection.md); raising that one value cannot revive discarded matches. Use ...errs to retain and raise every match.
 
-Supplying a group is now selected syntax, not a separate future forwarding operator. The remaining [LP-0011 r3](proposals/LP-0011-explicit-failure-raising.md) issue is other unmatched failures owned by scopes being exited, plus provenance/transport details. Carrying those remainders alongside supplied failures is the reviewed recommendation; the alternative of rejecting an exit until its remainder is handled is not yet ruled out. No remainder may silently vanish. Custom classification of ambiguous/overlapping operands and concrete origin metadata remain open.
+Supplying a group is now selected syntax, not a separate future forwarding operator. The remaining [LP-0011 r4](proposals/LP-0011-explicit-failure-raising.md) issue is other unmatched failures during failure-directed or other nonlocal tagged exits, plus provenance/transport details. LP-0015 separately settles plain return from captured recovery as abandonment, with no extra forwarding or rejection. Carrying those remainders alongside supplied failures is the reviewed recommendation; the alternative of rejecting an exit until its remainder is handled is not yet ruled out. No remainder may silently vanish. Custom classification of ambiguous/overlapping operands and concrete origin metadata remain open.
 
 ## Runtime boundary
 

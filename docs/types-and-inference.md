@@ -244,6 +244,10 @@ A component's successful type test does not automatically identify a generic par
 
 [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) selects explicit capture into T ! Panic or T ! (E | Panic), with retained ordered occurrences and origins. Types list admitted categories without counts; union normalization removes duplicate type alternatives, never failure occurrences. Widening must preserve all occurrences and origins. [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md) makes a completely recovered expression an ordinary T when no possible failure remains on continuing paths. This is not automatic extraction of an arbitrary successful Result instance. Postfix ! supplies T on success and exits outward with remaining failures otherwise. Nested Result success payloads stay intact. See [capture and unwrapping](failure-capture-and-unwrapping.md).
 
+## Continuing-path recovery types
+
+[LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) clarifies that `tmp2 := tmp1 else :ErrB { return 1 }`, for tmp1: T ! (ErrA | ErrB | Panic), has residual T ! (ErrA | Panic) only where the declaration completes. An ErrB match returns 1 from the nearest function/closure instead of initializing tmp2. The 1 belongs to that function's success contract; it does not add Int to tmp2's T. Unmatched captured categories in the abandoned expression are not inferred as escaping errors from this return path. Other continuing paths and newly produced failures keep their own outward contracts. See [early-return recovery](expression-recovery.md#early-function-returns-and-continuing-path-types).
+
 ## Major open decisions
 
 Numeric widths and overflow rules; generic syntax and inference; standalone inferred record literal types; the complete generic variance proof system; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.

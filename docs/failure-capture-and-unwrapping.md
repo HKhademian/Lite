@@ -122,6 +122,12 @@ x23's normal type T does not promise that the original call cannot panic: bare o
 
 If a handler returns U, successful recovery may produce T | U. A handler's new outward failures remain possible. A handler that transfers out supplies no normal value at this continuation.
 
+## Early return abandons the unfinished captured recovery
+
+Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): for tmp1: T ! (ErrA | ErrB | Panic), `tmp2 := tmp1 else :ErrB { return 1 }` returns 1 from the nearest function/closure on an ErrB match. tmp2 is never initialized on that path. If the declaration completes instead, its type is T ! (ErrA | Panic). The 1 belongs to the function's successful return contract, not tmp2's success alternatives.
+
+Even when ErrA and a captured Panic coexist with ErrB, the explicit function return abandons that unfinished recovery; those unmatched captured failures are not automatically raised or grounds for an extra handling rejection here. Filtering did not consume them. Handler-local return @handler instead completes only that body and preserves the remainder for following recovery layers. Cleanup and new payload/cleanup failures keep their ordinary rules. See [the full temporary trace](expression-recovery.md#early-function-returns-and-continuing-path-types).
+
 ## Explicit extraction and propagation
 
 ```text
@@ -158,7 +164,7 @@ Again assume each handler produces T without new failures. With no remaining fai
 
 ## Manual raise and remaining caught-group forwarding
 
-LP-0012 selects manual failure capability and eligible error inference; [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a directed failure exit to the nearest function/closure, or an explicit enclosing block with @outer. The transfer bypasses inner else/? boundaries after operand evaluation; surrounding recovery/capture of the completed target may handle its outgoing failures. Error/Panic origin determines the channel, not a different target. LP-0013 selects typed scalar first-match exposure and intentional discard of other matches; ellipsis exposes all matches. Other unmatched failures during a nonlocal exit remain [draft LP-0011 r3](proposals/LP-0011-explicit-failure-raising.md). See [boundary examples](manual-failures-and-inference.md#directed-raise-boundaries) and [the shortfalls list](failure-handling-shortfalls.md).
+LP-0012 selects manual failure capability and eligible error inference; [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a directed failure exit to the nearest function/closure, or an explicit enclosing block with @outer. The transfer bypasses inner else/? boundaries after operand evaluation; surrounding recovery/capture of the completed target may handle its outgoing failures. Error/Panic origin determines the channel, not a different target. LP-0013 selects typed scalar first-match exposure and intentional discard of other matches; ellipsis exposes all matches. LP-0015 now settles plain early function return as abandonment of unfinished captured recovery. Failure-directed raise/! and other nonlocal tagged exits retain their [draft LP-0011 r4](proposals/LP-0011-explicit-failure-raising.md) remainder policy. See [boundary examples](manual-failures-and-inference.md#directed-raise-boundaries) and [the shortfalls list](failure-handling-shortfalls.md).
 
 ## Implementation and remaining decisions
 

@@ -1,7 +1,7 @@
-# LP-0011 r3: Explicit failure raising from recovery
+# LP-0011 r4: Explicit failure raising from recovery
 
 - ID: `LP-0011`
-- Revision: `r3`
+- Revision: `r4`
 - Status: **draft, 2026-10-27; raise targets/groups selected in LP-0014; unmatched-remainder transport remains open**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
@@ -13,6 +13,10 @@
 [LP-0014 r1](LP-0014-directed-failure-exits.md) now selects raise failure, raise ...failures, and explicit @outer block targets. Untagged raise completes the nearest function/closure with failure, for Error and Panic alike. Tagged raise completes the named enclosing executable block. After operand evaluation the transfer bypasses recovery inside its target; surrounding recovery of that completed target remains eligible. This revises LP-0012's earlier bare Panic local-interception behavior. Required cleanup and preserved channels remain selected.
 
 [LP-0013 r1](LP-0013-scalar-recovery-selection.md) resolves typed scalar multi-match binding: expose the first match, consume/discard the other matches, and leave different categories untouched. The collector exposes all matches; raise ...ps can now forward them explicitly. No-match clauses still skip execution. Raising one scalar cannot revive matches already discarded by that catch.
+
+## Plain function return follow-up
+
+[LP-0015 r1](LP-0015-early-return-recovery-paths.md) resolves normal function return: it abandons unfinished captured recovery and returns the written success value even if other captured categories remain. No implicit forwarding or remainder-based rejection applies to that return pattern. The continuing residual type exists only on paths that finish the recovery declaration. This does not automatically extend to raise/! or other nonlocal tagged/loop exits; the failure-directed question below remains draft.
 
 ## Remaining unmatched-remainder policy
 
@@ -27,5 +31,7 @@ Exact provenance/identity exposure, ownership, filtered sequence providers, and 
 `r2` separates LP-0012's selected manual failure emission from the still-requested caught-group outward forwarding. Panic raise follows ordinary local recovery scope; the earlier forwarding meaning is not silently retained as a second contextual meaning. Scalar/group binding, remainder preservation, forwarding syntax/target, and re-emission provenance remain under review.
 
 `r3` records the accepted LP-0013/LP-0014 follow-up: typed scalar first-match/discard, scalar/group raise, function default targets, and explicit block targets. The draft now concerns unmatched-remainder policy and transport/provenance details; prior emission-versus-forwarding alternatives are history.
+
+`r4` separates LP-0015's accepted plain-return abandonment from the remaining failure-directed/tagged exit remainder policy. Current source references must no longer list normal function return as unresolved.
 
 Current selected extraction: [LP-0010 r1](LP-0010-outcome-extraction-and-exhaustion.md). Related: [pending exits](LP-0005-handler-execution-and-exits.md), [temporary scope traces](LP-0008-recovery-block-tags-and-traces.md), and [capture reference](../failure-capture-and-unwrapping.md#manual-raise-and-remaining-caught-group-forwarding).

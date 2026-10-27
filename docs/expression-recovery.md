@@ -78,9 +78,9 @@ Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-er
 
 For schematic (ErrA1, ErrA2, ErrB), where ErrA1 and ErrA2 are distinct occurrences of ErrA, ordinary type-directed recovery must have a count-independent way to account for the ErrA category. A rule that consumes at most one ErrA per written clause and then requires a manually repeated clause for each remaining ErrA cannot provide that contract. The earlier assistant recommendation to run each clause at most once while consuming one occurrence was not adopted and is withdrawn.
 
-The count-free requirement is completed by whole-match consumption in LP-0006 and the explicit collector in LP-0007 below. Matching bodies execute once; explicit loops perform repeated work. Scalar binding of several matching values, transport/retention, and nonlocal exits with a remainder remain open. No count parameter is added to the error signature.
+The count-free requirement is completed by whole-match consumption in LP-0006 and the explicit collector in LP-0007 below. Matching bodies execute once; explicit loops perform repeated work. Typed scalar first-match/discard is selected in LP-0013; untyped binding, transport/retention, and other failure-directed/tagged exit remainders remain open. LP-0015 resolves plain function return. No count parameter is added to the error signature.
 
-The user's expensive cache-to-database fallback exposes a problem with automatic handler repetition. [LP-0005 r6](proposals/LP-0005-handler-execution-and-exits.md) retains the counterexample and remaining scalar-binding/exit review. LP-0007 now selects once-per-clause execution and explicit ellipsis collectors. The assistant's automatic-repetition recommendation is withdrawn.
+The user's expensive cache-to-database fallback exposes a problem with automatic handler repetition. [LP-0005 r7](proposals/LP-0005-handler-execution-and-exits.md) retains the counterexample and remaining scalar-binding/exit review. LP-0007 now selects once-per-clause execution and explicit ellipsis collectors. The assistant's automatic-repetition recommendation is withdrawn.
 
 The flat outcome still has one active success-or-failure side. An individual ErrA | ErrB value has one active alternative, but [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) now permits the failure side to retain several ordered occurrences without a count in the type. Capture can store supported panics explicitly as T ! (E | Panic); ordinary T ! E does not implicitly include them. See [flat failure outcomes](failure-capture-and-unwrapping.md#flat-type-retained-occurrences).
 
@@ -88,7 +88,7 @@ The flat outcome still has one active success-or-failure side. An individual Err
 
 The user clarifies, 2026-10-26 ([LP-0006 r1](proposals/LP-0006-whole-match-failure-consumption.md)), that simple catching still consumes all its matches. An ordinary ErrA filter covers every pending ErrA occurrence, and a receiverless catch-all covers all pending failures supported by its target. Explicit sequence capture is not required for complete consumption. For (ErrA1, ErrA2, ErrB), the ErrA clause consumes both ErrA values and leaves ErrB. Clauses retain written else order. No matching failure means no body execution; a successful target does not invoke recovery with an empty collection.
 
-The earlier `errs: [ErrA]` capture candidate is superseded by the selected `...errs: ErrA` collector below. A single matching ErrA yields a one-element sequence. Explicit collection exposes all matched values; it does not create ordinary all-match consumption. Untyped broad receiver binding, storage/retention, and nonlocal exits with a different pending category remain under review in [LP-0005 r6](proposals/LP-0005-handler-execution-and-exits.md).
+The earlier `errs: [ErrA]` capture candidate is superseded by the selected `...errs: ErrA` collector below. A single matching ErrA yields a one-element sequence. Explicit collection exposes all matched values; it does not create ordinary all-match consumption. Untyped broad receiver binding, storage/retention, and other failure-directed/tagged exits with a different pending category remain under review in [LP-0005 r7](proposals/LP-0005-handler-execution-and-exits.md).
 
 Whole-match consumption resolves the ordinary type-filter multiplicity requirement in LP-0004. Scalar binding of several matches remains separate; handler execution is once per matching clause under LP-0007. Existing handler failures retain and join an unmatched remainder without retrying the same handler.
 
@@ -110,7 +110,7 @@ A matching catch body runs once for that clause's evaluation. Receiverless catch
 
 Collectors preserve occurrence order within their matched remainder. [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) selects Error for returned errors, Panic for typed panics, and Failure for both. Thus ...fails: Failure binds [Failure] and preserves the complete remaining mixed stream. symbolOfAny remains a historical placeholder, not another spelling. Separate typed collectors retain within-group order but process their groups in written else order, so earlier consumption cannot be undone.
 
-Use one suitable collector before other consuming clauses when the full mixed event order matters. Capturing and looping are separate: a loop break stops per-error work without reviving consumed matches. A nonlocal exit with an unmatched category still needs its own contract. The selected [T] capabilities include count and indexing, while backing storage, allocation/copying, exact lifetime, escaping retention, origin access, and carrier ABI remain open. No implicit List allocation or free filtering is promised.
+Use one suitable collector before other consuming clauses when the full mixed event order matters. Capturing and looping are separate: a loop break stops per-error work without reviving consumed matches. LP-0015 settles plain function return as abandonment of unfinished captured recovery. Other failure-directed/tagged exits with an unmatched category still need their own contract. The selected [T] capabilities include count and indexing, while backing storage, allocation/copying, exact lifetime, escaping retention, origin access, and carrier ABI remain open. No implicit List allocation or free filtering is promised.
 
 ### Typed scalar receivers selected
 
@@ -123,6 +123,29 @@ For pending (ErrA1, Panic1, ErrB1, ErrA2), err: Error exposes ErrA1, consumes th
 Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): `({ work() })?` stores supported returned errors and panics under the flat outcome type. Attached else on that stored value matches its occurrences, consumes all matches, and preserves the remainder without rerunning work. Captured unmatched panics remain stored in the residual type, unlike live panics that continue implicitly after a recovery chain. A following else may handle a new failure from an earlier handler; explicit function/closure-directed ! exits retain their separate control-flow rules.
 
 With failure-free T handlers, `attempt: T ! (E1 | E2 | Panic)` followed by `else :E1 { default_value }` has type T ! (E2 | Panic). Recover E2 and Panic too and the result is T, with no extra !. Narrow BoundPanic recovery cannot exhaust the open Panic family. New handler failures remain in the outcome. This static exhaustion rule is selected in [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md); [detailed type examples](failure-capture-and-unwrapping.md#types-of-the-review-examples) cover ordinary versus captured calls.
+
+### Early function returns and continuing-path types
+
+Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): a plain return in a handler processing a captured/stored outcome exits the nearest function/closure normally and abandons that unfinished recovery expression. Its unmatched captured categories are not implicitly forwarded, and do not cause an additional handling rejection for this pattern. The filter itself consumes only its matches; abandonment by return is a separate control-flow effect.
+
+```text
+tmp1 := operation()?;
+/* tmp1: T ! (ErrA | ErrB | Panic) */
+
+tmp2 := tmp1 else :ErrB {
+    return 1
+}
+/* If execution continues after this declaration:
+   tmp2: T ! (ErrA | Panic). */
+```
+
+ErrB match: return 1, do not initialize tmp2, and do not run later recovery layers. This holds even when ErrA and a captured Panic coexist with ErrB. No ErrB match: the declaration can finish with the original success or retained ErrA/Panic failures. The residual type describes these continuing paths. The 1 contributes to the function's successful return contract, never to tmp2's normal alternatives. Explicit/expected output checking remains in force. The type's Panic alternative denotes possible captured occurrences; it does not require that every actual group contain a panic.
+
+Both `if not condition1 { return "not ready" }` and `do_op()? else { return "error happened" }` are ordinary early returns. The catch-all consumes all matches before its body; a partial typed catch may leave other captured categories that the explicit return then abandons. A return @handler that only completes the catch body instead preserves its remainder for later layers under LP-0008. Temporary outcome traces show which declaration/continuation is reached; they do not unwrap values automatically or retroactively establish live-panic boundaries.
+
+Required exit cleanup still runs. Abandoned captured failures are not carried as active propagating failures into that cleanup; new failures from payload evaluation or cleanup follow their ordinary rules, including cancellation of a pending normal return. This does not decide remainder policy for raise, failure-directed !, or other nonlocal tagged/loop exits. See [control flow](control-flow.md) and [remaining shortfalls](failure-handling-shortfalls.md).
+
+A handler-local failure exit is different: with tmp1: T ! Panic, `tmp2 := tmp1 else @bl2 { raise @bl2 err2 }` has T ! Err2 when err2: Err2 is an Error value and operand/cleanup introduce no other failures. The catch-all consumed every original panic; raise @bl2 fails only the handler block, so the recovery declaration can finish with its new Err2 failure. A following tmp2! yields T on success or forwards Err2. See [the worked local-raise trace](manual-failures-and-inference.md#handler-local-raise-changes-the-stored-outcome).
 
 ### Directed raise within recovery
 
@@ -142,7 +165,7 @@ value := { save_report() }
     else ...errs: CloseFailed { second_value() }
 ```
 
-`return @myblock` completes the first handler only. The remaining CloseFailed occurrences still reach the next clause. A return to an explicit enclosing block, or plain return to the nearest function/closure, is a different exit; unmatched-remainder obligations remain under review in LP-0005.
+`return @myblock` completes the first handler only. The remaining CloseFailed occurrences still reach the next clause. A plain function/closure return instead abandons the unfinished captured recovery under LP-0015. Other nonlocal tagged/failure-directed exits retain their separate remainder question in LP-0005.
 
 Untangle confusing recovery expressions into tmp1 = target, tmp2 = tmp1 else first handler, tmp3 = tmp2 else next handler before deciding scope and outcome behavior. Track each target, normal value, remainder, and new failure. These are expression/outcome layers, not a claim that separate eager statements establish the original panic boundaries. Later recovery in a chain is active while its target runs; later statements cannot retroactively catch an escaped panic.
 

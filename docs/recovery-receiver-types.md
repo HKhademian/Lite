@@ -24,7 +24,7 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r6](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
+Status: **open review, 2026-10-26; [LP-0005 r7](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 
@@ -32,7 +32,7 @@ The revised candidate was selected in LP-0007: run each matching clause's body a
 
 The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](proposals/LP-0005-handler-execution-and-exits.md#type-owned-repetition-information).
 
-A handler's own new failure does not re-enter that handler under the existing selected rule. A nonlocal exit from a handler with an unmatched remainder is a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
+A handler's own new failure does not re-enter that handler under the existing selected rule. LP-0015 resolves plain function return from captured recovery. Other nonlocal tagged/failure-directed exits with an unmatched remainder retain a separate unresolved control-flow question; it cannot be assumed to run the next clause or consume its remaining failures. See [the draft's exit example](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
 
 ## Typed collector capture selected
 
@@ -50,7 +50,7 @@ The ellipsis declares a collector; Error is its element/filter type. The binding
 
 Each collector preserves occurrence order within its matched remainder. LP-0009 now selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both, with [Error], [Panic], and [Failure] bindings. The earlier symbolOfAny placeholder is not source syntax. Several typed collectors preserve within-group order but process their groups in written else order.
 
-The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; LP-0013 now binds the first matching value and consumes/discards the other matches for typed scalar receivers. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; nonlocal exits with a different pending category remain under review.
+The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; LP-0013 now binds the first matching value and consumes/discards the other matches for typed scalar receivers. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; other failure-directed/tagged exit remainders remain under review; LP-0015 resolves plain function return.
 
 ## Typed scalar first-match binding
 
@@ -166,3 +166,8 @@ A public receiver contract must remain stable across inlining and separate compi
 - Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.
 
 Related: [shared expression recovery](expression-recovery.md), [boundary comparison](recovery-boundaries.md), [typed panics](typed-panics.md), [Result errors](result-and-errors.md), [receiver clauses](receiver-clauses.md), and [union matching](union-patterns.md).
+
+
+## Early-return follow-up
+
+[LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) resolves ordinary function return from a partial captured-outcome handler. A matching branch can return its written success value and abandon that unfinished recovery; other captured categories are not automatically forwarded or a reason for an extra handling rejection on this pattern. No recovery result is initialized on that path, so only continuing paths determine its residual type. Handler-local tagged return retains its separate continuation/remainder behavior. Other failure-directed/tagged exits and aggregate inspection remain open; cleanup and new failures retain their rules.
