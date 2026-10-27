@@ -2,6 +2,12 @@
 
 Snapshot: **2026-10-26**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Recovery block scope follow-up, 2026-10-27
+
+- [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects explicit lexical block scope for recovery tags. A protected block tag does not enclose its handlers; a wrapper block is required to target the whole chain. A handler-local `@myblock` return completes only that handler and passes its remaining failures to later clauses.
+- First untangle confusing examples into temporary expression/outcome layers, then decide target, result, remainder, and new-failure behavior. Do not confuse this review technique with an eager statement lowering for panic boundaries.
+- Nonlocal exits with unmatched failures remain open in LP-0005; a valid lexical target alone does not settle that conflict.
+
 ## Established direction
 
 ### Audience and defaults

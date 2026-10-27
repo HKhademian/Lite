@@ -1,8 +1,8 @@
-# LP-0005 r3: Recovery-handler execution and pending exits
+# LP-0005 r4: Recovery-handler execution and pending exits
 
 - ID: `LP-0005`
-- Revision: `r3`
-- Status: **draft, 2026-10-26; counterexample and alternatives under review**
+- Revision: `r4`
+- Status: **draft, 2026-10-27; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
 - Supersedes: none; investigates the execution/binding questions left open by [LP-0004 r1](LP-0004-count-free-error-contracts.md).
@@ -85,6 +85,10 @@ If both ErrA and ErrB were pending, consuming ErrA leaves ErrB. The return exits
 
 A catch-all that has consumed the whole original group has no original remainder at that point; new failures and required cleanup retain their own obligations. Return/break/continue targets, cleanup ordering, no self-catching, and prior mutation effects retain their existing contracts. Broad recovery does not promise rollback or safe capture of arbitrary foreign crashes.
 
+## Tagged handler follow-up
+
+[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. True nonlocal exits with an unmatched remainder remain the unresolved question above. Temporary expression/outcome traces should precede decisions on confusing examples.
+
 ## Revision history
 
 `r1` records the expensive-fallback counterexample, the withdrawn default recommendation, the at-most-once candidate, payload-binding alternatives, exploratory type-owned count/details, and nonlocal exits with a pending remainder. It changes no accepted proposal, grammar, or runtime behavior.
@@ -92,5 +96,7 @@ A catch-all that has consumed the whole original group has no original remainder
 `r2` adds the user's explicit `errs: [ErrA]` capture candidate, singleton support, explicit iteration, the complete [T] capability/storage implications, and the array-payload parsing ambiguity. It links the separately accepted all-match clarification in LP-0006. The capture syntax and remaining handler execution/exit rules stay under review.
 
 `r3` records the accepted follow-up in LP-0007: ellipsis spelling, [Error] bound type, once-per-clause execution, and stable filtered occurrence order. The former bracket-annotation capture is retained as history. This proposal remains draft for unresolved scalar binding, lifetime/transport, and nonlocal exits with unmatched failures.
+
+`r4` records the accepted LP-0008 scope and handler-local completion follow-up while retaining the unresolved nonlocal-exit policy.
 
 Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).

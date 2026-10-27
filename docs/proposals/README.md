@@ -1,6 +1,6 @@
 # Lite Proposal register
 
-Status: **design record, 2026-10-26; no release is created by this register**.
+Status: **design record, 2026-10-27; no release is created by this register**.
 
 Proposals follow [the selected versioning policy](../versioning-and-naming.md#8-proposal-versioning). Each record has a stable LP ID, revision, status, target version or unassigned marker, and supersession information. Accepted proposal text is retained; a later contract change requires a new revision or proposal rather than a silent edit.
 
@@ -16,11 +16,13 @@ Proposals follow [the selected versioning policy](../versioning-and-naming.md#8-
 
 - [LP-0007 r1: Typed recovery collectors and occurrence order](LP-0007-typed-recovery-collectors.md). Target language and compiler/runtime versions: unassigned. Selects ...errs: Error with errs typed [Error], singleton capture, once-per-clause execution, and stable filtered occurrence order. The all-failures marker remains unselected.
 
+- [LP-0008 r1: Recovery block tags and temporary traces](LP-0008-recovery-block-tags-and-traces.md). Target language and compiler/runtime versions: unassigned. Protected-block tags exclude attached handlers; explicit wrapper blocks and handler-local tags define return scope. Temporary traces are a review technique, not retroactive panic boundaries.
+
 These are the first actual proposal records in this repository; LP numbers used as illustrative examples in the naming/versioning page do not reserve proposal IDs. Historical ledger entries are not retroactively renumbered.
 
 ## Drafts under review
 
-- [LP-0005 r3: Recovery-handler execution and pending exits](LP-0005-handler-execution-and-exits.md). Target language and compiler/runtime versions: unassigned. Retains the expensive-fallback and earlier bracket-capture proposal history, follows the selected LP-0007 collector, and reviews residual scalar binding, optional domain-owned count/details, retention/transport, and nonlocal exits with unhandled remainders.
+- [LP-0005 r4: Recovery-handler execution and pending exits](LP-0005-handler-execution-and-exits.md). Target language and compiler/runtime versions: unassigned. Retains the expensive-fallback and earlier bracket-capture proposal history, follows the selected LP-0007 collector, and reviews residual scalar binding, optional domain-owned count/details, retention/transport, and nonlocal exits with unhandled remainders.
 
 ## Current reference and release boundary
 

@@ -80,7 +80,7 @@ For schematic (ErrA1, ErrA2, ErrB), where ErrA1 and ErrA2 are distinct occurrenc
 
 The count-free requirement is completed by whole-match consumption in LP-0006 and the explicit collector in LP-0007 below. Matching bodies execute once; explicit loops perform repeated work. Scalar binding of several matching values, transport/retention, and nonlocal exits with a remainder remain open. No count parameter is added to the error signature.
 
-The user's expensive cache-to-database fallback exposes a problem with automatic handler repetition. [LP-0005 r3](proposals/LP-0005-handler-execution-and-exits.md) retains the counterexample and remaining scalar-binding/exit review. LP-0007 now selects once-per-clause execution and explicit ellipsis collectors. The assistant's automatic-repetition recommendation is withdrawn.
+The user's expensive cache-to-database fallback exposes a problem with automatic handler repetition. [LP-0005 r4](proposals/LP-0005-handler-execution-and-exits.md) retains the counterexample and remaining scalar-binding/exit review. LP-0007 now selects once-per-clause execution and explicit ellipsis collectors. The assistant's automatic-repetition recommendation is withdrawn.
 
 The ordinary Result still has one active success/error outcome. Its ErrA | ErrB payload admits one active alternative; it is not itself an aggregate of both. Language-generated failure aggregation and implicit panic propagation retain their separate contracts, and a Result E does not enumerate all possible panics. See [declared error coverage](result-and-errors.md#declared-error-coverage).
 
@@ -88,7 +88,7 @@ The ordinary Result still has one active success/error outcome. Its ErrA | ErrB 
 
 The user clarifies, 2026-10-26 ([LP-0006 r1](proposals/LP-0006-whole-match-failure-consumption.md)), that simple catching still consumes all its matches. An ordinary ErrA filter covers every pending ErrA occurrence, and a receiverless catch-all covers all pending failures supported by its target. Explicit sequence capture is not required for complete consumption. For (ErrA1, ErrA2, ErrB), the ErrA clause consumes both ErrA values and leaves ErrB. Clauses retain written else order. No matching failure means no body execution; a successful target does not invoke recovery with an empty collection.
 
-The earlier `errs: [ErrA]` capture candidate is superseded by the selected `...errs: ErrA` collector below. A single matching ErrA yields a one-element sequence. Explicit collection exposes all matched values; it does not create ordinary all-match consumption. Scalar receiver binding, storage/retention, and nonlocal exits with a different pending category remain under review in [LP-0005 r3](proposals/LP-0005-handler-execution-and-exits.md).
+The earlier `errs: [ErrA]` capture candidate is superseded by the selected `...errs: ErrA` collector below. A single matching ErrA yields a one-element sequence. Explicit collection exposes all matched values; it does not create ordinary all-match consumption. Scalar receiver binding, storage/retention, and nonlocal exits with a different pending category remain under review in [LP-0005 r4](proposals/LP-0005-handler-execution-and-exits.md).
 
 Whole-match consumption resolves the ordinary type-filter multiplicity requirement in LP-0004. Scalar binding of several matches remains separate; handler execution is once per matching clause under LP-0007. Existing handler failures retain and join an unmatched remainder without retrying the same handler.
 
@@ -111,6 +111,24 @@ A matching catch body runs once for that clause's evaluation. Receiverless catch
 Collectors preserve occurrence order within the selected pending remainder. Error selects returned errors only. An all-failures marker would include both errors and supported typed panics; its spelling remains open, and symbolOfAny is only the discussion's placeholder. For (ErrB1, Panic1, ErrA1, ErrB2, ErrA2), Error preserves (ErrB1, ErrA1, ErrB2, ErrA2); a single all-failures collector would preserve the entire stream. Separate ErrA and ErrB clauses each preserve their group's occurrence order but process the groups in written else order. A later capture cannot restore failures already consumed by earlier clauses.
 
 Use one suitable collector before other consuming clauses when the full mixed event order matters. Capturing and looping are separate: a loop break stops per-error work without reviving consumed matches. A nonlocal exit with an unmatched category still needs its own contract. The selected [T] capabilities include count and indexing, while backing storage, allocation/copying, exact lifetime, escaping retention, origin access, and carrier ABI remain open. No implicit List allocation or free filtering is promised.
+
+### Handler block tags and temporary traces
+
+Selected 2026-10-27 in [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md): a tag names its explicit block, not the entire following recovery chain. In `@inner { work() } else { fallback() }`, @inner is not an enclosing target inside fallback. To return to a block enclosing both work and recovery, write `@inner { { work() } else { fallback() } }`.
+
+A handler can tag its own body:
+
+```text
+value := { save_report() }
+    else ...errs: DiskFull @myblock {
+        return @myblock first_value()
+    }
+    else ...errs: CloseFailed { second_value() }
+```
+
+`return @myblock` completes the first handler only. The remaining CloseFailed occurrences still reach the next clause. A return to an explicit enclosing block, or plain return to the nearest function/closure, is a different exit; unmatched-remainder obligations remain under review in LP-0005.
+
+Untangle confusing recovery expressions into tmp1 = target, tmp2 = tmp1 else first handler, tmp3 = tmp2 else next handler before deciding scope and outcome behavior. Track each target, normal value, remainder, and new failure. These are expression/outcome layers, not a claim that separate eager statements establish the original panic boundaries. Later recovery in a chain is active while its target runs; later statements cannot retroactively catch an escaped panic.
 
 ### Receiver forms and aggregate patterns
 

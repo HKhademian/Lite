@@ -24,7 +24,7 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r3](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
+Status: **open review, 2026-10-26; [LP-0005 r4](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 

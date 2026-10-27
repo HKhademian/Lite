@@ -619,7 +619,7 @@ target else (name: (: FailureType, : FailureType)) { recovery_body }
 target else (: (: FailureType, : FailureType)) { recovery_body }
 
 recovery_expression := target else_clause { else_clause } [ finally_clause ]
-else_clause := "else" [recovery_receiver] block
+else_clause := "else" [recovery_receiver] [tag] block
 recovery_receiver := "(" [recovery_pattern] ")" | recovery_pattern
 recovery_pattern := identifier
                   | "_"
@@ -637,6 +637,8 @@ ordered_failure_entry := ":" FailureType | identifier ":" FailureType
 These are selected surface templates, not complete productions. Postfix `!` extracts one successful Result payload or returns its typed error from the nearest function or closure; it must not silently extract every Result in a chain. It participates in left-to-right postfix chaining, so `load_user(id)!.load_profile()!.name` needs no grouping around each extraction. `!.` is the `!` token followed by the ordinary `.` token, not a nullable-access token; token-separating whitespace changes no meaning.
 
 Selected panic target distinction, 2026-10-26 ([LP-0001 r1](proposals/LP-0001-operation-specific-panic-recovery.md), [LP-0002 r1](proposals/LP-0002-explicit-block-panic-recovery.md)): `operation(args) else { fallback }` handles only faults defined by that operation. Panics while evaluating arguments/operands bypass its handler. `{ operation(args) } else { fallback }` instead establishes broad recovery before the explicit block's first item and covers supported typed panics from its executed contents, including arguments and synchronously called code. The braces are the selected target boundary and need no extra grouping. A block's own handler is outside its protected contents; supported exits and explicit Result handling retain their existing rules. Operation fault attribution and complete postfix/chain integration remain open.
+
+Selected [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) allows a tag immediately before a handler body, as in `else ...errs: DiskFull @myblock { return @myblock value }`. That tag names only that block; its local return completes the handler and retains the remainder for the next recovery layer. A tag on the protected block does not enclose attached handlers. Use an additional explicit tagged wrapper for that scope. Review ambiguous chains as temporary outcome layers before deciding their behavior; these traces do not make separate eager statements retroactively protect earlier panic evaluation.
 
 A recovery expression has one or more `else` clauses. Each later clause wraps the entire preceding recovery, so it can catch a new matching failure raised by an earlier handler. The optional `finally` is cleanup-only: it runs as the protected expression exits, preserves any pending result, exit, or failure, and does not recover. This reuses the loop/conditional `finally_clause`; its attachment scope and interaction with body-wide cleanup remain under review. A recovery chain does not add an external `else` tail to a whole `if`, loop, or match; body-owned recovery remains selected.
 

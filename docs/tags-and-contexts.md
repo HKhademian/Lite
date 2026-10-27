@@ -18,6 +18,10 @@ Prefix tags replace the earlier suffix-header and `label: construct` sketches. A
 
 Function and closure declarations are not current tag targets. They use plain `return`; whether a nested function or lambda can return to an enclosing function, and whether functions should carry tags for visibility or future metadata, are deferred to the nested-function review.
 
+## Recovery block scope
+
+Selected 2026-10-27 in [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md): a tag on a recovery target block does not enclose its attached handlers. Write an extra explicit tagged block around the whole recovery chain when its handlers must return to that block. A handler-local tag is a prefix on its own body: `else ...errs: DiskFull @myblock { return @myblock value }`. That return completes only the handler; the next recovery layer still receives any unmatched remainder. See [handler tags and traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
+
 ## Named metadata
 
 ```text

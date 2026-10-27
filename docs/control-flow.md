@@ -62,6 +62,10 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 
 For a tagged `return`, the target's kind determines how its supplied `T` completes: a loop or conditional with `then` runs it once to produce `R`; a target without `then` returns `T` directly.
 
+## Returns inside recovery handlers
+
+[LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. Nonlocal returns with unmatched failures remain under review; do not silently consume the remainder. See [recovery scope traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
+
 ## Loop distinction
 
 - `continue`: move to the next iteration without a contribution.
