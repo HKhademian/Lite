@@ -22,6 +22,12 @@ Function and closure declarations are not current tag targets. They use plain `r
 
 Selected 2026-10-27 in [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md): a tag on a recovery target block does not enclose its attached handlers. Write an extra explicit tagged block around the whole recovery chain when its handlers must return to that block. A handler-local tag is a prefix on its own body: `else ...errs: DiskFull @myblock { return @myblock value }`. That return completes only the handler; the next recovery layer still receives any unmatched remainder. See [handler tags and traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
 
+## Directed failure targets
+
+Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): `raise @outer failure` or `raise @outer ...failures` completes the named lexically enclosing executable block with failure, analogous to return @outer supplying its normal result. Untagged raise targets the nearest function/closure, never an implicit nearest ordinary block. A transfer cannot cross a function/closure boundary, and this adds no tags to function declarations. Other target kinds require their own support rule.
+
+After operand evaluation, the jump bypasses intervening else/? boundaries inside its target; recovery/capture surrounding the completed target may handle its outgoing failures. Required cleanup runs. A tag on a protected block still does not enclose that block's attached handlers; add an explicit tagged wrapper when they need to jump around the whole chain. See [the boundary example](manual-failures-and-inference.md#directed-raise-boundaries). Other unmatched pending failures require their separate exit policy.
+
 ## Named metadata
 
 ```text

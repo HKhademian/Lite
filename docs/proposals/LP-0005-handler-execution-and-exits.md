@@ -1,7 +1,7 @@
-# LP-0005 r5: Recovery-handler execution and pending exits
+# LP-0005 r6: Recovery-handler execution and pending exits
 
 - ID: `LP-0005`
-- Revision: `r5`
+- Revision: `r6`
 - Status: **draft, 2026-10-27; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
@@ -23,7 +23,7 @@ Consuming matched failures and executing a recovery computation are distinct des
 
 The candidate below was subsequently selected in LP-0007: evaluate each matching `else` body at most once for one evaluation of its target, after selecting its matched pending failures. A receiverless catch-all would consume the supported pending group and evaluate the database fallback once, regardless of that group's occurrence count. A typed clause would select its covered category/group and leave unmatched categories for later clauses. Clauses would retain written source order.
 
-An annotation `error: ErrA` must not silently bind an arbitrary occurrence and discard others, or pretend that one ErrA value is a group. The user's explicit sequence-capture candidate below provides a concrete way to review multiple-payload access. Scalar receiver behavior remains open. The collector grammar and binding direction are now selected separately in LP-0007; this draft does not finalize scalar multi-payload binding or an escaping inspection API.
+An annotation `error: ErrA` must not silently bind an arbitrary occurrence and discard others, or pretend that one ErrA value is a group. The user's explicit sequence-capture candidate below provides a concrete way to review multiple-payload access. LP-0013 now selects typed scalar first-match exposure and discard of other matches; untyped broad binding remains open. The collector grammar and binding direction are now selected separately in LP-0007; this draft does not finalize scalar multi-payload binding or an escaping inspection API.
 
 An alternative would repeat named scalar handlers while running receiverless handlers once. That makes adding or removing a receiver name change side-effect counts. Review that cost explicitly against optional-receiver semantics; it is not selected. Distinguishing per-occurrence processing with an explicit source form is another open alternative.
 
@@ -100,5 +100,7 @@ A catch-all that has consumed the whole original group has no original remainder
 `r4` records the accepted LP-0008 scope and handler-local completion follow-up while retaining the unresolved nonlocal-exit policy.
 
 `r5` links LP-0009's selected Failure/Panic selectors and LP-0011's explicit raise review. The unmatched-remainder policy remains draft; LP-0010 extraction alone does not settle a partial handler's implicit remainder.
+
+`r6` follows LP-0013 typed scalar selection/discard and LP-0014 directed raise targets/groups. Temporary layers already settle handler-local completion; the remaining true nonlocal-exit issue is transport or rejection of an unmatched remainder, not ordinary chain composition.
 
 Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).

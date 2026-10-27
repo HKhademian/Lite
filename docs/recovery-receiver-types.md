@@ -1,6 +1,6 @@
 # Types received by recovery handlers
 
-Status: **typed filtering and ellipsis collectors selected; flat Error/Panic/Failure outcome categories selected 2026-10-27 in LP-0009**. The earlier receiver alternatives below are design history. Scalar multi-match binding, origin-inspection syntax, and representation remain open; [capture and unwrapping](failure-capture-and-unwrapping.md) states the current contract.
+Status: **typed filtering and ellipsis collectors selected; flat Error/Panic/Failure outcome categories selected 2026-10-27 in LP-0009**. The earlier receiver alternatives below are design history. Typed scalar first-match/discard is selected in LP-0013; untyped binding, origin-inspection syntax, and representation remain open; [capture and unwrapping](failure-capture-and-unwrapping.md) states the current contract.
 
 ## The question
 
@@ -24,11 +24,11 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r5](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
+Status: **open review, 2026-10-26; [LP-0005 r6](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 
-The revised candidate was selected in LP-0007: run each matching clause's body at most once per evaluation of its target and consume its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation alone does not expose several payloads. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. Those contrasting execution-count alternatives are unselected; the ellipsis collector below is selected.
+The revised candidate was selected in LP-0007: run each matching clause's body at most once per evaluation of its target and consume its matched group. A catch-all could then replace one failed cache computation with one database computation. Typed group binding still needs design; a scalar ErrA annotation exposes the first match and intentionally discards the other matching payloads under LP-0013. Running receiverless handlers once but named handlers per occurrence is a separate alternative with observable costs: adding a receiver name would change execution count. Those contrasting execution-count alternatives are unselected; the ellipsis collector below is selected.
 
 The user also explores optional count/details inside ErrA when meaningful to its domain, such as a batch failure count, while ordinary errors need no such field. This separates error-value information from the count-free function signature and handler execution count. It does not yet define how independently produced same-type values combine or change the selected retention of secondary failures; see [type-owned repetition information](proposals/LP-0005-handler-execution-and-exits.md#type-owned-repetition-information).
 
@@ -50,7 +50,11 @@ The ellipsis declares a collector; Error is its element/filter type. The binding
 
 Each collector preserves occurrence order within its matched remainder. LP-0009 now selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both, with [Error], [Panic], and [Failure] bindings. The earlier symbolOfAny placeholder is not source syntax. Several typed collectors preserve within-group order but process their groups in written else order.
 
-The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; scalar binding of several such values remains open. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; nonlocal exits with a different pending category remain under review.
+The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; LP-0013 now binds the first matching value and consumes/discards the other matches for typed scalar receivers. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; nonlocal exits with a different pending category remain under review.
+
+## Typed scalar first-match binding
+
+[LP-0013 r1](proposals/LP-0013-scalar-recovery-selection.md) selects err: Error to expose the first matching Error occurrence in occurrence order, consume every matching Error, and discard the other matched payloads. Other categories remain untouched. ...errs: Error consumes the same matches and exposes all of them as [Error]. Both bodies run once, and no match skips the clause. Typed scalar filters for ErrA/Panic/Failure follow the same rule; exact tuple group receivers retain their tuple binding. Untyped broad receiver binding and aggregate .err inspection remain open. See [current scalar recovery](expression-recovery.md#typed-scalar-receivers-selected).
 
 ## Direct-union direction and scalar receiver history
 
@@ -96,7 +100,7 @@ Recommendation: prefer candidate A for ordinary receiver access, while retaining
 
 If the eventual error-type rules permit returning a Panic carrier as an ordinary .err payload, E | Panic can normalize to Panic. The receiver's type alone then cannot tell whether the value was returned or raised as a panic.
 
-Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling and overlapping-payload typing remain open. LP-0010 now specifies that ! forwards stored occurrences with their retained origins; distinct caught-group forwarding remains a draft in LP-0011. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
+Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling and overlapping-payload typing remain open. LP-0010 now specifies that ! forwards stored occurrences with their retained origins; LP-0014 now selects directed scalar/group raise and explicit block targets; unmatched-remainder/provenance transport remains draft LP-0011. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
 
 ## Selected typed receiver filtering
 
@@ -156,7 +160,7 @@ A public receiver contract must remain stable across inlining and separate compi
 
 ## Decisions remaining
 
-- Flat E | Panic categories and Failure selection are now chosen in LP-0009; scalar binding for several matches and generalized .err payload inspection still need contracts.
+- Flat E | Panic categories and Failure selection are now chosen in LP-0009; LP-0013 now selects typed scalar first-match/discard; untyped broad binding and generalized .err payload inspection still need contracts.
 - The typed Panic carrier/category model and any failure-origin metadata API.
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
 - Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.

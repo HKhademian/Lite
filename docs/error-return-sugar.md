@@ -1,6 +1,6 @@
 # Throw as an error return
 
-Status: **historical unselected throw shorthand; manual raise selected instead, 2026-10-27, LP-0012 r1**. The comparison below preserves earlier proposal reasoning. Current Error raise returns failure from the nearest function/closure; Panic raise uses ordinary typed-panic propagation. Eligible omitted outputs may infer escaping returned errors. See [manual failures and inference](manual-failures-and-inference.md).
+Status: **historical unselected throw shorthand; manual raise selected instead, 2026-10-27, LP-0012 r1**. The comparison below preserves earlier proposal reasoning. LP-0014 now makes both Error and Panic raise directed exits, with a function/closure default or explicit block target; their outgoing channels remain distinct. Eligible omitted outputs may infer escaping returned errors. See [manual failures and inference](manual-failures-and-inference.md).
 
 ## Core equivalence
 

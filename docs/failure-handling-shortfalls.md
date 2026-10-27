@@ -1,6 +1,6 @@
 # Failure-handling shortfalls
 
-Status: **supporting review queue, 2026-10-27**. Selected capture, flat outcome types, munching, collectors, extraction, handler tags, manual failures, and eligible escaping-error inference are recorded in LP-0001–LP-0010 and LP-0012. This list tracks incomplete contracts; alternatives here are not selected rules. See the [proposal register](proposals/README.md).
+Status: **supporting review queue, 2026-10-27**. Selected capture, flat outcome types, munching, collectors, extraction, handler tags, manual failures, and eligible escaping-error inference are recorded in LP-0001–LP-0010 and LP-0012–LP-0014. This list tracks incomplete contracts; alternatives here are not selected rules. See the [proposal register](proposals/README.md).
 
 ## 1. Exits with an unmatched remainder
 
@@ -10,15 +10,15 @@ attempt
     else :ErrB { recover_b() }
 ```
 
-When both errors are pending, ErrB survives the first catch. A return, outward ! inside that handler, or Error raise must not silently discard it. Decide whether the remainder forwards despite the requested exit or the exit is rejected until it is handled. Handler-local tagged returns already complete only that body and preserve the remainder for later clauses. Ordinary target validity and cleanup ordering alone do not settle a true nonlocal exit. Owner: [LP-0005 r5](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
+When both errors are pending, ErrB survives the first catch. A true nonlocal return, raise, or ! inside that handler must not silently discard it. LP-0014 now specifies the destination and skipped handlers; carrying the remainder too in preserved order is the reviewed recommendation, while rejection until handled remains an alternative. Handler-local tagged return is already settled by tmp* composition: finish that handler and pass ErrB to the next layer. Do not treat ordinary local completion as an open issue. Owner: [LP-0005 r6](proposals/LP-0005-handler-execution-and-exits.md#exiting-with-a-remainder).
 
-## 2. Explicit forwarding from a catch
+## 2. Supplied group provenance and typing
 
-Manual Panic raise now emits through ordinary panic propagation; a later eligible else can catch it. The requested operation that forwards caught occurrences past local handlers still needs spelling/target and remainder rules. outcome! forwards its complete operand; a partially consuming catch also has an implicit unmatched remainder. Do not conflate these situations. raise ...ps is historical proposed syntax, not selected manual raise. Scalar p: Panic also needs its multi-match rule. Owner: [LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md).
+LP-0014 now selects raise ...errs and explicit raise @outer ...errs. Destination/spelling are no longer gaps; both Error and Panic use the same targeting rule. Finish exact retained occurrence identity/provenance representation, admissibility of ambiguous/overlapping failure operands, and sequence-provider/ownership integration. The selected contract preserves supplied channels and order; it does not expose a concrete metadata object or choose a transport ABI. Other unmatched categories belong to the separate exit policy above. Owner: [LP-0011 r3](proposals/LP-0011-explicit-failure-raising.md).
 
 ## 3. Public access to several failures
 
-...errs: Error is selected and binds [Error]; ...fails: Failure binds [Failure]. But a scalar recovery binding and match .err(error) need defined behavior when the same flat outcome holds several occurrences. Neither can choose an arbitrary first occurrence or silently lose payloads. Decide aggregate .err payload inspection and construction without requiring the caller to know how the value was produced. Owner: [flat outcomes](failure-capture-and-unwrapping.md#flat-type-retained-occurrences).
+Typed scalar binding is now solved by LP-0013: expose the first match and intentionally discard the other matching payloads, leaving other categories untouched. ...errs: Error exposes all matches as [Error]. Untyped broad receiver binding and match .err(error) still need a complete aggregate payload/inspection contract. This API must work from the flat type without knowing capture provenance. Owner: [flat outcomes](failure-capture-and-unwrapping.md#flat-type-retained-occurrences).
 
 ## 4. Custom category declarations and overlap
 

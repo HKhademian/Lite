@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and caught-group forwarding remain open. Manual raise and eligible escaping-error inference are selected in LP-0012.
+Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and caught-group forwarding remain open. Manual failure/inference capability is selected in LP-0012; LP-0013/LP-0014 now select typed scalar first-match/discard and directed scalar/group raise.
 
 Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Failure capture and unwrapping](failure-capture-and-unwrapping.md) owns explicit postfix ? boundaries, flat error/panic outcomes, and extraction after recovery. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
 
@@ -28,7 +28,7 @@ Every recoverable error that can escape a function must fit its established outw
 
 Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-error-contracts.md)): `fn(...): T ! (ErrA | ErrB)` admits failure categories without occurrence counts. Callers must not predict multiplicity or repeat a catch clause per occurrence. [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) extends the earlier singular Result description: the flat failure side may preserve ordered repeated occurrences. A union lists permitted categories rather than encoding or deduplicating those occurrences. Ordinary explicit .err(error) construction is singular; capture/aggregation can retain several. No implicit Panic member is added to ordinary E.
 
-The [whole-match clarification](expression-recovery.md#whole-match-consumption-selected), LP-0006, covers every matching pending occurrence. LP-0007 selects explicit ...errs: Error collection as [Error], singleton support, once-per-clause execution, and stable occurrence order. LP-0009 adds ...ps: Panic and ...fails: Failure. Scalar multi-value binding, representation, and nonlocal exits with unmatched remainders remain open.
+The [whole-match clarification](expression-recovery.md#whole-match-consumption-selected), LP-0006, covers every matching pending occurrence. LP-0007 selects explicit ...errs: Error collection as [Error], singleton support, once-per-clause execution, and stable occurrence order. LP-0009 adds ...ps: Panic and ...fails: Failure. LP-0013 selects typed scalar first-match/discard; untyped binding, representation, and nonlocal exits with unmatched remainders remain open.
 
 - An explicit or expected plain T output declares no recoverable failure; the function must handle such errors internally. Omitting an output under eligible LP-0012 body inference instead allows an inferred T ! E contract.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
@@ -89,7 +89,7 @@ validate_age := fn(age: Int): Int ! AgeError {
 
 The expected `Int ! AgeError` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
 
-Manual raise expression is selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): an established Error-category value exits the nearest function/closure like return .err(value); an established Panic-category value initiates ordinary typed-panic propagation. This replaces the unselected throw error shorthand as the selected manual-failure spelling. Explicit return .ok(value) and implicit ordinary success remain available. See [manual failures and inference](manual-failures-and-inference.md).
+Manual failure construction and inference are selected in LP-0012. [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now specifies directed raise failure / raise ...failures, defaulting to the nearest function/closure for both Error and Panic, or an explicit @outer enclosing-block target. Error/Panic retains its outgoing channel; local handlers inside the target cannot intercept the directed transfer. Surrounding recovery of the completed target remains eligible. Tagged Error failures handled locally do not enter the function's outward error set. See [manual failures](manual-failures-and-inference.md).
 
 ## Proposed conversion boundary
 

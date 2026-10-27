@@ -1,6 +1,6 @@
 # Failure capture, flat outcomes, and unwrapping
 
-Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) and [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). Manual raise and eligible escaping-error inference are selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md). Distinct caught-group forwarding remains a [draft](proposals/LP-0011-explicit-failure-raising.md), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
+Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) and [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). Manual raise and eligible escaping-error inference are selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md). Directed scalar/group raise and explicit block targets are now selected in [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md). Its unmatched-remainder policy remains a [draft](proposals/LP-0011-explicit-failure-raising.md), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
 
 Normative for explicit capture and extraction; [Result and errors](result-and-errors.md) owns ordinary outcomes, [expression recovery](expression-recovery.md) owns matching and consumption, and [finally](finally.md) owns cleanup.
 
@@ -100,7 +100,7 @@ value := attempt
     }
 ```
 
-Failure supplies the previously missing all-failures selector. Receiverless else still consumes everything supported by its target and executes once. Explicit collection is for payload access, not a prerequisite for complete munching. A scalar binding such as p: BoundPanic still needs its multi-match binding policy; use the ellipsis collector to expose every occurrence unambiguously.
+Failure supplies the previously missing all-failures selector. Receiverless else still consumes everything supported by its target and executes once. Explicit collection is for payload access, not a prerequisite for complete munching. LP-0013 now selects typed scalar p: BoundPanic: expose the first match in occurrence order, consume/discard its other matches, and leave different categories untouched. Use ...ps: BoundPanic to expose every matching payload. Untyped broad binding and generalized .err inspection remain open.
 
 ## Types of the review examples
 
@@ -158,7 +158,7 @@ Again assume each handler produces T without new failures. With no remaining fai
 
 ## Manual raise and remaining caught-group forwarding
 
-Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): raise expression returns an Error failure from the nearest function/closure or initiates ordinary Panic propagation, according to established category membership. A manually raised panic can be captured locally; a panic raised in one handler may reach a later eligible else. Reusing a caught payload does not select a different bypass behavior. Eligible unannotated outputs infer escaping returned errors only. The earlier request for explicit caught-group forwarding past later clauses remains [draft LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md), with spelling/target, scalar multi-match binding, re-emission provenance, and unmatched-remainder policy unresolved. The old raise ...ps candidate is not a selected manual-raise form. See [manual examples](manual-failures-and-inference.md) and [remaining shortfalls](failure-handling-shortfalls.md).
+LP-0012 selects manual failure capability and eligible error inference; [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a directed failure exit to the nearest function/closure, or an explicit enclosing block with @outer. The transfer bypasses inner else/? boundaries after operand evaluation; surrounding recovery/capture of the completed target may handle its outgoing failures. Error/Panic origin determines the channel, not a different target. LP-0013 selects typed scalar first-match exposure and intentional discard of other matches; ellipsis exposes all matches. Other unmatched failures during a nonlocal exit remain [draft LP-0011 r3](proposals/LP-0011-explicit-failure-raising.md). See [boundary examples](manual-failures-and-inference.md#directed-raise-boundaries) and [the shortfalls list](failure-handling-shortfalls.md).
 
 ## Implementation and remaining decisions
 

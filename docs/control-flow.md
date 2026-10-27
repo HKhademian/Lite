@@ -10,6 +10,10 @@ return value;
 return @tag;
 return @tag value;
 return @tag @other.value;
+raise failure;
+raise ...failures;
+raise @tag failure;
+raise @tag ...failures;
 break;
 break value;
 break @loop;
@@ -35,7 +39,7 @@ Selected on **2026-10-25**: ordinary return payloads copy their evaluated values
 
 `return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary. [Early-exit narrowing](type-tests-and-narrowing.md#narrowing-after-early-exits-selected) retains supported type facts about stable existing bindings on all paths reaching a continuation. An exiting path contributes no normal continuation there; determine this from its actual target and completion behavior, not the exit keyword alone. This changes no binding scope or cleanup obligation. The selected built-in Int distinctness fact follows the same reaching-path rule: after if i == j { return; }, stable i and j may justify separate var element grants into the same initialized writable fixed array. An equal-index branch that continues cannot establish that fact; ordinary bounds checks and proof stability remain. See [element distinctness after an early exit](call-replacement-flow.md#element-distinctness-after-an-early-exit-selected).
 
-Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): raise expression evaluates its operand once. An Error-category value exits the nearest function/closure with a returned failure; a Panic-category value initiates ordinary panic propagation and may reach eligible local recovery. Applicable cleanup runs. It produces no normal local result. Bare/tagged raise and group-forwarding syntax are not selected. The earlier throw error shorthand is unselected history. See [manual failures](manual-failures-and-inference.md).
+Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): raise failure / raise ...failures completes the nearest function/closure with failure for both Error and Panic. raise @outer failure / raise @outer ...failures selects a lexically enclosing executable block instead. Evaluate the operand once, then bypass intervening recovery/capture inside the chosen target while running applicable cleanup. Recovery surrounding the completed target may handle its outgoing failures. Error/Panic origin chooses the channel rather than a different default target. Required operand, preserved order/origins, and no cross-function jump remain selected; unmatched-remainder policy and custom category grammar remain open. This supersedes LP-0012's earlier local interception of bare Panic raise. See [directed raise examples](manual-failures-and-inference.md#directed-raise-boundaries).
 
 ## Targeted return
 
@@ -64,7 +68,7 @@ For a tagged `return`, the target's kind determines how its supplied `T` complet
 
 ## Captured outcomes and outward extraction
 
-Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): outcome! supplies one successful payload or forwards every retained occurrence from the nearest function/closure. Returned errors obey declared coverage; explicitly captured panics resume their original panic channel through required cleanup. This failure path is a directed exit that later local else does not intercept. Ordinary live panics during operand evaluation remain separate; ! establishes no capture boundary. The ? capture boundary does not intercept return, tagged exits, or function-targeted !. Distinct caught-group forwarding from a partial catch remains under review in [LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md), especially unmatched remainders.
+Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): outcome! extracts a complete outcome's successful payload or forwards its retained failures from the nearest function/closure. LP-0014 adds explicit scalar/group raise operands and optional block targets under the same directed-exit model. Both skip intervening local recovery during transfer. Generated/live operand panics remain separate; ! establishes no capture boundary, and ? does not intercept these directed exits before their targets complete. Other pending categories owned by partial catches still need their [remainder policy](proposals/LP-0011-explicit-failure-raising.md).
 
 ## Returns inside recovery handlers
 
