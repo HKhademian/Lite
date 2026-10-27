@@ -11,7 +11,7 @@ receiver: A | B = choose_value();
 value := receiver.field;
 ```
 
-If A.field has type X and B.field has type Y, value has type X | Y. Duplicate resolved identities disappear, order does not matter, and nested plain unions flatten. No conversion is needed merely because the field types differ.
+If A.field has type X and B.field has type Y, value has type X | Y. Duplicate resolved identities disappear, order does not matter, and nested plain unions flatten. No explicit conversion syntax is required merely because the field types differ; the compiler must construct a valid result representation when member admission changes the layout.
 
 The runtime read selects the field belonging to the active alternative. It does not evaluate the fields of inactive alternatives. Evaluate the receiver expression once under the ordinary evaluation rules.
 
@@ -43,6 +43,44 @@ match value {
 ```
 
 For field types X | Y and Y | Z, the read produces X | Y | Z. Transparent aliases do not add alternatives; separately declared record field types remain distinct even if their shapes match.
+
+## Field reads construct the result representation
+
+Clarified 2026-10-27: the union of readable field types is a produced value contract, not a claim that the original field already occupies a union slot. For established distinct record alternatives:
+
+```text
+P := record { value: Int; }
+Q := record { value: String; }
+
+parent: P | Q = choose_parent();
+copied := parent.value; /* Int | String */
+```
+
+For this stable local parent, the read has the following conceptual expansion:
+
+```text
+copied := if parent: P {
+    parent.value /* Int, implicitly admitted into the result union */
+} else {
+    parent.value /* Q.value: String, implicitly admitted into the result union */
+}
+```
+
+The complete if/else infers Int | String under the selected [branch-result rule](branch-result-inference.md). Each executed branch supplies its field value and constructs the destination's corresponding active member. The compiler knows the parent-to-result member mapping; it does not inspect naked payload bytes to guess their type. In abstract memory notation:
+
+```ini
+parent P case = [P][7]
+copied result = [Int][7]
+
+parent Q case = [Q]["hello"]
+copied result = [String]["hello"]
+```
+
+The source parent tag and the produced field-result tag have different roles. Preserve the active field value, its ordinary copy effects, and any necessary destination representation adaptation. The original field keeps its declared Int or String storage and is not silently replaced by a tagged Int | String field. Its copied result adds no write authority or reference back to the source.
+
+This expansion describes value/effect semantics, not mandatory extra intermediate copies or generated branches. Evaluate an arbitrary receiver expression once, dispatch on that evaluated receiver, and read only the selected field; do not repeat a call/getter or manufacture a snapshot to justify the expansion. If a valid proof already determines the active parent alternative, the dispatch/tag choice can be fixed. Physical copy/store counts, tag encodings, and ABI remain separate.
+
+In particular, a produced Int | String read does not justify passing the original Int-or-String field as var (Int | String). Such a whole-union grant could write a String tag/payload into an Int field. The existing [all-target write rules](union-field-writes.md) still apply; after a valid parent refinement, an appropriately authorized member-only grant follows its original field contract. This adds no general reference syntax or conversion between record identities.
 
 ## A missing or inaccessible field rejects the read
 
