@@ -20,5 +20,6 @@ The project is currently **planning only**. These documents record the design di
 - [External references](docs/references.md)
 - [Documentation review backlog](TASKS.md): historical 2026-10-23 snapshot; current rules are in the decision ledger.
 - [Backlog by topic](ISSUES-BY-TOPIC.md): topic-grouped view of the same snapshot.
+- [Investigation catalog for agents and developers](investigations/README.md): 75 topic briefs outside the language draft, scoped starter subtopics, starting references, and a reusable investigation-note template. This is an inventory, not a roadmap or a set of language decisions.
 
 Each concept has its own document containing its purpose, working syntax, examples, constraints, and unresolved details. Earlier alternatives are retained only when they explain a decision or an outstanding choice.
