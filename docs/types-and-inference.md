@@ -248,6 +248,12 @@ A component's successful type test does not automatically identify a generic par
 
 [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) clarifies that `tmp2 := tmp1 else :ErrB { return 1 }`, for tmp1: T ! (ErrA | ErrB | Panic), has residual T ! (ErrA | Panic) only where the declaration completes. An ErrB match returns 1 from the nearest function/closure instead of initializing tmp2. The 1 belongs to that function's success contract; it does not add Int to tmp2's T. Unmatched captured categories in the abandoned expression are not inferred as escaping errors from this return path. Other continuing paths and newly produced failures keep their own outward contracts. See [early-return recovery](expression-recovery.md#early-function-returns-and-continuing-path-types).
 
+## Capture normalization and explicit inspection
+
+[LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md) permits repeated capture: capture(T ! Es) is T ! (Es | Panic), equal to T ! Es if broad Panic is already a normalized member. This deduplicates type alternatives, never occurrences. Existing outward outcomes preserve all data/identities; nested successful Results retain their layers. An unchanged type does not prove redundant capture, and every warning is suppressible.
+
+[LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md) makes .err(e) expose the first failure as F and .err(...es) expose all as [F] for T ! F. Scalar subpatterns test only the first occurrence; no hidden search or automatic original-value mutation is introduced. [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) prohibits checked live-panic effect declarations/inference. A function return annotation containing captured Panic describes literal outcome data, not a live effect projected away by ordinary calls. Newly captured live panics use broad Panic with retained concrete categories. See [Result patterns](result-and-errors.md#failure-occurrence-patterns) and [implicit panics](panics.md#no-checked-panic-effect-declarations).
+
 ## Major open decisions
 
 Numeric widths and overflow rules; generic syntax and inference; standalone inferred record literal types; the complete generic variance proof system; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.

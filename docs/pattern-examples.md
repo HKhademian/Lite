@@ -369,3 +369,8 @@ The fallback explicitly handles every remaining case. _ is the ordinary unused-a
 - [All-type review](pattern-type-review.md) and [field clauses](aggregate-patterns.md).
 - [Conditionals](conditionals.md), [match arm chains](match-guards.md), and [pattern scopes](pattern-contexts.md).
 - [Sets](set-patterns.md), [records](records.md), [Result](result-and-errors.md), and [loops](loops.md).
+
+
+## Result failure occurrence inspection
+
+[LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](result-and-errors.md#failure-occurrence-patterns).

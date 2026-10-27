@@ -1,6 +1,6 @@
 # Failure-handling shortfalls
 
-Status: **supporting review queue, 2026-10-27**. Selected capture, flat outcome types, munching, collectors, extraction, handler tags, manual failures, and eligible escaping-error inference are recorded in LP-0001–LP-0010 and LP-0012–LP-0015. This list tracks incomplete contracts; alternatives here are not selected rules. See the [proposal register](proposals/README.md).
+Status: **supporting review queue, 2026-10-27**. Selected capture, flat outcome types, munching, collectors, extraction, handler tags, manual failures, and eligible escaping-error inference are recorded in LP-0001–LP-0010 and LP-0012–LP-0018. This list tracks incomplete contracts; alternatives here are not selected rules. See the [proposal register](proposals/README.md).
 
 ## 1. Exits with an unmatched remainder
 
@@ -24,15 +24,15 @@ LP-0014 now selects raise ...errs and explicit raise @outer ...errs. Destination
 
 ## 3. Public access to several failures
 
-Typed scalar binding is now solved by LP-0013: expose the first match and intentionally discard the other matching payloads, leaving other categories untouched. ...errs: Error exposes all matches as [Error]. Untyped broad receiver binding and match .err(error) still need a complete aggregate payload/inspection contract. This API must work from the flat type without knowing capture provenance. Owner: [flat outcomes](failure-capture-and-unwrapping.md#flat-type-retained-occurrences).
+LP-0013 settles typed scalar recovery first-match/discard; LP-0017 now settles .err(e) first-occurrence inspection and .err(...es) all-occurrence inspection without source mutation. These are no longer aggregate binding gaps. Untyped broad else binding, physical group construction, origin-inspection APIs, and ownership/provider details still need contracts. The flat type must suffice without depending on visible capture provenance. Owner: [Result patterns](result-and-errors.md#failure-occurrence-patterns).
 
 ## 4. Custom category declarations and overlap
 
-User-defined Error/Panic categories and manual raise are selected. Finish declaration/conformance syntax, admissible types, mixed/overlapping classifications, and retained origin inspection. Payload names do not determine channels. An open Panic family needs enough identity to support typed matching across separate compilation. Exact provenance when raising a previously caught payload still needs a rule. Owner: [manual failure categories](manual-failures-and-inference.md#custom-categories-and-explicit-raising).
+User-defined Error/Panic categories and manual raise are selected. Finish category value declaration/conformance syntax, admissible types, mixed/overlapping classifications, and retained origin inspection. This concerns actual Error/Panic values, not a live-panic effect declaration, which LP-0018 prohibits. Payload names do not determine channels. An open Panic family needs enough identity to support typed matching across separate compilation. Exact provenance when raising a previously caught payload still needs a rule. Owner: [manual failure categories](manual-failures-and-inference.md#custom-categories-and-explicit-raising).
 
-## 5. Repeated capture and inference boundaries
+## 5. Remaining expression and inference boundaries
 
-exp? normalizes one outward Result layer; deliberately nested successful Results remain data. Define capture of already panic-bearing outcomes, precise repeated-capture behavior, and full postfix/recovery precedence. Eligible nonrecursive inference now includes escaping returned errors only; complete recursive/public-signature rules and success typing for bodies that never complete normally remain open. Owners: [capture](failure-capture-and-unwrapping.md#capture-normalizes-one-outward-outcome-layer) and [error inference](manual-failures-and-inference.md#infer-all-escaping-returned-error-paths).
+LP-0016 now permits recapture through ordinary duplicate-free union normalization, retaining stored occurrences without another layer or re-raising. Complete postfix/recovery precedence, recursive/public-signature inference, and success typing for bodies that never complete normally remain open. No checked live-panic effect declaration/inferred list is to be added: LP-0018 prohibits that feature. Possible non-exhaustive documentary known-fault annotations need investigation rather than an effect grammar. Owners: [capture](failure-capture-and-unwrapping.md#recapture-is-allowed), [functions](functions.md), and [implicit panics](panics.md#no-checked-panic-effect-declarations).
 
 ## 6. Storage, cleanup extent, and transport
 

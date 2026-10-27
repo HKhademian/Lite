@@ -166,3 +166,8 @@ Some fragments intentionally omit remaining arms to isolate a pattern category. 
 - [Dart pattern types](https://dart.dev/language/pattern-types): constant, variable, typed, object, and record patterns.
 - [Swift enumerations](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Enumerations.md): payload-free and associated-value enum cases.
 - [Match](match.md), [tuples and patterns](tuples-and-patterns.md), and [reference comparison](pattern-syntax-comparison.md).
+
+
+## Result failure occurrence inspection
+
+[LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md) selects .err(e) for the first stored failure and .err(...es) for every occurrence in order. For T ! F, the bindings are F and [F]. Scalar subpatterns test the first occurrence without searching; a failed test does not change the source. Tag-only .err binds nothing, and .ok(value) preserves the complete successful T. This Result-specific collection does not flatten occurrence internals, mutate the stored outcome, or change structural tuple-rest/other constructor schemas. See [the normative examples](result-and-errors.md#failure-occurrence-patterns).

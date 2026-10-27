@@ -47,7 +47,28 @@ before := op2();
 after := before?;
 ```
 
-The second statement cannot capture a panic that already escaped the first call. It can only capture evaluation of its own operand. Repeated capture of an already panic-bearing outcome needs a separate normalization rule; no general idempotence or recursive flattening is selected.
+The second statement cannot capture a panic that already escaped the first call. It can only capture evaluation of its own operand. Legal recapture and one-outward-layer normalization are now selected in LP-0016 below; deliberately nested successful Result data is still not recursively flattened.
+
+## Recapture is allowed
+
+Selected [LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md): capture of outward T ! Es produces T ! (Es | Panic). Existing union normalization removes duplicate type alternatives. If Es already contains broad Panic, Es | Panic equals Es, so recapture adds no public type or outcome layer.
+
+```text
+tmp1 := operation()?;    /* T ! (ErrA | Panic) */
+tmp2 := tmp1?;           /* T ! (ErrA | Panic) */
+tmp3 := ({ tmp1 })?;     /* T ! (ErrA | Panic) */
+tmp4 := (operation()?)?; /* T ! (ErrA | Panic); operation runs once */
+```
+
+With no new failure during operand evaluation, preserve the successful value or every stored occurrence with its payload, origin, multiplicity, and order. Do not re-raise stored panics merely to capture them again. Type deduplication never removes repeated actual failures. Keeping an explicit recapture boundary is legal and supports later code evolution.
+
+An unchanged type does not prove redundant capture. A function returning T ! (E | Panic) data may still produce a separate live panic during execution; capturing its call can be meaningful even though the resulting type stays the same. Only a provably redundant boundary may receive an optional suppressible warning. No diagnostic is justified solely by type equality. Every warning is suppressible; [syntax/configuration](tooling-and-learning.md#warning-suppression) remains open.
+
+Capture still processes only one outward outcome layer. For an explicitly nested (T ! InnerError) ! OuterError, capture gives (T ! InnerError) ! (OuterError | Panic); the successful inner Result stays data. Capture does not scan unrelated stored outcomes or retroactively catch an earlier escaped panic.
+
+## Live panic capture is broad
+
+[LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) forbids semantic panic-effect declarations. An ordinary operation with result T may produce live panics implicitly; exp? exposes those newly captured occurrences through broad Panic. Their concrete categories remain available when a pattern matches, rather than being enumerated in the capture type. Known faults may be documented without an exhaustive type-level promise. Explicitly returned/stored outcome data retains its literal return type and follows the same recapture rule.
 
 ## Flat type, retained occurrences
 
@@ -57,7 +78,7 @@ Failure is the broad error-or-panic selector, conceptually Error | Panic. Error 
 
 The failure side preserves one or several ordered occurrences, including repeated categories. There is no occurrence count in the type. A normalized E1 | E2 union describes permitted categories; it does not merge two E1 payloads or itself encode several values. An ordinary explicit .err(error) constructs a singular failure; failure aggregation and capture can preserve several under the same flat outcome contract. This extends the earlier one-error-only description of Result without changing ordinary success construction or the count-free declaration rule. A single active success-or-failure outcome is still distinct from simultaneous success and failure.
 
-The public type must suffice for recovery: passing/storing an outcome cannot lose multiplicity because its capture provenance is no longer visible at a call site. Ordinary stored-value widening must preserve all occurrences and origins. Ordered collector recovery is selected; the generalized .err pattern payload shape, public origin-inspection API, carrier construction, ownership, and ABI remain open. Existing scalar .err examples describe ordinary singular outcomes and do not define aggregate inspection.
+The public type must suffice for inspection/recovery: storing, passing, widening, or returning an outcome must preserve its occurrences and origins without depending on visible capture provenance. LP-0017 now selects .err(e) first-occurrence inspection and .err(...es) all-occurrence collection without mutating the stored source; see [Result patterns](result-and-errors.md#failure-occurrence-patterns). Origin-inspection API, carrier construction, ownership, and ABI remain open.
 
 ## Capture normalizes one outward outcome layer
 
@@ -100,7 +121,7 @@ value := attempt
     }
 ```
 
-Failure supplies the previously missing all-failures selector. Receiverless else still consumes everything supported by its target and executes once. Explicit collection is for payload access, not a prerequisite for complete munching. LP-0013 now selects typed scalar p: BoundPanic: expose the first match in occurrence order, consume/discard its other matches, and leave different categories untouched. Use ...ps: BoundPanic to expose every matching payload. Untyped broad binding and generalized .err inspection remain open.
+Failure supplies the previously missing all-failures selector. Receiverless else still consumes everything supported by its target and executes once. Explicit collection is for payload access, not a prerequisite for complete munching. LP-0013 now selects typed scalar p: BoundPanic: expose the first match in occurrence order, consume/discard its other matches, and leave different categories untouched. Use ...ps: BoundPanic to expose every matching payload. LP-0017 now selects scalar/collector .err inspection. Untyped broad recovery binding remains open.
 
 ## Types of the review examples
 
@@ -168,4 +189,4 @@ LP-0012 selects manual failure capability and eligible error inference; [LP-0014
 
 ## Implementation and remaining decisions
 
-An open Panic family requires enough retained category/payload information for supported typed matching across separate compilation. It does not require a complete static panic-effect list, reflection on arbitrary objects, a common heap object, or a mandated unwinder. Retaining dynamic occurrences and providing [T] count/indexing have real storage/provider requirements. Allocation, retention failure, ownership, foreign boundaries, repeated capture, complete postfix precedence, aggregate .err inspection, and mixed-channel forwarding ABI remain open. No zero-runtime or allocation-free guarantee follows from the flat spelling.
+An open Panic family needs enough retained category/payload information for supported matching across separate compilation. LP-0018 prohibits checked live-panic effect lists; this does not require reflection on arbitrary objects, a common heap object, or a mandated unwinder. Dynamic occurrence retention and [T] count/indexing have real provider/storage requirements. Allocation/retention failure, ownership, foreign boundaries, complete postfix precedence, construction and origin inspection, and mixed-channel forwarding ABI remain open. LP-0016 settles recapture and LP-0017 settles .err scalar/collector access; neither implies zero-runtime or allocation-free behavior.

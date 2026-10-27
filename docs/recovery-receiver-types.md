@@ -54,7 +54,7 @@ The former `errs: [Error]` collector spelling is not selected. Ordinary sequence
 
 ## Typed scalar first-match binding
 
-[LP-0013 r1](proposals/LP-0013-scalar-recovery-selection.md) selects err: Error to expose the first matching Error occurrence in occurrence order, consume every matching Error, and discard the other matched payloads. Other categories remain untouched. ...errs: Error consumes the same matches and exposes all of them as [Error]. Both bodies run once, and no match skips the clause. Typed scalar filters for ErrA/Panic/Failure follow the same rule; exact tuple group receivers retain their tuple binding. Untyped broad receiver binding and aggregate .err inspection remain open. See [current scalar recovery](expression-recovery.md#typed-scalar-receivers-selected).
+[LP-0013 r1](proposals/LP-0013-scalar-recovery-selection.md) selects err: Error to expose the first matching Error occurrence in occurrence order, consume every matching Error, and discard the other matched payloads. Other categories remain untouched. ...errs: Error consumes the same matches and exposes all of them as [Error]. Both bodies run once, and no match skips the clause. Typed scalar filters for ErrA/Panic/Failure follow the same rule; exact tuple group receivers retain their tuple binding. LP-0017 now defines .err first-occurrence/all-occurrence views; untyped broad recovery binding remains open. See [current scalar recovery](expression-recovery.md#typed-scalar-receivers-selected).
 
 ## Direct-union direction and scalar receiver history
 
@@ -160,7 +160,7 @@ A public receiver contract must remain stable across inlining and separate compi
 
 ## Decisions remaining
 
-- Flat E | Panic categories and Failure selection are now chosen in LP-0009; LP-0013 now selects typed scalar first-match/discard; untyped broad binding and generalized .err payload inspection still need contracts.
+- Flat E | Panic categories and Failure selection are now chosen in LP-0009; LP-0013 now selects typed scalar first-match/discard; LP-0017 now selects .err scalar/collector inspection; untyped broad recovery binding still needs its contract.
 - The typed Panic carrier/category model and any failure-origin metadata API.
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
 - Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.

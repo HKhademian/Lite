@@ -168,6 +168,12 @@ Braces were chosen as a promising consistent rule, not as an empirically proven 
 
 These studies motivate evaluating novice experience; they do not isolate LiteScript's brace syntax as already validated.
 
+## Warning suppression
+
+Selected [LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md): every warning is suppressible. Suppression changes diagnostics, not source typing, evaluation, or failure behavior. Exact syntax/configuration/scope and warning defaults remain open. This does not make invalid code valid or downgrade required errors.
+
+Recapture is legal. Do not warn solely because the output type is unchanged or its failure side already includes Panic. An optional redundancy warning requires proof that the boundary is redundant; a call returning stored T ! (E | Panic) can still produce a new live panic before returning. Intentional boundaries kept for code evolution must remain usable with suppression. There is no blanket warning or rejection for already-captured values.
+
 ## Capture and recovery presentation
 
 The selected [capture/extraction reference](failure-capture-and-unwrapping.md) distinguishes exp? (capture before operand evaluation), outcome! (one-layer extraction or outward forwarding), and else (ordered consumption and recovery). Teach ordinary stored Results before mixed panic capture, then show T ! Panic and T ! (E | Panic), ...fails: Failure with [Failure], and exhaustive recovery yielding T. Do not teach the provisional Captured/FailureGroup wrapper as source syntax. Keep handler-local tags on their explicit block, and untangle confusing chains into temporary outcome layers without promising retroactive panic recovery across eager statements. LP-0012 now selects raise expression and eligible omitted-output escaping-error inference; custom category grammar and unmatched-remainder/provenance policy remain open. LP-0013 selects typed scalar first-match/discard, and LP-0014 selects scalar/group raise plus explicit block targets.
@@ -185,3 +191,10 @@ LP-0015 teaching/conformance direction: contrast ordinary guard return, catch-al
 
 
 Also contrast handler-local raise: tmp1 := op()? is T ! Panic; a receiverless else @bl2 { raise @bl2 err2 } consumes all original panics and gives tmp2: T ! Err2; tmp2! supplies T or forwards Err2. Keep this separate from an early function return that prevents its recovery binding from being initialized. See [the local-raise example](manual-failures-and-inference.md#handler-local-raise-changes-the-stored-outcome).
+
+
+## Current captured-outcome teaching order
+
+Teach plain array/arithmetic values with implicit panics before explicit capture. LP-0018 prohibits checked panic-effect signature lists: distinguish a literal first-class outcome return from a live-effect annotation, and do not teach the withdrawn fn(): T ! SpecialPanic1/plain-T-call interpretation. Documentary known-fault metadata is non-exhaustive and still exploratory. Capture exposes broad Panic while patterns reveal concrete categories.
+
+Then teach LP-0016 recapture as a legal boundary supporting code evolution, followed by LP-0017 .err(e) versus .err(...es). Future conformance fixtures should preserve occurrences despite duplicate type normalization, distinguish unchanged types from redundant boundaries, keep nested successful Results intact, test scalar subpatterns against the first occurrence only, and verify source outcome preservation. All warnings are suppressible; no warning-control syntax is selected. Indexed collector capabilities, ownership, and runtime costs require separate verification. These documentation checks are not parser/typechecker/runtime execution.

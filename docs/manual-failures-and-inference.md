@@ -186,3 +186,8 @@ Supplying a group is now selected syntax, not a separate future forwarding opera
 ## Runtime boundary
 
 Function-directed Error raise can use typed outcome returns; tagged block raise can use a directed local transfer. Panic delivery at the selected boundary retains typed panic transport. Inference is compile-time work. No separate runtime service is required solely for the keyword, but cleanup, dynamic category identity, retained multiple payloads, ownership, and cross-call/mixed-channel transport still need implementation and cost policies. There is no parser/compiler/runtime implementation or measured performance result here.
+
+
+## Implicit panics and literal outcome data
+
+[LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md) prohibits checked live-panic effect declarations or inferred exhaustive live-panic lists. Manual/generated supported panics retain their selected implicit channel and directed-raise scope rules without enumeration in every caller signature. A function deliberately returning a captured outcome instead returns literal T ! Panic data; ordinary calls preserve it. Recapture is legal under LP-0016. LP-0017 .err(e) exposes the first stored failure, while .err(...es) exposes all; raise e forwards only the scalar and raise ...es forwards the collected group. Category declaration/conformance syntax and source data ownership remain separate open questions. Documentary known-fault annotations are non-exhaustive and still under investigation.

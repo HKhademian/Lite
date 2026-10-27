@@ -99,6 +99,10 @@ Both `operation() else(error) { fallback }` and `operation() else { fallback }` 
 
 Continuing from the value of a complete recovery block follows the existing parenthesized block-value continuation rule until a more general rule is selected. Selecting postfix propagation does not silently change that grammar.
 
+## Stored outcomes, recapture, and inspection
+
+[LP-0016](proposals/LP-0016-recapture-and-warning-policy.md) permits recapture without another outward layer. [LP-0017](proposals/LP-0017-result-failure-occurrence-patterns.md) distinguishes .err(e) first-occurrence binding from .err(...es) all-occurrence collection. Raising scalar e forwards only that occurrence; raise ...es or outcome! can forward the complete stored group. Inspection preserves the source outcome. [LP-0018](proposals/LP-0018-implicit-panics-without-effect-declarations.md) forbids checked live-panic signatures: a declared captured outcome return is literal data, never an effect silently removed by an ordinary call. Live panics remain implicit and explicit ? exposes broad Panic with retained concrete identity.
+
 ## Open decisions
 
 - Complete the postfix grammar and its interaction with arithmetic, indexing, and recovery clauses. Result propagation participates in left-to-right postfix chaining.

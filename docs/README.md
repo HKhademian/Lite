@@ -164,7 +164,11 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Manual failures and inference](manual-failures-and-inference.md): custom Error/Panic capability, directed scalar/group raise with function defaults or explicit block targets, authenticateUser and handler-local raise examples, escaping-error inference, and contract checking; LP-0012/LP-0014.
 - [Early returns from recovery](expression-recovery.md#early-function-returns-and-continuing-path-types): normal function return abandons unfinished captured recovery; residual types describe continuing paths, and handler return values belong to the function contract; LP-0015.
 
-- [Failure-handling shortfalls](failure-handling-shortfalls.md): focused review queue for pending-remainder exits, group provenance/typing, untyped/aggregate access, category declarations, repeated capture, and storage/transport.
+- [Failure-handling shortfalls](failure-handling-shortfalls.md): focused review queue for pending-remainder exits, group provenance/typing, untyped/aggregate access, category declarations, remaining expression/inference boundaries, and storage/transport.
+
+- [Implicit panics without effect declarations](panics.md#no-checked-panic-effect-declarations): ordinary operators need no checked/transitive panic lists; captured panics remain typed data, and documentary known-fault annotations remain exploratory; LP-0018.
+- [Recapture](failure-capture-and-unwrapping.md#recapture-is-allowed): legal repeated boundaries, union-based type stability, preserved occurrences, and suppressible proof-based warnings; LP-0016.
+- [Result occurrence patterns](result-and-errors.md#failure-occurrence-patterns): .err(e) first occurrence, .err(...es) all occurrences, source-preserving inspection, and scalar subpatterns without hidden search; LP-0017.
 
 - [Failure capture and unwrapping](failure-capture-and-unwrapping.md): postfix ? capture, flat T ! (E | Panic), ordered Error/Panic/Failure collectors, all x11–x26 types, ! forwarding, static exhaustion, manual raise/error inference, and the remaining caught-group forwarding draft; LP-0009/LP-0010/LP-0011/LP-0012.
 
@@ -217,7 +221,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 ## Project and implementation direction
 
 - [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.
-- [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010 plus LP-0012–LP-0015, draft LP-0005 r7 for untyped binding and pending exits, draft LP-0011 r4 for unmatched-remainder/provenance transport, revision/status records, and unassigned release targets.
+- [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010 plus LP-0012–LP-0018, draft LP-0005 r7 for untyped binding and pending exits, draft LP-0011 r4 for unmatched-remainder/provenance transport, revision/status records, and unassigned release targets.
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): selected singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, performance goals, and open memory semantics; the supporting [runtime-cost review](memory-and-performance.md#runtime-cost-review) separates compile-time proofs from generated work and unresolved support machinery.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.

@@ -1,12 +1,31 @@
 # Panics and failure channels
 
-Status: **a panic path separate from typed recoverable errors established; basic arithmetic faults use that channel and target-level typed `else` filters can recover a specific category. A same-scope matching typed-panic handler recovers before its owning scope's `finally`; escaped panics unwind entered scopes and run applicable `finally` blocks inner-to-outer before reaching an outer matching handler. Operation-specific and explicit whole-block recovery are selected 2026-10-26; fault attribution, complete chain/attachment rules, triggers, and hard-abort behavior remain open. Cleanup-failure precedence and declaration-ordered member-wise handling are selected; aggregate representation and duplicate-member behavior remain open**.
+Status: **implicit live panics without checked effect declarations selected 2026-10-27 in LP-0018; explicit capture and strongly typed category matching retained**. Recovery scopes, directed manual raises, ordinary early returns, and cleanup retain their selected contracts. Documentary fault annotations, concrete payload/transport/storage rules, complete grammar, and host/hard-abort boundaries remain open.
 
 ## Purpose
 
 Distinguish a declared recoverable outcome from a failure outside ordinary Result handling. A separate path does not imply that panics are automatically recoverable, use hardware exceptions, or require a stack-unwinding runtime.
 
 The user requests [strongly typed panics](typed-panics.md) in the future, including underlying null access, zero division, arithmetic overflow, and related faults. Typed categories and structured payloads are the intended direction; the later [shared expression recovery](expression-recovery.md) direction adds else as the recovery surface. An operation handler covers only its defined faults; evaluated argument/operand panics bypass it. An explicit `{ ... } else { ... }` block instead covers supported typed panics across its executed contents and synchronous calls. Fault-contract syntax, safe transport, complete chain/attachment rules, and exact triggers still need definition. Underlying null faults do not introduce public nullable values.
+
+## No checked panic-effect declarations
+
+Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): live panics remain implicit. Semantic panic-effect declarations are prohibited; functions do not declare or infer exhaustive lists of the bounds, overflow, division, helper, or other live panics that can escape. Ordinary indexing/arithmetic remains ordinary value-producing code, without forcing a train of transitive panic alternatives into every callable signature.
+
+```text
+calculate := fn(values: [Int], i: Int): Int {
+    values[i] + 1
+}
+
+value := calculate(values, i);   /* Int */
+attempt := calculate(values, i)?; /* Int ! Panic */
+```
+
+Specific categories such as BoundPanic remain typed runtime values that can be constructed, captured, and matched. Capture exposes newly captured live panics as broad Panic while retaining their concrete categories/payloads for patterns. It does not expose a statically enumerated effect list. A normal function output annotation does not promise panic freedom.
+
+Known faults may be documented non-exhaustively, but documentary annotation format/tooling remains under investigation. Such information cannot change callable typing, add returned errors, or prove that other live panics cannot occur. No annotation syntax is selected, and existing operation-specific else attribution is not replaced by a checked effect system.
+
+A literal fn(): T ! Panic return contract instead means explicitly returned outcome data: its ordinary call result is T ! Panic, not T with a silently projected panic effect. Functions may return, store, and pass captured data. The exploratory interpretation of fn(): T ! SpecialPanic1 as an implicit-effect signature whose ordinary call yields T is withdrawn. Banning effects does not ban user-defined Panic category types or first-class panic-bearing Result values. See [literal outcome returns](result-and-errors.md#implicit-live-panics-and-explicit-outcome-returns).
 
 ## Recoverable failure template
 

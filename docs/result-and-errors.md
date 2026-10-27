@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and caught-group forwarding remain open. Manual failure/inference capability is selected in LP-0012; LP-0013/LP-0014 now select typed scalar first-match/discard and directed scalar/group raise.
+Status: **ordinary typed outcomes and first-class Result handling established; capture/extraction LP-0009/LP-0010, manual failure/inference LP-0012, recovery/exit refinements LP-0013–LP-0015, recapture LP-0016, Result occurrence patterns LP-0017, and implicit panics without effect declarations LP-0018 selected**. Concrete classification, untyped recovery binding, construction/origin APIs, ownership, and transport still need contracts.
 
 Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Failure capture and unwrapping](failure-capture-and-unwrapping.md) owns explicit postfix ? boundaries, flat error/panic outcomes, and extraction after recovery. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
 
@@ -73,7 +73,7 @@ Selected 2026-10-25: source := fn(value: Int): Int ! ReadError { value } may be 
 Result<T, E> = ok(T) | err(E)
 ```
 
-This is explanatory singular-outcome notation, not settled enum syntax or a complete aggregate definition. Under [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md), the failure side can retain several ordered occurrences admitted by E; an actual E union value still has one active member. Group access uses typed recovery collectors. The generalized .err pattern payload and exact carrier remain open.
+This is explanatory singular-outcome notation, not settled enum syntax or a complete aggregate definition. Under [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md), the failure side can retain several ordered occurrences admitted by E; an actual E union value still has one active member. Group access uses typed recovery collectors. LP-0017 now defines scalar/collector .err inspection; physical carrier and construction remain open.
 
 ## Function template
 
@@ -103,7 +103,7 @@ Ambiguous cases, including when `T` is itself a `Result`, need a precise rule an
 
 ## Handling and propagation
 
-For ordinary singular outcomes, stored Result patterns explicitly select the lowercase outcome cases `.ok(value)` and `.err(error)`. Successful returns remain implicit; inspecting a success does not require constructing it explicitly at every return.
+Stored Result patterns explicitly select the lowercase outcome cases `.ok(value)` and `.err(error)`. Successful returns remain implicit; inspecting a success does not require constructing it explicitly at every return.
 
 ```text
 match attempt {
@@ -121,6 +121,40 @@ if .err(error) := validate_age(text_age) {
     report(error)
 }
 ```
+
+## Failure occurrence patterns
+
+Selected [LP-0017 r1](proposals/LP-0017-result-failure-occurrence-patterns.md): for attempt: T ! F, .err(e) matches the failure side and exposes the first failure occurrence as e: F. .err(...es) exposes every occurrence in order as es: [F]. A matching failure collector is nonempty. Success matches neither pattern; tag-only .err tests the failure side without binding. Each branch executes once regardless of occurrence count.
+
+```text
+attempt: T ! Panic;
+
+if .err(e) := attempt {
+    /* e: Panic; first occurrence */
+    report_failure(e)
+}
+
+if .err(...es) := attempt {
+    /* es: [Panic]; all occurrences in order */
+    loop es as e { report_failure(e) }
+}
+```
+
+For T ! (ErrA | ErrB | Panic), e has ErrA | ErrB | Panic and es has [ErrA | ErrB | Panic]. Scalar selection follows occurrence order, not severity or diagnostic primary promotion. Other occurrences are intentionally unexposed through e, but pattern inspection does not mutate or consume attempt; the original stored outcome still contains every occurrence. This differs from else's resulting recovery outcome, which consumes matches, without rewriting the original source binding. General ignored-result/usage diagnostics are separate.
+
+An ordinary scalar subpattern tests only the first occurrence. Given (ErrA1, BoundPanic1), `if .err(p: BoundPanic) := attempt { ... }` does not match: there is no hidden search ahead. A failed subpattern changes nothing. Use else category filters for matched-group selection. Collection does not flatten an occurrence's internal arrays, tuples, fields, or nested Result payloads. .ok(value) binds the complete successful T, preserving deliberately nested Results.
+
+```text
+if .err(e) := attempt { raise e }
+/* forwards only the first bound occurrence */
+
+if .err(...es) := attempt { raise ...es }
+/* forwards every stored occurrence */
+```
+
+Complete extraction/forwarding may instead use attempt!. Stored failures are not secretly attached to scalar e. This Result-specific collector does not change general enum constructor payloads or structural tuple-rest patterns. [F] must satisfy readable count/indexing/traversal; copies/views, ownership, escape lifetimes, provider/storage adaptation, allocation, and physical carrier construction remain open.
+
+## Propagation of an outcome
 
 Propagation uses postfix `!`:
 
@@ -168,6 +202,12 @@ Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): e
 ## Early return and an unfinished recovery outcome
 
 Selected [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md): a handler's plain return exits the nearest function/closure normally and abandons that unfinished captured recovery. Remaining captured categories are not implicitly forwarded or grounds for an additional handling rejection for this pattern. The handler's returned value contributes to the function success contract, not the recovery's continuing normal type. Only paths that complete the recovery declaration have its residual T ! RemainingFailures type. Explicit/expected success checks, payload-evaluation failures, and cleanup retain their normal rules. See [the exact tmp1/tmp2 example](expression-recovery.md#early-function-returns-and-continuing-path-types).
+
+## Implicit live panics and explicit outcome returns
+
+Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): functions do not declare checked live-panic effects or infer transitive panic lists from ordinary operators/helpers. For a normal op: fn(): T, op() has T and op()? has T ! Panic. For read_report: fn(): Report ! ReadError, ordinary calls return Report ! ReadError while explicit capture gives Report ! (ReadError | Panic).
+
+A function deliberately returning a captured outcome uses ordinary return-value typing. For capture_for_later: fn(): T ! Panic, the ordinary call returns T ! Panic data, preserving its outcome and occurrences. It does not silently unwrap to T and resume a declared panic effect. Applying ? again is legal LP-0016 recapture. No special captured-return wrapper is required. Concrete categories of newly captured live panics are represented by broad Panic and remain available to typed patterns at runtime. Non-exhaustive documentary known-fault information may be investigated, but has no callable-type or exhaustiveness effect.
 
 ## Recovery at a single operation
 

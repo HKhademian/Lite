@@ -516,6 +516,12 @@ double := fn (x: Int) {
 
 The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Capture/context design is [postponed](deferred-contexts.md), with earlier capture-header ideas retained for later review.
 
+## Implicit live panics are not callable effects
+
+Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): ordinary array access, arithmetic, and helper calls do not force live panic alternatives into function signatures. Checked panic-effect declarations and exhaustive inferred live-panic lists are prohibited. A function annotated T returns T even though a supported live panic may propagate implicitly. A normal T ! E outcome exposes returned errors, not an exhaustive list of live panics.
+
+A function deliberately returning captured T ! Panic data literally returns that outcome; an ordinary call receives T ! Panic. No type-based rule strips Panic from a return annotation and silently supplies T. Explicit ? capture produces broad Panic for newly captured live occurrences and is legal again on stored outcomes under LP-0016. Known-fault documentary annotations may be investigated, but cannot alter callable compatibility or prove panic freedom. Specific panic category definitions/construction/matching remain available. See [panics](panics.md#no-checked-panic-effect-declarations) and [outcome returns](result-and-errors.md#implicit-live-panics-and-explicit-outcome-returns).
+
 ## Manual failures and inferred errors
 
 LP-0012 selects custom failure capability and eligible omitted-output error inference. [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md) now makes raise failure / raise ...failures a nearest-function/closure failure exit for both Error and Panic; explicit @outer instead selects a named enclosing block. Error/Panic chooses the outgoing channel. Input-established nonrecursive bodies without explicit/expected outputs infer normal success and escaping returned errors from raises, .err returns, !, and outward fallible tails. A tagged Error raise recovered locally does not escape and adds no outward E. Implicit panics, handled/local stored errors, and nested uninvoked bodies remain excluded. Explicit/expected outputs remain constraints. See [manual failures and inference](manual-failures-and-inference.md).
