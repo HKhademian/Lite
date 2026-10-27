@@ -167,3 +167,9 @@ Braces were chosen as a promising consistent rule, not as an empirically proven 
 - [2023 syntax-intuitiveness replication](https://link.springer.com/article/10.1007/s11219-023-09631-7)
 
 These studies motivate evaluating novice experience; they do not isolate LiteScript's brace syntax as already validated.
+
+## Capture and recovery presentation
+
+The selected [capture/extraction reference](failure-capture-and-unwrapping.md) distinguishes exp? (capture before operand evaluation), outcome! (one-layer extraction or outward forwarding), and else (ordered consumption and recovery). Teach ordinary stored Results before mixed panic capture, then show T ! Panic and T ! (E | Panic), ...fails: Failure with [Failure], and exhaustive recovery yielding T. Do not teach the provisional Captured/FailureGroup wrapper as source syntax. Keep handler-local tags on their explicit block, and untangle confusing chains into temporary outcome layers without promising retroactive panic recovery across eager statements. Exact raise grammar and partial-handler exit policy remain draft LP-0011.
+
+Future formatter/parser fixtures must distinguish postfix capture from the standalone ? storage initializer and the rejected ? propagation spelling, retain grouping in `({ work() })?`, and preserve written else order and block-tag targets. Existing semicolon rules apply: omit optional semicolons after complete braced items; retain separators for continued expressions such as parenthesized block capture. This is a documentation contract, not evidence of implemented parsing, formatting, or execution.

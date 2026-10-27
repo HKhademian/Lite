@@ -1,6 +1,6 @@
 # Types received by recovery handlers
 
-Status: **typed failure filtering selected, 2026-10-20; broad mixed-channel receiver representation remains open**. Shared else can match all failures or filter for one type. This review assumes a boundary that can receive both channels; operation targets exclude argument panics, while an explicit block target covers supported typed panics across its contents and synchronous calls. Complete chain/attachment integration remains open. Panic, Failure, and generic notation below are explanatory names, not final declarations or ABI.
+Status: **typed filtering and ellipsis collectors selected; flat Error/Panic/Failure outcome categories selected 2026-10-27 in LP-0009**. The earlier receiver alternatives below are design history. Scalar multi-match binding, origin-inspection syntax, and representation remain open; [capture and unwrapping](failure-capture-and-unwrapping.md) states the current contract.
 
 ## The question
 
@@ -24,7 +24,7 @@ This supplies String on success or a String fallback, without introducing an imp
 
 ## Handler execution and expensive fallbacks
 
-Status: **open review, 2026-10-26; [LP-0005 r4](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
+Status: **open review, 2026-10-26; [LP-0005 r5](proposals/LP-0005-handler-execution-and-exits.md) is a draft for remaining scalar-binding and exit questions; once-per-clause execution is selected in LP-0007**.
 
 The user points out that `{ read_cached() } else { fallback_heavy_db_read() }` must be reviewed before adopting automatic per-occurrence handler execution: several pending failures could otherwise repeat an expensive fallback. Consuming a group is distinct from running its recovery expression. The assistant withdraws automatic repetition as a general default recommendation.
 
@@ -48,11 +48,11 @@ Selected 2026-10-26 in [LP-0007 r1](proposals/LP-0007-typed-recovery-collectors.
 
 The ellipsis declares a collector; Error is its element/filter type. The binding errs has the readable [Error] indexed-sequence contract. The clause captures all matches, including one element for a singular error, and its body runs once. No match skips it. The explicit loop performs per-error work. Receiverless and ordinary typed catches retain [all-match consumption](expression-recovery.md#whole-match-consumption-selected), independently of whether the programmer asks to bind the collected values.
 
-Each collector preserves the occurrence order of its matched pending remainder. Error selects returned errors only. A source marker for collecting errors and supported typed panics together is still open; symbolOfAny remains an explanatory placeholder. Separate ErrA and ErrB collectors preserve order within each group but process those groups in written clause order, which can change their original interleaving. A complete mixed sequence requires one suitable capture before earlier clauses consume its entries.
+Each collector preserves occurrence order within its matched remainder. LP-0009 now selects ...errs: Error for returned errors, ...ps: Panic for panics, and ...fails: Failure for both, with [Error], [Panic], and [Failure] bindings. The earlier symbolOfAny placeholder is not source syntax. Several typed collectors preserve within-group order but process their groups in written else order.
 
 The former `errs: [Error]` collector spelling is not selected. Ordinary sequence-valued error typing retains its existing context; scalar binding of several such values remains open. Collection capture promises [T] traversal, cheap count, and indexed reads without selecting a contiguous owner, allocation/copying, escaping lifetime, or origin-inspection API. A loop break does not revive caught failures; nonlocal exits with a different pending category remain under review.
 
-## Candidate A: direct union of the handled values
+## Direct-union direction and scalar receiver history
 
 Recommend the direct receiver type E | Panic when a boundary handles a T ! E outcome and typed panics. A panic-only boundary receives Panic; a Result-only inspection receives E. Which channels a boundary covers is part of its source contract, not a type change introduced by an optimizer.
 
@@ -74,7 +74,7 @@ This changes an important expectation: on a general call with combined capture, 
 
 A stored Result can still be matched with .err(error) to obtain exactly its declared E. The separate call that produced that stored value has already completed; its earlier panic cannot be caught retroactively by matching the stored outcome.
 
-## Candidate B: tag both failure channels
+## Historical alternative: public channel wrappers
 
 A uniform wrapper could instead expose an illustrative Failure<E> with returned-error and panic variants:
 
@@ -96,7 +96,7 @@ Recommendation: prefer candidate A for ordinary receiver access, while retaining
 
 If the eventual error-type rules permit returning a Panic carrier as an ordinary .err payload, E | Panic can normalize to Panic. The receiver's type alone then cannot tell whether the value was returned or raised as a panic.
 
-Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling, context scope, and resume syntax remain open. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
+Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling and overlapping-payload typing remain open. LP-0010 now specifies that ! forwards stored occurrences with their retained origins; explicit raise from a partial handler remains a draft in LP-0011. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
 
 ## Selected typed receiver filtering
 
@@ -109,7 +109,7 @@ text := read_text(path) else(p: BoundPanic) {
 }!
 ```
 
-This handles only the matching `BoundPanic`. The suffix `!` explicitly forwards a remaining returned `ReadError`; it does not alter panic handling. Any panic category that does not match `BoundPanic` continues outward implicitly. If the target has no returned `Result` error, this filter needs no `!` for panic propagation.
+This handles only the matching `BoundPanic`. For this uncaptured target, the suffix ! explicitly forwards a remaining returned ReadError while live unmatched panics propagate implicitly. LP-0010 additionally forwards stored panics when the target is an explicitly captured outcome. Any panic category that does not match `BoundPanic` continues outward implicitly. If the target has no returned `Result` error, this filter needs no `!` for panic propagation.
 
 The type-only spellings distinguish matching from binding:
 
@@ -136,7 +136,7 @@ target else (failure) { report(failure); recover() }
 
 Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.
 
-This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending occurrences. Single, aggregated, and empty remainders follow [the munching model](expression-recovery.md#pending-occurrences-and-munching-selected); no pending occurrence means no failure match, and a nonmatch neither runs the body nor consumes anything. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. An unmatched panic propagates implicitly after the chain. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
+This is refutable receiver matching, not a converting annotation or an irrefutable parameter declaration. The filter handles only matching pending occurrences. Single, aggregated, and empty remainders follow [the munching model](expression-recovery.md#pending-occurrences-and-munching-selected); no pending occurrence means no failure match, and a nonmatch neither runs the body nor consumes anything. When typed filters chain on one target, they consume matching members in declaration order, and each later filter sees the remaining members. A live uncaptured panic propagates implicitly after the chain; a stored captured panic remains in its residual outcome until handled or explicitly forwarded. Unmatched returned errors do not: they must remain represented as a `Result`, be handled by another defined form, or be propagated explicitly. The bound aggregate's public type/operations and duplicate-member consumption rules remain open. See [member-wise handling](expression-recovery.md#match-all-failures-or-filter-by-type).
 
 Each later filter wraps the preceding recovery expression, including its handler body. A matching failure raised by an earlier handler can be caught by that later recovery; the earlier handler does not catch its own failure. See the [sequential recovery example](expression-recovery.md#match-all-failures-or-filter-by-type) for the distinction between nested active recovery and separate eager assignments.
 
@@ -156,7 +156,7 @@ A public receiver contract must remain stable across inlining and separate compi
 
 ## Decisions remaining
 
-- Direct E | Panic versus a tagged Failure<E> wrapper as the public receiver.
+- Flat E | Panic categories and Failure selection are now chosen in LP-0009; scalar binding for several matches and generalized .err payload inspection still need contracts.
 - The typed Panic carrier/category model and any failure-origin metadata API.
 - The exact type relationships and coverage diagnostics for selected typed receiver patterns.
 - Operation fault attribution, complete block/chain attachment, transfer mechanism, cleanup-failure aggregate matching/access, and any explicit resume operation; cleanup-failure precedence is selected, and language-managed propagation already runs applicable exited-scope `finally` blocks before an outer matching handler.

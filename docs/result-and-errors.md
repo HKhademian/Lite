@@ -1,8 +1,8 @@
 # Result and errors
 
-Status: **`T ! E` and `T!` outcome types, typed declared recoverable failures, implicit success construction, postfix `!` propagation, optional-receiver `else` recovery with union results, and first-class Result outcomes established; Error's full contract open; arithmetic uses typed panics and target-level typed `else` recovery**.
+Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and explicit raise remain open.
 
-Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
+Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Failure capture and unwrapping](failure-capture-and-unwrapping.md) owns explicit postfix ? boundaries, flat error/panic outcomes, and extraction after recovery. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
 
 ## Purpose
 
@@ -26,16 +26,16 @@ The earlier discussion of ordinary `: Int` signatures hiding recoverable failure
 
 Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a postfix `!` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
 
-Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-error-contracts.md)): a declaration such as `fn(...): T ! (ErrA | ErrB)` describes admitted error types, with no occurrence count. Callers must not predict aggregate multiplicity or repeat a catch clause once per unknown occurrence. Count-independent repeated-type handling still needs its payload/invocation contract; this adds no count syntax, implicit aggregation, or panic categories to E. An ordinary Result retains one active outcome with one active error alternative. See [count-free recovery](expression-recovery.md#error-contracts-do-not-declare-occurrence-counts).
+Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-error-contracts.md)): `fn(...): T ! (ErrA | ErrB)` admits failure categories without occurrence counts. Callers must not predict multiplicity or repeat a catch clause per occurrence. [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) extends the earlier singular Result description: the flat failure side may preserve ordered repeated occurrences. A union lists permitted categories rather than encoding or deduplicating those occurrences. Ordinary explicit .err(error) construction is singular; capture/aggregation can retain several. No implicit Panic member is added to ordinary E.
 
-The later [whole-match clarification](expression-recovery.md#whole-match-consumption-selected), LP-0006, resolves consumption: ordinary type-based catching covers all its matching pending occurrences, and receiverless catching covers the whole supported group. Explicit sequence access is now selected in [LP-0007](proposals/LP-0007-typed-recovery-collectors.md) as `...errs: Error`, with errs typed [Error] and singleton capture supported. The ordinary Result representation and its one active error alternative remain unchanged; LP-0007 selects ellipsis collector binding and once-per-clause execution; scalar multi-value binding and nonlocal exits with a remainder remain open.
+The [whole-match clarification](expression-recovery.md#whole-match-consumption-selected), LP-0006, covers every matching pending occurrence. LP-0007 selects explicit ...errs: Error collection as [Error], singleton support, once-per-clause execution, and stable occurrence order. LP-0009 adds ...ps: Panic and ...fails: Failure. Scalar multi-value binding, representation, and nonlocal exits with unmatched remainders remain open.
 
 - A function declaring no recoverable failure must handle such failures internally; it cannot use `!` to let them escape.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
 - The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
 
-Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. [Stored Result widening](#stored-result-values-widen-safely) now applies the same payload proofs to ordinary outcome values and matching nested layers. General error-set composition, generic error contracts, and other Result conversions remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. The postfix ! marker is needed for Result forwarding, not panic forwarding.
+Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. [Stored Result widening](#stored-result-values-widen-safely) now applies the same payload proofs to ordinary outcome values and matching nested layers. General error-set composition, generic error contracts, and other Result conversions remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. Uncaptured panics need no ! marker. Explicitly stored panic-bearing outcomes use ! to extract success or resume the retained panic channel, as specified in LP-0010.
 
 ## Stored Result values widen safely
 
@@ -59,7 +59,7 @@ nested_wider: ((Int | String) ! (ReadError | ParseError)) ! ReadError = nested;
 
 Here the explicit `.ok(source)` constructs the outer layer. The later widening adds no layer, removes none, and does not reassociate error and success payloads. Widening an existing outcome uses its matching-layer proof; failure of that proof is not repaired by silently wrapping the whole source as a success. Deliberately adding an outer layer can use an explicit `.ok(...)`; other ambiguous success-construction cases remain separate.
 
-The transfer follows ordinary value-copy semantics, leaves the source available under its original contract, and may require compiler representation adaptation. It does not implicitly unwrap, propagate, handle, or flatten an outcome. Widening a zero source preserves its `.ok(zero(source success type))` value, rather than replacing it with a fresh destination zero. No bitwise-layout, allocation, or ABI guarantee follows.
+The transfer follows ordinary value-copy semantics, leaves the source available under its original contract, and may require compiler representation adaptation. For generalized flat outcomes, widening must preserve every occurrence and its channel origin; singular examples do not restrict multiplicity. It does not implicitly unwrap, propagate, handle, or flatten an outcome. Widening a zero source preserves its `.ok(zero(source success type))` value, rather than replacing it with a fresh destination zero. No bitwise-layout, allocation, or ABI guarantee follows.
 
 [Unchecked narrowing is rejected](types-and-inference.md#unchecked-narrowing-is-rejected). The reverse direction requires independently justified narrowing or explicit handling/reconstruction that proves the narrower contract. A destination annotation alone supplies no such proof. An arbitrary `(Int | String) ! (ReadError | ParseError)` cannot be assigned to `Int ! ReadError`: it may contain a String success or ParseError failure. Result widening does not authorize arbitrary error casts, broaden the errors allowed to escape an implementation, or change writable grants. A parameter accepting a Result by value may use this rule; a `var` parameter still follows its caller-location read/write contract.
 
@@ -73,7 +73,7 @@ Selected 2026-10-25: source := fn(value: Int): Int ! ReadError { value } may be 
 Result<T, E> = ok(T) | err(E)
 ```
 
-This explanatory notation does not settle enum declaration syntax. Ordinary success paths should not require an `Ok(...)` wrapper.
+This is explanatory singular-outcome notation, not settled enum syntax or a complete aggregate definition. Under [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md), the failure side can retain several ordered occurrences admitted by E; an actual E union value still has one active member. Group access uses typed recovery collectors. The generalized .err pattern payload and exact carrier remain open.
 
 ## Function template
 
@@ -103,7 +103,7 @@ Ambiguous cases, including when `T` is itself a `Result`, need a precise rule an
 
 ## Handling and propagation
 
-Stored Result patterns explicitly select the lowercase outcome cases `.ok(value)` and `.err(error)`. Successful returns remain implicit; inspecting a success does not require constructing it explicitly at every return.
+For ordinary singular outcomes, stored Result patterns explicitly select the lowercase outcome cases `.ok(value)` and `.err(error)`. Successful returns remain implicit; inspecting a success does not require constructing it explicitly at every return.
 
 ```text
 match attempt {
@@ -131,7 +131,7 @@ load_age := fn(path: String): Int ! LoadError {
 }
 ```
 
-`outcome!` evaluates its operand once. For success it supplies one Result layer's payload; for a recoverable error it exits the nearest function or closure with that error, subject to the enclosing declared error contract. It does not dynamically search for a handler or cross a function boundary to return from an outer caller. Applicable structured cleanup follows the existing exit rules. This is recoverable propagation, not a panic-producing assertion of success.
+`outcome!` evaluates its operand once and supplies one outcome layer's success payload. Failure forwards all retained occurrences from the nearest function/closure, preserving origins, multiplicity, and order. Returned errors must fit its declared error contract; explicitly captured panics resume their panic channel through applicable cleanup. This is a directed exit, not dynamic local handler lookup or a panic assertion. Uncaptured panics during operand evaluation still use ordinary panic propagation: ! establishes no capture boundary. See [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md).
 
 The example assumes the read and parse errors are covered by `LoadError`; their composition or mapping must be declared and defined, not guessed from the example. `!` must not erase error types. It participates in a left-to-right postfix chain, so calls and member access can continue from the extracted value without grouping:
 
@@ -141,7 +141,7 @@ name := load_user(id)!.load_profile()!.name;
 
 `!.` is the postfix `!` followed by ordinary member access `.`, not a separate nullable-access operator. Whitespace between those tokens does not change meaning. Each marked step extracts only its own Result; it does not automatically extract later outcomes. Complete expression precedence and recovery-clause interactions still need formalization.
 
-Prefix `try` and postfix `?` are superseded as recoverable-error propagation spellings. No marker is required to retain a Result as data. Optional-value propagation remains a separate open decision. See [propagation and call chaining](propagation-and-chaining.md).
+Prefix try and postfix ? remain superseded as returned-error propagation spellings. Postfix ? now has the separately selected meaning of explicit failure capture in [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md). No marker is needed to store an already returned Result; capturing panics is an additional explicit action. Option propagation remains open.
 
 ## Results passed as arguments
 
@@ -158,6 +158,12 @@ attempt := read_text(path);
 ```
 
 Here `attempt` retains the typed success-or-error outcome for storage, passing to another function, or conditional inspection. No capture marker or expected-type conversion is required. `attempt!` requests extraction and propagation later; an attached recovery clause can instead provide a fallback. Neither ordinary variable access nor storing a Result recursively unwraps or flattens it.
+
+## Explicit capture and exhausted failure types
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): exp? captures its entire operand evaluation. Capturing outward T yields T ! Panic; capturing outward T ! E yields T ! (E | Panic), normalizing one outward layer. It can store supported panic occurrences alongside returned errors for later handling without a mandatory Captured or FailureGroup public wrapper. Error/Panic/Failure selectors mean returned errors, panics, and both respectively. The compiler need not enumerate all concrete panics. Nested Result success payloads remain data; prior escaped panics and function-targeted exits are not captured.
+
+Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): exhaustive recovery leaves an ordinary value when no possible failure remains on continuing paths. With failure-free T handlers, T ! (E1 | E2 | Panic), then E1 recovery, then E2 recovery, then Panic recovery yields T ! (E2 | Panic), T ! Panic, and T. No extra ! is needed after complete recovery. A successful instance of an arbitrary fallible type does not establish static exhaustion. New handler/cleanup failures remain obligations. See [the full examples and x11–x26 types](failure-capture-and-unwrapping.md#types-of-the-review-examples).
 
 ## Recovery at a single operation
 
@@ -245,7 +251,7 @@ The final `Unit` represents success without data.
 
 ## Failure boundaries
 
-Recoverable errors and panics have separate paths. Postfix `!` and Result recovery operate on declared recoverable outcomes; they do not turn panics into returned errors. Postfix `!` propagation runs applicable construct-level `finally` blocks from inner to outer before the typed error leaves the enclosing function or closure. Language-managed typed-panic propagation likewise unwinds exited scopes and runs applicable `finally` blocks before an outer matching handler. Body-wide cleanup remains deferred. Exact triggers, capture boundaries, hard-abort behavior, and cleanup-failure aggregation/inspection remain open; cleanup-failure precedence is selected in [finally](finally.md#pending-outcomes). See [panics](panics.md). Process termination and allocation failure have not been assigned a universal mechanism.
+Recoverable errors and panics retain separate origins and propagation channels. Explicit ? can store them together; ! resumes retained origins rather than turning panics into returned Error. Ordinary uncaptured panics still propagate implicitly. Both forwarding paths run applicable exited-scope finally cleanup, retaining primary and secondary failures. See [capture/extraction](failure-capture-and-unwrapping.md) and [cleanup](finally.md#pending-outcomes). Transfer ABI, storage/inspection, hard-abort behavior, and full attachment grammar remain open.
 
 Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The selected target-level `else` can recover a matching typed panic at the operation. Unmatched panics still propagate implicitly; returned errors still require explicit handling or `!`. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width remainder % and modulo _% minimum-value/-1 cases. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
 

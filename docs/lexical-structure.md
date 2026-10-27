@@ -16,6 +16,10 @@ Whitespace can separate tokens. It does not insert separators or choose block bo
 
 Fallible-type shorthand has a selected attachment rule: T! requires ! to touch the end of its type, while spaces around a following initializer = are optional. User!=load() in a type annotation separates User!, =, and load(); User !=load() cannot be reattached into that shorthand. Explicit T ! E remains the binary type form. This is a source-spelling/token-boundary constraint, not permission for whitespace to regroup already recognized expressions. If generic source syntax uses angle brackets, type-context recognition must preserve the selected > then attached ! then optional initializer = boundary. See [fallible-type shorthand attachment](fallible-types-and-error-composition.md#fallible-type-shorthand-attachment-selected).
 
+## Capture and storage question marks
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): postfix exp? is explicit failure capture, distinct from the standalone = ? initializer in a typed reserved-storage declaration. It is not a returned-error propagation alias or an Option operator. Existing continuation after a complete block requires grouping, as in `attempt := ({ work() })?;`. Its parentheses do not establish the capture boundary; the ? operator does so before operand evaluation. Full postfix/token integration remains part of the grammar work; whitespace or line breaks must not select these meanings. See [capture and unwrapping](failure-capture-and-unwrapping.md).
+
 ## Separators
 
 - `;` separates ordinary items in blocks and modules.

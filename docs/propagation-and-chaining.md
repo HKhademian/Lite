@@ -22,9 +22,9 @@ Allow a successful value to continue through ordinary calls and member access wi
 name := load_user(id)!.load_profile()!.name;
 ```
 
-Each `!` extracts one successful payload or returns its error from the nearest function or closure, subject to that function's declared error type. On failure, later calls and member accesses do not execute. On success, the postfix chain continues without extra grouping.
+Each ! supplies one successful payload or forwards its retained failures from the nearest function/closure. Returned errors must fit the declared error contract; explicitly captured panics resume their panic channel under [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). On failure later chain steps do not run. This is a directed exit, not local handler search or a forced-success assertion.
 
-`!.` consists of the propagation token `!` followed by the member-access token `.`. It is not a separate nullable-access operator; inserting token-separating whitespace changes no semantics. The marker propagates recoverable failures and does not assert success or trigger a panic.
+`!.` consists of the propagation token `!` followed by the member-access token `.`. It is not a separate nullable-access operator; inserting token-separating whitespace changes no semantics. The marker forwards retained failures with their origins and establishes no capture boundary. It does not assert success or create a new panic.
 
 The visual similarity of Rust-style `?.` to JavaScript optional access was a reason to favor `!`. JavaScript's optional chain returns `undefined` for a nullish receiver; LiteScript's `!` instead explicitly forwards a declared recoverable error. See [ECMAScript optional chains](https://tc39.es/ecma262/multipage/ecmascript-language-expressions.html#sec-optional-chains).
 
@@ -85,7 +85,13 @@ attempt := load_user(id);
 user := attempt!;
 ```
 
-Ordinary access to `attempt` retains its Result value. The marker is not needed for capture and does not recursively flatten Result values stored inside a success payload.
+Ordinary access to `attempt` retains its Result value. No marker is needed to store the Result returned by an ordinary call. Capturing its separate live panic channel uses ?; ! later extracts success or forwards retained occurrences. Neither recursively flattens Result values deliberately stored inside a success payload.
+
+## Capture and complete recovery
+
+[LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) separately selects exp? for capture, not propagation. It establishes a whole-operand boundary before execution and stores supported failures as T ! (E | Panic). Existing block continuation uses `({ work() })?`. Recovery of a stored outcome preserves its unmatched failures as data. Exhaust all possible failures and the result is the normal T without another ! ([LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md)). A handler's new failures remain obligations; runtime success alone does not change a fallible static type. See [capture examples](failure-capture-and-unwrapping.md).
+
+The requested raise form from inside a handler is retained in [LP-0011 r1](proposals/LP-0011-explicit-failure-raising.md) as a draft. Its target and unmatched-remainder transfer cannot be inferred from ordinary emission of a new failure, which later else clauses could catch.
 
 ## Recovery is a separate retained contract
 

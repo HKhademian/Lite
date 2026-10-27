@@ -203,3 +203,7 @@ Remaining power contracts, complete expression-grammar integration, record/colle
 - [Declarations and assignment](declarations-and-assignment.md)
 - [Memory and performance](memory-and-performance.md)
 - This is a LiteScript contract selected in the design discussion, rather than a claim that all comparison languages use the same evaluation order.
+
+## Explicit capture starts before operand evaluation
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): although written postfix, exp? activates its capture boundary before any part of exp executes. Evaluate the operand once in its ordinary order; capture supported failures from executed arguments, receivers/callees, and synchronous called code. Skipped paths do not run, and a failure can prevent later arguments or the call from executing. A helper invoked only after evaluating exp cannot implement this boundary. Separate temporary statements cannot retroactively capture an earlier escaped panic. See [capture scope](failure-capture-and-unwrapping.md#explicit-capture-covers-its-operand-evaluation).

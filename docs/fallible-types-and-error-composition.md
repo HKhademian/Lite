@@ -15,6 +15,10 @@ SuccessType!
 
 `T ! E` is the selected compact spelling for the conceptual `Result<T, E>`. `T!` is exactly shorthand for `T ! Error`; the missing error operand selects the predefined general recoverable error contract named `Error`. These are ordinary first-class outcome types, usable in variables, parameters, and function return annotations. They do not request automatic unwrapping.
 
+### Flat captured failure types
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): an explicit capture of outward T has type T ! Panic; capture of outward T ! E has type T ! (E | Panic). No public Captured or FailureGroup wrapper is required. Panic represents an open category, not a statically enumerated effect list. Failure selects errors and panics, conceptually Error | Panic. The flat failure side retains ordered occurrences without a count parameter; a plain union value remains a single active alternative. Ordinary functions do not implicitly include Panic, and T! still expands only to T ! Error. Static exhaustion of all failures yields the normal value type directly; ! explicitly extracts success or forwards retained failures with original channels. See [capture and unwrapping](failure-capture-and-unwrapping.md) for the full selected boundary and remaining representation/inspection gaps.
+
 ### Fallible-type shorthand attachment selected
 
 Selected by the user, 2026-10-23: the ! in shorthand T! must be attached directly to the end of the type it qualifies. Do not insert whitespace or a comment between that type and its shorthand suffix. The following declaration initializer = is a separate token; spacing before or after it is optional under the ordinary item rules.

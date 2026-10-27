@@ -1,7 +1,7 @@
-# LP-0005 r4: Recovery-handler execution and pending exits
+# LP-0005 r5: Recovery-handler execution and pending exits
 
 - ID: `LP-0005`
-- Revision: `r4`
+- Revision: `r5`
 - Status: **draft, 2026-10-27; counterexample and alternatives under review**
 - Target language version: **unassigned**
 - Target compiler/runtime version: **unassigned**
@@ -57,7 +57,7 @@ With whole-match consumption, explicit iteration is work on captured failures, n
     }
 ```
 
-LP-0007 selects this typed collector and the [Error] type of errs. It handles one or many matches, skips no-match clauses, preserves occurrence order in each filtered group, and keeps per-error work in an explicit loop. Error filters returned errors only; a symbol for an all-failures collector remains unselected. See that accepted record and the normative expression-recovery page for current rules. Nonlocal exits with an unmatched remainder remain the open concern below.
+LP-0007 selects this typed collector and the [Error] type of errs. It handles one or many matches, skips no-match clauses, preserves occurrence order in each filtered group, and keeps per-error work in an explicit loop. Error filters returned errors only. The later LP-0009 now selects Failure for all failures and Panic for typed panics, preserving LP-0007 ordering and execution count. See that accepted record and the normative expression-recovery page for current rules. Nonlocal exits with an unmatched remainder remain the open concern below.
 
 ## Type-owned repetition information
 
@@ -87,7 +87,7 @@ A catch-all that has consumed the whole original group has no original remainder
 
 ## Tagged handler follow-up
 
-[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. True nonlocal exits with an unmatched remainder remain the unresolved question above. Temporary expression/outcome traces should precede decisions on confusing examples.
+[LP-0008 r1](LP-0008-recovery-block-tags-and-traces.md) resolves handler-local completion: a tag belongs to its explicit block, and `return @myblock` from a tagged catch body completes that body while retaining the unmatched remainder for later clauses. An @inner tag on the protected block alone does not enclose its handlers; returning around the entire chain requires an explicit wrapper. True nonlocal exits with an unmatched remainder remain the unresolved question above. [LP-0011 r1](LP-0011-explicit-failure-raising.md) records explicit raise forwarding alternatives; LP-0010 extraction forwards its entire operand and does not independently settle a partial handler's implicit remainder. Temporary expression/outcome traces should precede decisions on confusing examples.
 
 ## Revision history
 
@@ -98,5 +98,7 @@ A catch-all that has consumed the whole original group has no original remainder
 `r3` records the accepted follow-up in LP-0007: ellipsis spelling, [Error] bound type, once-per-clause execution, and stable filtered occurrence order. The former bracket-annotation capture is retained as history. This proposal remains draft for unresolved scalar binding, lifetime/transport, and nonlocal exits with unmatched failures.
 
 `r4` records the accepted LP-0008 scope and handler-local completion follow-up while retaining the unresolved nonlocal-exit policy.
+
+`r5` links LP-0009's selected Failure/Panic selectors and LP-0011's explicit raise review. The unmatched-remainder policy remains draft; LP-0010 extraction alone does not settle a partial handler's implicit remainder.
 
 Current rules: [expression recovery](../expression-recovery.md). Supporting discussion: [handler execution review](../recovery-receiver-types.md#handler-execution-and-expensive-fallbacks) and [cleanup/exit review](../finally.md#failure-aggregation-review).

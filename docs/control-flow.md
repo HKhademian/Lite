@@ -62,6 +62,10 @@ Targets must be lexically enclosing. Control-flow transfers cannot jump across f
 
 For a tagged `return`, the target's kind determines how its supplied `T` completes: a loop or conditional with `then` runs it once to produce `R`; a target without `then` returns `T` directly.
 
+## Captured outcomes and outward extraction
+
+Selected [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md): outcome! supplies one successful payload or forwards every retained occurrence from the nearest function/closure. Returned errors obey declared coverage; explicitly captured panics resume their original panic channel through required cleanup. This failure path is a directed exit that later local else does not intercept. Ordinary live panics during operand evaluation remain separate; ! establishes no capture boundary. The ? capture boundary does not intercept return, tagged exits, or function-targeted !. Requested raise forwarding from a partial catch remains under review in [LP-0011 r1](proposals/LP-0011-explicit-failure-raising.md), especially unmatched remainders.
+
 ## Returns inside recovery handlers
 
 [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-traces.md) selects handler-local tagged blocks. In `else ...errs: DiskFull @myblock { return @myblock value }`, the return completes that handler only; later recovery layers still receive its outcome and unmatched remainder. A tag on the original protected block does not enclose attached handlers. Returning to a block around the entire chain requires an explicit outer wrapper. Plain return remains a nearest-function/closure exit. Nonlocal returns with unmatched failures remain under review; do not silently consume the remainder. See [recovery scope traces](expression-recovery.md#handler-block-tags-and-temporary-traces).
@@ -164,7 +168,7 @@ Assume format_total maps Int to String. A negative item commits Int zero, stops,
 
 When an applicable `finally` runs and completes normally, it preserves the pending normal result, control-flow exit, propagated recoverable error, or typed panic; it has no receiver for that outcome and does not transform it. If a typed panic matches a handler in the same scope that owns `finally`, recovery runs first and that scope's `finally` runs once as it exits. During language-managed panic propagation, exited inner scopes run their applicable `finally` blocks before an outer matching handler. Which scopes attach `finally` and hard-abort behavior remain open. Cleanup failure follows the primary/secondary rule in [finally](finally.md#pending-outcomes); the aggregate's type and handling behavior remain open.
 
-Postfix `outcome!` supplies one Result layer's success payload or returns its recoverable error from the nearest function or closure. The escaping error must fit that function's declared error contract; it cannot cross a closure boundary to return directly from an outer function. This is structured error forwarding, not dynamic handler lookup or a panic assertion. See [Result and errors](result-and-errors.md) and [propagation and call chaining](propagation-and-chaining.md).
+Postfix outcome! supplies one outcome layer's success or forwards retained failures from the nearest function/closure under LP-0010. Escaping returned errors must fit the declared E; captured panics resume their panic channel. This is a structured exit rather than local dynamic handler lookup. It cannot return across a closure to an outer function. See [capture and extraction](failure-capture-and-unwrapping.md#explicit-extraction-and-propagation).
 
 The [finally example](finally.md) records selected inner-to-outer cleanup during language-managed typed-panic propagation. The transfer implementation and hard-abort behavior remain open. Cleanup-failure precedence is selected, with aggregate representation and inspection still open. These rules do not require cleanup after a hard process abort.
 

@@ -260,3 +260,9 @@ Execution time, startup, compilation latency, binary size, allocations, peak mem
 - [Swift value/reference semantics](https://www.swift.org/documentation/articles/value-and-reference-types.html).
 
 These sources establish comparison models; they do not settle LiteScript's memory semantics.
+
+## Explicit capture and flat outcome costs
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) uses flat T ! (E | Panic) outcomes and occurrence-ordered collectors; [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md) extracts success or forwards retained occurrences. A flat public type does not eliminate storage for several payloads or category information for unknown concrete panics. Typed matching across separate compilation requires sufficient retained identity; collector [T] also requires its full count/indexing/traversal contract. The compiler may specialize a proven singular or exhausted path, but cannot deduplicate repeated occurrences or erase observable ordering, origins, and cleanup to obtain that optimization.
+
+No common heap-object superclass, reflection on arbitrary objects, mandatory allocation, unwinder, or public FailureGroup wrapper is selected. Dynamic retention, filtered providers, ownership/lifetimes, allocation-failure behavior, mixed-channel ABI, and measured costs remain open. See [capture implementation boundaries](failure-capture-and-unwrapping.md#implementation-and-remaining-decisions).

@@ -240,6 +240,10 @@ The [generic User example](aggregate-patterns.md#generic-aggregate-example) requ
 
 A component's successful type test does not automatically identify a generic parameter or permit a cast of the enclosing generic value. Preserve the distinction between field-value refinement and the type argument of its container. [Generic widening](#generic-widening-requires-complete-compatibility) now requires proof of complete instantiated-contract compatibility; a field refinement alone supplies no such proof. Specialization, erasure/reification, constraints, the generic variance proof system, and legal tests of unknown generic parameters remain open.
 
+## Flat failure outcomes and exhaustion
+
+[LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) selects explicit capture into T ! Panic or T ! (E | Panic), with retained ordered occurrences and origins. Types list admitted categories without counts; union normalization removes duplicate type alternatives, never failure occurrences. Widening must preserve all occurrences and origins. [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md) makes a completely recovered expression an ordinary T when no possible failure remains on continuing paths. This is not automatic extraction of an arbitrary successful Result instance. Postfix ! supplies T on success and exits outward with remaining failures otherwise. Nested Result success payloads stay intact. See [capture and unwrapping](failure-capture-and-unwrapping.md).
+
 ## Major open decisions
 
 Numeric widths and overflow rules; generic syntax and inference; standalone inferred record literal types; the complete generic variance proof system; associated types; literal inference; overload resolution; interface dispatch; higher-order type features; ownership and borrowing; and whether types are first-class compile-time values.

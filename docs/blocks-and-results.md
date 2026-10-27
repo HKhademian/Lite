@@ -46,6 +46,10 @@ name := ({ make_user() }).name;
 
 These outer items are ordinary expressions or declarations and use ordinary separators. A closing brace inside a call argument or other enclosing expression does not terminate that enclosing item. See [lexical structure](lexical-structure.md) for the complete separator direction.
 
+## Explicit failure capture
+
+Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): `({ work() })?` captures supported failures during block execution into a flat outcome. The boundary is active before the first item and includes executed synchronous calls. A final outward T ! E becomes T ! (E | Panic); deliberately nested success payloads remain data. Postfix ? also applies to other expressions. Existing grouping for continuation after a complete braced construct remains required. Normal exits and function-targeted ! are not captured. See [failure capture and unwrapping](failure-capture-and-unwrapping.md).
+
 ## Final-item rule
 
 - A final expression supplies the block's value.
