@@ -31,7 +31,11 @@ This example explicitly returns a recoverable failure. The ordinary final intege
 - Postfix ! extracts success or forwards retained failures with their origins. It establishes no panic capture boundary and is not a forced-success assertion. LP-0010 extends it to explicitly stored panic-bearing outcomes; ordinary live panics retain implicit propagation.
 - Ordinary returned-error inspection retains E. LP-0009 selects explicit ? capture into flat T ! (E | Panic), with Error/Panic/Failure filters for returned errors, panics, and both. Scalar multi-match binding and origin-inspection representation remain open.
 - Returning `.err(value)` explicitly constructs a recoverable failure; it does not trigger a panic.
-- Attached else is selected as a shared recovery surface. Operation-specific and explicit whole-block panic recovery are selected; panic-trigger spelling, complete chain/attachment rules, and fault-transfer implementation remain open; no implemented panic() API is implied.
+- Attached else is selected as a shared recovery surface. Operation-specific and explicit whole-block panic recovery are selected; manual raise expression is now selected in LP-0012 for established Panic-category operands. Complete category declarations, chain/attachment rules, and fault-transfer implementation remain open; no implemented panic() API is implied.
+
+## Manual panics and error inference
+
+[LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md) selects custom Panic-category values and manual raise expression. Panic raise initiates ordinary propagation, including eligible local capture/recovery; it is not a special bypass-local-handlers rethrow. Custom Error-category raises instead return failure from the nearest function/closure. Eligible omitted-output inference includes escaping returned errors and excludes implicit panics. Capturing such a call explicitly still adds broad Panic. Declaration/conformance syntax, overlap, and re-emission provenance remain open. See [manual failures and inference](manual-failures-and-inference.md).
 
 ## Explicitly stored panics
 
@@ -58,7 +62,7 @@ Recoverable errors do not imply automatic rollback of earlier mutations. Transac
 ## Open decisions
 
 - Which invariant violations, arithmetic faults, and allocation failures can panic.
-- Explicit panic-trigger syntax and any payload type.
+- Manual raise is selected in LP-0012; custom category declarations/conformance, ambiguous operand classifications, and exact panic payload schemas remain open.
 - The unhandled-fault policy when no typed panic handler matches, and how handlers inspect or consume members of an aggregated failure.
 - Operation-specific fault contracts, attribution through helpers, complete block attachment/recovery-chain integration, and how safe recovery is guaranteed. Argument panics bypass an outer operation handler.
 - Interaction with foreign code, host runners, threads, and process termination.

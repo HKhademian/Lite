@@ -552,6 +552,7 @@ The tag scope includes its header, so a loop condition may reference initialized
 
 ```text
 return_exit := "return" [exit_target] [exit_payload]
+raise_exit := "raise" expression
 break_exit := "break" [exit_target] [exit_payload]
 continue_exit := "continue" [exit_target] [exit_payload]
 
@@ -563,7 +564,7 @@ An optional target is exactly one `@` identifier; the payload, when present, beg
 
 Break value commits a value of body type T, stops the nearest loop, and runs then if present. Bare break preserves .value and follows normal completion. An optional `@tag` selects an enclosing loop explicitly; without it, break targets the nearest loop, tagged or untagged. A payloadless `break @tag` preserves .value; with a payload it commits T. A break target that is not a loop is invalid. `continue @tag [value]` advances the named loop; with a value, it commits that T value before advancing. An untagged continue targets the nearest loop. `continue` also requires a loop target. Tagged `return` may target a loop, conditional, or general result block; plain `return` targets the nearest function/closure. Functions and closures are not current tagged-return targets. Whether a nested function or lambda can return to an enclosing function, and whether function declarations can carry tags for visibility or future metadata, remain deferred. Unsupported operation–target pairs are invalid. Exits cannot cross function/closure boundaries. A missing return payload means `Unit`.
 
-The [throw proposal](error-return-sugar.md) considers throw expression as shorthand for return .err(expression), with a required operand and the nearest function/closure as its target. This is not yet an adopted exit production; it would not introduce dynamic handler search or a tagged-throw form.
+Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): raise expression requires one operand, evaluated once. An established Error-category value returns failure from the nearest function/closure; an established Panic-category value initiates ordinary typed-panic propagation to eligible local recovery/capture. Both run applicable cleanup and supply no normal local result. Classification is explicit in the type contract; custom category declaration/conformance grammar and ambiguous mixed/overlapping operands remain open. No bare raise, tagged raise, or raise ...collector production is selected. This replaces the unselected throw shorthand direction; caught-group forwarding remains draft LP-0011 r2.
 
 ## Unit and empty tuple
 
@@ -605,6 +606,10 @@ union_type := ["|"] union_member_type { "|" union_member_type }
 
 This is a selected nonempty-chain fragment in type context, not a complete type-expression grammar. union_member_type excludes ungrouped top-level | and binary fallible !; its recursive productions and other constructor precedence remain open. Established grouping may contain another union chain. Thus Alias := type | A | B and Alias := type A | B denote the same type, while Alias := type |, Alias := type | | A, and Alias := type A | are invalid. A singleton | A denotes A and adds no empty member or Unit. Each union operand of binary ! uses this same fragment, preserving the selected tighter union precedence. No public intersection-type or leading-& production is selected. See [optional leading separators](leading-separators.md#plain-union-types).
 
+## Escaping-error inference at an omitted output
+
+Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): within existing nonrecursive body inference with established inputs, an omitted output without an expected result contract may infer T ! E from successful completion types and escaping returned-error paths. Include Error raises, explicit .err returns, ! forwarding, and outward fallible tails. Implicit panics, handled/local stored Results, and merely nested callable bodies do not add escaping errors. Explicit/expected outputs remain constraints. Complete recursive/public/no-normal-completion inference and custom category grammar remain open. This is a typing rule, not whitespace-dependent parsing.
+
 ## Recoverable error expressions and shared recovery direction
 
 ```text
@@ -642,7 +647,7 @@ Selected [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md): exp? activates
 
 The generalized flat failure side retains one or several ordered occurrences admitted by its category union, with no count in the type. Error selects returned errors, Panic selects typed panics, and Failure selects both. ...fails: Failure binds [Failure] with the same once-per-matching-clause, stable-filter rules as LP-0007. Unmatched stored panics remain in the residual outcome; live uncaptured panics still propagate implicitly. Existing scalar .err patterns do not settle generalized group-payload inspection. Complete error/category admissibility, origin inspection, storage, and ABI remain open.
 
-A recovery chain with no remaining possible failures produces its normal value type directly under LP-0010. A narrow BoundPanic filter alone cannot exhaust open Panic. New handler/cleanup failures remain obligations. The reviewed raise expression / raise ...collector forms remain draft [LP-0011 r1](proposals/LP-0011-explicit-failure-raising.md), not adopted exit productions; unmatched handler remainders need a policy.
+A recovery chain with no remaining possible failures produces its normal value type directly under LP-0010. A narrow BoundPanic filter alone cannot exhaust open Panic. New handler/cleanup failures remain obligations. Manual raise expression is now selected in LP-0012. Distinct caught-group forwarding, including the earlier raise ...collector candidate, remains [draft LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md); unmatched handler remainders need a policy.
 
 Selected panic target distinction, 2026-10-26 ([LP-0001 r1](proposals/LP-0001-operation-specific-panic-recovery.md), [LP-0002 r1](proposals/LP-0002-explicit-block-panic-recovery.md)): `operation(args) else { fallback }` handles only faults defined by that operation. Panics while evaluating arguments/operands bypass its handler. `{ operation(args) } else { fallback }` instead establishes broad recovery before the explicit block's first item and covers supported typed panics from its executed contents, including arguments and synchronously called code. The braces are the selected target boundary and need no extra grouping. A block's own handler is outside its protected contents; supported exits and explicit Result handling retain their existing rules. Operation fault attribution and complete postfix/chain integration remain open.
 

@@ -91,7 +91,7 @@ Ordinary access to `attempt` retains its Result value. No marker is needed to st
 
 [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) separately selects exp? for capture, not propagation. It establishes a whole-operand boundary before execution and stores supported failures as T ! (E | Panic). Existing block continuation uses `({ work() })?`. Recovery of a stored outcome preserves its unmatched failures as data. Exhaust all possible failures and the result is the normal T without another ! ([LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md)). A handler's new failures remain obligations; runtime success alone does not change a fallible static type. See [capture examples](failure-capture-and-unwrapping.md).
 
-The requested raise form from inside a handler is retained in [LP-0011 r1](proposals/LP-0011-explicit-failure-raising.md) as a draft. Its target and unmatched-remainder transfer cannot be inferred from ordinary emission of a new failure, which later else clauses could catch.
+Manual raise expression is selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): Error raises return failure; Panic raises use ordinary propagation and can reach local recovery. A separate caught-group forwarding form that bypasses following handlers remains [draft LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md). Its unmatched-remainder policy is not settled by outcome! extraction.
 
 ## Recovery is a separate retained contract
 

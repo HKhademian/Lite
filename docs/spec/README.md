@@ -1,6 +1,6 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-26**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
+Status: **draft current-design summary, 2026-10-27**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
@@ -144,7 +144,10 @@ Selected:
 - [LP-0007 r1](../proposals/LP-0007-typed-recovery-collectors.md) selects ...errs: Error with [Error], singleton/multiple ordered matches, and once-per-matching-clause execution. [LP-0009 r1](../proposals/LP-0009-flat-failure-capture.md) adds ...ps: Panic and ...fails: Failure with [Panic]/[Failure], selecting panics and both channels respectively. Clauses execute in written else order; each collector preserves within-group occurrence order. Stored unmatched panics remain in the residual outcome. Scalar multi-match binding, origin access, and retention/transport remain open.
 - [LP-0010 r1](../proposals/LP-0010-outcome-extraction-and-exhaustion.md) generalizes ! to extract one success layer or forward all retained failures from the nearest function/closure. Returned errors obey declared coverage; captured panics resume their channel through applicable cleanup. Later local else cannot intercept that exit itself; ordinary live operand panics are not captured by !.
 - Complete static failure exhaustion yields the ordinary normal value type with no further !. Runtime success alone is insufficient. A narrow BoundPanic filter leaves open Panic; new handler/cleanup failures remain obligations. See [x11–x26 types](../failure-capture-and-unwrapping.md#types-of-the-review-examples).
-- Explicit raise forwarding from a handler remains [draft LP-0011 r1](../proposals/LP-0011-explicit-failure-raising.md), especially scalar multi-match binding and other pending failures. No unmatched remainder may silently disappear.
+- [LP-0012 r1](../proposals/LP-0012-manual-failures-and-error-inference.md) selects custom Error/Panic capability and raise expression. Known Error operands return failure from the nearest function/closure; known Panic operands initiate ordinary typed-panic propagation to eligible local recovery/capture. The operand runs once, raises supply no normal result, and cleanup rules remain in force. Classification is explicit in the type contract; declaration syntax and overlap remain open.
+- Eligible nonrecursive bodies with established inputs and no explicit/expected output infer success types and escaping returned-error categories: Error raises, .err returns, ! forwarding, and outward fallible tails. Exclude implicit panics, handled/local stored Results, and uninvoked nested bodies. Explicit/expected outputs remain constraints. See [manual examples](../manual-failures-and-inference.md); recursive/public/no-normal-completion policies remain open.
+
+- Distinct caught-group forwarding remains [draft LP-0011 r2](../proposals/LP-0011-explicit-failure-raising.md), especially scalar multi-match binding and other pending failures. Manual Panic raise below follows ordinary propagation and is not a bypass-local-handlers transfer. No unmatched remainder may silently disappear.
 
 - `A | B` is an alternative; `A & B` is an order-insensitive co-occurrence set and binds no value.
 - Ordered failure tuples use existing tuple syntax and bind a real tuple; positional access works, labels only in the named form.
@@ -152,7 +155,7 @@ Selected:
 - `finally` runs on normal and abrupt exits and preserves the pending outcome when cleanup completes normally. Cleanup failures follow the selected primary/secondary precedence.
 - `then` runs before `finally` on normal loop/conditional completion. A handler in the same scope recovers a matching typed panic before that scope's `finally` runs once on exit.
 
-Open: aggregate .err inspection, repeated capture, mixed-channel forwarding ABI, [scalar multi-value binding, retention/transport, and exits with a remainder](../proposals/LP-0005-handler-execution-and-exits.md), `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
+Open: custom failure-category declaration/conformance, ambiguous classification, recursive/public error inference, re-emission provenance, aggregate .err inspection, repeated capture, mixed-channel forwarding ABI, [scalar multi-value binding, retention/transport, and exits with a remainder](../proposals/LP-0005-handler-execution-and-exits.md), `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
 
 ## LS-009 — Collections and sequences
 

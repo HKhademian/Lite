@@ -1,6 +1,6 @@
 # Failure capture, flat outcomes, and unwrapping
 
-Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) and [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). Explicit `raise` forwarding remains a [draft](proposals/LP-0011-explicit-failure-raising.md), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
+Status: **selected, 2026-10-27; unreleased design**, [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) and [LP-0010 r1](proposals/LP-0010-outcome-extraction-and-exhaustion.md). Manual raise and eligible escaping-error inference are selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md). Distinct caught-group forwarding remains a [draft](proposals/LP-0011-explicit-failure-raising.md), especially exits with unmatched failures. No parser, runtime, storage layout, or benchmark is supplied.
 
 Normative for explicit capture and extraction; [Result and errors](result-and-errors.md) owns ordinary outcomes, [expression recovery](expression-recovery.md) owns matching and consumption, and [finally](finally.md) owns cleanup.
 
@@ -156,9 +156,9 @@ c := b else :Panic { default_value }   /* T */
 
 Again assume each handler produces T without new failures. With no remaining failure alternative, the recovery expression is T. An actually empty remainder during one execution is insufficient if other admitted paths can still fail. Recovery or explicit propagation must account for those paths. This introduces no public empty-failure type or general coercion from an arbitrary T ! E to T, and does not recursively unwrap a Result deliberately stored inside T.
 
-## Explicit raise remains under review
+## Manual raise and remaining caught-group forwarding
 
-The requested `else p: BoundPanic { raise p } else { default_value }` needs two further contracts: scalar binding when multiple panics match, and outward forwarding versus producing a new failure catchable by the following else. The proposed collector form is `else ...ps: BoundPanic { raise ...ps }`; the proposed target is the nearest function/closure, analogous to !. Handling an unmatched remainder during that transfer is unresolved. Forwarding the remainder too and rejecting the exit until it is handled are alternatives; neither may silently discard it. See [LP-0011 r1](proposals/LP-0011-explicit-failure-raising.md).
+Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): raise expression returns an Error failure from the nearest function/closure or initiates ordinary Panic propagation, according to established category membership. A manually raised panic can be captured locally; a panic raised in one handler may reach a later eligible else. Reusing a caught payload does not select a different bypass behavior. Eligible unannotated outputs infer escaping returned errors only. The earlier request for explicit caught-group forwarding past later clauses remains [draft LP-0011 r2](proposals/LP-0011-explicit-failure-raising.md), with spelling/target, scalar multi-match binding, re-emission provenance, and unmatched-remainder policy unresolved. The old raise ...ps candidate is not a selected manual-raise form. See [manual examples](manual-failures-and-inference.md) and [remaining shortfalls](failure-handling-shortfalls.md).
 
 ## Implementation and remaining decisions
 

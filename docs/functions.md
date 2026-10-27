@@ -285,7 +285,7 @@ operation := (x: Float): Float { x * 3 }
 
 Permit this result inference for nonrecursive local lambdas. Use the existing body-result rules: normal completion comes from the final item, an empty body or final declaration/assignment produces Unit, and explicit returns must satisfy the resulting type constraints. Require an annotation when the result cannot be determined unambiguously. Distinct completion payload types form a normalized plain union under the selected rule below.
 
-Keep the scope narrow: input types must already be established by annotations, an expected callable, or selected ordinary parameter defaults. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. No recoverable error channel may be silently added; escaping errors still require an explicitly declared error contract, directly or through the expected callable contract. Result-valued bodies and nested Result boundaries retain their separate rules.
+Keep the scope narrow: input types must already be established by annotations, an expected callable, or selected ordinary parameter defaults. This does not select generic inference for `(n) { n * 2 }` without such information. Recursive result inference, no-normal-completion types, and public/stable API signature policy remain separate. LP-0012 now permits eligible omitted outputs to infer escaping returned errors. Explicit/expected output contracts remain constraints and cannot silently gain failures. Result-valued bodies and nested Result boundaries retain their separate rules.
 
 Requiring an expected result type or a written result annotation for every independent local lambda was considered and not chosen.
 
@@ -316,7 +316,7 @@ choose := (flag: Bool): (Int | String) {
 }
 ```
 
-Genuine Unit completion payloads participate like other types. A no-`else` conditional is noncontributing; a declaration default uses zero(T) and does not add a Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Escaping recoverable errors still require an explicitly declared error contract, directly or through the expected callable.
+Genuine Unit completion payloads participate like other types. A no-`else` conditional is noncontributing; a declaration default uses zero(T) and does not add a Unit alternative. Paths that leave by failure or another exit without producing a lambda result do not add a result payload type. Eligible omitted outputs now infer escaping returned errors under LP-0012; explicit/expected outputs still constrain the body and exclude undeclared errors.
 
 Requiring an explicit or expected union for distinct local completion payloads was considered and not chosen. A changed completion payload can change the inferred local result; an annotation can pin the contract. This decision concerns lambda completion payloads. [Conditional and match results](branch-result-inference.md) now use the same selected normalized-union inference when no expected result contract supplies their type. Recursive inference, context/capture work, and union representation remain separate.
 
@@ -498,7 +498,7 @@ Early returns are encouraged for guards and invalid cases. Explicit final `retur
 
 A fallible function exposes a statically typed recoverable error contract. A caller must explicitly handle/inspect the outcome, provide a default, or propagate the error before using the successful payload. Keeping the returned outcome as a `Result` for later handling does not unwrap it. Implicit success construction inside a fallible function does not grant automatic propagation at its callers.
 
-Postfix `operation()!` extracts success or forwards its recoverable error from the nearest function or closure. Member access and calls can continue directly, as in `load_user(id)!.load_profile()!.name`; see [propagation and call chaining](propagation-and-chaining.md). Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without handling or extraction, the call retains its Result as ordinary data. Every recoverable error that can escape, directly or through propagation, must be covered by the function's declared error type. A declaration that promises no recoverable failure cannot silently gain one through inference. One outer propagation marker must not silently extract all intermediate Results in a chain.
+Postfix `operation()!` extracts success or forwards its recoverable error from the nearest function or closure. Member access and calls can continue directly, as in `load_user(id)!.load_profile()!.name`; see [propagation and call chaining](propagation-and-chaining.md). Use `operation() else(error) { ... }` for a local fallback or explicit exit. Without handling or extraction, the call retains its Result as ordinary data. Every escaping recoverable error must fit the established explicit, expected, or eligible inferred outward error contract. An explicit or expected output promising no recoverable failure cannot silently gain one through inference; an omitted output may infer its error side under LP-0012. One outer propagation marker must not silently extract all intermediate Results in a chain.
 
 The recovery receiver may be omitted: `operation() else { fallback }`. Both recovery forms combine success type `T` and normal fallback type `D` as `T | D`. A fallback need not have the same type as the original success. Returning that union still needs to satisfy the enclosing function's declared return type.
 
@@ -515,6 +515,10 @@ double := fn (x: Int) {
 ```
 
 The same body-result rule applies to anonymous functions. A plain `return` inside a closure exits that closure, not the function that created it. Capture/context design is [postponed](deferred-contexts.md), with earlier capture-header ideas retained for later review.
+
+## Manual failures and inferred errors
+
+Selected [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): raise expression manually produces an Error return or an implicit Panic according to its established category. Custom category capability is selected; declaration/conformance syntax remains open. In the existing nonrecursive body-inference boundary with established inputs and no explicit/expected output, infer normal success types and escaping returned-error categories. Include Error raises, explicit .err returns, ! forwarding, and outward fallible tails; exclude implicit panics, handled/local stored errors, and nested callable bodies until their outcomes escape through calls. An explicit/expected T or T ! E remains a constraint. Recursive cycles require enough explicit output information; general recursive/public policy remains open. See [the authenticateUser examples](manual-failures-and-inference.md).
 
 ## Recursion and inference
 

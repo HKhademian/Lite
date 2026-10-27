@@ -1,6 +1,6 @@
 # Throw as an error return
 
-Status: **user-proposed shorthand, 2026-10-19; recommended semantics below await confirmation**. Existing declared Result contracts, implicit successful returns, lowercase outcome cases, postfix ! propagation, and local else recovery remain established. This proposal adds one explicit failure-exit spelling.
+Status: **historical unselected throw shorthand; manual raise selected instead, 2026-10-27, LP-0012 r1**. The comparison below preserves earlier proposal reasoning. Current Error raise returns failure from the nearest function/closure; Panic raise uses ordinary typed-panic propagation. Eligible omitted outputs may infer escaping returned errors. See [manual failures and inference](manual-failures-and-inference.md).
 
 ## Core equivalence
 
@@ -77,6 +77,6 @@ Swift demonstrates that throw spelling can accompany declared fallibility withou
 
 C# uses throw for exception handling with a search for a compatible catch along the call stack. That established association is a naming tradeoff for teaching; LiteScript would define the word through the exact local error-return equivalence above. Source: [C# throw](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/exception-handling-statements#the-throw-statement).
 
-Recommendation: retain return value as the everyday success exit and adopt throw error as the everyday explicit failure exit if the user confirms this proposal. Keep .ok/.err for ordinary outcome construction and inspection, and preserve postfix ! for extracting or forwarding existing outcomes.
+Historical recommendation only: the earlier throw spelling was not selected. LP-0012 now selects raise expression with category-based behavior and eligible escaping-error inference. The old explicit-annotation-only restrictions below do not override that current contract.
 
 Related: [Result and errors](result-and-errors.md), [fallible types](fallible-types-and-error-composition.md), [control-flow exits](control-flow.md), and [panics](panics.md).

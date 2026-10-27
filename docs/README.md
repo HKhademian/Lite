@@ -161,7 +161,10 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Fallible types and error composition](fallible-types-and-error-composition.md): selected `T ! E` spelling and `T!` shorthand for `T ! Error`, plus proposed named compositions and aliases.
 - [Recovery boundaries](recovery-boundaries.md): mandatory handling of Result arguments, preferred local fallbacks, selected operation-specific and explicit whole-block scopes, current and historical evaluation traces, and implementation tradeoffs.
 - [Recovery receiver types](recovery-receiver-types.md): typed filters, ordered Error/Panic/Failure collectors with [Error]/[Panic]/[Failure] bindings, one/many matches, once-per-clause execution, and remaining scalar-binding and handler-exit review.
-- [Failure capture and unwrapping](failure-capture-and-unwrapping.md): postfix ? capture, flat T ! (E | Panic), ordered Error/Panic/Failure collectors, all x11–x26 types, ! forwarding, static exhaustion, and the remaining raise draft; LP-0009/LP-0010/LP-0011.
+- [Manual failures and inference](manual-failures-and-inference.md): custom Error/Panic capability, raise expression, authenticateUser examples, escaping-error inference, and explicit/expected contract checking; LP-0012.
+- [Failure-handling shortfalls](failure-handling-shortfalls.md): focused review queue for pending-remainder exits, caught-group forwarding, scalar/aggregate access, category declarations, repeated capture, and storage/transport.
+
+- [Failure capture and unwrapping](failure-capture-and-unwrapping.md): postfix ? capture, flat T ! (E | Panic), ordered Error/Panic/Failure collectors, all x11–x26 types, ! forwarding, static exhaustion, manual raise/error inference, and the remaining caught-group forwarding draft; LP-0009/LP-0010/LP-0011/LP-0012.
 
 - [Shared expression recovery](expression-recovery.md): catch-all and typed-filter else, written-order munching, whole-match consumption, ordered collectors, co-occurrence/tuple patterns, explicit block tags, operation/block recovery scope, stored captured failures, and static exhaustion.
 - [Recovery block tags and temporary traces](expression-recovery.md#handler-block-tags-and-temporary-traces): explicit block scope, handler-local returns, and expression-layer reasoning; LP-0008.
@@ -212,7 +215,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 ## Project and implementation direction
 
 - [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.
-- [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010, draft LP-0005 r5 for scalar binding and pending exits, draft LP-0011 r1 for explicit raise, revision/status records, and unassigned release targets.
+- [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010 plus LP-0012, draft LP-0005 r5 for scalar binding and pending exits, draft LP-0011 r2 for distinct caught-group forwarding, revision/status records, and unassigned release targets.
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.
 - [Memory and performance](memory-and-performance.md): selected singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, performance goals, and open memory semantics; the supporting [runtime-cost review](memory-and-performance.md#runtime-cost-review) separates compile-time proofs from generated work and unresolved support machinery.
 - [Tooling and learning](tooling-and-learning.md): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.

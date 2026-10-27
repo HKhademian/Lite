@@ -96,7 +96,7 @@ Recommendation: prefer candidate A for ordinary receiver access, while retaining
 
 If the eventual error-type rules permit returning a Panic carrier as an ordinary .err payload, E | Panic can normalize to Panic. The receiver's type alone then cannot tell whether the value was returned or raised as a panic.
 
-Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling and overlapping-payload typing remain open. LP-0010 now specifies that ! forwards stored occurrences with their retained origins; explicit raise from a partial handler remains a draft in LP-0011. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
+Do not infer origin from capitalization, message contents, or a successful type test. Candidate B solves this with an explicit tag. Candidate A needs retained context metadata when origin matters, for example to resume the same panic rather than explicitly return a mapped .err. Metadata spelling and overlapping-payload typing remain open. LP-0010 now specifies that ! forwards stored occurrences with their retained origins; distinct caught-group forwarding remains a draft in LP-0011. This review does not forbid overlapping error types or silently select a panic-rethrow operation.
 
 ## Selected typed receiver filtering
 

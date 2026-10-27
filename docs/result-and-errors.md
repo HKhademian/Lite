@@ -1,6 +1,6 @@
 # Result and errors
 
-Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and explicit raise remain open.
+Status: **ordinary typed outcomes and first-class Result handling established; explicit postfix ? capture, flat panic-bearing failure types, generalized ! extraction, and static exhaustion selected 2026-10-27 in LP-0009/LP-0010**. Error/category details, aggregate inspection/representation, and caught-group forwarding remain open. Manual raise and eligible escaping-error inference are selected in LP-0012.
 
 Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Failure capture and unwrapping](failure-capture-and-unwrapping.md) owns explicit postfix ? boundaries, flat error/panic outcomes, and extraction after recovery. [Expression recovery](expression-recovery.md) owns the `else`/filter surface; [checked fault policy](checked-fault-policy.md) owns typed-panic triggers; [finally](finally.md) owns cleanup ordering. See the [normative page map](normative-pages.md).
 
@@ -24,16 +24,16 @@ The earlier discussion of ordinary `: Int` signatures hiding recoverable failure
 
 ## Declared error coverage
 
-Every recoverable error that can escape a function must be covered by its declared error type. This includes errors explicitly returned by the function and errors forwarded when a postfix `!` operation fails. Compiler-generated forwarding does not exempt an error from declaration.
+Every recoverable error that can escape a function must fit its established outward error contract. Explicit or expected contracts constrain the body and cannot silently widen. [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md) now allows an eligible unannotated nonrecursive body to establish that contract by inferring escaping returned-error categories. This includes errors explicitly raised/returned, forwarded by !, or exposed by an outward fallible tail. Panics stay outside ordinary inferred E.
 
 Selected clarification, 2026-10-26 ([LP-0004 r1](proposals/LP-0004-count-free-error-contracts.md)): `fn(...): T ! (ErrA | ErrB)` admits failure categories without occurrence counts. Callers must not predict multiplicity or repeat a catch clause per occurrence. [LP-0009 r1](proposals/LP-0009-flat-failure-capture.md) extends the earlier singular Result description: the flat failure side may preserve ordered repeated occurrences. A union lists permitted categories rather than encoding or deduplicating those occurrences. Ordinary explicit .err(error) construction is singular; capture/aggregation can retain several. No implicit Panic member is added to ordinary E.
 
 The [whole-match clarification](expression-recovery.md#whole-match-consumption-selected), LP-0006, covers every matching pending occurrence. LP-0007 selects explicit ...errs: Error collection as [Error], singleton support, once-per-clause execution, and stable occurrence order. LP-0009 adds ...ps: Panic and ...fails: Failure. Scalar multi-value binding, representation, and nonlocal exits with unmatched remainders remain open.
 
-- A function declaring no recoverable failure must handle such failures internally; it cannot use `!` to let them escape.
+- An explicit or expected plain T output declares no recoverable failure; the function must handle such errors internally. Omitting an output under eligible LP-0012 body inference instead allows an inferred T ! E contract.
 - If an operation can return an error outside the declared contract, propagating it is a compile-time error unless an explicit, defined conversion or mapping makes it compatible.
 - Fully handled internal errors need not appear in the enclosing function's outward contract. The producing operation still has its own declared error type.
-- The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or infer additional escaping failures outside the declared contract. Choosing `T!` itself declares the broad `Error` contract.
+- The compiler may verify coverage and identify missing declarations; it must not silently widen a refined contract to `Error` or admit escaping failures outside an explicit/expected contract. Eligible omitted outputs may establish an inferred contract under LP-0012; that is not widening a supplied declaration. Choosing `T!` itself declares the broad `Error` contract.
 
 Matching-outer-outcome [fallible callable outcome widening](callable-value-variance.md#fallible-callable-views-may-widen-outcomes) is now selected for compatible callable views: source success/error payloads can be admitted into wider public success/error contracts while preserving .ok/.err. [Stored Result widening](#stored-result-values-widen-safely) now applies the same payload proofs to ordinary outcome values and matching nested layers. General error-set composition, generic error contracts, and other Result conversions remain open. [Panics](panics.md) use a separate, implicitly propagating channel and are not implicit members of every recoverable error contract. Uncaptured panics need no ! marker. Explicitly stored panic-bearing outcomes use ! to extract success or resume the retained panic channel, as specified in LP-0010.
 
@@ -89,7 +89,7 @@ validate_age := fn(age: Int): Int ! AgeError {
 
 The expected `Int ! AgeError` contract makes the final integer a success. Errors are explicit. Early returns are encouraged when they keep the normal path flat.
 
-The user has proposed throw error as exact shorthand for return .err(error). Its [error-return proposal](error-return-sugar.md) preserves declared error coverage, nearest-function/closure exits, and explicit caller handling. Explicit return .ok(value) remains available alongside implicit success. The throw spelling is not yet selected; it adds no implicit exception channel or panic operation.
+Manual raise expression is selected in [LP-0012 r1](proposals/LP-0012-manual-failures-and-error-inference.md): an established Error-category value exits the nearest function/closure like return .err(value); an established Panic-category value initiates ordinary typed-panic propagation. This replaces the unselected throw error shorthand as the selected manual-failure spelling. Explicit return .ok(value) and implicit ordinary success remain available. See [manual failures and inference](manual-failures-and-inference.md).
 
 ## Proposed conversion boundary
 
