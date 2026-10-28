@@ -1,6 +1,11 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-27**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Snapshot: **2026-10-28**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+
+## Source file body, 2026-10-28
+
+- [Source file body](blocks-and-results.md#source-file-body), selected 2026-10-28: a source file that is run as a program is the outermost implicit executable block; the file boundary supplies the braces and written block constructs still require `{ ... }`. Items execute in written order, and the final item's result is computed then not observed, so a trailing expression is evaluated for its effects and its value discarded rather than rejected. The body completes with `Unit` whether empty, declaration-final, assignment-final, or expression-final. "Bodies always use braces" now distinguishes written block bodies from the source unit.
+- This selects the execution model only. Top-level `return`/`break`/`continue` have no enclosing function, loop, or tag target; duplicate top-level names versus module declarations, imported-file behavior and module initialization, recursive function-literal initialization, process exit status, and observable effects remain with their owning topics. No compiler, backend, runtime, or ABI claim follows.
 
 ## Recapture, Result inspection, and implicit panics, 2026-10-27
 

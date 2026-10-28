@@ -15,7 +15,7 @@ lite build lesson.lite
 
 These are proposed commands and a proposed extension; no tool exists in this workspace.
 
-One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows.
+One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows. The executable body of a run file is defined in [blocks and results](blocks-and-results.md#source-file-body); this page governs packages, imports, and visibility.
 
 ## Import sketch
 

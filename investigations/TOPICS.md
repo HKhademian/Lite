@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-003-01](INV-003-01-top-level-execution.md) — INV-003.01 file body selected 2026-10-28 (option A); INV-003.02–.04 not started.
 
 <a id="inv-004"></a>
 

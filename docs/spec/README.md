@@ -1,6 +1,6 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-27**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
+Status: **draft current-design summary, 2026-10-28**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
@@ -14,6 +14,7 @@ Status: **draft current-design summary, 2026-10-27**. This page states the selec
 Selected:
 
 - Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
+- A run source file is the outermost implicit executable block: the file boundary supplies its braces. Items execute in written order; the final item's result is computed and not observed, so the body completes with `Unit` whether empty, declaration-final, or expression-final. See [source file body](../blocks-and-results.md#source-file-body).
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
 - Operands and named call inputs evaluate left to right in written order.
 - Operator grouping, tighter to looser: prefix `-`; `* / _/ % _%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.

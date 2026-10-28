@@ -1,6 +1,6 @@
 # Blocks and results
 
-Status: **established direction**.
+Status: **established direction; source-file body selected 2026-10-28**.
 
 ## Purpose and template
 
@@ -117,6 +117,30 @@ use(answer);
 ```
 
 The block's final expression does not exit the surrounding function. `return` does. A prefix tag can identify a block as an explicit return target.
+
+## Source file body
+
+Selected **2026-10-28**: a source file that is run as a program is the outermost
+implicit executable block. The file boundary supplies the braces that explicit
+block constructs require, so "bodies always use braces" still governs every
+written `{ ... }` body; the source unit needs no written brace pair of its own.
+
+Its items execute in written order under the ordinary block rules, including the
+final-item rule. The final item's result is computed and then not observed: a
+trailing expression is evaluated for its effects, and its value is discarded
+rather than reported as an error. The file body completes with `Unit` whether it
+is empty, ends in a declaration or assignment, or ends in an expression.
+
+Because there is no enclosing function, loop, or tagged block at this boundary, a
+top-level `return`, `break`, or `continue` has no valid target. Exact diagnostics
+and any future top-level exit spelling remain open.
+
+This section selects the execution model only. Duplicate top-level names and
+their module-declaration counterparts, imported-file behavior and module
+initialization, recursive initialization of a named function literal, process
+exit status, and observable effects remain with their owning contracts. Contrast
+[declaration bodies](#declaration-bodies) below, which contain declarations and
+never supply an executable result.
 
 ## Declaration bodies
 
