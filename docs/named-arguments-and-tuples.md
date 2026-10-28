@@ -16,7 +16,7 @@ op(1, 2, c = 3);
 
 These forms supply the same three inputs to the same callable. Naming an argument does not turn the call into a single record or tuple argument. No extra named-parameter declaration marker is required for these simple identifier parameters. The user's abbreviated fn (a,b,c) sketch describes the call shape; it does not select independent inference of unknown function input types. Omission still requires an applicable explicitly declared default.
 
-The comparison of all twelve established reference languages, plus supplemental C#, is in [named calls and tuples across the reference languages](named-arguments-reference-comparison.md).
+The comparison of the twelve languages in the 2026-10-21 review, plus supplemental C#, is in [named calls and tuples across the reference languages](named-arguments-reference-comparison.md).
 
 ## Construction spelling
 

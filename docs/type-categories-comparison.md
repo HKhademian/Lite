@@ -2,6 +2,8 @@
 
 Status: **primary-documentation review dated 2026-10-18; comparison, not selected LiteScript semantics**.
 
+Salam joined the [project reference set](references.md#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
+
 ## Scope and reading rule
 
 This review covers Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript, Python, Lua, and Scala 3, which has also been used as a match-syntax reference. Sources include development documentation, especially Zig/V and evolving Scala pages; a documented feature is not a promise about every installed compiler release. No examples were compiled.

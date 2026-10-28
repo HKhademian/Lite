@@ -1,6 +1,6 @@
 # Investigation catalog
 
-Status: **topic inventory only**, established 2026-10-27; lightweight execution focus added 2026-10-28. The 75 topics track their individual investigation status in TOPICS.md; existing language documents are starting evidence, not completed investigations.
+Status: **topic inventory only**, established 2026-10-27; lightweight execution and multilingual learning focuses added 2026-10-28. The 75 topics track their individual investigation status in TOPICS.md; existing language documents are starting evidence, not completed investigations.
 
 This directory is a contributor workspace for agents and developers, outside the
 language draft in `docs/`. It records what can be investigated and where to begin.
@@ -30,6 +30,16 @@ connects memory, compiler, runtime, optimization, and evaluation topics and adds
 an ownership mechanism, backend, numeric budget, implementation sequence, or
 priority ordering for the entire catalog.
 
+## Multilingual source and learning focus
+
+The [multilingual source proposal](../docs/multilingual-source-and-learning.md)
+records learning programming in a familiar human language with an optional bridge
+to simple English. Salam joins the project's reference programming languages.
+The [question map](multilingual-source-and-learning.md) adds 12 not-started
+questions under lexical structure, tooling/diagnostics, and testing/verification,
+with links to existing goals, API, Unicode, and footprint work. It does not select
+translated keywords, language packs, source conversion, or a learning outcome.
+
 ## Start a topic
 
 1. Find its stable `INV-NNN` ID below and read the [topic brief](TOPICS.md).
@@ -56,7 +66,7 @@ are tracked on each topic's **Investigation** line and remain non-normative.
 
 ## Starter subtopics
 
-The [subtopic catalog](SUBTOPICS.md) contains 148 concrete questions across 36
+The [subtopic catalog](SUBTOPICS.md) contains 160 concrete questions across 39
 broader topics. These are entry points, not an exhaustive decomposition.
 Topics without subtopics remain available at their existing scope; their lack of
 subtopics does not imply lower importance or readiness.

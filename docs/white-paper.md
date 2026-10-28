@@ -124,6 +124,22 @@ Conciseness can coexist with optional redundancy that makes code pleasant to wri
 
 This also supports teaching. A beginner can start with values, inferred bindings, calls, conditions, and loops, then learn explicit mutation, absence, failures, and stronger library contracts as the problem requires them. More advanced use retains the same basic model.
 
+### Familiar-language entry and an English reference
+
+Recorded 2026-10-28: a learner who does not yet read English may be trying to
+learn programming and unfamiliar human-language vocabulary at once. Explore
+letting children learn logic, values, conditions, loops, and functions in a familiar
+language, including source vocabulary, names, teaching APIs, explanations, and
+diagnostics. Simple English remains the shared reference presentation. An optional
+bridge could show the same program in both presentations and support a deliberate
+transition without changing the underlying language semantics.
+
+This [multilingual source proposal](multilingual-source-and-learning.md) is inspired
+by [Salam, now a project reference language](references.md#salam-and-multilingual-source-reviewed-2026-10-28).
+The educational benefit requires evaluation; no keyword mappings, source-selection
+syntax, translation tool, or implementation is selected. The existing Unicode-name
+direction alone does not provide a fully localized learning experience.
+
 ## 7. Judge convenience by its semantic cost
 
 Some implicit behavior is useful and already selected: ordinary type inference, compatible success construction, and defined zero initialization remove repetition. Each has a specific rule that a programmer can learn and apply consistently.

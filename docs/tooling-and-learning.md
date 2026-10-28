@@ -170,6 +170,29 @@ The [access-ergonomics goal](slot-ergonomics.md) keeps mathematical summaries in
 
 The language should not silently inject `it`, `count`, or `acc`. An editor may suggest explicit receiver bindings or generate a snippet, leaving names visible and editable in source.
 
+## Familiar-language source and an English bridge
+
+The [multilingual source proposal](multilingual-source-and-learning.md) addresses
+learning programming without first understanding English vocabulary. Investigate
+localized lessons, names, teaching APIs, diagnostics, editor help/completions,
+and source presentation together. Simple English remains the shared reference;
+one language's semantics must hold across presentations. No source locale,
+translation command, vocabulary pack, or translated keyword is selected.
+
+Compare localized files with editor-only views. A syntax/symbol-aware conversion
+would need source maps, reviewed changes, collision handling, stable public and
+named-label identities, and behavior checks. Preserve comments and string data
+unless separately requested; keyword mapping does not automatically translate
+student names or arbitrary text. Ordinary formatting preserves the chosen source
+vocabulary; conversion is a separate proposed operation and must preserve the
+selected [comment contract](comments.md#selected-formatting-contract).
+
+Investigate mixed-direction selection, punctuation, debugger positions, fonts,
+normalization, and visible confusable/control-character handling without silently
+rejecting a whole script. Localization catalogs should remain in tooling unless
+program features require them at runtime. The [question map](../investigations/multilingual-source-and-learning.md)
+records lexical, tooling, conversion, learning, and footprint checks.
+
 ## Beginner validation
 
 Braces were chosen as a promising consistent rule, not as an empirically proven universal advantage over keywords. Future usability work should compare tracing execution, identifying branch ownership, repairing delimiters, and interpreting type errors. Small tasks can reveal problems before freezing the grammar.

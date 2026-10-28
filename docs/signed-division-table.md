@@ -63,6 +63,8 @@ The selected [arithmetic family](arithmetic-methods-and-division-revision.md) is
 | [TypeScript](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html) | bigint | `a / b` | Truncating quotient | 3n | -3n | -3n | 3n |
 | [TypeScript](https://tc39.es/ecma262/multipage/ecmascript-data-types-and-values.html) | bigint | `a % b` | Remainder (dividend sign) | 1n | 1n | -1n | -1n |
 
+Salam joined the [project reference set](references.md#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
+
 ## Reading the differences
 
 - Truncating division rounds toward zero; floor division rounds toward negative infinity.

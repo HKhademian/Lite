@@ -1,6 +1,6 @@
 # Starter subtopics
 
-Status: **question inventory only**, established 2026-10-27; lightweight execution questions added 2026-10-28. All subtopics start as
+Status: **question inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28. All subtopics start as
 **not started**. No investigation findings, selected mechanisms, priorities, or
 implementation plans are recorded here.
 
@@ -44,6 +44,17 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-004).
 - <a id="inv-004-02"></a> **INV-004.02 — Script compilation and caching:** How could cold compilation, cached native launch, invalidation, and warm execution preserve the same semantics, and what are their separate latency and storage costs?
 - <a id="inv-004-03"></a> **INV-004.03 — Execution-mode parity:** Which observable behaviors must agree between script execution and an ahead-of-time build, including failures and cleanup?
 - <a id="inv-004-04"></a> **INV-004.04 — Restricted environments:** What would a freestanding or restricted-support profile require, which operations would be unavailable, and how would those restrictions remain explicit?
+
+<a id="inv-008"></a>
+
+## INV-008 — Lexical structure
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-008).
+
+- <a id="inv-008-01"></a> **INV-008.01 — Source vocabularies and versions:** How could explicit, reproducible source-language vocabularies map to common tokens without ambient OS locale changing program meaning? Compare file/project selection and versioning without choosing directive syntax.
+- <a id="inv-008-02"></a> **INV-008.02 — Reserved names and mixing:** How would localized keywords interact with student identifiers, dependencies, missing translations, pack upgrades, and mixed-language files without silently reinterpreting old source?
+- <a id="inv-008-03"></a> **INV-008.03 — Unicode and text direction:** Which normalization, letter-variant, join-control, bidi-control, and confusable rules preserve usable names and logical token order, and which checks belong in display/review tools?
+- <a id="inv-008-04"></a> **INV-008.04 — Language versus writing system:** Which scripts, transliterations, digit sets, decimal punctuation, and keyboard conventions would a supported source presentation accept, and how would each affect scanning independently of human-language choice?
 
 <a id="inv-014"></a>
 
@@ -411,6 +422,28 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-069).
 - <a id="inv-069-02"></a> **INV-069.02 — Atomic operations:** Which values and operations can be atomic, and what alignment or representation obligations apply?
 - <a id="inv-069-03"></a> **INV-069.03 — Visibility and ordering:** Which observations do synchronization operations order between concurrent contexts?
 - <a id="inv-069-04"></a> **INV-069.04 — Safe abstraction boundaries:** How do high-level concurrent APIs expose sufficient guarantees without requiring every caller to reason about low-level atomics?
+
+<a id="inv-072"></a>
+
+## INV-072 — Tooling and diagnostics
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-072).
+
+- <a id="inv-072-01"></a> **INV-072.01 — Localized vocabulary and APIs:** Which keyword, predefined-type/value, teaching-API, diagnostic, documentation, and lesson vocabulary must be available for a complete first lesson, and how can aliases retain one underlying symbol/contract?
+- <a id="inv-072-02"></a> **INV-072.02 — Editing and source locations:** How can completions, formatting, debugging, search, accessibility, and mixed-direction editing preserve actual source spellings, meaningful positions, and the chosen presentation?
+- <a id="inv-072-03"></a> **INV-072.03 — Conversion and name mapping:** What syntax/symbol-aware operations can convert vocabulary or explicitly rename names without changing bindings, public APIs, named labels, strings, or comments unintentionally?
+- <a id="inv-072-04"></a> **INV-072.04 — Reference form and collaboration:** How do localized files, canonical files with localized editor views, side-by-side English views, and mixed-team workflows differ in reproducibility, review, pack maintenance, and unsupported dependency handling?
+
+<a id="inv-073"></a>
+
+## INV-073 — Testing and verification
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-073).
+
+- <a id="inv-073-01"></a> **INV-073.01 — Presentation conformance:** Which paired cases establish that source presentations preserve types, evaluation, access, failure, cleanup, and API identity through the same semantic core?
+- <a id="inv-073-02"></a> **INV-073.02 — Conversion guarantees:** Which binding, collision, scope, public-label, literal/comment, source-map, and round-trip cases distinguish semantic preservation from exact source recovery, including unsupported translations?
+- <a id="inv-073-03"></a> **INV-073.03 — Learner evaluation:** How do paired familiar-language and English lessons measure logic/programming understanding separately from reading, vocabulary, keyboard/script familiarity, and transfer to the reference presentation?
+- <a id="inv-073-04"></a> **INV-073.04 — Localization footprint checks:** Which native builds show whether unused vocabulary/diagnostic resources remain out of executables, and which required program strings, metadata, and debug resources explain any measured size or runtime difference?
 
 <a id="inv-074"></a>
 

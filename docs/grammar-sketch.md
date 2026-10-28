@@ -12,6 +12,15 @@ Angle-bracket generic examples elsewhere are [temporary documentation notation](
 
 `[x]` below means optional notation; `{x}` means repetition in grammar productions. Quoted braces and punctuation are literal tokens. The code examples elsewhere use source braces normally.
 
+## Multilingual presentation boundary
+
+This sketch uses the current simple-English reference spellings. The proposed
+[multilingual source surface](multilingual-source-and-learning.md) adds no grammar
+production or translated keyword yet. Any future vocabulary mapping must preserve
+constructs, precedence, evaluation, access, and failure behavior; source-pack
+selection and reserved-name collisions remain unresolved. Unicode names alone do
+not select localized keywords or numeric literal forms.
+
 ## Comment scanning
 
 Before parsing items, the lexer recognizes [nested and raw comments](comments.md) as token-separating whitespace. A raw opener takes precedence over its ordinary `/*` prefix. Raw fences match their exact hash count; unterminated comments are errors. No comment form inserts `;`.

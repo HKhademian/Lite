@@ -18,7 +18,8 @@ The project is currently **planning only**. These documents record the design di
 - [Optional leading separators for expressions, additive chains, patterns, and unions](docs/leading-separators.md)
 - [Tuple types, array tails, and fixed-size inference](docs/tuple-array-shapes.md)
 - [Logical tuple unpacking](docs/tuple-unpacking.md): emit labeled fixed items and tail elements, then reconstruct under the destination contract.
-- [External references](docs/references.md)
+- [Multilingual source and learning](docs/multilingual-source-and-learning.md): proposed familiar-language entry to programming, simple-English reference presentation, and [investigation points](investigations/multilingual-source-and-learning.md).
+- [External references](docs/references.md): the project reference languages now include Salam; older comparisons retain their stated coverage.
 - [Documentation review backlog](TASKS.md): historical 2026-10-23 snapshot; current rules are in the decision ledger.
 - [Backlog by topic](ISSUES-BY-TOPIC.md): topic-grouped view of the same snapshot.
 - [Investigation catalog for agents and developers](investigations/README.md): 75 topic briefs outside the language draft, scoped starter subtopics, starting references, and a reusable investigation-note template. This is an inventory, not a roadmap or a set of language decisions.

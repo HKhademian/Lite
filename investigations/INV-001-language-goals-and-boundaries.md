@@ -43,6 +43,17 @@ The evidence below remains the 2026-10-27 snapshot; its statement that no priori
 order was recorded should not obscure this later emphasis or imply a total
 ordering among goals.
 
+## Subsequent multilingual learning proposal, 2026-10-28
+
+The user adds [Salam to the reference languages](../docs/references.md#project-reference-languages)
+and records the concern that children may need to learn English vocabulary and
+programming simultaneously. [Multilingual source and learning](../docs/multilingual-source-and-learning.md)
+explores a familiar-language starting point and an optional bridge to the
+simple-English reference presentation. It preserves the goal of one language's
+semantics; localized syntax, tooling mechanisms, and educational benefit remain
+unselected or unverified. The [question map](multilingual-source-and-learning.md)
+links the new work; the original evidence below remains a dated snapshot.
+
 ## Current contracts and evidence
 
 Evidence was read at repository revision `c59f743` ("docs: catalog language

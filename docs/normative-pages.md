@@ -12,6 +12,8 @@ The [Lite Proposal register](proposals/README.md) links accepted decision record
 
 The [memory and performance priorities](memory-and-performance.md#lightweight-native-execution-priority), selected 2026-10-28, own the lightweight native execution goals and their measurement boundaries. Compiler and memory-management candidates in that page remain proposals.
 
+The [multilingual source and learning page](multilingual-source-and-learning.md) owns the recorded motivation and proposal boundaries; localized grammar and translation mechanisms remain unselected. The [reference register](references.md#project-reference-languages) records Salam’s addition.
+
 ## Map
 
 | Area | Start with | Also normative for narrower contracts |

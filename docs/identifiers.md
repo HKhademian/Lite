@@ -25,6 +25,17 @@ _temporary := 3;
 
 Digits may continue a name but do not begin one under this profile. Punctuation such as `.`, `@`, and `:` remains syntax rather than part of an identifier. Reserved words are recognized separately; their complete list and any escaping form remain open.
 
+## Names versus localized source vocabulary
+
+Unicode names already allow student-authored names in familiar scripts. The
+[multilingual learning proposal](multilingual-source-and-learning.md) goes further:
+localized keywords, predefined names/APIs, diagnostics, and lessons, with a possible
+bridge to simple English. That proposal does not change current keyword lookup,
+normalization, scope, or label compatibility. Translation of a user-defined name
+needs a scope-aware mapping; visually similar or translated names are not silently
+identical. Persian/Arabic letter variants and join controls remain profile and
+tooling questions, not newly selected equivalences.
+
 ## Names and scope
 
 Identifier spelling determines which name is being referenced. Lexical scope determines which binding of that name is visible. Sequential local declarations may shadow earlier names in the same block. Resolve each ordinary initializer before introducing its new binding: var x := x reads the old x and introduces a new reassignable x. This does not change the old binding's permissions; see [local shadowing and copies](local-shadowing-and-copies.md).

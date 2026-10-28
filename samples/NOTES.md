@@ -4,6 +4,17 @@ Exercises 001–020 are **implemented but unverified** as LiteScript programs. T
 
 The `.lite` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
 
+## Multilingual learning proposal
+
+Current lessons retain simple-English reference syntax. The [multilingual source
+proposal](../docs/multilingual-source-and-learning.md) records familiar-language
+keywords/names, teaching APIs, narratives, diagnostics, and an optional bridge to
+English as investigation scope. Unicode names alone do not implement that scope.
+Do not present illustrative translations as accepted syntax, rewrite payload
+strings as part of code conversion, or claim learner benefits before evaluation.
+Use the [question map](../investigations/multilingual-source-and-learning.md) for
+paired-lesson and conversion checks; no translated sample suite is claimed.
+
 ## Arithmetic choices and bounds
 
 - Use small finite values. For further experiments, keep integer magnitudes and intermediate products at most 1000000 and fractional input magnitudes at most 1000. These teaching bounds do not select integer widths or numeric precision.

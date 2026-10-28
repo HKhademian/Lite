@@ -35,4 +35,6 @@ Try changing an input number and working out the new answer yourself. The answer
 
 Money examples count amounts in cents: 1999 cents means 19.99 euros. A few examples explain how to round when a calculation lands between cents. Other lessons explore measurements, temperatures, grades, and positions on a map.
 
+The current lessons use Lite’s simple-English reference spellings. [Multilingual learning](../docs/multilingual-source-and-learning.md) is being explored so students could begin in a familiar language and compare the same ideas with English later; localized keywords and translated lessons are not implemented yet.
+
 **Can I run these?** Not yet. LiteScript is still being designed, and this repository has no compiler or runtime. These are readable source examples whose calculations have been checked separately. For verification limits and language questions, see the [contributor notes](NOTES.md).

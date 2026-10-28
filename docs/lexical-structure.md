@@ -185,6 +185,16 @@ Unicode identifiers are supported. The working profile uses `XID_Start` or `_` i
 
 Fractional literals require a leading digit: `0.5` is valid spelling and standalone `.5` is rejected as a numeric literal. Leading-dot forms such as `.count` retain their context-access role. The selected tuple member access `tuple.5` is a fixed position, not a leading-dot literal. Complete numeric-suffix scanning, including nested `pair.0.1`, remains to be formalized; see [tuple entries and access](tuple-entries-and-access.md). See [numbers and ranges](numbers.md).
 
+## Proposed multilingual vocabulary
+
+The [multilingual source proposal](multilingual-source-and-learning.md) explores
+familiar-language spellings mapped to one language contract. Existing documented
+English keywords remain the current surface. Locale selection, pack/version
+identity, keyword/identifier collisions, mixed-language files, local numerals,
+and bidirectional display need separate investigation. No translated token or
+locale directive is added here; locale must not silently change existing source
+meaning. Logical token/evaluation order remains distinct from visual text order.
+
 ## Open lexical decisions
 
 The complete Unicode identifier profile, reserved words, remaining numeric-literal rules, escape sequences, and full longest-token rules are not specified. Prefix `@name` and leading-dot context access must be distinguished from ordinary identifiers and member access without using whitespace as a semantic signal.

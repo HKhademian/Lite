@@ -1,6 +1,6 @@
 # Investigation topic briefs
 
-Status: **inventory only**, established 2026-10-27; lightweight execution questions added 2026-10-28. Topic status is tracked on each Investigation line.
+Status: **inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28. Topic status is tracked on each Investigation line.
 These briefs define questions, not answers, implementation tasks, or review
 findings. Advanced possibilities listed in a scope remain possibilities.
 
@@ -108,6 +108,10 @@ questions; check their status and current owning pages before relying on them.
 **Starter question:** Which token boundaries and character rules are defined, and where can scanning conflict with selected syntax?
 
 **Start with:** [docs/lexical-structure.md](../docs/lexical-structure.md); [docs/identifiers.md](../docs/identifiers.md); [docs/comments.md](../docs/comments.md).
+
+**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-008).
+
+**Focus:** [Multilingual source and learning questions](multilingual-source-and-learning.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
@@ -949,6 +953,10 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/tooling-and-learning.md](../docs/tooling-and-learning.md); [docs/unused-name-intent.md](../docs/unused-name-intent.md); [docs/comments.md](../docs/comments.md).
 
+**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-072).
+
+**Focus:** [Multilingual source and learning questions](multilingual-source-and-learning.md).
+
 **Investigation:** not started; contributor: unassigned; note: none.
 
 <a id="inv-073"></a>
@@ -960,6 +968,10 @@ questions; check their status and current owning pages before relying on them.
 **Starter question:** What evidence distinguishes expected examples, admitted and rejected programs, runtime results, and complete exercise solutions?
 
 **Start with:** [samples/NOTES.md](../samples/NOTES.md); [challenges/README.md](../challenges/README.md); [challenges/benchmark/README.md](../challenges/benchmark/README.md).
+
+**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-073).
+
+**Focus:** [Multilingual source and learning questions](multilingual-source-and-learning.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 

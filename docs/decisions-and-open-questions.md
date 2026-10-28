@@ -2,6 +2,14 @@
 
 Snapshot: **2026-10-28**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Salam reference and multilingual learning proposal, 2026-10-28
+
+- The user adds Salam to the [project reference languages](references.md#project-reference-languages). Its recorded areas of interest are Persian/English source presentation, teaching/tooling vocabulary, native C/LLVM paths, and modest runtime support. Prior twelve-language comparisons retain their historical scope; Salam's addition does not establish comparison coverage or benchmarks.
+- Record the concern that children may need to learn programming concepts and unfamiliar English vocabulary at the same time. Simple English is the project's reference human-language presentation; it is distinct from the set of reference programming languages. Explore learning in a familiar language with an optional bridge back to English, preserving one set of LiteLang semantics.
+- Multilingual source remains a proposal. Its desired scope includes keywords, names, predefined types/values, teaching APIs, diagnostics, lessons, and editor support, beyond already accepted Unicode identifiers. Writing system, human language, and transliteration are separate choices. Keyword mappings, supported languages, selection/mixing/versioning, API/name translation, Unicode/bidi rules, conversion guarantees, and measured educational benefit remain open.
+
+Owner of the proposal and its boundaries: [multilingual source and learning](multilingual-source-and-learning.md). The [investigation points](../investigations/multilingual-source-and-learning.md) record questions, not findings. No grammar or runtime behavior changes here.
+
 ## Lightweight native execution priorities, 2026-10-28
 
 - Lightness is a core design priority: fast native execution, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Ordinary native programs should require neither a VM nor a tracing garbage collector. These are selected goals, not implemented performance or no-GC guarantees.

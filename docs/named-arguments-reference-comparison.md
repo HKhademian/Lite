@@ -2,6 +2,8 @@
 
 Status: **primary documentation checked 2026-10-21; design comparison, not compiler execution**.
 
+Salam joined the [project reference set](references.md#project-reference-languages) on 2026-10-28. This review retains its stated language coverage; it does not yet contain a Salam comparison.
+
 ## Scope
 
 Cover the twelve languages used by the existing [type-category review](type-categories-comparison.md): Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript, Python, Lua, and Scala 3. Include C# as a supplemental named-tuple comparison. Current development documentation describes its own version; no examples here were compiled.

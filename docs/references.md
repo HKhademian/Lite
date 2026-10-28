@@ -2,11 +2,49 @@
 
 These sources were consulted during the design discussion. They support comparisons and tradeoff analysis, not claims that LiteScript implements or inherits their semantics. The general reference snapshot is dated **2026-10-18**; focused reviews below carry their own dates. External pages can evolve.
 
+## Project reference languages
+
+Updated by user direction, **2026-10-28**: **Salam is a project reference
+language**, alongside **Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript,
+Python, Lua, and Scala 3**. This makes 13 project reference languages. Comparisons
+also consult topic-specific sources such as C, C#, Java, JavaScript, Go, and R;
+being cited in a focused review does not by itself change this reference set.
+
+Each language informs particular questions rather than supplying LiteLang's whole
+contract. Older twelve-language comparisons retain their dated coverage; Salam's
+addition does not mean those tables now contain an audited Salam comparison.
+Future reviews should state the languages, versions, features, and evidence they
+actually cover. Simple English as Lite's reference human-language presentation is
+a separate concept from this programming-language reference set.
+
+## Salam and multilingual source, reviewed 2026-10-28
+
+- [Official website](https://www.salamlang.ir/): shows Persian and English forms
+  of a program and describes `salam translate` for keywords, types, and the entry
+  function. This is evidence for a localized source direction; it does not prove
+  arbitrary identifier/comment/string translation or exact round-trip conversion.
+- [Compiler repository](https://github.com/SalamLang/Salam): describes English
+  and Persian keyword packs and editor keyword lists generated from compiler
+  tables. No Salam compiler/translation experiment was run in this discussion.
+- [Persian teaching material](https://www.salamlang.ir/learn/): a starting
+  reference for familiar-language lessons and terminology. Its existence does not
+  establish a measured learning advantage for Lite or every learner.
+- Native C/LLVM compilation and modest runtime support are the other recorded
+  areas of interest; see the [lightweight execution review](#lightweight-native-execution-reviewed-2026-10-28).
+
+The user's [multilingual source and learning proposal](multilingual-source-and-learning.md)
+aims to separate learning programming from first having to learn English, with an
+optional bridge to Lite's simple-English reference form. Source vocabulary,
+localized APIs, Unicode handling, diagnostics, tooling, learning outcomes, and
+conversion boundaries need investigation. Persian script, English in Latin
+script, and Persian transliteration are distinct capabilities; do not attribute
+all of them to Salam merely because it supports Persian and English.
+
 ## Arithmetic operators, reviewed 2026-10-25
 
 [Arithmetic operators across languages](arithmetic-operators-comparison.md) links the exact primary sources consulted for Java, C, C++, C#, Python, JavaScript/TypeScript, Rust, Go, Swift, Kotlin, Dart, Lua, Odin, Zig, and V. It compares precedence/associativity, division/remainder, unary signs, power, and evaluation order. The review distinguishes drafts, moving documentation, and versioned references; its [captured probes](research/arithmetic-operator-probes-2026-10-25.json) record seven installed toolchains and a separate expected Rust compile rejection. They are foreign-language checks, not LiteScript execution. LiteScript first selected Odin's % / %% symbols with Zig's remainder / modulo names, then replaced the floor symbols with _/ and _%. The user subsequently clarified calculation versus storage: floating operands supply floating division semantics, including nonintegral operands; Int storage accepts / truncation or _/ floor of the quotient, while Float/Double results retain fractional /. This LiteScript choice is separate from the foreign contracts. The selected values and current spellings are defined in division.md. The user also selected `**` power spelling with explicit grouping at a unary-minus/base boundary after comparing Python/Lua with JavaScript; see [power and negation](power-and-negation.md). Remaining power contracts and other additional operators stay open.
 
-The [signed division, remainder, and modulo table](signed-division-table.md), reviewed 2026-10-25, expands the arithmetic comparison to all twelve established references and the additional arithmetic languages, including Scala 3/JVM and separate JavaScript/TypeScript numeric families. It links primary sources per operation and includes four signed V playground cases reported by V 0.5.0 345b29d. Calculated cells, prior local probes, and that remote observation are distinguished in its evidence notes.
+The [signed division, remainder, and modulo table](signed-division-table.md), reviewed 2026-10-25, expands the arithmetic comparison to the twelve references in that dated review and the additional arithmetic languages, including Scala 3/JVM and separate JavaScript/TypeScript numeric families. It links primary sources per operation and includes four signed V playground cases reported by V 0.5.0 345b29d. Calculated cells, prior local probes, and that remote observation are distinguished in its evidence notes.
 
 The [arithmetic methods and selected family](arithmetic-methods-and-division-revision.md), selected 2026-10-25, records / _/ % _% with contextual division and ordinary numeric methods in addition. Kotlin informs the named surface; Dart tilde and R percent-delimited alternatives remain comparison history. The compact/spaced equivalence requirement remains, with underscore/identifier recognition unresolved. No foreign language's wider numeric, overload, or comment contracts are imported.
 
@@ -87,6 +125,8 @@ These moving primary sources were consulted 2026-10-28. They motivate the [selec
 
 - [Unicode Standard Annex #31: Unicode Identifiers and Syntax](https://www.unicode.org/reports/tr31/): identifier character properties and language-specific profiles. LiteScript's exact profile and Unicode version remain open.
 - [Unicode Standard Annex #15: Unicode Normalization Forms](https://www.unicode.org/reports/tr15/): normalization choices for identifier equivalence. Linking the standard does not adopt a normalization policy for identifiers or strings.
+- [Unicode Standard Annex #9: Bidirectional Algorithm](https://www.unicode.org/reports/tr9/): logical text order and bidirectional display, consulted 2026-10-28 for the multilingual-source investigation.
+- [Unicode Technical Standard #39: Security Mechanisms](https://www.unicode.org/reports/tr39/): confusable/script-related mechanisms, consulted 2026-10-28 as input to identifier and tooling questions. These sources do not select a Unicode version, normalization, bidi-control policy, or script restriction for LiteLang.
 
 ## Pattern syntax comparison
 
@@ -106,4 +146,4 @@ The primary source for LiteScript-specific choices is the design conversation th
 
 The [all-type pattern review](pattern-type-review.md#reference-checks), [ordered sequences](sequence-patterns.md), and [set matching](set-patterns.md) compare primary Rust, Dart, Python, Swift, and Kotlin documentation consulted on 2026-10-18. They distinguish structural decomposition, equality, membership, and search; no new collection matching grammar is adopted solely because a reference language supports it.
 
-The [empty/singleton review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts), checked 2026-10-22, compares low-arity tuple construction and Unit models across the twelve established references plus C#, with primary sources linked per language. It records open LiteScript recommendations, not implementation verification.
+The [empty/singleton review](tuple-entries-and-access.md#empty-and-singleton-review-across-contexts), checked 2026-10-22, compares low-arity tuple construction and Unit models across the twelve references in that dated review plus C#, with primary sources linked per language. It records open LiteScript recommendations, not implementation verification.
