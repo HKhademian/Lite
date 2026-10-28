@@ -60,3 +60,12 @@ decision has been made, say so.
 Summarize the current question, evidence collected, unresolved assumptions, and
 where another contributor can resume. Do not turn the handoff into an implementation
 plan unless that work has been requested.
+
+Follow the [atomic commit requirement](README.md#atomic-commit-requirement):
+commit this bounded investigation update together with its tracking and all
+affected decision/reference pages. Keep independent work in separate commits and
+preserve unrelated changes. Check the focused diff and relevant documentation
+before committing. Report the resulting commit ID and verification limits in the
+handoff message; do not attempt to embed a commit's own ID in its contents. If
+committing is blocked, report the blocker and exact uncommitted scope instead of
+claiming completion.

@@ -61,6 +61,8 @@ translated keywords, language packs, source conversion, or a learning outcome.
    such as `INV-043-ownership.md`.
 4. Update that line's status and contributor as work proceeds, keeping the ID and
    scope stable. Read an existing note before opening another for the same topic.
+5. Follow the [atomic commit requirement](#atomic-commit-requirement) before
+   handing off or reporting the investigation update as complete.
 
 The catalog itself does not request investigations, reviews, implementation,
 delegation, or draft changes. Topic numbers preserve the discussion's inventory;
@@ -107,6 +109,31 @@ Accepted decisions belong in the existing proposal/decision process and their
 owning language pages. Link them from the investigation; an investigation note
 does not change the language contract by itself. Preserve unrelated working-tree
 changes when contributing.
+
+## Atomic commit requirement
+
+Investigation changes and accepted decisions **must be committed atomically**.
+Each commit must contain one coherent investigation result or decision, together
+with every documentation change needed to make that result consistent.
+
+- Commit the investigation note, affected topic/subtopic tracking, and relevant
+  links together. For an accepted decision, include its owning language page,
+  decision-ledger/proposal record, and affected summaries or examples in the same
+  commit. Preserve the distinction between findings, proposals, and selected rules.
+- Keep independent questions or decisions in separate focused commits. A bounded
+  result may record unresolved questions; committing it does not resolve them or
+  mark the whole topic complete.
+- Review the diff, run checks appropriate to the change, and stage only the
+  intended files or hunks. Preserve unrelated work; do not use a blanket stage
+  operation when the working tree contains unrelated changes.
+- Create the commit before reporting that unit of work complete or moving to
+  another independent investigation unit. Report its commit ID and verification
+  limits in the handoff. If committing is blocked, preserve the work and report
+  the blocker and uncommitted scope explicitly; do not claim completion.
+
+This is a required contributor workflow for agents and developers, including
+updates to existing notes. It does not require a decision before findings can be
+recorded, and it does not authorize implementing a discussed feature.
 
 ## Topics
 
