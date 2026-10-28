@@ -110,6 +110,33 @@ owning language pages. Link them from the investigation; an investigation note
 does not change the language contract by itself. Preserve unrelated working-tree
 changes when contributing.
 
+## Reconsidering decisions and postponed ideas
+
+This applies to **every investigation point**. A selected decision is the current
+baseline, not a permanent constraint or an exemption from review. An
+investigation may find that an earlier rule is inconsistent, unnecessarily
+restrictive, or no longer the best fit. A later result can also remove the
+reason an idea was postponed and make that idea worth reconsidering.
+
+- Check selected rules as critically as open proposals. Do not skip a relevant
+  question merely because a decision was recorded earlier.
+- When a contradiction or changed assumption appears, identify the affected
+  decisions and give concrete cases showing the problem. Compare retaining,
+  revising, and replacing the earlier rule, including effects on related topics.
+- Revisit postponed ideas when new evidence or resolved dependencies change
+  their feasibility. Record why the earlier postponement may no longer apply;
+  discovering a connection does not select the idea or restart every deferred topic.
+- Keep current behavior, proposed replacements, and newly accepted changes
+  distinct. Until replaced through the decision process, the current rule remains
+  the baseline; do not silently invent a third rule to reconcile conflicting pages.
+- For an accepted revision, record what it supersedes and why, then update the
+  owning pages, ledger/proposal records, investigation tracking, and affected
+  examples/references in the same [atomic commit](#atomic-commit-requirement).
+  Keep historical alternatives clearly labeled and preserve unrelated work.
+
+The purpose is to reach a coherent working language. Previous selection or
+postponement is evidence about the design's history, not proof that it must stay.
+
 ## Atomic commit requirement
 
 Investigation changes and accepted decisions **must be committed atomically**.

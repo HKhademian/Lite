@@ -22,6 +22,10 @@ Link the current owning language pages and relevant decisions. Distinguish
 selected rules, proposals, open questions, and historical material. Record the
 repository revision and any changes in progress that affect the evidence.
 
+Apply the [reconsideration rule](README.md#reconsidering-decisions-and-postponed-ideas):
+selected rules remain reviewable. Identify contradictions, changed assumptions,
+and postponed ideas whose original blockers this investigation may remove.
+
 ## Concrete cases
 
 Use small, focused examples, including ordinary exercise use and boundary cases.
@@ -34,6 +38,9 @@ with selected contracts, and representation, allocation, copying, dispatch,
 checking, and cleanup costs where relevant. Separate compiler work from generated
 execution and shared runtime support. Identify assumptions rather than silently
 choosing them.
+
+If an option revises an earlier decision, state what it supersedes, why the
+change is justified, and which related contracts/examples need updating.
 
 ## Verification and limits
 
