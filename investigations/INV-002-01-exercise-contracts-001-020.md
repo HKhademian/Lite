@@ -15,14 +15,30 @@ Which contracts does stage 01 of the exercise corpus — `samples/001` through
 `samples/020`, the only files with written solutions — actually depend on, and
 which of those are absent, open, or merely proposed?
 
-Boundary: this note does not scope the full 520-exercise corpus or decide what
-the first milestone includes (that remains INV-002 proper, unscoped). It does
+Boundary: this note does not scope the full 520-exercise corpus or freeze the
+later practical-script milestone's coverage. It records the selected initial
+demonstrator batch below. It also does
 address the second half of the starter question, "what would count as a solved
 exercise," because no contract for it exists anywhere in `docs/`.
 
 Coverage of the starter question: the missing-contract inventory for 001–020 is
-answered at document level; the acceptance-mechanism options are recorded as
-options, not selected. Milestone subset selection remains open.
+answered at document level. The initial batch and acceptance direction have
+selections recorded below; numeric/host contracts and later coverage remain open.
+
+## Initial coverage selection, 2026-10-28
+
+The user selected exercises 001–020 as the initial correctness batch, exercised
+incrementally as their features become executable. The first runnable experiment
+need not implement the whole batch's feature set. Add focused examples as
+conditionals, functions, loops, and other features become executable; the full
+520-exercise catalog is a growth guide, not a demonstrator completion gate.
+
+The [sample contributor policy](../samples/NOTES.md#initial-correctness-batch) and
+[ledger](../docs/decisions-and-open-questions.md#initial-exercise-coverage-2026-10-28)
+record this selection. The existing C-now/B-later acceptance direction remains.
+Exact later milestone coverage, numeric semantics, check API, process exit, and
+observation remain open. No lesson was changed or verified by this selection.
+The contract inventory below retains its original dated evidence scope.
 
 ## Current contracts and evidence
 
@@ -188,7 +204,9 @@ corpus is graded by a harness. Keep comment answers as documentation.
 
 Remaining questions:
 
-- Which exercises the milestone covers — INV-002 proper, still unscoped.
+- Initial correctness coverage — settled 2026-10-28 as 001–020 incrementally,
+  with focused examples added as features become executable. Exact later
+  milestone coverage remains open under INV-002.
 - Whether acceptance follows option A, B, or C — settled 2026-10-28 as C now,
   B later; the exit-status contract ([INV-004](TOPICS.md#inv-004),
   [INV-005](TOPICS.md#inv-005)) and observation mechanism
@@ -208,21 +226,25 @@ default and `var` ([immutability](../docs/immutability-by-default.md)),
 comment neutrality and formatting ([comments](../docs/comments.md)), formatter
 commands and read-only check mode ([tooling](../docs/tooling-and-learning.md)).
 
-No accepted decision or proposal covers numeric representation, execution modes,
-host I/O, process exit status, or exercise acceptance. Nothing in this note is
-presented as an accepted decision; no LP ID applies.
+The [initial correctness policy](../samples/NOTES.md#initial-correctness-batch)
+and [ledger](../docs/decisions-and-open-questions.md#initial-exercise-coverage-2026-10-28)
+record selected initial coverage and the C-now/B-later acceptance direction.
+Numeric representation, execution modes, host I/O, and process exit status remain
+open. These project policy decisions do not select missing language contracts;
+no LP ID applies.
 
 ## Handoff
 
 Question: which contracts do 001–020 need, and what would count as a solved
 exercise? Evidence collected: the construct table above, the five gap findings,
-and the three acceptance options. Unresolved assumptions: milestone subset,
-acceptance option, numeric contract.
+and the three acceptance options. Selected: incremental 001–020 coverage with
+focused executable feature examples, C-now/B-later acceptance. Unresolved: exact
+later milestone coverage, numeric contract, checks, exit status, and observation.
 
 Resume at: (1) define the exit-status contract the selected option C needs —
 needs [execution modes](TOPICS.md#inv-004) and [program lifecycle](TOPICS.md#inv-005),
-not more corpus reading; (2) scope the milestone exercise subset, which reopens
-INV-002 proper; (3) re-run the construct inventory once
+not more corpus reading; (2) scope the later practical-script milestone's exercise
+coverage under INV-002; (3) re-run the construct inventory once
 samples 021+ gain written solutions, since stage 02 adds comparisons and branches
 and stage 05 adds text, both absent here. Do not treat this note as an
 implementation plan; no implementation work has been requested.

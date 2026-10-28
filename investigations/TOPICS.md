@@ -31,7 +31,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [samples/list.md](../samples/list.md); [samples/NOTES.md](../samples/NOTES.md); [challenges/README.md](../challenges/README.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — bounded question, contracts required by exercises 001–020.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — contracts required by 001–020; initial incremental correctness batch selected 2026-10-28, with focused feature examples added as executable; numeric, exit/observation contracts and later coverage remain open.
 
 <a id="inv-003"></a>
 

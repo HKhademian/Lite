@@ -4,6 +4,10 @@
 
 ## Starting conditions
 
+The [selected initial correctness batch](NOTES.md#initial-correctness-batch) is
+001–020, exercised incrementally as features become executable. All 520 entries
+remain a growth catalog rather than a completion gate for the tiny demonstrator.
+
 The repository is currently a language-design workspace, with no implemented compiler, runtime, or standard library. The syntax and contracts in the [language reference](../docs/README.md) include open proposals. These are learning and design experiments, not claims that the programs can run today. In particular, do not assume existing printing, input, string indexing, collection methods, math functions, filesystem APIs, or generic syntax.
 
 - Keep every script self-contained: supplied inputs, any local helpers, and a solution. Use a short problem statement and expected answers to make it readable. Keep verification and design notes separate from the lesson. No manifest, imports from other samples, or third-party dependencies should be necessary.

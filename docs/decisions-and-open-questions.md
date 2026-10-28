@@ -27,7 +27,7 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
   memory placement, and concurrency remain later investigations.
 - Supported demonstrator features follow selected rules; unsupported features
   receive clear diagnostics. The runner/compiler mechanism, commands, backend,
-  observation API, exact feature subset/order, exercise coverage, and release
+  observation API, exact feature subset/order, later exercise coverage, and release
   targets remain open. No implementation work or conformance result is implied.
 
 Owner: [first working targets](principles.md#first-working-targets).
@@ -74,6 +74,24 @@ mechanisms and concrete safety/cost cases.
 Owner: [resolving competing goals](principles.md#resolving-competing-goals).
 This settles INV-001's goal-conflict review method, not its remaining technical
 capability or implementation questions.
+
+## Initial exercise coverage, 2026-10-28
+
+- Select exercises 001–020 as the tiny demonstrator's initial correctness batch,
+  run incrementally as their features become executable. The first runnable
+  experiment does not require the entire batch's feature set.
+- Add focused examples as conditionals, functions, loops, and other features
+  become executable. The 520-exercise catalog guides growth and is not a
+  demonstrator completion gate. Exact later milestone coverage remains open.
+- Retain the existing acceptance direction: in-program panic-based mismatch
+  checks for 001–020, with a grading harness later. Check API, process exit,
+  numeric contracts, and observation still need definition. No lesson was
+  changed or executed; implemented-but-unverified status remains.
+
+Project policy owner: [sample contributor notes](../samples/NOTES.md#initial-correctness-batch).
+[INV-002](../investigations/INV-002-01-exercise-contracts-001-020.md) records the
+contract inventory and remaining dependencies. This selects coverage, not numeric
+semantics or a runner/compiler implementation.
 
 ## Source file body, 2026-10-28
 

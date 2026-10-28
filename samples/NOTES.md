@@ -4,6 +4,23 @@ Exercises 001–020 are **implemented but unverified** as LiteScript programs. T
 
 The `.lite` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
 
+## Initial correctness batch
+
+Selected 2026-10-28: use exercises **001–020** as the initial correctness batch
+for the tiny demonstrator. Run supported cases incrementally as the demonstrator
+grows; the batch is not a requirement to implement all its features before the
+first runnable experiment. Add focused examples as conditionals, functions,
+loops, and other features become executable. The full 520-exercise catalog guides
+later coverage and is not a completion gate for the tiny demonstrator.
+
+The selected acceptance direction is in-program checks for 001–020, with mismatch
+using the panic channel, followed later by a grading harness. Comment answers
+remain documentation. Check syntax/API, exit status, numeric contracts, and host
+observation still need definition; no checks have been added to the lessons and
+all 20 remain implemented but unverified. See
+[INV-002](../investigations/INV-002-01-exercise-contracts-001-020.md) for evidence,
+selected policy, and remaining dependencies. Exact later milestone coverage is open.
+
 ## Multilingual learning proposal
 
 Current lessons retain simple-English reference syntax. The [multilingual source

@@ -39,7 +39,9 @@ Let people and programming agents focus on problem solving through concise, read
 Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
 with LiteLang features, then grow toward a first useful milestone of practical
 scripts with command-line arguments, console input/output, and file processing.
-The exercise corpus supplies use cases; exact exercise coverage remains open.
+The exercise corpus supplies use cases. The
+[initial correctness batch](../samples/NOTES.md#initial-correctness-batch) is
+001–020, exercised incrementally; exact later milestone coverage remains open.
 Foreign calls, explicit memory placement, and concurrency remain later
 investigations outside that first useful milestone.
 
