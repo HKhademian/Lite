@@ -19,7 +19,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/white-paper.md](../docs/white-paper.md); [docs/principles.md](../docs/principles.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-001 — language goals and boundaries](INV-001-language-goals-and-boundaries.md).
 
 <a id="inv-002"></a>
 

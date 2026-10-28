@@ -43,8 +43,8 @@ topic records the question of what the milestone includes.
 
 The catalog itself does not request investigations, reviews, implementation,
 delegation, or draft changes. Topic numbers preserve the discussion's inventory;
-they are not priorities, phases, dependencies, or a roadmap. No topic findings or
-implementation plans have been added.
+they are not priorities, phases, dependencies, or a roadmap. Investigation notes
+are tracked on each topic's **Investigation** line and remain non-normative.
 
 ## Starter subtopics
 
