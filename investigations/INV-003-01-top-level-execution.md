@@ -1,6 +1,6 @@
 # INV-003.01 — Top-level execution
 
-Status: recorded
+Status: in progress
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-003](TOPICS.md#inv-003)
@@ -32,7 +32,86 @@ lookup and recursion belong to [INV-003.02](SUBTOPICS.md#inv-003-02) and
 starter question can be answered only in part here, because the language has no
 selected effect mechanism at all.
 
-## Current contracts and evidence
+## Re-review against the demonstrator goal, 2026-10-28
+
+Evidence baseline: revision `9eec717`, with a clean working tree before this
+update. The [reconsideration rule](README.md#reconsidering-decisions-and-postponed-ideas)
+requires reviewing the existing selection rather than exempting it. The current
+[source-file contract](../docs/blocks-and-results.md#source-file-body) selects A;
+the newer [working targets](../docs/principles.md#first-working-targets) require a
+tiny executable demonstrator with a way to observe results. No replacement has
+been selected in this re-review.
+
+### Concrete probes
+
+```text
+/* File 1: final expression */
+7 + 5
+```
+
+```text
+/* File 2: final declaration, matching the lesson style */
+apples := 7 + 5;
+```
+
+Under current A, both files complete normally with Unit and neither prints an
+answer. File 1 evaluates 12 and discards it; file 2 initializes apples to 12 and
+its final declaration produces Unit. An automatic final-expression display
+would show 12 only for file 1 unless another observation rule were added.
+
+Re-read all 20 current lessons: each ends in a declaration or assignment, so
+automatic tail display alone would leave every existing lesson silent. A
+trailing call must still execute its observable effects and failures before its
+ordinary result is discarded; discarding does not mean skipping execution.
+
+### Alternatives and tradeoffs
+
+- **Retain A and provide explicit observation.** Keep the implicit file body,
+  written execution order, and discarded final value; define a small output API
+  or deliberate tool observation facility separately. This preserves minimal
+  source ceremony and predictable batch execution. It requires teaching how to
+  request observation and eventually defining its formatting/effect/failure
+  contract. The current lessons would need checks or explicit observation to
+  become visibly useful; their answer comments are documentation only.
+- **Revise A to display a final expression automatically.** This makes file 1
+  immediately demonstrative, but does not help declaration-final lessons. It
+  needs rules for printable types, Unit, formatting, output failures, and whether
+  display is part of every run/build or an explicit playground facility. Implicit
+  output can also change batch-script output when a final item changes. Its
+  formatting/I/O support has a cost to investigate, not a measured footprint.
+- **Require Unit completion (A-prime).** A static error could reveal an
+  accidentally unused final value, but adds a rule at the file boundary and
+  rejects file 1 without making file 2 observable. A warning could be evaluated
+  separately; no warning is selected here.
+- **Require an explicit entry (C).** This could provide a distinct program-entry
+  contract, but adds first-script ceremony and requires migrating the current
+  lesson files. No current observation requirement demands that extra entry.
+
+The ordered-item-list alternative B remains possible, but changing the
+container alone does not define output. Import behavior D is orthogonal and
+belongs to INV-003.04. These alternatives have been compared against the new
+goal; none is excluded merely because A was previously selected.
+
+### Finding and proposed direction
+
+The demonstrator's observation requirement exposes a missing host/tool contract,
+not a necessary contradiction in the implicit-block model. Recommend retaining
+the implicit file body and using explicit observation for ordinary scripts.
+Automatic display in a deliberate playground remains worth considering under
+INV-004/INV-067, with its behavior and costs stated explicitly. This is a
+recommendation for discussion, not renewed acceptance of A or selection of an
+output API. Ask first whether an ordinary run of file 1 should stay silent or
+display 12 automatically.
+
+Verification: read the current owning pages, selected working targets, and
+investigation workflow; inspected the final item of each of the 20 current
+sample files. These are source/document checks. No LiteLang parsing, type
+checking, execution, performance, or footprint measurement was performed.
+
+## Original contracts and evidence
+
+The following evidence/options/findings retain their original snapshot scope.
+The current selected baseline and new reconsideration are recorded above.
 
 Repository revision: `c59f743`, 2026-10-28. The catalog edits and this note are
 uncommitted working-tree changes; the tracked tree matches that revision.
@@ -279,8 +358,9 @@ braces scope tension, and the observation that all 20 samples complete with
 Unresolved: top-level diagnostics, duplicate-name and module rules, recursive
 function-literal initialization, and the entire observable-effect half.
 
-Resume at: (1) continue to INV-005 for completion and exit status, which the
-adopted exercise-acceptance policy depends on; (2) INV-003.02 for top-level
-declarations and lookup; (3) decide whether a discarded final expression should
-warn. Do not treat this note as an implementation plan; no implementation work
-has been requested.
+Current resume point: discuss the re-review above, especially silent final-value
+discard versus automatic display. A remains the current rule while under review;
+no replacement or renewed acceptance has been selected. After closing that
+discussion, continue to INV-003.02 for declarations and lookup. INV-005 still
+owns the exit-status dependency of exercise acceptance, and discarded-value
+warnings remain open. This is not an implementation plan.
