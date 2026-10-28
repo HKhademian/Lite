@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-003-01](INV-003-01-top-level-execution.md) — INV-003.01 re-review retains option A and selects explicit output/tracing for scripts, demonstrators, and playgrounds, 2026-10-28; concrete observation APIs remain open. INV-003.02–.04 not started.
+**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 in progress, initial declaration/lookup cases and alternatives recorded, no new rule selected. INV-003.03–.04 not started.
 
 <a id="inv-004"></a>
 
