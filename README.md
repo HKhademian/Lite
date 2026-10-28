@@ -8,6 +8,7 @@ The project is currently **planning only**. These documents record the design di
 
 - [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)
+- [First working targets](docs/principles.md#first-working-targets): a tiny executable demonstrator for experimentation, followed by practical command-line and file-processing scripts. These are selected development goals; no runner or compiler exists yet.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)

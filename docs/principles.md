@@ -34,6 +34,27 @@ Let people and programming agents focus on problem solving through concise, read
 - One conditional syntax for actions and values.
 - One `loop` keyword for the supported iteration modes.
 
+## First working targets
+
+Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
+with LiteLang features, then grow toward a first useful milestone of practical
+scripts with command-line arguments, console input/output, and file processing.
+The exercise corpus supplies use cases; exact exercise coverage remains open.
+Foreign calls, explicit memory placement, and concurrency remain later
+investigations outside that first useful milestone.
+
+The demonstrator should execute a `.lite` source file through a minimal runner
+or compilation path and provide a simple way to observe results. Supported
+features must follow their selected rules; unsupported features must produce
+clear diagnostics. Runner versus compiler, commands, backend, and observation
+API remain open. Literals, bindings, arithmetic, and simple value display are a
+proposed initial subset, with conditionals, functions, and loops added
+incrementally; this feature order is not a selected implementation plan.
+
+These are development targets, not an implemented toolchain or a release promise.
+The lightweight native execution goals continue to guide the language; choosing
+an experimental execution mechanism remains a separate decision.
+
 ## Representative shape
 
 ```text
@@ -60,11 +81,34 @@ The compiler infers types; it does not remove them. A mutable integer binding ca
 
 Advanced facilities should be introduced as students need them. This is a teaching progression within one language, not a dynamically typed beginner dialect and a separate systems dialect.
 
+Selected 2026-10-28: ordinary code should receive safe automatic storage and
+cleanup without routine manual memory or explicit ownership/lifetime bookkeeping.
+Advanced memory controls must remain available through an explicit step with
+little ceremony, such as a possible built-in memory-module import. The
+[memory-control boundary](memory-and-performance.md#ordinary-and-advanced-memory-control)
+owns this goal; module/API syntax and the memory-management mechanism remain open.
+
 ## Performance expectations
 
 Selected priority, 2026-10-28: Lite must be light in deployed cost as well as source ceremony. Aim for performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Review feature costs against each measure; a speed improvement does not automatically justify greater code size or runtime complexity. Preserve selected safety and observable behavior.
 
 Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](memory-and-performance.md#performance-evidence-and-size-accounting) and the [investigation focus](../investigations/lightweight-native-execution.md).
+
+## Resolving competing goals
+
+Selected 2026-10-28: preserve safety and defined behavior when assessing design
+tradeoffs. Then judge readability, ceremony, execution speed, memory use, runtime
+support, and executable size against concrete uses. Neither convenience nor
+performance always wins; there is no universal ranking among those remaining
+goals. An optimization must preserve selected observable contracts.
+
+For a consequential tradeoff, record the use case, goals in tension, alternatives,
+chosen direction, implied costs, and supporting evidence or unresolved measurement.
+Use the white paper's review questions and the continuity principle's visible
+boundaries. Keep expected costs distinct from measured results. A newly selected
+contract change must follow the decision process rather than being introduced
+silently as an optimization. Numeric budgets and per-feature acceptance cases
+remain open.
 
 ## Notes and open questions
 

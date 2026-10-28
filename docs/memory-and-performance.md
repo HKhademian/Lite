@@ -1,6 +1,6 @@
 # Memory and performance
 
-Status: **lightweight native execution priorities selected 2026-10-28; tuple/fixed-array storage contracts selected; complete memory model, compiler backend, and ABI unchosen**.
+Status: **lightweight native execution priorities and ordinary/advanced memory-control boundary selected 2026-10-28; tuple/fixed-array storage contracts selected; complete memory model, compiler backend, and ABI unchosen**.
 
 ## Purpose
 
@@ -20,6 +20,32 @@ Make a convenient language compatible with predictable data representation and a
 - Optional facilities linked only when used, where practical.
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
+
+## Ordinary and advanced memory control
+
+Selected by the user, **2026-10-28**: ordinary LiteLang programs should receive
+safe automatic storage and cleanup without routinely requiring manual
+allocation/freeing, explicit ownership bookkeeping, or lifetime annotations.
+The compiler should carry that work where possible. Consequential copying,
+sharing, and ownership changes must retain understandable contracts and the
+selected copy/access semantics.
+
+Advanced memory controls must remain available through an explicit step with
+little ceremony. They should stay outside the default beginner surface and be
+introduced as needed within the same language. Importing a built-in memory
+module is the user's example of a suitably small step; no module name, import
+spelling, API, or particular advanced facility is selected. Making an API
+available does not by itself change unrelated code's semantics or waive its
+safety checks. Any additional responsibilities belong to the advanced
+operations' eventual contracts.
+
+This selects the usability boundary, not a reclamation mechanism. Ownership
+inference, borrowing, reference counting, cycle handling, resource-copy
+eligibility, escape checks, exact cleanup timing, placement/allocator controls,
+and raw-memory boundaries remain investigations. Ordinary native execution
+without a mandatory VM or tracing collector remains a goal. Advanced facilities
+are an intended capability beyond the first useful milestone; this decision
+does not require their implementation in the tiny demonstrator.
 
 ## Lightweight native execution priority
 

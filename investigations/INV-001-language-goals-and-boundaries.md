@@ -2,7 +2,7 @@
 
 Status: recorded
 Contributor: redacted (agent-assisted)
-Last updated: 2026-10-27
+Last updated: 2026-10-28
 Catalog brief: [INV-001](TOPICS.md#inv-001)
 Covered subtopics: whole topic (INV-001 has no starter subtopics in [SUBTOPICS.md](SUBTOPICS.md))
 
@@ -53,6 +53,66 @@ simple-English reference presentation. It preserves the goal of one language's
 semantics; localized syntax, tooling mechanisms, and educational benefit remain
 unselected or unverified. The [question map](multilingual-source-and-learning.md)
 links the new work; the original evidence below remains a dated snapshot.
+
+## Working-target selection, 2026-10-28
+
+The user selected practical scripts as the first useful milestone and required
+an earlier, very small runner or compilation path for playing with language
+features. The [owning principles page](../docs/principles.md#first-working-targets)
+and [decision ledger](../docs/decisions-and-open-questions.md#first-working-targets-2026-10-28)
+record the current selection:
+
+- First provide a tiny executable demonstrator that runs a `.lite` file and
+  makes results observable. Supported features follow selected semantics;
+  unsupported features receive clear diagnostics.
+- Grow toward practical scripts with command-line arguments, console I/O, and
+  file processing. Systems capabilities remain later investigations.
+- Runner versus compiler, commands, backend, observation API, exact demonstrator
+  subset/order, and exercise coverage remain open. No implementation is claimed.
+
+This selects the practical scope of A2 below without freezing all 520 exercises
+as acceptance requirements. The initial literals/bindings/arithmetic/display
+subset and incremental addition of conditionals/functions/loops remain a
+recommendation. Specific memory mechanisms remain unselected; subsequent
+memory-control and conflict-review selections are recorded below.
+The evidence and alternatives below retain their original
+2026-10-27 scope except where a later selection is explicitly identified.
+
+## Memory-control boundary selection, 2026-10-28
+
+The user selected safe automatic storage and cleanup for ordinary code, without
+routine manual allocation/freeing or explicit ownership/lifetime bookkeeping.
+Advanced controls must remain available through a deliberate step with little
+ceremony, outside the default beginner surface. Importing a built-in memory
+module is an illustrative entry point; its name, grammar, APIs, and exact
+facilities remain open. This is one language with progressively exposed tools.
+
+The [owning memory page](../docs/memory-and-performance.md#ordinary-and-advanced-memory-control)
+and [ledger](../docs/decisions-and-open-questions.md#ordinary-and-advanced-memory-control-2026-10-28)
+record the selected usability goal. This partly answers Q2 and Q9 below. It
+does not select M1's inferred borrowing, M2's lifetime type system, any M3
+placement/allocator/raw-memory API, or a reclamation mechanism. The no-mandatory-VM
+or-tracing-collector goal and selected copies/access/safety remain in force.
+Advanced capabilities remain beyond the first useful milestone; their usability
+goal is not a requirement to implement them in the tiny demonstrator.
+
+## Goal-conflict review selection, 2026-10-28
+
+The user selected case-by-case review that preserves safety and defined behavior,
+then compares readability, ceremony, speed, memory, runtime support, and
+executable size against concrete uses with explicit costs and evidence. Neither
+convenience nor performance always wins. Record consequential tradeoffs with the
+use case, competing goals, alternatives, chosen direction, costs, and evidence
+or measurement still needed. Expected costs are not measured results.
+
+The [owning principles page](../docs/principles.md#resolving-competing-goals) and
+[ledger](../docs/decisions-and-open-questions.md#resolving-competing-goals-2026-10-28)
+record the decision. This adopts the case-based, visible-contract and cost-record
+approach underlying C2 below, without selecting C2's suggested tier-specific
+dominance for readability or explicit control. There is no global ranking among
+the remaining goals. Optimization preserves selected observable contracts;
+contract changes require their own explicit decision. Numeric budgets and
+per-feature acceptance cases remain open.
 
 ## Current contracts and evidence
 
@@ -358,7 +418,9 @@ FFI, and concurrency to the binding tier.
 
 These tiers are not exclusive. A likely structure is a binding everyday tier plus
 an explicitly optional advanced tier, with separate acceptance cases. That
-structure is a recommendation, not a selected boundary.
+structure was a recommendation at the original review. The later
+[working-target selection](#working-target-selection-2026-10-28) selects practical
+scripts after a tiny demonstrator, leaving exact exercise coverage open.
 
 ### B. Memory-control promise
 
@@ -386,8 +448,11 @@ costs.
   contradicts the stated safety, readability, and no-universal-pointer goals.
 
 The catalog's direction points toward M1 plus some explicit M3 boundary, but the
-middle (M2) is not selected. Whether M2 is required for the promised control is
-the ownership topic's question, not something this note can settle.
+middle (M2) is not selected. The later
+[memory-control boundary selection](#memory-control-boundary-selection-2026-10-28)
+selects automatic ordinary handling and advanced controls behind a small explicit
+step. It does not adopt any M0–M3 mechanism as a package. Whether M2 is required
+for the promised control is the ownership topic's question.
 
 ### C. Conflict adjudication
 
@@ -414,10 +479,13 @@ No tier may silently hide a consequential effect.
 ceremony, and implementation cost. Explicit but falsely precise: the weights are
 arbitrary, and a single number can hide a contract violation.
 
-A recommendation, not a selected rule: use C2, with the white paper's questions
-as the checklist, and add a short conflict record to the owning proposal or
-ledger entry. The record should name the goals in tension, the affected tier, the
-chosen direction, the implied costs, and the evidence or review date.
+The original recommendation was C2, using the white paper's questions and a
+short conflict record. The later
+[goal-conflict review selection](#goal-conflict-review-selection-2026-10-28)
+adopts concrete-case review, visible contracts, and explicit costs/evidence,
+subject to safety and defined behavior. It does not adopt the suggested
+tier-specific dominance in C2 or assign universal priority to convenience or
+performance.
 
 ### D. Evaluation evidence
 
@@ -508,11 +576,15 @@ features out of the ordinary path, and require the boundary to be visible.
 
 ### Remaining questions
 
-- **Q1 — Milestone membership.** Which exercise stages, host facilities, and
-  challenge formats are binding for the first release? (INV-002, INV-003,
-  INV-004)
-- **Q2 — Memory-control promise.** Which level (M0–M4) is promised in the everyday
-  tier, and which are advanced-tier only? (INV-041 through INV-053)
+- **Q1 — Milestone membership (partly settled 2026-10-28).** A tiny demonstrator
+  precedes the first useful practical-script milestone with command-line
+  arguments, console I/O, and file processing. Exact exercise stages, challenge
+  formats, host APIs, demonstrator subset, and release membership remain open.
+  (INV-002, INV-003, INV-004)
+- **Q2 — Memory-control promise (partly settled 2026-10-28).** Safe automatic
+  handling for ordinary code; advanced tools available through an explicit step
+  with little ceremony. Exact capabilities, mechanisms, and their safety/cost
+  contracts remain open; no M0–M3 package is selected. (INV-041 through INV-053)
 - **Q3 — Copy and resources.** What does copying a resource-owning value mean,
   and which types are copy-eligible? (INV-041, INV-043, INV-053)
 - **Q4 — Views and escape.** Are slices/borrows exposed in ordinary code, and
@@ -527,12 +599,15 @@ features out of the ordinary path, and require the boundary to be visible.
 - **Q7 — Host and library boundary.** Are host I/O and a standard library part of
   the language's practical definition or a separate product tier? (INV-067,
   INV-071)
-- **Q8 — Systems scope.** Are FFI, concurrency, and raw memory in the first
-  milestone, a later milestone, or explicitly out of scope? (INV-052, INV-066,
-  INV-068, INV-069, INV-070)
-- **Q9 — Audience surface.** Does "one language for beginners, experts, and
-  agents" permit advanced syntax to be optional, or does it require one uniform
-  surface? (INV-003, INV-072, INV-075)
+- **Q8 — Systems scope (partly settled 2026-10-28).** Foreign calls, explicit
+  memory placement, and concurrency are later investigations outside the first
+  useful milestone. Their eventual inclusion, restricted raw-memory boundary,
+  and target support remain open. (INV-052, INV-066, INV-068, INV-069, INV-070)
+- **Q9 — Audience surface (partly settled 2026-10-28).** One language with
+  progressively exposed advanced memory tools outside the default beginner
+  surface. Importing a built-in memory module is an example; exact syntax,
+  module/API boundaries, and other advanced facilities remain open.
+  (INV-003, INV-072, INV-075)
 
 ## Decision references
 
@@ -547,8 +622,21 @@ features out of the ordinary path, and require the boundary to be visible.
   [LP-0010](../docs/proposals/LP-0010-outcome-extraction-and-exhaustion.md), and
   [LP-0018](../docs/proposals/LP-0018-implicit-panics-without-effect-declarations.md)
   select failure-related rules relevant to the cost side of this topic.
-- No accepted decision selects a workload tier, a memory-control level, or a
-  conflict-adjudication procedure. Target releases remain unassigned.
+- [First working targets](../docs/principles.md#first-working-targets), selected
+  2026-10-28 and recorded in the
+  [ledger](../docs/decisions-and-open-questions.md#first-working-targets-2026-10-28):
+  tiny demonstrator, then practical scripts. Exact exercise/release membership
+  remains open. Target releases remain unassigned.
+- [Ordinary and advanced memory control](../docs/memory-and-performance.md#ordinary-and-advanced-memory-control),
+  selected 2026-10-28 and recorded in the
+  [ledger](../docs/decisions-and-open-questions.md#ordinary-and-advanced-memory-control-2026-10-28):
+  automatic ordinary handling with advanced tools behind a small explicit step.
+  No memory mechanism is selected.
+- [Resolving competing goals](../docs/principles.md#resolving-competing-goals),
+  selected 2026-10-28 and recorded in the
+  [ledger](../docs/decisions-and-open-questions.md#resolving-competing-goals-2026-10-28):
+  preserve safety/defined behavior and evaluate other goals case by case with
+  explicit costs and evidence. Numeric budgets remain open.
 
 ## Handoff
 
@@ -556,8 +644,14 @@ The question is which workloads bind the language and what memory control it
 promises, not which mechanism to implement. The evidence gathered here is the
 goal statements, the exercise and challenge inventories, and the selected/open
 memory fragments at revision `c59f743`. The unresolved assumptions are the
-milestone membership (Q1), the promised memory level (Q2), and the acceptability
-of runtime support for failures and cleanup (Q6). A contributor should start with
-Q1, because every later boundary depends on it; INV-002 owns the detailed
-coverage inventory, and the memory topics own the mechanism questions. No
-language rule should be inferred from this note.
+exact milestone membership (Q1), concrete memory capabilities/mechanisms (Q2),
+and the acceptability of runtime support for failures and cleanup (Q6). The 2026-10-28
+selection settles the broad workload direction: a tiny demonstrator followed by
+practical scripts, plus automatic ordinary memory handling and deliberately
+accessible advanced controls. Goal-conflict review is now selected as concrete-case
+evaluation preserving safety/defined behavior, with explicit costs and evidence.
+The three goal-level questions have recorded selections with the limits stated
+above; the technical follow-ups are still open. Continue the catalog review at
+INV-002 for detailed exercise coverage. The memory topics own mechanism questions
+and INV-074 owns measurement protocols/budgets. Current decisions live in the
+linked owning pages and ledger.

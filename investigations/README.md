@@ -11,9 +11,12 @@ presence does not select a feature or commit it to the first milestone.
 
 The intended direction is modern scripting convenience with as much native-like
 memory control as practical, restricted raw-pointer access, substantial compiler
-work, and efficient everyday programs with modest runtime requirements. The first
-milestone is a language ready to solve the exercises. These goals guide questions;
-they do not settle an ownership model, backend, runtime mechanism, or benchmark.
+work, and efficient everyday programs with modest runtime requirements. The
+[selected working targets](../docs/principles.md#first-working-targets) begin with
+a tiny executable demonstrator for experimentation, followed by practical scripts
+with command-line arguments, console I/O, and file processing. These goals guide
+questions; they do not settle an ownership model, backend, runtime mechanism, or
+benchmark.
 
 The [progressive exercise catalog](../samples/list.md) and
 [challenge corpus](../challenges/README.md) provide concrete use cases. Their full

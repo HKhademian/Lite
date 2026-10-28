@@ -18,6 +18,63 @@ Owner of the proposal and its boundaries: [multilingual source and learning](mul
 
 Owner: [memory and performance](memory-and-performance.md#lightweight-native-execution-priority). The [investigation focus](../investigations/lightweight-native-execution.md) links stable questions across memory, compiler, runtime, optimization, and measurement topics; listing questions does not complete their investigations.
 
+## First working targets, 2026-10-28
+
+- Select a tiny working demonstrator before the first useful milestone: execute
+  a `.lite` file and observe results so language features can be tried early.
+- Select practical scripts as the first useful milestone, including command-line
+  arguments, console input/output, and file processing. Foreign calls, explicit
+  memory placement, and concurrency remain later investigations.
+- Supported demonstrator features follow selected rules; unsupported features
+  receive clear diagnostics. The runner/compiler mechanism, commands, backend,
+  observation API, exact feature subset/order, exercise coverage, and release
+  targets remain open. No implementation work or conformance result is implied.
+
+Owner: [first working targets](principles.md#first-working-targets).
+[INV-001](../investigations/INV-001-language-goals-and-boundaries.md#working-target-selection-2026-10-28)
+records the investigation follow-up. The memory-control usability boundary is
+selected below; its mechanisms remain open. Goal-conflict review is also selected
+below.
+
+## Ordinary and advanced memory control, 2026-10-28
+
+- Ordinary code should receive safe automatic storage and cleanup without
+  routinely requiring manual allocation/freeing, ownership bookkeeping, or
+  lifetime annotations. Preserve selected copy/access semantics and understandable
+  contracts for consequential copying, sharing, and ownership changes.
+- Advanced memory controls must remain available through an explicit step with
+  little ceremony, outside the default beginner surface. A built-in memory-module
+  import is an illustrative entry point; no import spelling, module name, API,
+  or specific facility is selected. Importing APIs does not itself alter
+  unrelated code or remove checks; advanced operations need their own contracts.
+- This selects ergonomics within one language. Reclamation, ownership inference,
+  borrowing, reference counting/cycles, resource copying, placement, raw memory,
+  and cleanup timing remain open. Native execution without a mandatory VM or
+  tracing collector remains a goal. No advanced implementation is required in
+  the tiny demonstrator or first useful milestone.
+
+Owner: [ordinary and advanced memory control](memory-and-performance.md#ordinary-and-advanced-memory-control).
+INV-001's goal-level memory question is partly settled; the memory topics own
+mechanisms and concrete safety/cost cases.
+
+## Resolving competing goals, 2026-10-28
+
+- Preserve safety and defined behavior. Assess readability, ceremony, execution
+  speed, memory use, runtime support, and executable size case by case against
+  concrete uses and explicit costs. Neither convenience nor performance has a
+  universal priority over the other goals.
+- Record consequential tradeoffs with the use case, competing goals,
+  alternatives, selection, costs, and evidence or measurement still needed.
+  Distinguish expected costs from measured results. Follow the white paper's
+  review questions and continuity's visible-boundary principle.
+- Optimization preserves selected observable contracts. Changes to those
+  contracts require an explicit design decision. Numeric budgets, feature-level
+  acceptance cases, and memory mechanisms remain open.
+
+Owner: [resolving competing goals](principles.md#resolving-competing-goals).
+This settles INV-001's goal-conflict review method, not its remaining technical
+capability or implementation questions.
+
 ## Source file body, 2026-10-28
 
 - [Source file body](blocks-and-results.md#source-file-body), selected 2026-10-28: a source file that is run as a program is the outermost implicit executable block; the file boundary supplies the braces and written block constructs still require `{ ... }`. Items execute in written order, and the final item's result is computed then not observed, so a trailing expression is evaluated for its effects and its value discarded rather than rejected. The body completes with `Unit` whether empty, declaration-final, assignment-final, or expression-final. "Bodies always use braces" now distinguishes written block bodies from the source unit.

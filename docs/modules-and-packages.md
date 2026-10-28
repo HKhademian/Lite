@@ -44,6 +44,12 @@ Implicit arbitrary module initialization and package installation scripts were d
 
 A small predefined environment could contain basic types, basic collections, `Option`, `Result`, and convenient output. Filesystem, networking, and larger libraries would require explicit imports. The effect and error contract of even convenient output must eventually be specified.
 
+The selected [memory-control usability boundary](memory-and-performance.md#ordinary-and-advanced-memory-control)
+keeps advanced memory controls outside the default beginner surface while
+requiring a deliberate entry point with little ceremony. A built-in memory-module
+import is an example, not a selected module, API, or import grammar. Availability
+through an import alone does not waive checks or change ordinary code's behavior.
+
 ## Open decisions
 
 Module path resolution; cycles; declaration resolution across files; initialization order; interface files; binary versus source packages; target-specific dependencies; C interoperability; package authenticity; and the stable public API policy.

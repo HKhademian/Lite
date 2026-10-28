@@ -6,6 +6,11 @@ Status: **official formatter required; compact/multiline presentation, unchanged
 
 Students should spend their early effort understanding programs rather than choosing build tools or interpreting parser jargon.
 
+The [selected first working targets](principles.md#first-working-targets) call
+for a tiny executable demonstrator before practical scripting. Its runner or
+compiler mechanism, command spelling, and way to observe values remain open;
+the formatter contract below does not choose them.
+
 ## Formatter
 
 ```text

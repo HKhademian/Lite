@@ -19,7 +19,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/white-paper.md](../docs/white-paper.md); [docs/principles.md](../docs/principles.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-001 — language goals and boundaries](INV-001-language-goals-and-boundaries.md).
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-001 — language goals and boundaries](INV-001-language-goals-and-boundaries.md) — tiny demonstrator, practical-script milestone, ordinary/advanced memory-control usability boundary, and case-by-case goal-conflict review selected 2026-10-28; exact coverage, memory mechanisms, and evidence budgets remain open.
 
 <a id="inv-002"></a>
 
