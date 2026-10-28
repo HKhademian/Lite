@@ -1,6 +1,6 @@
 # INV-003.01 — Top-level execution
 
-Status: in progress
+Status: recorded
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-003](TOPICS.md#inv-003)
@@ -39,8 +39,9 @@ update. The [reconsideration rule](README.md#reconsidering-decisions-and-postpon
 requires reviewing the existing selection rather than exempting it. The current
 [source-file contract](../docs/blocks-and-results.md#source-file-body) selects A;
 the newer [working targets](../docs/principles.md#first-working-targets) require a
-tiny executable demonstrator with a way to observe results. No replacement has
-been selected in this re-review.
+tiny executable demonstrator with a way to observe results. The discussion
+initially reopened A; the selection below now retains it and requires explicit
+output/tracing across scripts and tools.
 
 ### Concrete probes
 
@@ -92,16 +93,28 @@ container alone does not define output. Import behavior D is orthogonal and
 belongs to INV-003.04. These alternatives have been compared against the new
 goal; none is excluded merely because A was previously selected.
 
-### Finding and proposed direction
+### Finding and selection
 
 The demonstrator's observation requirement exposes a missing host/tool contract,
-not a necessary contradiction in the implicit-block model. Recommend retaining
-the implicit file body and using explicit observation for ordinary scripts.
-Automatic display in a deliberate playground remains worth considering under
-INV-004/INV-067, with its behavior and costs stated explicitly. This is a
-recommendation for discussion, not renewed acceptance of A or selection of an
-output API. Ask first whether an ordinary run of file 1 should stay silent or
-display 12 automatically.
+not a necessary contradiction in the implicit-block model. The opening
+recommendation was to retain A and use explicit observation; playground display
+was raised as a possible separate facility.
+
+Selection recorded 2026-10-28: the user requires output to be explicit always,
+including in demonstrators and playgrounds. Retain A. Neither file above displays
+12 automatically. A source output operation or deliberately enabled
+inspection/tracing facility can request observation. The user's command-tracing
+analogy illustrates explicit activation; no external command syntax is adopted.
+An enabled facility may report events within its declared scope without a new
+request for every event. Observation must not re-evaluate expressions.
+
+This closes the silent-discard versus implicit-display question. The earlier
+candidate of display enabled merely by being in a playground is not selected.
+Concrete APIs, formatting/output failures, inspection controls, diagnostics, and
+the broader host-effect surface remain with INV-004/INV-067/INV-072. The
+[owning tooling page](../docs/tooling-and-learning.md#explicit-output-and-tracing)
+and [ledger](../docs/decisions-and-open-questions.md#explicit-output-and-tracing-2026-10-28)
+record the selected boundary; source-file completion is unchanged.
 
 Verification: read the current owning pages, selected working targets, and
 investigation workflow; inspected the final item of each of the 20 current
@@ -343,8 +356,15 @@ result is computed but not observed, and the body completes with `Unit`. Recorde
 in the [decision ledger](../docs/decisions-and-open-questions.md#source-file-body-2026-10-28).
 No LP ID applies.
 
+Re-review selection, 2026-10-28: retain A and require
+[explicit output/tracing](../docs/tooling-and-learning.md#explicit-output-and-tracing)
+for ordinary scripts and playgrounds, recorded in the
+[ledger](../docs/decisions-and-open-questions.md#explicit-output-and-tracing-2026-10-28).
+Automatic expression/declaration/assignment echo is not selected. Explicitly
+enabled observation facilities remain possible; exact APIs remain open.
+
 Top-level diagnostics, duplicate-name and module rules, imports, process exit
-status, and observable effects remain without an accepted rule. The adjacent
+status, and concrete host-effect APIs remain without an accepted rule. The adjacent
 selected rules are block results and the final-item rule, item separators
 including end of file, sequential local shadowing, and nonrecursive local result
 inference.
@@ -356,11 +376,11 @@ value? Evidence: the contracts above, the seven discriminating cases, the
 braces scope tension, and the observation that all 20 samples complete with
 `Unit`. Settled 2026-10-28: A, recorded in the owning page and ledger.
 Unresolved: top-level diagnostics, duplicate-name and module rules, recursive
-function-literal initialization, and the entire observable-effect half.
+function-literal initialization, and concrete observable-effect APIs. Explicit
+output/tracing intent is now selected.
 
-Current resume point: discuss the re-review above, especially silent final-value
-discard versus automatic display. A remains the current rule while under review;
-no replacement or renewed acceptance has been selected. After closing that
-discussion, continue to INV-003.02 for declarations and lookup. INV-005 still
+Current resume point: continue to INV-003.02 for declarations and lookup. The
+re-review retains A and selects explicit output/tracing even in playgrounds.
+INV-005 still
 owns the exit-status dependency of exercise acceptance, and discarded-value
 warnings remain open. This is not an implementation plan.

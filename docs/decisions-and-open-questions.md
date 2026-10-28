@@ -98,6 +98,25 @@ semantics or a runner/compiler implementation.
 - [Source file body](blocks-and-results.md#source-file-body), selected 2026-10-28: a source file that is run as a program is the outermost implicit executable block; the file boundary supplies the braces and written block constructs still require `{ ... }`. Items execute in written order, and the final item's result is computed then not observed, so a trailing expression is evaluated for its effects and its value discarded rather than rejected. The body completes with `Unit` whether empty, declaration-final, assignment-final, or expression-final. "Bodies always use braces" now distinguishes written block bodies from the source unit.
 - This selects the execution model only. Top-level `return`/`break`/`continue` have no enclosing function, loop, or tag target; duplicate top-level names versus module declarations, imported-file behavior and module initialization, recursive function-literal initialization, process exit status, and observable effects remain with their owning topics. No compiler, backend, runtime, or ABI claim follows.
 
+## Explicit output and tracing, 2026-10-28
+
+- Re-review retains the implicit source-file body and discarded final result.
+  Evaluating a value, declaring/assigning a binding, or completing a file does
+  not implicitly display a value. Program output and tracing require an explicit
+  source operation or deliberately enabled tool facility.
+- Apply this rule to ordinary scripts, the tiny demonstrator, and playgrounds.
+  A playground alone is not permission for automatic display. An explicitly
+  enabled inspector/tracer may report events in its defined scope without a
+  separate request for each event; observation must not re-evaluate expressions.
+- Output APIs, formatting/failure contracts, inspection/tracing controls, and
+  command names remain open. Diagnostics and unused-value warnings retain their
+  separate policies; no new checked effect typing is selected.
+
+Owner: [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
+[Source-file completion](blocks-and-results.md#source-file-body) retains its
+evaluation rule. [INV-003.01](../investigations/INV-003-01-top-level-execution.md)
+records the reconsideration and selection; no implementation is claimed.
+
 ## Recapture, Result inspection, and implicit panics, 2026-10-27
 
 - [LP-0016 r1](proposals/LP-0016-recapture-and-warning-policy.md) selects legal recapture: capture(T ! Es) is T ! (Es | Panic), equal to the existing type if Es already includes broad Panic. Preserve stored success/failure occurrences, payloads, origins, multiplicity, and order without re-raising them or adding an outward layer. Deliberately nested successful Results remain data. Type deduplication never deduplicates occurrences.

@@ -15,6 +15,7 @@ Selected:
 
 - Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
 - A run source file is the outermost implicit executable block: the file boundary supplies its braces. Items execute in written order; the final item's result is computed and not observed, so the body completes with `Unit` whether empty, declaration-final, or expression-final. See [source file body](../blocks-and-results.md#source-file-body).
+- Output, value display, and execution tracing require an explicit source operation or deliberately enabled tool facility, including in demonstrators and playgrounds. Expressions, declarations, and assignments do not echo their values automatically. Observation must not re-evaluate expressions. See [explicit output and tracing](../tooling-and-learning.md#explicit-output-and-tracing).
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
 - Operands and named call inputs evaluate left to right in written order.
 - Operator grouping, tighter to looser: prefix `-`; `* / _/ % _%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.

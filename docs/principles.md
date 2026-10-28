@@ -13,6 +13,7 @@ Let people and programming agents focus on problem solving through concise, read
 - Keep ceremony low and make programs easy to read, write, and reason about.
 - Make the first programming concepts approachable for learners who do not yet read English. Investigate [multilingual source and learning](multilingual-source-and-learning.md), retaining simple English as the shared reference presentation and one set of language semantics. Localized source remains a proposal; exact vocabularies and tooling are open.
 - Make consequential behavior explicit through concise operations, including failure handling and caller mutation grants.
+- Output and execution tracing require explicit requests, including in demonstrators and playgrounds. Evaluating a value alone does not display it. See [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
 - Evaluate convenience together with its semantic and runtime costs; ordinary abstractions should support efficient implementation with modest runtime machinery.
 - Static, strong typing with inference for ordinary code.
 - Functions, conditions, loops, modules, and packages.

@@ -131,6 +131,14 @@ trailing expression is evaluated for its effects, and its value is discarded
 rather than reported as an error. The file body completes with `Unit` whether it
 is empty, ends in a declaration or assignment, or ends in an expression.
 
+Reaffirmed 2026-10-28: this discarded result is never an implicit request for
+output. Scripts, demonstrators, and playgrounds require an explicit output
+operation or deliberately enabled inspection/tracing facility to display it.
+Declarations and assignments likewise do not echo their values. See
+[explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
+Discarding an ordinary result does not skip its evaluation or suppress its effects
+or failures.
+
 Because there is no enclosing function, loop, or tagged block at this boundary, a
 top-level `return`, `break`, or `continue` has no valid target. Exact diagnostics
 and any future top-level exit spelling remain open.

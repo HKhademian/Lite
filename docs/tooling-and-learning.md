@@ -11,6 +11,26 @@ for a tiny executable demonstrator before practical scripting. Its runner or
 compiler mechanism, command spelling, and way to observe values remain open;
 the formatter contract below does not choose them.
 
+## Explicit output and tracing
+
+Selected 2026-10-28: program output, value display, and execution tracing require
+an explicit request. Evaluating an expression or completing a source file does
+not automatically print its value. A final declaration or assignment does not
+automatically display the initialized or assigned value either.
+
+This applies to ordinary scripts, the tiny demonstrator, and playgrounds.
+Observation can be requested through an explicit source operation or a
+deliberately enabled inspection/tracing facility. Merely running in a playground
+does not enable automatic display. Once explicitly enabled, a facility may report
+the values or operations within its defined scope without a separate request for
+every event. It must preserve the program's evaluation and execute it only as
+specified, not evaluate expressions again merely to display them.
+
+The user's tracing analogy motivates explicit activation; it does not select a
+command name, flag, module, output API, formatting rule, or failure contract.
+Compiler/runtime diagnostics and unused-value warnings retain their separate
+policies. This selects observation intent, not a new checked effect system.
+
 ## Formatter
 
 ```text
