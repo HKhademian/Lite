@@ -31,7 +31,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [samples/list.md](../samples/list.md); [samples/NOTES.md](../samples/NOTES.md); [challenges/README.md](../challenges/README.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — bounded question, contracts required by exercises 001–020.
 
 <a id="inv-003"></a>
 
