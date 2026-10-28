@@ -185,6 +185,7 @@ Selected:
 - The official formatter is `lite fmt`. `lite fmt --check` is read-only and suitable for CI.
 - Formatting is a presentation transform. It requires syntactically valid source but is not a type checker or name resolver.
 - The formatter preserves meaning, is idempotent, and leaves a malformed or unverified file unchanged while reporting a diagnostic and failure status.
+- Lightweight native execution is a core priority: fast execution/startup, low memory overhead, small runtime support, and small final executables. Ordinary native programs should require neither a VM nor a tracing garbage collector. These are goals, not implementation guarantees; memory model, backend, numeric budgets, and linking mechanisms remain open. Preserve selected copies, safety, and cleanup; see [performance priorities](../memory-and-performance.md#lightweight-native-execution-priority).
 - The project remains planning-only; no compiler implementation is claimed.
 
 Open: package/build syntax, runtime/native ABI, complete formatter implementation, and module resolution details.

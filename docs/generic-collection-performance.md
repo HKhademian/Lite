@@ -24,7 +24,7 @@ The source API need not expose an array's static extent for the compiler to use 
 
 They solve different problems. Requiring a traversal capability should not silently choose the second or third mechanism. A runtime-polymorphic value may legitimately involve indirect calls, ownership storage, or boxing where its chosen representation requires them; that must be an explicit design decision rather than a cost imposed on every generic collection.
 
-Specialization can increase compilation work and code size. Sharing compatible implementations, specialization limits, and cross-module compilation need design. No universal claim that a generic interface always compiles to a free abstraction follows from the syntax.
+Specialization can increase compilation work and code size. Sharing compatible implementations, specialization limits, and cross-module compilation need design. No universal claim that a generic interface always compiles to a free abstraction follows from the syntax. The selected [lightweight native execution priority](memory-and-performance.md#lightweight-native-execution-priority) requires evaluating final executable/runtime size alongside speed; [INV-063.01](../investigations/SUBTOPICS.md#inv-063-01) records the specialization-versus-sharing investigation.
 
 ## Logical element type and physical access
 

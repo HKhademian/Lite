@@ -1,8 +1,6 @@
 # Investigation catalog
 
-Status: **topic inventory only**, established 2026-10-27. All 75 investigations
-start as **not started**; existing language documents are starting evidence, not
-completed investigations.
+Status: **topic inventory only**, established 2026-10-27; lightweight execution focus added 2026-10-28. The 75 topics track their individual investigation status in TOPICS.md; existing language documents are starting evidence, not completed investigations.
 
 This directory is a contributor workspace for agents and developers, outside the
 language draft in `docs/`. It records what can be investigated and where to begin.
@@ -21,6 +19,16 @@ The [progressive exercise catalog](../samples/list.md) and
 [challenge corpus](../challenges/README.md) provide concrete use cases. Their full
 contents are not automatically a frozen acceptance suite. The exercise-coverage
 topic records the question of what the milestone includes.
+
+## Lightweight native execution focus
+
+The user reaffirmed lightness, fast execution, small runtime support, and small
+final executables as core priorities on 2026-10-28. The [owning design page](../docs/memory-and-performance.md#lightweight-native-execution-priority)
+records those selected goals. The [focused question map](lightweight-native-execution.md)
+connects memory, compiler, runtime, optimization, and evaluation topics and adds
+16 bounded questions. Their status remains not started. The focus does not select
+an ownership mechanism, backend, numeric budget, implementation sequence, or
+priority ordering for the entire catalog.
 
 ## Start a topic
 
@@ -48,7 +56,7 @@ are tracked on each topic's **Investigation** line and remain non-normative.
 
 ## Starter subtopics
 
-The [subtopic catalog](SUBTOPICS.md) starts with 132 concrete questions across 33
+The [subtopic catalog](SUBTOPICS.md) contains 148 concrete questions across 36
 broader topics. These are entry points, not an exhaustive decomposition.
 Topics without subtopics remain available at their existing scope; their lack of
 subtopics does not imply lower importance or readiness.

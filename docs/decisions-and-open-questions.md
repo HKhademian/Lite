@@ -2,6 +2,14 @@
 
 Snapshot: **2026-10-28**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Lightweight native execution priorities, 2026-10-28
+
+- Lightness is a core design priority: fast native execution, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Ordinary native programs should require neither a VM nor a tracing garbage collector. These are selected goals, not implemented performance or no-GC guarantees.
+- Assess execution time, compilation/startup, memory, runtime footprint, and executable/deployment size separately. Specialization/inlining can trade size for speed; required shared-library bytes must remain visible in size accounting. Numeric budgets and target-specific acceptance workloads remain open.
+- Preserve selected copy, access, safety, cleanup, and failure behavior. Owned storage with deterministic cleanup, checked views, explicit sharing, static generic specialization, a typed compiler core, C generation, and a later direct LLVM path are recommendations to investigate. No ownership system, implicit move/borrow, backend, ABI, linking mode, freestanding profile, or implementation order is selected.
+
+Owner: [memory and performance](memory-and-performance.md#lightweight-native-execution-priority). The [investigation focus](../investigations/lightweight-native-execution.md) links stable questions across memory, compiler, runtime, optimization, and measurement topics; listing questions does not complete their investigations.
+
 ## Source file body, 2026-10-28
 
 - [Source file body](blocks-and-results.md#source-file-body), selected 2026-10-28: a source file that is run as a program is the outermost implicit executable block; the file boundary supplies the braces and written block constructs still require `{ ... }`. Items execute in written order, and the final item's result is computed then not observed, so a trailing expression is evaluated for its effects and its value discarded rather than rejected. The body completes with `Unit` whether empty, declaration-final, assignment-final, or expression-final. "Bodies always use braces" now distinguishes written block bodies from the source unit.

@@ -50,6 +50,21 @@ Idempotence is a required formatter conformance check: for each successful-forma
 
 Malformed input retains the separate unchanged-file/failure contract below; it is not a successful formatting fixture. This selects a future conformance requirement, not an implemented formatter, an executed LiteScript check, or proof that all inputs satisfy it.
 
+## Native build and footprint investigations
+
+The selected [lightweight execution priorities](memory-and-performance.md#lightweight-native-execution-priority)
+call for small runtime support and final executables alongside fast execution,
+startup, and low memory overhead. Investigate tooling that explains retained
+runtime facilities, dependency/section sizes, allocation sources, specialization,
+and eliminated or remaining checks. Build reports should identify target,
+optimization, linking, stripping, debug data, and optional services. Distinguish
+executable bytes, required support bytes, and loaded memory; cached launch and
+cold compilation need separate timings.
+
+These are tooling investigation requirements, not selected command-line flags or
+implemented reports. C and LLVM backends should eventually share behavioral
+conformance cases if both are implemented. See [investigation points](../investigations/lightweight-native-execution.md).
+
 ## Verification before writing
 
 Selected 2026-10-25: generate a file's proposed formatted output in memory, parse it again, and verify it against the original before writing the file or applying formatter edits to an editor buffer. Successful output parsing alone is not the complete check; require preservation of executable structure, source-imposed typing requirements, and the separate comment contract.

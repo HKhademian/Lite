@@ -10,6 +10,14 @@ The [signed division, remainder, and modulo table](signed-division-table.md), re
 
 The [arithmetic methods and selected family](arithmetic-methods-and-division-revision.md), selected 2026-10-25, records / _/ % _% with contextual division and ordinary numeric methods in addition. Kotlin informs the named surface; Dart tilde and R percent-delimited alternatives remain comparison history. The compact/spaced equivalence requirement remains, with underscore/identifier recognition unresolved. No foreign language's wider numeric, overload, or comment contracts are imported.
 
+## Lightweight native execution, reviewed 2026-10-28
+
+- [Salam website](https://www.salamlang.ir/), [compiler repository](https://github.com/SalamLang/Salam), and [benchmark methodology](https://www.salamlang.ir/speed/): inspiration for native compilation, C/LLVM paths, and small support without a mandatory tracing collector. The website's performance numbers are project-reported measurements for its workloads; this discussion did not reproduce them or audit Salam's memory safety. Its compiler documentation describes small runtime helpers included in generated C. Absence of a separately distributed runtime library does not mean absence of runtime code.
+- [LLVM frontend performance guidance](https://llvm.org/docs/Frontend/PerformanceTips.html): frontend representation and lowering affect optimization; choosing LLVM alone does not establish speed or a memory model.
+- [Rust ownership explanation](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html): compile-time ownership rules as a reference route to memory management without a tracing collector. LiteLang's selected ordinary copies and unresolved resource-copy contracts must be preserved when evaluating its own model.
+
+These moving primary sources were consulted 2026-10-28. They motivate the [selected LiteLang priorities](memory-and-performance.md#lightweight-native-execution-priority) and [open investigations](../investigations/lightweight-native-execution.md), without adopting another language's semantics or selecting a Lite backend.
+
 ## Rust
 
 - [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html): final expressions, unit results, and control-flow boundaries. LiteScript's semicolons deliberately do not suppress a preceding final result.

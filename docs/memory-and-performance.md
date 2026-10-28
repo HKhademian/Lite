@@ -1,6 +1,6 @@
 # Memory and performance
 
-Status: **performance goals and selected tuple/fixed-array storage contracts documented; complete memory model, compiler backend, and ABI unchosen**.
+Status: **lightweight native execution priorities selected 2026-10-28; tuple/fixed-array storage contracts selected; complete memory model, compiler backend, and ABI unchosen**.
 
 ## Purpose
 
@@ -9,7 +9,9 @@ Make a convenient language compatible with predictable data representation and a
 ## Goals
 
 - Native execution and useful performance near C on suitable workloads.
-- No mandatory large runtime merely to execute ordinary code.
+- Small final executables, low memory overhead, and fast startup as core design priorities.
+- Ordinary native programs deployable without a mandatory VM or tracing garbage collector.
+- Small support machinery, with optional facilities included only when their use requires them where practical.
 - Unboxed scalar values and records where their semantics allow it.
 - Predictable collection storage and explicit expensive representations.
 - Specialization and static dispatch where appropriate.
@@ -18,6 +20,109 @@ Make a convenient language compatible with predictable data representation and a
 - Optional facilities linked only when used, where practical.
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
+
+## Lightweight native execution priority
+
+Selected by the user, **2026-10-28**: being light, fast, and economical in runtime
+and final executable size is central to LiteLang's design. These priorities apply
+to ordinary scripts as well as larger applications. They guide language, library,
+compiler, and deployment decisions together with readability and safety.
+
+The intended native path should require neither a VM nor a tracing garbage
+collector. This selects a goal, not an ownership system or an implemented no-GC
+guarantee. Allocation, cleanup, bounds checks, failure transport, and necessary
+metadata still require an implementation. Small runtime support can be generated
+inline or linked; removing a separately named runtime library does not erase its
+bytes or execution cost. The compiler's own LLVM dependency need not become a
+dependency of the produced program.
+
+Review substantial features for representation, allocation, copying, indirection,
+dispatch, checks, cleanup, startup, and linked code. Prefer static resolution and
+direct representations where semantics allow them. Keep optional facilities out
+of programs that do not need them where practical. Explain any unavoidable base
+support. A smaller file obtained by moving required support into a shared library
+is a deployment tradeoff, not proof of a smaller total deployment.
+
+Preserve defined behavior: selected copies cannot silently become moves or live
+borrows, required checks cannot disappear without proof, and cleanup/failure
+information cannot be dropped to meet a speed or size target. Specialization,
+inlining, shared helpers, and link-time optimization must be evaluated for both
+speed and code size. No numeric size budget, mandatory optimization mode, or
+universal ordering among these targets is selected yet.
+
+### Candidate implementation direction
+
+Status: **recommendations for investigation, not selected mechanisms**.
+
+1. **Native data.** Build on inline fixed arrays, zero-payload Unit, metadata-free
+   tuple labels, and unboxed concrete values where their contracts permit them.
+   Runtime unions, dynamic sequences, and erased providers still retain the
+   information their observations require. Inline storage does not mandate stack
+   placement or settle the ABI.
+2. **Ownership compatible with copying.** Investigate owned storage,
+   deterministic cleanup, lifetime-checked views, and explicit sharing. Define
+   copy eligibility and effects for strings, lists, resource-bearing records, and
+   closure environments before choosing reclamation. Copying an owning pointer
+   descriptor alone cannot create two safe independent owners. Explicit transfer,
+   clone, or sharing operations need their own contracts; do not silently change
+   ordinary-copy semantics. Compare reference-count costs and cycle policies as
+   alternatives, without assuming automatic reference counting.
+3. **Static abstraction.** Retain concrete provider/element types for generic
+   specialization and direct calls. Compare selective specialization with shared
+   implementations to control code size. Runtime-erased providers and escaping
+   closures need defined storage, lifetime, and dispatch policies.
+4. **Compiler core and backends.** Investigate a typed intermediate representation
+   preserving evaluation order, numeric semantics, copies, access/lifetime facts,
+   checks, and cleanup. C generation followed by an optimizing C compiler is a
+   practical first candidate; direct LLVM generation can be evaluated against
+   the same core later. Neither backend nor implementation order is selected.
+   C emission must preserve LiteLang behavior where C differs, including overflow,
+   shifts, evaluation order, and failure handling. LLVM alone does not establish
+   efficient lowering or memory safety.
+5. **Small feature support.** Account separately for startup, allocation, strings,
+   formatting/I/O, panic transport, failure aggregation, closure support, and any
+   concurrency services. Evaluate local branches, shared helpers, metadata, dead
+   code removal, and optional library boundaries without changing their required
+   semantics. Arbitrary retained failures still need a valid storage policy.
+6. **Systems boundaries.** Investigate C ABI interoperation, controlled raw-memory
+   access, target layout, and restricted/freestanding environments separately.
+   Native performance does not alone establish suitability for kernels or devices;
+   no raw-pointer syntax or freestanding profile is selected here.
+
+A proposed first executable subset is arithmetic, functions, loops, records, and
+fixed arrays, followed by owned dynamic storage and closures. Every implemented
+subset must state its supported semantics and remaining gaps. This is a candidate
+validation sequence, not a selected milestone or permission to weaken contracts.
+
+### Performance evidence and size accounting
+
+No LiteLang execution or performance results exist yet. Investigate representative
+workloads and budgets before publishing numbers. Record at least:
+
+- Correctness outputs and matching safety, numeric, and failure behavior.
+- Steady-state execution, cold/warm startup, compilation/link time, and tail
+  latency where relevant; distinguish a cached script launch from a cold build.
+- Allocation count/bytes, peak live memory, and reclamation behavior, including
+  escaping captures, resource copying, and shared cycles where supported.
+- Final executable file bytes and section contributions, required runtime/library
+  bytes and dependencies, and loaded memory separately. State stripped/debug,
+  static/dynamic linking, target ABI, optimization, LTO, and dead-code-removal
+  settings; distinguish a minimal program's base cost from each feature's delta.
+- Same-work comparisons with C using documented toolchains, flags, hardware,
+  workload inputs, repetition/aggregation, and raw results. Never infer general
+  superiority from one benchmark or compare different correctness contracts.
+
+Begin with an empty program, integer computation, fixed-array traversal, and a
+plain record call; then add strings/I/O, dynamic storage, capturing callables,
+checks/recovery, and cleanup individually. Repeat failure and boundary cases as
+well as success paths. Future differential checks between C and LLVM backends
+must compare observable behavior before comparing speed or size. No commands or
+benchmarks listed here are implemented by this documentation update.
+
+See the [focused investigation points](../investigations/lightweight-native-execution.md)
+for owning topic IDs, starting questions, and expected evidence. External
+inspiration is recorded in [references](references.md#lightweight-native-execution-reviewed-2026-10-28);
+other languages' claims do not establish LiteLang results.
 
 ## Runtime-cost review
 
@@ -173,7 +278,7 @@ could compile and cache native code. This was a proposed scripting experience; n
 
 ## Memory-model candidates
 
-Owned values, deterministic cleanup, inferred borrowing, and explicit shared ownership were recommended as a promising direction. Automatic reference counting was discussed as another tradeoff. A tracing collector was not selected, nor was a complete no-GC ownership system specified.
+Owned values, deterministic cleanup, inferred borrowing, and explicit shared ownership were recommended as a promising direction. Automatic reference counting was discussed as another tradeoff. A tracing collector was not selected, nor was a complete no-GC ownership system specified. The 2026-10-28 priority above now explicitly targets ordinary native execution without a mandatory tracing collector; it still leaves the reclamation mechanism open.
 
 The general language rule selected on **2026-10-25** gives ordinary reads/initializers, assignment values, call inputs, and ordinary results copy semantics, with no implicit references. Value semantics may require substantial copying, but direct construction, indirect ABI transport, and physical copy elimination must preserve all observable values and valid copy effects. This decides neither a physical copy instruction nor type-specific eligibility, ownership, safety, or resource policy; future reference-copy modes must be explicit. See [the general copy default](parameter-values-and-slots.md#general-copy-default-selected) and [result copies](parameter-values-and-slots.md#ordinary-return-values-are-copies-selected).
 

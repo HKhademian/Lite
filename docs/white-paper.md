@@ -8,7 +8,7 @@ Status: **foundational design statement, 2026-10-20**. Lite is a language-design
 
 LiteLang aims to make strongly typed programming feel as direct as scripting. Its primary purpose is to let people and programming agents spend their attention solving problems, expressing algorithms, and reasoning about behavior. The language should contribute little repetitive syntax, expose the contracts that matter, and make common safe operations easy to write and read.
 
-Convenience must remain compatible with an efficient implementation. The design favors useful defaults, static reasoning, concise explicit operations, and predictable data representations. It aims for native execution with modest runtime support. Readability, safety, and performance are evaluated together throughout the design.
+Convenience must remain compatible with an efficient implementation. The design favors useful defaults, static reasoning, concise explicit operations, and predictable data representations. Fast native execution, low memory use, small runtime support, and small final executables are core design priorities, reaffirmed 2026-10-28. Readability, safety, and performance are evaluated together throughout the design.
 
 ## 1. Keep the language out of the programmer's way
 
@@ -110,7 +110,9 @@ Abstractions have costs that need to be understood. Allocation, copying, indirec
 
 Safe defaults can coexist with optimization. A semantic zero initialization can be omitted physically when the compiler proves its stores unobservable. An explicit request for uninitialized storage has its own initialization requirements. Those two source contracts remain distinct even when their compiled code can coincide.
 
-The goal is useful performance near C on suitable workloads with a modest runtime. That goal needs an implementation and measurements. The memory-management model, ownership rules, compiler backend, and runtime mechanisms remain open decisions.
+Selected priority, 2026-10-28: aim for useful performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Ordinary native programs should be deployable without a mandatory VM or tracing garbage collector. Include optional support only where the used features require it, and account for any required shared libraries alongside executable size. These are design targets, not measured results or a complete memory model.
+
+Speed and size can conflict: specialization and inlining may improve execution while increasing code size. Every substantial proposal should describe these tradeoffs and preserve selected safety, value-copy, and cleanup behavior. The memory-management model, ownership rules, compiler backend, ABI, linking strategy, and numeric budgets remain open. The [memory and performance reference](memory-and-performance.md#lightweight-native-execution-priority) owns the detailed priorities; [focused investigation points](../investigations/lightweight-native-execution.md) organize the unanswered questions.
 
 ## 6. Support people and programming agents through the same clarity
 
@@ -139,7 +141,7 @@ Every substantial proposal should be reviewed against these questions:
 3. Does it remove repetition while preserving essential contracts?
 4. Are failure paths, access permissions, and meaningful effects understandable from source?
 5. What representation, allocation, copying, dispatch, and cleanup does it require?
-6. Can a compiler implement the ordinary path efficiently, and which claims need measurement?
+6. Can a compiler implement the ordinary path efficiently, and what are the separate execution-time, allocation, startup, runtime-footprint, and executable-size costs? Which claims need measurement?
 7. Does it compose consistently with the rest of the language?
 
 These criteria are the basis for design review. Brevity, familiarity, or a favorable isolated example does not by itself settle a proposal.

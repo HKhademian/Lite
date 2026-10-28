@@ -1,6 +1,6 @@
 # Starter subtopics
 
-Status: **question inventory only**, 2026-10-27. All subtopics start as
+Status: **question inventory only**, established 2026-10-27; lightweight execution questions added 2026-10-28. All subtopics start as
 **not started**. No investigation findings, selected mechanisms, priorities, or
 implementation plans are recorded here.
 
@@ -33,6 +33,17 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-003).
 - <a id="inv-003-02"></a> **INV-003.02 — Declarations and lookup:** How do top-level definitions, local helpers, forward references, and recursion interact with execution?
 - <a id="inv-003-03"></a> **INV-003.03 — Script environment:** Which inputs, predefined names, and host facilities are available to a standalone file?
 - <a id="inv-003-04"></a> **INV-003.04 — Growth into modules:** Which script rules remain unchanged when code is imported or moved into a package?
+
+<a id="inv-004"></a>
+
+## INV-004 — Execution modes
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-004).
+
+- <a id="inv-004-01"></a> **INV-004.01 — Native executable path:** What does a standalone native program require at deployment, and how can its dependencies remain small without a mandatory VM or tracing collector?
+- <a id="inv-004-02"></a> **INV-004.02 — Script compilation and caching:** How could cold compilation, cached native launch, invalidation, and warm execution preserve the same semantics, and what are their separate latency and storage costs?
+- <a id="inv-004-03"></a> **INV-004.03 — Execution-mode parity:** Which observable behaviors must agree between script execution and an ahead-of-time build, including failures and cleanup?
+- <a id="inv-004-04"></a> **INV-004.04 — Restricted environments:** What would a freestanding or restricted-support profile require, which operations would be unavailable, and how would those restrictions remain explicit?
 
 <a id="inv-014"></a>
 
@@ -331,6 +342,19 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-061).
 - <a id="inv-061-03"></a> **INV-061.03 — Intermediate representations:** Which explicit operations and effects must survive lowering so transformations remain valid?
 - <a id="inv-061-04"></a> **INV-061.04 — Backend boundaries:** How are target layout, code generation, runtime support, and diagnostics connected without making backend accidents language rules?
 
+- <a id="inv-061-05"></a> **INV-061.05 — C and LLVM lowering parity:** What common typed operations can drive C emission and direct LLVM generation, and how are LiteLang evaluation, numeric, copy, check, failure, and cleanup semantics preserved where backend behavior differs? Compare implementation effort and emitted cost without selecting a backend or order.
+
+<a id="inv-063"></a>
+
+## INV-063 — Optimization contracts
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-063).
+
+- <a id="inv-063-01"></a> **INV-063.01 — Specialization versus code sharing:** When do concrete generic instantiations need separate code, and when can implementations be shared without boxing or changing behavior? Measure speed, binary growth, and compilation cost.
+- <a id="inv-063-02"></a> **INV-063.02 — Inlining versus shared helpers:** Which call paths benefit from inlining, and when do outlined checks, adapters, or cleanup reduce code size at an acceptable execution cost?
+- <a id="inv-063-03"></a> **INV-063.03 — Proof-based cost elimination:** What facts justify removing physical copies, bounds checks, initialization stores, or temporary environments while preserving ordinary-copy, access, failure, and cleanup contracts?
+- <a id="inv-063-04"></a> **INV-063.04 — Link-time reachability:** How can dead-code removal and optional library boundaries exclude unused support, including metadata, registration, and failure helpers, without dropping reachable behavior?
+
 <a id="inv-064"></a>
 
 ## INV-064 — Runtime responsibilities
@@ -341,6 +365,8 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-064).
 - <a id="inv-064-02"></a> **INV-064.02 — Generated code versus shared services:** Which checks and operations can be local code, and which require reusable runtime machinery?
 - <a id="inv-064-03"></a> **INV-064.03 — Runtime facilities and costs:** What allocation, failure transport, metadata, and cleanup services are required by the eventual contracts?
 - <a id="inv-064-04"></a> **INV-064.04 — Linking and compatibility:** How are optional services included, and how do compiler and runtime versions agree on their boundary?
+
+- <a id="inv-064-05"></a> **INV-064.05 — Feature footprint accounting:** Which startup, allocation, string/I/O, closure, panic/aggregation, and concurrency facilities are retained by each feature, and how can generated reports expose their code/data/metadata and dependency costs?
 
 <a id="inv-065"></a>
 
@@ -385,3 +411,16 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-069).
 - <a id="inv-069-02"></a> **INV-069.02 — Atomic operations:** Which values and operations can be atomic, and what alignment or representation obligations apply?
 - <a id="inv-069-03"></a> **INV-069.03 — Visibility and ordering:** Which observations do synchronization operations order between concurrent contexts?
 - <a id="inv-069-04"></a> **INV-069.04 — Safe abstraction boundaries:** How do high-level concurrent APIs expose sufficient guarantees without requiring every caller to reason about low-level atomics?
+
+<a id="inv-074"></a>
+
+## INV-074 — Performance evaluation
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-074).
+
+- <a id="inv-074-01"></a> **INV-074.01 — Workloads and budgets:** Which representative workloads and target-specific budgets assess lightness and near-C performance, including small scripts and larger programs, without inventing an unsupported universal threshold?
+- <a id="inv-074-02"></a> **INV-074.02 — Executable and deployment size:** How are file bytes, sections, debug/stripping state, static/dynamic dependencies, required runtime bytes, and loaded memory reported separately?
+- <a id="inv-074-03"></a> **INV-074.03 — Incremental feature footprint:** What does the minimal program retain, and how much code, data, metadata, and startup work does adding each individual feature retain?
+- <a id="inv-074-04"></a> **INV-074.04 — Time and memory protocol:** How are cold build, cached launch, startup, steady-state time, relevant tail latency, allocation count/bytes, and peak memory measured with reproducible inputs and repetitions?
+- <a id="inv-074-05"></a> **INV-074.05 — Fair native comparison:** How do equivalent C and LiteLang cases match algorithms, work, numeric behavior, safety, failure semantics, and outputs before speed and size are compared?
+- <a id="inv-074-06"></a> **INV-074.06 — Backend conformance and regression evidence:** If C and LLVM paths are implemented, which differential cases establish observable parity, and what artifacts and thresholds distinguish real regressions from noise?

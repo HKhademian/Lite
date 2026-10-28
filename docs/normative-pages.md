@@ -10,6 +10,8 @@ The [LiteLang current design specification](spec/README.md) provides stable area
 
 The [Lite Proposal register](proposals/README.md) links accepted decision records with their LP IDs, revisions, statuses, and release targets. It records proposal/version history; the owning normative page and decision ledger remain the current-rule reference. Acceptance does not itself create a release or bump a component version.
 
+The [memory and performance priorities](memory-and-performance.md#lightweight-native-execution-priority), selected 2026-10-28, own the lightweight native execution goals and their measurement boundaries. Compiler and memory-management candidates in that page remain proposals.
+
 ## Map
 
 | Area | Start with | Also normative for narrower contracts |

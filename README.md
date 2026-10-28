@@ -1,13 +1,14 @@
 # Lite
 
-Lite is a language-design project for **LiteLang**, a readable, strongly typed language with scripting convenience. LiteLang programs are **LiteScripts**. The project aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Native execution with modest runtime support is a performance goal.
+Lite is a language-design project for **LiteLang**, a readable, strongly typed language with scripting convenience. LiteLang programs are **LiteScripts**. The project aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Lightness is a core design priority: fast native execution, low memory use, small runtime support, and small final executables. Ordinary native programs should not require a VM or tracing garbage collector; memory-management and backend mechanisms remain open.
 
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
-The project is currently **planning only**. These documents record the design discussion through **2026-10-26**. They are not an implemented compiler specification, and the examples have not been compiled.
+The project is currently **planning only**. These documents record the design discussion through **2026-10-28**. They are not an implemented compiler specification, and the examples have not been compiled.
 
 - [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)
+- [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
 - [Provisional grammar sketch](docs/grammar-sketch.md)

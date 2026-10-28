@@ -26,7 +26,7 @@ Let people and programming agents focus on problem solving through concise, read
 - Infer derived access type structure, keeping mathematical summaries such as A | var B | C out of routine code. Explicit type-side var in a function header declares caller replacement; local-only var belongs in the body. See [var access](var-access-qualifier.md) and [access ergonomics](slot-ergonomics.md).
 - Interfaces, modifiers, composition, and carefully scoped reuse instead of class inheritance as the primary model.
 - Collection consumers request the capabilities they need; standard and user implementations provide them. Shared element-typed APIs must not require primitive-wrapper collection families, conversion to one standard container, or a universal boxed-object representation. See [collection abstractions](collection-abstractions.md).
-- Small runtime requirements and native execution as an intended implementation direction.
+- Treat fast native execution, low memory use, small runtime support, and small final executables as core design priorities. Ordinary native programs should not require a VM or tracing garbage collector; ownership, reclamation, backend, and linking mechanisms remain open. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
 - Syntax whose meaning does not depend on indentation, tabs, spaces, or line boundaries.
 - Optional redundancy may improve writing and visual consistency without changing meaning: selected [leading separators](leading-separators.md) let every Boolean-expression, condition, pattern-alternative, or union entry use the same shape while preserving compact forms and explicit operand boundaries.
 - A connected design gradient: small source changes should have local, predictable meaning; similar-looking constructs should share rules; any semantic jump needs a visible source/type/target boundary. See [continuity and analogical coherence](continuity-and-analogy.md).
@@ -61,7 +61,9 @@ Advanced facilities should be introduced as students need them. This is a teachi
 
 ## Performance expectations
 
-The aim is performance near C on suitable workloads with a modest runtime. No claim that the language universally outperforms C has been established. Execution time, cold startup, compilation latency, binary size, allocations, and memory usage are separate targets.
+Selected priority, 2026-10-28: Lite must be light in deployed cost as well as source ceremony. Aim for performance near C on suitable workloads, low allocation and memory overhead, fast startup, small runtime support, and small final executables. Review feature costs against each measure; a speed improvement does not automatically justify greater code size or runtime complexity. Preserve selected safety and observable behavior.
+
+Measure execution time, cold/warm startup, compilation latency, executable and required support size, allocations, peak memory, and tail latency separately. Numeric budgets and representative workloads still need investigation. No universal C-speed, no-allocation, zero-runtime, or executable-size guarantee is established. See [measurement requirements](memory-and-performance.md#performance-evidence-and-size-accounting) and the [investigation focus](../investigations/lightweight-native-execution.md).
 
 ## Notes and open questions
 

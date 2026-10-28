@@ -31,6 +31,18 @@ implementation topics ([INV-061](TOPICS.md#inv-061) through
 [INV-075](TOPICS.md#inv-075)). Exercise coverage is [INV-002](TOPICS.md#inv-002);
 performance evaluation is [INV-074](TOPICS.md#inv-074).
 
+## Subsequent priority clarification, 2026-10-28
+
+The user subsequently reaffirmed fast native execution, low memory use, small
+runtime support, and small final executables as core priorities. The [current
+owning page](../docs/memory-and-performance.md#lightweight-native-execution-priority)
+records ordinary native execution without a mandatory VM or tracing collector as
+a goal, with mechanisms and numeric budgets still open. The [focused question
+map](lightweight-native-execution.md) supplies follow-up investigation points.
+The evidence below remains the 2026-10-27 snapshot; its statement that no priority
+order was recorded should not obscure this later emphasis or imply a total
+ordering among goals.
+
 ## Current contracts and evidence
 
 Evidence was read at repository revision `c59f743` ("docs: catalog language

@@ -1,6 +1,6 @@
 # Investigation topic briefs
 
-Status: **inventory only**, 2026-10-27. All topics are initially not started.
+Status: **inventory only**, established 2026-10-27; lightweight execution questions added 2026-10-28. Topic status is tracked on each Investigation line.
 These briefs define questions, not answers, implementation tasks, or review
 findings. Advanced possibilities listed in a scope remain possibilities.
 
@@ -56,6 +56,10 @@ questions; check their status and current owning pages before relying on them.
 **Starter question:** What semantics should execution modes share, and what compilation, caching, or interactive behavior needs a separate contract?
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/tooling-and-learning.md](../docs/tooling-and-learning.md).
+
+**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-004).
+
+**Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
@@ -793,7 +797,9 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/grammar-sketch.md](../docs/grammar-sketch.md); [docs/types-and-inference.md](../docs/types-and-inference.md); [docs/memory-and-performance.md](../docs/memory-and-performance.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-061).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-061).
+
+**Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
@@ -819,6 +825,10 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/parameter-values-and-slots.md](../docs/parameter-values-and-slots.md); [docs/evaluation-order.md](../docs/evaluation-order.md).
 
+**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-063).
+
+**Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
+
 **Investigation:** not started; contributor: unassigned; note: none.
 
 <a id="inv-064"></a>
@@ -831,7 +841,9 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/versioning-and-naming.md](../docs/versioning-and-naming.md); [docs/panics.md](../docs/panics.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-064).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-064).
+
+**Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
@@ -960,6 +972,10 @@ questions; check their status and current owning pages before relying on them.
 **Starter question:** How are separate cost goals measured reproducibly on representative workloads without generalizing beyond the evidence?
 
 **Start with:** [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/generic-collection-performance.md](../docs/generic-collection-performance.md); [challenges/benchmark/README.md](../challenges/benchmark/README.md).
+
+**Starter subtopics:** [6 bounded questions](SUBTOPICS.md#inv-074).
+
+**Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
