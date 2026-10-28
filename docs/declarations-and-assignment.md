@@ -158,11 +158,20 @@ Selected tuple declarations include (left, right): (:Int, :Int) = (1, 2), inferr
 
 Destructuring declarations and possible future destructuring assignments need separate contracts: declarations introduce names, while assignments update permitted existing targets. Refutable declaration failure and tuple assignment behavior must not be inferred from match syntax. See the [pattern context review](pattern-contexts.md#1-ordinary-declarations).
 
-Sequential local declarations may shadow earlier bindings in the same block, just as nested scopes may shadow names. Resolve an ordinary initializer against the previously visible bindings before introducing its new names. Thus x := make_user(); var x := x; mut x := x; introduces three successive bindings, rather than upgrading the first binding's permissions. Duplicate parameter, record-field, and module declaration lists retain separate contracts. Recursive function initialization and hoisting remain open. See [local shadowing and copies](local-shadowing-and-copies.md).
+Sequential local declarations may shadow earlier bindings in the same block, just as nested scopes may shadow names. Resolve an ordinary initializer against the previously visible bindings before introducing its new names. Thus x := make_user(); var x := x; mut x := x; introduces three successive bindings, rather than upgrading the first binding's permissions. Duplicate parameter, record-field, and module declaration lists retain separate contracts. The deferred-body exception below permits later-name references without eager script hoisting; recursive binding selection and exact module resolution remain open. See [local shadowing and copies](local-shadowing-and-copies.md).
 
 Within one destructuring pattern, names bind in recursive written order and later occurrences shadow earlier ones; former loop receiver lists are retired, while body-local loop destructuring uses the ordinary pattern rule. `_` is an ordinary readable underscore-prefixed name with permission to be unused, not a discard operation. Assignment to it needs var like assignment to any other binding. Tag shadowing follows its own explicit @name namespace and nearest-enclosing lookup. See [pattern binding and shadowing](pattern-shadowing.md).
 
 A conditional pattern binding may shadow the outer source name inside its matching branch. Resolve the source expression before introducing the narrowed name; the new binding does not alter the outer binding's type or mutability and is not visible in sibling branches. See [union type patterns](union-patterns.md).
+
+For every executable block, including a run file, ordinary eager code cannot use
+a later binding. The [deferred function-body exception](functions.md#deferred-body-lookup)
+permits later-name references without moving initialization. It does not make a
+callable available before its own initializer or permit uninitialized reads.
+Exact future-name/shadow selection and early-call checks remain open. Module
+declaration lookup follows its separately selected direction. See
+[block order](evaluation-order.md#executable-block-items) and
+[module lookup](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Rejected forms
 

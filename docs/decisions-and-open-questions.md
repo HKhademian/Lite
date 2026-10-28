@@ -98,6 +98,32 @@ semantics or a runner/compiler implementation.
 - [Source file body](blocks-and-results.md#source-file-body), selected 2026-10-28: a source file that is run as a program is the outermost implicit executable block; the file boundary supplies the braces and written block constructs still require `{ ... }`. Items execute in written order, and the final item's result is computed then not observed, so a trailing expression is evaluated for its effects and its value discarded rather than rejected. The body completes with `Unit` whether empty, declaration-final, assignment-final, or expression-final. "Bodies always use braces" now distinguishes written block bodies from the source unit.
 - This selects the execution model only. Top-level `return`/`break`/`continue` have no enclosing function, loop, or tag target; duplicate top-level names versus module declarations, imported-file behavior and module initialization, recursive function-literal initialization, process exit status, and observable effects remain with their owning topics. No compiler, backend, runtime, or ABI claim follows.
 
+## Block order, deferred bodies, and module lookup, 2026-10-28
+
+- Every executable code block, including a run-file body, evaluates reached
+  items top to bottom. Ordinary eager code cannot use later bindings; ordinary
+  shadowing preserves the order of the earlier and new bindings.
+- A deferred function body may refer to later identifiers. Creating the callable
+  does not execute that body or move later initialization earlier. The callable
+  binding itself is not hoisted. Name visibility does not permit uninitialized
+  reads; exact future-shadow selection, recursion, capture mechanics, and early/
+  indirect-call checking remain open. In the op/tmp2 probe, tmp2's initializer
+  has not run at the read; an initialized value cannot simply be assumed.
+- Module declaration lookup should permit safe forward references without
+  mandatory manually maintained headers or duplicated signatures. This does
+  not select arbitrary import-time execution or runtime initializer reordering.
+  Module identity, cycles, cross-file inference, and scheduling remain open.
+- Declaration-oriented modules do not rule out compile-time computation or
+  metaprogramming. Those mechanisms, syntax, effects, and proof/diagnostic
+  policies remain investigations. Safety is required, not an implementation
+  result or permission to access an uninitialized value.
+
+Owners: [block order](evaluation-order.md#executable-block-items),
+[deferred-body lookup](functions.md#deferred-body-lookup), and
+[module lookup](modules-and-packages.md#module-lookup-without-header-files).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md) records the
+partial selection and remaining gaps; no compiler/runtime verification exists.
+
 ## Explicit output and tracing, 2026-10-28
 
 - Re-review retains the implicit source-file body and discarded final result.

@@ -4,7 +4,7 @@ Status: in progress
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-28
 Catalog brief: [INV-003](TOPICS.md#inv-003)
-Covered subtopics: INV-003.02 (initial investigation; no new rule selected)
+Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)
 Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
 
 This is a non-normative investigation note outside the language draft. Options
@@ -19,7 +19,66 @@ availability. Review existing rules rather than treating selection as final.
 Imports/module declaration lists belong to INV-003.04/INV-006; general lookup
 belongs to INV-011; recursion/inference also belongs to INV-030/INV-018.
 
-## Current contracts and evidence
+## Selected direction and safety gap, 2026-10-28
+
+The user clarifies that all executed code blocks run top to bottom. Ordinary
+eager code does not know lower bindings, and shadowing preserves that order.
+Function bodies are the exception: their execution is deferred, so they may
+refer to lower identifiers. This does not make the callable binding itself
+available before its initializer.
+
+The user also rejects mandatory header-file/duplicate-signature ceremony and
+accepts more flexible declaration lookup in modules subject to safety. Module
+declarations can be resolved from source without making their initialization
+arbitrary. Compile-time computation and metaprogramming remain open
+possibilities, not reasons to abandon ordering within executed blocks.
+
+Owners: [block order](../docs/evaluation-order.md#executable-block-items),
+[function bodies](../docs/functions.md#deferred-body-lookup),
+[module lookup](../docs/modules-and-packages.md#module-lookup-without-header-files),
+and the [ledger](../docs/decisions-and-open-questions.md#block-order-deferred-bodies-and-module-lookup-2026-10-28).
+These are selected directions and safety requirements, not completed closure,
+initialization, module, or compile-time semantics.
+
+The user's gap, using a selected explicit function header for the probe:
+
+```text
+op := fn(): Int { tmp2 }
+tmp1 := op();
+tmp2 := 1;
+```
+
+Creation does not execute the body. The next item invokes it before tmp2's
+initializer has run. A later name can be known without its value being ready:
+safe execution cannot supply 1 early, substitute zero, or read unspecified
+storage. This is not repaired by the universal zero-mapping rule, because this
+inferred declaration has not executed. Moving the call below tmp2 removes the
+particular ordering hazard, subject to the unresolved environment contracts.
+
+### Enforcement alternatives still open
+
+- **Static proof/rejection.** Reject a call whose reached body would read an
+  uninitialized binding; reject uncertain cases conservatively if safety cannot
+  be established. This avoids requiring runtime readiness checks but can reject
+  safe indirect/conditional calls unless analysis is sufficiently precise.
+- **Checked execution where proof is unavailable.** Reject obvious bad calls
+  statically and define a checked failure before an uncertain invalid access.
+  This admits more indirect uses but needs a selected fault category, attribution,
+  cleanup behavior, and readiness/lifetime mechanism. No such runtime fallback
+  is selected here, and implicit live panics must not become public effect lists.
+
+Initial recommendation: diagnose the directly evident early call at compile
+time. Before choosing a fallback, probe a callback invoked by an opaque helper,
+a conditional call that does not actually read tmp2, and a function escaping
+the defining block. Do not assume name visibility proves readiness or lifetime.
+These cases partly reopen a dependency on deferred capture/lifetime work; the
+lookup direction alone does not select that machinery or reopen every context
+proposal. Also resolve which binding a future name selects when shadows exist.
+
+## Initial contracts and evidence
+
+The following inventory and alternatives retain their initial scope; the later
+partial selection above supersedes the earlier recommendation where they differ.
 
 Evidence baseline: `2fdb250`; working tree clean before writing this note.
 
@@ -123,13 +182,13 @@ Written execution order alone does not settle lookup. Existing ordinary local
 shadowing is a useful baseline, but neither that baseline nor knowing a
 function signature settles top-level helper availability and recursion.
 
-Initial recommendation: retain sequential initialization for ordinary values;
+Original recommendation (partly superseded by the selection above): retain sequential initialization for ordinary values;
 use declare-before-use for ordinary function-valued bindings unless a distinct
 early-availability contract is chosen. Review self/mutual recursion separately,
 especially the shadowing counterexample. This keeps the simple case predictable,
 at the cost of ordering helpers before callers. It is not a selected rule.
 
-First discussion question: should case 3 work as written? If yes, decide which
+Original discussion question: should case 3 work as written? If yes, decide which
 function initializers qualify and what happens to earlier captured values and
 side effects. If no, discuss a small recursion mechanism without accidentally
 changing case 5. Module growth must be checked before generalizing either answer.
@@ -144,8 +203,15 @@ used. All proposed case outcomes above are design analysis.
 
 ## Decision references and handoff
 
-Current source-file execution and local shadowing remain selected, reviewable
-baselines. No new top-level lookup, hoisting, capture, or recursion rule is
-selected by this note. Resume with case 3, then the scope/readiness distinction
-and case 5. Keep changes to related owners in the same atomic commit if a rule
-is accepted; findings alone do not revise those owners.
+Selected, reviewable direction: sequential eager script/block evaluation;
+deferred bodies may name lower declarations; module declaration lookup may be
+more flexible without mandatory handwritten headers, subject to safety. Script
+case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
+direction but needs environment/readiness rules. Case 5's binding selection and
+the op/tmp2 enforcement alternatives above remain open.
+
+The owning pages and ledger linked above record this partial selection. Resume
+with early-call enforcement and shadow selection, then self/mutual recursion.
+Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
+No capture representation, readiness-check runtime, or recursive inference rule
+is selected. No LiteLang execution or safety implementation has been verified.

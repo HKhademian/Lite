@@ -16,6 +16,11 @@ Earlier bindings and their existing aliases retain their own permissions and own
 
 The typed equivalents place mut after the colon, as in x: mut User = source. The selected copy behavior concerns copying an existing record into the new mutable declaration, rather than upgrading a read-only access to the original object in place.
 
+The later [deferred function-body direction](functions.md#deferred-body-lookup)
+permits references to lower declarations without executing the body or moving
+initialization. It does not yet select which same-named binding such a body
+uses, or settle self-recursion and call-time initialization checks.
+
 ## Copy inline values; preserve reference fields
 
 Copy the upper record and all inline value fields. A nested record stored inline occupies part of that record's value storage, so its inline contents are copied too. A reference-valued field copies the reference representation and retains its existing target and access permissions. Do not traverse the reference and clone the target.

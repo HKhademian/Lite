@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 in progress, initial declaration/lookup cases and alternatives recorded, no new rule selected. INV-003.03–.04 not started.
+**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 in progress, sequential eager blocks and deferred-body/header-free module lookup direction selected, 2026-10-28; early-call safety, future-shadow selection, and recursion remain open. INV-003.03–.04 not started.
 
 <a id="inv-004"></a>
 

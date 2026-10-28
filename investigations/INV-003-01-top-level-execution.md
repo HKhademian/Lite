@@ -363,7 +363,7 @@ for ordinary scripts and playgrounds, recorded in the
 Automatic expression/declaration/assignment echo is not selected. Explicitly
 enabled observation facilities remain possible; exact APIs remain open.
 
-Top-level diagnostics, duplicate-name and module rules, imports, process exit
+Top-level diagnostics, module-declaration uniqueness/rules, imports, process exit
 status, and concrete host-effect APIs remain without an accepted rule. The adjacent
 selected rules are block results and the final-item rule, item separators
 including end of file, sequential local shadowing, and nonrecursive local result
@@ -375,9 +375,14 @@ Question: what executes when one file runs, and does its final item supply a
 value? Evidence: the contracts above, the seven discriminating cases, the
 braces scope tension, and the observation that all 20 samples complete with
 `Unit`. Settled 2026-10-28: A, recorded in the owning page and ledger.
-Unresolved: top-level diagnostics, duplicate-name and module rules, recursive
+Unresolved: top-level diagnostics, module-declaration uniqueness/rules, recursive
 function-literal initialization, and concrete observable-effect APIs. Explicit
 output/tracing intent is now selected.
+
+The later [INV-003.02 direction](INV-003-02-declarations-and-lookup.md#selected-direction-and-safety-gap-2026-10-28)
+clarifies sequential ordinary eager lookup in scripts/blocks, with a deferred
+function-body exception and separate module declaration lookup. Exact future
+shadow selection, initialization checking, and recursion remain open.
 
 Current resume point: continue to INV-003.02 for declarations and lookup. The
 re-review retains A and selects explicit output/tracing even in playgrounds.

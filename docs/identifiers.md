@@ -46,6 +46,12 @@ An unmarked bare identifier in a pattern binds, even if an outer constant or typ
 
 The name after `@` in a tag follows the same identifier character rules. Tags retain their own namespace and construct-specific capabilities.
 
+Ordinary eager lookup is sequential in every executable block. The narrow
+[deferred function-body exception](functions.md#deferred-body-lookup) permits
+later-name references without making their values initialized. Selection among
+earlier/later shadows in such a body remains open. Module declaration namespaces
+have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
+
 ## Underscore-prefixed names, including standalone underscore
 
 `_`, `_user`, and `_left` are ordinary readable identifiers with explicit permission to be unused. Their type, var/mut capabilities, ownership, and scope rules remain ordinary. The prefix does not make declared fields private or skip initialization. See [explicit unused-name intent](unused-name-intent.md).

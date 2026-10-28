@@ -1,6 +1,6 @@
 # Modules and packages
 
-Status: **required capability; organization and commands are working proposals**.
+Status: **required capability; header-free module declaration lookup direction selected 2026-10-28; organization, initialization, and commands remain open or proposed**.
 
 ## Purpose
 
@@ -16,6 +16,33 @@ lite build lesson.lite
 These are proposed commands and a proposed extension; no tool exists in this workspace.
 
 One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows. The executable body of a run file is defined in [blocks and results](blocks-and-results.md#source-file-body); this page governs packages, imports, and visibility.
+
+## Module lookup without header files
+
+Selected direction, 2026-10-28: module-based source should permit safe forward
+references among declarations without requiring authors to maintain separate
+header files or duplicate signatures. The compiler can resolve the declarations
+from their source. This is a namespace/declaration-resolution direction, not
+permission to reorder arbitrary runtime initializers or access invalid storage.
+Declaration dependency cycles, recursive inference, cross-file resolution,
+initialization scheduling, and exact admissibility/proof rules remain open.
+
+Every executed code block still follows
+[top-to-bottom evaluation](evaluation-order.md#executable-block-items). Resolving
+a later declaration is distinct from executing its initializer. Arbitrary
+top-level runtime statements and import-time effects are not selected here.
+
+Compile-time evaluation and metaprogramming remain possible investigations;
+declaration-oriented modules do not prohibit them. A future compile-time block
+would still need defined execution order, while scheduling dependencies between
+declarations is a separate question. Syntax, capabilities, permitted effects,
+cycles, and reproducibility rules are open under
+[INV-062](../investigations/TOPICS.md#inv-062). No comptime or macro facility is
+selected or implemented by this direction.
+
+The script/module distinction must eventually be explicit and support growing a
+script into a module. Its exact source/configuration marker remains open under
+INV-003.04; this section does not choose a file extension or import grammar.
 
 ## Import sketch
 
@@ -52,7 +79,7 @@ through an import alone does not waive checks or change ordinary code's behavior
 
 ## Open decisions
 
-Module path resolution; cycles; declaration resolution across files; initialization order; interface files; binary versus source packages; target-specific dependencies; C interoperability; package authenticity; and the stable public API policy.
+Module path resolution; cycles; declaration resolution across files; initialization order; optional/generated interface artifacts; binary versus source packages; target-specific dependencies; C interoperability; package authenticity; and the stable public API policy. Manually maintained header files or duplicate signatures are not required by the selected direction.
 
 ## Related concepts and references
 

@@ -1,10 +1,26 @@
 # Evaluation order
 
-Status: **left-to-right operator operands and function arguments established; ownership and cleanup details open**.
+Status: **top-to-bottom executable blocks selected 2026-10-28; left-to-right operator operands and function arguments established; deferred-body initialization checks, ownership, and cleanup details open**.
 
 ## Purpose
 
 Make expressions with calls and other observable effects predictable independently of whitespace, while keeping operator grouping separate from evaluation order.
+
+## Executable block items
+
+Selected 2026-10-28: every executable code block evaluates its reached items from
+top to bottom. Ordinary eager code cannot use a binding introduced by a later
+item. Sequential shadowing preserves that order: an ordinary initializer uses
+previously visible bindings before its new binding is introduced. This includes
+the implicit run-file body. Module declaration namespaces have a separate
+[lookup direction](modules-and-packages.md#module-lookup-without-header-files).
+
+A function literal's body is deferred: creating the callable does not execute
+that body. The [deferred-body lookup direction](functions.md#deferred-body-lookup)
+permits references to later identifiers without moving their initialization or
+making the callable itself available early. Name visibility does not make an
+uninitialized value readable. Future-binding selection, capture mechanics, and
+the rejection/checking policy for early or indirect calls remain open.
 
 ## Operator operands
 

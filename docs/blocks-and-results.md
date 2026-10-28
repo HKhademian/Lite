@@ -143,8 +143,12 @@ Because there is no enclosing function, loop, or tagged block at this boundary, 
 top-level `return`, `break`, or `continue` has no valid target. Exact diagnostics
 and any future top-level exit spelling remain open.
 
-This section selects the execution model only. Duplicate top-level names and
-their module-declaration counterparts, imported-file behavior and module
+Ordinary eager lookup and shadowing in this executable body follow the selected
+[block-order rule](evaluation-order.md#executable-block-items), with the separate
+[deferred function-body exception](functions.md#deferred-body-lookup).
+
+This section selects the execution model only. Module-declaration uniqueness,
+imported-file behavior and module
 initialization, recursive initialization of a named function literal, process
 exit status, and observable effects remain with their owning contracts. Contrast
 [declaration bodies](#declaration-bodies) below, which contain declarations and

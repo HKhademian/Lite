@@ -530,6 +530,38 @@ LP-0012 selects custom failure capability and eligible omitted-output error infe
 
 [LP-0015 r1](proposals/LP-0015-early-return-recovery-paths.md) selects ordinary early-return behavior inside captured recovery. A handler's return 1 contributes to the enclosing function's normal success contract, not the recovery expression's continuing success type. The recovery declaration is never initialized on that exiting path. Its residual failure type is computed on continuing paths only. Unmatched captured errors/panics in the abandoned expression are not implicitly forwarded and do not force an extra error declaration or rejection for that path. Explicit/expected function success contracts still check the returned 1; other paths may independently expose outward failures. Handler-local tagged completion, new live failures, and cleanup retain their own rules. See [the tmp1/tmp2 example](expression-recovery.md#early-function-returns-and-continuing-path-types).
 
+## Deferred-body lookup
+
+Selected direction, 2026-10-28: a function body may refer to identifiers declared
+later in its enclosing code block. Creating a function value does not execute
+its body. When invoked, the body's executable blocks still run top to bottom;
+ordinary eager expressions inside them do not acquire general forward lookup.
+This direction applies equally to full function literals and lambda spellings.
+
+The exception concerns a deferred body, not early availability of its containing
+binding. Calling an ordinary function-valued binding before its initializer is
+not permitted by the exception. Nor does future-name visibility authorize reading
+an uninitialized value or implicitly run a later initializer early.
+
+```text
+op := fn(): Int { tmp2 }
+tmp1 := op();
+tmp2 := 1;
+```
+
+The body may name tmp2, but its attempted read occurs before tmp2's initializer
+has run. Safe execution cannot supply 1, an invented zero, or unspecified bytes
+as that read's value. Static rejection versus a checked failure policy remains
+open; this direction does not select an executable outcome for the example.
+Calling after initialization removes this particular ordering problem, subject
+to the remaining binding, inference, and environment contracts.
+
+Exact selection among earlier/later same-named bindings, self/mutual recursion,
+initialization proofs through calls/callbacks, and inaccessible/cyclic future
+definitions remain open. Capture representation, ownership, and escaping
+lifetimes remain deferred; no public capture-parameter or checked panic-effect
+list is introduced. See [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md).
+
 ## Recursion and inference
 
 Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](pattern-contexts.md#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
