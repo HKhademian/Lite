@@ -304,6 +304,46 @@ callable-replacement, and first-initialization owners. No compiler/runtime
 executed these probes. Resume with the intended access semantics of the mutable
 original binding before generalizing surrounding-value eligibility.
 
+### Recommended behavior for admitted binding access, 2026-10-29
+
+Status: recommendation requested by the user; not an accepted capture policy.
+Evidence baseline: `dcebe31`.
+
+Recommend live access to the original lexical binding when that surrounding
+access is permitted. Read its stored callable when the body evaluates the name,
+rather than silently moving that read to function creation. Preserve the
+distinction between = replacing that binding's value and := declaring a new
+binding. Under this proposal, the var-corrected probe above gives 0, 4, 4, 16.
+
+This fits the selected deferred-body execution rule and gives the same read
+expression its execution-time meaning. It does not turn an ordinary
+[value copy](../docs/declarations-and-assignment.md#value-transfers-copy-no-implicit-references)
+such as saved := double into a live alias to double's storage: that initializer
+still copies the value when it runs. Deliberately using a separate fixed saved
+binding can express value freezing for an eligible callable. No capture-header
+syntax is selected here.
+
+Preserve [callee-before-arguments evaluation](../docs/evaluation-order.md#function-calls):
+in double(double(n)), evaluate the outer callee's value first, then evaluate
+the inner call, then invoke the already selected outer callable. Do not read
+the outer callee again if argument evaluation changes the original binding.
+The simple multiplication probe performs no such intervening replacement.
+
+Live binding access does not grant every surrounding name unrestricted access.
+The [surrounding-access policy](../docs/functions.md#surrounding-access-under-review)
+still needs eligibility/permission rules even for reads. Required initialization
+and lifetime safety must be established under the initial static-first direction;
+unknown captures/callbacks cannot simply be assumed safe. Retaining mutable
+storage or supporting escapes can add implementation work and costs; no closure
+layout, ownership mechanism, storage promotion, or public capture-parameter list
+is chosen by this recommendation. State retention remains private implementation
+context where admitted.
+
+Compare explicit snapshot and live-access cases before selecting general
+capture rules. This proposal is a semantic choice for already-admitted access,
+not acceptance of implicit local capture. It was checked against current source
+contracts; no LiteLang execution or runtime-cost measurement occurred.
+
 For example, an ordinary parameter can avoid a surrounding reference entirely:
 
 ```text

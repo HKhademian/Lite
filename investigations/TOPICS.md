@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 retains ordered blocks/deferred-body/header-free module direction, initial static enforcement, and existing-binding identity for permitted references. Helper-order, typed-zero, callable-replacement/shadow, and live-versus-snapshot probes recorded; surrounding-value access policy remains open while preserving helper calls. Future-name selection, recursion, precise proofs, and callback policy remain open. INV-003.03–.04 not started.
+**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 retains ordered blocks/deferred-body/header-free module direction, initial static enforcement, and existing-binding identity for permitted references. Helper-order, typed-zero, replacement/shadow, and capture probes recorded; live access for admitted bindings recommended but not selected. Surrounding-value eligibility, future-name selection, recursion, precise proofs, and callback policy remain open. INV-003.03–.04 not started.
 
 <a id="inv-004"></a>
 
