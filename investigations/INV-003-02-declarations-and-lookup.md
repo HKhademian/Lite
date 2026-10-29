@@ -352,6 +352,40 @@ capture eligibility rules. This selection is a semantic choice for already-admit
 not acceptance of implicit local capture. It was checked against current source
 contracts; no LiteLang execution or runtime-cost measurement occurred.
 
+### Reading a callable versus another value, 2026-10-29
+
+The user asks whether accessing a fn differs from accessing an ordinary value.
+At the binding level, both need name resolution, initialized/readable storage,
+the applicable access permission, and valid lifetime. The selected live-read
+and shadow-identity rules apply to admitted surrounding references generally,
+not only to callable-valued ones.
+
+```text
+saved_count := count;
+saved_callable := double;
+result := saved_callable(3);
+```
+
+The first two initializers perform ordinary
+[value transfers](../docs/declarations-and-assignment.md#value-transfers-copy-no-implicit-references)
+under each type's copy eligibility. Invocation adds a later operation: read/select
+the [callee value](../docs/evaluation-order.md#function-calls), evaluate supplied
+arguments, then execute that callable. Reading a function value does not itself
+execute the function body or waive capture/lifetime obligations.
+
+The earlier statically known helper discussion is an implementation distinction,
+not blanket permission for outer names whose type happens to be callable. A
+runtime-selected/stateful callable may require retained runtime context; a
+non-callable constant may also be known statically. The recommended policy axis
+is static declaration availability versus runtime binding/state access, together
+with permissions, initialization, and lifetime, rather than fn versus non-fn.
+Exact eligibility categories remain open. No callable layout or universal
+cost-free capture is selected by this explanation.
+
+Evidence baseline: `335768f`; checked uniform value-transfer, live-read, binding,
+and callee-evaluation owners. This is design analysis, not LiteLang execution or
+acceptance of a new capture/access category.
+
 For example, an ordinary parameter can avoid a surrounding reference entirely:
 
 ```text
