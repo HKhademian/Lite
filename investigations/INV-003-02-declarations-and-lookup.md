@@ -185,6 +185,50 @@ that itself has an environment. Merely classifying a value's type as callable
 is not sufficient to waive those obligations. The exact eligibility categories
 are a proposal for investigation, not a complete selected rule.
 
+### Helper ordering and later-shadow probes
+
+The user reverses the helper definitions:
+
+```text
+quadruple := fn(n: Int): Int { double(double(n)) }
+double := fn(n: Int): Int { n * 2 }
+answer := quadruple(2);
+```
+
+Proposed outcome for an admitted known noncapturing helper reference: 8. The
+first item creates quadruple without executing its body; the next initializes
+double; only then does the call execute. This exercises the existing deferred-
+body direction without hoisting double's initialization. Moving the call
+between the definitions would reach double before its initializer and must be
+rejected under the initial static safety direction. Exact helper eligibility
+and future-name selection remain open, so this is a proposed admitted case,
+not a complete new access policy.
+
+The user then keeps an earlier helper and adds a later shadow:
+
+```text
+double := fn(n: Int): Int { n * 2 }
+quadruple := fn(n: Int): Int { double(double(n)) }
+double := fn(n: Int): Int { n * 3 }
+answer := quadruple(2);
+later_answer := double(2);
+```
+
+For an admitted helper reference, the selected existing-binding rule gives
+answer = 8 and later_answer = 6. The two occurrences inside quadruple identify
+the first double binding. The final direct call identifies the new binding.
+The later := does not replace the old binding, patch earlier bodies, or require
+looking up the most recent declaration by spelling at each call. The compiler
+can distinguish the declarations by binding identity; no physical closure
+representation or runtime environment is selected by this reasoning.
+
+These probes distinguish a forward body reference with no earlier target from
+a reference already resolved to a visible helper. They do not settle reassignment
+through a var callable, captures of runtime-computed/stateful helpers, a forward
+reference with multiple later shadows, or recursive-self lookup. Evidence:
+traced from the current selected block-order, existing-binding, and initial
+static-enforcement pages at baseline `88ba9e3`; no LiteLang execution occurred.
+
 For example, an ordinary parameter can avoid a surrounding reference entirely:
 
 ```text
