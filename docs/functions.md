@@ -579,7 +579,8 @@ answer := read_value(); /* 1 */
 ```
 
 This selects binding identity, not permission for implicit surrounding-local
-capture or a universal creation-time value snapshot/live-storage capture mode.
+capture. The live-read rule below defines when an admitted reference reads the
+binding's value; deliberate value copies retain their ordinary behavior.
 The permitted surrounding-access surface is under reconsideration in
 [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 Mutation, retention, and escaping lifetimes keep
@@ -587,6 +588,39 @@ their separate contracts. The forward-reference direction applies when no
 appropriate earlier binding is visible; exactly which later declaration it
 selects, including self/mutual recursion, remains open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
+
+### Live reads of admitted surrounding bindings
+
+Selected **2026-10-29**: when surrounding binding access is permitted, a deferred
+function body reads the current value of its original lexical binding when the
+body evaluates that name. Do not silently snapshot the value at function
+creation. An = replacement of a var binding can therefore change what a later
+body evaluation reads; a later := shadow does not redirect the reference.
+
+With both double declarations marked var in INV-003.02's mixed replacement/
+shadow probe, x1, x2, x3, and x4 are respectively 0, 4, 4, and 16. The original
+binding changes from the zero callable to times-two; the newer shadow and its
+times-four replacement are different storage.
+
+This does not turn saved := double into a storage alias: that ordinary value
+initializer copies the callable value when it runs. Using a separate fixed
+saved binding can express deliberate value freezing where its use is admitted.
+That freezes the callable value, not transitive mutable state in its own
+environment; ordinary copying does not become deep cloning.
+No new snapshot/capture-header syntax is selected.
+
+Preserve [callee-before-arguments evaluation](evaluation-order.md#function-calls).
+Each call reads/selects its callee once before evaluating supplied arguments.
+If argument evaluation is permitted to replace the source binding, the already
+selected callable remains the callee for that invocation. A nested call can
+read a newer value; the outer call is not reevaluated afterward.
+
+Eligibility/permissions for surrounding values, capture representation,
+ownership, retention, and escaping lifetimes remain open. Live reads are not
+blanket permission to capture local state or to use an uninitialized/expired
+binding. Required safety must be established under the initial static-first
+direction; unknown access is not assumed safe. The implementation environment
+can remain private without adding its fields to the public callable inputs.
 
 ### Surrounding access under review
 

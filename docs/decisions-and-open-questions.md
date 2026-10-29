@@ -2,6 +2,25 @@
 
 Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Live reads of admitted surrounding bindings, 2026-10-29
+
+- Where surrounding binding access is permitted, a deferred body reads the
+  current value of its original lexical binding when it evaluates that name.
+  Do not implicitly snapshot it at function creation. = replacement can affect
+  later reads of that var binding; := shadowing cannot retarget the reference.
+- Ordinary value copies remain copies. A fixed saved := double can freeze the
+  eligible callable value deliberately; no capture-header syntax is selected.
+- Evaluate each callee once before its arguments. A permitted replacement during
+  argument evaluation does not replace the outer call's already selected callable.
+- In the var-corrected mixed probe, x1/x2/x3/x4 are 0/4/4/16. Surrounding-access
+  eligibility, permissions, storage, ownership, and escaping lifetime rules
+  remain open. The initial static safety direction still applies, and private
+  environment fields do not become public callable inputs.
+
+Owner: [live surrounding reads](functions.md#live-reads-of-admitted-surrounding-bindings).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#live-binding-reads-selection-2026-10-29)
+records the selection. No compiler/runtime or lifetime analysis is implemented.
+
 ## Deferred-body binding identity and shadowing, 2026-10-29
 
 - Source order still matters when function execution is deferred. For a

@@ -292,8 +292,9 @@ Two policies now differ while preserving the same lexical binding identity:
 
 Thus declaring/resolving a binding, initializing/replacing its stored callable,
 and choosing snapshot versus live surrounding access are separate contracts.
-No live access, snapshot capture, or implicit capture permission is selected by
-these probes. An explicit reserved binding with = ? and later first write with
+The probes initially selected no access mode; the subsequent live-read selection
+below now settles read timing for admitted access. An explicit reserved binding
+with = ? and later first write with
 = is another existing construction mechanism, but no read is permitted before
 initialization; it is not the same as the typed zero declaration above. Nor is
 a signature-only function symbol currently selected by this syntax. Those
@@ -304,16 +305,20 @@ callable-replacement, and first-initialization owners. No compiler/runtime
 executed these probes. Resume with the intended access semantics of the mutable
 original binding before generalizing surrounding-value eligibility.
 
-### Recommended behavior for admitted binding access, 2026-10-29
+## Live binding reads selection, 2026-10-29
 
-Status: recommendation requested by the user; not an accepted capture policy.
-Evidence baseline: `dcebe31`.
+Status: selected for admitted surrounding access; eligibility and capture
+implementation remain open. Recommendation baseline: `dcebe31`; acceptance
+update baseline: `26717f2`.
 
-Recommend live access to the original lexical binding when that surrounding
+The user accepts live access to the original lexical binding when that surrounding
 access is permitted. Read its stored callable when the body evaluates the name,
 rather than silently moving that read to function creation. Preserve the
 distinction between = replacing that binding's value and := declaring a new
-binding. Under this proposal, the var-corrected probe above gives 0, 4, 4, 16.
+binding. Under this selection, the var-corrected probe above gives 0, 4, 4, 16.
+The [owning function page](../docs/functions.md#live-reads-of-admitted-surrounding-bindings)
+and [ledger](../docs/decisions-and-open-questions.md#live-reads-of-admitted-surrounding-bindings-2026-10-29)
+record the rule together with the existing callee-evaluation contract.
 
 This fits the selected deferred-body execution rule and gives the same read
 expression its execution-time meaning. It does not turn an ordinary
@@ -322,6 +327,9 @@ such as saved := double into a live alias to double's storage: that initializer
 still copies the value when it runs. Deliberately using a separate fixed saved
 binding can express value freezing for an eligible callable. No capture-header
 syntax is selected here.
+
+This freezes the callable value, not transitive mutable state held by that
+callable's own environment; no deep-clone guarantee is introduced.
 
 Preserve [callee-before-arguments evaluation](../docs/evaluation-order.md#function-calls):
 in double(double(n)), evaluate the outer callee's value first, then evaluate
@@ -336,11 +344,11 @@ and lifetime safety must be established under the initial static-first direction
 unknown captures/callbacks cannot simply be assumed safe. Retaining mutable
 storage or supporting escapes can add implementation work and costs; no closure
 layout, ownership mechanism, storage promotion, or public capture-parameter list
-is chosen by this recommendation. State retention remains private implementation
+is chosen by this selection. State retention remains private implementation
 context where admitted.
 
 Compare explicit snapshot and live-access cases before selecting general
-capture rules. This proposal is a semantic choice for already-admitted access,
+capture eligibility rules. This selection is a semantic choice for already-admitted access,
 not acceptance of implicit local capture. It was checked against current source
 contracts; no LiteLang execution or runtime-cost measurement occurred.
 
@@ -566,7 +574,9 @@ direction but needs environment/readiness rules. An already-visible lexical
 binding is now retained across later shadows; a body without an earlier target
 still needs future-name and recursive-self selection. The 2026-10-29 selection makes evident op/tmp2 early reads static
 errors and uses conservative proof/rejection for the initial subset, with the
-full language's long-term fallback still open.
+full language's long-term fallback still open. Admitted surrounding references
+now use live execution-time reads of their original binding; deliberate value
+copying remains distinct, and surrounding-access eligibility is not settled.
 
 The owning pages and ledger linked above record this partial selection. Resume
 with concrete surrounding-access categories above, then future-name selection

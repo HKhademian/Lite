@@ -61,6 +61,12 @@ choose_handler()(first(), second());
 
 For a method-call expression, evaluate the receiver as part of evaluating the callee before the other supplied arguments. The complete method/dispatch notation remains open; this order does not choose static or dynamic dispatch.
 
+An [admitted live surrounding read](functions.md#live-reads-of-admitted-surrounding-bindings)
+observes its binding's current value when that read executes. Once a call has
+evaluated its callee, permitted argument-side replacement of the source binding
+does not replace the already selected callable for that invocation. Nested
+calls evaluate their own callee occurrences in the ordinary order.
+
 For [intrinsic pack application](callable-input-packs.md#application-with-an-existing-pack), evaluate the invokable first, then the supplied pack expression once, then route its components and invoke. Bare `.call` supplies Unit; `f(...)` is invocation sugar with the same effects/order contract. Parentheses and spaces after `.call` do not introduce another argument evaluation or turn it into ordinary method-value lookup. Tuple spread, replaced contributions, unused inputs, and zero callables retain their ordinary observable effects and required cleanup.
 
 Argument order and the value/access contract are separate. Ordinary value arguments copy their evaluated values without implicit references, while explicit var/mut grants follow their selected access rules. Type-specific copy eligibility, future explicit modes, and the full activation/lifetime model remain deferred. For ordinary inputs, the public contract must permit omission and the selected implementation must provide valid omission handling (a declared default for an ordinary user implementation, or the zero implementation's no-execution rule); without it, the call is rejected regardless of parameter type. Declared-default evaluation timing is selected below; ordinary default-type inference is selected separately; complete default syntax, general lexical lookup, and remaining callable compatibility beyond selected destination label adaptation remain separate. Core named-call routing and validation are selected; see [omitted value arguments](functions.md#omitted-value-arguments).
