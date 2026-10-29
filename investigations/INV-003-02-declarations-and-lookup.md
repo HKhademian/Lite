@@ -142,6 +142,47 @@ Evidence baseline for this update: `25de30b`. Reviewed the current owners and
 comparison findings; checked links, fences, and diff consistency. This is a
 documentation decision; no LiteLang program was compiled or executed.
 
+## Forward target with an intervening call, 2026-10-29
+
+Question: when no earlier binding exists, which later declaration should an
+admitted deferred-body reference select? Baseline: `59b52e1`. The shared
+binding/read model applies regardless of whether the value is callable.
+
+```text
+read_value := fn(): Int { value }
+value := 1;
+a := read_value();
+value := 2;
+b := read_value();
+```
+
+Assume the surrounding access is admitted and the selected target's lifetime
+is valid. Three candidate policies distinguish name resolution from readiness:
+
+- **First subsequent declaration in the defining executable block:** both
+  reads target the value initialized to 1, so a = 1 and b = 1. The later shadow
+  cannot retarget the body, and the first call occurs after its target's
+  initialization.
+- **Last later declaration in that block:** both reads target the value
+  initialized to 2. The first call now reaches its target before initialization,
+  so the initial static-safety direction rejects the program. It cannot return
+  1 for a and then silently choose a different binding for b.
+- **Reject multiple future declarations as ambiguous:** neither call is
+  admitted until the author removes the ambiguity. This avoids choosing a
+  future target but adds restrictions to ordinary sequential shadowing.
+
+Recommend the first subsequent declaration, then preserve that binding identity.
+This extends source-order reasoning without choosing a binding per invocation
+or hoisting its initializer. It is not selected yet. Nested-scope search,
+declarations within conditional regions, and the function's own recursive
+binding need separate probes. Module declaration uniqueness/order remains its
+own contract. An earlier typed zero-callable binding, as in the preceding user
+probe, already supplies a target and is not skipped in favor of a later body.
+
+Verification: compared these candidate outcomes with the current binding,
+live-read, and initial static-enforcement owners. No LiteLang execution or
+proof algorithm was implemented or run.
+
 ## Surrounding-access reconsideration, 2026-10-29
 
 The user wants to minimize surrounding identifier access and asks whether
