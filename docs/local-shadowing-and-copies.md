@@ -22,8 +22,11 @@ initialization. For permitted surrounding references, a body
 [retains an already-visible binding across later shadowing](functions.md#existing-bindings-survive-later-shadowing);
 this lookup rule does not itself grant implicit local capture.
 When no earlier binding exists, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
-selects the first subsequent same-name ordinary binding. Nested-scope search and
-self-recursion remain open; initial static enforcement has its own rule.
+selects the first subsequent same-name ordinary binding. A
+[direct self-reference](functions.md#direct-self-reference-without-an-earlier-target)
+may select the function's own binding when no earlier same-name binding exists.
+Earlier-name recursive conflicts, mutual recursion, and nested-scope search
+remain open; initial static enforcement has its own rule.
 
 ## Copy inline values; preserve reference fields
 

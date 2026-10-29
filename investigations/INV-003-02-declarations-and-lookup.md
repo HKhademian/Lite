@@ -190,7 +190,7 @@ Acceptance baseline: `5c94dd9`. Updated the owning pages, current-design
 summary, related lookup references, and tracking together. Link/fence/diff checks
 are documentation verification, not execution or implementation evidence.
 
-### Next probe: a function's own binding
+## Direct self-reference selection, 2026-10-29
 
 ```text
 countdown := fn(n: Int): Int {
@@ -201,12 +201,39 @@ answer := countdown(3);
 
 No earlier countdown exists. The name belongs to the declaration currently
 being initialized, not a subsequent item, so the new same-block rule does not
-settle it. Candidate: make this direct function-valued binding's own name
-available in its deferred body, while retaining initialization safety for calls.
-This could support ordinary recursion without a signature-only declaration;
-the probe supplies input/result types and does not select recursive inference.
-Earlier same-name targets, callable replacement during recursion, and mutual
-recursion still need discriminating cases. This candidate is not selected.
+settle it. The user selects making this direct function-valued binding's own
+name available in its deferred body, while retaining initialization safety for
+calls. It selects the current binding before any strictly later same-name
+declaration. This supports the shown ordinary recursion without a separate
+signature-only declaration or header. The probe supplies input/result types;
+recursive inference is not selected.
+
+The [owning rule](../docs/functions.md#direct-self-reference-without-an-earlier-target)
+and [ledger](../docs/decisions-and-open-questions.md#direct-self-reference-without-an-earlier-target-2026-10-29)
+record the no-earlier-target selection. Earlier same-name precedence, callable
+replacement during recursion, mutual recursion, and escaping lifetimes remain
+open. Initialization is not hoisted, and an eager call during an incomplete
+initializer is not made safe just by resolving the name.
+
+Next conflict probe:
+
+```text
+step := fn(n: Int): Int { n * 2 }
+step := fn(n: Int): Int {
+    if n == 0 { 0 } else { step(n - 1) }
+}
+answer := step(3);
+```
+
+Keeping the earlier visible binding for the inner reference gives 4. Giving
+the new function's own binding priority gives recursive calls and result 0.
+The no-earlier-target selection alone does not choose between these. Compare
+wrapper intent with recursive-self intent before extending the precedence rule;
+do not silently retarget every earlier reference. Neither outcome is selected
+for this conflict probe.
+
+Acceptance baseline: `16400a3`. Checked the selected/open boundaries, local
+links, fences, and diff consistency. No LiteLang recursion was compiled or run.
 
 ## Surrounding-access reconsideration, 2026-10-29
 
@@ -673,7 +700,9 @@ case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
 direction but needs environment/readiness rules. An already-visible lexical
 binding is now retained across later shadows; a body without an earlier target
 now selects the first subsequent same-name ordinary binding in the defining
-executable block. Nested-scope search and recursive-self selection remain open.
+executable block. A direct function-valued declaration with no earlier same-name
+target now admits its own name in its deferred body. Nested-scope search,
+earlier-name recursive conflicts, and mutual recursion remain open.
 The 2026-10-29 selection makes evident op/tmp2 early reads static
 errors and uses conservative proof/rejection for the initial subset, with the
 full language's long-term fallback still open. Admitted surrounding references
@@ -681,7 +710,7 @@ now use live execution-time reads of their original binding; deliberate value
 copying remains distinct, and surrounding-access eligibility is not settled.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with self/mutual recursion, nested-scope forward search, and concrete
+with earlier-name recursive conflicts/mutual recursion, nested-scope forward search, and concrete
 surrounding-access/callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
 No capture representation, readiness-check runtime, or recursive inference rule

@@ -556,7 +556,7 @@ evident early read at compile time.
 Calling after initialization removes this particular ordering problem, subject
 to the remaining binding, inference, and environment contracts.
 
-Nested-scope forward lookup, self/mutual recursion,
+Nested-scope forward lookup, earlier-name recursive conflicts and mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
@@ -586,7 +586,7 @@ The permitted surrounding-access surface is under reconsideration in
 Mutation, retention, and escaping lifetimes keep
 their separate contracts. The forward-reference direction applies when no
 appropriate earlier binding is visible; the same-block rule below selects its
-first subsequent declaration. Nested-scope lookup and self/mutual recursion
+first subsequent declaration. Nested-scope lookup, earlier-name recursive conflicts, and mutual recursion
 remain open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
 
@@ -611,10 +611,38 @@ initialization is subject to the initial static-enforcement rule. An earlier
 visible binding, including an initialized zero callable, is retained under the
 preceding rule instead of falling through to a later declaration.
 
+The direct self-reference rule below handles the declaration currently being
+initialized before falling through to strictly later declarations.
+
 This selects the demonstrated same-block case. Nested-scope search, declarations
-inside separate conditional regions, binding a function's own recursive name,
+inside separate conditional regions, earlier-name recursive conflicts,
 and module declaration resolution remain separate questions. Surrounding-access
 eligibility and lifetime requirements still apply; visibility alone is not a grant.
+
+### Direct self-reference without an earlier target
+
+Selected **2026-10-29**: when a direct function-valued declaration has no earlier
+visible same-name binding, its own name is available in its deferred body.
+This includes the following established-input/result function-literal case:
+
+```text
+countdown := fn(n: Int): Int {
+    if n == 0 { 0 } else { countdown(n - 1) }
+}
+answer := countdown(3); /* 0 */
+```
+
+The self-reference selects this binding rather than a strictly later shadow.
+No separate signature-only declaration or handwritten header is required. The
+function value must still be initialized before a call can execute; making the
+name resolvable in a deferred body does not permit an eager uninitialized read
+in its initializer or change top-to-bottom execution.
+
+This selects the shown no-earlier-target case, not precedence when an earlier
+same-name binding exists, recursive result inference, mutual recursion, or
+callable replacement/escaping lifetime rules. Full and keyword-omitted lambda
+spellings retain their shared function-body model where the signature is
+established. Surrounding-value eligibility remains separate.
 
 ### Live reads of admitted surrounding bindings
 
@@ -684,7 +712,7 @@ public callable dependency/effect list.
 
 Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](pattern-contexts.md#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
 
-The language needs a declaration-resolution rule allowing recursive definitions without making arbitrary initialization order implicit. Unannotated parameter inference, public signature requirements, generic constraints, and recursive result inference are still open.
+The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. Earlier-name recursive conflicts, mutual recursion, and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Unannotated parameter inference, public signature requirements, generic constraints, and recursive result inference are still open.
 
 ## Tagged exits
 

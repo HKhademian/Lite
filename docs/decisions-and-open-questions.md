@@ -2,6 +2,22 @@
 
 Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Direct self-reference without an earlier target, 2026-10-29
+
+- Permit a direct function-valued declaration's own name in its deferred body
+  when no earlier same-name binding is visible. The explicit-input/result
+  countdown example is admitted without a signature-only declaration or header.
+- The self-reference selects the current binding, not a strictly later shadow.
+  Initialization must still finish before invocation; eager initializer reads
+  do not acquire this exception. Keep top-to-bottom execution.
+- This selects the shown no-earlier-target case. Earlier-name recursive
+  conflicts, mutual recursion, recursive inference, callable replacement,
+  surrounding-value eligibility, and escaping lifetime rules remain open.
+
+Owner: [direct self-reference](functions.md#direct-self-reference-without-an-earlier-target).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#direct-self-reference-selection-2026-10-29)
+records the selection and next conflict probe. No compiler/runtime is implemented.
+
 ## First later binding in the defining block, 2026-10-29
 
 - For an admitted deferred-body reference with no earlier lexical target,

@@ -53,7 +53,10 @@ binding is [retained across later shadowing](functions.md#existing-bindings-surv
 when that surrounding reference is permitted; this is not an implicit-capture grant.
 With no earlier target, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
 selects the first subsequent same-name ordinary binding and keeps that identity.
-Nested-scope search and recursive-self lookup remain open. Module declaration namespaces
+The [direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
+also admits a function's own binding when no earlier same-name binding exists.
+Nested-scope search, earlier-name recursive conflicts, and mutual recursion
+remain open. Module declaration namespaces
 have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Underscore-prefixed names, including standalone underscore

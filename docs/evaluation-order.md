@@ -24,7 +24,11 @@ uninitialized value readable. The
 evident early reads and conservatively rejects unproved calls in the initial
 subset. The [same-block forward target](functions.md#first-later-binding-in-the-defining-block)
 is the first subsequent same-name ordinary binding when no earlier target
-exists; its initializer still runs in order. Nested-scope search, recursion,
+exists; its initializer still runs in order. A
+[direct recursive self-reference](functions.md#direct-self-reference-without-an-earlier-target)
+can resolve the current function binding when no earlier same-name binding
+exists, without making its value readable before initialization. Nested-scope
+search, earlier-name recursive conflicts, mutual recursion,
 capture mechanics, precise proof rules, and
 the full language's long-term indirect-call policy remain open.
 
