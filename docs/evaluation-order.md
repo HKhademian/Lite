@@ -22,7 +22,10 @@ making the callable itself available early. Name visibility does not make an
 uninitialized value readable. The
 [initial static enforcement](functions.md#initial-static-enforcement) rejects
 evident early reads and conservatively rejects unproved calls in the initial
-subset. Future-binding selection, capture mechanics, precise proof rules, and
+subset. The [same-block forward target](functions.md#first-later-binding-in-the-defining-block)
+is the first subsequent same-name ordinary binding when no earlier target
+exists; its initializer still runs in order. Nested-scope search, recursion,
+capture mechanics, precise proof rules, and
 the full language's long-term indirect-call policy remain open.
 
 ## Operator operands

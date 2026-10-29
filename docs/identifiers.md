@@ -51,7 +51,9 @@ Ordinary eager lookup is sequential in every executable block. The narrow
 later-name references without making their values initialized. An already-visible
 binding is [retained across later shadowing](functions.md#existing-bindings-survive-later-shadowing)
 when that surrounding reference is permitted; this is not an implicit-capture grant.
-Selection among later declarations when no earlier target exists remains open. Module declaration namespaces
+With no earlier target, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
+selects the first subsequent same-name ordinary binding and keeps that identity.
+Nested-scope search and recursive-self lookup remain open. Module declaration namespaces
 have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Underscore-prefixed names, including standalone underscore

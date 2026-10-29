@@ -2,6 +2,23 @@
 
 Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## First later binding in the defining block, 2026-10-29
+
+- For an admitted deferred-body reference with no earlier lexical target,
+  select the first subsequent same-name ordinary binding declaration in the
+  defining executable block. Keep that identity across later shadows and call
+  positions; apply the same rule to callable and other ordinary values.
+- In the read_value/value-1/intervening-call/value-2/later-call probe, both
+  calls return 1. Do not hoist initialization or permit early reads. Existing
+  visible bindings, including zero callables, retain priority.
+- This selects the demonstrated same-block case only. Nested-scope search,
+  declarations in separate conditional regions, a function's own recursive
+  name, module resolution, access eligibility, and lifetime rules remain open.
+
+Owner: [first later binding](functions.md#first-later-binding-in-the-defining-block).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#forward-target-with-an-intervening-call-2026-10-29)
+records the selection and alternatives. No LiteLang execution is claimed.
+
 ## Live reads of admitted surrounding bindings, 2026-10-29
 
 - Where surrounding binding access is permitted, a deferred body reads the

@@ -171,8 +171,9 @@ callable available before its own initializer or permit uninitialized reads.
 For a permitted surrounding reference, an already-visible binding is
 [retained across later shadows](functions.md#existing-bindings-survive-later-shadowing).
 This binding-selection rule does not grant implicit local capture.
-Selection among later declarations without an earlier target, and exact proof
-rules, remain open; the
+With no earlier target, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
+selects the first subsequent same-name ordinary binding. Nested-scope search,
+recursive-self lookup, and exact proof rules remain open; the
 [initial static enforcement](functions.md#initial-static-enforcement) rejects
 evident early reads and unproved calls in the initial supported subset. Module
 declaration lookup follows its separately selected direction. See

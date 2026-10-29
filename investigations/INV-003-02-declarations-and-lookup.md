@@ -132,9 +132,9 @@ value := 2;
 answer := read_value();
 ```
 
-Candidate: select the first subsequent declaration in the defining block, then
+Original candidate (subsequently selected for the same-block case below): select the first subsequent declaration in the defining block, then
 keep that binding identity. Alternatives include selecting a later declaration
-or rejecting an ambiguous forward reference. None is selected. Compare a call
+or rejecting an ambiguous forward reference. Compare a call
 between the two declarations, nested scopes, and a recursive name before
 generalizing the future-name rule. Existing initialization safety still applies.
 
@@ -171,9 +171,12 @@ is valid. Three candidate policies distinguish name resolution from readiness:
   admitted until the author removes the ambiguity. This avoids choosing a
   future target but adds restrictions to ordinary sequential shadowing.
 
-Recommend the first subsequent declaration, then preserve that binding identity.
+Selection recorded 2026-10-29: choose the first subsequent same-name ordinary
+binding declaration in the defining executable block, then preserve that identity.
 This extends source-order reasoning without choosing a binding per invocation
-or hoisting its initializer. It is not selected yet. Nested-scope search,
+or hoisting its initializer. The [owning function rule](../docs/functions.md#first-later-binding-in-the-defining-block)
+and [ledger](../docs/decisions-and-open-questions.md#first-later-binding-in-the-defining-block-2026-10-29)
+record the selection; both a and b are 1 in this admitted case. Nested-scope search,
 declarations within conditional regions, and the function's own recursive
 binding need separate probes. Module declaration uniqueness/order remains its
 own contract. An earlier typed zero-callable binding, as in the preceding user
@@ -182,6 +185,28 @@ probe, already supplies a target and is not skipped in favor of a later body.
 Verification: compared these candidate outcomes with the current binding,
 live-read, and initial static-enforcement owners. No LiteLang execution or
 proof algorithm was implemented or run.
+
+Acceptance baseline: `5c94dd9`. Updated the owning pages, current-design
+summary, related lookup references, and tracking together. Link/fence/diff checks
+are documentation verification, not execution or implementation evidence.
+
+### Next probe: a function's own binding
+
+```text
+countdown := fn(n: Int): Int {
+    if n == 0 { 0 } else { countdown(n - 1) }
+}
+answer := countdown(3);
+```
+
+No earlier countdown exists. The name belongs to the declaration currently
+being initialized, not a subsequent item, so the new same-block rule does not
+settle it. Candidate: make this direct function-valued binding's own name
+available in its deferred body, while retaining initialization safety for calls.
+This could support ordinary recursion without a signature-only declaration;
+the probe supplies input/result types and does not select recursive inference.
+Earlier same-name targets, callable replacement during recursion, and mutual
+recursion still need discriminating cases. This candidate is not selected.
 
 ## Surrounding-access reconsideration, 2026-10-29
 
@@ -647,16 +672,17 @@ more flexible without mandatory handwritten headers, subject to safety. Script
 case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
 direction but needs environment/readiness rules. An already-visible lexical
 binding is now retained across later shadows; a body without an earlier target
-still needs future-name and recursive-self selection. The 2026-10-29 selection makes evident op/tmp2 early reads static
+now selects the first subsequent same-name ordinary binding in the defining
+executable block. Nested-scope search and recursive-self selection remain open.
+The 2026-10-29 selection makes evident op/tmp2 early reads static
 errors and uses conservative proof/rejection for the initial subset, with the
 full language's long-term fallback still open. Admitted surrounding references
 now use live execution-time reads of their original binding; deliberate value
 copying remains distinct, and surrounding-access eligibility is not settled.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with concrete surrounding-access categories above, then future-name selection
-when no earlier binding exists and self/mutual
-recursion and concrete callback probes.
+with self/mutual recursion, nested-scope forward search, and concrete
+surrounding-access/callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
 No capture representation, readiness-check runtime, or recursive inference rule
 is selected. No LiteLang execution or safety implementation has been verified.

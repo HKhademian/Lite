@@ -556,7 +556,7 @@ evident early read at compile time.
 Calling after initialization removes this particular ordering problem, subject
 to the remaining binding, inference, and environment contracts.
 
-Selection among later same-named bindings when no earlier target exists, self/mutual recursion,
+Nested-scope forward lookup, self/mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
@@ -585,9 +585,36 @@ The permitted surrounding-access surface is under reconsideration in
 [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
 Mutation, retention, and escaping lifetimes keep
 their separate contracts. The forward-reference direction applies when no
-appropriate earlier binding is visible; exactly which later declaration it
-selects, including self/mutual recursion, remains open. Ordinary local bindings
+appropriate earlier binding is visible; the same-block rule below selects its
+first subsequent declaration. Nested-scope lookup and self/mutual recursion
+remain open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
+
+### First later binding in the defining block
+
+Selected **2026-10-29**: for an admitted deferred-body reference with no earlier
+lexical binding target, select the first subsequent same-name ordinary binding
+declaration in the defining executable block. Keep that binding identity;
+later shadows and call positions do not redirect the reference. This selection
+is the same for callable-valued and other ordinary bindings.
+
+```text
+read_value := fn(): Int { value }
+value := 1;
+a := read_value(); /* 1 */
+value := 2;
+b := read_value(); /* 1 */
+```
+
+Do not hoist the selected initializer. A call that reaches the binding before
+initialization is subject to the initial static-enforcement rule. An earlier
+visible binding, including an initialized zero callable, is retained under the
+preceding rule instead of falling through to a later declaration.
+
+This selects the demonstrated same-block case. Nested-scope search, declarations
+inside separate conditional regions, binding a function's own recursive name,
+and module declaration resolution remain separate questions. Surrounding-access
+eligibility and lifetime requirements still apply; visibility alone is not a grant.
 
 ### Live reads of admitted surrounding bindings
 

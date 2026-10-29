@@ -21,8 +21,9 @@ permits references to lower declarations without executing the body or moving
 initialization. For permitted surrounding references, a body
 [retains an already-visible binding across later shadowing](functions.md#existing-bindings-survive-later-shadowing);
 this lookup rule does not itself grant implicit local capture.
-When no earlier binding exists, future-name selection and self-recursion remain
-open; initial static enforcement and its remaining limits have their own rule.
+When no earlier binding exists, the [same-block forward rule](functions.md#first-later-binding-in-the-defining-block)
+selects the first subsequent same-name ordinary binding. Nested-scope search and
+self-recursion remain open; initial static enforcement has its own rule.
 
 ## Copy inline values; preserve reference fields
 
