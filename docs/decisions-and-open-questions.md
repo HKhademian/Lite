@@ -2,6 +2,29 @@
 
 Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Deferred-body binding identity and shadowing, 2026-10-29
+
+- Source order still matters when function execution is deferred. For a
+  surrounding reference admitted by the access/capture rules, a free
+  reference retains the binding already visible under ordinary lexical lookup
+  where the function is defined. A later same-name declaration creates a new
+  binding and does not retarget that earlier reference; the fixed-value
+  read_value shadow probe returns 1.
+- This selects binding identity, not permission for implicit local capture or
+  snapshot/live capture semantics. The surrounding-access surface is being
+  reconsidered in INV-003.02. Mutation,
+  retention, and escaping lifetime contracts remain separate. When no suitable
+  earlier binding exists, selection among later declarations and self/mutual
+  recursion remain open.
+
+Owner: [existing bindings survive later shadowing](functions.md#existing-bindings-survive-later-shadowing).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#binding-identity-selection-2026-10-29)
+records the selection and surrounding-access reconsideration. The user's
+clarified requirement is a defined policy for surrounding runtime values,
+including reads, while keeping simple helper calls possible; neither a blanket
+outer-name ban nor unrestricted implicit capture is selected. No LiteLang
+execution is claimed.
+
 ## Initial static initialization enforcement, 2026-10-29
 
 - Reject evident early calls whose reached body would read an uninitialized

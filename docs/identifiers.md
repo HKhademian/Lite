@@ -48,8 +48,10 @@ The name after `@` in a tag follows the same identifier character rules. Tags re
 
 Ordinary eager lookup is sequential in every executable block. The narrow
 [deferred function-body exception](functions.md#deferred-body-lookup) permits
-later-name references without making their values initialized. Selection among
-earlier/later shadows in such a body remains open. Module declaration namespaces
+later-name references without making their values initialized. An already-visible
+binding is [retained across later shadowing](functions.md#existing-bindings-survive-later-shadowing)
+when that surrounding reference is permitted; this is not an implicit-capture grant.
+Selection among later declarations when no earlier target exists remains open. Module declaration namespaces
 have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
 
 ## Underscore-prefixed names, including standalone underscore

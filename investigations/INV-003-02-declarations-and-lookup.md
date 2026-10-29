@@ -95,7 +95,7 @@ Evidence baseline for this update: `a015e54`. Reviewed the current owners and
 their selected/open boundaries, local links, fences, and diff consistency.
 No LiteLang parsing, type checking, runtime check, or safety proof was executed.
 
-### Next binding-selection probe
+### Binding-selection probe
 
 ```text
 value := 1;
@@ -104,12 +104,105 @@ value := 2;
 answer := read_value();
 ```
 
-Does the body select the already visible first value binding, or can the
-deferred-body exception make it select the later shadow? Recommend the first
-binding, so later shadowing does not retroactively change an earlier lexical
-reference. This chooses binding identity, not a general capture snapshot/live
-storage policy. The recommendation is not selected. After this, probe a body
-with no earlier value but multiple later same-name declarations, then recursion.
+The original question was whether the deferred-body exception could select the
+later shadow. The recommendation was to keep the earlier lexical binding. The
+selection below now adopts that recommendation, with capture modes still separate.
+
+## Binding identity selection, 2026-10-29
+
+The user agrees that the reference-language comparison still shows source order
+matters. Select retention of the already-visible lexical binding: read_value's
+value refers to the first binding, and the later declaration does not redirect
+it. The fixed-scalar probe returns 1. Deferring a body's execution does not make
+binding selection depend on the caller's source position.
+
+The [owning function rule](../docs/functions.md#existing-bindings-survive-later-shadowing)
+and [ledger](../docs/decisions-and-open-questions.md#deferred-body-binding-identity-and-shadowing-2026-10-29)
+record the selection for surrounding references admitted by the access/capture
+rules. It does not grant implicit local capture. This does not select creation-time value snapshots, live
+mutable captures, or retention/lifetime machinery. When no suitable earlier
+binding exists, the future-name exception still needs an exact selection rule.
+
+Next probe, with no earlier value binding:
+
+```text
+read_value := fn(): Int { value }
+value := 1;
+value := 2;
+answer := read_value();
+```
+
+Candidate: select the first subsequent declaration in the defining block, then
+keep that binding identity. Alternatives include selecting a later declaration
+or rejecting an ambiguous forward reference. None is selected. Compare a call
+between the two declarations, nested scopes, and a recursive name before
+generalizing the future-name rule. Existing initialization safety still applies.
+
+Evidence baseline for this update: `25de30b`. Reviewed the current owners and
+comparison findings; checked links, fences, and diff consistency. This is a
+documentation decision; no LiteLang program was compiled or executed.
+
+## Surrounding-access reconsideration, 2026-10-29
+
+The user wants to minimize surrounding identifier access and asks whether
+function-valued bindings make such access unavoidable. They do not: assigning or
+storing a callable does not itself define lexical scope or require captured
+runtime locals. A noncapturing callable and a callable carrying private state
+can have different implementation requirements. LiteLang has not selected their
+physical representation, and a callable value need not be only a code address.
+
+Primary comparison evidence: Rust's [function-pointer reference](https://doc.rust-lang.org/reference/types/function-pointer.html)
+admits coercion from noncapturing closures, while its [closure-type reference](https://doc.rust-lang.org/reference/types/closure.html)
+describes closure values in terms of captured state. These demonstrate that
+first-class function storage does not force implicit local capture; they do not
+select LiteLang's representation or ownership mechanism.
+
+Relevant earlier material: [deferred contexts](../docs/deferred-contexts.md) and
+[closure capture history](../docs/closures.md#implementation-captures-deferred)
+already distinguish private captured state from public call inputs. The older
+explicit-capture sketches are deferred, not available syntax. This investigation
+can reopen the access boundary without reinstating all those mechanisms.
+
+The user clarified that the concern is blindly granting access to every
+surrounding value, even for reading, rather than demanding a blanket prohibition
+that would also prevent simple helper calls. Select the design requirement of a
+defined access policy that keeps ordinary helper calls expressible. No complete
+implicit/explicit capture policy is chosen yet. Static module/type/constant
+lookup must be distinguished from retaining enclosing runtime locals.
+
+Proposed classification probe:
+
+```text
+double := fn(n: Int): Int { n * 2 }
+quadruple := fn(n: Int): Int { double(double(n)) }
+```
+
+If double resolves to a known noncapturing helper, calling it need not retain
+the enclosing stack as captured state. The ordinary script binding must still
+be available in order. This is different from reading an enclosing runtime
+value, invoking a replaceable/runtime-computed callable, or retaining a helper
+that itself has an environment. Merely classifying a value's type as callable
+is not sufficient to waive those obligations. The exact eligibility categories
+are a proposal for investigation, not a complete selected rule.
+
+For example, an ordinary parameter can avoid a surrounding reference entirely:
+
+```text
+read_value := fn(value: Int): Int { value }
+answer := read_value(value);
+```
+
+Only the caller reads its own value binding. The function body uses its input.
+This is not a requirement to expose hidden capture fields in public signatures;
+an eventual deliberate capture facility could still bind implementation-private
+state. The previously recorded binding-identity rule applies only where such
+surrounding access is admitted. Its fixed-scalar shadow probe does not decide
+whether plain fn permits implicit local capture.
+
+Continue with concrete allowed-name/access categories before revising the
+earlier deferred-body access direction. Do not infer that all outer names are
+forbidden or that every surrounding read is automatically permitted. The actual
+safe lowering, initialization analysis, and lifetime policy remain open.
 
 ## Reference-language comparison, 2026-10-29
 
@@ -175,7 +268,8 @@ Interpretation: retaining the earlier binding in the proposed Lite shadow probe
 has a direct Rust precedent. Python/JavaScript results of 2 under reassignment
 are not counterexamples, because those probes update one binding. C++ shows why
 capture policy must be reviewed separately. The earlier Lite recommendation
-remains unselected pending discussion.
+was unselected when the comparison was recorded. The later binding-identity
+selection above now adopts it; other capture/future-name rules remain open.
 
 ## Initial contracts and evidence
 
@@ -309,13 +403,16 @@ Selected, reviewable direction: sequential eager script/block evaluation;
 deferred bodies may name lower declarations; module declaration lookup may be
 more flexible without mandatory handwritten headers, subject to safety. Script
 case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
-direction but needs environment/readiness rules. Case 5's binding selection
-remains open. The 2026-10-29 selection makes evident op/tmp2 early reads static
+direction but needs environment/readiness rules. An already-visible lexical
+binding is now retained across later shadows; a body without an earlier target
+still needs future-name and recursive-self selection. The 2026-10-29 selection makes evident op/tmp2 early reads static
 errors and uses conservative proof/rejection for the initial subset, with the
 full language's long-term fallback still open.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with shadow selection, then self/mutual recursion and concrete callback probes.
+with concrete surrounding-access categories above, then future-name selection
+when no earlier binding exists and self/mutual
+recursion and concrete callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
 No capture representation, readiness-check runtime, or recursive inference rule
 is selected. No LiteLang execution or safety implementation has been verified.

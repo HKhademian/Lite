@@ -556,11 +556,53 @@ evident early read at compile time.
 Calling after initialization removes this particular ordering problem, subject
 to the remaining binding, inference, and environment contracts.
 
-Exact selection among earlier/later same-named bindings, self/mutual recursion,
+Selection among later same-named bindings when no earlier target exists, self/mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
 list is introduced. See [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md).
+
+### Existing bindings survive later shadowing
+
+Selected **2026-10-29**, for surrounding references admitted by the applicable
+access/capture rules: a free reference in a deferred function body retains
+the binding already visible under ordinary lexical lookup where that function
+is defined. A later same-name declaration in the defining scope creates a new
+binding; it does not redirect that reference. Deferring execution does not erase
+source order for binding selection.
+
+```text
+value := 1;
+read_value := fn(): Int { value }
+value := 2;
+answer := read_value(); /* 1 */
+```
+
+This selects binding identity, not permission for implicit surrounding-local
+capture or a universal creation-time value snapshot/live-storage capture mode.
+The permitted surrounding-access surface is under reconsideration in
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#surrounding-access-reconsideration-2026-10-29).
+Mutation, retention, and escaping lifetimes keep
+their separate contracts. The forward-reference direction applies when no
+appropriate earlier binding is visible; exactly which later declaration it
+selects, including self/mutual recursion, remains open. Ordinary local bindings
+inside the function body still follow their own sequential lexical scope.
+
+### Surrounding access under review
+
+The 2026-10-29 discussion requires a defined eligibility policy for surrounding
+values, even read-only uses, while preserving ordinary helper calls. It does not
+select a blanket ban on outer names or unrestricted implicit local capture.
+Lookup/binding identity and permission to retain surrounding runtime state are
+separate questions.
+
+A statically resolved noncapturing helper can be called without retaining an
+enclosing stack environment. A runtime-selected callable or a helper carrying
+state may need different rules. Constant/type/module lookup is also distinct
+from capturing a runtime local. Each case must preserve scope, initialization,
+copy/access, and eventual lifetime contracts; assignment of a callable alone
+does not settle any of them. Exact permitted categories and capture syntax
+remain open in INV-003.02.
 
 ### Initial static enforcement
 

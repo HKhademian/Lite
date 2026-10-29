@@ -45,6 +45,7 @@ Selected:
 - `name: Type = ?` explicitly reserves storage. The first whole-value write may initialize it without `var`; later replacement requires `var`.
 - Definite initialization is path-sensitive: every path reaching a read must have initialized the binding.
 - Ordinary local shadowing is lexical and sequential; a shadow binding is a distinct binding.
+- For a surrounding reference permitted by access/capture rules, a deferred function body retains its already-visible lexical binding; a later same-name declaration does not redirect it. The fixed-value shadow probe therefore returns 1 under admitted access. This does not grant implicit local capture or select snapshot/live capture modes; surrounding-access eligibility and future-name selection without an earlier target remain under review. See [existing binding identity](../functions.md#existing-bindings-survive-later-shadowing).
 
 Open: partial construction, initialization through callees, and full field/element construction contracts.
 

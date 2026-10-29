@@ -18,8 +18,11 @@ The typed equivalents place mut after the colon, as in x: mut User = source. The
 
 The later [deferred function-body direction](functions.md#deferred-body-lookup)
 permits references to lower declarations without executing the body or moving
-initialization. It does not yet select which same-named binding such a body
-uses, or settle self-recursion and call-time initialization checks.
+initialization. For permitted surrounding references, a body
+[retains an already-visible binding across later shadowing](functions.md#existing-bindings-survive-later-shadowing);
+this lookup rule does not itself grant implicit local capture.
+When no earlier binding exists, future-name selection and self-recursion remain
+open; initial static enforcement and its remaining limits have their own rule.
 
 ## Copy inline values; preserve reference fields
 
