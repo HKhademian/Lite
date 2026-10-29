@@ -229,6 +229,81 @@ reference with multiple later shadows, or recursive-self lookup. Evidence:
 traced from the current selected block-order, existing-binding, and initial
 static-enforcement pages at baseline `88ba9e3`; no LiteLang execution occurred.
 
+### Typed callable binding, replacement, and shadow probes
+
+The user adds a typed declaration before defining quadruple, emphasizing that
+the reference itself needs a definition and resolution. Under the current
+[omitted initialization rule](../docs/declarations-and-assignment.md#omitted-zero-and-default-initialization),
+double: fn(n: Int): Int; initializes a fixed binding immediately. It is not an
+uninitialized forward declaration. Its value is the
+[zero callable](../docs/zero-initialization.md#zero-initialized-functions), which
+returns zero(Int), or 0, after ordinary argument evaluation.
+
+In the first added probe, two later double := fn(...) declarations both return
+n * 3. For permitted surrounding access, quadruple still identifies the first
+fixed zero-callable binding. The three x1/x2/x3 calls therefore yield 0 under
+the current binding/zero rules; the later declarations do not fill in that
+binding's implementation. They introduce two new bindings. This is a design
+trace, not LiteLang execution.
+
+The user then mixes replacement and shadowing:
+
+```text
+double: fn(n: Int): Int;
+quadruple := fn(n: Int): Int { double(double(n)) }
+x1 := quadruple(1);
+double = fn(n: Int): Int { n * 2 }
+x2 := quadruple(1);
+double := fn(n: Int): Int { n * 3 }
+x3 := quadruple(1);
+double = fn(n: Int): Int { n * 4 }
+x4 := quadruple(4);
+```
+
+As written, this program is rejected: the first = attempts replacement of the
+already-initialized fixed zero-callable binding, and the last = independently
+attempts replacement of the later fixed shadow binding. Neither has var.
+An execution trace is not evidence that the invalid whole program runs.
+
+To isolate the unresolved capture question, make both bindings reassignable:
+
+```text
+var double: fn(n: Int): Int;
+quadruple := fn(n: Int): Int { double(double(n)) }
+x1 := quadruple(1);
+double = fn(n: Int): Int { n * 2 }
+x2 := quadruple(1);
+var double := fn(n: Int): Int { n * 3 }
+x3 := quadruple(1);
+double = fn(n: Int): Int { n * 4 }
+x4 := quadruple(4);
+```
+
+Two policies now differ while preserving the same lexical binding identity:
+
+- **Live access to the original binding:** candidate results are x1 = 0,
+  x2 = 4, x3 = 4, x4 = 16. The original binding changes from zero callable to
+  times-two. The later shadow is a distinct binding; assigning times-four to
+  that newer binding does not change the original one used by quadruple.
+- **Snapshot the original callable value at function creation:** candidate
+  results are 0 for all four calls, since the captured value was the zero
+  callable. This is a proposed capture policy, not a consequence forced by
+  assigning a function value or resolving a binding name.
+
+Thus declaring/resolving a binding, initializing/replacing its stored callable,
+and choosing snapshot versus live surrounding access are separate contracts.
+No live access, snapshot capture, or implicit capture permission is selected by
+these probes. An explicit reserved binding with = ? and later first write with
+= is another existing construction mechanism, but no read is permitted before
+initialization; it is not the same as the typed zero declaration above. Nor is
+a signature-only function symbol currently selected by this syntax. Those
+alternatives can be reconsidered rather than silently conflated.
+
+Evidence baseline: `cc794e4`; read the current declaration, callable-zero,
+callable-replacement, and first-initialization owners. No compiler/runtime
+executed these probes. Resume with the intended access semantics of the mutable
+original binding before generalizing surrounding-value eligibility.
+
 For example, an ordinary parameter can avoid a surrounding reference entirely:
 
 ```text
