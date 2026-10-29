@@ -111,6 +111,72 @@ reference. This chooses binding identity, not a general capture snapshot/live
 storage policy. The recommendation is not selected. After this, probe a body
 with no earlier value but multiple later same-name declarations, then recursion.
 
+## Reference-language comparison, 2026-10-29
+
+Question: how do other languages handle the next binding-selection probe? Keep
+redeclaration/shadowing distinct from assigning a new value to an existing
+binding, and keep binding identity distinct from capture mode. This comparison
+does not select a LiteLang rule.
+
+- **Rust:** a later local let can introduce a new binding with the same name.
+  The earlier closure still refers to the first binding, so the analogous
+  shadow probe returns 1. A closure cannot resolve a later local let that was
+  not in scope at its definition. Function items are different: their names
+  extend through the containing block/module, permitting forward uses.
+  Source: [Rust Reference, scopes](https://doc.rust-lang.org/reference/names/scopes.html#pattern-binding-scopes).
+- **JavaScript:** repeating let/const with the same name in one lexical scope
+  is a SyntaxError. If the second line instead assigns value = 2 to the existing
+  let binding, an earlier closure reads 2. A closure may name a later lexical
+  declaration, but calling before initialization throws ReferenceError; calling
+  afterward works. Sources: [let and its temporal dead zone](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let),
+  [closure environments](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures).
+- **Python:** assigning value = 2 again in the same enclosing function updates
+  its existing local binding; it is not Rust/Lite-style same-block shadowing.
+  An inner function reads 2 when called afterward. It can reference a name
+  assigned later in that enclosing function, but the early-call free-variable
+  probe raises NameError. Source: [Python execution model](https://docs.python.org/3/reference/executionmodel.html).
+- **C++:** capture mode adds a separate choice. With an existing local integer,
+  a lambda capturing [value] retains its copied 1 after the original variable
+  is assigned 2; [&value] reads the updated original and returns 2. This probe
+  changes the original value, not binding identity through shadowing.
+  Source: [Microsoft C++ lambda capture documentation](https://learn.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp?view=msvc-170#capture-clause).
+- **Zig 0.15.2:** shadowing a visible identifier is forbidden, so the proposed
+  same-name local shadow model is not admitted. Container declarations are
+  separately order-independent and lazily analyzed, with compile-time
+  initialization. This supports separating local execution from module
+  declaration lookup, without copying Zig's shadowing restriction into LiteLang.
+  Sources: [shadowing](https://ziglang.org/documentation/0.15.2/#Shadowing),
+  [container variables](https://ziglang.org/documentation/0.15.2/#Container-Level-Variables).
+
+### Probe evidence and limits
+
+Primary documentation above was read on 2026-10-29. Local foreign-language
+probes used rustc 1.97.1 (Rust 2021 edition), Node v24.16.0, Python 3.15.1, and
+Apple clang 21.0.0 with C++17. Temporary sources/executables were outside the
+repository and removed after use. Observed:
+
+- Rust shadow closure returned 1; a closure naming a later local let failed
+  compilation with E0425.
+- JavaScript lexical redeclaration failed with SyntaxError; reassignment read
+  2; a later-name closure reported ReferenceError before initialization and 1
+  afterward.
+- Python enclosing-function reassignment read 2; the later-name inner-function
+  probe reported NameError before initialization and 1 afterward.
+- C++ scalar copy/reference captures returned 1 and 2 respectively after
+  reassignment, checked by a compiled executable's success exit status.
+
+Zig was checked against its versioned reference only; no Zig compiler was
+available. Python's current online reference and the local interpreter have
+different patch versions; the recorded probe version is the execution evidence.
+No LiteLang program was compiled or run. These comparisons do not settle
+LiteLang's future-shadow rule, capture representation, or readiness analysis.
+
+Interpretation: retaining the earlier binding in the proposed Lite shadow probe
+has a direct Rust precedent. Python/JavaScript results of 2 under reassignment
+are not counterexamples, because those probes update one binding. C++ shows why
+capture policy must be reviewed separately. The earlier Lite recommendation
+remains unselected pending discussion.
+
 ## Initial contracts and evidence
 
 The following inventory and alternatives retain their initial scope; the later
