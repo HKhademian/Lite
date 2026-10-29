@@ -1,6 +1,6 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-28**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
+Status: **draft current-design summary, 2026-10-29**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
@@ -18,6 +18,7 @@ Selected:
 - Output, value display, and execution tracing require an explicit source operation or deliberately enabled tool facility, including in demonstrators and playgrounds. Expressions, declarations, and assignments do not echo their values automatically. Observation must not re-evaluate expressions. See [explicit output and tracing](../tooling-and-learning.md#explicit-output-and-tracing).
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
 - Operands and named call inputs evaluate left to right in written order.
+- Initial static enforcement rejects calls with evident reads before initialization and conservatively rejects calls whose initialization safety cannot be proved in the initial supported subset. No runtime readiness fallback is selected for that subset; exact proof rules and the full language's long-term callback policy remain open. See [initial static enforcement](../functions.md#initial-static-enforcement).
 - Executable blocks, including run files, execute reached items top to bottom; ordinary eager code cannot use later bindings. Deferred function bodies may name later identifiers, with initialization safety required and exact future-shadow/call-checking rules open. Module declaration lookup supports safe forward references without mandatory handwritten headers; initialization scheduling remains open. See [block order](../evaluation-order.md#executable-block-items), [deferred bodies](../functions.md#deferred-body-lookup), and [modules](../modules-and-packages.md#module-lookup-without-header-files).
 - Operator grouping, tighter to looser: prefix `-`; `* / _/ % _%`; `+ -`; comparison; `not`; `and`; `or`. Binary levels associate left to right, and parentheses override grouping.
 - All ten comparison forms share one precedence. A comparison chain compares adjacent operands, evaluates each operand at most once left to right, and stops at the first false comparison.

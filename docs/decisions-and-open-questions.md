@@ -1,6 +1,22 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-28**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+
+## Initial static initialization enforcement, 2026-10-29
+
+- Reject evident early calls whose reached body would read an uninitialized
+  binding. For the initial supported subset, conservatively reject calls whose
+  initialization safety cannot be established as well. Distinguish demonstrated
+  invalid access from insufficient proof in diagnostics.
+- No runtime readiness-check fallback is selected for that subset. Exact proof
+  rules, conditional/indirect callbacks, escaping functions, and the full
+  language's long-term policy remain open. Revisit concrete callback cases
+  before treating conservative rejection as a universal language rule.
+
+Owner: [initial static enforcement](functions.md#initial-static-enforcement).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#initial-static-enforcement-selection-2026-10-29)
+records the selected starting direction and unresolved cases. No compiler
+implementation, safety proof, or public callable effect/dependency list is claimed.
 
 ## Salam reference and multilingual learning proposal, 2026-10-28
 

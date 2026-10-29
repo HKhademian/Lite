@@ -19,8 +19,11 @@ A function literal's body is deferred: creating the callable does not execute
 that body. The [deferred-body lookup direction](functions.md#deferred-body-lookup)
 permits references to later identifiers without moving their initialization or
 making the callable itself available early. Name visibility does not make an
-uninitialized value readable. Future-binding selection, capture mechanics, and
-the rejection/checking policy for early or indirect calls remain open.
+uninitialized value readable. The
+[initial static enforcement](functions.md#initial-static-enforcement) rejects
+evident early reads and conservatively rejects unproved calls in the initial
+subset. Future-binding selection, capture mechanics, precise proof rules, and
+the full language's long-term indirect-call policy remain open.
 
 ## Operator operands
 

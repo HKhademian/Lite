@@ -2,7 +2,7 @@
 
 Status: in progress
 Contributor: redacted (agent-assisted)
-Last updated: 2026-10-28
+Last updated: 2026-10-29
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)
 Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
@@ -55,7 +55,7 @@ storage. This is not repaired by the universal zero-mapping rule, because this
 inferred declaration has not executed. Moving the call below tmp2 removes the
 particular ordering hazard, subject to the unresolved environment contracts.
 
-### Enforcement alternatives still open
+### Initial enforcement alternatives (follow-up selection below)
 
 - **Static proof/rejection.** Reject a call whose reached body would read an
   uninitialized binding; reject uncertain cases conservatively if safety cannot
@@ -74,6 +74,42 @@ the defining block. Do not assume name visibility proves readiness or lifetime.
 These cases partly reopen a dependency on deferred capture/lifetime work; the
 lookup direction alone does not select that machinery or reopen every context
 proposal. Also resolve which binding a future name selects when shadows exist.
+
+## Initial static enforcement selection, 2026-10-29
+
+Selected starting direction: diagnose the directly evident op() early read at
+compile time. In the initial supported subset, also reject calls whose
+initialization safety cannot be established, rather than assuming safe timing
+or adding a runtime readiness fallback. Distinguish a known invalid read from
+insufficient proof in diagnostics.
+
+The [owning function page](../docs/functions.md#initial-static-enforcement) and
+[ledger](../docs/decisions-and-open-questions.md#initial-static-initialization-enforcement-2026-10-29)
+record the selection. This is a conservative starting subset, not a permanent
+ban on every safe program that needs more precise analysis. Exact proof rules,
+callbacks/conditional accesses, escaping functions, and the full language's
+long-term rejection-versus-checked-execution policy remain open. No capture
+representation, public callable dependency list, or new panic category is selected.
+
+Evidence baseline for this update: `a015e54`. Reviewed the current owners and
+their selected/open boundaries, local links, fences, and diff consistency.
+No LiteLang parsing, type checking, runtime check, or safety proof was executed.
+
+### Next binding-selection probe
+
+```text
+value := 1;
+read_value := fn(): Int { value }
+value := 2;
+answer := read_value();
+```
+
+Does the body select the already visible first value binding, or can the
+deferred-body exception make it select the later shadow? Recommend the first
+binding, so later shadowing does not retroactively change an earlier lexical
+reference. This chooses binding identity, not a general capture snapshot/live
+storage policy. The recommendation is not selected. After this, probe a body
+with no earlier value but multiple later same-name declarations, then recursion.
 
 ## Initial contracts and evidence
 
@@ -207,11 +243,13 @@ Selected, reviewable direction: sequential eager script/block evaluation;
 deferred bodies may name lower declarations; module declaration lookup may be
 more flexible without mandatory handwritten headers, subject to safety. Script
 case 3 is not admitted by the deferred-body exception. Case 4 is eligible in
-direction but needs environment/readiness rules. Case 5's binding selection and
-the op/tmp2 enforcement alternatives above remain open.
+direction but needs environment/readiness rules. Case 5's binding selection
+remains open. The 2026-10-29 selection makes evident op/tmp2 early reads static
+errors and uses conservative proof/rejection for the initial subset, with the
+full language's long-term fallback still open.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with early-call enforcement and shadow selection, then self/mutual recursion.
+with shadow selection, then self/mutual recursion and concrete callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
 No capture representation, readiness-check runtime, or recursive inference rule
 is selected. No LiteLang execution or safety implementation has been verified.

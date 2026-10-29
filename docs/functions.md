@@ -551,8 +551,8 @@ tmp2 := 1;
 
 The body may name tmp2, but its attempted read occurs before tmp2's initializer
 has run. Safe execution cannot supply 1, an invented zero, or unspecified bytes
-as that read's value. Static rejection versus a checked failure policy remains
-open; this direction does not select an executable outcome for the example.
+as that read's value. The later static-first selection below rejects this
+evident early read at compile time.
 Calling after initialization removes this particular ordering problem, subject
 to the remaining binding, inference, and environment contracts.
 
@@ -561,6 +561,21 @@ initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
 list is introduced. See [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md).
+
+### Initial static enforcement
+
+Selected starting direction, **2026-10-29**: reject a call at compile time when
+its reached body would read a binding before initialization. In the initial
+supported subset, also reject a call when its initialization safety cannot be
+established. Distinguish a demonstrated early read from insufficient proof in
+diagnostics; uncertainty is not evidence that the program would actually fail.
+
+No runtime readiness-check fallback is selected for this subset. Exact proof
+rules, conditional/indirect callbacks, escaping functions, and the full language's
+long-term policy remain open. Review concrete callback cases before extending
+this conservative starting point into a universal rejection rule. This selects
+a design requirement, not an implemented analysis, lifetime guarantee, or new
+public callable dependency/effect list.
 
 ## Recursion and inference
 

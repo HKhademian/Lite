@@ -4,7 +4,7 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
-The project is currently **planning only**. These documents record the design discussion through **2026-10-28**. They are not an implemented compiler specification, and the examples have not been compiled.
+The project is currently **planning only**. These documents record the design discussion through **2026-10-29**. They are not an implemented compiler specification, and the examples have not been compiled.
 
 - [Language documentation and reading order](docs/README.md)
 - [Principles and goals](docs/principles.md)

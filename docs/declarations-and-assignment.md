@@ -168,7 +168,9 @@ For every executable block, including a run file, ordinary eager code cannot use
 a later binding. The [deferred function-body exception](functions.md#deferred-body-lookup)
 permits later-name references without moving initialization. It does not make a
 callable available before its own initializer or permit uninitialized reads.
-Exact future-name/shadow selection and early-call checks remain open. Module
+Exact future-name/shadow selection and proof rules remain open; the
+[initial static enforcement](functions.md#initial-static-enforcement) rejects
+evident early reads and unproved calls in the initial supported subset. Module
 declaration lookup follows its separately selected direction. See
 [block order](evaluation-order.md#executable-block-items) and
 [module lookup](modules-and-packages.md#module-lookup-without-header-files).
