@@ -2,6 +2,20 @@
 
 Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Readability and reasoning in every decision, 2026-10-29
+
+- Reaffirm readability and ease of reasoning as explicit criteria for every
+  design decision. Use minimal source pairs to expose the information a reader
+  needs to predict behavior; familiarity alone does not establish novice clarity.
+- In the recursive-shadow discussion, an explicit self-call marker is a
+  candidate way to distinguish ordinary binding lookup from calling the current
+  function. No marker, keyword, or earlier-name precedence is selected yet.
+
+Owner of the review criterion: [resolving competing goals](principles.md#resolving-competing-goals).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-proposal-2026-10-29)
+records the syntax candidates and open semantic questions. The existing
+no-earlier-target self-reference selection remains current and reviewable.
+
 ## Direct self-reference without an earlier target, 2026-10-29
 
 - Permit a direct function-valued declaration's own name in its deferred body

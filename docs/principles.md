@@ -105,6 +105,12 @@ support, and executable size against concrete uses. Neither convenience nor
 performance always wins; there is no universal ranking among those remaining
 goals. An optimization must preserve selected observable contracts.
 
+Reaffirmed 2026-10-29: assess readability and ease of reasoning explicitly in
+every design decision. Use small source examples and minimal pairs to show what
+a reader must know to predict the behavior. Familiarity can motivate a choice;
+it is not by itself evidence that the rule is clear to a new reader. Make
+semantic differences visible rather than relying on unstated contextual guesses.
+
 For a consequential tradeoff, record the use case, goals in tension, alternatives,
 chosen direction, implied costs, and supporting evidence or unresolved measurement.
 Use the white paper's review questions and the continuity principle's visible

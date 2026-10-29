@@ -235,6 +235,64 @@ for this conflict probe.
 Acceptance baseline: `16400a3`. Checked the selected/open boundaries, local
 links, fences, and diff consistency. No LiteLang recursion was compiled or run.
 
+## Explicit self-reference proposal, 2026-10-29
+
+The user emphasizes that every decision should make source easier to read and
+reason about. Self-reference feels clearer to them in the recursive-shadow
+probe, but they explicitly question how much that preference comes from
+familiarity and suggest special syntax to remove the collision. The
+[owning design criterion](../docs/principles.md#resolving-competing-goals) records
+the readability emphasis. It does not select precedence for the unmarked name.
+
+Proposed minimal pair, not accepted LiteLang syntax:
+
+```text
+step := fn(n: Int): Int { n * 2 }
+step := fn(n: Int): Int {
+    if n == 0 { 0 } else { self(n - 1) }
+}
+```
+
+Candidate meaning: self(...) calls the currently executing function
+implementation with its current implementation environment. It does not look
+up the latest binding spelled step or reread a mutable step binding. Ordinary
+step(...) keeps ordinary lexical binding lookup, making an earlier definition
+available for a wrapper. Under this proposed split, explicit self recursion
+gives result 0 for step(3), while the earlier-binding wrapper gives 4.
+
+This makes the intention visible within the body, without requiring the reader
+to search for earlier same-name declarations to recognize a self-call. It also
+needs a deliberate semantic choice: current callable identity versus the live
+contents of its original binding. The proposed marker denotes the former;
+ordinary permitted binding references retain the selected live-read rule.
+
+Two candidate spellings:
+
+- **self(...):** short and directly names the intended callable identity.
+  Check collision with parameters/locals and any future object receiver name.
+- **recur(...):** explicitly announces a recursive call and could be defined as
+  a call-only operation rather than a first-class value. Keyword/contextual-name
+  rules still need investigation; no tail-call-only behavior, loop transfer, or
+  stack optimization guarantee is implied by this proposed spelling.
+
+For either candidate, review nested functions (which function is current),
+argument labels/packs, output checking, calls after binding replacement,
+escaping/copying callables, and whether a first-class self value is needed at
+all. Do not repurpose existing @tags silently: functions/closures are not current
+tag targets under [tags and contexts](../docs/tags-and-contexts.md).
+
+Recommendation: explore an explicit current-function call, initially with
+self(...) as the readable working spelling. Preserve ordinary name lookup so
+wrapping an earlier definition stays possible. Whether the marker is optional
+or required, its final spelling, and changes to the already selected implicit
+no-earlier-target self-reference rule remain open. No syntax or conflict outcome
+is selected here. Readability should be evaluated on these minimal pairs rather
+than asserted as a measured beginner result.
+
+Evidence baseline: `d7ebc3a`; checked current lookup, function/closure boundaries,
+tag rules, and continuity's decision checklist. No LiteLang parser, runtime,
+keyword-reservation check, or learner study was executed.
+
 ## Surrounding-access reconsideration, 2026-10-29
 
 The user wants to minimize surrounding identifier access and asks whether
@@ -710,7 +768,8 @@ now use live execution-time reads of their original binding; deliberate value
 copying remains distinct, and surrounding-access eligibility is not settled.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with earlier-name recursive conflicts/mutual recursion, nested-scope forward search, and concrete
+with explicit self-call candidates and earlier-name recursive conflicts, then
+mutual recursion, nested-scope forward search, and concrete
 surrounding-access/callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.
 No capture representation, readiness-check runtime, or recursive inference rule
