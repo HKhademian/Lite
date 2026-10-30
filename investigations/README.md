@@ -9,6 +9,12 @@ presence does not select a feature or commit it to the first milestone.
 
 ## Context
 
+**Immediate focus, clarified 2026-10-30:** reach the tiny runnable
+[FVP (first viable product)](../docs/principles.md#immediate-focus-first-viable-product).
+Investigate its concrete blockers rather than walking the catalog in numeric
+order or completing the whole language design first. .lt/.lts module/import
+architecture and the explicitly later investigations are not FVP gates.
+
 The intended direction is modern scripting convenience with as much native-like
 memory control as practical, restricted raw-pointer access, substantial compiler
 work, and efficient everyday programs with modest runtime requirements. The

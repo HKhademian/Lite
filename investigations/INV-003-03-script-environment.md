@@ -186,6 +186,7 @@ inputs and name-conflict policy remain open. INV-003.04 is covered only at its
 source-kind boundary; full script-to-module migration is not decided. Preserve
 INV-003.02's unresolved questions; advancing this review does not resolve them.
 
-Continued in [INV-003.04](INV-003-04-script-to-module-boundary.md): ordinary
-imports targeting scripts versus extracting reusable definitions into modules.
-That note begins a new bounded question; its recommendation is not selected.
+The follow-up [INV-003.04](INV-003-04-script-to-module-boundary.md) records
+ordinary imports targeting scripts versus extracting reusable definitions into
+modules. The user subsequently deferred that discussion beyond the immediate
+FVP; its recommendation is not selected and no answer is requested now.

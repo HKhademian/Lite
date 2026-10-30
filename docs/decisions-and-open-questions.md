@@ -2,6 +2,26 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## FVP focus before module architecture, 2026-10-30
+
+- The user clarified that .lt versus .lts discussion is premature for the
+  immediate **first viable product**. Focus investigation on getting a tiny
+  supported language subset running with explicit observation.
+- Keep the recorded source-kind direction as later design context; it is not a
+  requirement to implement two modes, module imports, or packaging for the FVP.
+  Defer INV-003.04's script-importability discussion without selecting its
+  recommendation. Existing .lts sample names can remain.
+- Standard-provider swapping, interface/implementation layout, module initializer
+  effect restrictions, and metaprogramming/macros remain later investigations.
+  A selected long-term direction is not automatically an FVP acceptance gate.
+- Preserve selected semantics for whatever the FVP supports and clearly diagnose
+  unsupported features. This clarification selects neither an execution backend
+  nor a complete feature list. No compiler implementation is claimed.
+
+Owner: [immediate FVP focus](principles.md#immediate-focus-first-viable-product).
+[INV-003.04](../investigations/INV-003-04-script-to-module-boundary.md#fvp-scope-correction-2026-10-30)
+records the deferral; no runtime result is claimed.
+
 ## Distinct source kinds and replaceable standard modules, 2026-10-30
 
 - Select .lts for convenient scripts with an implicit executable file body and

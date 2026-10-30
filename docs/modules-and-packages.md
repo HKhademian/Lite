@@ -6,6 +6,11 @@ Status: **distinct .lts scripts and .lt module files, module-owned facilities, a
 
 Support a single-file first lesson and a path to reusable, explicitly versioned libraries without requiring students to learn packaging before writing a program.
 
+**FVP scope, clarified 2026-10-30:** the source-kind and module architecture below
+is later design context, not a gate for the tiny runnable first viable product.
+Do not require two source modes, imports, packages, or a script-importability
+decision before that FVP. See [the immediate focus](principles.md#immediate-focus-first-viable-product).
+
 ## Intended experience
 
 ```text

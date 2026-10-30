@@ -37,6 +37,24 @@ Let people and programming agents focus on problem solving through concise, read
 
 ## First working targets
 
+### Immediate focus: first viable product
+
+Clarified **2026-10-30**: prioritize a tiny runnable **FVP (first viable
+product)** for experimenting with language features. Resolve investigations
+needed to execute and observe a small supported subset; the investigation
+catalog is not a checklist to finish before implementation.
+
+The .lt/.lts source-kind direction remains recorded, but implementing both source
+modes, deciding script importability, and completing package/module semantics
+are deferred beyond this immediate FVP. Existing .lts sample filenames do not
+require a module/import subsystem. Likewise, replaceable std, interface/provider
+layout, metaprogramming, and macro/preprocessing mechanisms are later questions.
+Supported features still follow their selected semantics, effects remain
+explicit, and unsupported features receive clear diagnostics. Exact FVP feature
+coverage and execution mechanism remain open.
+
+### Growth after the tiny runnable version
+
 Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
 with LiteLang features, then grow toward a first useful milestone of practical
 scripts with command-line arguments, console input/output, and file processing.

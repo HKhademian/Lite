@@ -1,6 +1,6 @@
 # INV-003.04 — Growing a script into a module
 
-Status: in progress
+Status: recorded (discussion deferred beyond the immediate FVP; question unresolved)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-003](TOPICS.md#inv-003)
@@ -9,6 +9,19 @@ Subtopic brief: [INV-003.04](SUBTOPICS.md#inv-003-04)
 
 This is a non-normative investigation note outside the language draft. Options
 and recommendations below are not selected language rules.
+
+## FVP scope correction, 2026-10-30
+
+The user said this .lt/.lts discussion is premature while pursuing the **FVP
+(first viable product)**. Defer the importability question and further module
+architecture work. The source-kind direction remains recorded but implementing
+both modes or resolving their import boundary is not an immediate FVP gate.
+The recommendation below remains unselected; no answer is requested now.
+
+Resume only when module reuse is in scope or concrete FVP needs justify revisiting
+this question. The current investigation focus is the smallest runnable subset
+with explicit observation, as recorded in [principles](../docs/principles.md#immediate-focus-first-viable-product)
+and the [decision ledger](../docs/decisions-and-open-questions.md#fvp-focus-before-module-architecture-2026-10-30).
 
 ## Investigation question
 
@@ -89,9 +102,10 @@ behavior is assumed or needed for this local boundary choice.
 
 ## Findings, decision references, and handoff
 
-The source-kind split remains selected; script importability is **open**. No new
-decision is recorded. Ask whether ordinary imports should accept only .lt module
-source or also .lts scripts, starting with case 3's visible demonstration effect.
-Then investigate module ownership/exports and the practical extraction procedure.
+The source-kind split remains recorded; script importability is **open and
+deferred beyond the immediate FVP**. No importability decision is recorded. When
+resumed, compare whether ordinary imports should accept only .lt module source
+or also .lts scripts, starting with case 3's visible demonstration effect. Module
+ownership/exports and the practical extraction procedure also remain deferred.
 Preserve script convenience/disclosure questions from INV-003.03 and the later
 module-effects/metaprogramming investigations; this note does not complete them.
