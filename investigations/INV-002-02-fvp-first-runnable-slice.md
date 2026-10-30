@@ -17,8 +17,7 @@ Baseline: `3f2b28a`; working tree clean before this note.
 The [small interpreter](../docs/tooling-and-learning.md#fvp-interpreter), temporary
 input/report/exit helper names, input-fault policy, and explicit observation are
 selected. The user accepts the first slice below on baseline `49265c3`.
-Numeric/text details and remaining helper contracts remain open. Python is now
-selected as the minimal igniter, with early LiteLang self-hosting as the direction. Owners: [first executable checkpoint](../docs/tooling-and-learning.md#first-executable-checkpoint)
+Numeric/text details and remaining helper contracts remain open. TypeScript/Node now replaces Python as the minimal igniter, with early LiteLang self-hosting as the direction. Owners: [first executable checkpoint](../docs/tooling-and-learning.md#first-executable-checkpoint)
 and [decision ledger](../docs/decisions-and-open-questions.md#first-executable-interpreter-checkpoint-2026-10-30).
 The [FVP focus](../docs/principles.md#immediate-focus-first-viable-product) defers
 module architecture and native compilation.
@@ -82,6 +81,17 @@ Use explicit exit codes while the omitted-code default remains unresolved.
 
 ## Verification, decision status, and handoff
 
+### Implemented checkpoint follow-up, 2026-10-30
+
+The [TypeScript/Node igniter](../igniter/README.md) now implements this bounded
+slice. Its strict typecheck and 15 test groups pass, including the real CLI 7/5
+probe producing 24, pre-execution rejection, overflow/input faults, reportError,
+exit, and focused outcomes for lessons 001/002/020. Lesson bodies remain unchanged.
+Unsupported language features and provisional helper/text choices are documented
+in the guide. This is narrow interpreter evidence, not full batch/language or
+self-hosted compiler conformance. The earlier evidence below records its original
+design-only baseline.
+
 Read the selected FVP/interpreter/helper contracts and lesson sources above.
 Checked note/tracking links, fences, and focused diff consistency. No LiteLang
 execution, parser/typechecker result, or implementation-time estimate is claimed.
@@ -89,10 +99,10 @@ execution, parser/typechecker result, or implementation-time estimate is claimed
 The user accepts the first slice above. The [temporary numeric-profile investigation](INV-014-01-fvp-numeric-profile.md)
 now selects provisional signed 64-bit integers, one finite 64-bit binary floating
 family, and checked arithmetic faults. Remaining rounding/promotion/literal
-details, text profile, and minimal helper contracts are still open. Python is
+details, text profile, and minimal helper contracts are still open. TypeScript/Node is
 now the selected minimal igniter; the compiler should move to LiteLang early. The detailed [INV-016.01 text profile](INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
 is now deferred and unselected. Basic quoted text and temporary line/word/report
 helpers suffice to begin; define practical details as concrete examples need them.
-Keep the existing lessons unchanged until implementation/verification work is
-actually in scope. The complete 001–020 batch remains an incremental growth
+Keep the existing lessons unchanged in this implementation unit. The complete
+001–020 batch remains an incremental growth
 target, not a prerequisite for this first executable checkpoint.

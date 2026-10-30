@@ -26,7 +26,7 @@ supported features and clearly diagnose unsupported constructs.
 
 Native compilation remains a later goal; a native artifact is not required for
 this FVP. Do not make dual execution paths, caching, a bytecode/JIT engine, a
-debugger, or module machinery prerequisites. Python is now the selected minimal
+debugger, or module machinery prerequisites. TypeScript/Node is now the selected minimal
 igniter, followed by early LiteLang self-hosting. Concrete
 internal representation/checker structure, numeric/text profile, later feature
 coverage, and remaining I/O/exit details are still open. The first feature
@@ -76,7 +76,7 @@ Baseline: `b947746`; working tree clean before this investigation.
 - [Native execution](../docs/memory-and-performance.md#lightweight-native-execution-priority)
   remains a selected language/deployment goal. The experimental demonstrator's
   execution mechanism was open at the original baseline; the small interpreter
-  is now selected above. Python is subsequently selected as the minimal igniter
+  is now selected above. TypeScript/Node subsequently replaces Python as the minimal igniter
   with early LiteLang self-hosting; the native backend remains open. An experimental evaluator does not establish the native goal.
 - [Explicit observation](../docs/tooling-and-learning.md#explicit-output-and-tracing)
   permits a deliberately enabled tool facility. It must observe executed values
@@ -240,6 +240,13 @@ engines, JITs, caching, and full REPL behavior are outside this bounded choice.
 
 ## Verification and limits
 
+Implementation follow-up, 2026-10-30: the [TypeScript/Node igniter](../igniter/README.md)
+now executes the selected first slice and temporary helpers. Strict typechecking
+and 15 test groups passed on Node 26.13.0/TypeScript 7.0.2, including real CLI
+statuses and the 7/5 -> 24 probe. Exact implemented helper/text/numeric limits
+are documented in the guide; native execution and the self-hosted build chain
+remain unimplemented. Earlier design probes below describe their baseline.
+
 Checked the repository's current FVP, observation, native-goal, and exercise
 contracts; checked note/tracking links, code fences, and focused diff consistency.
 No source probe was executed as LiteLang. No performance, native footprint,
@@ -249,7 +256,7 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 The small interpreter, temporary helper surface, and input-fault policy are
 selected above. The [first executable checkpoint](INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
-is now selected; Python is the minimal igniter with early LiteLang self-hosting.
+is now selected; TypeScript/Node is the minimal igniter with early LiteLang self-hosting.
 Numeric/text details, complete I/O/exit contracts, and internal structure remain open.
 The input-fault behavior above is selected, with concrete category/transport,
 recovery support, and exact parsing/consumption still open.

@@ -55,14 +55,14 @@ explicit, and unsupported features receive clear diagnostics. Selected
 parses/checks, and executes the supported subset for the FVP. Native compilation
 remains a later goal. The [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint)
 selects scalar values, bindings/replacement, basic arithmetic, and temporary
-helper calls; numeric/text details remain open. The Python igniter is selected below.
+helper calls; numeric/text details remain open. The TypeScript/Node igniter is selected below.
 
 The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
 provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
 report(...), and reportError(...). These provisional names do not require the
 future module/standard-library design; exact I/O contracts remain open.
 
-Selected 2026-10-30: Python is a minimal [bootstrap igniter](tooling-and-learning.md#python-igniter-and-early-self-hosting),
+Selected 2026-10-30: TypeScript/Node is a minimal [bootstrap igniter](tooling-and-learning.md#typescript-igniter-and-early-self-hosting),
 not a long-term compiler foundation. Switch compiler development to LiteLang as
 soon as it can support it; preserve a downloadable source-bootstrap path from
 the retired igniter through compatible compiler revisions to the current compiler.
@@ -95,7 +95,8 @@ Scalar values, bindings/replacement, basic arithmetic, and temporary helper call
 are the selected first executable checkpoint. Conditionals, functions, loops,
 tuples, and richer types follow incrementally; their relative order is open.
 
-These are development targets, not an implemented toolchain or a release promise.
+The first experimental interpreter checkpoint is implemented; wider development
+targets are not a full toolchain or release promise.
 The lightweight native execution goals continue to guide the language; the FVP
 interpreter does not itself establish those native deployment goals.
 

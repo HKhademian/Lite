@@ -805,7 +805,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — minimal Python 3 standard-library igniter and early transition to a Lite-written compiler selected; retire active Python development while preserving the source-bootstrap path. INV-061.06 inventories the threshold and build chain, detailed investigation not started; stages/backend and full compiler architecture remain open.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — strict TypeScript/Node replaces Python as the minimal igniter; the first checkpoint is implemented and tested, with early transition to a Lite-written compiler still selected; retire active host-language development while preserving the source-bootstrap path. INV-061.06 inventories the threshold and build chain, detailed investigation not started; stages/backend and full compiler architecture remain open.
 
 <a id="inv-062"></a>
 

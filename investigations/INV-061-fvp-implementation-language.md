@@ -1,16 +1,50 @@
 # INV-061 — FVP interpreter implementation language
 
-Status: recorded (Python igniter and early self-hosting direction selected; bootstrap details open)
+Status: recorded (TypeScript/Node replaces Python; first checkpoint implemented; self-hosting open)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Covered scope: bounded whole-topic question — language and minimal structure for
 the experimental interpreter, subsequent self-hosting, and source-bootstrap continuity.
 
-This is a non-normative record of the selected bootstrap direction. No interpreter
-or compiler implementation is claimed.
+This note records the bootstrap direction and bounded implementation evidence.
+Historical Python sections below are superseded by the follow-up here.
+
+## TypeScript/Node replacement and implementation, 2026-10-30
+
+The user requests tightly typed TypeScript, run directly by the latest stable
+Node, instead of Python. The interrupted Python implementation had made no code
+changes. TypeScript/Node is now the igniter host, with early LiteLang self-hosting,
+minimal infrastructure, and stable bootstrap tags/source history retained.
+
+Verified Node 26.13.0 via the official release index/download page and TypeScript
+7.0.2 via npm (official TypeScript download page identifies the 7.0 line).
+Versions and Node typings are pinned in igniter/.node-version/package-lock.json.
+The downloaded official Node binary was used for actual tests; the user's global
+Node installation was not upgraded. Node strips types without checking them,
+so the separate strict no-emit check is required. References:
+[Node execution](https://nodejs.org/api/typescript.html),
+[Node releases](https://nodejs.org/en/download),
+[TypeScript installation](https://www.typescriptlang.org/download/),
+[strict options](https://www.typescriptlang.org/tsconfig/).
+
+The [igniter guide](../igniter/README.md) documents the actual runnable checkpoint,
+provisional helper behavior, strict typing, and limitations. The implementation
+uses no runtime npm dependencies, no JS eval/exec, and no transpilation step.
+Tests run the real evaluator and CLI; they cover pre-execution checking, exact
+64-bit integer division/overflow, finite floats, shadowing, temporary I/O/exit,
+and focused reported outcomes from lessons 001/002/020. Wider language features,
+a native backend, and a self-hosted compiler are not implemented.
+
+Initial verification: strict tsc --noEmit passed; all 15 Node test groups passed
+on Node 26.13.0 with TypeScript 7.0.2. The first input 7/5 probe reports 24.
+No native performance or compiler bootstrap-chain claim follows from those tests.
 
 ## Igniter and self-hosting selection, 2026-10-30
+
+Historical host choice: Python was selected here, then replaced above before
+any Python implementation. The self-hosting and source preservation direction
+remains in force with the TypeScript/Node igniter.
 
 The user accepts Python only as an **igniter**, emphasizing minimal infrastructure
 and a switch to self-hosting as soon as LiteLang can implement its compiler.
@@ -18,7 +52,7 @@ Retire the actively developed Python path after that transition. Preserve the
 versioned igniter and compatible Lite-written compiler sources so a new user can
 bootstrap forward to the current compiler. Baseline for selection: `b13887e`.
 
-Owner: [Python igniter and early self-hosting](../docs/tooling-and-learning.md#python-igniter-and-early-self-hosting).
+Owner: [Python igniter and early self-hosting](../docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
 Ledger: [minimal igniter and self-hosting](../docs/decisions-and-open-questions.md#minimal-python-igniter-and-early-self-hosting-2026-10-30).
 
 Keep Python 3/standard-library implementation minimal and disposable. Do not
@@ -81,8 +115,7 @@ Checked local command availability, Python's reported version, current scope,
 note/tracking links, fences, and focused diff consistency. No interpreter was
 implemented or executed, and no speed/native-footprint result is claimed.
 
-The host language is selected as the minimal Python igniter. Implement the
-selected first checkpoint with focused successful and rejected-program examples,
-then grow toward the Lite-written compiler. Keep a complete self-hosted compiler,
-bootstrap release system, and native backend outside that first implementation
-unit. Preserve the source-bootstrap direction as the compiler evolves.
+The TypeScript/Node replacement above supersedes the original Python handoff.
+The first checkpoint now runs; grow the needed language features toward the
+Lite-written compiler. Preserve the tested seed, version tags, and source route;
+do not expand the host-language implementation into a permanent framework.

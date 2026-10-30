@@ -15,8 +15,8 @@ Investigate its concrete blockers rather than walking the catalog in numeric
 order or completing the whole language design first. .lt/.lts module/import
 architecture and the explicitly later investigations are not FVP gates.
 The selected [execution path](../docs/tooling-and-learning.md#fvp-interpreter) is
-a small interpreter; native compilation is a later goal, and implementation has
-not started.
+a small interpreter, now implemented as the limited [TypeScript/Node igniter](../igniter/README.md).
+Native compilation and a self-hosted build chain remain later goals.
 
 The intended direction is modern scripting convenience with as much native-like
 memory control as practical, restricted raw-pointer access, substantial compiler

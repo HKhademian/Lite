@@ -1,6 +1,11 @@
 # Language documentation
 
-Design snapshot: **2026-10-30**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-30**. Stage: **design draft with a limited experimental igniter**.
+
+The [TypeScript/Node igniter](../igniter/README.md) executes the first narrow
+checkpoint. The broader reference is not fully implemented. Statements about no
+implementation in dated investigation baselines describe those earlier revisions;
+only the igniter's documented features and checks are current execution evidence.
 
 ## Start here
 

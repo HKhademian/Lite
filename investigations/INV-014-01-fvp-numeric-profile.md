@@ -86,6 +86,14 @@ non-finite numeric APIs, and native representation/ABI remain later questions.
 
 ## Verification and handoff
 
+Implementation follow-up, 2026-10-30: the [TypeScript/Node igniter](../igniter/README.md)
+uses bigint with signed 64-bit checks and finite binary64 number values. Tests
+check exact large integer division, range endpoints, overflow/negation/minimum
+quotient faults, zero divisors and non-finite arithmetic, with strict host type
+checking. Other mixed arithmetic is rejected; mixed division uses a documented
+provisional Number conversion. No native numeric ABI or full conversion contract
+is implemented. The earlier evidence below retains its original design-only scope.
+
 Checked the existing numeric/division/fault contracts and the first checkpoint;
 checked note/tracking links, fences, and focused diff consistency. No LiteLang
 numeric probe or host arithmetic experiment was run. No speed/size result is
@@ -93,6 +101,6 @@ claimed.
 
 The user accepts the provisional widths and fault boundary. Next settle
 the remaining rounding/promotion/literal details needed for this slice,
-alongside its text profile. Python is now selected as the minimal igniter, with
+alongside its text profile. TypeScript/Node now replaces Python as the minimal igniter, with
 early LiteLang self-hosting as the direction. All permanent numeric
 contracts remain reviewable; this selection does not implement any types.

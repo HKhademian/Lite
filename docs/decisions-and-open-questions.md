@@ -2,6 +2,29 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## TypeScript/Node replaces Python; first igniter checkpoint, 2026-10-30
+
+- The user replaces the Python igniter with tightly typed TypeScript executed
+  directly by Node, using the latest stable toolchain. At implementation time,
+  Node 26.13.0 and TypeScript 7.0.2 were verified; versions are pinned rather than
+  leaving bootstrap builds dependent on a moving latest alias.
+- Use erasable TS syntax and a separate strict no-emit typecheck: Node's direct
+  runner strips types without checking them. No transpilation tool, runtime npm
+  dependency, or long-term framework is introduced. The early LiteLang self-hosting
+  and preserved stable-tag/source-chain direction remain unchanged.
+- The experimental first checkpoint is now implemented in igniter/. Its real
+  tests cover checking before effects, bindings, checked numeric behavior, I/O,
+  exit, and focused outcomes for lessons 001/002/020. This is not implementation
+  of the full language or a self-hosted compiler.
+- Helper formatting, exit default/range, basic text handling, and mixed-numeric
+  restrictions are documented as provisional implementation behavior, not
+  permanent language selections. Broader semantics remain open where stated.
+
+Implementation/commands/limits: [igniter guide](../igniter/README.md).
+Owner: [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
+Investigation: [INV-061 follow-up](../investigations/INV-061-fvp-implementation-language.md#typescriptnode-replacement-and-implementation-2026-10-30).
+The earlier Python choice below is superseded; it produced no Python seed.
+
 ## Stable bootstrap version tags and source history, 2026-10-30
 
 - The user emphasizes tagged versioning and version control as essential to
@@ -21,6 +44,10 @@ records the clarification.
 
 ## Minimal Python igniter and early self-hosting, 2026-10-30
 
+**Historical host choice:** Python is superseded by the TypeScript/Node decision
+above before any Python implementation was written. The minimal-seed,
+self-hosting, and preserved-source-route direction remains selected.
+
 - Accept Python 3 with standard library only as the minimal bootstrap igniter for
   the experimental interpreter. Avoid building enduring Python infrastructure.
 - Select early self-hosting: move compiler development to LiteLang as soon as
@@ -37,7 +64,7 @@ records the clarification.
 - This is a growth direction, not a reason to enlarge the selected first runnable
   checkpoint into a full compiler or build/release system now.
 
-Owner: [Python igniter and early self-hosting](tooling-and-learning.md#python-igniter-and-early-self-hosting).
+Owner: [Python igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
 [INV-061](../investigations/INV-061-fvp-implementation-language.md#igniter-and-self-hosting-selection-2026-10-30)
 records the selection; [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06)
 tracks the unresolved source-bootstrap route.

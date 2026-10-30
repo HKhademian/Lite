@@ -56,14 +56,15 @@ Many existing pages say “LiteScript” when they mean the language. That usage
 
 ### Bootstrap source continuity
 
-Selected direction 2026-10-30: keep a downloadable, versioned Python igniter and
+Selected direction 2026-10-30: keep a downloadable, versioned TypeScript/Node igniter and
 compatible compiler source revisions sufficient to build forward to the current
 Lite-written compiler after active development becomes self-hosted. Preserve
 the bootstrap path when source language requirements change. Exact required
 revisions, stage dependencies, preservation/rebuild verification, and distribution
 procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06).
-See [the owning self-hosting direction](tooling-and-learning.md#python-igniter-and-early-self-hosting).
-No bootstrap bundle, release artifact, or reproducible-build result exists yet.
+See [the owning self-hosting direction](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
+The first [igniter checkpoint](../igniter/README.md) exists; there is no self-hosted
+bootstrap bundle or verified compiler-to-compiler rebuild chain yet.
 
 Reaffirmed **2026-10-30**: version control and stable version tags are required
 for bootstrap continuity. Tag the igniter and compiler milestones needed by the

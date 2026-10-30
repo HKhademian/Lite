@@ -68,7 +68,8 @@ Exact floating rounding/underflow/subnormals, mixed promotions beyond selected
 division, numeric literal grammar and signed-boundary parsing, concrete fault
 categories/payloads, and formatting remain open. The profile is provisional FVP
 scaffolding, not a permanent numeric API, native layout, or measured performance
-result. No numeric interpreter implementation exists. See
+result. The [igniter](../igniter/README.md) implements this bounded profile with documented
+limits; it is not evidence for the complete numeric design. See
 [INV-014.01](../investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
 and the [decision ledger](decisions-and-open-questions.md#temporary-fvp-numeric-profile-2026-10-30).
 

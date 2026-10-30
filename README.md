@@ -4,13 +4,17 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
-The project is currently **planning only**. These documents record the design discussion through **2026-10-30**. They are not an implemented compiler specification, and the examples have not been compiled.
+The project now has a **small experimental TypeScript/Node igniter** for a narrow
+FVP checkpoint. Run `node igniter/cli.ts igniter/examples/double-sum.lts` with
+Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
+for setup, strict typechecking, tests, supported behavior, and limitations.
+The wider language remains a design draft; there is no native or self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)
-- [First working targets](docs/principles.md#first-working-targets): a small interpreter is selected for the experimental FVP, followed by practical scripts and later native compilation. These are development decisions; no runner or compiler exists yet.
-- [Bootstrap direction](docs/tooling-and-learning.md#python-igniter-and-early-self-hosting): minimal Python igniter, early transition to a Lite-written compiler, and a preserved source-bootstrap route to current versions. No bootstrap implementation exists yet.
+- [First working targets](docs/principles.md#first-working-targets): the small interpreter implements the first experimental checkpoint; practical scripts, wider features, and native compilation follow.
+- [Bootstrap direction](docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting): disposable TypeScript/Node igniter, early transition to a Lite-written compiler, and a preserved source-bootstrap route. The self-hosted chain is not implemented yet.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
