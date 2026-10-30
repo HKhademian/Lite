@@ -115,7 +115,23 @@ for the FVP; keep all/last-binding inspection optional and deferred. This replac
 the earlier preference for runner inspection as the first observation mechanism,
 without changing block results, explicit-effect rules, or choosing an API.
 
-### Execution mechanism
+### Optional teaching inspection proposal, 2026-10-30
+
+The user adds a possible run flag revealing all internal identifier bindings'
+final values and debugger-style marked points for students to examine code.
+Record this as a **proposal**, complementing the temporary helper selection.
+Neither a flag nor a mark spelling, scope/snapshot policy, or full debugger is
+selected. Ordinary execution remains silent without explicit reports or an
+explicitly enabled observation facility. Blocks do not start returning their
+binding environments.
+
+The [owning tooling proposal](../docs/tooling-and-learning.md#optional-teaching-inspection)
+and [INV-072.05](SUBTOPICS.md#inv-072-05) track final-value versus point-in-time
+views, shadow/activation identities, ended scopes, hidden identifiers, retention
+costs, and non-reevaluation. The full tool is not required for the first runnable
+FVP; it may grow incrementally alongside the experiments.
+
+### Execution-mechanism options
 
 - **A — Experimental evaluator first.** Parse and check the supported subset,
   then evaluate its representation directly. This proposal avoids implementing

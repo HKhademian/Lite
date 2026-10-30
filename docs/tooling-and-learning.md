@@ -69,6 +69,30 @@ scaffolding, not any particular mock-input values or transport. No stdout/stderr
 prompt, exception, panic, or exit-status policy is selected by these names alone.
 No helpers or runner have been implemented yet.
 
+## Optional teaching inspection
+
+**Proposal, 2026-10-30:** the user suggests an explicitly enabled run flag that
+reveals identifier bindings' final values, and marked inspection points in a
+debugger style so students can examine their programs. These complement explicit
+report/reportError calls; they do not change the file's result or enable an
+automatic dump during ordinary execution. A full debugger is not an FVP gate.
+
+- **Final binding view:** request a summary of bindings and their final values.
+  Define whether all means user bindings, hidden/compiler-generated identifiers,
+  module names, or some subset. Distinguish shadowed bindings and repeated
+  function/loop activations. For scopes already exited, define whether to record
+  a value when the scope ends rather than assume its storage still exists.
+- **Marked points:** explicitly mark places to observe values visible there.
+  Define whether a mark captures a snapshot or pauses execution, which bindings
+  it includes, and how repeated visits appear. Stepping/breakpoints can be later
+  extensions; none is required by the temporary input/reporting helpers.
+
+Flag/mark spelling, source versus external marks, snapshot timing, failures,
+value formatting, state retention and lifetime costs, and diagnostic destinations
+remain open. Observation must not reevaluate the program's earlier expressions.
+Keep inspection distinguishable from deliberate program reports; no particular
+output stream or UI is selected. Inventory: [INV-072.05](../investigations/SUBTOPICS.md#inv-072-05).
+
 ## Formatter
 
 ```text

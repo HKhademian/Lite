@@ -961,9 +961,11 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/tooling-and-learning.md](../docs/tooling-and-learning.md); [docs/unused-name-intent.md](../docs/unused-name-intent.md); [docs/comments.md](../docs/comments.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-072).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-072).
 
 **Focus:** [Multilingual source and learning questions](multilingual-source-and-learning.md).
+
+**Teaching proposal, 2026-10-30:** [INV-072.05](SUBTOPICS.md#inv-072-05) inventories a final-binding run flag and marked inspection points. Detailed investigation not started; no flag/mark syntax or debugger implementation is selected, and this is not an FVP gate.
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
