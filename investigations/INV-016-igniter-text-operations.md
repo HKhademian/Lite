@@ -1,12 +1,22 @@
 # INV-016 — Text-scanning igniter increment
 
-Status: recorded (bounded implementation; full text/character contracts open)
+Status: waiting for input (implemented experiment; new helpers await explicit consent)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-016](TOPICS.md#inv-016)
 Covered scope: computed concatenation and temporary text-scanning helpers.
 
 ## Scope and contracts
+
+**Consent correction, 2026-10-30:** the user requires explicit approval before
+new language syntax/features, including temporary builtins and semantic choices.
+The agent introduced textLength/textAt/textSlice and their position/bounds policy
+without that approval. They remain an implemented experiment awaiting review,
+not accepted language/FVP additions. The continuation request, successful tests
+and alpha.5 tag do not supply consent. Computed concatenation had an existing
+documented direction; the newly invented helpers require separate consideration,
+including an investigation if needed. No further extension is authorized by
+this note. See the [consent rule](README.md#explicit-consent-for-language-changes).
 
 Baseline: `29978ff`, preserved as igniter-v0.1.0-alpha.4. The user requests the
 next runnable increment. Text scanning is a small practical prerequisite for

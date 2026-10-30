@@ -74,7 +74,7 @@ The factorial CLI reports 120 for 5; strict checking and all 43 test groups pass
 See [INV-030](../investigations/INV-030-igniter-functions.md). This is another
 bounded step toward the Lite-written compiler, not a self-hosting result.
 
-The next increment adds computed String concatenation and temporary
+The next implemented experiment adds computed String concatenation and temporary
 textLength/textAt/textSlice helpers, demonstrated by a Lite-written arithmetic
 tokenizer. Its code-point positions, half-open intervals and terminal bounds
 faults are provisional host behavior; full Unicode/text policy remains open.
@@ -82,6 +82,10 @@ Strict checking and all 52 test groups pass, including the real CLI and Unicode/
 empty/bounds cases. See [text-helper coverage](../igniter/README.md#temporary-text-operations)
 and [INV-016](../investigations/INV-016-igniter-text-operations.md). This is a
 scanning experiment, not the Lite lexer or a compiler bootstrap stage.
+The new helpers and their semantic choices were introduced without explicit
+user consent and await review; their implementation does not select them.
+Follow the [explicit-consent rule](../investigations/README.md#explicit-consent-for-language-changes)
+before adding syntax/features, even for temporary scaffolding.
 
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.

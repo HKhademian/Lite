@@ -58,6 +58,11 @@ until accepted through the project's decision process.
 
 ## Decision references
 
+Follow the [explicit-consent rule](README.md#explicit-consent-for-language-changes).
+Identify the user's explicit approval for each new syntax/feature or semantic
+choice before implementation; otherwise record it as awaiting consent. A general
+continuation request or an implemented experiment is not approval.
+
 Link any explicitly accepted decision or proposal separately. Summarize its
 boundary without treating this note as the owning language specification. If no
 decision has been made, say so.

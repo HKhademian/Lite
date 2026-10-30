@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Explicit design consent required, 2026-10-30
+
+The user requires explicit consent before new language syntax/features, including
+temporary builtins and observable semantic choices. "Ok next" is not approval
+for unspecified additions. Investigate new choices when needed and obtain consent
+before implementation or selection; continue already approved work within scope.
+The agent-added textLength/textAt/textSlice helpers and their policies remain
+implemented experiments awaiting consent, despite passing tests and the alpha.5
+tag. See the [workflow rule](../investigations/README.md#explicit-consent-for-language-changes)
+and [INV-016 correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+
 ## Igniter text-scanning increment, 2026-10-30
 
 Computed String + String concatenation and temporary textLength/textAt/textSlice

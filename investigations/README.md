@@ -124,6 +124,21 @@ owning language pages. Link them from the investigation; an investigation note
 does not change the language contract by itself. Preserve unrelated working-tree
 changes when contributing.
 
+## Explicit consent for language changes
+
+Required by the user, **2026-10-30**: do not invent or implement new language
+syntax or features without the user's explicit consent. This includes new
+builtins/APIs and observable semantic choices, even when described as temporary
+FVP scaffolding. A general request to continue, such as "ok next", is not consent
+to an unspecified design addition.
+
+Continue implementing already selected contracts within their authorized scope.
+When progress needs a new design choice, present the concrete proposal and its
+consequences first; investigate it under the relevant INV topic when needed,
+then obtain explicit consent before implementing it or marking it selected.
+Implementation evidence, passing tests, commits and milestone tags do not grant
+design approval. Keep unapproved experiments clearly labeled pending review.
+
 ## Reconsidering decisions and postponed ideas
 
 This applies to **every investigation point**. A selected decision is the current

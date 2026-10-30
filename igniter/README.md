@@ -150,6 +150,12 @@ propagate through function calls; cleanup and recoverable failures remain absent
 
 ### Temporary text operations
 
+**Awaiting explicit consent:** textLength/textAt/textSlice and their indexing/
+bounds policy were agent-added experiments, not user-approved language features.
+Their implementation and alpha.5 tag record behavior only. Review/investigate
+them before accepting or extending them; see the
+[consent correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+
 Computed `String + String` concatenates without adding separators, interpreting
 escapes, or converting other types to text. Operands evaluate once, left to right.
 This implements the existing explicit concatenation direction; adjacent literals

@@ -68,6 +68,10 @@ Whitespace outside literals can move freely without changing executable structur
 
 ## Experimental igniter coverage
 
+The agent-added textLength/textAt/textSlice helpers and their policies below
+await explicit user consent. Implemented behavior is not an accepted feature;
+see the [INV-016 correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+
 Implementation increment, **2026-10-30**: the
 [igniter](../igniter/README.md#temporary-text-operations) now executes computed
 String + String concatenation, plus temporary textLength/textAt/textSlice helpers

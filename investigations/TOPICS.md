@@ -213,7 +213,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-016).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal deferred and unselected; [INV-016 — text-scanning igniter increment](INV-016-igniter-text-operations.md) — computed concatenation and provisional code-point helpers demonstrated by a Lite-written arithmetic tokenizer; strict checking and 52 test groups pass. Generic String indexing, full text/character/view and performance contracts remain open.
+**Investigation:** waiting for input on new helpers; contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal deferred and unselected; [INV-016 — text-scanning igniter experiment](INV-016-igniter-text-operations.md) — implemented textLength/textAt/textSlice helpers and their policies await explicit user consent. Passing tests and the alpha.5 tag do not select them. Generic String indexing, full text/character/view and performance contracts remain open.
 
 <a id="inv-017"></a>
 
