@@ -12,6 +12,12 @@ An untyped target handler catches every failure supported by its target. Receive
 
 This channel decision does not define which floating-point outcomes are faults. If an operation is defined to fault, that fault uses the panic channel; whether a floating-point edge case instead produces a valid non-finite value is a separate numeric rule.
 
+The selected [temporary FVP profile](numbers.md#temporary-fvp-numeric-profile)
+now defines a bounded case: checked signed 64-bit integer arithmetic, integer
+and floating zero-divisor faults, and faults for non-finite floating arithmetic
+results. Non-finite literal/input values are rejected. The full language's
+floating policies, exact categories, and remaining rounding details are open.
+
 ## Concrete cases
 
 For fixed-width arithmetic, successful operations produce ordinary values. A detected overflow or other unrepresentable result uses typed panic rather than a recoverable `Result`:

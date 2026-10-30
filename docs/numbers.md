@@ -1,6 +1,6 @@
 # Numbers and ranges
 
-Status: **numeric usability and predictable cost are goals; arithmetic fault channel selected, exact numeric contract open**.
+Status: **numeric usability and predictable cost are goals; arithmetic fault channel and temporary FVP profile selected; complete language-wide numeric contract open**.
 
 ## Purpose
 
@@ -40,7 +40,37 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 ## Representation proposal
 
-A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the representation is not selected. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
+A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the permanent language-wide representation is not selected. The bounded FVP profile below now selects temporary representations. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
+
+## Temporary FVP numeric profile
+
+Selected **2026-10-30**, for the first experimental interpreter only:
+
+- Integer values use the signed 64-bit range -2^63 through 2^63 - 1.
+  Check +, -, *, unary negation, and / for representable results. Overflow,
+  including negating the minimum value or dividing it by -1, raises a typed
+  arithmetic panic; never silently wrap.
+- Floating values use one 64-bit binary floating representation for literals,
+  arithmetic, and inputFloat success values. This does not permanently assign
+  widths to the public Float/Double names or select a native ABI.
+- Accept finite floating values only in this profile. Reject non-finite source
+  literals/input; an arithmetic result that is non-finite raises a typed panic.
+  Integer or floating division by zero also raises a typed arithmetic panic.
+- Preserve division: integer-only 7 / 2 gives 3 and -7 / 2 gives -3, while
+  7.0 / 2 gives 3.5. Compute integer division exactly within the integer range,
+  rather than use rounded floating intermediates. Existing typed-storage rules
+  apply when those forms become supported.
+- Out-of-range source literals receive diagnostics; invalid/out-of-range input
+  uses the temporary input-fault policy. Unhandled fatal execution faults map to
+  nonzero status. Reporting I/O behavior remains separate.
+
+Exact floating rounding/underflow/subnormals, mixed promotions beyond selected
+division, numeric literal grammar and signed-boundary parsing, concrete fault
+categories/payloads, and formatting remain open. The profile is provisional FVP
+scaffolding, not a permanent numeric API, native layout, or measured performance
+result. No numeric interpreter implementation exists. See
+[INV-014.01](../investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
+and the [decision ledger](decisions-and-open-questions.md#temporary-fvp-numeric-profile-2026-10-30).
 
 ## Arithmetic grouping
 

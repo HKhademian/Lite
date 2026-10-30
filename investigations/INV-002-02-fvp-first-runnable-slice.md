@@ -35,9 +35,9 @@ is incremental, not a requirement to implement all 20 before the first run.
   clear diagnostics for unsupported constructs. A final declaration remains Unit;
   no implicit output or special meaning for the final binding.
 - Integer, floating, and text literals/values for the temporary helper roles,
-  plus normal Unit completion. An explicit provisional numeric profile and
-  supported text/escape subset still need selection; do not inherit the host's
-  arithmetic or text behavior silently.
+  plus normal Unit completion. The subsequent [temporary numeric profile](../docs/numbers.md#temporary-fvp-numeric-profile)
+  selects checked 64-bit families; remaining numeric details and supported
+  text/escape subset still need definition. Do not inherit host behavior silently.
 - Inferred fixed bindings with :=, name reads, var bindings, and replacement
   with =. Preserve existing shadowing and type/replacement rules for admitted
   forms; mutation of a fixed binding is rejected.
@@ -87,9 +87,10 @@ Checked note/tracking links, fences, and focused diff consistency. No LiteLang
 execution, parser/typechecker result, or implementation-time estimate is claimed.
 
 The user accepts the first slice above. The [temporary numeric-profile investigation](INV-014-01-fvp-numeric-profile.md)
-now compares provisional 64-bit families, checked faults, and alternatives;
-its recommendation is not selected. Text details, remaining minimal helper
-contracts, and implementation language are still open.
+now selects provisional signed 64-bit integers, one finite 64-bit binary floating
+family, and checked arithmetic faults. Remaining rounding/promotion/literal
+details, text profile, minimal helper contracts, and implementation language are
+still open.
 Keep the existing lessons unchanged until implementation/verification work is
 actually in scope. The complete 001–020 batch remains an incremental growth
 target, not a prerequisite for this first executable checkpoint.

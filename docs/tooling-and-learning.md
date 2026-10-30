@@ -48,6 +48,11 @@ to finish all 001–020 exercises first. Numeric/text details, helper contracts,
 and implementation language still need definition; no interpreter is implemented.
 See [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
+The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
+uses checked signed 64-bit integers and one finite 64-bit binary floating family.
+Division by zero and non-finite arithmetic results fault. Exact rounding,
+promotions/literal details, text profile, and implementation language remain open.
+
 ## Explicit output and tracing
 
 Selected 2026-10-28: program output, value display, and execution tracing require

@@ -2,6 +2,26 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Temporary FVP numeric profile, 2026-10-30
+
+- Select checked signed 64-bit integer values and one 64-bit binary floating
+  family for the first experimental interpreter, not permanent Float/Double
+  widths or a native ABI. Integer overflow, including negated minimum and minimum
+  divided by -1, raises a typed arithmetic panic rather than wrapping.
+- Division by integer or floating zero faults. Reject non-finite source/input
+  values; arithmetic producing a non-finite floating result raises a typed panic.
+  Source-literal diagnostics and helper input faults remain distinct channels.
+- Keep selected division: 7 / 2 is 3, -7 / 2 is -3, and 7.0 / 2 is 3.5.
+  Do not substitute floating computation for exact integer division.
+- Exact rounding/underflow/subnormals, mixed promotions beyond selected division,
+  literal/signed-boundary parsing, concrete fault categories and formatting remain
+  open. This is disposable FVP scaffolding, not a numeric implementation result.
+
+Owner: [temporary FVP numeric profile](numbers.md#temporary-fvp-numeric-profile).
+[INV-014](../investigations/INV-014-01-fvp-numeric-profile.md#selected-bounded-profile)
+records acceptance. Language-wide numeric contracts remain reviewable and open
+where not selected separately.
+
 ## First executable interpreter checkpoint, 2026-10-30
 
 - Select one ordered file with comments/separators, integer/floating/text values,
@@ -14,7 +34,7 @@ Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. N
 - Add conditionals/Booleans, loops, user functions, tuples/destructuring, and
   richer types after the first runnable slice; relative order remains open.
   This checkpoint is neither the final FVP ceiling nor completion of all 001–020.
-- Numeric/text profile, remaining helper contracts, implementation language,
+- Remaining numeric/text details, helper contracts, implementation language,
   internal structure, and later coverage remain open. No execution is claimed.
 
 Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
