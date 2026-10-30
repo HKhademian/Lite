@@ -2,6 +2,24 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Small interpreter for the FVP, 2026-10-30
+
+- Select a small interpreter for the first viable product: read one source file,
+  parse/check the supported subset, and execute it with the temporary input,
+  reporting, and exit helpers. Native compilation remains a later goal.
+- Preserve selected language semantics for supported features and diagnose
+  unsupported features clearly. No native emission, cache, JIT/bytecode engine,
+  full debugger, module/package system, or dual execution path is a gate for
+  this first runnable experiment.
+- Implementation language, concrete internal structure, complete feature/numeric
+  coverage, remaining helper contracts, and later native backend remain open.
+  This selects the execution mechanism, not an implemented interpreter or a
+  measured performance/footprint result.
+
+Owner: [FVP interpreter](tooling-and-learning.md#fvp-interpreter).
+[INV-004](../investigations/INV-004-fvp-execution-path.md#interpreter-selection-2026-10-30)
+records acceptance; the existing native deployment priority remains selected.
+
 ## Temporary input fault policy, 2026-10-30
 
 - Accept invalid input or EOF before the requested value is available as an
@@ -276,9 +294,11 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
   arguments, console input/output, and file processing. Foreign calls, explicit
   memory placement, and concurrency remain later investigations.
 - Supported demonstrator features follow selected rules; unsupported features
-  receive clear diagnostics. The runner/compiler mechanism, commands, backend,
-  observation API, exact feature subset/order, later exercise coverage, and release
-  targets remain open. No implementation work or conformance result is implied.
+  receive clear diagnostics. Subsequent 2026-10-30 decisions select a small FVP
+  interpreter and temporary input/report/exit helpers. Commands, implementation
+  language, native backend, full helper contracts, exact feature subset/order,
+  later coverage, and release targets remain open. No implementation work or
+  conformance result is implied.
 
 Owner: [first working targets](principles.md#first-working-targets).
 [INV-001](../investigations/INV-001-language-goals-and-boundaries.md#working-target-selection-2026-10-28)

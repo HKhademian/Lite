@@ -14,6 +14,9 @@ presence does not select a feature or commit it to the first milestone.
 Investigate its concrete blockers rather than walking the catalog in numeric
 order or completing the whole language design first. .lt/.lts module/import
 architecture and the explicitly later investigations are not FVP gates.
+The selected [execution path](../docs/tooling-and-learning.md#fvp-interpreter) is
+a small interpreter; native compilation is a later goal, and implementation has
+not started.
 
 The intended direction is modern scripting convenience with as much native-like
 memory control as practical, restricted raw-pointer access, substantial compiler

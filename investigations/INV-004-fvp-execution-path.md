@@ -14,7 +14,26 @@ and recommendations below are not selected implementation decisions.
 
 Must the first runnable FVP generate a native executable, or may an experimental
 evaluator execute a small supported subset before a native backend exists?
-Choose this boundary before designing caches, packages, or multiple source modes.
+The selection below answers this boundary before caches, packages, or multiple
+source modes are designed.
+
+## Interpreter selection, 2026-10-30
+
+The user accepts a **small interpreter first** for the FVP. Read one source
+file, parse/check the supported subset, and execute it using the selected
+temporary input/report/exit surface. Preserve selected language behavior for
+supported features and clearly diagnose unsupported constructs.
+
+Native compilation remains a later goal; a native artifact is not required for
+this FVP. Do not make dual execution paths, caching, a bytecode/JIT engine, a
+debugger, or module machinery prerequisites. Implementation language, concrete
+internal representation/checker structure, exact feature/numeric subset, and
+remaining I/O/exit details are still open.
+
+Owner: [FVP interpreter](../docs/tooling-and-learning.md#fvp-interpreter).
+Ledger: [small interpreter for the FVP](../docs/decisions-and-open-questions.md#small-interpreter-for-the-fvp-2026-10-30).
+Selection baseline: `075a10a`. No parser/checker/interpreter has been implemented
+or tested, and no native speed/footprint claim follows from this selection.
 
 ## Current contracts and evidence
 
@@ -35,8 +54,9 @@ makes successful reportError calls report-only and adds exit(errCode?) for
 explicit program end; exit defaults and cleanup behavior remain open.
 
 Calls explicitly request their operations; ordinary bindings/file completion stay
-silent and declaration-final blocks still produce Unit. This selection does not
-answer evaluator versus native-first or authorize implicit imports in .lt source.
+silent and declaration-final blocks still produce Unit. This helper selection
+alone did not choose the execution mechanism; the selection above now chooses
+the interpreter. It does not authorize implicit imports in .lt source.
 Owner: [temporary input and reporting](../docs/tooling-and-learning.md#temporary-fvp-input-and-reporting).
 Ledger: [temporary FVP helpers](../docs/decisions-and-open-questions.md#temporary-fvp-input-and-reporting-helpers-2026-10-30).
 No runner/helper implementation or LiteLang execution is claimed.
@@ -53,8 +73,9 @@ Baseline: `b947746`; working tree clean before this investigation.
   architecture is deferred; the full investigation catalog is not a prerequisite.
 - [Native execution](../docs/memory-and-performance.md#lightweight-native-execution-priority)
   remains a selected language/deployment goal. The experimental demonstrator's
-  execution mechanism is open; no interpreter, backend, or host language is
-  selected. An experimental evaluator would not establish the native goal.
+  execution mechanism was open at the original baseline; the small interpreter
+  is now selected above. The native backend and host implementation language
+  remain open. An experimental evaluator does not establish the native goal.
 - [Explicit observation](../docs/tooling-and-learning.md#explicit-output-and-tracing)
   permits a deliberately enabled tool facility. It must observe executed values
   without reevaluating their expressions. Running a file alone does not echo it.
@@ -209,13 +230,11 @@ FVP; it may grow incrementally alongside the experiments.
   first runnable scope. Target arithmetic and evaluation must preserve LiteLang
   contracts rather than inherit a backend's defaults.
 
-**Recommendation, not selected:** A for the tiny experimental FVP, with an
-explicit output operation as recommended above. This is a scope judgment, not a measured
-speed-of-development claim. Keep native deployment as the language goal; do not
-present the evaluator as satisfying it. If the user requires a native artifact
-in the first viable product, select B instead. Do not build both paths as an
-initial requirement. Bytecode engines, JITs, caching, and full REPL behavior are
-outside this bounded choice.
+**Selected:** A for the tiny experimental FVP, using the temporary explicit
+reporting helpers. This is a scope judgment, not a measured development-time
+claim. Native deployment remains the language goal; the evaluator does not
+satisfy that goal. B is not required for the first runnable version. Bytecode
+engines, JITs, caching, and full REPL behavior are outside this bounded choice.
 
 ## Verification and limits
 
@@ -226,10 +245,11 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 ## Decision references and handoff
 
-Temporary input/reporting helper names and roles are selected above; complete
-I/O contracts, execution mechanism, and feature subset remain open.
+The small interpreter, temporary helper surface, and input-fault policy are
+selected above. Complete I/O/exit contracts, exact feature/numeric subset,
+implementation language, and internal structure remain open.
 The input-fault behavior above is selected, with concrete category/transport,
 recovery support, and exact parsing/consumption still open.
-First settle whether an experimental evaluator is acceptable for the FVP or a
-native artifact is mandatory. Then bound the initial supported syntax/numbers
-and exact explicit-observation behavior. Preserve the deferred investigations.
+Next bound the initial supported syntax/numbers and remaining input/report/exit
+behavior, then the implementation language and structure needed for that slice.
+Preserve the deferred investigations; a native backend is not an FVP blocker.

@@ -67,8 +67,11 @@ record the current selection:
   unsupported features receive clear diagnostics.
 - Grow toward practical scripts with command-line arguments, console I/O, and
   file processing. Systems capabilities remain later investigations.
-- Runner versus compiler, commands, backend, observation API, exact demonstrator
-  subset/order, and exercise coverage remain open. No implementation is claimed.
+- Subsequent FVP selections on 2026-10-30 choose a small interpreter and temporary
+  input/report/exit helpers. Commands, implementation language, native backend,
+  full helper contracts, exact subset/order, and later coverage remain open.
+  See [the interpreter selection](../docs/tooling-and-learning.md#fvp-interpreter).
+  No implementation is claimed.
 
 This selects the practical scope of A2 below without freezing all 520 exercises
 as acceptance requirements. The initial literals/bindings/arithmetic/display

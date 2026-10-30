@@ -296,6 +296,11 @@ The user clarifies [metadata plus overlapping payload](union-zero.md#current-sto
 
 ## Candidate execution experience
 
+The [first FVP uses a small interpreter](tooling-and-learning.md#fvp-interpreter),
+selected 2026-10-30. Native compilation remains a later goal. This experimental
+path does not demonstrate native performance, runtime footprint, or no-GC
+deployment; those priorities and their measurement requirements remain intact.
+
 ```text
 lite run lesson.lts
 ```

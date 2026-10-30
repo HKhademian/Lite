@@ -7,9 +7,25 @@ Status: **official formatter required; compact/multiline presentation, unchanged
 Students should spend their early effort understanding programs rather than choosing build tools or interpreting parser jargon.
 
 The [selected first working targets](principles.md#first-working-targets) call
-for a tiny executable demonstrator before practical scripting. Its runner or
-compiler mechanism and command spelling remain open. Temporary input/reporting
+for a tiny executable demonstrator before practical scripting. A small interpreter
+is selected for the FVP; implementation language and command spelling remain
+open. Temporary input/reporting
 helper names are selected below; their detailed contracts remain open.
+
+## FVP interpreter
+
+Selected **2026-10-30**: use a small interpreter for the first viable product.
+Read one source file, parse and check the supported subset, then execute it with
+the temporary input/report/exit helpers. Preserve selected evaluation, binding,
+type, copy, failure, and cleanup rules for every supported feature; diagnose
+unsupported features clearly. This is a bounded experimental execution path.
+
+Native compilation remains a later language/deployment goal, not a requirement
+for this first runnable FVP. Do not require both interpreted and native paths,
+caching, a JIT/bytecode engine, a full debugger, or module/package machinery to
+deliver this slice. The implementation language, concrete parser/checker/evaluator
+structure, exact feature/numeric subset, and remaining helper contracts are open.
+This selection is not an implementation or a performance/footprint result.
 
 ## Explicit output and tracing
 

@@ -50,8 +50,11 @@ are deferred beyond this immediate FVP. Existing .lts sample filenames do not
 require a module/import subsystem. Likewise, replaceable std, interface/provider
 layout, metaprogramming, and macro/preprocessing mechanisms are later questions.
 Supported features still follow their selected semantics, effects remain
-explicit, and unsupported features receive clear diagnostics. Exact FVP feature
-coverage and execution mechanism remain open.
+explicit, and unsupported features receive clear diagnostics. Selected
+2026-10-30: a [small interpreter](tooling-and-learning.md#fvp-interpreter) reads,
+parses/checks, and executes the supported subset for the FVP. Native compilation
+remains a later goal; exact feature coverage and implementation language remain
+open.
 
 The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
 provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
@@ -75,17 +78,18 @@ require explicit module qualification or member introduction, with no implicit
 imports even for core type names. Standard module/file providers are intended
 to be replaceable. Script-run aliases and diagnostic disclosure remain proposals.
 
-The demonstrator should execute a `.lts` source file through a minimal runner
-or compilation path and provide a simple way to observe results. Supported
+The demonstrator should execute a `.lts` source file through the selected small
+interpreter and provide a simple way to observe results. Supported
 features must follow their selected rules; unsupported features must produce
-clear diagnostics. Runner versus compiler, commands, backend, and full I/O
-contracts remain open; temporary helper names are selected above. Literals, bindings, arithmetic, and simple value display are a
+clear diagnostics. Commands, implementation language, later native backend, and
+full I/O contracts remain open; temporary helper names are selected above.
+Literals, bindings, arithmetic, and simple value display are a
 proposed initial subset, with conditionals, functions, and loops added
 incrementally; this feature order is not a selected implementation plan.
 
 These are development targets, not an implemented toolchain or a release promise.
-The lightweight native execution goals continue to guide the language; choosing
-an experimental execution mechanism remains a separate decision.
+The lightweight native execution goals continue to guide the language; the FVP
+interpreter does not itself establish those native deployment goals.
 
 ## Representative shape
 
