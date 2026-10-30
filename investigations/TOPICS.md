@@ -45,7 +45,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body re-review retains option A and explicit output/tracing, concrete observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — INV-003.02 retains ordered blocks/deferred-body/header-free module direction, initial static enforcement, existing-binding identity, live admitted reads, first subsequent forward targets, and direct own-name recursion without an earlier target. Explicit self(...) current-implementation calls selected 2026-10-29, recorded 2026-10-30; ordinary names keep lexical lookup. Name collisions/reservation, full nested/outer targeting, eligibility, mutual recursion/inference, precise proofs, and callback policy remain open. INV-003.03–.04 not started.
+**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body and explicit-output decisions, observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — in progress, ordered blocks, lookup/live-read rules, static-first checks, direct recursion, and explicit self calls recorded; naming/nesting/access/inference details remain open; [INV-003-03](INV-003-03-script-environment.md) — in progress, environment inventory and predefined-versus-imported output alternatives recorded, no new rule selected. INV-003.04 not started.
 
 <a id="inv-004"></a>
 
