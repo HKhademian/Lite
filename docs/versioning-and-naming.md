@@ -54,6 +54,17 @@ Many existing pages say “LiteScript” when they mean the language. That usage
 - Tool metadata may accept `litescript` as a legacy language id through the `0.x` migration period. New metadata uses `litelang`.
 - Do not add new legacy usage while editing a page for another reason.
 
+### Bootstrap source continuity
+
+Selected direction 2026-10-30: keep a downloadable, versioned Python igniter and
+compatible compiler source revisions sufficient to build forward to the current
+Lite-written compiler after active development becomes self-hosted. Preserve
+the bootstrap path when source language requirements change. Exact required
+revisions, stage dependencies, preservation/rebuild verification, and distribution
+procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06).
+See [the owning self-hosting direction](tooling-and-learning.md#python-igniter-and-early-self-hosting).
+No bootstrap bundle, release artifact, or reproducible-build result exists yet.
+
 ## 2. Version streams
 
 These are independent version streams. A release manifest records the exact combination.

@@ -2,6 +2,29 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Minimal Python igniter and early self-hosting, 2026-10-30
+
+- Accept Python 3 with standard library only as the minimal bootstrap igniter for
+  the experimental interpreter. Avoid building enduring Python infrastructure.
+- Select early self-hosting: move compiler development to LiteLang as soon as
+  the language can implement its compiler, then stop developing the Python path.
+  This selects the intended self-hosted implementation language, superseding the
+  prior claim that the future compiler language is wholly open.
+- Preserve the versioned igniter and compatible Lite-written compiler sources
+  so a new user can build forward to the current compiler. Retiring active Python
+  development does not mean deleting the bootstrap seed or source history.
+- Exact supported seed subset, self-hosting threshold, first compatible compiler,
+  output/backend, intermediate revisions/artifacts, host prerequisites, chain
+  verification, and reproducible rebuild procedure remain open. No direct
+  seed-to-latest shortcut or working compiler/bootstrap is claimed.
+- This is a growth direction, not a reason to enlarge the selected first runnable
+  checkpoint into a full compiler or build/release system now.
+
+Owner: [Python igniter and early self-hosting](tooling-and-learning.md#python-igniter-and-early-self-hosting).
+[INV-061](../investigations/INV-061-fvp-implementation-language.md#igniter-and-self-hosting-selection-2026-10-30)
+records the selection; [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06)
+tracks the unresolved source-bootstrap route.
+
 ## Defer detailed text design for the FVP, 2026-10-30
 
 The user accepts narrowing the immediate text work to basic quoted text and
@@ -48,8 +71,8 @@ where not selected separately.
 - Add conditionals/Booleans, loops, user functions, tuples/destructuring, and
   richer types after the first runnable slice; relative order remains open.
   This checkpoint is neither the final FVP ceiling nor completion of all 001–020.
-- Remaining numeric/text details, helper contracts, implementation language,
-  internal structure, and later coverage remain open. No execution is claimed.
+- Remaining numeric/text details, helper contracts, internal structure, and later
+  coverage remain open. No execution is claimed.
 
 Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
 [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
@@ -65,7 +88,7 @@ records acceptance and the candidate probes.
   full debugger, module/package system, or dual execution path is a gate for
   this first runnable experiment.
 - The first executable feature checkpoint is subsequently selected above.
-  Implementation language, concrete internal structure, numeric/text details,
+  Python is subsequently selected as the minimal igniter; concrete internal structure, numeric/text details,
   later feature coverage, remaining helper contracts, and native backend remain open.
   This selects the execution mechanism, not an implemented interpreter or a
   measured performance/footprint result.
@@ -349,9 +372,10 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
   memory placement, and concurrency remain later investigations.
 - Supported demonstrator features follow selected rules; unsupported features
   receive clear diagnostics. Subsequent 2026-10-30 decisions select a small FVP
-  interpreter and temporary input/report/exit helpers. Commands, implementation
-  language, native backend, full helper contracts, numeric/text profile and later feature order,
-  later coverage, and release targets remain open. No implementation work or
+  interpreter and temporary input/report/exit helpers, followed by the minimal
+  Python igniter and early LiteLang self-hosting direction. Commands, native
+  backend, full helper contracts, remaining numeric/text details, later feature
+  order/coverage, and release targets remain open. No implementation work or
   conformance result is implied.
 
 Owner: [first working targets](principles.md#first-working-targets).

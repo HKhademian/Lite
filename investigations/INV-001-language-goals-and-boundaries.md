@@ -68,7 +68,8 @@ record the current selection:
 - Grow toward practical scripts with command-line arguments, console I/O, and
   file processing. Systems capabilities remain later investigations.
 - Subsequent FVP selections on 2026-10-30 choose a small interpreter and temporary
-  input/report/exit helpers. Commands, implementation language, native backend,
+  input/report/exit helpers. Python is subsequently selected as the minimal
+  igniter with early LiteLang self-hosting. Commands, native backend,
   full helper contracts, exact subset/order, and later coverage remain open.
   See [the interpreter selection](../docs/tooling-and-learning.md#fvp-interpreter).
   No implementation is claimed.

@@ -8,8 +8,8 @@ Students should spend their early effort understanding programs rather than choo
 
 The [selected first working targets](principles.md#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. A small interpreter
-is selected for the FVP; implementation language and command spelling remain
-open. Temporary input/reporting
+is selected for the FVP, with Python as the minimal igniter and early LiteLang
+self-hosting selected below. Command spelling remains open. Temporary input/reporting
 helper names are selected below; their detailed contracts remain open.
 
 ## FVP interpreter
@@ -23,8 +23,8 @@ unsupported features clearly. This is a bounded experimental execution path.
 Native compilation remains a later language/deployment goal, not a requirement
 for this first runnable FVP. Do not require both interpreted and native paths,
 caching, a JIT/bytecode engine, a full debugger, or module/package machinery to
-deliver this slice. The implementation language, concrete parser/checker/evaluator
-structure, exact numeric/text profile, and remaining helper contracts are open.
+deliver this slice. Python is selected only as the minimal igniter. Concrete
+internal structure, numeric/text details, and remaining helper contracts are open.
 This selection is not an implementation or a performance/footprint result.
 
 ### First executable checkpoint
@@ -44,14 +44,14 @@ run. This is an acceptance target, not an executed test.
 Add conditionals/Boolean expressions, loops, user-defined functions, tuples and
 destructuring, and richer types in subsequent increments; their relative order
 is open. The checkpoint is not the final FVP feature ceiling or a requirement
-to finish all 001–020 exercises first. Numeric/text details, helper contracts,
-and implementation language still need definition; no interpreter is implemented.
+to finish all 001–020 exercises first. Numeric/text details and helper contracts
+still need definition; Python is the igniter and no interpreter is implemented.
 See [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,
-promotions/literal details, text profile, and implementation language remain open.
+promotions/literal details and text profile remain open. Python is the selected igniter.
 
 **FVP scope correction, 2026-10-30:** basic quoted text and the temporary
 inputLine/inputWord/report helpers are enough to begin. Use a simple temporary
@@ -62,6 +62,41 @@ mixed-input rules are not prerequisites for starting the interpreter. Existing
 input-fault and explicit-output selections still apply. Record supported
 behavior and limitations without presenting host defaults as permanent language
 semantics.
+
+## Python igniter and early self-hosting
+
+Selected direction **2026-10-30**: Python is only the minimal, disposable
+**igniter** for the experimental interpreter. Use Python 3 with the standard
+library, without building a lasting Python framework or general compiler
+infrastructure. Move compiler development into LiteLang as soon as the supported
+language is sufficient to implement its compiler. Keep the selected first
+executable checkpoint small; a complete self-hosted compiler is not its gate.
+
+After the transition, abandon Python as the actively developed compiler path.
+Retain a versioned bootstrap copy so a new user can download the igniter and
+the required compiler sources and build forward to the current compiler. Do
+not delete the only usable bootstrap route when retiring Python from daily work.
+This is a source-bootstrap goal, not a claim that such a route exists yet.
+
+Conceptual route, not a selected build mechanism:
+
+```text
+Python igniter -> first compatible Lite-written compiler
+               -> compatible compiler revisions -> current compiler
+```
+
+An interpreter can execute the first Lite-written compiler source; producing a
+usable next-stage compiler still requires a defined output/backend and execution
+path. Do not equate interpreting Lite with already compiling itself. The seed's
+supported language subset, first compatible compiler revision, stage artifacts,
+host dependencies, source/version compatibility, preservation and verification
+of the chain, and rebuild reproducibility remain open under
+[INV-061.06](../investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
+route is not promised if later compiler source uses newer language features.
+
+This direction chooses LiteLang for the self-hosted compiler. It selects neither
+the self-hosting threshold nor a native backend, release infrastructure, or a
+Python expansion beyond what the experiments and eventual handoff need.
 
 ## Explicit output and tracing
 

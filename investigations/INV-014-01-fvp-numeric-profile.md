@@ -93,5 +93,6 @@ claimed.
 
 The user accepts the provisional widths and fault boundary. Next settle
 the remaining rounding/promotion/literal details needed for this slice,
-alongside its text profile and implementation language. All permanent numeric
+alongside its text profile. Python is now selected as the minimal igniter, with
+early LiteLang self-hosting as the direction. All permanent numeric
 contracts remain reviewable; this selection does not implement any types.

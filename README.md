@@ -10,6 +10,7 @@ The project is currently **planning only**. These documents record the design di
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)
 - [First working targets](docs/principles.md#first-working-targets): a small interpreter is selected for the experimental FVP, followed by practical scripts and later native compilation. These are development decisions; no runner or compiler exists yet.
+- [Bootstrap direction](docs/tooling-and-learning.md#python-igniter-and-early-self-hosting): minimal Python igniter, early transition to a Lite-written compiler, and a preserved source-bootstrap route to current versions. No bootstrap implementation exists yet.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)

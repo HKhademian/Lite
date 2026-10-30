@@ -26,7 +26,8 @@ supported features and clearly diagnose unsupported constructs.
 
 Native compilation remains a later goal; a native artifact is not required for
 this FVP. Do not make dual execution paths, caching, a bytecode/JIT engine, a
-debugger, or module machinery prerequisites. Implementation language, concrete
+debugger, or module machinery prerequisites. Python is now the selected minimal
+igniter, followed by early LiteLang self-hosting. Concrete
 internal representation/checker structure, numeric/text profile, later feature
 coverage, and remaining I/O/exit details are still open. The first feature
 checkpoint is selected in [INV-002.02](INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
@@ -75,8 +76,8 @@ Baseline: `b947746`; working tree clean before this investigation.
 - [Native execution](../docs/memory-and-performance.md#lightweight-native-execution-priority)
   remains a selected language/deployment goal. The experimental demonstrator's
   execution mechanism was open at the original baseline; the small interpreter
-  is now selected above. The native backend and host implementation language
-  remain open. An experimental evaluator does not establish the native goal.
+  is now selected above. Python is subsequently selected as the minimal igniter
+  with early LiteLang self-hosting; the native backend remains open. An experimental evaluator does not establish the native goal.
 - [Explicit observation](../docs/tooling-and-learning.md#explicit-output-and-tracing)
   permits a deliberately enabled tool facility. It must observe executed values
   without reevaluating their expressions. Running a file alone does not echo it.
@@ -248,10 +249,10 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 The small interpreter, temporary helper surface, and input-fault policy are
 selected above. The [first executable checkpoint](INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
-is now selected; numeric/text details, complete I/O/exit contracts, implementation
-language, and internal structure remain open.
+is now selected; Python is the minimal igniter with early LiteLang self-hosting.
+Numeric/text details, complete I/O/exit contracts, and internal structure remain open.
 The input-fault behavior above is selected, with concrete category/transport,
 recovery support, and exact parsing/consumption still open.
 Next bound numeric/text details and remaining input/report/exit behavior, then
-the implementation language and structure needed for the selected slice.
+the minimal igniter structure needed for the selected slice.
 Preserve the deferred investigations; a native backend is not an FVP blocker.

@@ -801,11 +801,11 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/grammar-sketch.md](../docs/grammar-sketch.md); [docs/types-and-inference.md](../docs/types-and-inference.md); [docs/memory-and-performance.md](../docs/memory-and-performance.md).
 
-**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-061).
+**Starter subtopics:** [6 bounded questions](SUBTOPICS.md#inv-061).
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — Python 3 standard-library interpreter with tokenizer/parser/checker/evaluator recommended, not selected. Future native compiler language and full compiler architecture remain open.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — minimal Python 3 standard-library igniter and early transition to a Lite-written compiler selected; retire active Python development while preserving the source-bootstrap path. INV-061.06 inventories the threshold and build chain, detailed investigation not started; stages/backend and full compiler architecture remain open.
 
 <a id="inv-062"></a>
 
