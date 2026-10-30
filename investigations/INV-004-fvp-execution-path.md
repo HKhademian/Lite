@@ -26,8 +26,10 @@ FVP names/roles, supplied by demonstrator scaffolding without requiring a module
 system or permanent stdlib design. report supersedes the assistant's unselected
 show illustration. The ellipsis does not select further helpers or a variadic
 signature. Real versus scripted/mock input, numeric parsing and token/line
-consumption, EOF/failures, complete signatures, reporting formats/destinations,
+consumption, complete signatures, reporting formats/destinations,
 and reportError's I/O-failure behavior remain open. No mock values are chosen.
+Invalid input/EOF behavior is subsequently selected in the input-failure section
+below; concrete fault category/transport and recovery support remain open.
 A subsequent [INV-005 selection](INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30)
 makes successful reportError calls report-only and adds exit(errCode?) for
 explicit program end; exit defaults and cleanup behavior remain open.
@@ -84,11 +86,18 @@ unsupported constructs clearly. A host evaluator's arithmetic is not an
 automatic definition of LiteLang numeric behavior. Add invalid-name and
 unsupported-feature probes alongside the successful case when implemented.
 
-## Temporary input failure question, 2026-10-30
+## Temporary input failure selection, 2026-10-30
 
-The next bounded FVP question is how the selected fake input helpers behave on
+This bounded FVP question concerns how the selected fake input helpers behave on
 bad input or end-of-input. This does not reopen the permanent I/O library design
 or require module machinery. Baseline for this addition: `7c01542`.
+
+The user accepts option A below on baseline `904729d`: invalid input or EOF
+before a requested value is available raises an input fault; unhandled faults
+produce a clear diagnostic and nonzero status. No automatic retry or fabricated
+0/empty string. An intentionally supplied empty inputLine remains valid.
+Owner: [temporary input failures](../docs/tooling-and-learning.md#temporary-input-failures).
+Ledger: [temporary input fault policy](../docs/decisions-and-open-questions.md#temporary-input-fault-policy-2026-10-30).
 
 ```text
 number := inputInt();
@@ -104,7 +113,7 @@ Design probes, not executed tests:
   A deliberate empty line for inputLine is distinct from no input being available
   at EOF; tokenization, line terminators, and consumption rules remain open.
 
-Options and consequences:
+Original options and consequences (A now selected):
 
 - **A — Input fault, failed run if unhandled.** Keep the success call simple;
   a failed read produces a clear diagnostic and nonzero completion if unhandled.
@@ -118,15 +127,15 @@ Options and consequences:
   or malformed input, but requires selecting the helper's Result/Option contract
   and making the relevant handling features available in the supported subset.
 
-**Recommendation, not selected:** A for these temporary direct-value helpers.
+**Selected:** A for these temporary direct-value helpers.
 Do not silently manufacture 0 or an empty string and do not silently reprompt.
 For inputLine, an intentionally supplied empty line can be a successful empty
-string; EOF without a line is a failed read. The same failure-policy question
-applies to inputFloat and inputWord.
+string; EOF without a line is a failed read. The same failure policy applies
+to inputFloat and inputWord.
 
-The input-fault type/channel, any supported recovery, numeric grammar/range,
+The concrete input-fault category/transport, any supported recovery, numeric grammar/range,
 token-versus-line consumption, real versus scripted input, and exact diagnostic/
-status code remain open. This recommendation does not select a host exception,
+status code remain open. This selection does not select a host exception,
 hard abort, cleanup bypass, or permanent stdlib policy. If recovery is supported,
 its selected semantics must be preserved; failure of an input operation is
 different from the separate report-only operation reportError(...).
@@ -219,8 +228,8 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 Temporary input/reporting helper names and roles are selected above; complete
 I/O contracts, execution mechanism, and feature subset remain open.
-The active bounded input question above compares failed reads, retries, defaults,
-and explicit outcome data; its recommendation remains unselected.
+The input-fault behavior above is selected, with concrete category/transport,
+recovery support, and exact parsing/consumption still open.
 First settle whether an experimental evaluator is acceptable for the FVP or a
 native artifact is mandatory. Then bound the initial supported syntax/numbers
 and exact explicit-observation behavior. Preserve the deferred investigations.

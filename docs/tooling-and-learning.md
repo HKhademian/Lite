@@ -69,12 +69,27 @@ all/last-binding inspector is not required for this path.
 
 Keep the remaining choices small and explicit before implementation: real
 console input versus scripted/fixed test input; token/line consumption, numeric
-parsing and EOF/failure behavior; complete input/output signatures, supported
+parsing details; complete input/output signatures, supported
 reported values, formatting/newlines and destinations. A successful reportError
 call is now selected to report only, as specified below. The word fake selects temporary
 scaffolding, not any particular mock-input values or transport. No stdout/stderr,
 prompt, exception, or panic policy is selected by these names alone.
 No helpers or runner have been implemented yet.
+
+### Temporary input failures
+
+Selected **2026-10-30**: invalid input or EOF before a requested value is
+available raises an input fault. If unhandled, report a clear diagnostic and
+finish the run with nonzero status. Do not silently return 0/empty text or
+automatically retry. An intentionally supplied empty line is a valid empty
+string for inputLine(); EOF without a line is a failed read.
+
+The policy applies to the temporary inputInt, inputFloat, inputLine, and inputWord
+helpers. Their exact numeric grammar/ranges, whitespace/token/line consumption,
+concrete fault category/transport, recovery support, and diagnostic/status code
+remain open. Preserve selected recovery/cleanup semantics for any supported
+features; no host exception, raw abort, or cleanup bypass is selected here. This
+is disposable FVP scaffolding, not a permanent standard-library I/O contract.
 
 ## FVP completion and explicit exit
 

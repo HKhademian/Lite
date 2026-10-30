@@ -61,7 +61,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — experimental evaluator versus native-first artifact, with explicit observation; evaluator recommended for the tiny FVP but not selected. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; bad-input/EOF options now recorded with unhandled input-fault failure recommended, not selected. Complete I/O contracts, backend/host language, exact subset, native deployment, caching, full mode parity, and restricted profiles remain open.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — experimental evaluator versus native-first artifact, with explicit observation; evaluator recommended for the tiny FVP but not selected. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. Complete I/O contracts, backend/host language, exact subset, native deployment, caching, full mode parity, and restricted profiles remain open.
 
 <a id="inv-005"></a>
 

@@ -2,6 +2,23 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Temporary input fault policy, 2026-10-30
+
+- Accept invalid input or EOF before the requested value is available as an
+  input fault for the temporary inputInt/inputFloat/inputLine/inputWord helpers.
+  An unhandled fault gives a clear diagnostic and nonzero run status.
+- Do not fabricate 0/empty text or automatically retry. A deliberately supplied
+  empty line remains a valid empty inputLine value; no available line at EOF
+  is a failed read.
+- Exact parsing/ranges, token/line consumption, concrete fault category/transport,
+  recovery support, and diagnostic/status codes remain open. Preserve the
+  language's selected recovery/cleanup semantics wherever supported; this does
+  not select a raw abort or permanent stdlib API.
+
+Owner: [temporary input failures](tooling-and-learning.md#temporary-input-failures).
+[INV-004](../investigations/INV-004-fvp-execution-path.md#temporary-input-failure-selection-2026-10-30)
+records acceptance. No input helper or runtime test is implemented.
+
 ## Disposable FVP scaffolding, 2026-10-30
 
 The user explicitly reaffirms that these temporary facilities will be cleaned up
@@ -41,8 +58,9 @@ records the selection. No implemented exit operation or runtime result is claime
   complete callable/variadic signatures, or an implementation. report supersedes
   the assistant's illustrative show name. Input/output still requires explicit
   calls; no automatic binding dump or change to Unit/block-result rules follows.
-- Real versus scripted/mock input, parsing/consumption, EOF/failures, exact types,
-  formatting/newlines/destinations remain open. reportError's report-only role
+- Real versus scripted/mock input, exact parsing/consumption and types,
+  formatting/newlines/destinations remain open. The subsequent input-fault policy
+  above resolves invalid input/EOF behavior. reportError's report-only role
   and a separate exit operation are subsequently selected above; failures during
   reporting still need contracts. Additional helpers are not selected merely by
   the user's trailing ellipsis.
