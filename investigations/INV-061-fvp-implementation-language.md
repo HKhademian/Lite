@@ -36,6 +36,21 @@ tools, version links, rebuild checks, and exact distribution remain open under
 [INV-061.06](SUBTOPICS.md#inv-061-06). No direct seed-to-latest capability or
 verified source chain is claimed.
 
+## Bootstrap versioning clarification, 2026-10-30
+
+The user emphasizes tagged versioning and version control to make the preserved
+source route usable. Select stable tags at exact igniter/compiler milestone
+commits, preserved referenced source history, and a compatibility map recording
+which builder revision builds each compiler source revision. Include host
+requirements and build/check steps as the chain becomes real. Do not move/delete
+published or chain-referenced tags; corrections get new tags/versions.
+
+Owner: [bootstrap source continuity](../docs/versioning-and-naming.md#bootstrap-source-continuity).
+Ledger: [stable tags and history](../docs/decisions-and-open-questions.md#stable-bootstrap-version-tags-and-source-history-2026-10-30).
+This does not require tagging every investigation commit or create a release now.
+Milestone numbers, igniter tag spelling, record format, and implemented chain
+checks remain open. No successful source rebuild is claimed.
+
 ## Evidence and recommendation
 
 Baseline: `a814652`; working tree clean before this note. The local environment

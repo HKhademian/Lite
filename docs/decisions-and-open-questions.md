@@ -2,6 +2,23 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Stable bootstrap version tags and source history, 2026-10-30
+
+- The user emphasizes tagged versioning and version control as essential to
+  rebuilding from the igniter. Tag required igniter/compiler milestones at exact
+  commits and preserve their source history. Do not move/delete published or
+  bootstrap-referenced tags; corrections receive new versions/tags.
+- Record which exact builder tag/commit builds which source tag/commit, required
+  host tools, and the build/check steps for advancing the chain. Keep the
+  compatibility map with source control and verify the complete route when built.
+- Ordinary investigation commits need no release tags. Exact igniter tag naming,
+  milestone numbers, and bootstrap-record format remain open. No tag, version
+  bump, release, or verified bootstrap result is created by this selection.
+
+Owner: [bootstrap source continuity](versioning-and-naming.md#bootstrap-source-continuity).
+[INV-061](../investigations/INV-061-fvp-implementation-language.md#bootstrap-versioning-clarification-2026-10-30)
+records the clarification.
+
 ## Minimal Python igniter and early self-hosting, 2026-10-30
 
 - Accept Python 3 with standard library only as the minimal bootstrap igniter for

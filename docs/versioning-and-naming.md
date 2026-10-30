@@ -65,6 +65,22 @@ procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-
 See [the owning self-hosting direction](tooling-and-learning.md#python-igniter-and-early-self-hosting).
 No bootstrap bundle, release artifact, or reproducible-build result exists yet.
 
+Reaffirmed **2026-10-30**: version control and stable version tags are required
+for bootstrap continuity. Tag the igniter and compiler milestones needed by the
+build chain, each tied to an exact source commit. Once published or referenced
+by that chain, do not move/delete those tags or rewrite away their source
+history; corrections get a new version/tag. Routine investigation commits do
+not each require a release tag.
+
+For each required stage, record the builder's version/tag and exact commit,
+the source version/tag and exact commit it builds, and how to produce and check
+the next stage, including required host tools. Preserve this compatibility map
+alongside the sources so users do not have to guess which historic revisions
+work together. Tags identify sources; successful end-to-end rebuilds must still
+verify the route. Exact tag naming for the igniter, first milestone versions,
+and bootstrap record format remain open. No tag or release is created by this
+documentation decision.
+
 ## 2. Version streams
 
 These are independent version streams. A release manifest records the exact combination.

@@ -78,6 +78,11 @@ the required compiler sources and build forward to the current compiler. Do
 not delete the only usable bootstrap route when retiring Python from daily work.
 This is a source-bootstrap goal, not a claim that such a route exists yet.
 
+The selected [bootstrap version-control rule](versioning-and-naming.md#bootstrap-source-continuity)
+requires stable milestone tags tied to exact commits and a recorded map of which
+builder/source revisions work together. Retain the igniter and required source
+history; verify the full build chain rather than treating tags alone as proof.
+
 Conceptual route, not a selected build mechanism:
 
 ```text
