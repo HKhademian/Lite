@@ -2,11 +2,14 @@
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
 type Operator = '+' | '-' | '*' | '/';
-type Type = 'Int' | 'Float' | 'String' | 'Unit';
+type Type = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
+type Comparison = '==' | '=!=' | '<' | '<!' | '<=' | '<!=' | '>' | '>!' | '>=' | '>!=';
+type Use = 'value' | 'discard';
 export type Value =
   | Readonly<{ kind: 'Int'; value: bigint }>
   | Readonly<{ kind: 'Float'; value: number }>
   | Readonly<{ kind: 'String'; value: string }>
+  | Readonly<{ kind: 'Bool'; value: boolean }>
   | Readonly<{ kind: 'Unit' }>;
 type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'report' | 'reportError' | 'exit';
 type Raw = Readonly<{ at: Position }> & (
@@ -14,8 +17,14 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'string'; text: string }
   | { kind: 'name'; name: string }
   | { kind: 'unit' }
-  | { kind: 'unary'; op: '+' | '-'; input: Raw }
+  | { kind: 'bool'; value: boolean }
+  | { kind: 'boolLeader'; input: Raw }
+  | { kind: 'unary'; op: '+' | '-' | 'not'; input: Raw }
   | { kind: 'binary'; op: Operator; left: Raw; right: Raw }
+  | { kind: 'logic'; op: 'and' | 'or'; left: Raw; right: Raw }
+  | { kind: 'compare'; first: Raw; rest: readonly Readonly<{ op: Comparison; right: Raw }>[] }
+  | { kind: 'block'; items: readonly RawItem[] }
+  | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
   | { kind: 'call'; name: string; args: readonly Raw[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
@@ -27,13 +36,18 @@ type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boole
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
   | { kind: 'read'; binding: Binding }
-  | { kind: 'unary'; op: '+' | '-'; input: Expr }
+  | { kind: 'unary'; op: '+' | '-' | 'not'; input: Expr }
   | { kind: 'binary'; op: Operator; left: Expr; right: Expr }
+  | { kind: 'logic'; op: 'and' | 'or'; left: Expr; right: Expr }
+  | { kind: 'compare'; first: Expr; rest: readonly Readonly<{ op: Comparison; right: Expr }>[] }
+  | { kind: 'block'; block: Block }
+  | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
   | { kind: 'call'; name: Builtin; args: readonly Expr[] }
 );
 type Item =
   | Readonly<{ kind: 'store'; binding: Binding; input: Expr }>
   | Readonly<{ kind: 'expression'; input: Expr }>;
+type Block = Readonly<{ items: readonly Item[]; type: Type }>;
 export type Program = Readonly<{ items: readonly Item[] }>;
 export type IO = Readonly<{
   read: () => string | null;
@@ -47,6 +61,8 @@ const NUMBER = /^(?:[0-9]+(?:\.[0-9]+)?)(?:[eE][+-]?[0-9]+)?/;
 const INPUT_NUMBER = /^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
 const INPUT_INTEGER = /^[+-]?[0-9]+$/;
 const SPACE = /^[ \t\n\r\f\v]$/;
+const KEYWORDS = new Set(['var', 'true', 'false', 'if', 'else', 'and', 'or', 'not',
+  'fn', 'loop', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally']);
 
 export class LiteFault extends Error {
   readonly at: Position;
@@ -81,6 +97,13 @@ function builtin(name: string): Builtin | undefined {
   switch (name) {
     case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord':
     case 'report': case 'reportError': case 'exit': return name;
+    default: return undefined;
+  }
+}
+function comparison(text: string): Comparison | undefined {
+  switch (text) {
+    case '==': case '=!=': case '<': case '<!': case '<=': case '<!=':
+    case '>': case '>!': case '>=': case '>!=': return text;
     default: return undefined;
   }
 }
@@ -155,11 +178,12 @@ function tokenize(text: string): readonly Token[] {
       do { advance(); } while (offset < text.length && /[_\p{ID_Continue}]/u.test(text[offset] ?? ''));
       tokens.push({ kind: 'id', text: text.slice(begin, offset), at: start });
     } else {
-      const pair = text.slice(offset, offset + 2);
-      if ([':=', '+=', '-=', '*=', '/=', '==', '**', '_/', '_%'].includes(pair)) {
-        advance(2);
-        tokens.push({ kind: 'symbol', text: pair, at: start });
-      } else if ('+-*/=();,'.includes(ch)) {
+      const operator = ['=!=', '>!=', '<!=', ':=', '+=', '-=', '*=', '/=', '==', '**', '_/', '_%',
+        '>=', '<=', '>!', '<!'].find(candidate => text.startsWith(candidate, offset));
+      if (operator !== undefined) {
+        advance(operator.length);
+        tokens.push({ kind: 'symbol', text: operator, at: start });
+      } else if ('+-*/=();,{}<>'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -181,15 +205,16 @@ class Parser {
   take(): Token { const token = this.peek(); this.index++; return token; }
   accept(text: string): boolean {
     const token = this.peek();
-    if (token.kind !== (text === 'var' ? 'id' : 'symbol') || token.text !== text) return false;
+    if (token.kind !== (/^[a-z]+$/.test(text) ? 'id' : 'symbol') || token.text !== text) return false;
     this.take(); return true;
   }
   expect(text: string): void {
     if (!this.accept(text)) source(`expected ${JSON.stringify(text)}`, this.peek().at);
   }
-  parse(): readonly RawItem[] {
+  parse(close = false): readonly RawItem[] {
     const items: RawItem[] = [];
     while (this.peek().kind !== 'eof') {
+      if (close && this.peek().kind === 'symbol' && this.peek().text === '}') break;
       if (this.accept(';')) continue;
       const start = this.peek();
       if (this.accept('var')) {
@@ -205,23 +230,54 @@ class Parser {
           ? { kind: 'declare', name: start.text, mutable: false, input, at: start.at }
           : { kind: 'assign', name: start.text, input, at: start.at });
       } else { items.push({ kind: 'expression', input: this.expression(), at: start.at }); }
-      if (this.peek().kind !== 'eof') this.expect(';');
+      const previous = this.tokens[this.index - 1];
+      const endedBlock = previous?.kind === 'symbol' && previous.text === '}';
+      const atClose = close && this.peek().kind === 'symbol' && this.peek().text === '}';
+      if (this.peek().kind !== 'eof' && !atClose && !endedBlock) this.expect(';');
     }
     return items;
   }
   expression(minimum = 0): Raw {
+    let leader: Token | undefined;
+    if (minimum === 0 && this.peek().kind === 'id' && ['and', 'or'].includes(this.peek().text)) {
+      leader = this.take(); // One optional presentation leader; still requires Bool.
+    }
     let left = this.prefix();
     while (true) {
+      const previous = this.tokens[this.index - 1];
+      if (previous?.kind === 'symbol' && previous.text === '}') break;
       const token = this.peek();
       const op = token.text;
+      if (token.kind === 'id' && (op === 'and' || op === 'or')) {
+        const precedence = op === 'or' ? 1 : 2;
+        if (precedence < minimum) break;
+        this.take();
+        left = { kind: 'logic', op, left, right: this.expression(precedence + 1), at: token.at };
+        continue;
+      }
       if (token.kind !== 'symbol') break;
+      if (comparison(op) !== undefined) {
+        if (4 < minimum) break;
+        const rest: Readonly<{ op: Comparison; right: Raw }>[] = [];
+        while (this.peek().kind === 'symbol') {
+          const previous = this.tokens[this.index - 1];
+          if (previous?.kind === 'symbol' && previous.text === '}') break;
+          const next = this.peek();
+          const compare = comparison(next.text);
+          if (compare === undefined) break;
+          this.take();
+          rest.push({ op: compare, right: this.expression(5) });
+        }
+        left = { kind: 'compare', first: left, rest, at: token.at };
+        continue;
+      }
       if (op !== '+' && op !== '-' && op !== '*' && op !== '/') break;
-      const precedence = op === '+' || op === '-' ? 1 : 2;
+      const precedence = op === '+' || op === '-' ? 5 : 6;
       if (precedence < minimum) break;
       this.take();
       left = { kind: 'binary', op, left, right: this.expression(precedence + 1), at: token.at };
     }
-    return left;
+    return leader === undefined ? left : { kind: 'boolLeader', input: left, at: leader.at };
   }
   prefix(): Raw {
     const token = this.take();
@@ -238,8 +294,28 @@ class Parser {
       if (this.accept(')')) return { kind: 'unit', at: token.at };
       const value = this.expression(); this.expect(')'); return value;
     }
+    if (token.kind === 'symbol' && token.text === '{') {
+      const items = this.parse(true); this.expect('}');
+      return { kind: 'block', items, at: token.at };
+    }
     if (token.kind === 'id') {
-      if (['fn', 'loop', 'if', 'return', 'mut', 'true', 'false', 'import', 'using', 'record', 'type'].includes(token.text)) {
+      if (token.text === 'true' || token.text === 'false') return { kind: 'bool', value: token.text === 'true', at: token.at };
+      if (token.text === 'not') return { kind: 'unary', op: 'not', input: this.expression(3), at: token.at };
+      if (token.text === 'if') {
+        const condition = this.expression();
+        if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('if requires a braced body', this.peek().at);
+        const body = this.prefix();
+        let otherwise: Raw | undefined;
+        if (this.accept('else')) {
+          const next = this.peek();
+          if (!((next.kind === 'symbol' && next.text === '{') || (next.kind === 'id' && next.text === 'if'))) {
+            source('else requires a braced body or else if', next.at);
+          }
+          otherwise = this.prefix();
+        }
+        return { kind: 'if', condition, body, otherwise, at: token.at };
+      }
+      if (['fn', 'loop', 'return', 'mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
         source(`${token.text} is not supported by this igniter yet`, token.at);
       }
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
@@ -257,7 +333,8 @@ class Parser {
 function numericLiteral(text: string, at: Position): Value {
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
-function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>): Expr {
+type CheckState = { nextSlot: number };
+function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
     case 'number': {
@@ -265,7 +342,30 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>): Expr {
       return { kind: 'literal', value, type: value.kind, at };
     }
     case 'string': return { kind: 'literal', value: { kind: 'String', value: raw.text }, type: 'String', at };
+    case 'bool': return { kind: 'literal', value: { kind: 'Bool', value: raw.value }, type: 'Bool', at };
+    case 'boolLeader': {
+      const input = checkExpression(raw.input, names, state);
+      if (input.type !== 'Bool') typeError('a leading and/or expression must be Bool', at);
+      return input;
+    }
     case 'unit': return { kind: 'literal', value: UNIT, type: 'Unit', at };
+    case 'block': {
+      const block = checkBlock(raw.items, names, state, use);
+      return { kind: 'block', block, type: block.type, at };
+    }
+    case 'if': {
+      const condition = checkExpression(raw.condition, names, state);
+      if (condition.type !== 'Bool') typeError('if condition must be Bool; there is no implicit truthiness', condition.at);
+      if (raw.otherwise === undefined && use === 'value') {
+        typeError('partial conditional values and guarded initializers/assignments are not supported yet; add else', at);
+      }
+      const body = checkExpression(raw.body, names, state, use);
+      const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use);
+      if (otherwise !== undefined && use === 'value' && otherwise.type !== body.type) {
+        typeError('conditional branch-result unions are not supported yet; use the same result type in each branch', at);
+      }
+      return { kind: 'if', condition, body, otherwise, type: use === 'discard' ? 'Unit' : body.type, at };
+    }
     case 'name': {
       const binding = names.get(raw.name);
       if (binding !== undefined) return { kind: 'read', binding, type: binding.type, at };
@@ -278,13 +378,17 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>): Expr {
         const value = numericLiteral(`-${raw.input.text}`, at);
         return { kind: 'literal', value, type: value.kind, at };
       }
-      const input = checkExpression(raw.input, names);
+      const input = checkExpression(raw.input, names, state);
+      if (raw.op === 'not') {
+        if (input.type !== 'Bool') typeError('not requires Bool', at);
+        return { kind: 'unary', op: raw.op, input, type: 'Bool', at };
+      }
       if (input.type !== 'Int' && input.type !== 'Float') typeError('unary arithmetic requires a number', at);
       return { kind: 'unary', op: raw.op, input, type: input.type, at };
     }
     case 'binary': {
-      const left = checkExpression(raw.left, names);
-      const right = checkExpression(raw.right, names);
+      const left = checkExpression(raw.left, names, state);
+      const right = checkExpression(raw.right, names, state);
       if ((left.type !== 'Int' && left.type !== 'Float') || (right.type !== 'Int' && right.type !== 'Float')) {
         typeError('arithmetic requires numeric operands', at);
       }
@@ -294,11 +398,30 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>): Expr {
       const type = left.type === 'Float' || right.type === 'Float' ? 'Float' : 'Int';
       return { kind: 'binary', op: raw.op, left, right, type, at };
     }
+    case 'logic': {
+      const left = checkExpression(raw.left, names, state);
+      const right = checkExpression(raw.right, names, state);
+      if (left.type !== 'Bool' || right.type !== 'Bool') typeError('and/or require Bool operands', at);
+      return { kind: 'logic', op: raw.op, left, right, type: 'Bool', at };
+    }
+    case 'compare': {
+      const first = checkExpression(raw.first, names, state);
+      const rest = raw.rest.map(pair => ({ op: pair.op, right: checkExpression(pair.right, names, state) }));
+      let previous = first;
+      for (const pair of rest) {
+        if (previous.type !== pair.right.type) typeError('mixed-type comparisons are not supported yet', pair.right.at);
+        if (pair.op !== '==' && pair.op !== '=!=' && previous.type !== 'Int' && previous.type !== 'Float') {
+          typeError('ordered comparisons currently require Int or Float', pair.right.at);
+        }
+        previous = pair.right;
+      }
+      return { kind: 'compare', first, rest, type: 'Bool', at };
+    }
     case 'call': {
       if (names.has(raw.name)) typeError('calling stored/user-defined functions is not supported yet', at);
       const name = builtin(raw.name);
       if (name === undefined) typeError(`unknown helper ${raw.name}`, at);
-      const args = raw.args.map(arg => checkExpression(arg, names));
+      const args = raw.args.map(arg => checkExpression(arg, names, state));
       let type: Type;
       switch (name) {
         case 'inputInt': type = 'Int'; break;
@@ -319,18 +442,20 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>): Expr {
   }
 }
 
-export function compile(text: string): Program {
-  const parsed = new Parser(tokenize(text)).parse();
-  const names = new Map<string, Binding>();
+function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Binding>, state: CheckState, use: Use): Block {
+  const names = new Map(outer);
   const items: Item[] = [];
-  let slots = 0;
-  for (const item of parsed) {
-    const input = checkExpression(item.input, names);
+  let type: Type = 'Unit';
+  for (const [index, item] of parsed.entries()) {
+    const context = item.kind === 'expression' && index === parsed.length - 1 ? use : 'discard';
+    const input = checkExpression(item.input, names, state, item.kind === 'expression' ? context : 'value');
     switch (item.kind) {
       case 'declare': {
-        const binding = { name: item.name, mutable: item.mutable, slot: slots++, type: input.type };
+        if (KEYWORDS.has(item.name)) source('keyword binding names are not supported by this igniter', item.at);
+        const binding = { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: input.type };
         names.set(item.name, binding);
         items.push({ kind: 'store', binding, input });
+        type = 'Unit';
         break;
       }
       case 'assign': {
@@ -339,13 +464,19 @@ export function compile(text: string): Program {
         if (!binding.mutable) typeError(`${item.name} is fixed; replacement requires var`, item.at);
         if (binding.type !== input.type) typeError(`cannot replace ${binding.type} with ${input.type}`, item.at);
         items.push({ kind: 'store', binding, input });
+        type = 'Unit';
         break;
       }
-      case 'expression': items.push({ kind: 'expression', input }); break;
+      case 'expression': items.push({ kind: 'expression', input }); type = input.type; break;
       default: unreachable(item);
     }
   }
-  return { items };
+  return { items, type: use === 'discard' ? 'Unit' : type };
+}
+
+export function compile(text: string): Program {
+  const parsed = new Parser(tokenize(text)).parse();
+  return checkBlock(parsed, new Map(), { nextSlot: 0 }, 'discard');
 }
 
 class Input {
@@ -375,6 +506,7 @@ function format(value: Value): string {
     case 'Int': return value.value.toString();
     case 'Float': return String(value.value);
     case 'String': return value.value;
+    case 'Bool': return value.value ? 'true' : 'false';
     case 'Unit': return 'Unit';
     default: return unreachable(value);
   }
@@ -407,12 +539,53 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
   }
 }
 
+function sameValue(left: Value, right: Value): boolean {
+  switch (left.kind) {
+    case 'Int': return right.kind === 'Int' && left.value === right.value;
+    case 'Float': return right.kind === 'Float' && left.value === right.value;
+    case 'String': return right.kind === 'String' && left.value === right.value;
+    case 'Bool': return right.kind === 'Bool' && left.value === right.value;
+    case 'Unit': return right.kind === 'Unit';
+    default: return unreachable(left);
+  }
+}
+function compare(op: Comparison, left: Value, right: Value): boolean {
+  if (op === '==') return sameValue(left, right);
+  if (op === '=!=') return !sameValue(left, right);
+  let order: number;
+  if (left.kind === 'Int' && right.kind === 'Int') {
+    order = left.value < right.value ? -1 : left.value > right.value ? 1 : 0;
+  } else if (left.kind === 'Float' && right.kind === 'Float') {
+    order = left.value < right.value ? -1 : left.value > right.value ? 1 : 0;
+  } else { throw new Error('igniter invariant: nonnumeric ordered comparison'); }
+  switch (op) {
+    case '<': return order < 0;
+    case '<!': return !(order < 0);
+    case '<=': return order <= 0;
+    case '<!=': return !(order <= 0);
+    case '>': return order > 0;
+    case '>!': return !(order > 0);
+    case '>=': return order >= 0;
+    case '>!=': return !(order >= 0);
+    default: return unreachable(op);
+  }
+}
+function boolean(value: Value): boolean {
+  if (value.kind !== 'Bool') throw new Error('igniter invariant: non-Bool after checking');
+  return value.value;
+}
+
 export function execute(program: Program, io: IO): number {
   const values: Value[] = [];
   const input = new Input(io.read);
   const evaluate = (expr: Expr): Value => {
     switch (expr.kind) {
       case 'literal': return expr.value;
+      case 'block': return evaluateBlock(expr.block.items);
+      case 'if':
+        if (boolean(evaluate(expr.condition))) return evaluate(expr.body);
+        // This missing branch is permitted only where its contribution is discarded.
+        return expr.otherwise === undefined ? UNIT : evaluate(expr.otherwise);
       case 'read': {
         const value = values[expr.binding.slot];
         if (value === undefined) throw new Error('igniter invariant: uninitialized checked binding');
@@ -420,12 +593,27 @@ export function execute(program: Program, io: IO): number {
       }
       case 'unary': {
         const value = evaluate(expr.input);
+        if (expr.op === 'not') return { kind: 'Bool', value: !boolean(value) };
         if (expr.op === '+') return value;
         if (value.kind === 'Int') return integer(-value.value, expr.at);
         if (value.kind === 'Float') return floating(-value.value, expr.at);
         throw new Error('igniter invariant: nonnumeric unary input');
       }
       case 'binary': return arithmetic(expr.op, evaluate(expr.left), evaluate(expr.right), expr.at);
+      case 'logic': {
+        const left = boolean(evaluate(expr.left));
+        const value = expr.op === 'and' ? left && boolean(evaluate(expr.right)) : left || boolean(evaluate(expr.right));
+        return { kind: 'Bool', value };
+      }
+      case 'compare': {
+        let left = evaluate(expr.first);
+        for (const pair of expr.rest) {
+          const right = evaluate(pair.right);
+          if (!compare(pair.op, left, right)) return { kind: 'Bool', value: false };
+          left = right;
+        }
+        return { kind: 'Bool', value: true };
+      }
       case 'call': {
         const args = expr.args.map(evaluate);
         switch (expr.name) {
@@ -468,11 +656,16 @@ export function execute(program: Program, io: IO): number {
       default: return unreachable(expr);
     }
   };
-  try {
-    for (const item of program.items) {
-      if (item.kind === 'store') values[item.binding.slot] = evaluate(item.input);
-      else evaluate(item.input);
+  const evaluateBlock = (items: readonly Item[]): Value => {
+    let result: Value = UNIT;
+    for (const item of items) {
+      if (item.kind === 'store') { values[item.binding.slot] = evaluate(item.input); result = UNIT; }
+      else result = evaluate(item.input);
     }
+    return result;
+  };
+  try {
+    evaluateBlock(program.items);
     return 0;
   } catch (error: unknown) {
     if (error instanceof EndRun) return error.code;

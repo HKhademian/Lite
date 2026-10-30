@@ -2,6 +2,22 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Igniter Boolean and conditional increment, 2026-10-30
+
+The next experimental increment implements existing Bool-only conditions,
+short-circuit logic, all ten adjacent-pair comparisons, lexical block scope,
+and basic if/else-if/else expressions. Whole-program checking precedes effects.
+Value branches require matching types for now; partial conditional values,
+guarded initializers/assignments, result unions, pattern guards, and then/finally
+are rejected as unsupported. The wider selected semantics are unchanged.
+
+Strict typechecking and all 22 Node test groups pass, covering skipped effects,
+chain evaluation counts, scope and Unit tails, and negative cases. Version
+0.1.0-alpha.2 receives a new milestone tag; alpha.1 remains fixed.
+Implementation: [conditions and block values](../igniter/README.md#conditions-and-block-values).
+Evidence: [INV-015](../investigations/INV-015-igniter-boolean-conditionals.md).
+No loops, user functions, native compiler or self-hosted chain is claimed.
+
 ## TypeScript/Node replaces Python; first igniter checkpoint, 2026-10-30
 
 - The user replaces the Python igniter with tightly typed TypeScript executed

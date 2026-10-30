@@ -6,6 +6,12 @@ Normative page: this page owns conditional result construction, no-match/guarded
 
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
+Implementation coverage, 2026-10-30: the [experimental igniter](../igniter/README.md#conditions-and-block-values)
+runs Bool conditions, basic braced branches, and same-type result expressions.
+No-else action conditionals skip their branch on false. The broader union,
+guarded initializer/assignment, pattern, then/finally, and metadata contracts
+below remain unimplemented; those forms are rejected rather than reinterpreted.
+
 ## Template
 
 ```text

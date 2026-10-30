@@ -4,6 +4,12 @@ Status: **accepted; all ten positive/negated comparison operators share this pre
 
 ## Purpose and template
 
+Implementation coverage, 2026-10-30: the [igniter](../igniter/README.md#conditions-and-block-values)
+implements the ten operators with adjacent-pair, single-evaluation, and
+short-circuit tests. It checks matching scalar types, orders only Int/Float,
+and supports String/Bool/Unit equality. Mixed-type/custom comparisons and the
+broader ownership model remain outside this implementation.
+
 Express mathematical bounds and adjacent comparisons without repeating the middle expression.
 
 ```text

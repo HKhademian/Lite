@@ -1,6 +1,6 @@
 # Lite igniter
 
-An experimental TypeScript interpreter for the first Lite FVP checkpoint.
+An experimental TypeScript interpreter for the first Lite FVP checkpoints.
 Disposable bootstrap code: move compiler development into Lite as soon as it
 can support it. This is not a native compiler or a self-hosted build chain.
 
@@ -18,6 +18,8 @@ node igniter/cli.ts igniter/examples/double-sum.lts
 ```
 
 Enter `7` and `5` on separate lines; it reports `24`. Redirected stdin works too.
+For basic conditions, run `node igniter/cli.ts igniter/examples/decisions.lts`
+and supply an integer such as `0` or `5`.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -37,11 +39,40 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 ## Supported checkpoint
 
 One file; fixed/inferred `:=` bindings, `var`/replacement, shadowing and scalar
-copies; integer/float/text/Unit values; `+ - * /`, unary signs and parentheses;
+copies; integer/float/text/Bool/Unit values; `+ - * /`, unary signs and parentheses;
 temporary helper calls. The whole file is parsed and checked before effects.
-Statements need semicolons between them; newlines do not terminate statements.
+Ordinary statements need semicolons between them; complete braced items do not.
+Newlines do not terminate statements.
 Repeated/trailing separators, adjacent text literals, multiline text, nested
 comments and raw comments are supported. Completed runs return status 0.
+
+### Conditions and block values
+
+`true`/`false`, Bool-only `and`/`or`/`not`, and braced `if`/`else if`/`else` are
+supported. Logical operators short-circuit; `not` applies to a complete comparison
+chain before `and`/`or`. One optional leading `and`/`or` preserves the requirement
+that the entire expression be Bool. No integer/string truthiness is admitted.
+
+All ten comparisons (`== =!= < <! <= <!= > >! >= >!=`) chain adjacent operands,
+retaining the middle value once and skipping later operands after failure. Every
+pair is checked before execution. Comparisons currently require matching scalar
+types; ordered pairs require Int or Float. String/Bool/Unit support equality and
+inequality. Mixed numeric comparisons and custom comparison providers are unsupported.
+
+Braced blocks introduce lexical scope and yield their last expression's value;
+empty/declaration/assignment-final blocks yield Unit. Semicolons do not discard
+that result. Parenthesize a block/conditional before continuing its value with an
+operator. Branch-local names stay local; permitted outer var replacement persists.
+
+Complete conditional expressions require matching result types in all branches
+for now. A conditional used only as an action may omit else: its false path
+contributes no value and executes no branch. Partial conditional initializers/
+assignments, branch-result unions, pattern guards, `then`, and `finally` are
+explicitly rejected. This implementation boundary does not change the wider
+language's selected guarded-update/union rules. Keyword binding names are not
+supported by the igniter; its permanent reserved-name profile remains open.
+
+### Numeric, input and reporting helpers
 
 - Int uses exact `bigint` computation with signed 64-bit checks, including minimum
   divided by -1. Int/Int division truncates toward zero.
@@ -73,8 +104,8 @@ comments and raw comments are supported. Completed runs return status 0.
   text profile. Identifier admission uses the host's Unicode ID properties plus
   underscore; the full Lite identifier profile remains open.
 
-Conditions/Booleans, loops, user functions, tuples/destructuring, explicit blocks,
-typed declarations, collections, modules, recovery and cleanup are unsupported.
+Loops, user functions, tuples/destructuring, typed declarations, collections,
+modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
 currently terminal because recovery is not implemented. Text concatenation and
 advanced operators are also unsupported; unsupported source is never evaluated
@@ -82,15 +113,18 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.1**, intended tag **igniter-v0.1.0-alpha.1**, identifies this
-first checkpoint. The tag pins the complete source commit and lockfile. It has
-no predecessor compiler and cannot build a Lite-written successor compiler yet.
+Version **0.1.0-alpha.2**, tag **igniter-v0.1.0-alpha.2**, identifies this
+checkpoint with Boolean conditions and scoped block values. The preserved first
+checkpoint is **igniter-v0.1.0-alpha.1** at commit `8c74537`.
+Each tag pins its source commit and lockfile. Both run directly on Node; neither
+is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
 There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-The tests exercise the real CLI and evaluator, including overflow and negative
+All **22 test groups** pass under the pinned Node/TypeScript versions. The tests
+exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
 This is not proof of the full 20-lesson or larger-language contract.

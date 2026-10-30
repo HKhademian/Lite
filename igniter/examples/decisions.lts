@@ -1,0 +1,20 @@
+/* Supply an integer. Try -4, 0, 5, and 12. */
+number := inputInt();
+
+description := if number < 0 {
+    "negative"
+} else if number == 0 {
+    "zero"
+} else {
+    "positive"
+}
+report(description);
+
+if 0 <= number < 10 {
+    report("between zero and nine");
+}
+
+/* The division is skipped when number is zero. */
+if number =!= 0 and 100 / number > 5 {
+    report("quotient exceeds five");
+}

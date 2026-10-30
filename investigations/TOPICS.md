@@ -199,7 +199,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/condition-chains.md](../docs/condition-chains.md); [docs/conditionals.md](../docs/conditionals.md); [docs/leading-separators.md](../docs/leading-separators.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-015 — Boolean/conditional igniter increment](INV-015-igniter-boolean-conditionals.md) — Bool-only logic, scalar comparison chains, scopes, and basic branches implemented with 22 passing test groups. Result unions, partial value/guarded updates, patterns, and then/finally remain unsupported; this is bounded implementation evidence, not completion of the full topic.
 
 <a id="inv-016"></a>
 

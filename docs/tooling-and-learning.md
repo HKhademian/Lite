@@ -50,6 +50,14 @@ are documented provisionally in the implemented [igniter](../igniter/README.md).
 The broad language contract remains a draft.
 See [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
+Implementation increment, 2026-10-30: the igniter now also supports Boolean
+values/logic, scalar comparison chains, basic conditionals, and scoped block
+values. Value branches currently need matching result types; partial conditionals
+are supported only as actions. Union results, guarded initializers/assignments,
+pattern conditions, completion/cleanup hooks, loops, and user functions remain
+unsupported. See [implemented conditions](../igniter/README.md#conditions-and-block-values)
+and [INV-015 evidence](../investigations/INV-015-igniter-boolean-conditionals.md).
+
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,
