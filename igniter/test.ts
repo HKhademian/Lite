@@ -412,3 +412,107 @@ test('factorial example runs through real CLI with checked results and failures'
     assert.equal(result.status, status); assert.equal(result.stdout, output); assert.equal(result.stderr, errors);
   }
 });
+
+test('computed String concatenation preserves contents and ordinary value copies', () => {
+  assert.equal(run(`var prefix := "hello";
+    saved := prefix + ", " + "سلام🙂";
+    prefix = "changed";
+    report(saved); report("" + prefix + "");
+    report("line\n" + "two");`).output, 'hello, سلام🙂\nchanged\nline\ntwo\n');
+  for (const code of ['report("x" + 1);', 'report(1 + "x");', 'report("x" - "y");',
+    'report("x" * 2);', 'report(+"x");']) fault(code, 'TypeError');
+});
+test('text helpers use consistent code-point positions without normalization or grapheme grouping', () => {
+  assert.equal(run(`text := "A🙂éسلام";
+    report(textLength(text)); report(textAt(text, 1)); report(textAt(text, 3));
+    report(textSlice(text, 0, 2)); report(textSlice(text, 2, 4));
+    report(textSlice(text, 4, 8)); report(textLength(""));
+    report(textLength("é")); report(textLength("é"));`).output,
+    '8\n🙂\ń\nA🙂\né\nسلام\n0\n1\n2\n');
+  assert.equal(run('report(textAt("🙂", 0)); report(textLength("👩‍💻"));').output, '🙂\n3\n');
+});
+test('textSlice admits empty and full half-open intervals, including the end of empty text', () => {
+  assert.equal(run(`report(textSlice("", 0, 0));
+    report(textSlice("abc", 0, 0)); report(textSlice("abc", 3, 3));
+    report(textSlice("abc", 0, 3)); report(textSlice("abc", 1, 2));
+    source := "a🙂b";
+    copy := textSlice(source, 0, 1) + textSlice(source, 1, 3);
+    report(copy == source);`).output, '\n\n\nabc\nb\ntrue\n');
+});
+test('invalid text positions fault without negative wrapping, clamping or huge-index rounding', () => {
+  for (const code of ['textAt("", 0);', 'textAt("abc", -1);', 'textAt("abc", 3);',
+    'textAt("🙂", 1);', 'textAt("abc", 9223372036854775807);',
+    'textSlice("abc", -1, 2);', 'textSlice("abc", 2, 1);', 'textSlice("abc", 0, 4);',
+    'textSlice("abc", 4, 4);', 'textSlice("", 0, 1);',
+    'textSlice("abc", 0, 9223372036854775807);']) fault(code, 'BoundPanic');
+});
+test('text operands and helper arguments execute once in written order before bounds checks', () => {
+  assert.equal(run(`report(({report(1); inputWord()}) + ({report(2); inputWord()}));
+    report(textSlice(({report(3); inputWord()}), ({report(4); 1}), ({report(5); 3})));`,
+  'hello world abcde').output, '1\n2\nhelloworld\n3\n4\n5\nbc\n');
+  let observed = '';
+  assert.throws(() => execute(compile('textSlice("abc", ({report(1); -1}), ({report(2); 2}));'), {
+    read: () => null, report: text => { observed += text; }, reportError: () => {},
+  }), (error: unknown) => error instanceof LiteFault && error.category === 'BoundPanic');
+  assert.equal(observed, '1\n2\n');
+});
+test('text signatures are checked before effects and temporary helper names can be shadowed', () => {
+  for (const code of ['textLength();', 'textLength("a", 1);', 'textLength(1);',
+    'textAt("a");', 'textAt("a", 0.0);', 'textAt(true, 0);',
+    'textSlice("a", 0);', 'textSlice("a", false, 1);', 'textSlice("a", 0, "1");',
+    'f := fn(): Int { 1 } textLength(f);', 'textLength := 1; textLength("a");']) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report(99); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
+    assert.equal(observed, false, code);
+  }
+  assert.equal(run('textLength := fn(text: String): Int { 7 } report(textLength("abc"));').output, '7\n');
+});
+test('a Lite function can scan and reconstruct text recursively with the temporary helpers', () => {
+  assert.equal(run(`reverse := fn(text: String): String {
+      length := textLength(text);
+      if length == 0 { return ""; }
+      textAt(text, length - 1) + self(textSlice(text, 0, length - 1))
+    }
+    report(reverse("a🙂ب")); report(reverse(""));`).output, 'ب🙂a\n\n');
+});
+test('Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection', () => {
+  const source = readFileSync(new URL('./examples/scan-arithmetic.lts', import.meta.url), 'utf8');
+  assert.equal(run(source, '12 + (003 * 4)\n').output,
+    'number: 12\nsymbol: +\nsymbol: (\nnumber: 003\nsymbol: *\nnumber: 4\nsymbol: )\n');
+  assert.equal(run(source, '123').output, 'number: 123\n');
+  assert.equal(run(source, ' \t\n').output, '');
+  assert.equal(run(source, '\n').output, '');
+  assert.equal(run(source, '-1/2').output, 'symbol: -\nnumber: 1\nsymbol: /\nnumber: 2\n');
+  assert.deepEqual(run(source, '🙂'), { code: 2, output: '', errors: 'unsupported symbol: 🙂\n' });
+  fault(source, 'InputFault');
+});
+test('real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations', () => {
+  const cli = new URL('./cli.ts', import.meta.url).pathname;
+  const example = new URL('./examples/scan-arithmetic.lts', import.meta.url).pathname;
+  for (const [input, status, output, errors] of [
+    ['12 + 30', 0, 'number: 12\nsymbol: +\nnumber: 30\n', ''],
+    ['🙂', 2, '', 'unsupported symbol: 🙂\n'],
+  ]) {
+    if (typeof input !== 'string') throw new Error('bad fixture');
+    const result = spawnSync(process.execPath, [cli, example], { input, encoding: 'utf8', timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, status);
+    assert.equal(result.stdout, output); assert.equal(result.stderr, errors);
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'lite-text-'));
+  const path = join(dir, 'probe.lts');
+  try {
+    writeFileSync(path, 'report(textLength(inputLine())); report(textAt("🙂", 0));');
+    const valid = spawnSync(process.execPath, [cli, path], { input: 'a🙂ب\n', encoding: 'utf8', timeout: 5000 });
+    assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
+    assert.equal(valid.stdout, '3\n🙂\n'); assert.equal(valid.stderr, '');
+    writeFileSync(path, 'textAt("🙂", 1);');
+    const check = spawnSync(process.execPath, [cli, '--check', path], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(check.error, undefined); assert.equal(check.status, 0);
+    assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+    const invalid = spawnSync(process.execPath, [cli, path], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
+    assert.equal(invalid.stdout, ''); assert.match(invalid.stderr, /:1:1: BoundPanic:/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

@@ -25,6 +25,9 @@ For loops, run `node igniter/cli.ts igniter/examples/sum-positive.lts`; enter
 For functions and recursion, run `node igniter/cli.ts igniter/examples/factorial.lts`;
 enter `5` to report `120` (or `0` to report `1`). Negative input explicitly
 reports an error and exits with status 2; overflow faults instead of wrapping.
+For a tiny Lite-written tokenizer, run
+`node igniter/cli.ts igniter/examples/scan-arithmetic.lts`; enter `12 + 30`
+to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -145,6 +148,46 @@ remain unsupported. The temporary builtin helpers are not first-class values.
 Function reporting/comparison is also rejected. Program exit and runtime faults
 propagate through function calls; cleanup and recoverable failures remain absent.
 
+### Temporary text operations
+
+Computed `String + String` concatenates without adding separators, interpreting
+escapes, or converting other types to text. Operands evaluate once, left to right.
+This implements the existing explicit concatenation direction; adjacent literals
+continue to join at parse time.
+
+Three disposable helpers make small text-scanning experiments possible:
+
+- `textLength(text: String): Int` counts code points using the host string iterator.
+- `textAt(text: String, index: Int): String` returns one code point as a String.
+  Indices start at zero and require `0 <= index < textLength(text)`.
+- `textSlice(text: String, start: Int, end: Int): String` returns the half-open
+  interval `[start, end)`, requiring `0 <= start <= end <= textLength(text)`.
+  Empty intervals, including `(0, 0)` on empty text, are valid.
+
+All three use the same temporary position unit. Supplementary characters such as
+an emoji occupy one position; combining marks and joined emoji sequences occupy
+several. No normalization or human-language segmentation is performed. This
+does not select the full language's String indexing, character type, or slice/view
+contract. Invalid positions raise terminal `BoundPanic`, with a source location;
+there is no wrapping, clamping, or fabricated value. Arguments evaluate once in
+written order before the bounds check. BigInt bounds are checked before converting
+an admitted index to a host number. Arity and types are checked before program effects.
+
+The host currently materializes code points on each helper call, so even length
+and indexed access scan the text and use temporary storage. Repeated scanning
+may be quadratic; no constant-time indexing, native layout, zero-copy slice,
+ownership, or performance guarantee follows. Generic String indexing syntax,
+byte/grapheme views, interpolation, formatting and the full text profile remain
+unsupported or open. These helper names obey ordinary shadowing and are not
+first-class builtin values.
+
+The [arithmetic tokenizer](examples/scan-arithmetic.lts) groups ASCII decimal
+digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
+It preserves digit text, including leading zeroes. An unsupported character
+explicitly reports an error and exits 2; an empty supplied line has no output,
+while EOF before a line faults. It is an experiment written in Lite, not the
+Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
+
 ### Numeric, input and reporting helpers
 
 - Int uses exact `bigint` computation with signed 64-bit checks, including minimum
@@ -180,18 +223,20 @@ propagate through function calls; cleanup and recoverable failures remain absent
 Tuples/destructuring, general typed declarations, collections,
 modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
-currently terminal because recovery is not implemented. Text concatenation and
-advanced operators are also unsupported; unsupported source is never evaluated
+currently terminal because recovery is not implemented. Advanced operators
+remain unsupported; unsupported source is never evaluated
 as JavaScript. Lite execution uses only this parser/checker/evaluator and the helpers.
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.4**, tag **igniter-v0.1.0-alpha.4**, adds typed scalar
-functions, calls, return, and recursion. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.5**, tag **igniter-v0.1.0-alpha.5**, adds computed text
+concatenation, temporary scanning helpers, and a Lite-written tokenizer example.
+Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
 - **igniter-v0.1.0-alpha.3**, commit `1dcf92f`: action loops and bare break/continue.
+- **igniter-v0.1.0-alpha.4**, commit `29978ff`: typed scalar functions, return and recursion.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -200,7 +245,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **43 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **52 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

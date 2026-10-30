@@ -26,6 +26,12 @@ the language-wide String direction. Baseline for this correction: `af1dc3b`.
 
 ## Question and current contracts
 
+Implementation follow-up, **2026-10-30**: a later
+[text-scanning increment](INV-016-igniter-text-operations.md) adds computed
+concatenation and three disposable code-point helpers for an arithmetic tokenizer
+experiment written in Lite. This records concrete supported behavior; it does
+not accept the detailed profile below or settle language-wide text indexing.
+
 Baseline: `a7fedf3`; working tree clean before this note.
 
 What is the smallest usable text profile for the selected interpreter checkpoint?

@@ -10,6 +10,12 @@ The user requests [strongly typed panics](typed-panics.md) in the future, includ
 
 ## No checked panic-effect declarations
 
+The experimental [text-helper increment](../igniter/README.md#temporary-text-operations)
+reports terminal BoundPanic diagnostics for invalid text positions. Arguments
+evaluate before helper bounds checks; an earlier argument fault prevents reaching
+the helper's check. This is a provisional interpreter diagnostic, not a first-class
+panic value or an implementation of capture, category matching, or recovery.
+
 Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): live panics remain implicit. Semantic panic-effect declarations are prohibited; functions do not declare or infer exhaustive lists of the bounds, overflow, division, helper, or other live panics that can escape. Ordinary indexing/arithmetic remains ordinary value-producing code, without forcing a train of transitive panic alternatives into every callable signature.
 
 ```text

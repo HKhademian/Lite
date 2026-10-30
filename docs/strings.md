@@ -66,6 +66,20 @@ Whitespace outside literals can move freely without changing executable structur
 - String ownership, slicing, and allocation behavior.
 - How adjacent literals with different encodings or future literal prefixes interact.
 
+## Experimental igniter coverage
+
+Implementation increment, **2026-10-30**: the
+[igniter](../igniter/README.md#temporary-text-operations) now executes computed
+String + String concatenation, plus temporary textLength/textAt/textSlice helpers
+for a small Lite-written arithmetic tokenizer. The helpers consistently use
+zero-based code-point positions and half-open slices, without normalization;
+invalid bounds raise a terminal BoundPanic. Code points are materialized on each
+helper call, so these operations do not promise constant-time access or a native
+representation. This records disposable host behavior, not a language-wide
+String indexing/character/slicing policy. The detailed FVP text-profile proposal
+remains deferred; [INV-016 evidence](../investigations/INV-016-igniter-text-operations.md)
+records exact coverage and limitations.
+
 ## Related concepts and references
 
 - [Lexical structure](lexical-structure.md)

@@ -2,6 +2,24 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Igniter text-scanning increment, 2026-10-30
+
+Computed String + String concatenation and temporary textLength/textAt/textSlice
+helpers now support a small arithmetic tokenizer written in Lite. The helpers
+use consistent zero-based code-point positions and half-open slices; empty
+intervals are valid and invalid bounds fault without wrapping/clamping. Arguments
+evaluate once before the bounds check. Their names, position unit and terminal
+BoundPanic diagnostic remain provisional, not a permanent String or panic API.
+Full text policy and the detailed earlier text-profile proposal remain open/deferred.
+
+The host materializes code points per call; no cheap indexing, native layout,
+view/lifetime or performance contract is claimed. Strict checking and all 52 test
+groups pass, including Unicode, bounds and real CLI probes. Preserve earlier
+tags and add igniter-v0.1.0-alpha.5. The example is not a full Lite lexer, parser,
+native compiler, or self-hosted build chain.
+Coverage: [temporary text operations](../igniter/README.md#temporary-text-operations).
+Evidence: [INV-016](../investigations/INV-016-igniter-text-operations.md).
+
 ## Igniter typed-function increment, 2026-10-30
 
 The interpreter now executes explicit scalar-annotated functions, positional

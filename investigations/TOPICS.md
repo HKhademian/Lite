@@ -213,7 +213,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-016).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed encoding/escape/line/word proposal deferred and unselected after the FVP scope correction. Basic quoted text and temporary helpers suffice to begin; practical details follow concrete examples. Partial INV-016.01/.04 coverage; full text contracts remain open.
+**Investigation:** recorded; contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal deferred and unselected; [INV-016 — text-scanning igniter increment](INV-016-igniter-text-operations.md) — computed concatenation and provisional code-point helpers demonstrated by a Lite-written arithmetic tokenizer; strict checking and 52 test groups pass. Generic String indexing, full text/character/view and performance contracts remain open.
 
 <a id="inv-017"></a>
 

@@ -36,9 +36,9 @@ helper calls before adding control flow, user functions, and tuples. It does
 not claim the full batch is executable or waive its in-program-check acceptance
 direction. No lesson bodies or verification status change with this selection.
 
-The experimental igniter has since added [conditions, loops, and typed scalar
-functions](../igniter/README.md#supported-checkpoint), with focused examples and
-43 test groups. This does not expand the checked lesson outcomes beyond 001,
+The experimental igniter has since added [conditions, loops, typed scalar
+functions, and temporary text operations](../igniter/README.md#supported-checkpoint),
+with focused examples and 52 test groups. This does not expand the checked lesson outcomes beyond 001,
 002, and 020 or add in-program checks to the lesson sources.
 
 The selected acceptance direction is in-program checks for 001–020, with mismatch

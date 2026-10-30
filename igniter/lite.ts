@@ -19,7 +19,8 @@ export type Value =
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
 type FunctionValue = Readonly<{ kind: 'Function'; code: FunctionCode; environment: Frame }>;
-type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'report' | 'reportError' | 'exit';
+type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'report' | 'reportError' | 'exit'
+  | 'textLength' | 'textAt' | 'textSlice';
 type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
   | { kind: 'string'; text: string }
@@ -84,7 +85,7 @@ const KEYWORDS = new Set(['var', 'true', 'false', 'if', 'else', 'and', 'or', 'no
 
 export class LiteFault extends Error {
   readonly at: Position;
-  readonly category: 'SourceError' | 'TypeError' | 'InputFault' | 'ArithmeticPanic';
+  readonly category: 'SourceError' | 'TypeError' | 'InputFault' | 'ArithmeticPanic' | 'BoundPanic';
   constructor(category: LiteFault['category'], message: string, at: Position) {
     super(message);
     this.name = category;
@@ -140,7 +141,8 @@ function floating(value: number, at: Position, literal = false): Extract<Value, 
 function builtin(name: string): Builtin | undefined {
   switch (name) {
     case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord':
-    case 'report': case 'reportError': case 'exit': return name;
+    case 'report': case 'reportError': case 'exit':
+    case 'textLength': case 'textAt': case 'textSlice': return name;
     default: return undefined;
   }
 }
@@ -532,6 +534,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
     case 'binary': {
       const left = checkExpression(raw.left, names, state);
       const right = checkExpression(raw.right, names, state);
+      if (raw.op === '+' && left.type === 'String' && right.type === 'String') {
+        return { kind: 'binary', op: raw.op, left, right, type: 'String', at };
+      }
       if ((left.type !== 'Int' && left.type !== 'Float') || (right.type !== 'Int' && right.type !== 'Float')) {
         typeError('arithmetic requires numeric operands', at);
       }
@@ -589,15 +594,23 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       const args = raw.args.map(arg => checkExpression(arg, names, state));
       let type: Type;
       switch (name) {
-        case 'inputInt': type = 'Int'; break;
+        case 'inputInt': case 'textLength': type = 'Int'; break;
         case 'inputFloat': type = 'Float'; break;
-        case 'inputLine': case 'inputWord': type = 'String'; break;
+        case 'inputLine': case 'inputWord': case 'textAt': case 'textSlice': type = 'String'; break;
         case 'report': case 'reportError': type = 'Unit'; break;
         case 'exit': type = 'Never'; break;
         default: return unreachable(name);
       }
       const count = name === 'report' || name === 'reportError' ? 1 : 0;
-      if (name === 'exit') {
+      if (name === 'textLength' || name === 'textAt' || name === 'textSlice') {
+        const parameters: readonly ScalarType[] = name === 'textLength' ? ['String']
+          : name === 'textAt' ? ['String', 'Int'] : ['String', 'Int', 'Int'];
+        if (args.length !== parameters.length) typeError(`${name} expects ${parameters.length} argument(s)`, at);
+        for (const [index, parameter] of parameters.entries()) {
+          const arg = args[index];
+          if (arg === undefined || !fits(arg.type, parameter)) typeError(`${name} argument ${index + 1} must be ${parameter}`, arg?.at ?? at);
+        }
+      } else if (name === 'exit') {
         if (args.length > 1 || (args[0] !== undefined && args[0].type !== 'Int')) {
           typeError('exit accepts zero arguments or one Int code', at);
         }
@@ -688,6 +701,9 @@ function format(value: Value): string {
   }
 }
 function arithmetic(op: Operator, left: Value, right: Value, at: Position): Value {
+  if (op === '+' && left.kind === 'String' && right.kind === 'String') {
+    return { kind: 'String', value: left.value + right.value };
+  }
   if (left.kind === 'Int' && right.kind === 'Int') {
     switch (op) {
       case '+': return integer(left.value + right.value, at);
@@ -834,6 +850,30 @@ export function execute(program: Program, io: IO): number {
       case 'call': {
         const args = expr.args.map(evaluateHere);
         switch (expr.name) {
+          case 'textLength': case 'textAt': case 'textSlice': {
+            const text = args[0];
+            if (text?.kind !== 'String') throw new Error('igniter invariant: missing checked text');
+            // Temporary explicit code-point view; no generic String indexing or native layout claim.
+            const points = Array.from(text.value);
+            const length = BigInt(points.length);
+            if (expr.name === 'textLength') return integer(length, expr.at);
+            const start = args[1];
+            if (start?.kind !== 'Int') throw new Error('igniter invariant: missing checked text index');
+            if (expr.name === 'textAt') {
+              if (start.value < 0n || start.value >= length) {
+                throw new LiteFault('BoundPanic', 'textAt index outside text', expr.at);
+              }
+              const point = points[Number(start.value)];
+              if (point === undefined) throw new Error('igniter invariant: checked text index absent');
+              return { kind: 'String', value: point };
+            }
+            const end = args[2];
+            if (end?.kind !== 'Int') throw new Error('igniter invariant: missing checked text end');
+            if (start.value < 0n || end.value < start.value || end.value > length) {
+              throw new LiteFault('BoundPanic', 'textSlice requires 0 <= start <= end <= textLength(text)', expr.at);
+            }
+            return { kind: 'String', value: points.slice(Number(start.value), Number(end.value)).join('') };
+          }
           case 'report': case 'reportError': {
             const value = args[0];
             if (value === undefined) throw new Error('igniter invariant: missing report argument');
