@@ -187,7 +187,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-014).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-014-01 — temporary FVP numeric profile](INV-014-01-fvp-numeric-profile.md) — signed 64-bit integers, one finite 64-bit floating family, checked overflow and zero-divisor faults proposed, not selected. Covers INV-014.01 and part of INV-014.03; precise rounding, promotions, literal/input rules, permanent widths, and ABI remain open.
 
 <a id="inv-015"></a>
 

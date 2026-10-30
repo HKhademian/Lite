@@ -86,8 +86,10 @@ Read the selected FVP/interpreter/helper contracts and lesson sources above.
 Checked note/tracking links, fences, and focused diff consistency. No LiteLang
 execution, parser/typechecker result, or implementation-time estimate is claimed.
 
-The user accepts the first slice above. Next define its numeric/text profile
-and remaining minimal helper contracts; implementation language is still open.
+The user accepts the first slice above. The [temporary numeric-profile investigation](INV-014-01-fvp-numeric-profile.md)
+now compares provisional 64-bit families, checked faults, and alternatives;
+its recommendation is not selected. Text details, remaining minimal helper
+contracts, and implementation language are still open.
 Keep the existing lessons unchanged until implementation/verification work is
 actually in scope. The complete 001–020 batch remains an incremental growth
 target, not a prerequisite for this first executable checkpoint.
