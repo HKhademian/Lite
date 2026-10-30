@@ -55,7 +55,11 @@ With no earlier target, the [same-block forward rule](functions.md#first-later-b
 selects the first subsequent same-name ordinary binding and keeps that identity.
 The [direct self-reference case](functions.md#direct-self-reference-without-an-earlier-target)
 also admits a function's own binding when no earlier same-name binding exists.
-Nested-scope search, earlier-name recursive conflicts, and mutual recursion
+An [explicit self call](functions.md#explicit-current-function-self-calls) targets
+the implementation currently executing instead of performing ordinary name lookup.
+Only self(...) is selected; standalone-value and self-named local/parameter
+collisions and keyword-reservation rules remain open.
+Nested-scope search and mutual recursion
 remain open. Module declaration namespaces
 have a separate [lookup direction](modules-and-packages.md#module-lookup-without-header-files).
 

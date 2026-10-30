@@ -181,6 +181,23 @@ Sequential ordinary local declarations may shadow earlier names in the same bloc
 
 Standalone `_` is an ordinary binding identifier, not a separate wildcard production. Repeated names in one pattern shadow in recursive written order; the final occurrence is visible and each binding keeps its own type. `_ := expression` evaluates its initializer and produces Unit as an ordinary declaration. `_ = expression` assigns the visible binding and requires var, not discard semantics. See [pattern binding and shadowing](pattern-shadowing.md) and [underscore bindings and skips](wildcards-and-skips.md).
 
+## Explicit current-function self calls
+
+Selected 2026-10-29; recorded 2026-10-30:
+
+```text
+self_call := "self" (empty_call_arguments | nonempty_call_arguments)
+```
+
+The argument-list fragments below describe the ordinary call-entry surface.
+The [owning function rule](functions.md#explicit-current-function-self-calls)
+makes self(...) a call to the implementation currently executing, not lookup
+of its named binding. Ordinary call evaluation, checking, and failure/cleanup
+rules apply. No first-class self value, alternative .call spelling, global
+keyword reservation, local-name collision policy, or complete expression-parser
+integration is selected by this descriptive fragment. The source form needs an
+executing function body; full nested/outer-function target rules remain open.
+
 ## Intrinsic callable application
 
 ```text

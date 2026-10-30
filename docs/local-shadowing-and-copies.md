@@ -25,7 +25,9 @@ When no earlier binding exists, the [same-block forward rule](functions.md#first
 selects the first subsequent same-name ordinary binding. A
 [direct self-reference](functions.md#direct-self-reference-without-an-earlier-target)
 may select the function's own binding when no earlier same-name binding exists.
-Earlier-name recursive conflicts, mutual recursion, and nested-scope search
+An [explicit self call](functions.md#explicit-current-function-self-calls) targets
+the implementation currently executing; ordinary named calls keep ordinary
+binding lookup. Mutual recursion and nested-scope search
 remain open; initial static enforcement has its own rule.
 
 ## Copy inline values; preserve reference fields

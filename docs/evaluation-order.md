@@ -28,7 +28,7 @@ exists; its initializer still runs in order. A
 [direct recursive self-reference](functions.md#direct-self-reference-without-an-earlier-target)
 can resolve the current function binding when no earlier same-name binding
 exists, without making its value readable before initialization. Nested-scope
-search, earlier-name recursive conflicts, mutual recursion,
+search, self-name collisions, mutual recursion,
 capture mechanics, precise proof rules, and
 the full language's long-term indirect-call policy remain open.
 
@@ -67,6 +67,12 @@ choose_handler()(first(), second());
 `choose_handler()` runs first, followed by `first()`, then `second()`, then the selected handler is called with the evaluated arguments. The callee expression is not reevaluated after evaluating arguments.
 
 For a method-call expression, evaluate the receiver as part of evaluating the callee before the other supplied arguments. The complete method/dispatch notation remains open; this order does not choose static or dynamic dispatch.
+
+An [explicit self(...) call](functions.md#explicit-current-function-self-calls)
+selects the implementation currently executing rather than reading its original
+named binding. Prepare its arguments under the ordinary call rules. A permitted
+replacement of that named binding does not replace the current implementation
+target of self; ordinary named calls retain their selected live-read behavior.
 
 An [admitted live surrounding read](functions.md#live-reads-of-admitted-surrounding-bindings)
 observes its binding's current value when that read executes. Once a call has

@@ -2,7 +2,7 @@
 
 Status: in progress
 Contributor: redacted (agent-assisted)
-Last updated: 2026-10-29
+Last updated: 2026-10-30
 Catalog brief: [INV-003](TOPICS.md#inv-003)
 Covered subtopics: INV-003.02 (partial direction selected; safety and binding details open)
 Subtopic brief: [INV-003.02](SUBTOPICS.md#inv-003-02)
@@ -228,23 +228,26 @@ answer := step(3);
 Keeping the earlier visible binding for the inner reference gives 4. Giving
 the new function's own binding priority gives recursive calls and result 0.
 The no-earlier-target selection alone does not choose between these. Compare
-wrapper intent with recursive-self intent before extending the precedence rule;
-do not silently retarget every earlier reference. Neither outcome is selected
-for this conflict probe.
+wrapper intent with recursive-self intent before extending the precedence rule.
+The later explicit self selection below preserves ordinary step lookup to the
+earlier binding (4) and provides self for current-implementation recursion (0).
 
 Acceptance baseline: `16400a3`. Checked the selected/open boundaries, local
 links, fences, and diff consistency. No LiteLang recursion was compiled or run.
 
-## Explicit self-reference proposal, 2026-10-29
+<a id="explicit-self-reference-proposal-2026-10-29"></a>
+
+## Explicit self-reference selection, 2026-10-29
 
 The user emphasizes that every decision should make source easier to read and
 reason about. Self-reference feels clearer to them in the recursive-shadow
 probe, but they explicitly question how much that preference comes from
 familiarity and suggest special syntax to remove the collision. The
 [owning design criterion](../docs/principles.md#resolving-competing-goals) records
-the readability emphasis. It does not select precedence for the unmarked name.
+the readability emphasis. The later user selection chooses self(...) as the
+explicit current-function call and keeps ordinary names under ordinary lookup.
 
-Proposed minimal pair, not accepted LiteLang syntax:
+Selected self-call form, not an implemented parser/runtime:
 
 ```text
 step := fn(n: Int): Int { n * 2 }
@@ -253,41 +256,49 @@ step := fn(n: Int): Int {
 }
 ```
 
-Candidate meaning: self(...) calls the currently executing function
+Selected meaning: self(...) calls the currently executing function
 implementation with its current implementation environment. It does not look
 up the latest binding spelled step or reread a mutable step binding. Ordinary
 step(...) keeps ordinary lexical binding lookup, making an earlier definition
-available for a wrapper. Under this proposed split, explicit self recursion
+available for a wrapper. Under this selected split, explicit self recursion
 gives result 0 for step(3), while the earlier-binding wrapper gives 4.
 
 This makes the intention visible within the body, without requiring the reader
 to search for earlier same-name declarations to recognize a self-call. It also
 needs a deliberate semantic choice: current callable identity versus the live
-contents of its original binding. The proposed marker denotes the former;
+contents of its original binding. The selected marker denotes the former;
 ordinary permitted binding references retain the selected live-read rule.
 
-Two candidate spellings:
+Spellings considered:
 
-- **self(...):** short and directly names the intended callable identity.
+- **self(...) — selected:** short and directly names the intended callable identity.
   Check collision with parameters/locals and any future object receiver name.
-- **recur(...):** explicitly announces a recursive call and could be defined as
+- **recur(...) — unselected alternative:** explicitly announces a recursive call and could be defined as
   a call-only operation rather than a first-class value. Keyword/contextual-name
   rules still need investigation; no tail-call-only behavior, loop transfer, or
   stack optimization guarantee is implied by this proposed spelling.
 
-For either candidate, review nested functions (which function is current),
+For self, review full nested/outer-function targeting,
 argument labels/packs, output checking, calls after binding replacement,
 escaping/copying callables, and whether a first-class self value is needed at
 all. Do not repurpose existing @tags silently: functions/closures are not current
 tag targets under [tags and contexts](../docs/tags-and-contexts.md).
 
-Recommendation: explore an explicit current-function call, initially with
-self(...) as the readable working spelling. Preserve ordinary name lookup so
-wrapping an earlier definition stays possible. Whether the marker is optional
-or required, its final spelling, and changes to the already selected implicit
-no-earlier-target self-reference rule remain open. No syntax or conflict outcome
-is selected here. Readability should be evaluated on these minimal pairs rather
-than asserted as a measured beginner result.
+Selection recorded 2026-10-30 from the user's 2026-10-29 choice: use self(...)
+for explicit current-implementation calls. Preserve ordinary name lookup so
+wrapping an earlier definition stays possible. Keep the already selected
+implicit own-name recursion with no earlier target; self is not made mandatory
+for every recursive function. Do not infer a standalone first-class self value,
+global reservation/name collision policy, new tag/receiver role, or tail-call
+optimization guarantee. Normal call argument/checking/failure/cleanup behavior
+applies. Readability is reasoned from these minimal pairs, not measured in a
+learner study.
+
+The [owning function rule](../docs/functions.md#explicit-current-function-self-calls),
+[ledger](../docs/decisions-and-open-questions.md#explicit-current-function-self-calls-2026-10-29),
+and [grammar outline](../docs/grammar-sketch.md#explicit-current-function-self-calls)
+record the selection. Acceptance-update baseline: `78e3c9c`. Complete parsing,
+reservation, nested/outer rules, first-class self, and inference remain open.
 
 Evidence baseline: `d7ebc3a`; checked current lookup, function/closure boundaries,
 tag rules, and continuity's decision checklist. No LiteLang parser, runtime,
@@ -759,8 +770,9 @@ direction but needs environment/readiness rules. An already-visible lexical
 binding is now retained across later shadows; a body without an earlier target
 now selects the first subsequent same-name ordinary binding in the defining
 executable block. A direct function-valued declaration with no earlier same-name
-target now admits its own name in its deferred body. Nested-scope search,
-earlier-name recursive conflicts, and mutual recursion remain open.
+target now admits its own name in its deferred body. Explicit self(...) calls
+the current implementation, while ordinary named calls keep ordinary lookup.
+Nested-scope search, self-name collisions, and mutual recursion remain open.
 The 2026-10-29 selection makes evident op/tmp2 early reads static
 errors and uses conservative proof/rejection for the initial subset, with the
 full language's long-term fallback still open. Admitted surrounding references
@@ -768,7 +780,7 @@ now use live execution-time reads of their original binding; deliberate value
 copying remains distinct, and surrounding-access eligibility is not settled.
 
 The owning pages and ledger linked above record this partial selection. Resume
-with explicit self-call candidates and earlier-name recursive conflicts, then
+with self-name collision/reservation and full nested/outer self targeting, then
 mutual recursion, nested-scope forward search, and concrete
 surrounding-access/callback probes.
 Module-growth and compile-time details belong to INV-003.04/INV-006/INV-062.

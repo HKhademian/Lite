@@ -556,7 +556,7 @@ evident early read at compile time.
 Calling after initialization removes this particular ordering problem, subject
 to the remaining binding, inference, and environment contracts.
 
-Nested-scope forward lookup, earlier-name recursive conflicts and mutual recursion,
+Nested-scope forward lookup, self-name collisions and mutual recursion,
 initialization proofs through calls/callbacks, and inaccessible/cyclic future
 definitions remain open. Capture representation, ownership, and escaping
 lifetimes remain deferred; no public capture-parameter or checked panic-effect
@@ -586,7 +586,7 @@ The permitted surrounding-access surface is under reconsideration in
 Mutation, retention, and escaping lifetimes keep
 their separate contracts. The forward-reference direction applies when no
 appropriate earlier binding is visible; the same-block rule below selects its
-first subsequent declaration. Nested-scope lookup, earlier-name recursive conflicts, and mutual recursion
+first subsequent declaration. Nested-scope lookup, self-name collisions, and mutual recursion
 remain open. Ordinary local bindings
 inside the function body still follow their own sequential lexical scope.
 
@@ -615,7 +615,7 @@ The direct self-reference rule below handles the declaration currently being
 initialized before falling through to strictly later declarations.
 
 This selects the demonstrated same-block case. Nested-scope search, declarations
-inside separate conditional regions, earlier-name recursive conflicts,
+inside separate conditional regions, self-name collisions,
 and module declaration resolution remain separate questions. Surrounding-access
 eligibility and lifetime requirements still apply; visibility alone is not a grant.
 
@@ -638,11 +638,46 @@ function value must still be initialized before a call can execute; making the
 name resolvable in a deferred body does not permit an eager uninitialized read
 in its initializer or change top-to-bottom execution.
 
-This selects the shown no-earlier-target case, not precedence when an earlier
-same-name binding exists, recursive result inference, mutual recursion, or
-callable replacement/escaping lifetime rules. Full and keyword-omitted lambda
+This selects the shown no-earlier-target case. Ordinary named references keep
+ordinary lexical lookup when an earlier same-name binding exists; the explicit
+self-call form below identifies the current implementation instead. Recursive
+result inference, mutual recursion, and remaining callable storage/escaping
+lifetime rules remain open. Full and keyword-omitted lambda
 spellings retain their shared function-body model where the signature is
 established. Surrounding-value eligibility remains separate.
+
+### Explicit current-function self calls
+
+Selected **2026-10-29**, recorded 2026-10-30: self(...) explicitly calls the
+function implementation currently executing, with its current implementation
+environment. It does not resolve an ordinary binding by the function's name
+or reread the live contents of that original binding.
+
+```text
+step := fn(n: Int): Int { n * 2 }
+step := fn(n: Int): Int {
+    if n == 0 { 0 } else { self(n - 1) }
+}
+answer := step(3); /* 0 */
+```
+
+In this example, self calls the second implementation recursively. Replacing
+self(n - 1) with the ordinary step(n - 1) instead selects the earlier visible
+step binding and gives 4. A later shadow or permitted replacement of the source
+binding cannot redirect an explicit self call from the implementation executing.
+
+This is an ordinary function call, with ordinary argument evaluation, type and
+access checks, result checking, and failure/cleanup behavior. It is not a loop
+transfer, a tail-position-only construct, or a tail-call optimization guarantee.
+No handwritten header or extra declaration is needed. The already selected
+implicit own-name case with no earlier target remains available; self is not
+made mandatory for every recursive function by this selection.
+
+The selected form is self(...). A standalone first-class self value, storing or
+returning it, other invocation spellings, parameter/local name collisions,
+global versus contextual keyword reservation, and full nested/outer-function
+target rules remain open. No object-receiver meaning is selected. This does not
+make functions tag targets or grant unrelated surrounding-value access.
 
 ### Live reads of admitted surrounding bindings
 
@@ -712,7 +747,7 @@ public callable dependency/effect list.
 
 Destructured parameter forms need both surface grammar and a mismatch policy. The [pattern context review](pattern-contexts.md#5-function-and-closure-parameters) recommends patterns irrefutable under the declared parameter contract; no implicit runtime dispatch, skipped call, or new failure channel is selected by writing a parameter pattern.
 
-The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. Earlier-name recursive conflicts, mutual recursion, and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Unannotated parameter inference, public signature requirements, generic constraints, and recursive result inference are still open.
+The [direct self-reference rule](#direct-self-reference-without-an-earlier-target) permits the shown no-earlier-binding recursive definition without a separate header. [Explicit self calls](#explicit-current-function-self-calls) distinguish current-implementation recursion from ordinary named binding lookup. Mutual recursion and full declaration-resolution rules remain open without making arbitrary initialization order implicit. Unannotated parameter inference, public signature requirements, generic constraints, and recursive result inference are still open.
 
 ## Tagged exits
 

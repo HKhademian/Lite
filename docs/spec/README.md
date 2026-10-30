@@ -1,6 +1,6 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-29**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
+Status: **draft current-design summary, 2026-10-30**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](../decisions-and-open-questions.md) remain authoritative if wording here is incomplete or conflicts.
 
 ## Using the IDs
 
@@ -46,8 +46,8 @@ Selected:
 - Definite initialization is path-sensitive: every path reaching a read must have initialized the binding.
 - Ordinary local shadowing is lexical and sequential; a shadow binding is a distinct binding.
 - For a permitted surrounding reference, a deferred body retains its original lexical binding and reads its current value when the name is evaluated. Later := shadows do not retarget it; = replacements of the original var binding can affect later reads. Ordinary value copies still copy at their own initialization, and each call selects its callee once before its arguments. This does not grant unrestricted local capture; eligibility and lifetime rules remain open. See [binding identity](../functions.md#existing-bindings-survive-later-shadowing) and [live reads](../functions.md#live-reads-of-admitted-surrounding-bindings).
-- With no earlier lexical target, an admitted deferred-body reference selects the first subsequent same-name ordinary binding in its defining executable block and keeps that identity. Initialization is not hoisted. Nested-scope search, earlier-name recursive conflicts, and module resolution remain separate. See [same-block forward lookup](../functions.md#first-later-binding-in-the-defining-block).
-- A direct function-valued declaration with no earlier visible same-name binding may refer to its own binding in its deferred body, with initialization required before invocation and no separate signature/header declaration. The explicit-input/result countdown probe is admitted. Earlier-name precedence, mutual recursion, recursive inference, and escaping lifetime rules remain open. See [direct self-reference](../functions.md#direct-self-reference-without-an-earlier-target).
+- With no earlier lexical target, an admitted deferred-body reference selects the first subsequent same-name ordinary binding in its defining executable block and keeps that identity. Initialization is not hoisted. Nested-scope search, self-name collisions, and module resolution remain separate. See [same-block forward lookup](../functions.md#first-later-binding-in-the-defining-block).
+- A direct function-valued declaration with no earlier visible same-name binding may refer to its own binding in its deferred body, with initialization required before invocation and no separate signature/header declaration. The explicit-input/result countdown probe is admitted. Ordinary names retain ordinary lexical lookup; explicit self calls select the current implementation. Mutual recursion, recursive inference, and escaping lifetime rules remain open. See [direct self-reference](../functions.md#direct-self-reference-without-an-earlier-target).
 
 Open: partial construction, initialization through callees, and full field/element construction contracts.
 
@@ -89,6 +89,8 @@ Open: field-default mechanics, partial construction, and allocation/cleanup deta
 ## LS-005 — Functions and calls
 
 Selected:
+
+- self(...) explicitly invokes the implementation currently executing with its implementation environment, independently of later shadows or replacement of its named binding. Ordinary call evaluation/checking and failure/cleanup rules apply; no tail-call guarantee or header is implied. Ordinary named calls keep lexical lookup, and the earlier implicit no-earlier-target recursion remains valid. Only this self-call form is selected; first-class self, name collisions/reservation, and full nested/outer targeting remain open. See [explicit self calls](../functions.md#explicit-current-function-self-calls).
 
 - Function types and literals use `fn`; ordinary parameters are written `name: Type`.
 - A function type is its signature without a body; function literals are ordinary value expressions.

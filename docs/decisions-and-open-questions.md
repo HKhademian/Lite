@@ -1,15 +1,41 @@
 # Decisions and open questions
 
-Snapshot: **2026-10-29**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
+
+## Explicit current-function self calls, 2026-10-29
+
+Recorded 2026-10-30:
+
+- Select self(...) to call the implementation currently executing with its
+  implementation environment. It does not perform ordinary name lookup or
+  reread the live contents of the function's original binding. Shadows and
+  permitted replacement of that binding do not retarget self.
+- Ordinary named calls keep ordinary binding lookup. In the recursive-shadow
+  probe, self(n - 1) recurses into the new implementation and yields 0 for
+  step(3); the ordinary step(n - 1) selects the earlier binding and yields 4.
+- Use ordinary call argument evaluation, type/access/result checks, and
+  failure/cleanup behavior. This is not a loop transfer, tail-position-only
+  form, or tail-call optimization guarantee. No separate header is required.
+- Keep the earlier no-earlier-target implicit own-name case. Selecting self
+  does not make it mandatory for every recursion. Standalone/first-class self,
+  name collisions and reservation, other invocation forms, full nested/outer
+  targeting, and recursive inference remain open. No object-receiver meaning,
+  function tags, or unrestricted surrounding access is selected.
+
+Owner: [explicit self calls](functions.md#explicit-current-function-self-calls).
+[INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-selection-2026-10-29)
+records the selection; [grammar sketch](grammar-sketch.md#explicit-current-function-self-calls)
+remains incomplete and no compiler/runtime is implemented.
 
 ## Readability and reasoning in every decision, 2026-10-29
 
 - Reaffirm readability and ease of reasoning as explicit criteria for every
   design decision. Use minimal source pairs to expose the information a reader
   needs to predict behavior; familiarity alone does not establish novice clarity.
-- In the recursive-shadow discussion, an explicit self-call marker is a
-  candidate way to distinguish ordinary binding lookup from calling the current
-  function. No marker, keyword, or earlier-name precedence is selected yet.
+- In the recursive-shadow discussion, an explicit self-call marker was proposed
+  to distinguish ordinary binding lookup from calling the current function.
+  The subsequent selection above chooses self(...); name collisions and full
+  keyword reservation remain open.
 
 Owner of the review criterion: [resolving competing goals](principles.md#resolving-competing-goals).
 [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#explicit-self-reference-proposal-2026-10-29)
@@ -24,8 +50,9 @@ no-earlier-target self-reference selection remains current and reviewable.
 - The self-reference selects the current binding, not a strictly later shadow.
   Initialization must still finish before invocation; eager initializer reads
   do not acquire this exception. Keep top-to-bottom execution.
-- This selects the shown no-earlier-target case. Earlier-name recursive
-  conflicts, mutual recursion, recursive inference, callable replacement,
+- This selects the shown no-earlier-target case. Ordinary earlier names retain
+  lexical lookup; the explicit self form above selects the current implementation.
+  Mutual recursion, recursive inference, remaining callable storage,
   surrounding-value eligibility, and escaping lifetime rules remain open.
 
 Owner: [direct self-reference](functions.md#direct-self-reference-without-an-earlier-target).
@@ -42,8 +69,8 @@ records the selection and next conflict probe. No compiler/runtime is implemente
   calls return 1. Do not hoist initialization or permit early reads. Existing
   visible bindings, including zero callables, retain priority.
 - This selects the demonstrated same-block case only. Nested-scope search,
-  declarations in separate conditional regions, a function's own recursive
-  name, module resolution, access eligibility, and lifetime rules remain open.
+  declarations in separate conditional regions, self-name collisions,
+  module resolution, access eligibility, and lifetime rules remain open.
 
 Owner: [first later binding](functions.md#first-later-binding-in-the-defining-block).
 [INV-003.02](../investigations/INV-003-02-declarations-and-lookup.md#forward-target-with-an-intervening-call-2026-10-29)
