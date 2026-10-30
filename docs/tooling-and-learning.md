@@ -41,6 +41,13 @@ The names may be supplied directly by the demonstrator for now; their eventual
 module ownership, public API, and migration remain later work. This does not
 introduce implicit imports into the deferred .lt module design.
 
+Reaffirmed **2026-10-30**: this FVP scaffolding is to be cleaned up later.
+The temporary input/report helpers, exit surface, and any experimental teaching
+flags/marks may be removed or replaced as real facilities take shape. Do not
+treat their names, fake implementations, or provisional behavior as a permanent
+public API or require compatibility shims solely to preserve the scaffolding.
+Teaching inspection remains a proposal; this clarification does not implement it.
+
 The intended roles are integer input, floating input, a line of text, a word of
 text, explicit ordinary reporting, and explicit error reporting. The trailing
 ellipsis in the user's suggestion leaves room for later helpers; it does not

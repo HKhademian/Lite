@@ -46,6 +46,11 @@ Owner: [FVP completion and explicit exit](../docs/tooling-and-learning.md#fvp-co
 Ledger: [report-only errors and explicit exit](../docs/decisions-and-open-questions.md#report-only-errors-and-explicit-fvp-exit-2026-10-30).
 Selection baseline: `7245720`. No helper/runner implementation is present.
 
+The user reaffirms that the provisional exit/reporting surface is part of the
+FVP scaffolding to be cleaned up later. It can be removed or replaced as real
+facilities take shape, without a long-term promise to preserve these temporary
+names/implementations. See the [cleanup clarification](../docs/decisions-and-open-questions.md#disposable-fvp-scaffolding-2026-10-30).
+
 ## Starting contracts and evidence
 
 Baseline: `617e79b`; working tree clean before this note.

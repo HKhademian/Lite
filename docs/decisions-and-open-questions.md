@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Disposable FVP scaffolding, 2026-10-30
+
+The user explicitly reaffirms that these temporary facilities will be cleaned up
+later. Input/report helpers, the provisional exit surface, and any experimental
+teaching flags/marks may be removed or replaced rather than preserved as permanent
+APIs. Their current names and temporary implementations carry no long-term API
+compatibility promise. This confirms the provisional scope of the selections
+below; it does not implement helpers or select the proposed inspection tools.
+
+Owner: [temporary FVP input and reporting](tooling-and-learning.md#temporary-fvp-input-and-reporting).
+
 ## Report-only errors and explicit FVP exit, 2026-10-30
 
 - Accept reportError as report-only: a successful call does not terminate or

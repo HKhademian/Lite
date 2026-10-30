@@ -39,6 +39,11 @@ Owner: [temporary input and reporting](../docs/tooling-and-learning.md#temporary
 Ledger: [temporary FVP helpers](../docs/decisions-and-open-questions.md#temporary-fvp-input-and-reporting-helpers-2026-10-30).
 No runner/helper implementation or LiteLang execution is claimed.
 
+The user subsequently reaffirms that all this FVP scaffolding will be cleaned
+up later: temporary helpers and any experimental inspection flags/marks can be
+removed or replaced, without making them permanent API commitments. See the
+[cleanup clarification](../docs/decisions-and-open-questions.md#disposable-fvp-scaffolding-2026-10-30).
+
 Baseline: `b947746`; working tree clean before this investigation.
 
 - [Immediate FVP focus](../docs/principles.md#immediate-focus-first-viable-product)
