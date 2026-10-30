@@ -356,6 +356,30 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-061).
 
 - <a id="inv-061-05"></a> **INV-061.05 — C and LLVM lowering parity:** What common typed operations can drive C emission and direct LLVM generation, and how are LiteLang evaluation, numeric, copy, check, failure, and cleanup semantics preserved where backend behavior differs? Compare implementation effort and emitted cost without selecting a backend or order.
 
+<a id="inv-062"></a>
+
+## INV-062 — Compile-time computation
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-062).
+
+Later questions added 2026-10-30, all **not started**. The following two groups
+record requested investigations, not selected language features. Comparison
+languages are research targets; verify their actual mechanisms and available
+evidence when investigation begins.
+
+### Metaprogramming, evaluation, constants, and types
+
+- <a id="inv-062-01"></a> **INV-062.01 — Evaluation stages and metaprogramming:** Which computations may or must execute at compile time, how is that stage requested, and which values can cross into the generated program? Distinguish explicit compile-time execution, required constant evaluation, and optional compiler optimization. Investigate stage order, dependencies/cycles, failures, permitted effects, and reproducible builds, including the possible module-effects restriction in [INV-003.05](#inv-003-05).
+- <a id="inv-062-02"></a> **INV-062.02 — Computed constants and initialization:** What should dynamically constructed constants mean: values computed during compilation, values depending on build inputs or generic arguments, or immutable values initialized at runtime? How are availability, target-dependent values, serialization into output, initialization timing, and diagnostics defined? Do not equate immutability with compile-time availability or silently permit runtime inputs in compile-time evaluation.
+- <a id="inv-062-03"></a> **INV-062.03 — Computed types and type-system dynamism:** Can programs inspect, construct, or transform types and declarations, at which stage, and with what type identity and checking rules? Distinguish compile-time type computation/reflection, generic specialization, runtime type metadata, and genuinely runtime-dependent types. Investigate generated members, recursive types, visibility, module ownership, and diagnostics without choosing a dynamic type system.
+- <a id="inv-062-04"></a> **INV-062.04 — Compiler-time execution models:** Compare an interpreter, a dedicated compile-time runtime, native execution, and other staging approaches; include Jai's compile-time execution approach as a requested research target. How are host versus target behavior, memory/resources, external inputs, effect permissions, caching, isolation, execution limits, and failures handled? What compiler machinery stays out of final executables? No engine or execution authority is selected.
+
+### Modern templating, preprocessing, and macros
+
+- <a id="inv-062-05"></a> **INV-062.05 — Template and generation models:** Which needs are met by ordinary generics, typed templates, syntax/code generation, or text/asset templating, and which deserve separate facilities? Compare parameter contracts, generated-name ownership, type checking before/after expansion, specialization, source locations, IDE support, and generated-code size with [INV-027](#inv-027) and [INV-063](#inv-063).
+- <a id="inv-062-06"></a> **INV-062.06 — Preprocessing or integrated staging:** Should Lite have a preprocessing step at all, or use parsed/typed compile-time constructs? Investigate conditional compilation, generated declarations, expansion order, dependency tracking, tooling, and error locations. Compare textual, token, syntax-tree, and typed transformations without selecting textual substitution or a separate preprocessor.
+- <a id="inv-062-07"></a> **INV-062.07 — Macro invocation and expansion contracts:** Compare an explicitly marked invocation such as Rust-style op!() with ordinary-call or other invocation forms. How can a reader distinguish expansion from runtime calls? Define questions for lexical scope/hygiene, name capture, argument evaluation count, side effects, expansion recursion, generated diagnostics, and composition with compile-time execution. op!() is a comparison candidate, not selected Lite syntax.
+
 <a id="inv-063"></a>
 
 ## INV-063 — Optimization contracts

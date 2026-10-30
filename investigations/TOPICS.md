@@ -811,11 +811,15 @@ questions; check their status and current owning pages before relying on them.
 
 ## INV-062 — Compile-time computation
 
-**Scope:** Constants, evaluation, reflection, and metaprogramming.
+**Scope:** Compile-time evaluation, computed constants and types, reflection, metaprogramming, compile-time execution engines, templating, preprocessing alternatives, and macro expansion.
 
 **Starter question:** Which computation or inspection should be possible during compilation, and what limits preserve predictable semantics and build costs?
 
 **Start with:** [docs/types-and-inference.md](../docs/types-and-inference.md); [docs/generic-notation.md](../docs/generic-notation.md); [docs/memory-and-performance.md](../docs/memory-and-performance.md).
+
+**Starter subtopics:** [7 later questions in two groups](SUBTOPICS.md#inv-062), added 2026-10-30: evaluation/constants/types and execution models; templating/preprocessing/macros. Rust-style op!() and Jai's compile-time execution approach are comparison candidates, not selected syntax or mechanisms. All seven are not started.
+
+**Related boundaries:** [Module initializer effects](SUBTOPICS.md#inv-003-05), [generics](SUBTOPICS.md#inv-027), [lean code generation](SUBTOPICS.md#inv-063-05), and [replaceable standard modules](SUBTOPICS.md#inv-071). A module being declaration-oriented does not settle compile-time effect permissions.
 
 **Investigation:** not started; contributor: unassigned; note: none.
 
