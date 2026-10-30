@@ -84,6 +84,53 @@ unsupported constructs clearly. A host evaluator's arithmetic is not an
 automatic definition of LiteLang numeric behavior. Add invalid-name and
 unsupported-feature probes alongside the successful case when implemented.
 
+## Temporary input failure question, 2026-10-30
+
+The next bounded FVP question is how the selected fake input helpers behave on
+bad input or end-of-input. This does not reopen the permanent I/O library design
+or require module machinery. Baseline for this addition: `7c01542`.
+
+```text
+number := inputInt();
+report(number);
+```
+
+Design probes, not executed tests:
+
+- A supplied integer such as 12 should produce that value for report.
+- Text such as hello is not an integer. Should the helper fail, request another
+  input, return a default, or expose an explicit failure result?
+- End-of-input before a requested value is available needs a defined outcome.
+  A deliberate empty line for inputLine is distinct from no input being available
+  at EOF; tokenization, line terminators, and consumption rules remain open.
+
+Options and consequences:
+
+- **A — Input fault, failed run if unhandled.** Keep the success call simple;
+  a failed read produces a clear diagnostic and nonzero completion if unhandled.
+  No report(number) runs after an unhandled failure to initialize number.
+- **B — Retry automatically.** Useful as an interactive convenience, but needs
+  retry/prompt and invalid-input consumption rules. EOF still needs a separate
+  outcome, and scripted input cannot supply an unlimited sequence of retries.
+- **C — Return a default.** Avoids a failure path but hides the distinction
+  between an actual 0/empty value and a failed read. Not recommended for the FVP.
+- **D — Return explicit optional/failure data.** Lets the program handle absence
+  or malformed input, but requires selecting the helper's Result/Option contract
+  and making the relevant handling features available in the supported subset.
+
+**Recommendation, not selected:** A for these temporary direct-value helpers.
+Do not silently manufacture 0 or an empty string and do not silently reprompt.
+For inputLine, an intentionally supplied empty line can be a successful empty
+string; EOF without a line is a failed read. The same failure-policy question
+applies to inputFloat and inputWord.
+
+The input-fault type/channel, any supported recovery, numeric grammar/range,
+token-versus-line consumption, real versus scripted input, and exact diagnostic/
+status code remain open. This recommendation does not select a host exception,
+hard abort, cleanup bypass, or permanent stdlib policy. If recovery is supported,
+its selected semantics must be preserved; failure of an input operation is
+different from the separate report-only operation reportError(...).
+
 ## Options and consequences
 
 ### Observation scope clarification, 2026-10-30
@@ -172,6 +219,8 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 Temporary input/reporting helper names and roles are selected above; complete
 I/O contracts, execution mechanism, and feature subset remain open.
+The active bounded input question above compares failed reads, retries, defaults,
+and explicit outcome data; its recommendation remains unselected.
 First settle whether an experimental evaluator is acceptable for the FVP or a
 native artifact is mandatory. Then bound the initial supported syntax/numbers
 and exact explicit-observation behavior. Preserve the deferred investigations.
