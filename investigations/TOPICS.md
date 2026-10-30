@@ -805,7 +805,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — Python 3 standard-library interpreter with tokenizer/parser/checker/evaluator recommended, not selected. Future native compiler language and full compiler architecture remain open.
 
 <a id="inv-062"></a>
 
