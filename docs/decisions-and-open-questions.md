@@ -2,6 +2,25 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Temporary FVP input and reporting helpers, 2026-10-30
+
+- Adopt the user's temporary/fake FVP helper surface: inputInt, inputFloat,
+  inputLine, inputWord, report(...), and reportError(...). Supply a minimal way
+  to experiment with language features before building module/stdlib machinery.
+- Select the temporary names and roles, not a permanent standard-library API,
+  complete callable/variadic signatures, or an implementation. report supersedes
+  the assistant's illustrative show name. Input/output still requires explicit
+  calls; no automatic binding dump or change to Unit/block-result rules follows.
+- Real versus scripted/mock input, parsing/consumption, EOF/failures, exact types,
+  formatting/newlines/destinations, and reportError's failure/exit effects remain
+  open. Additional helpers are not selected merely by the user's trailing ellipsis.
+- This provisional FVP surface does not choose an interpreter/native backend or
+  revise the deferred .lt no-implicit-import or replaceable-stdlib direction.
+
+Owner: [temporary FVP input and reporting](tooling-and-learning.md#temporary-fvp-input-and-reporting).
+[INV-004](../investigations/INV-004-fvp-execution-path.md#temporary-helper-selection-2026-10-30)
+records the selection and remaining contracts. No runtime verification is claimed.
+
 ## FVP focus before module architecture, 2026-10-30
 
 - The user clarified that .lt versus .lts discussion is premature for the

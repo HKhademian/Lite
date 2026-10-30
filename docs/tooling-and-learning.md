@@ -8,8 +8,8 @@ Students should spend their early effort understanding programs rather than choo
 
 The [selected first working targets](principles.md#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. Its runner or
-compiler mechanism, command spelling, and way to observe values remain open;
-the formatter contract below does not choose them.
+compiler mechanism and command spelling remain open. Temporary input/reporting
+helper names are selected below; their detailed contracts remain open.
 
 ## Explicit output and tracing
 
@@ -30,6 +30,44 @@ The user's tracing analogy motivates explicit activation; it does not select a
 command name, flag, module, output API, formatting rule, or failure contract.
 Compiler/runtime diagnostics and unused-value warnings retain their separate
 policies. This selects observation intent, not a new checked effect system.
+
+## Temporary FVP input and reporting
+
+Selected **2026-10-30** for the tiny FVP: provide a minimal temporary/fake helper
+surface named inputInt, inputFloat, inputLine, inputWord, report(...), and
+reportError(...). These are demonstrator scaffolding to try language features,
+not a settled standard-library API or a requirement to implement modules first.
+The names may be supplied directly by the demonstrator for now; their eventual
+module ownership, public API, and migration remain later work. This does not
+introduce implicit imports into the deferred .lt module design.
+
+The intended roles are integer input, floating input, a line of text, a word of
+text, explicit ordinary reporting, and explicit error reporting. The trailing
+ellipsis in the user's suggestion leaves room for later helpers; it does not
+select a complete I/O library. The notation report(...) does not yet choose a
+variadic callable contract or a formatting language.
+
+Illustrative FVP use, not a complete executable contract:
+
+```text
+first := inputInt();
+second := inputInt();
+report(first + second);
+```
+
+Only the explicit calls request input/reporting. Ordinary bindings and file
+completion remain silent; block results are unchanged. The temporary report
+name replaces the earlier illustrative show name for FVP output. A separate
+all/last-binding inspector is not required for this path.
+
+Keep the remaining choices small and explicit before implementation: real
+console input versus scripted/fixed test input; token/line consumption, numeric
+parsing and EOF/failure behavior; complete input/output signatures, supported
+reported values, formatting/newlines and destinations; and whether reportError
+only reports or also affects failure/exit. The word fake selects temporary
+scaffolding, not any particular mock-input values or transport. No stdout/stderr,
+prompt, exception, panic, or exit-status policy is selected by these names alone.
+No helpers or runner have been implemented yet.
 
 ## Formatter
 

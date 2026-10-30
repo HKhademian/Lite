@@ -138,6 +138,10 @@ The former general-prelude proposal is now scoped by source kind. Module-based
 APIs. Language syntax and literal typing are distinct from namespace imports;
 the exact compiler-intrinsic versus module-definition boundary remains open.
 
+For the immediate FVP, [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
+are selected as demonstrator scaffolding. They do not select the eventual
+script convenience set or require module/stdlib implementation first.
+
 **Proposal, not a selected convenience set:** an explicit script-running mode,
 illustrated by lite run script.lts, could introduce a small set of short names
 for module-owned facilities and disclose this with a warning or runner log.

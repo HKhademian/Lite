@@ -11,8 +11,10 @@ uses .lt and has no implicit imports. The 20 existing files were renamed from
 .lite to .lts and catalog/readme paths updated without changing lesson bodies.
 Their implemented-but-unverified status is unchanged. Legacy .lite names in
 dated investigation/backlog snapshots describe earlier revisions. No compiler
-alias or source conversion is implemented. Script-run conveniences and concrete
-I/O APIs remain proposals; see [source kinds](../docs/modules-and-packages.md#distinct-script-and-module-files).
+alias or source conversion is implemented. General script conveniences remain
+proposals; [temporary FVP input/reporting names](../docs/tooling-and-learning.md#temporary-fvp-input-and-reporting)
+are now selected, with full I/O contracts open. No input/report calls or in-program
+checks have been added to these lessons; see [source kinds](../docs/modules-and-packages.md#distinct-script-and-module-files).
 
 ## Initial correctness batch
 

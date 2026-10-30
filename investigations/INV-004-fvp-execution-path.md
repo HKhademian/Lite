@@ -18,6 +18,24 @@ Choose this boundary before designing caches, packages, or multiple source modes
 
 ## Current contracts and evidence
 
+### Temporary helper selection, 2026-10-30
+
+The user proposes a minimal temporary/fake surface for now: inputInt, inputFloat,
+inputLine, inputWord, report(...), and reportError(...). Adopt these provisional
+FVP names/roles, supplied by demonstrator scaffolding without requiring a module
+system or permanent stdlib design. report supersedes the assistant's unselected
+show illustration. The ellipsis does not select further helpers or a variadic
+signature. Real versus scripted/mock input, numeric parsing and token/line
+consumption, EOF/failures, complete signatures, reporting formats/destinations,
+and reportError's failure/exit effects remain open. No mock values are chosen.
+
+Calls explicitly request their operations; ordinary bindings/file completion stay
+silent and declaration-final blocks still produce Unit. This selection does not
+answer evaluator versus native-first or authorize implicit imports in .lt source.
+Owner: [temporary input and reporting](../docs/tooling-and-learning.md#temporary-fvp-input-and-reporting).
+Ledger: [temporary FVP helpers](../docs/decisions-and-open-questions.md#temporary-fvp-input-and-reporting-helpers-2026-10-30).
+No runner/helper implementation or LiteLang execution is claimed.
+
 Baseline: `b947746`; working tree clean before this investigation.
 
 - [Immediate FVP focus](../docs/principles.md#immediate-focus-first-viable-product)
@@ -42,13 +60,14 @@ Baseline: `b947746`; working tree clean before this investigation.
 first := 7;
 second := 5;
 total := first + second;
+report(total);
 ```
 
-Candidate observation: explicitly request inspection of total through the runner
-and expect 12. With inspection disabled, these statements request no output.
-Inspection command spelling, value formatting, output destination, missing-name
-behavior, and supported scope must be defined before this becomes an executable
-acceptance case. This is not a selected global print function or implicit import.
+The temporary report operation explicitly requests observation of total, expected
+to be 12. Remove that call and these declarations request no output. Exact value
+formatting, destination, and failure behavior must be defined before this becomes
+an executable acceptance case. Runner inspection was an earlier unselected
+alternative; it is not required to display this result.
 
 Literals, fixed bindings, name reads, and addition are a proposed first slice,
 not a complete FVP feature selection. Reached items remain ordered; names must
@@ -85,7 +104,8 @@ The user asks whether to display all, last, marked, or special bindings:
   no spelling or special meaning is selected. Do not reinterpret ordinary names,
   destructuring, or the existing readable underscore binding as an output request.
 
-Illustrative only: show(total) could request the computed total, while
+Historical illustration, superseded by the temporary report selection above:
+show(total) could request the computed total, while
 show((a, b, c, rest)) could request explicitly grouped destructured values.
 show is not a selected built-in or real API. Exact operation spelling, supported
 values, formatting, destination, and failure behavior remain open.
@@ -126,7 +146,8 @@ implementation-time measurement, or foreign-language behavior is claimed.
 
 ## Decision references and handoff
 
-No new execution mechanism, output API, or complete feature subset is selected.
+Temporary input/reporting helper names and roles are selected above; complete
+I/O contracts, execution mechanism, and feature subset remain open.
 First settle whether an experimental evaluator is acceptable for the FVP or a
 native artifact is mandatory. Then bound the initial supported syntax/numbers
 and exact explicit-observation behavior. Preserve the deferred investigations.

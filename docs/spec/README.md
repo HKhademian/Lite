@@ -189,6 +189,7 @@ Open: collection/iterator protocol names and syntax, empty/unresolved-element li
 
 Selected:
 
+- The immediate FVP uses provisional inputInt, inputFloat, inputLine, inputWord, report(...), and reportError(...) helpers for explicit input/reporting. These temporary names are not a settled stdlib API; complete signatures, parsing/EOF/failure, formatting, destinations, and implementation remain open. See [temporary FVP input and reporting](../tooling-and-learning.md#temporary-fvp-input-and-reporting).
 - .lt module files have no implicit imports, including core type names. Definitions belong to packages/modules and require qualification or explicit member introduction. Module aliases and unpacking syntax remain open; syntax/literal typing is distinct from namespace imports. Script-run conveniences and their warning/log policy remain a proposal, and cannot make names implicit inside imported .lt modules.
 - Even standard modules/files should be replaceable through an explicit dependency/provider model. The compiler-primitive/library boundary, provider selection and compatibility mechanisms remain open. See [replaceable standard modules](../modules-and-packages.md#replaceable-standard-modules).
 - Modules default to private visibility.

@@ -53,6 +53,11 @@ Supported features still follow their selected semantics, effects remain
 explicit, and unsupported features receive clear diagnostics. Exact FVP feature
 coverage and execution mechanism remain open.
 
+The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
+provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
+report(...), and reportError(...). These provisional names do not require the
+future module/standard-library design; exact I/O contracts remain open.
+
 ### Growth after the tiny runnable version
 
 Selected 2026-10-28: begin with a tiny working demonstrator for experimenting
@@ -73,8 +78,8 @@ to be replaceable. Script-run aliases and diagnostic disclosure remain proposals
 The demonstrator should execute a `.lts` source file through a minimal runner
 or compilation path and provide a simple way to observe results. Supported
 features must follow their selected rules; unsupported features must produce
-clear diagnostics. Runner versus compiler, commands, backend, and observation
-API remain open. Literals, bindings, arithmetic, and simple value display are a
+clear diagnostics. Runner versus compiler, commands, backend, and full I/O
+contracts remain open; temporary helper names are selected above. Literals, bindings, arithmetic, and simple value display are a
 proposed initial subset, with conditionals, functions, and loops added
 incrementally; this feature order is not a selected implementation plan.
 
