@@ -2,6 +2,20 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Defer detailed text design for the FVP, 2026-10-30
+
+The user accepts narrowing the immediate text work to basic quoted text and
+temporary inputLine/inputWord/report helpers. Defer the detailed UTF-8/escape/
+line/word proposal; it remains unselected. Use simple temporary scaffolding and
+define behavior when concrete examples need it rather than requiring complete
+encoding/Unicode or mixed-input contracts before starting the interpreter.
+Preserve already-selected input-fault and explicit-output rules and document
+actual supported behavior/limitations. No implementation is claimed.
+
+Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
+[INV-016 scope correction](../investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+records the deferral; permanent text semantics are not settled by this decision.
+
 ## Temporary FVP numeric profile, 2026-10-30
 
 - Select checked signed 64-bit integer values and one 64-bit binary floating

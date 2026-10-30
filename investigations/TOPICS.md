@@ -213,7 +213,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-016).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — UTF-8, minimal escapes, line input, and whitespace-delimited word input proposed, not selected. Partial INV-016.01/.04 coverage; shared input cursor, output formatting, ownership/indexing, and full Unicode/text contracts remain open.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed encoding/escape/line/word proposal deferred and unselected after the FVP scope correction. Basic quoted text and temporary helpers suffice to begin; practical details follow concrete examples. Partial INV-016.01/.04 coverage; full text contracts remain open.
 
 <a id="inv-017"></a>
 

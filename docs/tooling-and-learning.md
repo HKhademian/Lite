@@ -53,6 +53,16 @@ uses checked signed 64-bit integers and one finite 64-bit binary floating family
 Division by zero and non-finite arithmetic results fault. Exact rounding,
 promotions/literal details, text profile, and implementation language remain open.
 
+**FVP scope correction, 2026-10-30:** basic quoted text and the temporary
+inputLine/inputWord/report helpers are enough to begin. Use a simple temporary
+implementation and define concrete behavior as examples require it. The detailed
+[text-profile proposal](../investigations/INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+is deferred and unselected; detailed encoding/Unicode, escape coverage, and
+mixed-input rules are not prerequisites for starting the interpreter. Existing
+input-fault and explicit-output selections still apply. Record supported
+behavior and limitations without presenting host defaults as permanent language
+semantics.
+
 ## Explicit output and tracing
 
 Selected 2026-10-28: program output, value display, and execution tracing require

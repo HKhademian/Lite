@@ -90,8 +90,9 @@ The user accepts the first slice above. The [temporary numeric-profile investiga
 now selects provisional signed 64-bit integers, one finite 64-bit binary floating
 family, and checked arithmetic faults. Remaining rounding/promotion/literal
 details, text profile, minimal helper contracts, and implementation language are
-still open. [INV-016.01](INV-016-01-fvp-text-profile.md) now proposes a bounded
-UTF-8/literal/line/word text profile; it is not selected.
+still open. The detailed [INV-016.01 text profile](INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30)
+is now deferred and unselected. Basic quoted text and temporary line/word/report
+helpers suffice to begin; define practical details as concrete examples need them.
 Keep the existing lessons unchanged until implementation/verification work is
 actually in scope. The complete 001–020 batch remains an incremental growth
 target, not a prerequisite for this first executable checkpoint.

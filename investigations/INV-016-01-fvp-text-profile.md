@@ -1,6 +1,6 @@
 # INV-016 — Temporary FVP text profile
 
-Status: in progress
+Status: recorded (detailed profile deferred; proposal unselected)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-016](TOPICS.md#inv-016)
@@ -9,6 +9,20 @@ Subtopic briefs: [INV-016.01](SUBTOPICS.md#inv-016-01), [INV-016.04](SUBTOPICS.m
 
 This is a non-normative investigation. The profile below is proposed, not a
 selected String contract or an implemented input/parser subsystem.
+
+## FVP scope correction, 2026-10-30
+
+The user challenged whether this level of text design belongs in the FVP and
+accepted narrowing the immediate work to basic quoted text and the temporary
+inputLine/inputWord/report helpers. Defer the detailed profile below; it is
+not selected and no answer to that proposal is requested now.
+
+Use a simple temporary implementation and define behavior needed by concrete
+examples as they arise. Detailed encoding/Unicode policy, escape coverage, and
+mixed-input cursor rules are not design prerequisites for starting the FVP.
+Record practical implementation behavior and unsupported cases honestly; this
+does not waive selected input-fault or explicit-output semantics, nor redefine
+the language-wide String direction. Baseline for this correction: `af1dc3b`.
 
 ## Question and current contracts
 
@@ -86,7 +100,7 @@ Read the selected checkpoint/input-fault rules and current String direction.
 Checked note/tracking links, fences, and focused diff consistency. No LiteLang
 source/input probe was executed and no encoding implementation is claimed.
 
-First accept or revise the small encoding/literal/line/word profile. Then settle
-the remaining shared-cursor and report behavior needed for the FVP, along with
-numeric details and implementation language. No permanent stdlib design or
-source-mode split is needed to answer this question.
+The detailed proposal is deferred. Resume it when concrete experiments or later
+library design need its answers. For now, proceed toward the selected interpreter
+checkpoint with basic text/helper scaffolding and document the actual supported
+behavior; do not turn full text semantics into a pre-implementation checklist.
