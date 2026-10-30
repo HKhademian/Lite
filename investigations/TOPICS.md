@@ -73,7 +73,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/finally.md](../docs/finally.md); [docs/panics.md](../docs/panics.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-005 — FVP completion and reporting](INV-005-fvp-completion-and-reporting.md) — reportError report-only versus failure/termination effects, Unit completion versus host status; report-only and normal-success/fatal-failure status mapping recommended, not selected. Exact I/O failures, exit codes, termination API, and full lifecycle remain open.
 
 <a id="inv-006"></a>
 
