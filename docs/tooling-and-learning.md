@@ -148,11 +148,22 @@ The existing future two-pass idempotence conformance requirement remains indepen
 ## Run and build proposals
 
 ```text
-lite run lesson.lite
-lite build lesson.lite
+lite run lesson.lts
+lite build lesson.lts
 ```
 
-One command should run a file without requiring a package manifest. Native compilation/caching is a proposal, not an implemented path.
+One command should run a .lts script without requiring a package manifest.
+Native compilation/caching is a proposal, not an implemented path. .lt source
+retains its distinct module shape and explicit dependency names regardless of
+which tool loads it. See [source kinds](modules-and-packages.md#distinct-script-and-module-files).
+
+The user proposes a script-running mode such as lite run script.lts that could
+introduce selected short aliases for module-owned facilities, with warning/log
+disclosure. The convenience set, exact activation, diagnostic class/frequency/
+channel, and build-mode behavior remain open. This is separate from program
+output or result echo, which remain explicit. Imported .lt modules receive no
+such implicit imports. Whether a .lts build has a matching explicit convenience
+mode or requires explicit names remains an INV-004 parity question.
 
 ## Diagnostics
 

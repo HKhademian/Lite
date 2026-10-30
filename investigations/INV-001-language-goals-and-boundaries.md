@@ -62,7 +62,7 @@ features. The [owning principles page](../docs/principles.md#first-working-targe
 and [decision ledger](../docs/decisions-and-open-questions.md#first-working-targets-2026-10-28)
 record the current selection:
 
-- First provide a tiny executable demonstrator that runs a `.lite` file and
+- First provide a tiny executable demonstrator that runs a `.lts` file and
   makes results observable. Supported features follow selected semantics;
   unsupported features receive clear diagnostics.
 - Grow toward practical scripts with command-line arguments, console I/O, and

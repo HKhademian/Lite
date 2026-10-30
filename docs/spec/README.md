@@ -14,7 +14,7 @@ Status: **draft current-design summary, 2026-10-30**. This page states the selec
 Selected:
 
 - Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
-- A run source file is the outermost implicit executable block: the file boundary supplies its braces. Items execute in written order; the final item's result is computed and not observed, so the body completes with `Unit` whether empty, declaration-final, or expression-final. See [source file body](../blocks-and-results.md#source-file-body).
+- A .lts script file is the outermost implicit executable block: the file boundary supplies its braces. Items execute in written order; the final item's result is computed and not observed, so the body completes with `Unit` whether empty, declaration-final, or expression-final. A .lt file is declaration-oriented module source with explicit dependencies, not an implicit script body. See [source file body](../blocks-and-results.md#source-file-body) and [source kinds](../modules-and-packages.md#distinct-script-and-module-files).
 - Output, value display, and execution tracing require an explicit source operation or deliberately enabled tool facility, including in demonstrators and playgrounds. Expressions, declarations, and assignments do not echo their values automatically. Observation must not re-evaluate expressions. See [explicit output and tracing](../tooling-and-learning.md#explicit-output-and-tracing).
 - Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
 - Operands and named call inputs evaluate left to right in written order.
@@ -189,6 +189,8 @@ Open: collection/iterator protocol names and syntax, empty/unresolved-element li
 
 Selected:
 
+- .lt module files have no implicit imports, including core type names. Definitions belong to packages/modules and require qualification or explicit member introduction. Module aliases and unpacking syntax remain open; syntax/literal typing is distinct from namespace imports. Script-run conveniences and their warning/log policy remain a proposal, and cannot make names implicit inside imported .lt modules.
+- Even standard modules/files should be replaceable through an explicit dependency/provider model. The compiler-primitive/library boundary, provider selection and compatibility mechanisms remain open. See [replaceable standard modules](../modules-and-packages.md#replaceable-standard-modules).
 - Modules default to private visibility.
 - The official formatter is `lite fmt`. `lite fmt --check` is read-only and suitable for CI.
 - Formatting is a presentation transform. It requires syntactically valid source but is not a type checker or name resolver.
@@ -204,10 +206,10 @@ Open: package/build syntax, runtime/native ABI, complete formatter implementatio
 Selected:
 
 - The umbrella project is **Lite** (`lite`); the language is **LiteLang** (`litelang`).
-- A program or source unit is a **LiteScript** (`litescript`); the plural is **LiteScripts**.
+- A script/program is a **LiteScript** (`litescript`); the plural is **LiteScripts**. Module source is a distinct file kind.
 - The compiler is the **Lite compiler**, package `lite-compiler`, binary `litec`.
 - The runtime is the **Lite runtime**, package `lite-runtime`, binary `literun`.
-- The command-line tool is `lite`; LiteScript files use `.lite`.
+- The command-line tool is `lite`; scripts use `.lts` and module-based source uses `.lt`, superseding the former `.lite` suffix.
 - Language, compiler, runtime, and CLI have independent semantic versions. The runtime also has an integer ABI version.
 - A language version changes only through an accepted Lite Proposal (`LP-NNNN`) or a recorded ledger decision. Releases use a project manifest tag such as `lite-v1.2.0` plus component tags such as `lang-v1.2.0` and `compiler-v0.4.1`.
 - A proposal uses `LP-NNNN rN` with status, target version, and supersession links. Accepted proposals are not silently edited.

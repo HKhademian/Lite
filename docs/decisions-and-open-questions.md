@@ -2,6 +2,35 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Distinct source kinds and replaceable standard modules, 2026-10-30
+
+- Select .lts for convenient scripts with an implicit executable file body and
+  .lt for declaration-oriented source belonging to packages/modules. Module
+  headers, exports, initialization, and file-to-module mapping remain open.
+- .lt has no implicit imports, including names such as Int and Bool. Access
+  module-owned definitions through qualification or explicit member introduction.
+  Local aliases are possible; exact import/unpack/using syntax is not selected.
+  Syntax and literal typing do not themselves import namespace names.
+- Select the goal that even the standard module/file is replaceable through an
+  explicit dependency/provider model. The name std grants no ambient access.
+  Replacement configuration, compatibility checks, versions/ABI, and the boundary
+  between compiler primitives and module definitions remain open.
+- Script-mode convenience names with a warning or runner log remain a proposal,
+  illustrated by lite run script.lts. No convenience set, diagnostic policy,
+  activation rule, or run/build parity is selected. Imported .lt modules retain
+  explicit dependencies. Program output and tracing still require explicit acts.
+- This supersedes the single .lite suffix and general-prelude scope. Rename the
+  20 lesson files and 520 catalog paths to .lts, preserving lesson bodies and
+  dated historical snapshots. No tool implementation or legacy input alias is
+  implied, and no component release/version bump is made.
+
+Owners: [source kinds](modules-and-packages.md#distinct-script-and-module-files),
+[replaceable standard modules](modules-and-packages.md#replaceable-standard-modules),
+[script convenience proposal](modules-and-packages.md#prelude), and
+[source naming](versioning-and-naming.md#source-file-kinds).
+[INV-003.03 and partial INV-003.04](../investigations/INV-003-03-script-environment.md#source-kind-and-standard-module-selection-2026-10-30)
+record the discussion and remaining questions. No compiler/runtime is implemented.
+
 ## Explicit current-function self calls, 2026-10-29
 
 Recorded 2026-10-30:
@@ -153,7 +182,7 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
 ## First working targets, 2026-10-28
 
 - Select a tiny working demonstrator before the first useful milestone: execute
-  a `.lite` file and observe results so language features can be tried early.
+  a `.lts` file and observe results so language features can be tried early.
 - Select practical scripts as the first useful milestone, including command-line
   arguments, console input/output, and file processing. Foreign calls, explicit
   memory placement, and concurrency remain later investigations.
@@ -384,7 +413,7 @@ The [capture and unwrapping reference](failure-capture-and-unwrapping.md) owns d
 
 ### Project and versioning
 
-- Naming and versioning policy selected 2026-10-25: project **Lite** (`lite`); language **LiteLang** (`litelang`); a program is a **LiteScript** (`litescript`), plural **LiteScripts**; compiler **Lite compiler** (`lite-compiler`, binary `litec`); runtime **Lite runtime** (`lite-runtime`, binary `literun`); CLI `lite`; source extension `.lite`. Language, compiler, runtime, and CLI versions are independent; the runtime also carries an integer ABI version. Language changes require an accepted `LP-NNNN` proposal or a recorded ledger decision. Proposals use `LP-NNNN rN` with status, target version, and supersession links; accepted proposals are never silently edited. Releases use component tags and a manifest rather than one ambiguous project tag. Existing pages that say “LiteScript” for the language are legacy usage; new text uses LiteLang for the language and LiteScript only for a program. See [naming and versioning](versioning-and-naming.md).
+- Naming and versioning policy selected 2026-10-25: project **Lite** (`lite`); language **LiteLang** (`litelang`); a program is a **LiteScript** (`litescript`), plural **LiteScripts**; compiler **Lite compiler** (`lite-compiler`, binary `litec`); runtime **Lite runtime** (`lite-runtime`, binary `literun`); CLI `lite`; source suffixes revised 2026-10-30 to `.lts` scripts and `.lt` module files. Language, compiler, runtime, and CLI versions are independent; the runtime also carries an integer ABI version. Language changes require an accepted `LP-NNNN` proposal or a recorded ledger decision. Proposals use `LP-NNNN rN` with status, target version, and supersession links; accepted proposals are never silently edited. Releases use component tags and a manifest rather than one ambiguous project tag. Existing pages that say “LiteScript” for the language are legacy usage; new text uses LiteLang for the language and LiteScript only for a program. See [naming and versioning](versioning-and-naming.md).
 
 ### Syntax and results
 

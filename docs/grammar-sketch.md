@@ -12,6 +12,19 @@ Angle-bracket generic examples elsewhere are [temporary documentation notation](
 
 `[x]` below means optional notation; `{x}` means repetition in grammar productions. Quoted braces and punctuation are literal tokens. The code examples elsewhere use source braces normally.
 
+## Script and module source kinds
+
+Selected 2026-10-30: .lts denotes a script's implicit executable file body;
+.lt denotes a distinct package/module-based source form. In .lt files, module
+names must be qualified or explicitly introduced/unpacked, with no implicit
+imports even for core type names. Language syntax and literal tokens are not
+imports. Short names in fragments below assume the relevant explicit module
+bindings where needed. Module headers, aliases, and using/unpack grammar remain
+open; this outline does not introduce a concrete module wrapper or a new using
+production. See [source kinds](modules-and-packages.md#distinct-script-and-module-files).
+Script-run convenience injection/disclosure is a proposal, not a general prelude
+or implicit import inside module source.
+
 ## Multilingual presentation boundary
 
 This sketch uses the current simple-English reference spellings. The proposed

@@ -1,6 +1,6 @@
 # Modules and packages
 
-Status: **required capability; header-free module declaration lookup direction selected 2026-10-28; organization, initialization, and commands remain open or proposed**.
+Status: **distinct .lts scripts and .lt module files, module-owned facilities, and explicit module access selected 2026-10-30; header-free declaration lookup direction retained; exact syntax, initialization, and run-mode conveniences remain open or proposed**.
 
 ## Purpose
 
@@ -9,13 +9,58 @@ Support a single-file first lesson and a path to reusable, explicitly versioned 
 ## Intended experience
 
 ```text
-lite run lesson.lite
-lite build lesson.lite
+lite run lesson.lts
+lite build lesson.lts
 ```
 
-These are proposed commands and a proposed extension; no tool exists in this workspace.
+The .lts script extension is selected. These commands describe the intended
+tool experience; no run/build tool exists in this workspace, and mode behavior
+and full command grammar remain under investigation.
 
 One file should run without a manifest or handwritten entry function. A package can add metadata, dependencies, exports, and an entry point as it grows. The executable body of a run file is defined in [blocks and results](blocks-and-results.md#source-file-body); this page governs packages, imports, and visibility.
+
+## Distinct script and module files
+
+Selected **2026-10-30**:
+
+- **.lts is a script source.** Keep the convenient executable file body, with
+  items evaluated top to bottom and no handwritten entry wrapper required.
+- **.lt is module-based source.** Its source unit is declaration-oriented and
+  belongs to an owning package/module namespace. It is not an interchangeable
+  script file or an implicit script entry body. Exact package headers, exports,
+  entry declarations, initialization, and file-to-module mapping remain open.
+- Facilities belong to packages/modules. In module-based source, access them
+  through module qualification or explicit member unpacking/introduction.
+  Possible local module aliases can keep qualification short; exact alias,
+  unpack/import syntax (including the suggested using spelling) is not selected.
+  There are no implicit imports in .lt files, including core type names such
+  as Int and Bool. Short names require explicit introduction; qualified names
+  retain their module owner. Language syntax/literal tokens are not imports;
+  inferring the type of a literal does not implicitly import its type's name.
+- Script-run conveniences must not make names ambient inside an imported .lt
+  module. A module's explicit dependencies do not change because a script uses
+  it. Import syntax alone does not choose host authority or operation effects.
+
+This revises the former single .lite suffix. Current lesson/catalog paths use
+.lts; .lite references in dated review snapshots remain historical. No legacy
+input alias or automatic .lt-to-script fallback is selected. The distinction is
+within one language, preserving shared expression, type, call, safety, and
+explicit-output rules inside the corresponding constructs.
+
+## Replaceable standard modules
+
+Selected design goal, **2026-10-30**: even the standard module/file should be
+replaceable. Standard facilities have package/module owners and are accessed
+through the same explicit namespace/dependency model; the spelling std does not
+itself grant an ambient namespace or special name-access permission. A project
+should be able to supply an alternative provider for a standard module/file.
+
+This does not choose a replacement mechanism. Source paths, package versions,
+module aliases, toolchain configuration, provider compatibility checks, ABI,
+and reproducibility details remain open. The boundary between compiler-defined
+syntax/intrinsics and module-provided definitions must be specified explicitly;
+replacing a standard provider does not silently settle numeric, initialization,
+type, or failure contracts. No standard library or provider resolver exists yet.
 
 ## Module lookup without header files
 
@@ -40,9 +85,10 @@ cycles, and reproducibility rules are open under
 [INV-062](../investigations/TOPICS.md#inv-062). No comptime or macro facility is
 selected or implemented by this direction.
 
-The script/module distinction must eventually be explicit and support growing a
-script into a module. Its exact source/configuration marker remains open under
-INV-003.04; this section does not choose a file extension or import grammar.
+The script/module distinction now uses .lts versus .lt. Growing a script into a
+module may require expressing its package, dependencies, and entry behavior;
+the full migration contract remains open under INV-003.04. The suffix selection
+does not complete module/import grammar.
 
 ## Import sketch
 
@@ -69,7 +115,21 @@ Implicit arbitrary module initialization and package installation scripts were d
 
 ## Prelude
 
-A small predefined environment could contain basic types, basic collections, `Option`, `Result`, and convenient output. Filesystem, networking, and larger libraries would require explicit imports. The effect and error contract of even convenient output must eventually be specified.
+The former general-prelude proposal is now scoped by source kind. Module-based
+.lt source has no implicit imports, including core type names and bare output
+APIs. Language syntax and literal typing are distinct from namespace imports;
+the exact compiler-intrinsic versus module-definition boundary remains open.
+
+**Proposal, not a selected convenience set:** an explicit script-running mode,
+illustrated by lite run script.lts, could introduce a small set of short names
+for module-owned facilities and disclose this with a warning or runner log.
+Their owners remain modules; this is not a second implementation of each API.
+No particular alias, output name, using syntax, warning/log class, default set,
+frequency, or diagnostic destination is selected. Run/build parity for .lts and
+the exact activation rule remain INV-004 questions. Merely parsing or formatting
+a file does not select a convenience policy, and imported .lt modules remain
+explicit. Output operations still need their own effect/failure contract and
+must be called deliberately; disclosure is distinct from automatic result echo.
 
 The selected [memory-control usability boundary](memory-and-performance.md#ordinary-and-advanced-memory-control)
 keeps advanced memory controls outside the default beginner surface while

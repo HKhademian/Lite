@@ -12,7 +12,7 @@ an option or recommendation here does not select a language rule.
 
 ## Investigation question
 
-When one `.lite` file is run, what is the executable body, and what does each
+When one `.lts` file is run, what is the executable body, and what does each
 top-level item mean?
 
 Two halves, with different prospects:

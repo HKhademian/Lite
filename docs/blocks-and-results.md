@@ -125,6 +125,12 @@ implicit executable block. The file boundary supplies the braces that explicit
 block constructs require, so "bodies always use braces" still governs every
 written `{ ... }` body; the source unit needs no written brace pair of its own.
 
+Clarified **2026-10-30**: this is the .lts script source form. A .lt module file
+is a distinct, declaration-oriented source kind with explicit package/module
+access and no implicit imports. It does not become this implicit script body
+merely because a script loads it. See
+[source kinds](modules-and-packages.md#distinct-script-and-module-files).
+
 Its items execute in written order under the ordinary block rules, including the
 final-item rule. The final item's result is computed and then not observed: a
 trailing expression is evaluated for its effects, and its value is discarded

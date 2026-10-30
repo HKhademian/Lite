@@ -1,6 +1,6 @@
 # Language documentation
 
-Design snapshot: **2026-10-26**. Stage: **planning; no implementation**.
+Design snapshot: **2026-10-30**. Stage: **planning; no implementation**.
 
 ## Start here
 
@@ -23,6 +23,14 @@ The detailed reference below develops these foundations one concept at a time.
 These are reading paths, not separate index entries; each document has one canonical entry in this index.
 
 ## How to read this reference
+
+[Source kinds](modules-and-packages.md#distinct-script-and-module-files) are
+distinct: .lts scripts have an executable file body; .lt files belong to modules
+and have no implicit imports, even for core type names. Short type/API names in
+conceptual fragments assume appropriate explicit bindings in a module context;
+those fragments are not complete .lt files with an invisible prelude. Full
+module headers and member-unpacking syntax remain open. Old .lite names in
+dated review snapshots are historical, not another selected current source kind.
 
 - **Selected / established** records an explicit user choice or a rule retained by the subsequent discussion. Status lines use “selected” for a specific decision and “established” for the broader direction; both have the same normative weight.
 - **Working proposal** is a concrete design suggestion that still needs confirmation or formalization. Status lines may say “proposal” or “proposed.”

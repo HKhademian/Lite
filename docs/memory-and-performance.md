@@ -297,7 +297,7 @@ The user clarifies [metadata plus overlapping payload](union-zero.md#current-sto
 ## Candidate execution experience
 
 ```text
-lite run lesson.lite
+lite run lesson.lts
 ```
 
 could compile and cache native code. This was a proposed scripting experience; neither caching nor a backend was selected. Compiler latency and cold startup must be evaluated independently of steady-state execution.

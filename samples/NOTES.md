@@ -2,7 +2,17 @@
 
 Exercises 001–020 are **implemented but unverified** as LiteScript programs. There is no compiler, interpreter, runtime, or implemented `lite run` command. External arithmetic checks establish expected answers only; they do not verify LiteScript syntax, static types, or execution. Exercises 021–520 remain planned.
 
-The `.lite` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
+The `.lts` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
+
+## Source file kind migration
+
+Selected 2026-10-30: these introductory scripts use .lts; module-based source
+uses .lt and has no implicit imports. The 20 existing files were renamed from
+.lite to .lts and catalog/readme paths updated without changing lesson bodies.
+Their implemented-but-unverified status is unchanged. Legacy .lite names in
+dated investigation/backlog snapshots describe earlier revisions. No compiler
+alias or source conversion is implemented. Script-run conveniences and concrete
+I/O APIs remain proposals; see [source kinds](../docs/modules-and-packages.md#distinct-script-and-module-files).
 
 ## Initial correctness batch
 

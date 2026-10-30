@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25**. The canonical names and version rules below are stable. Package-registry spelling and release automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30**. Package-registry spelling and release automation remain open.
 
 ## 1. Canonical names
 
@@ -8,17 +8,18 @@ Status: **selected naming and version policy, 2026-10-25**. The canonical names 
 |---|---|---|---|
 | Umbrella project | **Lite** | `lite` | The whole project; not a language name |
 | Language | **LiteLang** | `litelang` | The language and its reference |
-| Program | **LiteScript** | `litescript` | One program/source unit; plural **LiteScripts** |
+| Program | **LiteScript** | `litescript` | A script/program; module source is a distinct file kind |
 | Compiler | **Lite compiler** | `lite-compiler`; binary `litec` | Compiles LiteLang programs |
 | Runtime | **Lite runtime** | `lite-runtime`; binary `literun` | Executes compiled LiteScript programs |
 | Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite fmt`, `lite build`, `lite run` |
-| Source file | **LiteScript file** | `.lite` | Extension already used by samples |
+| Script source | **LiteScript file** | `.lts` | Convenient standalone script body |
+| Module source | **LiteLang module file** | `.lt` | Package/module-owned declarations and explicit module access |
 | Formatter | **Lite formatter** | `lite fmt` | Part of the CLI |
-| Standard library | **Lite standard library** | `lite-stdlib` | Reserved; not yet designed |
+| Standard library | **Lite standard library** | `lite-stdlib` | Reserved default implementation name; replaceable standard providers are intended |
 
 ### Name rules
 
-- Write **Lite** for the project, **LiteLang** for the language, and **LiteScript** for one program or source unit.
+- Write **Lite** for the project, **LiteLang** for the language, and **LiteScript** for a script/program. A .lt source unit is a LiteLang module file, distinct from a .lts script body.
 - Use **LiteScripts** (plural) for several programs or a collection of scripts. Use `litescripts` only as a machine path/identifier.
 - Use `litelang` for the language identifier and in language-level package or metadata fields.
 - Use `litescript` for one program identity, not as the language identifier.
@@ -31,6 +32,18 @@ Status: **selected naming and version policy, 2026-10-25**. The canonical names 
 - Binary names are lowercase and contain no spaces. Prose names may contain spaces.
 - Existing `lite fmt` documentation is consistent with this policy.
 - Do not introduce a second short name for the language. “Lite” alone is not a language name.
+
+### Source file kinds
+
+Selected 2026-10-30: .lts identifies scripts and .lt identifies module-based
+source. The [module/source-kind contract](modules-and-packages.md#distinct-script-and-module-files)
+owns their different shapes and access policy. The former .lite suffix is
+superseded; the existing 20 lesson files and 520 catalog paths have been
+migrated to .lts without changing lesson source contents. Historical review
+snapshots retain old path spellings where they describe their original revision.
+No implemented lexer/tool, legacy .lite acceptance, or automatic conversion
+between script and module semantics is implied. Naming changes do not themselves
+publish a release or bump a component version.
 
 ### Legacy prose migration
 

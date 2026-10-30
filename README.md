@@ -7,6 +7,7 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 The project is currently **planning only**. These documents record the design discussion through **2026-10-30**. They are not an implemented compiler specification, and the examples have not been compiled.
 
 - [Language documentation and reading order](docs/README.md)
+- [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)
 - [First working targets](docs/principles.md#first-working-targets): a tiny executable demonstrator for experimentation, followed by practical command-line and file-processing scripts. These are selected development goals; no runner or compiler exists yet.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).

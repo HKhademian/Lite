@@ -1,6 +1,6 @@
 # Small problems, a few lines at a time
 
-Start with [adding two numbers](001_add_two_numbers.lite), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
+Start with [adding two numbers](001_add_two_numbers.lts), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
 
 You do not need to know LiteScript to read the first example:
 

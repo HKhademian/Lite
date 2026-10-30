@@ -46,7 +46,13 @@ The exercise corpus supplies use cases. The
 Foreign calls, explicit memory placement, and concurrency remain later
 investigations outside that first useful milestone.
 
-The demonstrator should execute a `.lite` source file through a minimal runner
+The [source kinds](modules-and-packages.md#distinct-script-and-module-files)
+are distinct: .lts scripts prioritize convenient execution; .lt module files
+require explicit module qualification or member introduction, with no implicit
+imports even for core type names. Standard module/file providers are intended
+to be replaceable. Script-run aliases and diagnostic disclosure remain proposals.
+
+The demonstrator should execute a `.lts` source file through a minimal runner
 or compilation path and provide a simple way to observe results. Supported
 features must follow their selected rules; unsupported features must produce
 clear diagnostics. Runner versus compiler, commands, backend, and observation

@@ -18,6 +18,11 @@ with command-line arguments, console I/O, and file processing. These goals guide
 questions; they do not settle an ownership model, backend, runtime mechanism, or
 benchmark.
 
+The selected [source kinds](../docs/modules-and-packages.md#distinct-script-and-module-files)
+distinguish convenient .lts scripts from .lt module files with no implicit
+imports, including core type names. Even standard modules should be replaceable;
+the mechanism and script-run convenience/disclosure proposal remain open.
+
 The [progressive exercise catalog](../samples/list.md) and
 [challenge corpus](../challenges/README.md) provide concrete use cases. Their full
 contents are not automatically a frozen acceptance suite. The exercise-coverage
