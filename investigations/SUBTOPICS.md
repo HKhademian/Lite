@@ -1,6 +1,6 @@
 # Starter subtopics
 
-Status: **question inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28. All subtopics start as
+Status: **question inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28; module-effects and replaceable-library questions added 2026-10-30. All subtopics start as
 **not started**. No investigation findings, selected mechanisms, priorities, or
 implementation plans are recorded here.
 
@@ -33,6 +33,7 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-003).
 - <a id="inv-003-02"></a> **INV-003.02 — Declarations and lookup:** How do top-level definitions, local helpers, forward references, and recursion interact with execution?
 - <a id="inv-003-03"></a> **INV-003.03 — Script environment:** Which inputs, predefined names, and host facilities are available to a standalone file?
 - <a id="inv-003-04"></a> **INV-003.04 — Growth into modules:** Which script rules remain unchanged when code is imported or moved into a package?
+- <a id="inv-003-05"></a> **INV-003.05 — Module top-level effects and declaration initializers:** Should non-scripting .lt files forbid top-level side-effect execution, and how would that work when declarations are assignments with evaluated initializers? Distinguish binding introduction, function-body creation versus invocation, pure computation, compile-time evaluation, and runtime initialization. Probe literals, fn bodies with deferred effects, calls such as value := load_file(...), hidden/transitive initializer effects, imports, and cycles. How are allowed effects proved, diagnosed, or moved to an explicit entry/init operation? This is a question, not a selected ban, effect system, purity requirement, or initialization schedule.
 
 <a id="inv-004"></a>
 
@@ -365,6 +366,7 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-063).
 - <a id="inv-063-02"></a> **INV-063.02 — Inlining versus shared helpers:** Which call paths benefit from inlining, and when do outlined checks, adapters, or cleanup reduce code size at an acceptable execution cost?
 - <a id="inv-063-03"></a> **INV-063.03 — Proof-based cost elimination:** What facts justify removing physical copies, bounds checks, initialization stores, or temporary environments while preserving ordinary-copy, access, failure, and cleanup contracts?
 - <a id="inv-063-04"></a> **INV-063.04 — Link-time reachability:** How can dead-code removal and optional library boundaries exclude unused support, including metadata, registration, and failure helpers, without dropping reachable behavior?
+- <a id="inv-063-05"></a> **INV-063.05 — Lean code from replaceable libraries:** How can explicit standard-module dependencies and alternative providers generate small code without retaining unused implementations, wrappers, dispatch machinery, metadata, or runtime services? Compare direct calls, specialization, shared helpers, cross-module optimization, and linking on equivalent workloads; measure code growth and deployment dependencies while preserving selected behavior. No zero-overhead or size guarantee is implied.
 
 <a id="inv-064"></a>
 
@@ -422,6 +424,19 @@ Parent: [scope, starting references, and tracking](TOPICS.md#inv-069).
 - <a id="inv-069-02"></a> **INV-069.02 — Atomic operations:** Which values and operations can be atomic, and what alignment or representation obligations apply?
 - <a id="inv-069-03"></a> **INV-069.03 — Visibility and ordering:** Which observations do synchronization operations order between concurrent contexts?
 - <a id="inv-069-04"></a> **INV-069.04 — Safe abstraction boundaries:** How do high-level concurrent APIs expose sufficient guarantees without requiring every caller to reason about low-level atomics?
+
+<a id="inv-071"></a>
+
+## INV-071 — Standard-library boundaries
+
+Parent: [scope, starting references, and tracking](TOPICS.md#inv-071).
+
+Later questions added 2026-10-30, all **not started**. The replaceable-standard
+goal is selected; the mechanisms below are unresolved.
+
+- <a id="inv-071-01"></a> **INV-071.01 — Standard-module swapping:** How does a project explicitly choose a replacement standard module/file, at what granularity, and how are transitive dependencies, module/type identity, conflicts, versions, and reproducible builds handled? Distinguish build-time provider selection from runtime replacement; neither mechanism is selected.
+- <a id="inv-071-02"></a> **INV-071.02 — Compiler primitives versus library definitions:** Which types, operations, literal contracts, and support hooks are compiler-defined, which can live in replaceable standard modules, and what obligations must an alternative provider satisfy? How do incompatible providers fail clearly without an implicit standard import?
+- <a id="inv-071-03"></a> **INV-071.03 — Interface and implementation definition locations:** Where do public contracts and their implementations live: together, in separate modules/packages/files, or in generated interface artifacts? How does a consumer bind an implementation to a contract, and how are visibility, generic bodies, compile-time needs, compatibility, and separate compilation checked without mandatory handwritten headers or duplicated signatures? Coordinate general package boundaries with [INV-007](TOPICS.md#inv-007) and code costs with [INV-063.05](#inv-063-05).
 
 <a id="inv-072"></a>
 

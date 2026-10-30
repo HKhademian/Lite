@@ -1,6 +1,6 @@
 # Investigation topic briefs
 
-Status: **inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28. Topic status is tracked on each Investigation line.
+Status: **inventory only**, established 2026-10-27; lightweight execution and multilingual learning questions added 2026-10-28; module-effects and replaceable-library questions added 2026-10-30. Topic status is tracked on each Investigation line.
 These briefs define questions, not answers, implementation tasks, or review
 findings. Advanced possibilities listed in a scope remain possibilities.
 
@@ -43,9 +43,9 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/blocks-and-results.md](../docs/blocks-and-results.md); [samples/README.md](../samples/README.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-003).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-003).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body and explicit-output decisions, observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — in progress, ordered blocks, lookup/live-read rules, static-first checks, direct recursion, and explicit self calls recorded; naming/nesting/access/inference details remain open; [INV-003-03](INV-003-03-script-environment.md) — in progress, .lts/.lt source kinds, no implicit imports in .lt, and replaceable standard-module goal selected; script convenience/disclosure proposal remains open. INV-003.04 partially covered in the same note at the source-kind boundary; full module shape and migration remain open.
+**Investigation:** in progress; contributor: redacted (agent-assisted); notes: [INV-003-01](INV-003-01-top-level-execution.md) — recorded, file-body and explicit-output decisions, observation APIs open; [INV-003-02](INV-003-02-declarations-and-lookup.md) — in progress, ordered blocks, lookup/live-read rules, static-first checks, direct recursion, and explicit self calls recorded; naming/nesting/access/inference details remain open; [INV-003-03](INV-003-03-script-environment.md) — in progress, .lts/.lt source kinds, no implicit imports in .lt, and replaceable standard-module goal selected; script convenience/disclosure proposal remains open. INV-003.04 partially covered in the same note at the source-kind boundary; full module shape and migration remain open. INV-003.05 (possible restriction on module top-level effects and declaration initializers) inventoried for later; not started.
 
 <a id="inv-004"></a>
 
@@ -829,7 +829,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/parameter-values-and-slots.md](../docs/parameter-values-and-slots.md); [docs/evaluation-order.md](../docs/evaluation-order.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-063).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-063).
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
@@ -935,11 +935,15 @@ questions; check their status and current owning pages before relying on them.
 
 ## INV-071 — Standard-library boundaries
 
-**Scope:** Built-ins, prelude, optional libraries, and dependency costs.
+**Scope:** Compiler primitives, script conveniences, replaceable standard modules, interface/implementation definition locations, optional libraries, and dependency costs.
 
 **Starter question:** Which facilities belong in the language, prelude, or libraries, and how are optional facilities and their costs exposed?
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/collection-abstractions.md](../docs/collection-abstractions.md); [docs/tooling-and-learning.md](../docs/tooling-and-learning.md).
+
+**Starter subtopics:** [3 later questions](SUBTOPICS.md#inv-071), added 2026-10-30; mechanisms not started.
+
+**Focus:** [Library replacement and lean generated code](lightweight-native-execution.md#later-library-and-code-size-questions-2026-10-30). The replaceable-standard goal is recorded in [INV-003.03](INV-003-03-script-environment.md#source-kind-and-standard-module-selection-2026-10-30); this does not resolve the provider mechanism or start these subtopics.
 
 **Investigation:** not started; contributor: unassigned; note: none.
 

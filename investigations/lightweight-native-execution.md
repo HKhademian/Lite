@@ -72,6 +72,19 @@ individual tracking status; listing them here does not restart or complete work.
    backend conformance/regression evidence. Propose numeric budgets only after
    target-specific baselines exist.
 
+## Later library and code-size questions, 2026-10-30
+
+The user requested later investigation of standard-library swapping, lean
+generated code, and interface versus implementation definition locations.
+[INV-071.01–.03](SUBTOPICS.md#inv-071) and
+[INV-063.05](SUBTOPICS.md#inv-063-05) inventory these questions; all are **not
+started**. Provider selection and contract placement may affect cross-module
+optimization, duplicate helpers, retained metadata, and runtime dependencies.
+No replacement mechanism, layout, dispatch policy, or size result is selected.
+The separate [module top-level effects question](SUBTOPICS.md#inv-003-05) also
+asks whether initialization can pull in effects/support merely by importing a
+module; a top-level-effects ban has not been selected.
+
 ## Evidence expected from a bounded investigation
 
 - State the question, current contracts, candidate assumptions, repository

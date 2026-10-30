@@ -62,6 +62,11 @@ syntax/intrinsics and module-provided definitions must be specified explicitly;
 replacing a standard provider does not silently settle numeric, initialization,
 type, or failure contracts. No standard library or provider resolver exists yet.
 
+Later investigations: [standard swapping, primitive boundaries, and interface/
+implementation locations](../investigations/SUBTOPICS.md#inv-071), plus
+[lean generated code](../investigations/SUBTOPICS.md#inv-063-05). These questions
+are not started and do not choose a replacement or interface layout.
+
 ## Module lookup without header files
 
 Selected direction, 2026-10-28: module-based source should permit safe forward
@@ -76,6 +81,14 @@ Every executed code block still follows
 [top-to-bottom evaluation](evaluation-order.md#executable-block-items). Resolving
 a later declaration is distinct from executing its initializer. Arbitrary
 top-level runtime statements and import-time effects are not selected here.
+
+The user also requested a later investigation of whether .lt should prohibit
+top-level side-effect execution. Because declarations are assignments and their
+initializers may call effectful code, declaration-only source does not establish
+that restriction by itself. [INV-003.05](../investigations/SUBTOPICS.md#inv-003-05)
+covers initializer effects, deferred function bodies, compile-time evaluation,
+transitive dependencies, and any explicit initialization entry. It is not started;
+no blanket ban or effect-checking mechanism is selected.
 
 Compile-time evaluation and metaprogramming remain possible investigations;
 declaration-oriented modules do not prohibit them. A future compile-time block

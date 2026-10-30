@@ -76,7 +76,7 @@ are tracked on each topic's **Investigation** line and remain non-normative.
 
 ## Starter subtopics
 
-The [subtopic catalog](SUBTOPICS.md) contains 160 concrete questions across 39
+The [subtopic catalog](SUBTOPICS.md) contains 165 concrete questions across 40
 broader topics. These are entry points, not an exhaustive decomposition.
 Topics without subtopics remain available at their existing scope; their lack of
 subtopics does not imply lower importance or readiness.

@@ -169,6 +169,14 @@ No foreign-language comparison is needed to select a local design preference.
 
 ## Decision references and handoff
 
+Later investigation requests, 2026-10-30: standard swapping, primitive/library
+boundaries, and interface/implementation locations are inventoried under
+[INV-071.01–.03](SUBTOPICS.md#inv-071), lean code under
+[INV-063.05](SUBTOPICS.md#inv-063-05), and a possible ban on module top-level
+side effects under [INV-003.05](SUBTOPICS.md#inv-003-05). All are **not started**.
+Declarations can evaluate effectful initializers, so forbidding bare statements
+alone would not establish such a ban. No new effect restriction is selected.
+
 The source-kind split, .lt explicit dependencies, and replaceable-standard goal
 are selected, reviewable baselines. Script convenience names and disclosure
 remain proposals. Next define the module's explicit dependency/source shape and
