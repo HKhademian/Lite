@@ -45,6 +45,12 @@ No implemented lexer/tool, legacy .lite acceptance, or automatic conversion
 between script and module semantics is implied. Naming changes do not themselves
 publish a release or bump a component version.
 
+Repository [Git attributes](../.gitattributes) declare both .lt and .lts as
+LiteLang, the canonical language name. GitHub's Linguist registry checked
+2026-10-30 does not yet list LiteLang: this declaration does not register a new
+language or by itself enable a LiteLang statistics/highlighting label. See
+[Linguist's override limits](https://github.com/github-linguist/linguist/blob/main/docs/overrides.md#detectable).
+
 ### Legacy prose migration
 
 Many existing pages say “LiteScript” when they mean the language. That usage is **legacy**:

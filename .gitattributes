@@ -1,0 +1,4 @@
+# Canonical source language for both Lite file kinds.
+# GitHub classification requires LiteLang to be registered in upstream Linguist.
+*.lt linguist-language=LiteLang linguist-detectable=true
+*.lts linguist-language=LiteLang linguist-detectable=true
