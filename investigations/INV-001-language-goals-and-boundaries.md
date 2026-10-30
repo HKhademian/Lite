@@ -74,9 +74,10 @@ record the current selection:
   No implementation is claimed.
 
 This selects the practical scope of A2 below without freezing all 520 exercises
-as acceptance requirements. The initial literals/bindings/arithmetic/display
-subset and incremental addition of conditionals/functions/loops remain a
-recommendation. Specific memory mechanisms remain unselected; subsequent
+as acceptance requirements. The subsequent [first checkpoint selection](../docs/tooling-and-learning.md#first-executable-checkpoint)
+adopts scalar values, bindings/replacement, arithmetic, and temporary helper calls;
+conditionals/functions/loops/tuples follow incrementally, with relative order open.
+Specific memory mechanisms remain unselected; subsequent
 memory-control and conflict-review selections are recorded below.
 The evidence and alternatives below retain their original
 2026-10-27 scope except where a later selection is explicitly identified.

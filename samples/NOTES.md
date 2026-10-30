@@ -25,6 +25,12 @@ first runnable experiment. Add focused examples as conditionals, functions,
 loops, and other features become executable. The full 520-exercise catalog guides
 later coverage and is not a completion gate for the tiny demonstrator.
 
+Selected 2026-10-30: the [first executable checkpoint](../docs/tooling-and-learning.md#first-executable-checkpoint)
+supports scalar values, bindings/replacement, basic arithmetic, and temporary
+helper calls before adding control flow, user functions, and tuples. It does
+not claim the full batch is executable or waive its in-program-check acceptance
+direction. No lesson bodies or verification status change with this selection.
+
 The selected acceptance direction is in-program checks for 001–020, with mismatch
 using the panic channel, followed later by a grading harness. Comment answers
 remain documentation. Check syntax/API, exit status, numeric contracts, and host

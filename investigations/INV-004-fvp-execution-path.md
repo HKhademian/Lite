@@ -27,8 +27,9 @@ supported features and clearly diagnose unsupported constructs.
 Native compilation remains a later goal; a native artifact is not required for
 this FVP. Do not make dual execution paths, caching, a bytecode/JIT engine, a
 debugger, or module machinery prerequisites. Implementation language, concrete
-internal representation/checker structure, exact feature/numeric subset, and
-remaining I/O/exit details are still open.
+internal representation/checker structure, numeric/text profile, later feature
+coverage, and remaining I/O/exit details are still open. The first feature
+checkpoint is selected in [INV-002.02](INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
 Owner: [FVP interpreter](../docs/tooling-and-learning.md#fvp-interpreter).
 Ledger: [small interpreter for the FVP](../docs/decisions-and-open-questions.md#small-interpreter-for-the-fvp-2026-10-30).
@@ -100,8 +101,8 @@ formatting, destination, and failure behavior must be defined before this become
 an executable acceptance case. Runner inspection was an earlier unselected
 alternative; it is not required to display this result.
 
-Literals, fixed bindings, name reads, and addition are a proposed first slice,
-not a complete FVP feature selection. Reached items remain ordered; names must
+Literals, fixed bindings, name reads, and addition form a smaller probe within
+the selected first checkpoint, not the complete FVP. Reached items remain ordered; names must
 resolve and values must obey the supported type/numeric contracts. Reject
 unsupported constructs clearly. A host evaluator's arithmetic is not an
 automatic definition of LiteLang numeric behavior. Add invalid-name and
@@ -246,10 +247,11 @@ implementation-time measurement, or foreign-language behavior is claimed.
 ## Decision references and handoff
 
 The small interpreter, temporary helper surface, and input-fault policy are
-selected above. Complete I/O/exit contracts, exact feature/numeric subset,
-implementation language, and internal structure remain open.
+selected above. The [first executable checkpoint](INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
+is now selected; numeric/text details, complete I/O/exit contracts, implementation
+language, and internal structure remain open.
 The input-fault behavior above is selected, with concrete category/transport,
 recovery support, and exact parsing/consumption still open.
-Next bound the initial supported syntax/numbers and remaining input/report/exit
-behavior, then the implementation language and structure needed for that slice.
+Next bound numeric/text details and remaining input/report/exit behavior, then
+the implementation language and structure needed for the selected slice.
 Preserve the deferred investigations; a native backend is not an FVP blocker.

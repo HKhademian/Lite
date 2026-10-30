@@ -53,8 +53,9 @@ Supported features still follow their selected semantics, effects remain
 explicit, and unsupported features receive clear diagnostics. Selected
 2026-10-30: a [small interpreter](tooling-and-learning.md#fvp-interpreter) reads,
 parses/checks, and executes the supported subset for the FVP. Native compilation
-remains a later goal; exact feature coverage and implementation language remain
-open.
+remains a later goal. The [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint)
+selects scalar values, bindings/replacement, basic arithmetic, and temporary
+helper calls; numeric/text details and implementation language remain open.
 
 The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
 provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
@@ -83,9 +84,9 @@ interpreter and provide a simple way to observe results. Supported
 features must follow their selected rules; unsupported features must produce
 clear diagnostics. Commands, implementation language, later native backend, and
 full I/O contracts remain open; temporary helper names are selected above.
-Literals, bindings, arithmetic, and simple value display are a
-proposed initial subset, with conditionals, functions, and loops added
-incrementally; this feature order is not a selected implementation plan.
+Scalar values, bindings/replacement, basic arithmetic, and temporary helper calls
+are the selected first executable checkpoint. Conditionals, functions, loops,
+tuples, and richer types follow incrementally; their relative order is open.
 
 These are development targets, not an implemented toolchain or a release promise.
 The lightweight native execution goals continue to guide the language; the FVP

@@ -1,14 +1,14 @@
 # INV-002 — First runnable FVP slice
 
-Status: in progress
+Status: recorded (first feature checkpoint selected; numeric/text and helper details open)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-30
 Catalog brief: [INV-002](TOPICS.md#inv-002)
 Covered scope: bounded whole-topic question — the smallest end-to-end interpreter
 slice and its demonstrable behavior, before adding later language features.
 
-This note is non-normative. The feature boundary below is a proposal, not an
-accepted implementation plan or a permanent limit on LiteLang.
+This note is non-normative. It records the selected first feature checkpoint,
+not an implemented interpreter or a permanent limit on LiteLang.
 
 ## Question and current evidence
 
@@ -16,7 +16,10 @@ Baseline: `3f2b28a`; working tree clean before this note.
 
 The [small interpreter](../docs/tooling-and-learning.md#fvp-interpreter), temporary
 input/report/exit helper names, input-fault policy, and explicit observation are
-selected. Exact syntax/numeric coverage and implementation language remain open.
+selected. The user accepts the first slice below on baseline `49265c3`.
+Numeric/text details, remaining helper contracts, and implementation language
+remain open. Owners: [first executable checkpoint](../docs/tooling-and-learning.md#first-executable-checkpoint)
+and [decision ledger](../docs/decisions-and-open-questions.md#first-executable-interpreter-checkpoint-2026-10-30).
 The [FVP focus](../docs/principles.md#immediate-focus-first-viable-product) defers
 module architecture and native compilation.
 
@@ -26,7 +29,7 @@ multiplication, and division. [Lesson 020](../samples/020_swap_values.lts) uses
 var and replacement. The [initial 001–020 batch](../samples/NOTES.md#initial-correctness-batch)
 is incremental, not a requirement to implement all 20 before the first run.
 
-## Proposed first runnable slice
+## Selected first runnable slice
 
 - One source file with ordered execution, comments, ordinary separators, and
   clear diagnostics for unsupported constructs. A final declaration remains Unit;
@@ -47,10 +50,10 @@ is incremental, not a requirement to implement all 20 before the first run.
   formatting, and exit contracts must be bounded before claiming completion.
 - Parse/check the supported code before executing it. Bad names/types or fixed
   binding replacement receive diagnostics; unhandled input faults fail the run.
-  These are behavior requirements for the proposal, not existing test results.
+  These are selected behavior requirements, not existing test results.
 
 Conditionals, Boolean expressions, loops, user-defined functions, tuples and
-destructuring, and richer type syntax are proposed subsequent increments, each
+destructuring, and richer type syntax are subsequent increments, each
 with focused valid/invalid examples. Their relative order remains open. This
 slice is the first executable checkpoint toward a useful experimental FVP, not a
 claim that calculator-like coverage completes every desired FVP feature.
@@ -83,8 +86,8 @@ Read the selected FVP/interpreter/helper contracts and lesson sources above.
 Checked note/tracking links, fences, and focused diff consistency. No LiteLang
 execution, parser/typechecker result, or implementation-time estimate is claimed.
 
-No feature subset is selected by this note. Confirm or revise the first slice,
-then define its numeric/text profile and remaining minimal helper contracts.
+The user accepts the first slice above. Next define its numeric/text profile
+and remaining minimal helper contracts; implementation language is still open.
 Keep the existing lessons unchanged until implementation/verification work is
 actually in scope. The complete 001–020 batch remains an incremental growth
 target, not a prerequisite for this first executable checkpoint.

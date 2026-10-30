@@ -2,6 +2,25 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## First executable interpreter checkpoint, 2026-10-30
+
+- Select one ordered file with comments/separators, integer/floating/text values,
+  inferred := bindings and reads, var bindings and = replacement, basic + - * /
+  arithmetic with unary minus/grouping, and temporary input/report/exit calls.
+- Preserve selected language rules for admitted forms; parse/check before
+  execution and diagnose unsupported or invalid code. Target a probe with inputs
+  7 and 5, a var holding their sum, replacement with twice that sum, and explicit
+  report of 24. No implicit binding dump or file-result display is introduced.
+- Add conditionals/Booleans, loops, user functions, tuples/destructuring, and
+  richer types after the first runnable slice; relative order remains open.
+  This checkpoint is neither the final FVP ceiling nor completion of all 001–020.
+- Numeric/text profile, remaining helper contracts, implementation language,
+  internal structure, and later coverage remain open. No execution is claimed.
+
+Owner: [first executable checkpoint](tooling-and-learning.md#first-executable-checkpoint).
+[INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice)
+records acceptance and the candidate probes.
+
 ## Small interpreter for the FVP, 2026-10-30
 
 - Select a small interpreter for the first viable product: read one source file,
@@ -11,8 +30,9 @@ Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. N
   unsupported features clearly. No native emission, cache, JIT/bytecode engine,
   full debugger, module/package system, or dual execution path is a gate for
   this first runnable experiment.
-- Implementation language, concrete internal structure, complete feature/numeric
-  coverage, remaining helper contracts, and later native backend remain open.
+- The first executable feature checkpoint is subsequently selected above.
+  Implementation language, concrete internal structure, numeric/text details,
+  later feature coverage, remaining helper contracts, and native backend remain open.
   This selects the execution mechanism, not an implemented interpreter or a
   measured performance/footprint result.
 
@@ -296,7 +316,7 @@ Owner: [memory and performance](memory-and-performance.md#lightweight-native-exe
 - Supported demonstrator features follow selected rules; unsupported features
   receive clear diagnostics. Subsequent 2026-10-30 decisions select a small FVP
   interpreter and temporary input/report/exit helpers. Commands, implementation
-  language, native backend, full helper contracts, exact feature subset/order,
+  language, native backend, full helper contracts, numeric/text profile and later feature order,
   later coverage, and release targets remain open. No implementation work or
   conformance result is implied.
 

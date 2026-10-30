@@ -24,8 +24,29 @@ Native compilation remains a later language/deployment goal, not a requirement
 for this first runnable FVP. Do not require both interpreted and native paths,
 caching, a JIT/bytecode engine, a full debugger, or module/package machinery to
 deliver this slice. The implementation language, concrete parser/checker/evaluator
-structure, exact feature/numeric subset, and remaining helper contracts are open.
+structure, exact numeric/text profile, and remaining helper contracts are open.
 This selection is not an implementation or a performance/footprint result.
+
+### First executable checkpoint
+
+Selected **2026-10-30**: start with one ordered source file, comments/separators,
+integer/floating/text values, inferred := bindings and reads, var bindings and =
+replacement, + - * / with unary minus and parentheses, and the temporary
+input/report/exit helper calls. Preserve selected shadowing, type, copy,
+evaluation, and division rules for supported forms. Parse/check before execution
+and clearly diagnose unsupported features or invalid names/types/replacement.
+
+The first end-to-end probe reads 7 and 5, computes their sum in a var binding,
+replaces it with twice the sum, and explicitly reports the value 24. Removing
+the report leaves no requested program output; unhandled input faults fail the
+run. This is an acceptance target, not an executed test.
+
+Add conditionals/Boolean expressions, loops, user-defined functions, tuples and
+destructuring, and richer types in subsequent increments; their relative order
+is open. The checkpoint is not the final FVP feature ceiling or a requirement
+to finish all 001–020 exercises first. Numeric/text details, helper contracts,
+and implementation language still need definition; no interpreter is implemented.
+See [INV-002.02](../investigations/INV-002-02-fvp-first-runnable-slice.md#selected-first-runnable-slice).
 
 ## Explicit output and tracing
 

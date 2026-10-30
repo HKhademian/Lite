@@ -31,7 +31,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [samples/list.md](../samples/list.md); [samples/NOTES.md](../samples/NOTES.md); [challenges/README.md](../challenges/README.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — contracts required by 001–020; initial incremental correctness batch selected 2026-10-28, with focused feature examples added as executable. [INV-002-02](INV-002-02-fvp-first-runnable-slice.md) — in progress, first runnable slice proposed (scalar values, bindings/replacement, basic arithmetic, temporary helper calls); not selected. Numeric/text profile, remaining helper details, and later coverage remain open.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-002-01](INV-002-01-exercise-contracts-001-020.md) — contracts required by 001–020; initial incremental correctness batch selected 2026-10-28, with focused feature examples added as executable. [INV-002-02](INV-002-02-fvp-first-runnable-slice.md) — recorded, first runnable checkpoint selected (scalar values, bindings/replacement, basic arithmetic, temporary helper calls); control flow/functions/tuples follow incrementally. Numeric/text profile, remaining helper details, and later coverage remain open.
 
 <a id="inv-003"></a>
 
@@ -61,7 +61,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — small interpreter selected for the FVP: read one file, parse/check the supported subset, and execute with temporary helpers; native compilation is a later goal. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. Complete I/O contracts, backend/host language, exact subset, native deployment, caching, full mode parity, and restricted profiles remain open.
+**Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — small interpreter selected for the FVP: read one file, parse/check the supported subset, and execute with temporary helpers; native compilation is a later goal. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. The first executable feature checkpoint is selected under INV-002.02; numeric/text profile, complete I/O contracts, backend/host language, later coverage, native deployment, caching, full mode parity, and restricted profiles remain open.
 
 <a id="inv-005"></a>
 
