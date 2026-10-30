@@ -59,6 +59,44 @@ unsupported-feature probes alongside the successful case when implemented.
 
 ## Options and consequences
 
+### Observation scope clarification, 2026-10-30
+
+The term inspection above describes an unselected tool proposal, not a language
+rule or a requirement to display the file's final bindings. Distinguish observing
+a block's value from observing bindings created inside it. Under the current
+final-item rule, a final declaration, including tuple destructuring, produces
+Unit. Its RHS value and introduced bindings are different observation targets.
+
+The user asks whether to display all, last, marked, or special bindings:
+
+- **All bindings:** a possible deliberately enabled trace/debug view. Define
+  scopes, repeated updates, shadow identities, and display timing before adding
+  it. Do not activate it merely because a script is run.
+- **Last statement's bindings:** a possible explicitly enabled convenience mode,
+  not the block result. It needs rules for destructuring, statements without
+  bindings, nested blocks/loops, and cleanup. Adding a final temporary would
+  change the displayed selection; this is not recommended as the FVP default.
+- **Explicitly marked/requested values:** recommend one simple explicit output
+  operation for the FVP. The source chooses values or tuples to display at that
+  execution point; there is no implicit traversal of local bindings and no need
+  for a separate binding-inspection subsystem. A selected value is read normally;
+  an operation supplied as the argument executes once, not again for display.
+- **Special binding names or declaration forms:** possible future syntax, but
+  no spelling or special meaning is selected. Do not reinterpret ordinary names,
+  destructuring, or the existing readable underscore binding as an output request.
+
+Illustrative only: show(total) could request the computed total, while
+show((a, b, c, rest)) could request explicitly grouped destructured values.
+show is not a selected built-in or real API. Exact operation spelling, supported
+values, formatting, destination, and failure behavior remain open.
+
+**Refined observation recommendation, not selected:** use explicit source output
+for the FVP; keep all/last-binding inspection optional and deferred. This replaces
+the earlier preference for runner inspection as the first observation mechanism,
+without changing block results, explicit-effect rules, or choosing an API.
+
+### Execution mechanism
+
 - **A — Experimental evaluator first.** Parse and check the supported subset,
   then evaluate its representation directly. This proposal avoids implementing
   native emission/linking in the first runnable path and permits inspection of
@@ -72,7 +110,7 @@ unsupported-feature probes alongside the successful case when implemented.
   contracts rather than inherit a backend's defaults.
 
 **Recommendation, not selected:** A for the tiny experimental FVP, with an
-explicitly enabled observation facility. This is a scope judgment, not a measured
+explicit output operation as recommended above. This is a scope judgment, not a measured
 speed-of-development claim. Keep native deployment as the language goal; do not
 present the evaluator as satisfying it. If the user requires a native artifact
 in the first viable product, select B instead. Do not build both paths as an
