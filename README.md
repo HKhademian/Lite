@@ -5,7 +5,8 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
 The project now has a **small experimental TypeScript/Node igniter** for a narrow
-FVP checkpoint, now including Boolean logic and basic conditionals. Run `node igniter/cli.ts igniter/examples/double-sum.lts` with
+FVP checkpoint, now including Boolean logic, basic conditionals, and action loops.
+Run `node igniter/cli.ts igniter/examples/double-sum.lts` with
 Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
 for setup, strict typechecking, tests, supported behavior, and limitations.
 The wider language remains a design draft; there is no native or self-hosted compiler.

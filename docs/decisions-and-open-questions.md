@@ -2,6 +2,22 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Igniter action-loop increment, 2026-10-30
+
+The next implementation adds Boolean-condition and unconditional loops used as
+actions. Conditions are checked before each body entry; bare continue skips the
+tail and returns to the header, while bare break stops the nearest loop without
+another condition check. Body locals reinitialize on each entry and lexical
+shadows do not redirect the header. Runtime faults and program exit propagate.
+
+Value-producing loops, metadata, iterables/ranges, tags/payload exits, transfers
+from headers to an enclosing loop, and then/finally are rejected as unsupported.
+This is a bounded implementation, not a revision of the wider loop semantics.
+Strict checking and all 30 test groups pass, including the real sentinel-input
+example. Version 0.1.0-alpha.3 gets a new tag; prior milestones remain fixed.
+Coverage: [action loops](../igniter/README.md#action-loops).
+Evidence: [INV-035](../investigations/INV-035-igniter-action-loops.md).
+
 ## Igniter Boolean and conditional increment, 2026-10-30
 
 The next experimental increment implements existing Bool-only conditions,

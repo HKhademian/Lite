@@ -20,6 +20,8 @@ node igniter/cli.ts igniter/examples/double-sum.lts
 Enter `7` and `5` on separate lines; it reports `24`. Redirected stdin works too.
 For basic conditions, run `node igniter/cli.ts igniter/examples/decisions.lts`
 and supply an integer such as `0` or `5`.
+For loops, run `node igniter/cli.ts igniter/examples/sum-positive.lts`; enter
+`3`, `-2`, `4`, `0` to report `7`.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -72,6 +74,25 @@ explicitly rejected. This implementation boundary does not change the wider
 language's selected guarded-update/union rules. Keyword binding names are not
 supported by the igniter; its permanent reserved-name profile remains open.
 
+### Action loops
+
+`loop condition { ... }` requires Bool and tests the condition before every body
+entry, including after continue. `loop { ... }` runs unconditionally. Bare break
+stops the nearest enclosing loop without another condition check; bare continue
+skips the body tail and returns to that loop's header. Nested loops catch only
+their own body transfers; program exit and runtime faults propagate outward.
+
+Bodies have lexical scope and initialize their locals on each entry. Permitted
+outer var writes persist; body shadows do not retarget the header's bindings.
+The whole source, including untaken loop bodies, is checked before any I/O.
+
+Only action-position loops are implemented. Value-producing loop expressions,
+metadata/accumulators, iterables/ranges, tags, payload break/continue, source/header
+break/continue targeting an enclosing loop, and then/finally remain unsupported.
+The body tail still evaluates for its effects, but no loop value can be observed
+in this subset. This does not replace the wider language's selected loop-result
+and completion semantics with an always-Unit language rule.
+
 ### Numeric, input and reporting helpers
 
 - Int uses exact `bigint` computation with signed 64-bit checks, including minimum
@@ -104,7 +125,7 @@ supported by the igniter; its permanent reserved-name profile remains open.
   text profile. Identifier admission uses the host's Unicode ID properties plus
   underscore; the full Lite identifier profile remains open.
 
-Loops, user functions, tuples/destructuring, typed declarations, collections,
+User functions, tuples/destructuring, typed declarations, collections,
 modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
 currently terminal because recovery is not implemented. Text concatenation and
@@ -113,17 +134,20 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.2**, tag **igniter-v0.1.0-alpha.2**, identifies this
-checkpoint with Boolean conditions and scoped block values. The preserved first
-checkpoint is **igniter-v0.1.0-alpha.1** at commit `8c74537`.
-Each tag pins its source commit and lockfile. Both run directly on Node; neither
+Version **0.1.0-alpha.3**, tag **igniter-v0.1.0-alpha.3**, adds action loops and
+bare break/continue. Previous checkpoints stay fixed:
+
+- **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
+- **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
+
+Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
 There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **22 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **30 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

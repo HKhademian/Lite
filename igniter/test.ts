@@ -206,3 +206,61 @@ test('all ten comparison operators complement their adjacent positive form', () 
   fault('report(1 == 1.0);', 'TypeError');
   fault('report("a" < "b");', 'TypeError');
 });
+
+test('Boolean loops test before entry and reevaluate the header after each body', () => {
+  assert.equal(run('loop false { report(inputInt()); } report(8);').output, '8\n');
+  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; sum = sum + i; } report(sum);').output, '15\n');
+  assert.equal(run('loop and inputInt() > 0 { report(1); } report(inputInt());', '2 1 0 99').output, '1\n1\n99\n');
+  assert.equal(run('loop ({ loop { break; } inputInt() > 0 }) { report(7); }', '1 0').output, '7\n');
+});
+test('continue skips the body tail and reevaluates the condition', () => {
+  assert.equal(run('loop inputInt() > 0 { if inputInt() == 2 { continue; } report(7); } report(inputInt());',
+    '1 2 1 3 0 99').output, '7\n99\n');
+  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; if i < 3 { continue; } sum = sum + i; } report(sum);').output, '12\n');
+});
+test('bare break ends the nearest loop without rechecking its condition', () => {
+  assert.equal(run('loop inputInt() > 0 { break; } report(inputInt());', '1 8').output, '8\n');
+  assert.equal(run('loop { if true { break; } report(1 / 0); } report(3);').output, '3\n');
+  assert.equal(run('var outer := 0; var entries := 0; loop outer < 3 { outer = outer + 1; var inner := 0; loop true { inner = inner + 1; entries = entries + 1; if inner == 2 { break; } } } report(entries);').output, '6\n');
+});
+test('nested continue stays in the inner loop and execution resumes after it', () => {
+  assert.equal(run('var outer := 0; var total := 0; loop outer < 2 { outer = outer + 1; var inner := 0; loop inner < 3 { inner = inner + 1; if inner < 3 { continue; } total = total + 1; } total = total + 10; } report(total);').output, '22\n');
+});
+test('body locals initialize on every entry; header and outer shadows keep their bindings', () => {
+  assert.equal(run('var i := 0; var sum := 0; loop i < 3 { i = i + 1; var local := 0; local = local + 1; sum = sum + local; } report(sum);').output, '3\n');
+  assert.equal(run('var i := 0; loop i < 2 { i = i + 1; i := 10; report(i); } report(i);').output, '10\n10\n2\n');
+  fault('loop false { local := 7; } report(local);', 'TypeError');
+});
+test('loops reject invalid sources, escaping controls, and value/completion forms before effects', () => {
+  for (const code of ['loop 1 {}', 'loop "items" {}', 'break;', 'continue;',
+    'if false { break; }', 'x := loop false {};', 'report(loop false {});',
+    'loop false { missing; }', 'loop false { var x := 1; x = true; }']) fault(code, 'TypeError');
+  fault('loop { loop ({ break; true }) {} break; }', 'TypeError');
+  fault('loop { loop ({ continue; false }) {} break; }', 'TypeError');
+  for (const code of ['loop true report(1);', 'loop { break 3; }', 'loop { continue 3; }',
+    'loop false {} then {}', 'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
+  let output = '';
+  assert.throws(() => execute(compile('report(1); loop false { continue; missing; }'), {
+    read: () => null, report: text => { output += text; }, reportError: () => {},
+  }), LiteFault);
+  assert.equal(output, '');
+});
+test('program exit and runtime faults propagate through nested loops', () => {
+  assert.deepEqual(run('loop { loop { reportError("stop"); exit(9); } report(8); } report(7);'),
+    { code: 9, output: '', errors: 'stop\n' });
+  fault('loop { loop { report(1 / 0); } }', 'ArithmeticPanic');
+  fault('loop { report(inputInt()); }', 'InputFault', '');
+});
+test('sentinel-input sum example runs through the real CLI', () => {
+  const example = new URL('./examples/sum-positive.lts', import.meta.url);
+  const source = readFileSync(example, 'utf8');
+  assert.equal(run(source, '3 -2 4 0').output, '7\n');
+  assert.equal(run(source, '0').output, '0\n');
+  const result = spawnSync(process.execPath, [new URL('./cli.ts', import.meta.url).pathname, example.pathname], {
+    input: '3\n-2\n4\n0\n', encoding: 'utf8', timeout: 5000,
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, '7\n');
+  assert.equal(result.stderr, '');
+});

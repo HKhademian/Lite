@@ -54,9 +54,16 @@ Implementation increment, 2026-10-30: the igniter now also supports Boolean
 values/logic, scalar comparison chains, basic conditionals, and scoped block
 values. Value branches currently need matching result types; partial conditionals
 are supported only as actions. Union results, guarded initializers/assignments,
-pattern conditions, completion/cleanup hooks, loops, and user functions remain
-unsupported. See [implemented conditions](../igniter/README.md#conditions-and-block-values)
+pattern conditions, completion/cleanup hooks, loops, and user functions remained
+unsupported at that checkpoint. See [implemented conditions](../igniter/README.md#conditions-and-block-values)
 and [INV-015 evidence](../investigations/INV-015-igniter-boolean-conditionals.md).
+
+The following increment adds [action loops](../igniter/README.md#action-loops):
+Boolean-condition and unconditional loop bodies, bare break/continue, and scoped
+locals reinitialized on each entry. It preserves header reevaluation and
+innermost targeting. Loop values/metadata, iterables, tagged/payload exits and
+then/finally remain unsupported. Strict checking and all 30 test groups pass;
+[INV-035](../investigations/INV-035-igniter-action-loops.md) records the evidence.
 
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.

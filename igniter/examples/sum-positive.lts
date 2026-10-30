@@ -1,0 +1,10 @@
+/* Read integers until 0. Ignore negatives and report the sum of positives.
+   For example: 3, -2, 4, 0 reports 7. */
+var sum := 0;
+loop {
+    number := inputInt();
+    if number == 0 { break; }
+    if number < 0 { continue; }
+    sum = sum + number;
+}
+report(sum);

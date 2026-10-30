@@ -25,6 +25,8 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'compare'; first: Raw; rest: readonly Readonly<{ op: Comparison; right: Raw }>[] }
   | { kind: 'block'; items: readonly RawItem[] }
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
+  | { kind: 'loop'; condition: Raw | undefined; body: Raw }
+  | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'call'; name: string; args: readonly Raw[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
@@ -42,6 +44,8 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'compare'; first: Expr; rest: readonly Readonly<{ op: Comparison; right: Expr }>[] }
   | { kind: 'block'; block: Block }
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
+  | { kind: 'loop'; condition: Expr | undefined; body: Expr }
+  | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'call'; name: Builtin; args: readonly Expr[] }
 );
 type Item =
@@ -62,7 +66,7 @@ const INPUT_NUMBER = /^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
 const INPUT_INTEGER = /^[+-]?[0-9]+$/;
 const SPACE = /^[ \t\n\r\f\v]$/;
 const KEYWORDS = new Set(['var', 'true', 'false', 'if', 'else', 'and', 'or', 'not',
-  'fn', 'loop', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally']);
+  'fn', 'loop', 'break', 'continue', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally']);
 
 export class LiteFault extends Error {
   readonly at: Position;
@@ -77,6 +81,10 @@ export class LiteFault extends Error {
 class EndRun extends Error {
   readonly code: number;
   constructor(code: number) { super('explicit exit'); this.code = code; }
+}
+class LoopTransfer extends Error {
+  readonly op: 'break' | 'continue';
+  constructor(op: 'break' | 'continue') { super(op); this.op = op; }
 }
 function unreachable(value: never): never { throw new Error(`igniter invariant: ${String(value)}`); }
 function source(message: string, at: Position): never { throw new LiteFault('SourceError', message, at); }
@@ -301,6 +309,15 @@ class Parser {
     if (token.kind === 'id') {
       if (token.text === 'true' || token.text === 'false') return { kind: 'bool', value: token.text === 'true', at: token.at };
       if (token.text === 'not') return { kind: 'unary', op: 'not', input: this.expression(3), at: token.at };
+      if (token.text === 'break' || token.text === 'continue') {
+        return { kind: 'loopExit', op: token.text, at: token.at };
+      }
+      if (token.text === 'loop') {
+        const next = this.peek();
+        const condition = next.kind === 'symbol' && next.text === '{' ? undefined : this.expression();
+        if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('loop requires a braced body', this.peek().at);
+        return { kind: 'loop', condition, body: this.prefix(), at: token.at };
+      }
       if (token.text === 'if') {
         const condition = this.expression();
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('if requires a braced body', this.peek().at);
@@ -315,7 +332,7 @@ class Parser {
         }
         return { kind: 'if', condition, body, otherwise, at: token.at };
       }
-      if (['fn', 'loop', 'return', 'mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
+      if (['fn', 'return', 'mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
         source(`${token.text} is not supported by this igniter yet`, token.at);
       }
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
@@ -333,7 +350,7 @@ class Parser {
 function numericLiteral(text: string, at: Position): Value {
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
-type CheckState = { nextSlot: number };
+type CheckState = { nextSlot: number; loopDepth: number };
 function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
@@ -366,6 +383,27 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       }
       return { kind: 'if', condition, body, otherwise, type: use === 'discard' ? 'Unit' : body.type, at };
     }
+    case 'loop': {
+      if (use !== 'discard') typeError('value-producing loops are not supported yet; use loop as an action', at);
+      // Transfers from a source expression are outside this bounded body-exit implementation.
+      const enclosingDepth = state.loopDepth;
+      let condition: Expr | undefined;
+      state.loopDepth = 0;
+      try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
+      finally { state.loopDepth = enclosingDepth; }
+      if (condition !== undefined && condition.type !== 'Bool') {
+        typeError('loop source must be Bool in this igniter; iterables are not supported yet', condition.at);
+      }
+      state.loopDepth++;
+      let body: Expr;
+      try { body = checkExpression(raw.body, names, state, 'discard'); }
+      finally { state.loopDepth--; }
+      return { kind: 'loop', condition, body, type: 'Unit', at };
+    }
+    case 'loopExit':
+      if (state.loopDepth === 0) typeError(`${raw.op} requires an enclosing loop`, at);
+      if (use !== 'discard') typeError('loop exits in value expressions and exit payloads are not supported yet', at);
+      return { kind: 'loopExit', op: raw.op, type: 'Unit', at };
     case 'name': {
       const binding = names.get(raw.name);
       if (binding !== undefined) return { kind: 'read', binding, type: binding.type, at };
@@ -476,7 +514,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
 
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
-  return checkBlock(parsed, new Map(), { nextSlot: 0 }, 'discard');
+  return checkBlock(parsed, new Map(), { nextSlot: 0, loopDepth: 0 }, 'discard');
 }
 
 class Input {
@@ -586,6 +624,17 @@ export function execute(program: Program, io: IO): number {
         if (boolean(evaluate(expr.condition))) return evaluate(expr.body);
         // This missing branch is permitted only where its contribution is discarded.
         return expr.otherwise === undefined ? UNIT : evaluate(expr.otherwise);
+      case 'loop':
+        while (expr.condition === undefined || boolean(evaluate(expr.condition))) {
+          try { evaluate(expr.body); }
+          catch (error: unknown) {
+            if (!(error instanceof LoopTransfer)) throw error;
+            if (error.op === 'break') break;
+            // Continue returns to this loop's header, not to the body tail.
+          }
+        }
+        return UNIT; // Only action-position loops are admitted by the checker.
+      case 'loopExit': throw new LoopTransfer(expr.op);
       case 'read': {
         const value = values[expr.binding.slot];
         if (value === undefined) throw new Error('igniter invariant: uninitialized checked binding');

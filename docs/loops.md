@@ -4,6 +4,13 @@ Status: **one keyword, three source modes, one optional item name, and metadata-
 
 Normative page: loop forms, source modes, item naming, and the metadata surface. [Loop value](loop-value.md) owns `.value` type/initialization/commit rules; [loop completion](loop-completion.md) owns `then` and targeted exits; [loop type inference](loop-type-inference.md) owns body/result inference; [last item](loop-last-item.md) owns completion-time item state. See the [normative page map](normative-pages.md).
 
+Implementation coverage, 2026-10-30: the [experimental igniter](../igniter/README.md#action-loops)
+now runs Boolean-condition and unconditional loops as actions, with bare nearest-
+loop break/continue. Bodies are scoped and condition reads are repeated before
+entry. Value-producing loops, metadata, iterables, tags, payload exits, header
+transfers and completion/cleanup hooks remain unsupported. This implements a
+bounded effect-only use of the rules below without changing their value contract.
+
 ## Template
 
 ```text

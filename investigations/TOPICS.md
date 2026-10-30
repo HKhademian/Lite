@@ -457,7 +457,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/loops.md](../docs/loops.md); [docs/loop-value.md](../docs/loop-value.md); [docs/loop-completion.md](../docs/loop-completion.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-035 — action-loop igniter increment](INV-035-igniter-action-loops.md) — Boolean/unconditional action loops, scoped bodies, bare nearest-loop break/continue implemented; strict checking and 30 test groups pass. Values/metadata, iterables, header/tagged/payload transfers, and completion/cleanup remain unsupported.
 
 <a id="inv-036"></a>
 
