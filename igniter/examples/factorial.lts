@@ -1,0 +1,10 @@
+factorial := fn(n: Int): Int {
+    if n < 0 {
+        reportError("expected a nonnegative integer");
+        exit(2);
+    }
+    if n <= 1 { return 1; }
+    n * self(n - 1)
+}
+
+report(factorial(inputInt()));

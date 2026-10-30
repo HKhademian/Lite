@@ -4,6 +4,17 @@ Status: **one callable model with typed input tuples, intrinsic pack application
 
 The [callable input-pack model](callable-input-packs.md) records the selected syntax, inline callback probes, and remaining limitations. It supersedes the earlier retirement of contextual `fn` and the distinction between independently typed functions and contextual-only lambdas. This is language design, not compiler/runtime verification.
 
+Implementation coverage, **2026-10-30**: the experimental
+[igniter](../igniter/README.md#typed-user-functions) now executes explicitly
+annotated scalar fn literals, positional named-value calls, tail/explicit
+returns, direct no-earlier-target recursion, and self(...) calls. It preserves
+callee-before-arguments order and lexical/live helper binding reads, with
+separate invocation environments. Surrounding scalar captures, surrounding
+writes, later helper references, inference, and the wider callable model remain
+unsupported. Admitting surrounding function-valued helper dependencies is a
+temporary implementation boundary, not a general capture-policy selection.
+See [INV-030 evidence](../investigations/INV-030-igniter-functions.md).
+
 ## Template
 
 ```text

@@ -2,6 +2,24 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Igniter typed-function increment, 2026-10-30
+
+The interpreter now executes explicit scalar-annotated functions, positional
+calls, tail/explicit returns, and own-name/self(...) recursion. Call activations
+have separate locals; named helper reads preserve lexical identity and live
+replacement. Each call selects its callee once before evaluating its arguments.
+Returns cross loops to their function; break/continue cannot cross function bodies.
+
+Surrounding function-valued dependencies are admitted for this bounded host
+implementation. Scalar captures, surrounding writes, later helper references,
+inference, callable inputs/results, and general routing remain unsupported.
+This does not resolve language-wide capture eligibility, lifetime, or ABI design.
+Strict checking and all 43 test groups pass, including real CLI factorial success,
+negative-input exit, and an evaluator overflow case. Preserve alpha.1–alpha.3 and
+add igniter-v0.1.0-alpha.4. No native or self-hosted compiler is claimed.
+Coverage: [typed functions](../igniter/README.md#typed-user-functions).
+Evidence: [INV-030](../investigations/INV-030-igniter-functions.md).
+
 ## Igniter action-loop increment, 2026-10-30
 
 The next implementation adds Boolean-condition and unconditional loops used as

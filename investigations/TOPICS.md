@@ -391,7 +391,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-030).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (bounded implementation); contributor: redacted (agent-assisted); note: [INV-030 — typed-function igniter increment](INV-030-igniter-functions.md) — explicit scalar functions, positional calls, tail/explicit returns and own-name/self recursion implemented; strict checking and 43 test groups pass. General capture policy, later helper lookup, inference, full argument routing and callable inputs/results remain open or unsupported.
 
 <a id="inv-031"></a>
 

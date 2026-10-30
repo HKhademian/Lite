@@ -65,6 +65,15 @@ innermost targeting. Loop values/metadata, iterables, tagged/payload exits and
 then/finally remain unsupported. Strict checking and all 30 test groups pass;
 [INV-035](../investigations/INV-035-igniter-action-loops.md) records the evidence.
 
+The next increment implements [typed scalar functions](../igniter/README.md#typed-user-functions),
+positional calls, tail/explicit returns, own-name and self(...) recursion, with
+separate call environments. Tests preserve callee/argument order, lexical/live
+helper reads, and return/loop boundaries. General captures, later helper lookup,
+inference, wider argument routing, and callable inputs/results remain unsupported.
+The factorial CLI reports 120 for 5; strict checking and all 43 test groups pass.
+See [INV-030](../investigations/INV-030-igniter-functions.md). This is another
+bounded step toward the Lite-written compiler, not a self-hosting result.
+
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,

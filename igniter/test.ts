@@ -264,3 +264,151 @@ test('sentinel-input sum example runs through the real CLI', () => {
   assert.equal(result.stdout, '7\n');
   assert.equal(result.stderr, '');
 });
+
+test('typed functions accept scalar inputs and yield tail or explicit results without automatic output', () => {
+  assert.equal(run(`double := fn(n: Int): Int { n * 2 }
+    twice := fn(n: Float): Float { return n * 2.0; }
+    echo := fn(text: String): String { text }
+    negate := fn(flag: Bool): Bool { not flag }
+    nothing := fn(u: Unit): Unit { return; }
+    report(double(4)); report(twice(1.5)); report(echo("hello"));
+    report(negate(false)); report(nothing(())); double(99);`).output, '8\n3\nhello\ntrue\nUnit\n');
+  assert.equal(run('action := fn(): Unit {} action();').output, '');
+});
+test('ordinary function values copy, shadow helpers, and replace only compatible var bindings', () => {
+  assert.equal(run(`var op := fn(n: Int): Int { n * 2 }
+    saved := op;
+    op = fn(n: Int): Int { n * 3 }
+    report(saved(4)); report(op(4));
+    inputInt := fn(): Int { 7 }
+    report(inputInt());`).output, '8\n12\n7\n');
+  fault('op := fn(): Int { 1 } op = fn(): Int { 2 }', 'TypeError');
+  fault('var op := fn(n: Int): Int { n } op = fn(n: Float): Int { 1 }', 'TypeError');
+  fault('var op := fn(n: Int): Int { n } op = fn(x: Int): Int { x }', 'TypeError');
+});
+test('calls select the callee once before arguments and evaluate arguments left to right', () => {
+  assert.equal(run(`var op := fn(n: Int): Int { n * 2 }
+    report(op(({ op = fn(n: Int): Int { n * 3 } 4 })));
+    report(op(4));
+    combine := fn(a: Int, b: Int): Int { a * 10 + b }
+    report(combine(({report(1); inputInt()}), ({report(2); inputInt()})));`, '3 4').output,
+    '8\n12\n1\n2\n34\n');
+});
+test('self recursion and direct own-name recursion keep separate call locals', () => {
+  assert.equal(run(`fib := fn(n: Int): Int {
+      if n < 2 { return n; }
+      left := self(n - 1);
+      left + self(n - 2)
+    }
+    factorial := fn(n: Int): Int { if n <= 1 { 1 } else { n * factorial(n - 1) } }
+    report(fib(8)); report(factorial(5)); report(fib(6));`).output, '21\n120\n8\n');
+});
+test('parameters, local vars and block shadows belong to each invocation', () => {
+  assert.equal(run(`sum := fn(n: Int): Int {
+      var total := 0;
+      { n := 100; report(n); }
+      var i := 0;
+      loop i < n { i = i + 1; total = total + i; }
+      total
+    }
+    report(sum(3)); report(sum(1));`).output, '100\n6\n100\n1\n');
+  fault('f := fn(n: Int): Int { n = 2; n }', 'TypeError');
+  fault('f := fn(): Int { local := 7; local } report(local);', 'TypeError');
+});
+test('an earlier same-name helper remains the ordinary named recursion target', () => {
+  assert.equal(run(`step := fn(n: Int): Int { n * 2 }
+    step := fn(n: Int): Int { if n == 0 { 0 } else { step(n - 1) } }
+    report(step(3));
+    step := fn(n: Int): Int { if n == 0 { 0 } else { self(n - 1) } }
+    report(step(3));`).output, '4\n0\n');
+});
+test('self calls retain the executing implementation after its source binding is replaced', () => {
+  assert.equal(run(`var step := fn(n: Int): Int { if n == 0 { 0 } else { 1 + self(n - 1) } }
+    saved := step;
+    step = fn(n: Int): Int { 100 }
+    report(saved(4)); report(step(4));`).output, '4\n100\n');
+});
+test('admitted helper references read live bindings and ignore later shadows', () => {
+  assert.equal(run(`var double := fn(n: Int): Int { n * 2 }
+    quadruple := fn(n: Int): Int { double(double(n)) }
+    report(quadruple(1));
+    double = fn(n: Int): Int { n * 3 }
+    report(quadruple(1));
+    double := fn(n: Int): Int { n * 4 }
+    report(quadruple(1)); report(double(1));`).output, '4\n9\n9\n4\n');
+});
+test('escaped helpers preserve distinct environments from repeated block activations', () => {
+  assert.equal(run(`var first := fn(n: Int): Int { n }
+    var second := fn(n: Int): Int { n }
+    var i := 0;
+    loop i < 2 {
+      var helper := fn(n: Int): Int { n * 2 }
+      wrapper := fn(n: Int): Int { helper(n) }
+      if i == 0 {
+        first = wrapper;
+        helper = fn(n: Int): Int { n * 3 }
+      } else {
+        second = wrapper;
+        helper = fn(n: Int): Int { n * 4 }
+      }
+      i = i + 1;
+    }
+    report(first(2)); report(second(2));`).output, '6\n8\n');
+});
+test('return exits the nearest function through loops and nested calls return locally', () => {
+  assert.equal(run(`inner := fn(): Int { return 7; }
+    outer := fn(flag: Bool): Int {
+      loop flag { return inner(); }
+      if flag { return 1; } else { return 2; }
+      999
+    }
+    report(outer(true)); report(outer(false));
+    stop := fn(): Unit { loop { return; } () }
+    loop { stop(); report(3); break; }`).output, '7\n2\n3\n');
+  fault('loop { f := fn(): Unit { break; } break; }', 'TypeError');
+  fault('loop { f := fn(): Unit { continue; } break; }', 'TypeError');
+});
+test('exit, input faults and arithmetic faults propagate through user functions', () => {
+  assert.deepEqual(run('stop := fn(): Int { exit(9); } loop { report(stop()); }'), { code: 9, output: '', errors: '' });
+  fault('f := fn(): Int { inputInt() } report(f());', 'InputFault');
+  fault('f := fn(n: Int): Int { 1 / n } report(f(0));', 'ArithmeticPanic');
+});
+test('invalid signatures, captures, forward references and unsupported forms fail before effects', () => {
+  for (const code of [
+    'return 1;', 'self();', 'f := fn(): Int { "wrong" }',
+    'f := fn(): Int { return; }', 'f := fn(): Int { if false { return "wrong"; } 1 }',
+    'f := fn(n: Int): Int { n } f();', 'f := fn(n: Int): Int { n } f(true);',
+    'f := fn(): Int { g() } g := fn(): Int { 7 }',
+    'x := 2; f := fn(): Int { x }',
+    'var x := 2; f := fn(): Unit { x = 3; }',
+    'f := fn(n: Int): Int { g := fn(): Int { n } g() }',
+    'f := fn(): Int { 1 } report(f);', 'f := fn(): Int { 1 } report(f == f);',
+    'f := fn(n: Number): Int { 1 }', 'f := fn(): Int { self }',
+  ]) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report(99); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
+    assert.equal(observed, false, code);
+  }
+  for (const code of ['f := fn(n: Int, n: Int): Int { n }', 'f := fn(self: Int): Int { 1 }',
+    'self := 1;', 'f := fn(n): Int { n }', 'f := fn(n: Int = 2): Int { n }',
+    'f := fn(n: Int): Int { n } f(n=2);']) fault(code, 'SourceError');
+});
+test('factorial example runs through real CLI with checked results and failures', () => {
+  const example = new URL('./examples/factorial.lts', import.meta.url);
+  const source = readFileSync(example, 'utf8');
+  assert.equal(run(source, '0').output, '1\n');
+  assert.equal(run(source, '5').output, '120\n');
+  fault(source, 'ArithmeticPanic', '21');
+  for (const [input, status, output, errors] of [
+    ['5', 0, '120\n', ''], ['-1', 2, '', 'expected a nonnegative integer\n'],
+  ]) {
+    if (typeof input !== 'string') throw new Error('bad fixture');
+    const result = spawnSync(process.execPath, [new URL('./cli.ts', import.meta.url).pathname, example.pathname], {
+      input, encoding: 'utf8', timeout: 5000,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, status); assert.equal(result.stdout, output); assert.equal(result.stderr, errors);
+  }
+});

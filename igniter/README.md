@@ -22,6 +22,9 @@ For basic conditions, run `node igniter/cli.ts igniter/examples/decisions.lts`
 and supply an integer such as `0` or `5`.
 For loops, run `node igniter/cli.ts igniter/examples/sum-positive.lts`; enter
 `3`, `-2`, `4`, `0` to report `7`.
+For functions and recursion, run `node igniter/cli.ts igniter/examples/factorial.lts`;
+enter `5` to report `120` (or `0` to report `1`). Negative input explicitly
+reports an error and exits with status 2; overflow faults instead of wrapping.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -42,7 +45,8 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 One file; fixed/inferred `:=` bindings, `var`/replacement, shadowing and scalar
 copies; integer/float/text/Bool/Unit values; `+ - * /`, unary signs and parentheses;
-temporary helper calls. The whole file is parsed and checked before effects.
+temporary helper calls and the typed user functions below. The whole file is
+parsed and checked before effects, including uncalled function bodies.
 Ordinary statements need semicolons between them; complete braced items do not.
 Newlines do not terminate statements.
 Repeated/trailing separators, adjacent text literals, multiline text, nested
@@ -93,6 +97,54 @@ The body tail still evaluates for its effects, but no loop value can be observed
 in this subset. This does not replace the wider language's selected loop-result
 and completion semantics with an always-Unit language rule.
 
+### Typed user functions
+
+```text
+double := fn(n: Int): Int { n * 2 }
+quadruple := fn(n: Int): Int { double(double(n)) }
+report(quadruple(3));
+```
+
+Parameters and results require explicit scalar annotations: Int, Float, String,
+Bool, or Unit. These spellings are the temporary script's primitive type names;
+general type-name resolution is not implemented. Parameters are fixed local
+value bindings. A body yields its final expression; empty/declaration/assignment
+tails yield Unit. `return value` exits the nearest invoked function, including
+through its loops; `return;` returns Unit. Results and supplied arguments must
+match their declared types, without new implicit conversions. Complete branch
+results may also include paths that return or exit instead of producing a value.
+Internal flow checking is conservative; this is not complete return-path analysis.
+Loops remain action-only, including at a function's tail: follow an action loop
+with an explicit result/Unit when necessary. Unreachable source is still checked.
+
+Call a named function value with positional arguments. Aliases copy the callable
+value; var permits compatible replacements (same parameter names/types and result
+in this subset). The callee is selected once before arguments, which evaluate
+left to right. Each invocation has separate parameters/locals; block and loop
+activations also keep separate environments. Named references retain their
+lexical binding: replacement is live, while a later shadow does not retarget it.
+
+`self(...)` calls the implementation currently executing, even after its named
+binding has changed. A direct fn declaration without an earlier same-name target
+also supports ordinary own-name recursion. If an earlier binding exists, the
+ordinary spelling resolves that earlier binding; self still selects the current
+implementation. These forms require no handwritten declaration header.
+
+Surrounding function-valued bindings are admitted as helper dependencies in this
+experimental subset. Surrounding scalar reads and all surrounding replacements
+inside a function are rejected; pass data as arguments. This temporary boundary
+does not settle the language's capture permissions or make functions a special
+class exempt from initialization/lifetime safety. The host retains environments;
+there is no native capture representation or resource-lifetime implementation.
+
+Later helper declarations and mutual recursion, general captures, first-class
+self, self binding/parameter names, keyword-free literals, omitted annotations,
+named/default/rest arguments, access-qualified parameters, callable parameters/
+results, typed receiving declarations, and calls through arbitrary expressions
+remain unsupported. The temporary builtin helpers are not first-class values.
+Function reporting/comparison is also rejected. Program exit and runtime faults
+propagate through function calls; cleanup and recoverable failures remain absent.
+
 ### Numeric, input and reporting helpers
 
 - Int uses exact `bigint` computation with signed 64-bit checks, including minimum
@@ -125,7 +177,7 @@ and completion semantics with an always-Unit language rule.
   text profile. Identifier admission uses the host's Unicode ID properties plus
   underscore; the full Lite identifier profile remains open.
 
-User functions, tuples/destructuring, typed declarations, collections,
+Tuples/destructuring, general typed declarations, collections,
 modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
 currently terminal because recovery is not implemented. Text concatenation and
@@ -134,11 +186,12 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.3**, tag **igniter-v0.1.0-alpha.3**, adds action loops and
-bare break/continue. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.4**, tag **igniter-v0.1.0-alpha.4**, adds typed scalar
+functions, calls, return, and recursion. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
+- **igniter-v0.1.0-alpha.3**, commit `1dcf92f`: action loops and bare break/continue.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -147,7 +200,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **30 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **43 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

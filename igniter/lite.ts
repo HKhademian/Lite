@@ -2,7 +2,11 @@
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
 type Operator = '+' | '-' | '*' | '/';
-type Type = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
+type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
+type Parameter = Readonly<{ name: string; type: ScalarType }>;
+type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: ScalarType }>;
+// Never is internal flow information, not a new source-level type.
+type Type = ScalarType | FunctionType | 'Never';
 type Comparison = '==' | '=!=' | '<' | '<!' | '<=' | '<!=' | '>' | '>!' | '>=' | '>!=';
 type Use = 'value' | 'discard';
 export type Value =
@@ -10,7 +14,11 @@ export type Value =
   | Readonly<{ kind: 'Float'; value: number }>
   | Readonly<{ kind: 'String'; value: string }>
   | Readonly<{ kind: 'Bool'; value: boolean }>
-  | Readonly<{ kind: 'Unit' }>;
+  | Readonly<{ kind: 'Unit' }>
+  | FunctionValue;
+type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
+type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
+type FunctionValue = Readonly<{ kind: 'Function'; code: FunctionCode; environment: Frame }>;
 type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'report' | 'reportError' | 'exit';
 type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
@@ -27,6 +35,8 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
   | { kind: 'loop'; condition: Raw | undefined; body: Raw }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
+  | { kind: 'function'; signature: FunctionType; body: Raw }
+  | { kind: 'return'; input: Raw | undefined }
   | { kind: 'call'; name: string; args: readonly Raw[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
@@ -34,7 +44,7 @@ type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'expression'; input: Raw }
 );
-type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean }>;
+type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; owner: number }>;
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
   | { kind: 'read'; binding: Binding }
@@ -46,10 +56,14 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
   | { kind: 'loop'; condition: Expr | undefined; body: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
+  | { kind: 'function'; code: FunctionCode }
+  | { kind: 'return'; input: Expr }
+  | { kind: 'self' }
+  | { kind: 'invoke'; callee: Expr; args: readonly Expr[] }
   | { kind: 'call'; name: Builtin; args: readonly Expr[] }
 );
 type Item =
-  | Readonly<{ kind: 'store'; binding: Binding; input: Expr }>
+  | Readonly<{ kind: 'store'; binding: Binding; input: Expr; declare: boolean }>
   | Readonly<{ kind: 'expression'; input: Expr }>;
 type Block = Readonly<{ items: readonly Item[]; type: Type }>;
 export type Program = Readonly<{ items: readonly Item[] }>;
@@ -86,16 +100,38 @@ class LoopTransfer extends Error {
   readonly op: 'break' | 'continue';
   constructor(op: 'break' | 'continue') { super(op); this.op = op; }
 }
+class ReturnTransfer extends Error {
+  readonly value: Value;
+  constructor(value: Value) { super('function return'); this.value = value; }
+}
 function unreachable(value: never): never { throw new Error(`igniter invariant: ${String(value)}`); }
 function source(message: string, at: Position): never { throw new LiteFault('SourceError', message, at); }
 function typeError(message: string, at: Position): never { throw new LiteFault('TypeError', message, at); }
-function integer(value: bigint, at: Position, literal = false): Value {
+function scalarType(name: string, at: Position): ScalarType {
+  switch (name) {
+    case 'Int': case 'Float': case 'String': case 'Bool': case 'Unit': return name;
+    default: return typeError('function annotations currently require Int, Float, String, Bool, or Unit', at);
+  }
+}
+function sameType(left: Type, right: Type): boolean {
+  if (typeof left === 'string' || typeof right === 'string') return left === right;
+  return left.result === right.result && left.parameters.length === right.parameters.length &&
+    left.parameters.every((parameter, index) => {
+      const other = right.parameters[index];
+      return other !== undefined && parameter.name === other.name && parameter.type === other.type;
+    });
+}
+function fits(actual: Type, expected: Type): boolean { return actual === 'Never' || sameType(actual, expected); }
+function typeName(type: Type): string {
+  return typeof type === 'string' ? type : `fn (${type.parameters.map(p => `${p.name}: ${p.type}`).join(', ')}): ${type.result}`;
+}
+function integer(value: bigint, at: Position, literal = false): Extract<Value, { kind: 'Int' }> {
   if (value < MIN || value > MAX) {
     throw new LiteFault(literal ? 'SourceError' : 'ArithmeticPanic', 'integer outside signed 64-bit range', at);
   }
   return { kind: 'Int', value };
 }
-function floating(value: number, at: Position, literal = false): Value {
+function floating(value: number, at: Position, literal = false): Extract<Value, { kind: 'Float' }> {
   if (!Number.isFinite(value)) {
     throw new LiteFault(literal ? 'SourceError' : 'ArithmeticPanic', 'non-finite floating value', at);
   }
@@ -191,7 +227,7 @@ function tokenize(text: string): readonly Token[] {
       if (operator !== undefined) {
         advance(operator.length);
         tokens.push({ kind: 'symbol', text: operator, at: start });
-      } else if ('+-*/=();,{}<>'.includes(ch)) {
+      } else if ('+-*/=();,{}<>:'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -307,6 +343,35 @@ class Parser {
       return { kind: 'block', items, at: token.at };
     }
     if (token.kind === 'id') {
+      if (token.text === 'fn') {
+        this.expect('(');
+        const parameters: Parameter[] = [];
+        if (!this.accept(')')) {
+          do {
+            const name = this.take();
+            if (name.kind !== 'id' || KEYWORDS.has(name.text) || name.text === 'self') {
+              source('expected an ordinary parameter name (self is unsupported as a binding name)', name.at);
+            }
+            if (parameters.some(p => p.name === name.text)) source(`duplicate parameter ${name.text}`, name.at);
+            this.expect(':');
+            const type = this.take();
+            if (type.kind !== 'id') source('expected a scalar parameter type', type.at);
+            parameters.push({ name: name.text, type: scalarType(type.text, type.at) });
+          } while (this.accept(',') && this.peek().text !== ')');
+          this.expect(')');
+        }
+        this.expect(':');
+        const result = this.take();
+        if (result.kind !== 'id') source('expected a scalar result type', result.at);
+        const signature: FunctionType = { kind: 'Function', parameters, result: scalarType(result.text, result.at) };
+        if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('fn requires a braced body', this.peek().at);
+        return { kind: 'function', signature, body: this.prefix(), at: token.at };
+      }
+      if (token.text === 'return') {
+        const next = this.peek();
+        const empty = next.kind === 'eof' || (next.kind === 'symbol' && [';', '}'].includes(next.text));
+        return { kind: 'return', input: empty ? undefined : this.expression(), at: token.at };
+      }
       if (token.text === 'true' || token.text === 'false') return { kind: 'bool', value: token.text === 'true', at: token.at };
       if (token.text === 'not') return { kind: 'unary', op: 'not', input: this.expression(3), at: token.at };
       if (token.text === 'break' || token.text === 'continue') {
@@ -332,7 +397,7 @@ class Parser {
         }
         return { kind: 'if', condition, body, otherwise, at: token.at };
       }
-      if (['fn', 'return', 'mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
+      if (['mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
         source(`${token.text} is not supported by this igniter yet`, token.at);
       }
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
@@ -347,10 +412,37 @@ class Parser {
   }
 }
 
-function numericLiteral(text: string, at: Position): Value {
+function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int' | 'Float' }> {
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
-type CheckState = { nextSlot: number; loopDepth: number };
+type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
+type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined };
+function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
+  if (binding.owner !== (state.current?.id ?? 0) && typeof binding.type === 'string') {
+    typeError(`surrounding runtime data capture (${binding.name}) is not supported yet; pass it as an argument`, at);
+  }
+  return { kind: 'read', binding, type: binding.type, at };
+}
+function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyMap<string, Binding>, state: CheckState): Expr {
+  const enclosing = state.current;
+  const depth = state.loopDepth;
+  const id = state.nextFunction++;
+  const local = new Map(names);
+  const parameters = raw.signature.parameters.map(parameter => {
+    const binding: Binding = { ...parameter, mutable: false, slot: state.nextSlot++, owner: id };
+    local.set(parameter.name, binding);
+    return binding;
+  });
+  state.current = { id, signature: raw.signature };
+  state.loopDepth = 0;
+  let body: Expr;
+  try { body = checkExpression(raw.body, local, state); }
+  finally { state.current = enclosing; state.loopDepth = depth; }
+  if (!fits(body.type, raw.signature.result)) {
+    typeError(`function body produces ${typeName(body.type)}; expected ${raw.signature.result}`, raw.body.at);
+  }
+  return { kind: 'function', code: { parameters, body }, type: raw.signature, at: raw.at };
+}
 function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
@@ -366,6 +458,16 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return input;
     }
     case 'unit': return { kind: 'literal', value: UNIT, type: 'Unit', at };
+    case 'function': return checkFunction(raw, names, state);
+    case 'return': {
+      if (state.current === undefined) typeError('return requires an enclosing function', at);
+      const input = raw.input === undefined ? { kind: 'literal', value: UNIT, type: 'Unit', at } satisfies Expr
+        : checkExpression(raw.input, names, state);
+      if (!fits(input.type, state.current.signature.result)) {
+        typeError(`return produces ${typeName(input.type)}; expected ${state.current.signature.result}`, at);
+      }
+      return { kind: 'return', input, type: 'Never', at };
+    }
     case 'block': {
       const block = checkBlock(raw.items, names, state, use);
       return { kind: 'block', block, type: block.type, at };
@@ -378,10 +480,12 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       }
       const body = checkExpression(raw.body, names, state, use);
       const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use);
-      if (otherwise !== undefined && use === 'value' && otherwise.type !== body.type) {
+      if (otherwise !== undefined && use === 'value' && !fits(otherwise.type, body.type) && !fits(body.type, otherwise.type)) {
         typeError('conditional branch-result unions are not supported yet; use the same result type in each branch', at);
       }
-      return { kind: 'if', condition, body, otherwise, type: use === 'discard' ? 'Unit' : body.type, at };
+      const type = body.type === 'Never' && otherwise !== undefined ? otherwise.type : body.type;
+      return { kind: 'if', condition, body, otherwise,
+        type: body.type === 'Never' && otherwise?.type === 'Never' ? 'Never' : use === 'discard' ? 'Unit' : type, at };
     }
     case 'loop': {
       if (use !== 'discard') typeError('value-producing loops are not supported yet; use loop as an action', at);
@@ -405,8 +509,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       if (use !== 'discard') typeError('loop exits in value expressions and exit payloads are not supported yet', at);
       return { kind: 'loopExit', op: raw.op, type: 'Unit', at };
     case 'name': {
+      if (raw.name === 'self') typeError('only self(...) calls are supported; first-class self remains open', at);
       const binding = names.get(raw.name);
-      if (binding !== undefined) return { kind: 'read', binding, type: binding.type, at };
+      if (binding !== undefined) return readBinding(binding, state, at);
       if (raw.name === 'Unit') return { kind: 'literal', value: UNIT, type: 'Unit', at };
       return typeError(`unknown value ${raw.name}`, at);
     }
@@ -447,7 +552,10 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       const rest = raw.rest.map(pair => ({ op: pair.op, right: checkExpression(pair.right, names, state) }));
       let previous = first;
       for (const pair of rest) {
-        if (previous.type !== pair.right.type) typeError('mixed-type comparisons are not supported yet', pair.right.at);
+        if (typeof previous.type !== 'string' || typeof pair.right.type !== 'string') {
+          typeError('function-value comparisons are not supported yet', pair.right.at);
+        }
+        if (!sameType(previous.type, pair.right.type)) typeError('mixed-type comparisons are not supported yet', pair.right.at);
         if (pair.op !== '==' && pair.op !== '=!=' && previous.type !== 'Int' && previous.type !== 'Float') {
           typeError('ordered comparisons currently require Int or Float', pair.right.at);
         }
@@ -456,16 +564,36 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return { kind: 'compare', first, rest, type: 'Bool', at };
     }
     case 'call': {
-      if (names.has(raw.name)) typeError('calling stored/user-defined functions is not supported yet', at);
+      const binding = names.get(raw.name);
+      if (binding !== undefined || raw.name === 'self') {
+        let callee: Expr;
+        if (raw.name === 'self') {
+          if (state.current === undefined) typeError('self(...) requires an enclosing function', at);
+          callee = { kind: 'self', type: state.current.signature, at };
+        } else {
+          if (binding === undefined) throw new Error('igniter invariant: missing callee binding');
+          callee = readBinding(binding, state, at);
+        }
+        if (typeof callee.type === 'string') typeError(`${raw.name} is not callable`, at);
+        const signature = callee.type;
+        const args = raw.args.map(arg => checkExpression(arg, names, state));
+        if (args.length !== signature.parameters.length) typeError(`${raw.name} expects ${signature.parameters.length} argument(s)`, at);
+        for (const [index, parameter] of signature.parameters.entries()) {
+          const arg = args[index];
+          if (arg === undefined || !fits(arg.type, parameter.type)) typeError(`argument ${parameter.name} must be ${parameter.type}`, arg?.at ?? at);
+        }
+        return { kind: 'invoke', callee, args, type: signature.result, at };
+      }
       const name = builtin(raw.name);
-      if (name === undefined) typeError(`unknown helper ${raw.name}`, at);
+      if (name === undefined) typeError(`unknown helper/function ${raw.name}; forward function lookup is not supported yet`, at);
       const args = raw.args.map(arg => checkExpression(arg, names, state));
       let type: Type;
       switch (name) {
         case 'inputInt': type = 'Int'; break;
         case 'inputFloat': type = 'Float'; break;
         case 'inputLine': case 'inputWord': type = 'String'; break;
-        case 'report': case 'reportError': case 'exit': type = 'Unit'; break;
+        case 'report': case 'reportError': type = 'Unit'; break;
+        case 'exit': type = 'Never'; break;
         default: return unreachable(name);
       }
       const count = name === 'report' || name === 'reportError' ? 1 : 0;
@@ -474,6 +602,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
+      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept function values yet', at);
       return { kind: 'call', name, args, type, at };
     }
     default: return unreachable(raw);
@@ -484,24 +613,32 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
   const names = new Map(outer);
   const items: Item[] = [];
   let type: Type = 'Unit';
+  let exits = false;
   for (const [index, item] of parsed.entries()) {
     const context = item.kind === 'expression' && index === parsed.length - 1 ? use : 'discard';
-    const input = checkExpression(item.input, names, state, item.kind === 'expression' ? context : 'value');
+    // Only the direct, no-earlier-target declaration is visible to its own deferred body.
+    const own: Binding | undefined = item.kind === 'declare' && item.input.kind === 'function'
+      ? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: item.input.signature, owner: state.current?.id ?? 0 }
+      : undefined;
+    const bodyNames = own !== undefined && !names.has(own.name) ? new Map(names).set(own.name, own) : names;
+    const input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
+    exits ||= input.type === 'Never';
     switch (item.kind) {
       case 'declare': {
-        if (KEYWORDS.has(item.name)) source('keyword binding names are not supported by this igniter', item.at);
-        const binding = { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: input.type };
+        if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
+        const binding: Binding = own ?? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: input.type, owner: state.current?.id ?? 0 };
         names.set(item.name, binding);
-        items.push({ kind: 'store', binding, input });
+        items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';
         break;
       }
       case 'assign': {
         const binding = names.get(item.name);
         if (binding === undefined) typeError(`unknown binding ${item.name}`, item.at);
+        if (binding.owner !== (state.current?.id ?? 0)) typeError('replacement of surrounding runtime bindings is not supported yet', item.at);
         if (!binding.mutable) typeError(`${item.name} is fixed; replacement requires var`, item.at);
-        if (binding.type !== input.type) typeError(`cannot replace ${binding.type} with ${input.type}`, item.at);
-        items.push({ kind: 'store', binding, input });
+        if (!fits(input.type, binding.type)) typeError(`cannot replace ${typeName(binding.type)} with ${typeName(input.type)}`, item.at);
+        items.push({ kind: 'store', binding, input, declare: false });
         type = 'Unit';
         break;
       }
@@ -509,12 +646,12 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
       default: unreachable(item);
     }
   }
-  return { items, type: use === 'discard' ? 'Unit' : type };
+  return { items, type: exits ? 'Never' : use === 'discard' ? 'Unit' : type };
 }
 
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
-  return checkBlock(parsed, new Map(), { nextSlot: 0, loopDepth: 0 }, 'discard');
+  return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined }, 'discard');
 }
 
 class Input {
@@ -546,6 +683,7 @@ function format(value: Value): string {
     case 'String': return value.value;
     case 'Bool': return value.value ? 'true' : 'false';
     case 'Unit': return 'Unit';
+    case 'Function': throw new Error('igniter invariant: formatting a checked function');
     default: return unreachable(value);
   }
 }
@@ -584,6 +722,7 @@ function sameValue(left: Value, right: Value): boolean {
     case 'String': return right.kind === 'String' && left.value === right.value;
     case 'Bool': return right.kind === 'Bool' && left.value === right.value;
     case 'Unit': return right.kind === 'Unit';
+    case 'Function': throw new Error('igniter invariant: comparing a checked function');
     default: return unreachable(left);
   }
 }
@@ -614,19 +753,48 @@ function boolean(value: Value): boolean {
 }
 
 export function execute(program: Program, io: IO): number {
-  const values: Value[] = [];
   const input = new Input(io.read);
-  const evaluate = (expr: Expr): Value => {
+  const findFrame = (frame: Frame, slot: number): Frame => {
+    for (let current: Frame | undefined = frame; current !== undefined; current = current.parent) {
+      if (current.values.has(slot)) return current;
+    }
+    throw new Error('igniter invariant: uninitialized checked binding');
+  };
+  const evaluate = (expr: Expr, frame: Frame, self: FunctionValue | undefined): Value => {
+    const evaluateHere = (child: Expr): Value => evaluate(child, frame, self);
     switch (expr.kind) {
       case 'literal': return expr.value;
-      case 'block': return evaluateBlock(expr.block.items);
+      case 'block': return evaluateBlock(expr.block.items, frame, self);
+      case 'function': return { kind: 'Function', code: expr.code, environment: frame };
+      case 'self': {
+        if (self === undefined) throw new Error('igniter invariant: self outside checked function');
+        return self;
+      }
+      case 'return': throw new ReturnTransfer(evaluateHere(expr.input));
+      case 'invoke': {
+        // Select once before evaluating arguments, even if an argument replaces its source binding.
+        const callee = evaluateHere(expr.callee);
+        if (callee.kind !== 'Function') throw new Error('igniter invariant: non-function checked call');
+        const args = expr.args.map(evaluateHere);
+        const activation: Frame = { parent: callee.environment, values: new Map() };
+        for (const [index, parameter] of callee.code.parameters.entries()) {
+          const value = args[index];
+          if (value === undefined) throw new Error('igniter invariant: missing checked argument');
+          activation.values.set(parameter.slot, value);
+        }
+        try { return evaluate(callee.code.body, activation, callee); }
+        catch (error: unknown) {
+          if (error instanceof ReturnTransfer) return error.value;
+          throw error;
+        }
+      }
       case 'if':
-        if (boolean(evaluate(expr.condition))) return evaluate(expr.body);
+        if (boolean(evaluateHere(expr.condition))) return evaluateHere(expr.body);
         // This missing branch is permitted only where its contribution is discarded.
-        return expr.otherwise === undefined ? UNIT : evaluate(expr.otherwise);
+        return expr.otherwise === undefined ? UNIT : evaluateHere(expr.otherwise);
       case 'loop':
-        while (expr.condition === undefined || boolean(evaluate(expr.condition))) {
-          try { evaluate(expr.body); }
+        while (expr.condition === undefined || boolean(evaluateHere(expr.condition))) {
+          try { evaluateHere(expr.body); }
           catch (error: unknown) {
             if (!(error instanceof LoopTransfer)) throw error;
             if (error.op === 'break') break;
@@ -636,35 +804,35 @@ export function execute(program: Program, io: IO): number {
         return UNIT; // Only action-position loops are admitted by the checker.
       case 'loopExit': throw new LoopTransfer(expr.op);
       case 'read': {
-        const value = values[expr.binding.slot];
+        const value = findFrame(frame, expr.binding.slot).values.get(expr.binding.slot);
         if (value === undefined) throw new Error('igniter invariant: uninitialized checked binding');
         return value;
       }
       case 'unary': {
-        const value = evaluate(expr.input);
+        const value = evaluateHere(expr.input);
         if (expr.op === 'not') return { kind: 'Bool', value: !boolean(value) };
         if (expr.op === '+') return value;
         if (value.kind === 'Int') return integer(-value.value, expr.at);
         if (value.kind === 'Float') return floating(-value.value, expr.at);
         throw new Error('igniter invariant: nonnumeric unary input');
       }
-      case 'binary': return arithmetic(expr.op, evaluate(expr.left), evaluate(expr.right), expr.at);
+      case 'binary': return arithmetic(expr.op, evaluateHere(expr.left), evaluateHere(expr.right), expr.at);
       case 'logic': {
-        const left = boolean(evaluate(expr.left));
-        const value = expr.op === 'and' ? left && boolean(evaluate(expr.right)) : left || boolean(evaluate(expr.right));
+        const left = boolean(evaluateHere(expr.left));
+        const value = expr.op === 'and' ? left && boolean(evaluateHere(expr.right)) : left || boolean(evaluateHere(expr.right));
         return { kind: 'Bool', value };
       }
       case 'compare': {
-        let left = evaluate(expr.first);
+        let left = evaluateHere(expr.first);
         for (const pair of expr.rest) {
-          const right = evaluate(pair.right);
+          const right = evaluateHere(pair.right);
           if (!compare(pair.op, left, right)) return { kind: 'Bool', value: false };
           left = right;
         }
         return { kind: 'Bool', value: true };
       }
       case 'call': {
-        const args = expr.args.map(evaluate);
+        const args = expr.args.map(evaluateHere);
         switch (expr.name) {
           case 'report': case 'reportError': {
             const value = args[0];
@@ -705,16 +873,21 @@ export function execute(program: Program, io: IO): number {
       default: return unreachable(expr);
     }
   };
-  const evaluateBlock = (items: readonly Item[]): Value => {
+  const evaluateBlock = (items: readonly Item[], parent: Frame | undefined, self: FunctionValue | undefined): Value => {
+    const frame: Frame = { parent, values: new Map() };
     let result: Value = UNIT;
     for (const item of items) {
-      if (item.kind === 'store') { values[item.binding.slot] = evaluate(item.input); result = UNIT; }
-      else result = evaluate(item.input);
+      if (item.kind === 'store') {
+        const value = evaluate(item.input, frame, self);
+        const target = item.declare ? frame : findFrame(frame, item.binding.slot);
+        target.values.set(item.binding.slot, value);
+        result = UNIT;
+      } else result = evaluate(item.input, frame, self);
     }
     return result;
   };
   try {
-    evaluateBlock(program.items);
+    evaluateBlock(program.items, undefined, undefined);
     return 0;
   } catch (error: unknown) {
     if (error instanceof EndRun) return error.code;
