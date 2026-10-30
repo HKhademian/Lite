@@ -16,7 +16,37 @@ Does a successful reportError(...) call merely report information, or also mark
 the run failed or terminate it? Distinguish the report's intended role from an
 I/O failure while trying to perform the report.
 
-## Current contracts and evidence
+## Report-only and explicit-exit selection, 2026-10-30
+
+The user accepts report-only behavior and adds exit(errCode?) as the explicit
+end. Accept the preceding FVP host mapping: normal completion is status 0;
+rejected programs and unhandled fatal execution failures are nonzero. Exact
+failure codes and the complete unhandled-fault policy remain open.
+
+- A successful reportError(...) call only reports. It neither marks the whole
+  run failed nor requests termination. Reporting I/O failures are separate.
+- exit(errCode?) ends the current program run with an optional code. exit()
+  and exit(1) illustrate the call forms; ? denotes optionality in this discussion,
+  not a call-site token. A reached termination has no ordinary continuation.
+- The omitted-code default, code type/range/host conversion, cleanup/finally,
+  flushing, argument failures, embedded-host behavior, and interception by
+  recovery remain open. Do not choose hard-abort or unwinding semantics here.
+
+```text
+reportError("Cannot continue");
+exit(1);
+report("Not reached");
+```
+
+This demonstrates separate reporting and termination, assuming reporting succeeds
+and the supplied code is admitted. It is not runtime evidence. Existing Unit
+block results and function-local return remain distinct from program termination.
+
+Owner: [FVP completion and explicit exit](../docs/tooling-and-learning.md#fvp-completion-and-explicit-exit).
+Ledger: [report-only errors and explicit exit](../docs/decisions-and-open-questions.md#report-only-errors-and-explicit-fvp-exit-2026-10-30).
+Selection baseline: `7245720`. No helper/runner implementation is present.
+
+## Starting contracts and evidence
 
 Baseline: `617e79b`; working tree clean before this note.
 
@@ -46,8 +76,10 @@ reportError("Could not use the preferred input");
 report("Continuing with a fallback");
 ```
 
-Possible behaviors: run both calls and finish successfully; run both but finish
-with a failed status; or stop after the first call. Error-reporting destination
+Originally compared behaviors: run both calls and finish successfully; run both
+but finish with a failed status; or stop after the first call. The selection
+above chooses report-only, so both calls can run and complete successfully if
+there is no other failure. Error-reporting destination
 is a separate question, and observing messages across destinations would need
 its own ordering contract.
 
@@ -67,15 +99,15 @@ eventually return control to the runner. Exact failure status is not selected.
   interaction with recovery; an earlier message affects later completion.
 - **C — Report and terminate.** Make reporting also a control-flow operation.
   Requires a termination/failure contract, cleanup behavior, and rules for calls
-  inside functions or other scopes. Its role overlaps a separate failure or exit
-  request, which is not yet selected.
+  inside functions or other scopes. Its role would overlap the separate exit
+  request selected above, whose cleanup behavior remains open.
 
-**Recommendation, not selected:** A. Keep reporting, failing, and terminating
-as separate requests. For the FVP host boundary, also propose normal completion
-as success status 0 and a rejected program or unhandled fatal execution failure
-as nonzero. Exact failure codes, output-failure policy, explicit termination API,
-input EOF/parse failures, and full panic/cleanup/host-abort behavior remain open.
-This recommendation does not choose stderr or an exception type for reportError.
+**Accepted from the recommendation:** A, with normal completion as status 0 and
+rejected programs/unhandled fatal execution failures as nonzero. The user adds
+exit(errCode?) as the explicit termination operation. Exact failure codes,
+output-failure policy, exit defaults and cleanup, input EOF/parse failures, and
+full panic/host-abort behavior remain open. No stderr or exception type is chosen
+for reportError.
 
 ## Verification and limits
 
@@ -86,8 +118,9 @@ runtime cleanup result was produced.
 
 ## Decision references and handoff
 
-No lifecycle decision is selected here. First choose report-only, sticky failure,
-or terminating reportError behavior using the two-call probe. Then settle the
-small host success/failure contract and temporary input failures. Full startup,
+Report-only, the FVP normal-success/fatal-failure mapping, and explicit
+exit(errCode?) are selected above. Omitted-code default and exit cleanup/recovery
+behavior are still open, alongside code-domain details and temporary input
+failures. Full startup,
 module initialization, runtime teardown, and lifecycle hooks are outside this
 bounded note and are not prerequisites for this choice.

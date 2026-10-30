@@ -27,7 +27,10 @@ system or permanent stdlib design. report supersedes the assistant's unselected
 show illustration. The ellipsis does not select further helpers or a variadic
 signature. Real versus scripted/mock input, numeric parsing and token/line
 consumption, EOF/failures, complete signatures, reporting formats/destinations,
-and reportError's failure/exit effects remain open. No mock values are chosen.
+and reportError's I/O-failure behavior remain open. No mock values are chosen.
+A subsequent [INV-005 selection](INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30)
+makes successful reportError calls report-only and adds exit(errCode?) for
+explicit program end; exit defaults and cleanup behavior remain open.
 
 Calls explicitly request their operations; ordinary bindings/file completion stay
 silent and declaration-final blocks still produce Unit. This selection does not

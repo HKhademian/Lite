@@ -63,11 +63,43 @@ all/last-binding inspector is not required for this path.
 Keep the remaining choices small and explicit before implementation: real
 console input versus scripted/fixed test input; token/line consumption, numeric
 parsing and EOF/failure behavior; complete input/output signatures, supported
-reported values, formatting/newlines and destinations; and whether reportError
-only reports or also affects failure/exit. The word fake selects temporary
+reported values, formatting/newlines and destinations. A successful reportError
+call is now selected to report only, as specified below. The word fake selects temporary
 scaffolding, not any particular mock-input values or transport. No stdout/stderr,
-prompt, exception, panic, or exit-status policy is selected by these names alone.
+prompt, exception, or panic policy is selected by these names alone.
 No helpers or runner have been implemented yet.
+
+## FVP completion and explicit exit
+
+Selected **2026-10-30**:
+
+- A successful reportError(...) call only reports its supplied values. It does
+  not request termination or mark the run failed; execution may continue.
+  Failures while performing the report retain their separate open I/O contract.
+- Normal FVP completion maps to host success status 0. A rejected program or
+  unhandled fatal execution failure maps to nonzero; exact failure codes and
+  the complete unhandled-fault policy remain open. This host mapping is distinct
+  from the script block's Unit result.
+- exit(errCode?) is the explicit operation to end the current program run with
+  an optional code. exit() and exit(1) illustrate omission and supplying a code;
+  the question mark describes optionality, not a new call-site token. This is
+  program termination, not a return from the nearest block/function. Ordinary
+  continuation after a successfully reached termination does not execute.
+
+For example, assuming successful reporting:
+
+```text
+reportError("Cannot continue");
+exit(1);
+report("Not reached");
+```
+
+The default code for exit(), code type/range and host conversion, cleanup/finally
+and unwinding, buffering/flush behavior, argument-evaluation failures, embedded
+host behavior, and interception by recovery remain open. The exit selection
+does not choose hard-abort semantics or silently bypass selected cleanup rules.
+Neither exit(0) as a default nor any special syntax/ABI is implied by omission.
+Owner of the investigation: [INV-005](../investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30).
 
 ## Optional teaching inspection
 

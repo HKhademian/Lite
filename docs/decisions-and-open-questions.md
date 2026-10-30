@@ -2,6 +2,25 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Report-only errors and explicit FVP exit, 2026-10-30
+
+- Accept reportError as report-only: a successful call does not terminate or
+  mark the run failed. Keep reporting separate from requesting termination.
+- Accept normal FVP completion as status 0 and rejected programs/unhandled fatal
+  execution failures as nonzero; exact failure codes and full failure policy
+  remain open. The block's Unit result is not an exit code.
+- Select the user's exit(errCode?) as the explicit way to end the current
+  program run, with an optional code. exit() and exit(1) are illustrative calls;
+  the question mark expresses argument optionality rather than call-site syntax.
+- Omitted-code default, accepted code type/range/conversion, cleanup/finally,
+  buffering/flushing, embedding, argument failures, and recovery interception
+  remain open. Do not infer a raw process abort or an exception mechanism from
+  the name exit. Input failures and reporting I/O failures remain separate.
+
+Owner: [FVP completion and explicit exit](tooling-and-learning.md#fvp-completion-and-explicit-exit).
+[INV-005](../investigations/INV-005-fvp-completion-and-reporting.md#report-only-and-explicit-exit-selection-2026-10-30)
+records the selection. No implemented exit operation or runtime result is claimed.
+
 ## Temporary FVP input and reporting helpers, 2026-10-30
 
 - Adopt the user's temporary/fake FVP helper surface: inputInt, inputFloat,
@@ -12,8 +31,10 @@ Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. N
   the assistant's illustrative show name. Input/output still requires explicit
   calls; no automatic binding dump or change to Unit/block-result rules follows.
 - Real versus scripted/mock input, parsing/consumption, EOF/failures, exact types,
-  formatting/newlines/destinations, and reportError's failure/exit effects remain
-  open. Additional helpers are not selected merely by the user's trailing ellipsis.
+  formatting/newlines/destinations remain open. reportError's report-only role
+  and a separate exit operation are subsequently selected above; failures during
+  reporting still need contracts. Additional helpers are not selected merely by
+  the user's trailing ellipsis.
 - This provisional FVP surface does not choose an interpreter/native backend or
   revise the deferred .lt no-implicit-import or replaceable-stdlib direction.
 

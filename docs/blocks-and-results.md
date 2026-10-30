@@ -160,6 +160,12 @@ exit status, and observable effects remain with their owning contracts. Contrast
 [declaration bodies](#declaration-bodies) below, which contain declarations and
 never supply an executable result.
 
+For the FVP, [host completion and explicit exit](tooling-and-learning.md#fvp-completion-and-explicit-exit)
+now select normal completion as status 0, rejected programs/unhandled fatal
+execution failures as nonzero, and exit(errCode?) for explicit program end.
+These do not change this block's Unit value or make top-level return valid;
+exit's omitted-code default and cleanup behavior remain open.
+
 ## Declaration bodies
 
 A record, interface, enum, module, or implementation body contains declarations. Its last declaration does not become an executable block result merely because the syntax uses braces.

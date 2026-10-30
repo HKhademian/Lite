@@ -37,6 +37,11 @@ Selected on **2026-10-25**: ordinary return payloads copy their evaluated values
 
 ## Plain return
 
+For explicit termination of the whole FVP program run, the selected temporary
+operation is [exit(errCode?)](tooling-and-learning.md#fvp-completion-and-explicit-exit).
+It is distinct from return's function/closure target. Its omitted-code default,
+cleanup and recovery interaction remain open; do not equate it with a raw abort.
+
 `return value` exits the nearest function or closure. `return;` returns `Unit`. Early returns are encouraged for guard cases. Ordinary blocks do not create an implicit plain-return boundary. [Early-exit narrowing](type-tests-and-narrowing.md#narrowing-after-early-exits-selected) retains supported type facts about stable existing bindings on all paths reaching a continuation. An exiting path contributes no normal continuation there; determine this from its actual target and completion behavior, not the exit keyword alone. This changes no binding scope or cleanup obligation. The selected built-in Int distinctness fact follows the same reaching-path rule: after if i == j { return; }, stable i and j may justify separate var element grants into the same initialized writable fixed array. An equal-index branch that continues cannot establish that fact; ordinary bounds checks and proof stability remain. See [element distinctness after an early exit](call-replacement-flow.md#element-distinctness-after-an-early-exit-selected).
 
 Selected [LP-0014 r1](proposals/LP-0014-directed-failure-exits.md): raise failure / raise ...failures completes the nearest function/closure with failure for both Error and Panic. raise @outer failure / raise @outer ...failures selects a lexically enclosing executable block instead. Evaluate the operand once, then bypass intervening recovery/capture inside the chosen target while running applicable cleanup. Recovery surrounding the completed target may handle its outgoing failures. Error/Panic origin chooses the channel rather than a different default target. Required operand, preserved order/origins, and no cross-function jump remain selected; unmatched-remainder policy and custom category grammar remain open. This supersedes LP-0012's earlier local interception of bare Panic raise. See [directed raise examples](manual-failures-and-inference.md#directed-raise-boundaries).
