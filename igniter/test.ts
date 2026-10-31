@@ -22,6 +22,45 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
+  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
+    const source = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
+    const expected = run(source, 'report(42);').output;
+    for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
+      assert.deepEqual(run(source, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
+      assert.deepEqual(run(source, 'report(1 + 2);', [label]), {
+        code: 2, output: '', errors: label + ': expected )\n',
+      });
+    }
+    assert.deepEqual(run(source, 'report(1 + 2);'), { code: 2, output: '', errors: 'expected )\n' });
+    let reads = 0; let errors = '';
+    const code = execute(compile(source), {
+      args: ['first.lts', 'extra'], read: () => { reads++; return null; },
+      report: () => { throw new Error('unexpected artifact'); }, reportError: text => { errors += text; },
+    });
+    assert.equal(code, 2); assert.equal(reads, 0);
+    assert.equal(errors, 'expected at most one logical source name argument\n');
+  }
+});
+test('real compiler CLI forwards source-name context without changing emitted bytes or check-only behavior', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const label = 'path with spaces/سلام".lts';
+  for (const [name, reference] of [['017-report-ts-compiler.lts', '017-report-42.ts'],
+    ['018-report-c-compiler.lts', '018-report-42.c']] as const) {
+    const path = join(root, 'examples', name);
+    const valid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(42);', env, timeout: 5000 });
+    assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
+    assert.deepEqual(valid.stdout, readFileSync(join(root, 'examples/generated', reference))); assert.equal(valid.stderr.length, 0);
+    const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 + 2);', env, timeout: 5000 });
+    assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
+    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected )\n'));
+    const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
+    assert.equal(check.error, undefined); assert.equal(check.status, 0);
+    assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
+  }
+});
+
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
     push_front(mut editable, "local"); report(original[0], editable[0]);

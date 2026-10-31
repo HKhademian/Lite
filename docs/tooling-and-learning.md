@@ -205,6 +205,12 @@ before any artifact. Twelve admitted cases retain byte/status parity; strict
 checking and 139 interpreter groups pass. See
 [whole-source evidence](../investigations/INV-061-whole-source-emission.md).
 
+The compiler applications subsequently adopt inputArgs for an optional explicit
+logical source name. Exact names prefix their own rejection diagnostics, while
+valid artifact bytes stay unchanged and extra arguments fail before reads.
+Strict checking and 147 groups pass; generated runtime fault locations remain
+separate. See [context evidence](../investigations/INV-061-compiler-source-context.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

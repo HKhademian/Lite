@@ -525,8 +525,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.21**, tag **igniter-v0.1.0-alpha.21**, adds approved
-inputArgs() and the explicit -- script-argument suffix.
+Version **0.1.0-alpha.22**, tag **igniter-v0.1.0-alpha.22**, adds explicit logical
+source context to the restricted TS/C compiler applications.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -566,6 +566,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.20**, commit `9669ee5`: complete-source emitter validation.
 
+- **igniter-v0.1.0-alpha.21**, commit `7ebd22d`: script argument snapshots and forwarding.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -573,7 +575,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **145 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **147 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
@@ -621,3 +623,10 @@ multi-line spaces/tabs/CR/LF around their admitted statement and rejecting later
 unsupported source before emission. Empty source is a compiler rejection (2),
 not an inputLine EOF fault. Twelve admitted cases retain exact output-byte/status
 parity. See [whole-source evidence](../investigations/INV-061-whole-source-emission.md).
+
+The two compiler applications accept zero or one logical source-name argument
+after --. One name is preserved exactly as a prefix on compiler rejection
+messages; omission keeps prior messages. Extra arguments fail before source
+reads. Valid artifact bytes remain unchanged, and names are not embedded as
+source code. This does not implement generated runtime source locations or
+fault parity; see [source-context evidence](../investigations/INV-061-compiler-source-context.md).

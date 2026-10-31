@@ -2,6 +2,20 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Explicit compiler source context, 2026-10-31
+
+Using approved inputArgs, both restricted emitter applications now accept an
+optional logical source name after --. Preserve it exactly in compiler rejection
+diagnostics without embedding it as TS/C source or changing valid artifacts.
+Extra application arguments fail before source reads; no hidden host driver,
+file read, new builtin or source global is added.
+
+Strict checking and 147 interpreter groups plus 9 editor groups pass, including
+exact diagnostic bytes for unusual names and unchanged generated reference files.
+Preserve as alpha.22; generated-program runtime source positions/faults and
+self-rebuild remain open. See
+[INV-061 evidence](../investigations/INV-061-compiler-source-context.md).
+
 ## Script arguments and source context input approved, 2026-10-31
 
 The user replies "Approve inputArgs() and the -- argument suffix" after the

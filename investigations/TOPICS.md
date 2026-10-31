@@ -831,6 +831,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — whole-source compiler input](INV-061-whole-source-emission.md) — existing restricted TS/C emitters adopt approved inputAll, multi-line whitespace and complete-input validation. Twelve native/TS/JS/igniter parity cases pass; strict checking and 139 interpreter groups plus 9 editor groups pass. No new syntax/helper, full parser or self-rebuild claim.
 
+**Follow-up:** [INV-061 — compiler source context](INV-061-compiler-source-context.md) — the TS/C applications accept an optional logical source name via approved inputArgs for exact rejection prefixes. Valid artifacts remain unchanged; extra arguments fail before reads. Strict checking and 147 interpreter groups plus 9 editor groups pass. Generated runtime fault locations/ABI remain separate.
+
 <a id="inv-062"></a>
 
 ## INV-062 — Compile-time computation

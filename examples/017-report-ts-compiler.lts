@@ -26,15 +26,15 @@ skipSpaces := fn(source: String, start: Int): Int {
     position
 }
 
-expectSymbol := fn(source: String, position: Int, symbol: String): Int {
+expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int {
     if position >= textLength(source) or textAt(source, position) =!= symbol {
-        reportError("expected " + symbol);
+        reportError(prefix + "expected " + symbol);
         exit(2);
     }
     position + 1
 }
 
-normalizeInteger := fn(digits: String, negative: Bool): String {
+normalizeInteger := fn(digits: String, negative: Bool, prefix: String): String {
     size := textLength(digits);
     var start := 0;
     loop start + 1 < size and textAt(digits, start) == "0" {
@@ -44,7 +44,7 @@ normalizeInteger := fn(digits: String, negative: Bool): String {
     count := textLength(magnitude);
     limit := if negative { "9223372036854775808" } else { "9223372036854775807" }
     if count > 19 {
-        reportError("integer literal outside signed 64-bit range");
+        reportError(prefix + "integer literal outside signed 64-bit range");
         exit(2);
     }
     if count == 19 {
@@ -54,7 +54,7 @@ normalizeInteger := fn(digits: String, negative: Bool): String {
             maximum := digitValue(textAt(limit, position));
             if value < maximum { break; }
             if value > maximum {
-                reportError("integer literal outside signed 64-bit range");
+                reportError(prefix + "integer literal outside signed 64-bit range");
                 exit(2);
             }
             position = position + 1;
@@ -63,15 +63,25 @@ normalizeInteger := fn(digits: String, negative: Bool): String {
     if negative and magnitude =!= "0" { "-" + magnitude } else { magnitude }
 }
 
+var prefix := "";
+var argumentCount := 0;
+loop inputArgs() as argument {
+    if argumentCount == 0 { prefix = argument + ": "; }
+    argumentCount = argumentCount + 1;
+}
+if argumentCount > 1 {
+    reportError("expected at most one logical source name argument");
+    exit(2);
+}
 source := inputAll();
 size := textLength(source);
 var position := skipSpaces(source, 0);
 if position + 6 > size or textSlice(source, position, position + 6) =!= "report" {
-    reportError("expected report(integer)");
+    reportError(prefix + "expected report(integer)");
     exit(2);
 }
 position = skipSpaces(source, position + 6);
-position = expectSymbol(source, position, "(");
+position = expectSymbol(source, position, "(", prefix);
 position = skipSpaces(source, position);
 var negative := false;
 if position < size and (textAt(source, position) == "+" or textAt(source, position) == "-") {
@@ -83,21 +93,21 @@ loop position < size and isDigit(textAt(source, position)) {
     position = position + 1;
 }
 if start == position {
-    reportError("expected a decimal integer literal");
+    reportError(prefix + "expected a decimal integer literal");
     exit(2);
 }
 digits := textSlice(source, start, position);
 position = skipSpaces(source, position);
-position = expectSymbol(source, position, ")");
+position = expectSymbol(source, position, ")", prefix);
 position = skipSpaces(source, position);
 if position < size and textAt(source, position) == ";" {
     position = skipSpaces(source, position + 1);
 }
 if position =!= size {
-    reportError("unsupported trailing source");
+    reportError(prefix + "unsupported trailing source");
     exit(2);
 }
-integer := normalizeInteger(digits, negative);
+integer := normalizeInteger(digits, negative, prefix);
 report("export function main(): string {");
 report("    return \"" + integer + "\\n\";");
 report("}");

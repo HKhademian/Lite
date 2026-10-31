@@ -74,7 +74,8 @@ integer prompts may appear together in captured stdout.
 - [017 — Report-to-TypeScript compiler](017-report-ts-compiler.lts): reads complete
   Lite source such as report(42); and emits a readable TS module. It supports
   one signed-decimal Int report with multi-line whitespace and rejects unsupported syntax before emitting
-  code. Inspect the [TS reference](generated/017-report-42.ts) and
+  code. An optional -- source.lts argument adds that exact logical name to
+  compiler rejection diagnostics without changing valid output. Inspect the [TS reference](generated/017-report-42.ts) and
   [explicit Node adapter](generated/017-run-report.ts); the adapter prints 42.
   The [generated-source checking config](generated/tsconfig.json) inherits the
   igniter's strict options. This is an initial emitter, not a self-hosted compiler.
@@ -82,7 +83,8 @@ integer prompts may appear together in captured stdout.
 - [018 — Report-to-C compiler](018-report-c-compiler.lts): compiles the same
   restricted signed-integer report source into standalone readable C. The
   [C reference](generated/018-report-42.c) builds with a C11 compiler and standard
-  library. Native output bytes/status match the igniter and TS path for the 12
+  library. It accepts the same optional logical source-name argument after --.
+  Native output bytes/status match the igniter and TS path for the 12
   tested cases; general libraries/ABI and self-hosting remain future work.
 
 - [019 — Whole input](019-whole-input.lts): optionally prompted whole-input read
