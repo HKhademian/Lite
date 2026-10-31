@@ -1,6 +1,6 @@
 # Lite for VS Code
 
-A small syntax highlighter for `.lt` and `.lts` files. The language picker shows
+A small syntax highlighter for `.lt`, `.lts` and legacy `.lite` files. The language picker shows
 **Lite**. Colors follow your existing editor theme.
 
 Highlights nested block/raw comments, multiline double-quoted strings, basic
@@ -28,7 +28,7 @@ npm run package
 ```
 
 In VS Code, open Extensions, choose **… → Install from VSIX…**, and select
-`lite-0.1.0.vsix`. Open a `.lt` or `.lts` file; if it already has a manual language
+`lite-0.1.1.vsix`. Open a `.lt`, `.lts` or `.lite` file; if it already has a manual language
 association, use **Change Language Mode → Lite**. Nothing is published to the
 Marketplace. `lite-local` is only the local package publisher identifier.
 
@@ -44,7 +44,9 @@ raw-fence counts, nested comments, multiline strings, keyword boundaries and
 project samples and the indexed examples. The package ships only the manifest, grammar, language configuration, the
 light/dark language icons and this guide; testing/packaging dependencies are
 development-only. The language contribution supplies 16×16 light/dark SVG icons
-for file icon themes that do not define their own Lite icon.
+for file icon themes that do not define their own Lite icon. `.lite` is a
+highlighting-only legacy association; compiler sources remain `.lts` scripts
+and `.lt` modules.
 
 Source contracts in the repository: `docs/lexical-structure.md`,
 `docs/comments.md`, `docs/strings.md`, and `docs/operators.md`. Implementation references:

@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { readFileSync, readdirSync } = require('node:fs');
+const { existsSync, readFileSync, readdirSync } = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const { Registry, parseRawGrammar, INITIAL } = require('vscode-textmate');
@@ -61,6 +61,11 @@ test('ordinary Lite declarations, calls, scalar types, literals and Unicode iden
   has(inferred, 1, 'mut', 'storage.modifier.lite');
   has(inferred, 1, 'other', 'variable.other.lite');
   has(inferred, 0, 'inputArgs', 'entity.name.function.call.lite');
+  const manifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.deepEqual(manifest.contributes.languages[0].extensions, ['.lt', '.lts', '.lite']);
+  for (const icon of Object.values(manifest.contributes.languages[0].icon)) {
+    assert.ok(existsSync(path.join(root, icon)), icon);
+  }
 });
 test('multiline strings and escaped quotes keep comment/keyword text inside the string', async () => {
   const rows = await tokenize('message := "if /* not a comment\n\\"quoted\\" and // text"; report(1);');
