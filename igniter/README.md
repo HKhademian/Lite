@@ -250,8 +250,8 @@ first-class builtin values.
 The [arithmetic tokenizer](../examples/005-scan-arithmetic.lts) groups ASCII decimal
 digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
 It preserves digit text, including leading zeroes. An unsupported character
-explicitly reports an error and exits 2; an empty supplied line has no output,
-while EOF before a line faults. It is an experiment written in Lite, not the
+explicitly reports an error and exits 2. An empty supplied line emits only the
+prompt heading; EOF before a line faults. It is an experiment written in Lite, not the
 Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
 
 ### Numeric, input and reporting helpers

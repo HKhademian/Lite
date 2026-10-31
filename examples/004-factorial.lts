@@ -7,4 +7,4 @@ factorial := fn(n: Int): Int {
     n * self(n - 1)
 }
 
-report(factorial(inputInt()));
+report(factorial(inputInt("Nonnegative integer: ")));

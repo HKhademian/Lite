@@ -23,8 +23,8 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
 
 test('first checkpoint: stdin integers, mutation, arithmetic and explicit report', () => {
   const code = readFileSync(new URL('../examples/001-double-sum.lts', import.meta.url), 'utf8');
-  assert.deepEqual(run(code, '7\n5\n'), { code: 0, output: '24\n', errors: '' });
-  assert.equal(run(code.replace('report(total);', ''), '7\n5\n').output, '');
+  assert.deepEqual(run(code, '7\n5\n'), { code: 0, output: 'First integer: Second integer: 24\n', errors: '' });
+  assert.equal(run(code.replace('report(total);', ''), '7\n5\n').output, 'First integer: Second integer: ');
 });
 test('Unit completion and no automatic binding/expression output', () => {
   for (const code of ['', ';;;;', 'x := 3;', '12;', 'x := 3; x']) assert.equal(run(code).output, '');
@@ -149,8 +149,8 @@ test('only the selected branch executes; action conditionals may omit else', () 
   assert.equal(run('if false { exit(5); } report(8);').output, '8\n');
   assert.equal(run('if true { exit(5); } report(8);').code, 5);
   const code = readFileSync(new URL('../examples/002-decisions.lts', import.meta.url), 'utf8');
-  assert.equal(run(code, '0').output, 'zero\nbetween zero and nine\n');
-  assert.equal(run(code, '5').output, 'positive\nbetween zero and nine\nquotient exceeds five\n');
+  assert.equal(run(code, '0').output, 'Integer: zero\nbetween zero and nine\n');
+  assert.equal(run(code, '5').output, 'Integer: positive\nbetween zero and nine\nquotient exceeds five\n');
 });
 test('blocks and branches have lexical scope, scalar results, and Unit declaration tails', () => {
   assert.equal(run('var x := 1; if true { x = 2; x := 8; report(x); } report(x);').output, '8\n2\n');
@@ -254,14 +254,15 @@ test('program exit and runtime faults propagate through nested loops', () => {
 test('sentinel-input sum example runs through the real CLI', () => {
   const example = new URL('../examples/003-sum-positive.lts', import.meta.url);
   const source = readFileSync(example, 'utf8');
-  assert.equal(run(source, '3 -2 4 0').output, '7\n');
-  assert.equal(run(source, '0').output, '0\n');
+  const prompt = 'Integer (0 to finish): ';
+  assert.equal(run(source, '3 -2 4 0').output, prompt.repeat(4) + '7\n');
+  assert.equal(run(source, '0').output, prompt + '0\n');
   const result = spawnSync(process.execPath, [new URL('./cli.ts', import.meta.url).pathname, example.pathname], {
     input: '3\n-2\n4\n0\n', encoding: 'utf8', timeout: 5000,
   });
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0);
-  assert.equal(result.stdout, '7\n');
+  assert.equal(result.stdout, prompt.repeat(4) + '7\n');
   assert.equal(result.stderr, '');
 });
 
@@ -398,11 +399,12 @@ test('invalid signatures, captures, forward references and unsupported forms fai
 test('factorial example runs through real CLI with checked results and failures', () => {
   const example = new URL('../examples/004-factorial.lts', import.meta.url);
   const source = readFileSync(example, 'utf8');
-  assert.equal(run(source, '0').output, '1\n');
-  assert.equal(run(source, '5').output, '120\n');
+  assert.equal(run(source, '0').output, 'Nonnegative integer: 1\n');
+  assert.equal(run(source, '5').output, 'Nonnegative integer: 120\n');
   fault(source, 'ArithmeticPanic', '21');
   for (const [input, status, output, errors] of [
-    ['5', 0, '120\n', ''], ['-1', 2, '', 'expected a nonnegative integer\n'],
+    ['5', 0, 'Nonnegative integer: 120\n', ''],
+    ['-1', 2, 'Nonnegative integer: ', 'expected a nonnegative integer\n'],
   ]) {
     if (typeof input !== 'string') throw new Error('bad fixture');
     const result = spawnSync(process.execPath, [new URL('./cli.ts', import.meta.url).pathname, example.pathname], {
@@ -479,21 +481,22 @@ test('a Lite function can scan and reconstruct text recursively with the tempora
 });
 test('Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection', () => {
   const source = readFileSync(new URL('../examples/005-scan-arithmetic.lts', import.meta.url), 'utf8');
+  const prompt = 'Arithmetic expression:\n';
   assert.equal(run(source, '12 + (003 * 4)\n').output,
-    'number: 12\nsymbol: +\nsymbol: (\nnumber: 003\nsymbol: *\nnumber: 4\nsymbol: )\n');
-  assert.equal(run(source, '123').output, 'number: 123\n');
-  assert.equal(run(source, ' \t\n').output, '');
-  assert.equal(run(source, '\n').output, '');
-  assert.equal(run(source, '-1/2').output, 'symbol: -\nnumber: 1\nsymbol: /\nnumber: 2\n');
-  assert.deepEqual(run(source, '🙂'), { code: 2, output: '', errors: 'unsupported symbol: 🙂\n' });
+    prompt + 'number: 12\nsymbol: +\nsymbol: (\nnumber: 003\nsymbol: *\nnumber: 4\nsymbol: )\n');
+  assert.equal(run(source, '123').output, prompt + 'number: 123\n');
+  assert.equal(run(source, ' \t\n').output, prompt);
+  assert.equal(run(source, '\n').output, prompt);
+  assert.equal(run(source, '-1/2').output, prompt + 'symbol: -\nnumber: 1\nsymbol: /\nnumber: 2\n');
+  assert.deepEqual(run(source, '🙂'), { code: 2, output: prompt, errors: 'unsupported symbol: 🙂\n' });
   fault(source, 'InputFault');
 });
 test('real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations', () => {
   const cli = new URL('./cli.ts', import.meta.url).pathname;
   const example = new URL('../examples/005-scan-arithmetic.lts', import.meta.url).pathname;
   for (const [input, status, output, errors] of [
-    ['12 + 30', 0, 'number: 12\nsymbol: +\nnumber: 30\n', ''],
-    ['🙂', 2, '', 'unsupported symbol: 🙂\n'],
+    ['12 + 30', 0, 'Arithmetic expression:\nnumber: 12\nsymbol: +\nnumber: 30\n', ''],
+    ['🙂', 2, 'Arithmetic expression:\n', 'unsupported symbol: 🙂\n'],
   ]) {
     if (typeof input !== 'string') throw new Error('bad fixture');
     const result = spawnSync(process.execPath, [cli, example], { input, encoding: 'utf8', timeout: 5000 });

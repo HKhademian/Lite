@@ -1,6 +1,6 @@
 /* Supply two integers, such as 7 and 5. Report twice their sum: 24. */
-first := inputInt();
-second := inputInt();
+first := inputInt("First integer: ");
+second := inputInt("Second integer: ");
 var total := first + second;
 total = total * 2;
 report(total);

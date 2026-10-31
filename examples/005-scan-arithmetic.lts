@@ -1,9 +1,10 @@
 /* A small tokenizer experiment: decimal runs, spaces/tabs, and arithmetic symbols. */
 isDigit := fn(text: String): Bool {
-    text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
+    or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
 }
 
+report("Arithmetic expression:");
 line := inputLine();
 size := textLength(line);
 var position := 0;
@@ -19,11 +20,11 @@ loop position < size {
         loop position < size and isDigit(textAt(line, position)) {
             position = position + 1;
         }
-        report("number: " + textSlice(line, start, position));
+        report("number:", textSlice(line, start, position));
         continue;
     }
     if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "(" or ch == ")" {
-        report("symbol: " + ch);
+        report("symbol:", ch);
         position = position + 1;
         continue;
     }

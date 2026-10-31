@@ -64,6 +64,15 @@ This is bounded helper/CLI evidence, not full I/O or callable conformance.
 
 ## Handoff
 
+Follow-up requested by the user, **2026-10-31**: apply the approved facilities
+to earlier examples too. Examples 001–004 now pass explicit String prompts to
+inputInt. Example 005 prints its heading with report before the unchanged
+zero-argument inputLine, and uses ordinary multi-value report calls for token
+labels. Existing expected-output assertions include these prompts, including
+sentinel repeats, factorial rejection and the scanner's empty/error cases.
+Strict checking, 69 interpreter groups and nine highlighter groups pass. This
+is an example/test update, not a new helper signature or language feature.
+
 Preserve as igniter-v0.1.0-alpha.8 with prior tags unchanged. Keep the example in
 root ./examples with its indexed name. This explicit request takes precedence
 over the pending named-tuple review; it does not approve that separate proposal.

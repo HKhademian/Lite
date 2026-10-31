@@ -24,6 +24,11 @@ the separate exercise catalog does not need renumbering for this move.
 Relocation does not approve the experimental text helpers or change lesson
 verification status.
 
+The user's subsequent prompt update adds explicit input prompts to root examples
+001–004 and a report heading before line input in 005. Scanner token reports use
+the approved multiple-value helper. Their expected-output tests and guide now
+include those requested effects. The learning exercise files are unchanged.
+
 ## Source file kind migration
 
 Selected 2026-10-30: these introductory scripts use .lts; module-based source

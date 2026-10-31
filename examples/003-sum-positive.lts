@@ -2,7 +2,7 @@
    For example: 3, -2, 4, 0 reports 7. */
 var sum := 0;
 loop {
-    number := inputInt();
+    number := inputInt("Integer (0 to finish): ");
     if number == 0 { break; }
     if number < 0 { continue; }
     sum = sum + number;

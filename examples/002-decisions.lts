@@ -1,5 +1,5 @@
 /* Supply an integer. Try -4, 0, 5, and 12. */
-number := inputInt();
+number := inputInt("Integer: ");
 
 description := if number < 0 {
     "negative"

@@ -10,6 +10,11 @@ Run from the repository root with Node 26.13.0:
 ./lite run examples/001-double-sum.lts
 ```
 
+The interactive examples display explicit prompts. Integer prompts leave the
+cursor on the same line; the scanner prints a heading before reading its line.
+When input is redirected, the program does not echo that input, so successive
+integer prompts may appear together in captured stdout.
+
 - [001 — Double a sum](001-double-sum.lts): enter 7 and 5; reports 24.
 - [002 — Decisions](002-decisions.lts): enter an integer; reports its sign,
   checks a range, and demonstrates short-circuiting before division.
