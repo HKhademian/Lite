@@ -240,7 +240,7 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 163 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 164 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
@@ -251,7 +251,7 @@ are `./ltc` and `./litec`. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`; `./lite verify`
-runs cases affected by git changes, while `./lite verify --all` runs all 25
+runs cases affected by git changes, while `./lite verify --all` runs all 26
 feature cases and all 39 artifact manifests. Seven feature cases also execute
 through the restricted TS and C compiler targets. `--update`, `--coverage`,
 `--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing

@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 78 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 79 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 25 registered, 25 cases/);
+    assert.match(covered.stdout, /features: 26 registered, 26 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1191,6 +1191,16 @@ test('floor division, floor modulo and compound updates follow documented signs'
   fault('x := 1; x += 1;', 'TypeError');
   fault('var x := 1; x += "a";', 'TypeError');
 });
+test('inferred mut and var mut declarations grant writable list access', () => {
+  assert.equal(run('mut args := inputArgs(); push_back(mut args, "z"); report(args[0], args[2]);',
+    'unread', ['a', 'b']).output, 'a z\n');
+  assert.equal(run('var mut args := inputArgs(); args = inputArgs(); push_front(mut args, "z"); report(args[0], args[2]);',
+    'unread', ['a', 'b']).output, 'z b\n');
+  fault('mut x := 1;', 'TypeError');
+  fault('mut args := inputArgs(); args = inputArgs();', 'TypeError');
+  fault('var mut x: List<Int> = [1];', 'SourceError');
+  fault('var mut args := inputArgs(); args = 1;', 'TypeError');
+});
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',
     'report(9223372036854775807 * 2);', 'var x := -9223372036854775808; report(-x);',
@@ -2111,7 +2121,7 @@ test('unsupported array forms fail before effects without inventing empty types,
     ['values := [fn(): Int { 1 }];', 'TypeError'], ['values := ([1, 2],);', 'TypeError'],
     ['loop [1] as value { unknown; }', 'TypeError'], ['report([1, 2]);', 'TypeError'],
     ['var values := [1, 2]; values[0] = 3;', 'SourceError'],
-    ['mut values := [1, 2];', 'SourceError'], ['f := fn(values: [Int]): Int { 1 }', 'SourceError'],
+    ['mut values := [1, 2];', 'TypeError'], ['f := fn(values: [Int]): Int { 1 }', 'SourceError'],
     ['f := fn(values: [Int; 2.0]): Int { 1 }', 'SourceError'],
     ['loop [1, 2] as (a, b) {}', 'SourceError'],
     ['values := [1, 2]; report(values.count);', 'TypeError'],

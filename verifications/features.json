@@ -228,6 +228,15 @@
         "docs/mutability.md",
         "docs/operators.md"
       ]
+    },
+    {
+      "id": "mut.inferred",
+      "summary": "Inferred mut and var mut declarations.",
+      "case": "features/mut-inferred.json",
+      "status": "verified",
+      "docs": [
+        "docs/mutability.md"
+      ]
     }
   ]
 }

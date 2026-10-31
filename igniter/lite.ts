@@ -64,7 +64,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'call'; name: string; args: readonly Readonly<{ label: string | undefined; input: Raw }>[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
-  | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
+  | { kind: 'declare'; name: string; mutable: boolean; writable: boolean; input: Raw }
   | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw }
   | { kind: 'typeAlias'; name: string; target: RawType }
   | { kind: 'assign'; name: string; input: Raw }
@@ -499,16 +499,26 @@ class Parser {
       if (this.accept(';')) continue;
       const start = this.peek();
       if (this.accept('var')) {
+        const writable = this.accept('mut');
         const name = this.take();
         if (name.kind !== 'id') source('expected binding name after var', name.at);
-        if (this.peek().text === ':') items.push(this.typedDeclaration(name, true));
-        else {
+        if (this.peek().text === ':') {
+          if (writable) source('typed declarations place mut after the colon', name.at);
+          items.push(this.typedDeclaration(name, true));
+        } else {
           this.expect(':=');
           if (this.peek().kind === 'id' && this.peek().text === 'type') {
             source('type aliases cannot be declared with var', start.at);
           }
-          items.push({ kind: 'declare', name: name.text, mutable: true, input: this.expression(), at: start.at });
+          items.push({ kind: 'declare', name: name.text, mutable: true, writable, input: this.expression(), at: start.at });
         }
+      } else if (this.accept('mut')) {
+        const name = this.take();
+        if (name.kind !== 'id') source('expected binding name after mut', name.at);
+        if (this.peek().text === ':') source('typed declarations place mut after the colon', name.at);
+        this.expect(':=');
+        items.push({ kind: 'declare', name: name.text, mutable: false, writable: true,
+          input: this.expression(), at: start.at });
       } else if (start.kind === 'id' && this.peek(1).text === ':=' && this.peek(2).kind === 'id' && this.peek(2).text === 'type') {
         this.take();
         this.take();
@@ -523,7 +533,7 @@ class Parser {
         const op = this.take();
         const right = this.expression();
         if (op.text === ':=') {
-          items.push({ kind: 'declare', name: start.text, mutable: false, input: right, at: start.at });
+          items.push({ kind: 'declare', name: start.text, mutable: false, writable: false, input: right, at: start.at });
         } else if (op.text === '=') {
           items.push({ kind: 'assign', name: start.text, input: right, at: start.at });
         } else {
@@ -537,7 +547,7 @@ class Parser {
         this.expect(':=');
         const input = this.expression();
         if (pattern.kind === 'name') {
-          items.push({ kind: 'declare', name: pattern.token.text, mutable: false, input, at: start.at });
+          items.push({ kind: 'declare', name: pattern.token.text, mutable: false, writable: false, input, at: start.at });
         } else {
           const names = pattern.items.map(item => {
             if (item.kind !== 'name') source('nested tuple patterns are not supported yet', start.at);
@@ -1077,7 +1087,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
       ? resolveFunctionSignature(fnInput, names)
       : undefined;
     const own: Binding | undefined = ownSignature !== undefined && item.kind === 'declare'
-      ? { name: item.name, mutable: item.mutable, writable: false, slot: state.nextSlot++, type: ownSignature, owner: state.current?.id ?? 0 }
+      ? { name: item.name, mutable: item.mutable, writable: item.writable, slot: state.nextSlot++, type: ownSignature, owner: state.current?.id ?? 0 }
       : undefined;
     const bodyNames = own !== undefined && !names.has(own.name)
       ? new Map(names).set(own.name, { kind: 'value', binding: own })
@@ -1118,6 +1128,10 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
       }
       case 'typedDeclare': case 'declare': {
         if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
+        if (item.kind === 'declare' && item.writable &&
+            (typeof input.type === 'string' || input.type.kind !== 'List')) {
+          typeError('held-data mut declarations currently support lists only', item.at);
+        }
         let declared = input.type;
         if (item.kind === 'typedDeclare') {
           const destination = resolveType(item.annotation, names);
@@ -1135,7 +1149,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
           }
         }
         const binding: Binding = own ?? { name: item.name, mutable: item.mutable,
-          writable: item.kind === 'typedDeclare' && item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
+          writable: item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, { kind: 'value', binding });
         items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';

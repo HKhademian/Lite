@@ -44,6 +44,8 @@ var x := make_user();     /* reassignable binding; read-only access */
 var mut x := make_user(); /* reassignable binding; writable access */
 ```
 
+Implementation note, 2026-10-31: the igniter now implements inferred `mut name := expression` and `var mut name := expression`. Writable held data is currently limited to List values; fixed-array/record writable declarations remain unsupported. Explicitly typed forms use `name: mut List<T> = ...` or `var name: mut List<T> = ...`; `var mut name: Type = ...` is rejected so mut stays after the colon in typed declarations.
+
 These lines show four inferred alternatives for comparison. Sequential declarations may also shadow a name in one block. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
 
 Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var` after initialization; the first write to `x: T = ?` is the exception. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.

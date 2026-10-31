@@ -1,0 +1,26 @@
+{
+  "id": "mut.inferred",
+  "kind": "feature",
+  "source": {
+    "file": "mut-inferred.lts",
+    "hash": "sha256:0bd942c958fe4724d64439f44217c0743142676ff6281acdd8ad1e171f1db737"
+  },
+  "features": [
+    "mut.inferred"
+  ],
+  "guideline": "Checks inferred mut and var mut declarations on writable list bindings.",
+  "cases": [
+    {
+      "name": "writable-lists",
+      "args": [
+        "a",
+        "b"
+      ],
+      "stdout": {
+        "text": "a z\nz b\n",
+        "hash": "sha256:406592a2f7318e21e23ddc77cf4d395caf8f51e8b17bfd31df008fa3ee9f571e"
+      },
+      "exitCode": 0
+    }
+  ]
+}
