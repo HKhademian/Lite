@@ -57,6 +57,10 @@ integer prompts may appear together in captured stdout.
   four explicit mut end operations, and an independent saved sequence. Reports
   0 3, then 1, then 2 on separate lines.
 
+- [014 — Input history](014-input-history.lts): collects integers until 0, then
+  reports every entered value and their sum. Enter 7, -2, 5, 0 for a sum of 10;
+  entering 0 immediately leaves the history empty and reports sum: 0.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

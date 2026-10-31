@@ -1,0 +1,13 @@
+numbers: mut List<Int> = [];
+loop {
+    number := inputInt("Integer (0 to finish): ");
+    if number == 0 { break; }
+    push_back(mut numbers, number);
+}
+report("entered:");
+var total := 0;
+loop numbers as number {
+    report(number);
+    total = total + number;
+}
+report("sum:", total);

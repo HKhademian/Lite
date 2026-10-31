@@ -135,6 +135,9 @@ select new permanent language restrictions. Text-helper consent is unchanged.
 
 Commit implementation, tests, example, editor changes and owning documentation
 atomically as igniter-v0.1.0-alpha.14, preserving all earlier tags. Continue with
-already selected scope automatically. A runtime input-history example can now use
-this supported list/I/O subset; a character tokenizer still depends on the
+already selected scope automatically. The follow-up [014 input-history example](../examples/014-input-history.lts)
+uses only this supported list/I/O subset: collect entered integers until zero,
+then traverse/report and sum them. Real-launcher checks cover mixed-sign inputs,
+immediate zero, and check-only mode without input or output. No new feature or
+release tag is introduced by this example. A character tokenizer still depends on the
 existing unapproved text-helper experiment and needs its own explicit review.
