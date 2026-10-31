@@ -39,15 +39,18 @@ The user's `-2 ** 3` example is the right place to ask about intent, but its mat
 
 Use an even exponent to expose the difference. Do not accept an ambiguous source spelling because constant folding, an odd exponent, or the current value happens to make two interpretations agree. Do not infer the author's grouping from types or overload success either. A diagnostic should show the negative-base and outer-negation alternatives rather than silently choosing one.
 
-## Dual spelling proposal — not selected
+## Dual spelling proposal — deferred future investigation
 
-The user suggested a compatibility split:
+The user asks to keep a compatibility split as a **late future investigation**:
 
 - `**` remains right-associative.
 - `^` would be a left-associative alias for users coming from Excel and MATLAB.
+- If pursued, `^` uses the same precedence as `**`, rejects mixed unparenthesized
+  `^`/`**` chains, and follows the same negative-base grouping, Float-default
+  result and positive-exponent checkpoint as `**`.
 
-That is not selected. Excel and MATLAB make `^` familiar, but a second spelling
-with different association creates new questions:
+This is not implemented or selected now. Excel and MATLAB make `^` familiar, but
+a second spelling with different association creates new questions:
 
 - What happens in a mixed chain such as `2 ** 3 ^ 2`? A safe rule would reject
   mixed unparenthesized chains and require explicit grouping.
@@ -59,7 +62,7 @@ with different association creates new questions:
 - The Float-default result and positive-exponent checkpoint would need to apply
   consistently to both spellings.
 
-No `^` token or alternate association is selected.
+The `^` token and alternate association are deferred; no implementation is selected.
 
 ## Reference behavior and rationale
 
