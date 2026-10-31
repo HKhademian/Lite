@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Whole compiler-input proposal, 2026-10-31
+
+After the restricted TS/C emission prototypes, a compiler-input review proposes
+temporary inputAll(): String for exact remaining UTF-8 stdin through EOF,
+preserving whitespace/newlines and returning empty text at immediate EOF. It
+would let compiler applications obtain multi-line source without a new file or
+process API or changing inputLine's selected EOF-fault behavior. This is a new
+helper/name/EOF contract, remains unselected and has no implementation. See
+[INV-004 proposal](../investigations/INV-004-fvp-whole-input.md).
+
 ## First restricted native output and three-way parity, 2026-10-31
 
 Under the selected maintained C target, example 018 now emits a standalone C

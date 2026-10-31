@@ -91,3 +91,8 @@ explicit contract: inputLine currently supplies one line and faults at missing
 input; silently changing it to an EOF iterator or adding a read-file/input helper
 would exceed selected scope. Keep the igniter active during further self-hosting
 work and preserve the readable TS seed regardless of later retirement timing.
+
+The next [whole-input proposal](INV-004-fvp-whole-input.md) presents inputAll()
+for exact remaining UTF-8 text through EOF, including an empty result at immediate
+EOF. It remains unselected pending explicit consent; the current inputLine
+behavior is not changed by the proposal.
