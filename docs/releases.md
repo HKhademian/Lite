@@ -2,7 +2,7 @@
 
 Current components:
 
-- Igniter: **0.1.0-alpha.25**
+- Igniter: **0.1.0-alpha.26**
 - VS Code extension: **0.1.1**
 - Verification corpus: 28 features, 19 examples, 20 samples, 67 scenarios, 83 target executions
 - Tests: 166 interpreter groups and 9 editor grammar groups
@@ -39,6 +39,7 @@ version. Detailed milestone prose remains in the
 | `igniter-v0.1.0-alpha.23` | 2026-10-31 | `28141c9` | Verification registry, complete artifact coverage, compiler-target cases, floor/compound arithmetic, inferred mutability, VS Code icons, CI |
 | `igniter-v0.1.0-alpha.24` | 2026-11-01 | `99e16c3` | Right-associative Float-default power with explicit negative-base grouping |
 | `igniter-v0.1.0-alpha.25` | 2026-11-01 | `3eebdde` | Restricted TS/C lowering for Int floor division and floor modulo |
+| `igniter-v0.1.0-alpha.26` | 2026-11-01 | `2edf486` | Subjectless Boolean match with required fallback and same-type value arms |
 
 ## Current tag conventions
 
