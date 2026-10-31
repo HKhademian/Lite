@@ -234,6 +234,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Project and implementation direction
 
+- [Release and tag history](releases.md): published igniter tags, current component versions, and test/verification counts.
 - [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.
 - [Lite Proposal register](proposals/README.md): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010 plus LP-0012–LP-0018, draft LP-0005 r7 for untyped binding and pending exits, draft LP-0011 r4 for unmatched-remainder/provenance transport, revision/status records, and unassigned release targets.
 - [Modules and packages](modules-and-packages.md): private defaults and intended packaging experience.

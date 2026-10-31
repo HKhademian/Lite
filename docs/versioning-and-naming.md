@@ -1,8 +1,21 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. Package-registry spelling, final release packaging and automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. Package-registry spelling, final release packaging and automation remain open.
 
 ## 1. Canonical names
+
+### Name origin
+
+**Lite** is **Light** with the silent letters dropped, and the dropped letters are the point: a silent letter costs a reader attention and carries no meaning.
+
+The name is read four ways, and the design is meant to keep all four.
+
+- **Light, not heavy.** Fast native execution, low memory use, small runtime support, and small final executables. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
+- **Low in code junk.** Little ceremony: few repeated annotations, no wrapper construction or defensive padding carried while solving the problem. See [the design goals](principles.md#design-goals).
+- **Light, not dark.** Behavior stays visible. Output and tracing are explicit, contracts are written down, and no mechanism depends on hidden state that a reader must discover elsewhere. See [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
+- **Bright, clean, pure, naive.** Naive in the engineering sense: understandable one part at a time, with local, predictable meanings and no cleverness that needs a specialist to decode. See [continuity and analogical coherence](continuity-and-analogy.md).
+
+These are readings of one project name. They introduce no second name for the language or the tools, and "naive" claims simplicity of design, not immaturity of implementation. The canonical names below remain the only official ones.
 
 | Thing | Prose name | Machine name | Notes |
 |---|---|---|---|
@@ -110,9 +123,9 @@ the source version/tag and exact commit it builds, and how to produce and check
 the next stage, including required host tools. Preserve this compatibility map
 alongside the sources so users do not have to guess which historic revisions
 work together. Tags identify sources; successful end-to-end rebuilds must still
-verify the route. Exact tag naming for the igniter, first milestone versions,
-and bootstrap record format remain open. No tag or release is created by this
-documentation decision.
+verify the route. The current igniter tag stream is `igniter-vX.Y.Z[-prerelease]`;
+see [release history](releases.md). Tag naming for future non-igniter streams and
+the bootstrap record format remain open. This policy does not itself create a tag.
 
 ## 2. Version streams
 
