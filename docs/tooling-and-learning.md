@@ -211,6 +211,11 @@ valid artifact bytes stay unchanged and extra arguments fail before reads.
 Strict checking and 147 groups pass; generated runtime fault locations remain
 separate. See [context evidence](../investigations/INV-061-compiler-source-context.md).
 
+Both compiler applications subsequently advance to sequence arbitrary `report(integer);`
+statements across the whole input without language extensions. Emitted TS and native C
+preserve exact byte/status parity across 15 admitted programs. Strict checking and 148
+groups pass. See [statement sequencing evidence](../investigations/INV-061-statement-sequencing.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

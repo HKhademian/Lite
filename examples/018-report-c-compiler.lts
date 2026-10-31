@@ -75,40 +75,47 @@ if argumentCount > 1 {
 }
 source := inputAll();
 size := textLength(source);
+integers: mut List<String> = [];
 var position := skipSpaces(source, 0);
-if position + 6 > size or textSlice(source, position, position + 6) =!= "report" {
+if position == size {
     reportError(prefix + "expected report(integer)");
     exit(2);
 }
-position = skipSpaces(source, position + 6);
-position = expectSymbol(source, position, "(", prefix);
-position = skipSpaces(source, position);
-var negative := false;
-if position < size and (textAt(source, position) == "+" or textAt(source, position) == "-") {
-    negative = textAt(source, position) == "-";
-    position = skipSpaces(source, position + 1);
+loop position < size {
+    if position + 6 > size or textSlice(source, position, position + 6) =!= "report" {
+        reportError(prefix + "expected report(integer)");
+        exit(2);
+    }
+    position = skipSpaces(source, position + 6);
+    position = expectSymbol(source, position, "(", prefix);
+    position = skipSpaces(source, position);
+    var negative := false;
+    if position < size and (textAt(source, position) == "+" or textAt(source, position) == "-") {
+        negative = textAt(source, position) == "-";
+        position = skipSpaces(source, position + 1);
+    }
+    start := position;
+    loop position < size and isDigit(textAt(source, position)) {
+        position = position + 1;
+    }
+    if start == position {
+        reportError(prefix + "expected a decimal integer literal");
+        exit(2);
+    }
+    digits := textSlice(source, start, position);
+    position = skipSpaces(source, position);
+    position = expectSymbol(source, position, ")", prefix);
+    position = skipSpaces(source, position);
+    if position < size and textAt(source, position) == ";" {
+        position = skipSpaces(source, position + 1);
+    }
+    push_back(mut integers, normalizeInteger(digits, negative, prefix));
 }
-start := position;
-loop position < size and isDigit(textAt(source, position)) {
-    position = position + 1;
-}
-if start == position {
-    reportError(prefix + "expected a decimal integer literal");
-    exit(2);
-}
-digits := textSlice(source, start, position);
-position = skipSpaces(source, position);
-position = expectSymbol(source, position, ")", prefix);
-position = skipSpaces(source, position);
-if position < size and textAt(source, position) == ";" {
-    position = skipSpaces(source, position + 1);
-}
-if position =!= size {
-    reportError(prefix + "unsupported trailing source");
-    exit(2);
-}
-integer := normalizeInteger(digits, negative, prefix);
 report("#include <stdio.h>");
 report("int main(void) {");
-report("    return fputs(\"" + integer + "\\n\", stdout) == EOF ? 1 : 0;");
+var content := "";
+loop integers as item {
+    content = content + item + "\\n";
+}
+report("    return fputs(\"" + content + "\", stdout) == EOF ? 1 : 0;");
 report("}");

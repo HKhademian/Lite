@@ -210,14 +210,16 @@ test('whole-input example runs via the real launcher preserving UTF-8 bytes and 
 const reportLiteralPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
   '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
   'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)',
-  '\nreport(\n42\n);\n', '\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n', 'report(42);\n'];
+  '\nreport(\n42\n);\n', '\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n', 'report(42);\n',
+  'report(42);\nreport(9);\n', 'report(1); report(2); report(3);',
+  'report(0);\nreport(-42);\nreport(+100);\n'];
 
 test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
     const path = join(root, 'examples', name);
-    for (const input of ['', 'report(42);\nreport(9);\n', 'report(42);\nprocess.exit(7);\n']) {
+    for (const input of ['', 'report(42);\nunsupported();\n', 'report(42);\nprocess.exit(7);\n']) {
       const rejected = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
       assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
       assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
@@ -236,7 +238,9 @@ test('restricted C compiler emits the readable reference and rejects unsupported
   const source = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
   const expected = readFileSync(new URL('../examples/generated/018-report-42.c', import.meta.url), 'utf8');
   assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
-  for (const input of ['report(1 + 2);', 'report("text");', 'report(42); report(9);',
+  assert.equal(run(source, 'report(42);\nreport(9);').output,
+    '#include <stdio.h>\nint main(void) {\n    return fputs("42\\n9\\n", stdout) == EOF ? 1 : 0;\n}\n');
+  for (const input of ['report(1 + 2);', 'report("text");', 'report(42); report("text");',
     'report(42); system("anything");', 'report(9223372036854775808);', 'report(-9223372036854775809);']) {
     const result = run(source, input);
     assert.equal(result.code, 2); assert.equal(result.output, ''); assert.notEqual(result.errors, '');
@@ -302,11 +306,24 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
   assert.equal(run(source, 'report(-000);').output,
     'export function main(): string {\n    return "0\\n";\n}\n');
 });
+test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
+  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
+  const program = 'report(10);\nreport(20);\nreport(-30);\n';
+  const tsOutput = run(tsSource, program);
+  assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
+  assert.equal(tsOutput.output, 'export function main(): string {\n    return "10\\n20\\n-30\\n";\n}\n');
+  const cOutput = run(cSource, program);
+  assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
+  assert.equal(cOutput.output, '#include <stdio.h>\nint main(void) {\n    return fputs("10\\n20\\n-30\\n", stdout) == EOF ? 1 : 0;\n}\n');
+});
 test('restricted TS compiler rejects malformed, unsupported and injected source before emitting bytes', () => {
   const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  assert.equal(run(source, 'report(42);\nreport(9);').output,
+    'export function main(): string {\n    return "42\\n9\\n";\n}\n');
   for (const input of ['', '\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
     'report("text");', 'report(1 + 2);', 'report(1.5);', 'report(1e2);',
-    'report(42); report(9);', 'report(42); process.exit(7);',
+    'report(42); report("text");', 'report(42); process.exit(7);',
     'report(9223372036854775808);', 'report(-9223372036854775809);',
     'report(999999999999999999999999);', 'report(42); "}; throw 1; //']) {
     const result = run(source, input);

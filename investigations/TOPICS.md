@@ -833,6 +833,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — compiler source context](INV-061-compiler-source-context.md) — the TS/C applications accept an optional logical source name via approved inputArgs for exact rejection prefixes. Valid artifacts remain unchanged; extra arguments fail before reads. Strict checking and 147 interpreter groups plus 9 editor groups pass. Generated runtime fault locations/ABI remain separate.
 
+**Follow-up:** [INV-061 — statement sequencing in compiler applications](INV-061-statement-sequencing.md) — the TS/C applications sequence arbitrary report(integer) statements over whole source input using existing List/loops without language additions. Emitted TS and native C preserve exact byte/status parity across 15 admitted programs. Strict checking and 148 interpreter groups plus 9 editor groups pass. Control flow and runtime fault generation remain open.
+
 <a id="inv-062"></a>
 
 ## INV-062 — Compile-time computation
