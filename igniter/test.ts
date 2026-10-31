@@ -21,6 +21,73 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('named calls route interleaved positional entries into the next unfilled slot', () => {
+  assert.equal(run(`op := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c }
+    b := 2; report(op(c = 3, 1, =b), op(9, a = 1, 2, 3), op(c = 3, b = 2, a = 1));
+    report := fn(value: Int): Int { value + 1 }
+    result := report(value = 7);
+    output := fn(v: Int): Int { v } output(v = result);`).output, '123 123 123\n');
+});
+test('named call replacement checks only surviving slot types but evaluates every supplied expression', () => {
+  assert.equal(run(`take := fn(a: Int, b: Int): Int { report("body"); a * 10 + b }
+    report(take(({report("old"); "superseded"}), b = ({report("b"); 2}), a = ({report("a"); 1})));`).output,
+    'old\nb\na\nbody\n12\n');
+  fault('take := fn(a: Int): Int { a } take(unknown, a = 1);', 'TypeError');
+  fault('take := fn(a: Int): Int { a } take(1, a = "bad");', 'TypeError');
+});
+test('named call arguments retain callee-before-arguments selection and stop on exits or faults', () => {
+  assert.equal(run(`var op := fn(a: Int, b: Int): Int { a + b }
+    report(op(b = ({op = fn(a: Int, b: Int): Int { a * b } 3}), a = 2));
+    report(op(a = 2, b = 3));`).output, '5\n6\n');
+  assert.deepEqual(run(`op := fn(a: Int, b: Int): Int { report("body"); 0 }
+    op(b = ({report("first"); exit(7); 1}), a = ({report("later"); 2}));`),
+    { code: 7, output: 'first\n', errors: '' });
+  let output = '';
+  assert.throws(() => execute(compile(`op := fn(a: Int): Int { report("body"); a }
+    op(1 / 0, a = ({report("later"); 2}));`), {
+    read: () => null, report: text => { output += text; }, reportError: () => {},
+  }), LiteFault);
+  assert.equal(output, '');
+});
+test('named recursive calls and aggregate arguments preserve public labels and stored tuple contracts', () => {
+  assert.equal(run(`sum := fn(n: Int, total: Int): Int {
+      if n == 0 { return total; } self(total = total + n, n = n - 1)
+    }
+    consume := fn(values: [Int; 2], pair: (:Int, label: String)): Int { values[0] + pair.0 }
+    report(sum(total = 0, n = 4), consume(pair = (3, label = "tea"), values = [7, 8]));`).output,
+    '10 10\n');
+  fault('f := fn(pair: (x: Int)): Int { pair.x } stored := (y = 1); f(pair = stored);', 'TypeError');
+});
+test('invalid named mappings and unsupported builtin labels fail before effects', () => {
+  for (const code of [
+    'f := fn(a: Int, b: Int): Int { a } f(a = 1, a = 2, b = 3);',
+    'f := fn(a: Int): Int { a } a := 1; f(a = 2, =a);',
+    'f := fn(a: Int): Int { a } f(z = 1);',
+    'f := fn(a: Int, b: Int): Int { a } f(b = 2);',
+    'f := fn(a: Int): Int { a } f(a = 1, 2);',
+    'f := fn(): Int { 0 } f(a = 1);',
+    'report(value = 1);', 'inputInt(prompt = "Age: ");',
+  ]) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; },
+      reportError: () => { observed = true; },
+    }), LiteFault);
+    assert.equal(observed, false, code);
+  }
+});
+test('indexed named argument example executes and checks through the root launcher', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = new URL('../examples/012-named-arguments.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const check of [false, true]) {
+    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, check ? '' : '123\n123\n10\n');
+    assert.equal(result.stderr, '');
+  }
+});
+
 test('typed tuple receiving declarations rename positions without reordering source values', () => {
   assert.equal(run(`stored := (r = 20, l = 10); renamed: (l: Int, r: Int) = stored;
     plain: (:Int, :Int) = renamed; mixed: (:Int, last: Int) = plain;
@@ -495,8 +562,7 @@ test('invalid signatures, captures, forward references and unsupported forms fai
     assert.equal(observed, false, code);
   }
   for (const code of ['f := fn(n: Int, n: Int): Int { n }', 'f := fn(self: Int): Int { 1 }',
-    'self := 1;', 'f := fn(n): Int { n }', 'f := fn(n: Int = 2): Int { n }',
-    'f := fn(n: Int): Int { n } f(n=2);']) fault(code, 'SourceError');
+    'self := 1;', 'f := fn(n): Int { n }', 'f := fn(n: Int = 2): Int { n }']) fault(code, 'SourceError');
 });
 test('factorial example runs through real CLI with checked results and failures', () => {
   const example = new URL('../examples/004-factorial.lts', import.meta.url);

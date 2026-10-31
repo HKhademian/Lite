@@ -49,6 +49,10 @@ integer prompts may appear together in captured stdout.
   positions new labels through explicit receiving types. Reports 640 480 three
   times, retaining source order and values.
 
+- [012 — Named arguments](012-named-arguments.lts): named/positional interleaving,
+  shorthand, replacement of a positional contribution and named self calls.
+  Reports 123, 123, and 10 on separate lines.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

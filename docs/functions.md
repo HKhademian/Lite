@@ -26,8 +26,7 @@ results, tuple data captures, or the wider callable model. See
 The [named-field follow-up](../investigations/INV-022-fvp-named-tuples.md) extends
 these explicit tuple inputs/results to fully named scalar shapes. Stored values
 must retain compatible ordered labels and component types. This does not add
-named call arguments, contextual field routing or declaration-site relabeling;
-valid fresh-constructor routing requests receive an unsupported diagnostic.
+contextual field routing; valid fresh-constructor routing requests receive an unsupported diagnostic.
 
 The approved [fixed-array increment](../investigations/INV-054-fvp-fixed-arrays.md)
 also admits explicit [T; N] inputs/results for the supported scalar or flat-tuple
@@ -35,6 +34,13 @@ element T and literal extent N. Exact extents and element contracts are checked;
 ordinary arguments retain their evaluated values when the original variable
 changes. General [T] contracts, array views/access grants and nested arrays
 remain outside the interpreter subset.
+
+The subsequent [INV-031 increment](../investigations/INV-031-fvp-named-calls.md)
+implements existing named/positional user-function routing and =name shorthand,
+including named self calls. It preserves supplied evaluation order and validates
+only surviving contributions against destination slots. Stored tuple receiving
+label conversion is also [implemented narrowly](../investigations/INV-022-fvp-label-conversion.md).
+Defaults, spread and named builtin helper arguments remain unsupported.
 
 ## Template
 

@@ -413,7 +413,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-031).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (bounded implementation of selected rules); contributor: redacted (agent-assisted); note: [INV-031 — named fixed-slot calls](INV-031-fvp-named-calls.md) — interleaved named/positional arguments, shorthand and named replacement preserve evaluation order and final slot typing. Strict checking and 108 interpreter groups pass. Defaults, spread, access grants and builtin public labels remain outside this delivery.
 
 <a id="inv-032"></a>
 

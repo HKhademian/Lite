@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Named user-function call delivery, 2026-10-31
+
+INV-031 implements existing fixed-slot argument routing: unnamed entries fill
+next-unfilled slots, names select slots and can replace positional contributions,
+and explicit labels remain unique. Check all expressions and final slot types;
+evaluate callee then every supplied expression in written order before invocation.
+Strict checking and 108 interpreter groups pass, including example 012 through
+the launcher. Defaults, spread, access grants and builtin public labels remain
+unimplemented. Tag igniter-v0.1.0-alpha.13; see
+[INV-031 evidence](../investigations/INV-031-fvp-named-calls.md).
+
 ## Explicit tuple label conversion delivery, 2026-10-31
 
 INV-022 implements the selected receiving-declaration bypass for stored flat

@@ -50,7 +50,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; signature: FunctionType; body: Raw }
   | { kind: 'return'; input: Raw | undefined }
-  | { kind: 'call'; name: string; args: readonly Raw[] }
+  | { kind: 'call'; name: string; args: readonly Readonly<{ label: string | undefined; input: Raw }>[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
@@ -79,7 +79,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'function'; code: FunctionCode }
   | { kind: 'return'; input: Expr }
   | { kind: 'self' }
-  | { kind: 'invoke'; callee: Expr; args: readonly Expr[] }
+  | { kind: 'invoke'; callee: Expr; args: readonly Expr[]; slots: readonly number[] }
   | { kind: 'call'; name: Builtin; args: readonly Expr[] }
 );
 type Item =
@@ -618,9 +618,9 @@ class Parser {
         source(`${token.text} is not supported by this igniter yet`, token.at);
       }
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
-      const args: Raw[] = [];
+      const args: Readonly<{ label: string | undefined; input: Raw }>[] = [];
       if (!this.accept(')')) {
-        do { args.push(this.expression()); } while (this.accept(',') && this.peek().text !== ')');
+        do { args.push(this.tupleEntry()); } while (this.accept(',') && this.peek().text !== ')');
         this.expect(')');
       }
       return { kind: 'call', name: token.text, args, at: token.at };
@@ -851,18 +851,38 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
         }
         if (typeof callee.type === 'string' || callee.type.kind !== 'Function') typeError(`${raw.name} is not callable`, at);
         const signature = callee.type;
-        const args = raw.args.map(arg => checkExpression(arg, names, state));
-        if (args.length !== signature.parameters.length) typeError(`${raw.name} expects ${signature.parameters.length} argument(s)`, at);
+        const args = raw.args.map(arg => checkExpression(arg.input, names, state));
+        const slots: (number | undefined)[] = signature.parameters.map(() => undefined);
+        const labels = new Set<string>();
+        for (const [index, entry] of raw.args.entries()) {
+          let slot: number;
+          if (entry.label === undefined) {
+            slot = slots.findIndex(value => value === undefined);
+            if (slot === -1) typeError('no unfilled parameter remains for positional argument', entry.input.at);
+          } else {
+            if (labels.has(entry.label)) typeError(`duplicate explicit argument label ${entry.label}`, entry.input.at);
+            labels.add(entry.label);
+            slot = signature.parameters.findIndex(parameter => parameter.name === entry.label);
+            if (slot === -1) typeError(`unknown argument label ${entry.label}`, entry.input.at);
+          }
+          slots[slot] = index;
+        }
+        const routed = slots.map((index, slot) => {
+          if (index === undefined) typeError(`missing required argument ${signature.parameters[slot]?.name}`, at);
+          return index;
+        });
         for (const [index, parameter] of signature.parameters.entries()) {
-          const arg = args[index];
+          const contribution = routed[index];
+          const arg = contribution === undefined ? undefined : args[contribution];
           if (arg === undefined) throw new Error('igniter invariant: missing checked argument');
           requireCompatible(arg, parameter.type, `argument ${parameter.name} must be ${typeName(parameter.type)}`, arg.at);
         }
-        return { kind: 'invoke', callee, args, type: signature.result, at };
+        return { kind: 'invoke', callee, args, slots: routed, type: signature.result, at };
       }
       const name = builtin(raw.name);
       if (name === undefined) typeError(`unknown helper/function ${raw.name}; forward function lookup is not supported yet`, at);
-      const args = raw.args.map(arg => checkExpression(arg, names, state));
+      if (raw.args.some(arg => arg.label !== undefined)) typeError('named arguments for temporary builtin helpers are not supported; public labels are not selected', at);
+      const args = raw.args.map(arg => checkExpression(arg.input, names, state));
       let type: Type;
       switch (name) {
         case 'inputInt': case 'textLength': type = 'Int'; break;
@@ -1124,7 +1144,8 @@ export function execute(program: Program, io: IO): number {
         const args = expr.args.map(evaluateHere);
         const activation: Frame = { parent: callee.environment, values: new Map() };
         for (const [index, parameter] of callee.code.parameters.entries()) {
-          const value = args[index];
+          const contribution = expr.slots[index];
+          const value = contribution === undefined ? undefined : args[contribution];
           if (value === undefined) throw new Error('igniter invariant: missing checked argument');
           activation.values.set(parameter.slot, value);
         }

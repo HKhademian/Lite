@@ -143,7 +143,7 @@ Internal flow checking is conservative; this is not complete return-path analysi
 Loops remain action-only, including at a function's tail: follow an action loop
 with an explicit result/Unit when necessary. Unreachable source is still checked.
 
-Call a named function value with positional arguments. Aliases copy the callable
+Call a named function value with positional or named arguments. Aliases copy the callable
 value; var permits compatible replacements (same parameter names/types and result
 in this subset). The callee is selected once before arguments, which evaluate
 left to right. Each invocation has separate parameters/locals; block and loop
@@ -165,11 +165,28 @@ there is no native capture representation or resource-lifetime implementation.
 
 Later helper declarations and mutual recursion, general captures, first-class
 self, self binding/parameter names, keyword-free literals, omitted annotations,
-named/default/rest arguments, access-qualified parameters, callable parameters/
+default/rest arguments, access-qualified parameters, callable parameters/
 results, general typed receiving declarations, and calls through arbitrary expressions
 remain unsupported. The temporary builtin helpers are not first-class values.
 Function reporting/comparison is also rejected. Program exit and runtime faults
 propagate through function calls; cleanup and recoverable failures remain absent.
+
+### Named user-function arguments
+
+Existing public parameter names can be used as literal argument labels, including
+=name shorthand. Unnamed arguments fill the next unfilled slot in declaration
+order; a named argument may replace an earlier positional contribution. Explicit
+labels must be unique and known. All required slots must be supplied, and no
+extra positional slot is created. Check every expression, but only surviving
+contributions must fit their parameter types.
+
+Select the callee first, evaluate every supplied expression once in written order
+(including superseded inputs), then bind the final slot values and invoke.
+An exit/fault stops later preparation and the body. self uses the same routing.
+Temporary builtin helpers remain positional; their public labels are unselected.
+Defaults, spread, callable views and access-qualified inputs remain unsupported.
+See [012](../examples/012-named-arguments.lts) and
+[INV-031 evidence](../investigations/INV-031-fvp-named-calls.md).
 
 ### Flat fixed tuples
 
@@ -414,8 +431,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.12**, tag **igniter-v0.1.0-alpha.12**, adds existing explicit
-receiving-declaration label conversion for stored flat scalar tuples.
+Version **0.1.0-alpha.13**, tag **igniter-v0.1.0-alpha.13**, adds existing named
+user-function argument routing and =name shorthand.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -436,6 +453,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.11**, commit `b8583ff`: mixed flat tuple fields and annotations.
 
+- **igniter-v0.1.0-alpha.12**, commit `54d3617`: explicit tuple label conversion.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -443,7 +462,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **102 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **108 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

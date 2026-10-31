@@ -163,6 +163,12 @@ by position with exact shape/types. Ordinary transfers remain label-sensitive;
 fresh-constructor routing stays unimplemented. Strict checking and 102 groups
 pass; see [INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
 
+The INV-031 increment implements existing fixed-slot named user-function calls,
+including shorthand and positional replacement, without defaults/spread or new
+builtin labels. Strict checking and 108 interpreter groups pass, including
+source-order effects and callee selection; see
+[bounded evidence](../investigations/INV-031-fvp-named-calls.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

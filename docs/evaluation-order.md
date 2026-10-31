@@ -2,6 +2,12 @@
 
 Status: **top-to-bottom executable blocks selected 2026-10-28; left-to-right operator operands and function arguments established; deferred-body initialization checks, ownership, and cleanup details open**.
 
+The FVP checks named user-function calls against this order: select callee once,
+evaluate supplied expressions in written order including superseded inputs,
+then invoke with surviving slot values. See
+[INV-031 evidence](../investigations/INV-031-fvp-named-calls.md). Defaults and
+spread remain outside the implemented subset.
+
 ## Purpose
 
 Make expressions with calls and other observable effects predictable independently of whitespace, while keeping operator grouping separate from evaluation order.
