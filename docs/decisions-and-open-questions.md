@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## List end-operation naming review, 2026-10-31
+
+Following the copy-first clarification, INV-055 reviews the existing
+push_front/push_back/pop_front/pop_back proposal as a small independent naming
+decision. Recommendation: select that one canonical family, retaining explicit
+mutation grants and the selected direct-pop fault behavior. Names remain proposed
+pending explicit consent. Generic punctuation, construction, public argument
+labels, module placement and allocation failures are not selected. No executable
+list increment is claimed. See [the review](../investigations/INV-055-fvp-list-operations.md).
+
 ## Copy-first FVP direction clarified, 2026-10-31
 
 After automatic deliveries through alpha.13, INV-055 raised owner-copy eligibility

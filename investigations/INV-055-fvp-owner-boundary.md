@@ -69,6 +69,10 @@ bounded allocation behavior before implementing it. Keep views, generalized
 protocols, capacity tuning and native layout outside a first implementation
 unless an actual example requires their design.
 
+The next [bounded naming review](INV-055-fvp-list-operations.md) recommends the
+already proposed push_front/push_back/pop_front/pop_back family. It leaves the
+names unselected pending consent and does not adopt List<Int> generic grammar.
+
 ## Evidence and handoff
 
 This is a repository-contract review, not runtime validation of lists. The last

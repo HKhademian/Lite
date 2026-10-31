@@ -4,6 +4,12 @@ Status: **naming and structural-capability proposal, 2026-10-19**. The user requ
 
 ## Proposed operations
 
+FVP review, **2026-10-31**: [INV-055](../investigations/INV-055-fvp-list-operations.md)
+recommends selecting the existing front/back name family below as the next
+independent decision. Names remain proposed pending explicit consent. This does
+not adopt generic notation, a constructor, public argument labels or allocation
+failure handling, and adds no runtime operations.
+
 Recommend one symmetric family:
 
 - push_front adds one element before the current first element.
