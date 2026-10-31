@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Alias namespace/shadowing question, 2026-10-31
+
+To reduce repeated compiler type annotations, INV-029 reviews selected
+Alias := type TypeExpression. The remaining ordinary name-resolution choice is
+whether a later same-name value shadows the alias even in type annotations, or
+whether type lookup retains a separate namespace. Recommendation: one ordinary
+lexical binding namespace, with a type error when the nearest binding is a value;
+no alternative is selected. Builtin/module/type-value questions remain separate.
+No alias code or new syntax is added. See
+[the concrete case](../investigations/INV-029-fvp-alias-name-resolution.md).
+
 ## Isolated early Wasm feasibility evidence, 2026-10-31
 
 The existing emitted TS report core compiles unchanged with AssemblyScript

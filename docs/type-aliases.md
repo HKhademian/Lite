@@ -104,6 +104,13 @@ An explicit prefix raises an additional boundary: should Name := type { ... } be
 
 ## Selected rule
 
+FVP follow-up, **2026-10-31**: the
+[INV-029 name-resolution review](../investigations/INV-029-fvp-alias-name-resolution.md)
+asks whether an ordinary value declaration with an alias's name shadows that
+alias in subsequent type annotations, or whether type lookup retains a separate
+namespace. This remains open. The selected spelling/transparent meaning below
+does not decide the answer, and no igniter alias implementation is claimed.
+
 Use one spelling for all named aliases:
 
 ```text
