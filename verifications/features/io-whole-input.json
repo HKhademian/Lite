@@ -1,12 +1,14 @@
 {
   "id": "io.whole-input",
   "kind": "feature",
-  "source": "io-whole-input.lts",
+  "source": {
+    "file": "io-whole-input.lts",
+    "hash": "sha256:b193dcaeef3bae673246b649e2a945f7ac7a7b134bfde6a166e9e4396374d9e8"
+  },
   "features": [
     "io.whole-input"
   ],
   "guideline": "Checks inputAll text length through EOF, including a trailing newline.",
-  "sourceHash": "sha256:b193dcaeef3bae673246b649e2a945f7ac7a7b134bfde6a166e9e4396374d9e8",
   "cases": [
     {
       "name": "three-chars-and-newline",

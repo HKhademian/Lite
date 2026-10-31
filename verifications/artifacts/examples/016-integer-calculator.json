@@ -1,7 +1,10 @@
 {
   "id": "example.016-integer-calculator",
   "kind": "example",
-  "source": "../../../examples/016-integer-calculator.lts",
+  "source": {
+    "file": "../../../examples/016-integer-calculator.lts",
+    "hash": "sha256:7548293609eddf18c4179a9f48a8c0557384ffb8ea8a52f064ec3ba5ad5e5d05"
+  },
   "features": [
     "int.arithmetic",
     "list.mutation",
@@ -13,7 +16,6 @@
     "io.report"
   ],
   "description": "Tokenized integer calculator with precedence and nesting.",
-  "sourceHash": "sha256:7548293609eddf18c4179a9f48a8c0557384ffb8ea8a52f064ec3ba5ad5e5d05",
   "cases": [
     {
       "name": "precedence",

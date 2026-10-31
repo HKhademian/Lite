@@ -1,12 +1,14 @@
 {
   "id": "list.mutation",
   "kind": "feature",
-  "source": "list-mutation.lts",
+  "source": {
+    "file": "list-mutation.lts",
+    "hash": "sha256:9ae987d71f332bddb3d22b464ed1bfe41bf42c53f7fa1406d09e2a32b5ac18ea"
+  },
   "features": [
     "list.mutation"
   ],
   "guideline": "Checks mut list grants for push_back/push_front and positional reads after growth.",
-  "sourceHash": "sha256:9ae987d71f332bddb3d22b464ed1bfe41bf42c53f7fa1406d09e2a32b5ac18ea",
   "cases": [
     {
       "name": "push-front-back",

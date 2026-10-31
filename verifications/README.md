@@ -28,8 +28,9 @@ verifications/
     showcases/                  # reserved; transcript manifests later
 ```
 
-Each manifest has a sibling `.lts` source for feature cases, or a relative
-`source` path for an artifact. Manifest JSON uses the stream model from the
+Each manifest has a `source` object with exactly one of `file` or `text`.
+Feature cases normally use a sibling `.lts`; artifacts use a relative file path.
+Inline `text` is available for tiny cases that need no imports. Manifest JSON uses the stream model from the
 compiler fixtures.
 
 ## Manifest shape
@@ -38,10 +39,12 @@ compiler fixtures.
 {
   "id": "int.arithmetic",
   "kind": "feature",
-  "source": "int-arithmetic.lts",
+  "source": {
+    "file": "int-arithmetic.lts",
+    "hash": "sha256:<64 lowercase hex>"
+  },
   "features": ["int.arithmetic"],
   "guideline": "Checks precedence, left associativity and truncating division.",
-  "sourceHash": "sha256:<64 lowercase hex>",
   "cases": [
     {
       "name": "precedence-and-division",
@@ -55,14 +58,14 @@ compiler fixtures.
 - `id` — unique manifest ID. Feature IDs use dotted names (`int.arithmetic`);
   artifact IDs use a kind prefix (`example.001-double-sum`).
 - `kind` — `feature`, `example`, `sample` or `showcase`; must match the directory.
-- `source` — source path relative to the manifest.
+- `source` — exactly one of `file` (relative path) or `text` (inline source), plus an optional `hash`. Inline text cannot resolve `importFlatAll`; use a file for imports.
 - `features` — feature IDs from `features.json`. A feature case includes its own ID.
 - `guideline` — required for `feature`; the one-line verification rationale.
 - `description` — optional artifact summary.
 - `append` — optional text appended to the source for observation. Used by
   samples whose teaching bodies print nothing.
-- `sourceHash` — SHA-256 of the original source file bytes. Changed source fails
-  verification until `--update` is reviewed.
+- `source.hash` — SHA-256 of the original source bytes (file bytes or UTF-8 text).
+  Changed source fails verification until `--update` is reviewed.
 - `cases` — one or more scenarios:
   - `name` — unique within the manifest.
   - `stdin`/`stdout`/`stderr` — `{ "text": ... }`, `{ "bytes": [...] }` or
@@ -108,8 +111,8 @@ later step; today `./lite verify` is the local gate.
 ## Adding a case
 
 1. Add the `.lts` source.
-2. Add the manifest with id, kind, source, features, guideline/description and
-   cases.
+2. Add the manifest with id, kind, `source.file` or `source.text`, features,
+   guideline/description and cases.
 3. Register a new feature in `features.json` if needed.
 4. Run `./lite verify --update`, review the generated streams/hash, then run
    `./lite verify`.

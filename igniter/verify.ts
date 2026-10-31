@@ -6,6 +6,7 @@ import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string }>;
+type Source = Readonly<{ file?: string; text?: string; hash?: string }>;
 type Scenario = Readonly<{
   name: string;
   args?: readonly string[];
@@ -19,13 +20,12 @@ type Manifest = {
   file: string;
   kind: Kind;
   id: string;
-  source: string;
-  sourcePath: string;
+  source: Source;
+  sourcePath?: string;
   features: readonly string[];
   guideline?: string;
   description?: string;
   append?: string;
-  sourceHash?: string;
   cases: Scenario[];
 };
 type RegistryEntry = Readonly<{
@@ -173,13 +173,30 @@ function registry(): Map<string, RegistryEntry> {
 function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>): Manifest {
   const label = file.slice(root.length + 1);
   const record = object(JSON.parse(readFileSync(file, 'utf8')), label);
-  checkKeys(record, ['id', 'kind', 'source', 'features', 'guideline', 'description', 'append', 'sourceHash', 'cases'], label);
+  checkKeys(record, ['id', 'kind', 'source', 'features', 'guideline', 'description', 'append', 'cases'], label);
   if (record['kind'] !== kind) throw new Error(`${label}: kind must be ${kind}`);
   const id = text(record['id'], `${label}.id`);
-  const source = text(record['source'], `${label}.source`);
-  if (isAbsolute(source)) throw new Error(`${label}.source: expected a relative path`);
-  const sourcePath = resolve(dirname(file), source);
-  if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) throw new Error(`${label}.source: missing ${source}`);
+  const sourceRecord = object(record['source'], `${label}.source`);
+  checkKeys(sourceRecord, ['file', 'text', 'hash'], `${label}.source`);
+  const sourceFile = sourceRecord['file'] === undefined ? undefined : text(sourceRecord['file'], `${label}.source.file`);
+  const sourceText = sourceRecord['text'] === undefined ? undefined : text(sourceRecord['text'], `${label}.source.text`);
+  if ((sourceFile === undefined) === (sourceText === undefined)) {
+    throw new Error(`${label}.source: expected exactly one of file or text`);
+  }
+  if (sourceFile !== undefined && isAbsolute(sourceFile)) throw new Error(`${label}.source.file: expected a relative path`);
+  const sourcePath = sourceFile === undefined ? undefined : resolve(dirname(file), sourceFile);
+  if (sourcePath !== undefined && (!existsSync(sourcePath) || !statSync(sourcePath).isFile())) {
+    throw new Error(`${label}.source.file: missing ${sourceFile}`);
+  }
+  const sourceHash = sourceRecord['hash'] === undefined ? undefined : text(sourceRecord['hash'], `${label}.source.hash`);
+  if (sourceHash !== undefined && !/^sha256:[0-9a-f]{64}$/.test(sourceHash)) {
+    throw new Error(`${label}.source.hash: expected sha256:<64 lowercase hex>`);
+  }
+  const source: Source = {
+    ...(sourceFile === undefined ? {} : { file: sourceFile }),
+    ...(sourceText === undefined ? {} : { text: sourceText }),
+    ...(sourceHash === undefined ? {} : { hash: sourceHash }),
+  };
   const names = strings(record['features'], `${label}.features`);
   if (names.length === 0) throw new Error(`${label}.features: at least one feature is required`);
   for (const name of names) {
@@ -190,10 +207,6 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
   if (kind === 'feature' && guideline === undefined) throw new Error(`${label}.guideline: feature cases require a guideline`);
   const description = record['description'] === undefined ? undefined : text(record['description'], `${label}.description`);
   const append = record['append'] === undefined ? undefined : text(record['append'], `${label}.append`);
-  const sourceHash = record['sourceHash'] === undefined ? undefined : text(record['sourceHash'], `${label}.sourceHash`);
-  if (sourceHash !== undefined && !/^sha256:[0-9a-f]{64}$/.test(sourceHash)) {
-    throw new Error(`${label}.sourceHash: expected sha256:<64 lowercase hex>`);
-  }
   const rawCases = record['cases'];
   if (!Array.isArray(rawCases) || rawCases.length === 0) throw new Error(`${label}.cases: at least one case is required`);
   const cases = rawCases.map((value, index) => scenario(value, `${label}.cases[${index}]`));
@@ -202,9 +215,9 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
     if (seen.has(item.name)) throw new Error(`${label}: duplicate case name ${item.name}`);
     seen.add(item.name);
   }
-  return { file, kind, id, source, sourcePath, features: names, ...(guideline === undefined ? {} : { guideline }),
-    ...(description === undefined ? {} : { description }), ...(append === undefined ? {} : { append }),
-    ...(sourceHash === undefined ? {} : { sourceHash }), cases };
+  return { file, kind, id, source, ...(sourcePath === undefined ? {} : { sourcePath }), features: names,
+    ...(guideline === undefined ? {} : { guideline }), ...(description === undefined ? {} : { description }),
+    ...(append === undefined ? {} : { append }), cases };
 }
 
 function manifests(features: Map<string, RegistryEntry>): readonly Manifest[] {
@@ -282,12 +295,15 @@ function writeManifest(item: Manifest, scenarios: readonly Scenario[], sourceHas
   const record = {
     id: item.id,
     kind: item.kind,
-    source: item.source,
+    source: {
+      ...(item.source.file === undefined ? {} : { file: item.source.file }),
+      ...(item.source.text === undefined ? {} : { text: item.source.text }),
+      hash: sourceHash,
+    },
     features: item.features,
     ...(item.guideline === undefined ? {} : { guideline: item.guideline }),
     ...(item.description === undefined ? {} : { description: item.description }),
     ...(item.append === undefined ? {} : { append: item.append }),
-    sourceHash,
     cases: scenarios,
   };
   writeFileSync(item.file, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
@@ -325,7 +341,8 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
   process.stdout.write(`examples: ${counts('example')}/${examples} manifests\n`);
   process.stdout.write(`samples: ${counts('sample')}/${samples} manifests\n`);
   process.stdout.write(`showcases: ${counts('showcase')}/${showcases} manifests\n`);
-  const pending = (kind: Kind): string[] => items.filter(item => item.kind === kind).map(item => item.source);
+  const pending = (kind: Kind): string[] => items.filter(item => item.kind === kind)
+    .map(item => item.source.file ?? '(inline text)');
   process.stdout.write(`covered examples: ${pending('example').join(', ') || '(none)'}\n`);
   process.stdout.write(`covered samples: ${pending('sample').join(', ') || '(none)'}\n`);
 }
@@ -349,10 +366,12 @@ function main(): void {
   for (const item of items) {
     if (!matches(item, options.filter)) continue;
     const failuresBefore = failures;
-    const sourceBytes = readFileSync(item.sourcePath);
+    const sourcePath = item.sourcePath;
+    const sourceBytes = sourcePath === undefined ? Buffer.from(item.source.text ?? '', 'utf8') : readFileSync(sourcePath);
     const sourceHash = hash(sourceBytes);
-    const source = loadSource(item.sourcePath) + (item.append === undefined ? '' : `\n${item.append}`);
-    if (!options.update && item.sourceHash !== sourceHash) {
+    const source = (sourcePath === undefined ? item.source.text ?? '' : loadSource(sourcePath)) +
+      (item.append === undefined ? '' : `\n${item.append}`);
+    if (!options.update && item.source.hash !== sourceHash) {
       process.stdout.write(`FAIL ${item.id}: source hash changed; run ./lite verify --update\n`);
       failures += 1;
       continue;

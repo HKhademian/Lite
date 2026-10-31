@@ -1,12 +1,14 @@
 {
   "id": "array.fixed",
   "kind": "feature",
-  "source": "array-fixed.lts",
+  "source": {
+    "file": "array-fixed.lts",
+    "hash": "sha256:da12e4524d0d687f3a09753036ebc93a9bb9261443bbf3789776d345181d70ae"
+  },
   "features": [
     "array.fixed"
   ],
   "guideline": "Checks fixed-array construction and constant/static indexed reads.",
-  "sourceHash": "sha256:da12e4524d0d687f3a09753036ebc93a9bb9261443bbf3789776d345181d70ae",
   "cases": [
     {
       "name": "indexed-reads",

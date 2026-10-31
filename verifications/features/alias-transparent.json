@@ -1,12 +1,14 @@
 {
   "id": "alias.transparent",
   "kind": "feature",
-  "source": "alias-transparent.lts",
+  "source": {
+    "file": "alias-transparent.lts",
+    "hash": "sha256:b879c6eb4eab21dbf3e439ed8e8e511ecd45bd67dc4ca79c543e4bd194506c2c"
+  },
   "features": [
     "alias.transparent"
   ],
   "guideline": "Checks a tuple alias, a list alias, and zero-wrapper field access.",
-  "sourceHash": "sha256:b879c6eb4eab21dbf3e439ed8e8e511ecd45bd67dc4ca79c543e4bd194506c2c",
   "cases": [
     {
       "name": "tuple-and-list-alias",

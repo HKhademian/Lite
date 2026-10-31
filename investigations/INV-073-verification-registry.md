@@ -37,11 +37,12 @@ teaching material.
 - `artifacts/examples|samples|showcases/<id>.json` — artifact manifests.
 
 A manifest records `id`, `kind`, `source`, `features`, optional
-`guideline`/`description`/`append`, `sourceHash`, and `cases`. A case records
+`guideline`/`description`/`append`, and `cases`. `source` holds exactly one of
+`file` or `text` plus an optional `hash`. A case records
 `stdin`/`stdout`/`stderr` streams (`text`, `bytes` or `file`), optional `args`,
 and `exitCode`. The stream model matches the compiler verification fixtures.
 
-`sourceHash` covers the original source bytes. Editing an artifact without
+`source.hash` covers the original source bytes (file bytes or UTF-8 text). Editing an artifact without
 reviewing its expectations fails verification until `--update` is run and its
 diff is accepted. `append` lets the verifier observe sample values without
 adding `report` calls to the lesson body.
@@ -56,8 +57,8 @@ adding `report` calls to the lesson body.
 - `--coverage`: report feature/artifact coverage without executing;
 - `--filter <id-or-path>`: select manifests.
 
-The runner validates the feature registry, manifest structure, source paths,
-feature references, stream forms and duplicate IDs. It is the local gate; CI
+The runner validates the feature registry, manifest structure, source file/text
+fields, feature references, stream forms and duplicate IDs. It is the local gate; CI
 wiring is a later step.
 
 ## First slice

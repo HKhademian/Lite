@@ -1,14 +1,16 @@
 {
   "id": "sample.020-swap-values",
   "kind": "sample",
-  "source": "../../../samples/020_swap_values.lts",
+  "source": {
+    "file": "../../../samples/020_swap_values.lts",
+    "hash": "sha256:83204cc21bc8a139d1f19d59e5c4eaf03071824ef72b10d5c81b73d1cf87be9c"
+  },
   "features": [
     "scope.assignment",
     "scope.locals"
   ],
   "description": "Swaps two var bindings through a temporary; verification reports both.",
   "append": "report(first_box); report(second_box);",
-  "sourceHash": "sha256:83204cc21bc8a139d1f19d59e5c4eaf03071824ef72b10d5c81b73d1cf87be9c",
   "cases": [
     {
       "name": "swapped",

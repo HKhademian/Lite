@@ -1,12 +1,14 @@
 {
   "id": "int.arithmetic",
   "kind": "feature",
-  "source": "int-arithmetic.lts",
+  "source": {
+    "file": "int-arithmetic.lts",
+    "hash": "sha256:948df5604e9fde058ee2670050c247020096abc794622024b71ede67cced1c18"
+  },
   "features": [
     "int.arithmetic"
   ],
   "guideline": "Checks precedence, left associativity, truncating division, and a negative quotient.",
-  "sourceHash": "sha256:948df5604e9fde058ee2670050c247020096abc794622024b71ede67cced1c18",
   "cases": [
     {
       "name": "precedence-and-division",

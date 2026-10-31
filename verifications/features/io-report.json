@@ -1,12 +1,14 @@
 {
   "id": "io.report",
   "kind": "feature",
-  "source": "io-report.lts",
+  "source": {
+    "text": "report(1, \"two\", true);\n",
+    "hash": "sha256:ff7955ffe1a07aca9aeec44d29189b740dd53dc90960ce1c1d60ea1fb892ad6e"
+  },
   "features": [
     "io.report"
   ],
   "guideline": "Checks space-separated display of Int, String, and Bool values.",
-  "sourceHash": "sha256:ff7955ffe1a07aca9aeec44d29189b740dd53dc90960ce1c1d60ea1fb892ad6e",
   "cases": [
     {
       "name": "mixed-values",

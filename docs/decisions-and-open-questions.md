@@ -9,7 +9,8 @@ from examples, samples and showcases, which are verified consumers. The new
 `verifications/` tree holds a JSON schema, a 17-feature registry and canonical
 cases; `igniter/verify.ts` and `./lite verify` run them through the reference
 igniter, with `--update` regenerating expected streams/source hashes, `--coverage`
-reporting coverage and `--filter` selecting manifests. `sourceHash` prevents a
+reporting coverage and `--filter` selecting manifests. `source` holds exactly
+one of `file` or `text` plus an optional `hash`. A `source.hash` prevents a
 source edit from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 

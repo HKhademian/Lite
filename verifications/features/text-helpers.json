@@ -1,12 +1,14 @@
 {
   "id": "text.helpers",
   "kind": "feature",
-  "source": "text-helpers.lts",
+  "source": {
+    "file": "text-helpers.lts",
+    "hash": "sha256:e33cdd721f2363dba03829abb63b7468f2ab3f959081188c23e0aa758d219561"
+  },
   "features": [
     "text.helpers"
   ],
   "guideline": "Checks textLength, textAt, and half-open textSlice positions on ASCII text.",
-  "sourceHash": "sha256:e33cdd721f2363dba03829abb63b7468f2ab3f959081188c23e0aa758d219561",
   "cases": [
     {
       "name": "length-at-slice",

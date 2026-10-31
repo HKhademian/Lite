@@ -1,12 +1,14 @@
 {
   "id": "bool.conditions",
   "kind": "feature",
-  "source": "bool-conditions.lts",
+  "source": {
+    "file": "bool-conditions.lts",
+    "hash": "sha256:85a4997aa867507b4e79c740fd799ac7dc264dad1994fb3d2ed9a5365e884619"
+  },
   "features": [
     "bool.conditions"
   ],
   "guideline": "Checks comparison, and, if/else actions, and a conditional expression.",
-  "sourceHash": "sha256:85a4997aa867507b4e79c740fd799ac7dc264dad1994fb3d2ed9a5365e884619",
   "cases": [
     {
       "name": "comparison-and-branches",

@@ -1,7 +1,10 @@
 {
   "id": "example.001-double-sum",
   "kind": "example",
-  "source": "../../../examples/001-double-sum.lts",
+  "source": {
+    "file": "../../../examples/001-double-sum.lts",
+    "hash": "sha256:ac8a28b0284da427280c6c4b40297c06f75d26d25289ff1c9f20836a67afd954"
+  },
   "features": [
     "io.input",
     "int.arithmetic",
@@ -9,7 +12,6 @@
     "io.report"
   ],
   "description": "Prompted integer addition doubled and reported.",
-  "sourceHash": "sha256:ac8a28b0284da427280c6c4b40297c06f75d26d25289ff1c9f20836a67afd954",
   "cases": [
     {
       "name": "seven-and-five",

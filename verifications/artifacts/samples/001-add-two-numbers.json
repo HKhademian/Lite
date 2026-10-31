@@ -1,14 +1,16 @@
 {
   "id": "sample.001-add-two-numbers",
   "kind": "sample",
-  "source": "../../../samples/001_add_two_numbers.lts",
+  "source": {
+    "file": "../../../samples/001_add_two_numbers.lts",
+    "hash": "sha256:e60c4c300627602ff1df349431cec72b8a9186ba316182524e5d1774d1cab240"
+  },
   "features": [
     "int.arithmetic",
     "scope.locals"
   ],
   "description": "Adds two supplied baskets; the verification appends report(apples).",
   "append": "report(apples);",
-  "sourceHash": "sha256:e60c4c300627602ff1df349431cec72b8a9186ba316182524e5d1774d1cab240",
   "cases": [
     {
       "name": "apples",
