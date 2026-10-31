@@ -39,6 +39,28 @@ The user's `-2 ** 3` example is the right place to ask about intent, but its mat
 
 Use an even exponent to expose the difference. Do not accept an ambiguous source spelling because constant folding, an odd exponent, or the current value happens to make two interpretations agree. Do not infer the author's grouping from types or overload success either. A diagnostic should show the negative-base and outer-negation alternatives rather than silently choosing one.
 
+## Dual spelling proposal — not selected
+
+The user suggested a compatibility split:
+
+- `**` remains right-associative.
+- `^` would be a left-associative alias for users coming from Excel and MATLAB.
+
+That is not selected. Excel and MATLAB make `^` familiar, but a second spelling
+with different association creates new questions:
+
+- What happens in a mixed chain such as `2 ** 3 ^ 2`? A safe rule would reject
+  mixed unparenthesized chains and require explicit grouping.
+- Both spellings would share the same precedence, or `^` would need its own
+  level.
+- Excel and MATLAB do not necessarily agree on unary-minus interaction, so
+  `-2 ^ 2` cannot be imported from both.
+- `^` is bitwise XOR in many other languages; Lite has no bitwise operators yet.
+- The Float-default result and positive-exponent checkpoint would need to apply
+  consistently to both spellings.
+
+No `^` token or alternate association is selected.
+
 ## Reference behavior and rationale
 
 - [Python power](https://docs.python.org/3/reference/expressions.html#the-power-operator) gives power priority on the left: `-2 ** 2` evaluates as `-(2 ** 2)`, giving -4.
