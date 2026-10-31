@@ -21,8 +21,9 @@ unit-test cases stay in the igniter test file. New demonstrations should join
 the root examples collection with an indexed name and a guide entry. The user
 explicitly allows this directory and reuse/reordering of samples when useful;
 the separate exercise catalog does not need renumbering for this move.
-Relocation does not approve the experimental text helpers or change lesson
-verification status.
+Relocation itself did not approve the experimental text helpers or change lesson
+verification status. The user later explicitly approves their temporary FVP scope
+on 2026-10-31; see [INV-016](../investigations/INV-016-igniter-text-operations.md).
 
 The user's subsequent prompt update adds explicit input prompts to root examples
 001–004 and a report heading before line input in 005. Scanner token reports use
@@ -58,7 +59,7 @@ direction. No lesson bodies or verification status change with this selection.
 
 The experimental igniter has since added [conditions, loops, typed scalar
 functions, fixed tuples, and experimental text operations](../igniter/README.md#supported-checkpoint),
-with focused examples and 120 test groups. The new text helpers still await
+with focused examples and 122 test groups. The temporary text helpers now have explicit consent; the full profile awaits
 explicit consent. This does not expand the checked lesson outcomes beyond 001,
 002, and 020 or add in-program checks to the lesson sources.
 

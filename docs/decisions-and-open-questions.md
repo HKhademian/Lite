@@ -2,15 +2,22 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## Next scanner consent boundary, 2026-10-31
+## Temporary text helpers approved and retained scanning delivered, 2026-10-31
 
-After approved list delivery and the input-history example, the next retained-token
-scanner would depend on the unapproved textLength/textAt/textSlice experiment.
-INV-016 presents their exact existing positional code-point contracts, empty
-interval/bounds behavior and terminal BoundPanic policy for explicit consent.
-No helper is selected and no new scanner is implemented by this review. The
-full text/Unicode/profile investigation remains deferred. See
-[the focused review](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+The user explicitly replies "Approve these temporary text helpers" to the focused
+INV-016 review in `d3122b9`. Accept textLength/textAt/textSlice as temporary
+positional runner helpers with code-point positions, half-open intervals and
+terminal BoundPanic on invalid bounds. Combining marks count separately; no
+normalization, grapheme grouping, String indexing syntax or full Unicode profile
+is selected. The earlier alpha.5 implementation did not supply consent.
+
+The [015 scanner](../examples/015-retained-tokens.lts) now returns a list of named
+token tuples before traversal/output, using the already approved list/function
+features. Unsupported input reports an error and exits 2 before partial tokens
+are printed. Strict checking, 122 interpreter groups and 9 editor groups pass,
+including real launcher/check-only cases. Preserve this consent/application
+milestone as igniter-v0.1.0-alpha.15. See
+[INV-016 evidence](../investigations/INV-016-igniter-text-operations.md).
 
 ## Approved FVP list delivery, 2026-10-31
 
@@ -179,7 +186,8 @@ Strict no-emit checking and all 62 interpreter test groups pass, including the
 real [006 example](../examples/006-fixed-tuples.lts). Preserve alpha.1–alpha.5
 and add igniter-v0.1.0-alpha.6. Named/mixed/nested/rest tuples, member mutation,
 access grants, tuple reporting/equality, native layout and self-hosting remain
-unimplemented. The text helpers still await separate consent.
+unimplemented at this increment. The text helpers later receive separate
+explicit consent on 2026-10-31.
 Coverage: [fixed tuples](../igniter/README.md#flat-fixed-tuples).
 Evidence and approval: [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
 
@@ -189,9 +197,9 @@ The user requires explicit consent before new language syntax/features, includin
 temporary builtins and observable semantic choices. "Ok next" is not approval
 for unspecified additions. Investigate new choices when needed and obtain consent
 before implementation or selection; continue already approved work within scope.
-The agent-added textLength/textAt/textSlice helpers and their policies remain
-implemented experiments awaiting consent, despite passing tests and the alpha.5
-tag. See the [workflow rule](../investigations/README.md#explicit-consent-for-language-changes)
+At this 2026-10-30 correction, textLength/textAt/textSlice remained experiments
+awaiting consent despite tests and alpha.5. The later explicit approval above
+settles only their exact temporary FVP scope. See the [workflow rule](../investigations/README.md#explicit-consent-for-language-changes)
 and [INV-016 correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
 
 ## Igniter text-scanning increment, 2026-10-30

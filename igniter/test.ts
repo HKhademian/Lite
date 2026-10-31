@@ -21,6 +21,36 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('retained tokenizer returns named token lists, preserving text and rejecting before traversal output', () => {
+  const source = readFileSync(new URL('../examples/015-retained-tokens.lts', import.meta.url), 'utf8');
+  const prompt = 'Arithmetic expression:\n';
+  assert.deepEqual(run(source, '12 + (003 * 4)\n'), { code: 0,
+    output: prompt + 'number 12\nsymbol +\nsymbol (\nnumber 003\nsymbol *\nnumber 4\nsymbol )\n', errors: '' });
+  assert.equal(run(source, '123').output, prompt + 'number 123\n');
+  assert.equal(run(source, ' \t\n').output, prompt);
+  assert.equal(run(source, '\n').output, prompt);
+  assert.equal(run(source, '-1/2').output, prompt + 'symbol -\nnumber 1\nsymbol /\nnumber 2\n');
+  assert.deepEqual(run(source, '12 + 🙂'), { code: 2, output: prompt, errors: 'unsupported symbol: 🙂\n' });
+  fault(source, 'InputFault');
+});
+test('retained tokenizer runs and checks through the root launcher with explicit status and Unicode errors', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = new URL('../examples/015-retained-tokens.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const [input, status, output, errors] of [
+    ['12 + 30', 0, 'Arithmetic expression:\nnumber 12\nsymbol +\nnumber 30\n', ''],
+    ['12 + 🙂', 2, 'Arithmetic expression:\n', 'unsupported symbol: 🙂\n'],
+    ['\n', 0, 'Arithmetic expression:\n', ''],
+  ] as const) {
+    const result = spawnSync(join(root, 'lite'), ['run', path], { input, encoding: 'utf8', env, timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, status);
+    assert.equal(result.stdout, output); assert.equal(result.stderr, errors);
+  }
+  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { encoding: 'utf8', env, timeout: 5000 });
+  assert.equal(check.error, undefined); assert.equal(check.status, 0);
+  assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+});
+
 test('typed list construction supports known empty elements and preserves the fixed-array default', () => {
   assert.equal(run(`empty: mut List<Int>=[]; push_back(mut empty, 7); report(empty[0]);
     floats: List<Float> = [1.5]; text: List<String> = ["tea"]; flags: List<Bool> = [true];

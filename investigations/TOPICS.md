@@ -215,7 +215,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-016).
 
-**Investigation:** waiting for input on new helpers; contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal deferred and unselected; [INV-016 — text-scanning igniter experiment](INV-016-igniter-text-operations.md) — implemented textLength/textAt/textSlice helpers and their policies await explicit user consent. Passing tests and the alpha.5 tag do not select them. A [focused review after list delivery](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31) presents the exact existing positional code-point helpers for consent before a retained-token scanner. Generic String indexing, full text/character/view and performance contracts remain open.
+**Investigation:** recorded (temporary helpers explicitly approved); contributor: redacted (agent-assisted); notes: [INV-016-01 — temporary FVP text profile](INV-016-01-fvp-text-profile.md) — detailed proposal remains deferred; [INV-016 — text-scanning increment](INV-016-igniter-text-operations.md) — the user explicitly approves the existing positional textLength/textAt/textSlice code-point helpers and terminal bounds policy after the [focused review](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31). A retained named-token list scanner is verified through the launcher. Strict checking and 122 interpreter groups pass; 9 editor groups pass. General String indexing, grapheme/normalization policy, native text layout and performance remain open.
 
 <a id="inv-017"></a>
 

@@ -6,6 +6,11 @@ Last updated: 2026-10-31
 Catalog brief: [INV-072](TOPICS.md#inv-072)
 Covered scope: local VS Code syntax highlighting for .lt and .lts.
 
+Subsequent status, **2026-10-31**: the user explicitly approves the temporary
+textLength/textAt/textSlice helpers after the focused review. Earlier pending
+consent statements in this dated increment describe its original baseline, not
+the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Authorization and scope
 
 The user explicitly requested a small VS Code highlighter after requiring

@@ -6,6 +6,11 @@ Last updated: 2026-10-31
 Catalog brief: [INV-004](TOPICS.md#inv-004)
 Covered scope: inputInt's optional prompt and report's ordinary multiple arguments.
 
+Subsequent status, **2026-10-31**: the user explicitly approves the temporary
+textLength/textAt/textSlice helpers after the focused review. Earlier pending
+consent statements in this dated increment describe its original baseline, not
+the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Request and explicit choices
 
 Baseline: `d3169ac`; runnable baseline igniter-v0.1.0-alpha.7 at `36b301f`.

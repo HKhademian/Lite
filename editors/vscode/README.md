@@ -12,7 +12,7 @@ This is a declarative TextMate extension with no runtime code or dependencies.
 It adds no language syntax, snippets, builtins, formatter, runner, or language
 server. Coloring is approximate lexical feedback, not parsing, typechecking,
 name resolution, or evidence that a feature is selected or implemented by the
-igniter. Calls use the same coloring for any identifier; unapproved experimental
+igniter. Calls use the same coloring for any identifier; temporary runner
 helpers receive no special builtin status. Open lexical boundaries, such as
 compact underscore operators, remain open.
 

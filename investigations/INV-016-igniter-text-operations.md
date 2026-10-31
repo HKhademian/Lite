@@ -1,6 +1,6 @@
 # INV-016 — Text-scanning igniter increment
 
-Status: waiting for input (implemented experiment; new helpers await explicit consent)
+Status: recorded (temporary helpers explicitly approved; retained-token example verified)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-016](TOPICS.md#inv-016)
@@ -11,15 +11,16 @@ Covered scope: computed concatenation and temporary text-scanning helpers.
 **Consent correction, 2026-10-30:** the user requires explicit approval before
 new language syntax/features, including temporary builtins and semantic choices.
 The agent introduced textLength/textAt/textSlice and their position/bounds policy
-without that approval. They remain an implemented experiment awaiting review,
-not accepted language/FVP additions. The continuation request, successful tests
+without that approval. At that point they remained an experiment awaiting review, not accepted FVP
+additions. The later explicit approval is recorded below; the original tag/tests
+did not grant consent. The continuation request, successful tests
 and alpha.5 tag do not supply consent. Computed concatenation had an existing
 documented direction; the newly invented helpers require separate consideration,
 including an investigation if needed. No further extension is authorized by
 this note. See the [consent rule](README.md#explicit-consent-for-language-changes).
 
 Baseline: `29978ff`, preserved as igniter-v0.1.0-alpha.4. The user requests the
-next runnable increment. Text scanning is a small practical prerequisite for
+next runnable increment. Text scanning is a small practical component of
 compiler experiments in Lite. Preserve the [FVP scope correction](INV-016-01-fvp-text-profile.md#fvp-scope-correction-2026-10-30):
 implement only what a concrete example needs, documenting temporary behavior
 without treating the deferred text profile as an accepted specification.
@@ -45,7 +46,8 @@ helper checks bounds. Whole-program arity/type checking still precedes I/O.
 
 Supplementary characters occupy one position; combining marks and joined emoji
 sequences may occupy several. No grapheme segmentation or normalization is
-provided. The names, position unit and fault diagnostic are provisional; this
+provided. The names, position unit and fault diagnostic are now approved for the temporary
+FVP helper scope only; this
 does not select language-wide String indexing, character types, slice/view
 semantics, or a public panic API. The earlier detailed proposal remains deferred.
 
@@ -53,7 +55,7 @@ Each helper currently materializes the code points, using time and temporary
 storage proportional to the input. Repeated scanning may be quadratic. There is
 no constant-time indexing, native storage, zero-copy slicing, ownership/lifetime,
 or performance claim. Keep the host disposable rather than building a text
-framework. Collections, general String indexing syntax, byte/grapheme views,
+framework. Broader collection/text integration, general String indexing syntax, byte/grapheme views,
 interpolation, formatting, and full Unicode policy remain unimplemented/open.
 
 ## Concrete experiment and evidence
@@ -66,7 +68,7 @@ Unsupported characters explicitly report an error and exit 2. An empty supplied
 line emits nothing; missing input faults. It is not the Lite lexer, a parser,
 an arithmetic evaluator, or a compiler-to-compiler build stage.
 
-Strict TypeScript no-emit checking and all 52 Node test groups pass with Node
+Historical alpha.5 evidence: strict TypeScript checking and all 52 groups passed with Node
 26.13.0/TypeScript 7.0.2. Added tests cover computed concatenation/copies,
 supplementary/Persian/combining text, empty/full/end intervals, negative/huge/
 reversed/out-of-range bounds, written evaluation order before bounds faults,
@@ -79,20 +81,21 @@ No lesson source or checked lesson coverage changes.
 ## Handoff
 
 Preserve this source as igniter-v0.1.0-alpha.5; alpha.1–alpha.4 stay fixed.
-Collections/structured data and file I/O remain practical gaps for a Lite-written
-compiler. No native compiler, self-hosted successor, or verified forward rebuild
+The later alpha.14 list slice supplies bounded runtime collection storage. File
+I/O and broader structured data remain practical gaps for a Lite-written compiler. No native compiler, self-hosted successor, or verified forward rebuild
 chain exists yet. Extend the actual bootstrap compatibility map when one does.
 
 ## Focused consent review, 2026-10-31
 
 The approved List<T> slice now supplies runtime-sized token storage. The next
-bounded scanner example could retain named token tuples rather than report each
-token immediately. That storage is implemented; text scanning still depends on
-the three unapproved helpers above. This is a concrete next experiment, not a
+bounded scanner example can retain named token tuples rather than report each
+token immediately. Before this decision, text scanning still depended on the
+three unapproved helpers above. This is a concrete next experiment, not a
 claim that this tokenizer or its APIs are required for every compiler approach.
 
-Recommend accepting the existing experiment as temporary FVP runner helpers with
-these exact contracts, leaving the wider text profile deferred:
+The user explicitly replies "Approve these temporary text helpers" to the
+focused review in `d3122b9`. Accept these exact existing contracts as temporary
+FVP runner helpers, leaving the wider text profile deferred:
 
 - textLength(text) takes one String and returns an Int code-point count.
 - textAt(text, index) takes String/Int and returns a one-code-point String.
@@ -105,7 +108,7 @@ shadowing and before-effects arity/type checks. Arguments evaluate once in
 written order before bounds checking. Invalid indices/intervals use the existing
 terminal BoundPanic diagnostic, without clamping, negative wrapping or retries.
 
-For example, the proposed temporary interpretation is:
+For example, the approved temporary interpretation is:
 
 ```text
 report(textLength("A🙂B"));     /* 3 */
@@ -120,9 +123,31 @@ The current host implementation materializes code points per operation and may
 scan repeatedly; no optimization or constant-time access is promised. The
 detailed encoding/literal/Unicode/profile proposal remains deferred.
 
-The existing helper tests, including combining/supplementary text, positional
-bounds and evaluation order, still pass in the current 120-group interpreter
-suite. This is implementation evidence only. Approval of lists and operation
-names does not supply consent for these helpers. No new scanner example or
-language implementation is added by this review; wait for the explicit helper
-decision before building on the experiment.
+## Current delivery and evidence
+
+The approved helpers retain their existing implementation and positional-only
+calling convention. No new text operator, API or String representation is added.
+The detailed FVP text/Unicode profile remains deferred. Approval here comes from
+the user's explicit reply, not from prior tags, tests or unrelated feature work.
+
+[015-retained-tokens.lts](../examples/015-retained-tokens.lts) combines ordinary
+functions, the approved helpers and approved named-tuple list storage. It returns
+a complete token list, then explicitly traverses/reports its fields. It preserves
+digit text including leading zeroes, skips spaces/tabs, and recognizes the same
+arithmetic symbols as 005. Unsupported characters report an error and exit 2
+before the outer traversal prints any partial tokens. An empty supplied line
+produces an empty list; missing input retains InputFault.
+
+Strict no-emit checking and all 122 interpreter groups pass on pinned Node
+26.13.0/TypeScript 7.0.2. Existing helper checks still cover combining/supplementary
+text, invalid/empty/full intervals, BigInt bounds, evaluation order, shadowing and
+before-effects signatures. New integration checks cover retained field values,
+final digit runs, whitespace/empty input, Unicode rejection after earlier tokens,
+and real ./lite run/check-only behavior. All 9 editor checks pass on the expanded
+corpus. No native/compiler-performance or self-hosting result is claimed.
+
+Preserve this consent/application milestone as igniter-v0.1.0-alpha.15, with prior
+tags intact. Next, a bounded arithmetic parser/evaluator example can use these
+selected features under INV-061 without changing Lite grammar, adding helper
+APIs or choosing a native backend. That demonstration would be application code,
+not a self-hosted Lite compiler or a permanent compiler architecture.

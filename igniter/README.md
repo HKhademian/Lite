@@ -223,7 +223,7 @@ retains the binding's exact tuple type. Copies, ordinary arguments and results
 preserve the evaluated values when the original source is subsequently replaced.
 Passing one tuple is one argument, without implicit argument spread or flattening.
 
-Mixed tuples, nested tuple components/patterns, typed declaration patterns,
+Nested tuple components/patterns, typed declaration patterns,
 rest/spread, array segments, component writes, access grants, tuple equality and
 tuple report formatting remain unsupported. Surrounding tuple data capture is
 rejected just like surrounding scalar capture. Type/return-path analysis remains
@@ -383,11 +383,11 @@ array values; it does not validate native header-free storage or performance.
 
 ### Temporary text operations
 
-**Awaiting explicit consent:** textLength/textAt/textSlice and their indexing/
-bounds policy were agent-added experiments, not user-approved language features.
-Their implementation and alpha.5 tag record behavior only. Review/investigate
-them before accepting or extending them; see the
-[consent correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+**Explicitly approved, 2026-10-31:** textLength/textAt/textSlice and their exact
+code-point/half-open/terminal-bounds policy are selected as temporary FVP helpers.
+The earlier alpha.5 implementation was unapproved at the time; current acceptance
+comes from the user's explicit reply to the focused review. See
+[INV-016](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Computed `String + String` concatenates without adding separators, interpreting
 escapes, or converting other types to text. Operands evaluate once, left to right.
@@ -417,7 +417,8 @@ and indexed access scan the text and use temporary storage. Repeated scanning
 may be quadratic; no constant-time indexing, native layout, zero-copy slice,
 ownership, or performance guarantee follows. Generic String indexing syntax,
 byte/grapheme views, interpolation, formatting and the full text profile remain
-unsupported or open. These helper names obey ordinary shadowing and are not
+unsupported or open. Helper parameter names above are explanatory; only
+positional arguments are supported. These helper names obey ordinary shadowing and are not
 first-class builtin values.
 
 The [arithmetic tokenizer](../examples/005-scan-arithmetic.lts) groups ASCII decimal
@@ -480,8 +481,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.14**, tag **igniter-v0.1.0-alpha.14**, adds the approved
-bounded List<T> construction, copy and explicit end-mutation slice.
+Version **0.1.0-alpha.15**, tag **igniter-v0.1.0-alpha.15**, records explicit
+approval of the temporary text helpers and adds a retained-token scanner example.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -489,7 +490,8 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.3**, commit `1dcf92f`: action loops and bare break/continue.
 - **igniter-v0.1.0-alpha.4**, commit `29978ff`: typed scalar functions, return and recursion.
 - **igniter-v0.1.0-alpha.5**, commit `7038ce1`: computed text concatenation and
-  experimental scanning helpers; the new helpers/policies still await consent.
+  scanning helpers, initially unapproved and subsequently accepted for the
+  temporary FVP scope on 2026-10-31.
 - **igniter-v0.1.0-alpha.6**, commit `d667395`: approved flat fixed tuples,
   declaration destructuring and tuple function inputs/results.
 - **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./lite run launcher.
@@ -506,6 +508,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.13**, commit `2139003`: fixed-slot named user-function calls.
 
+- **igniter-v0.1.0-alpha.14**, commit `135972e`: approved bounded growable lists.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -513,7 +517,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **120 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **122 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
@@ -523,3 +527,6 @@ References checked for the toolchain: [Node release/downloads](https://nodejs.or
 [Node TypeScript execution](https://nodejs.org/api/typescript.html),
 [TypeScript installation](https://www.typescriptlang.org/download/), and
 [compiler options](https://www.typescriptlang.org/tsconfig/).
+
+The [retained-token example 015](../examples/015-retained-tokens.lts) returns a
+named-tuple list before traversal; invalid text exits without partial token output.

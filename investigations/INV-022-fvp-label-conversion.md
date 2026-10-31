@@ -5,6 +5,11 @@ Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-022](TOPICS.md#inv-022)
 
+Subsequent status, **2026-10-31**: the user explicitly approves the temporary
+textLength/textAt/textSlice helpers after the focused review. Earlier pending
+consent statements in this dated increment describe its original baseline, not
+the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Contract and boundary
 
 The selected [receiving-declaration rule](../docs/tuple-label-conversions.md)

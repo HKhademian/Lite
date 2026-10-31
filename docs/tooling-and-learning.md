@@ -107,8 +107,10 @@ Strict checking and all 52 test groups pass, including the real CLI and Unicode/
 empty/bounds cases. See [text-helper coverage](../igniter/README.md#temporary-text-operations)
 and [INV-016](../investigations/INV-016-igniter-text-operations.md). This is a
 scanning experiment, not the Lite lexer or a compiler bootstrap stage.
-The new helpers and their semantic choices were introduced without explicit
-user consent and await review; their implementation does not select them.
+The new helpers were initially introduced without explicit consent; the user
+subsequently approves their exact temporary FVP scope on 2026-10-31 after review.
+The alpha.15 retained-token example now uses these approved helpers and lists.
+Strict checking and 122 interpreter groups pass; broader text policy stays open.
 Follow the [explicit-consent rule](../investigations/README.md#explicit-consent-for-language-changes)
 before adding syntax/features, even for temporary scaffolding.
 
@@ -117,8 +119,8 @@ scalars, literal positional reads, declaration destructuring and explicit tuple
 function inputs/results, using already selected syntax. The runnable example is
 [006-fixed-tuples.lts](../examples/006-fixed-tuples.lts). Strict checking and all
 62 interpreter test groups pass. Named/nested/rest tuples, mutation/access grants,
-tuple reporting and native layout remain unsupported; experimental text-helper
-consent is unchanged. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md)
+tuple reporting and native layout remain unsupported. Text helpers were
+separately approved for their temporary FVP scope on 2026-10-31. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md)
 and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
 
 The following named-field increment implements existing flat fully named tuple

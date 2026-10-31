@@ -6,6 +6,11 @@ Last updated: 2026-10-31
 Catalog brief: [INV-022](TOPICS.md#inv-022)
 Covered scope: readable named fields on the existing flat fixed-tuple subset.
 
+Subsequent status, **2026-10-31**: the user explicitly approves the temporary
+textLength/textAt/textSlice helpers after the focused review. Earlier pending
+consent statements in this dated increment describe its original baseline, not
+the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Question and consent boundary
 
 The current [006 example](../examples/006-fixed-tuples.lts) carries a token as

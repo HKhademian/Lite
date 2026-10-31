@@ -52,9 +52,8 @@ The newline inside the quotes is data. The working direction preserves literal c
 ## Notes
 
 The next [focused FVP review](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
-asks whether to accept the existing textLength/textAt/textSlice experiments as
-temporary positional code-point helpers with terminal bounds faults. They remain
-unapproved. This review does not settle ordinary String indexing, graphemes,
+records the explicit acceptance of textLength/textAt/textSlice as temporary
+positional code-point helpers with terminal bounds faults. This review does not settle ordinary String indexing, graphemes,
 normalization, native representation or the deferred complete text profile.
 
 String literal patterns test the whole string through its ordinary equality contract. Existing text uses == expectedText. Neither spelling implies regex, substring, case-folding, or normalization operations. Unicode equality details remain a String contract, not a special pattern conversion.
@@ -72,11 +71,12 @@ Whitespace outside literals can move freely without changing executable structur
 - String ownership, slicing, and allocation behavior.
 - How adjacent literals with different encodings or future literal prefixes interact.
 
-## Experimental igniter coverage
+## Approved temporary igniter coverage
 
-The agent-added textLength/textAt/textSlice helpers and their policies below
-await explicit user consent. Implemented behavior is not an accepted feature;
-see the [INV-016 correction](../investigations/INV-016-igniter-text-operations.md#scope-and-contracts).
+The user explicitly approves the exact temporary positional code-point helpers
+on 2026-10-31 after the consent correction and focused review. Acceptance comes
+from that reply, not the earlier implementation/tag. See
+[INV-016 approval and evidence](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
 
 Implementation increment, **2026-10-30**: the
 [igniter](../igniter/README.md#temporary-text-operations) now executes computed

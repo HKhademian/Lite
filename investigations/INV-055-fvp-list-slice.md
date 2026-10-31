@@ -6,6 +6,11 @@ Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
 Baseline: `7cafc24`; interpreter remains igniter-v0.1.0-alpha.13
 
+Subsequent status, **2026-10-31**: the user explicitly approves the temporary
+textLength/textAt/textSlice helpers after the focused review. Earlier pending
+consent statements in this dated increment describe its original baseline, not
+the current status. See [INV-016 approval](INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Consent and baseline
 
 The user selects the four front/back operation names and authorizes automatic
