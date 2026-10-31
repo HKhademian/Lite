@@ -2,6 +2,20 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## First restricted native output and three-way parity, 2026-10-31
+
+Under the selected maintained C target, example 018 now emits a standalone C
+program for the same signed-integer report source class as 017's TS emitter.
+All nine admitted cases match native C, TS and igniter stdout/stderr bytes,
+status and signal. The generated file builds with a system C11 compiler and
+standard library without Lite/Node at build/run time after emission.
+
+Strict checking and 132 interpreter groups pass; the native test ran locally
+with Apple clang 21.0.0 and is an explicit skip if the compiler is absent on
+another machine. All 9 editor groups pass. Preserve as alpha.18; general C library
+export, runtime/fault-environment parity, multi-line source and compiler self-rebuild
+remain open. See [INV-061 evidence](../investigations/INV-061-c-emission-and-parity.md).
+
 ## TS bootstrap/web, C native/export and overlapping self-hosting, 2026-10-31
 
 The user refines `87546c9`: start with toy-like readable TypeScript emission for

@@ -484,8 +484,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.17**, tag **igniter-v0.1.0-alpha.17**, adds the first restricted
-Lite-to-TS emitter, byte-parity checks and a quoted-delimiter parser correction.
+Version **0.1.0-alpha.18**, tag **igniter-v0.1.0-alpha.18**, adds the restricted
+Lite-to-C emitter and native/TS/igniter output-byte parity checks.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -517,6 +517,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.16**, commit `30f1d3e`: Lite-written arithmetic front end.
 
+- **igniter-v0.1.0-alpha.17**, commit `d5d1c63`: readable TS emission and exact-byte parity.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -524,7 +526,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **130 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **132 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
@@ -556,3 +558,13 @@ Nine admitted programs match the igniter's raw stdout/stderr/status through TS
 and translated JS. The emitted core checks without Node/DOM types; no actual
 browser, AS/Wasm or compiler self-rebuild claim follows. See
 [INV-061 evidence](../investigations/INV-061-ts-emission-and-parity.md).
+
+The [C emitter 018](../examples/018-report-c-compiler.lts) supports the same
+restricted report-literal class, with no additional host feature. Inspect its
+[standalone C reference](../examples/generated/018-report-42.c) and
+[build/parity evidence](../investigations/INV-061-c-emission-and-parity.md).
+The native integration test needs cc (or CC as its executable path); it is
+explicitly skipped if the tool is absent. It ran successfully here with Apple
+clang 21.0.0. Nine emitted native programs match TS and igniter stdout/stderr
+bytes, status and signal. Broader source support, error-environment parity,
+C library exports and compiler self-rebuild are not established.

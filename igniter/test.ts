@@ -21,6 +21,65 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+const reportLiteralPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
+  '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
+  'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)'];
+
+test('restricted C compiler emits the readable reference and rejects unsupported source before output', () => {
+  const source = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../examples/generated/018-report-42.c', import.meta.url), 'utf8');
+  assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
+  for (const input of ['report(1 + 2);', 'report("text");', 'report(42); report(9);',
+    'report(42); system("anything");', 'report(9223372036854775808);', 'report(-9223372036854775809);']) {
+    const result = run(source, input);
+    assert.equal(result.code, 2); assert.equal(result.output, ''); assert.notEqual(result.errors, '');
+  }
+});
+test('Lite-generated native C, TS and igniter programs have identical output bytes and status', context => {
+  const cc = process.env['CC'] ?? 'cc';
+  const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+    context.skip('C compiler unavailable; native parity requires cc or CC pointing to a compiler'); return;
+  }
+  assert.equal(probe.error, undefined); assert.equal(probe.status, 0, probe.stderr);
+  const root = new URL('../', import.meta.url).pathname;
+  const cCompiler = join(root, 'examples/018-report-c-compiler.lts');
+  const tsCompiler = join(root, 'examples/017-report-ts-compiler.lts');
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
+  try {
+    writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
+    for (const [index, source] of reportLiteralPrograms.entries()) {
+      const sourcePath = join(directory, `input-${index}.lts`);
+      const cPath = join(directory, `program-${index}.c`);
+      const tsPath = join(directory, `program-${index}.ts`);
+      const executable = join(directory, `native-${index}`);
+      const adapter = join(directory, `run-${index}.ts`);
+      writeFileSync(sourcePath, source);
+      for (const [compiler, path] of [[cCompiler, cPath], [tsCompiler, tsPath]] as const) {
+        const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: source, env, timeout: 5000 });
+        assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
+        assert.equal(emitted.stderr.length, 0); writeFileSync(path, emitted.stdout);
+      }
+      const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable], {
+        encoding: 'utf8', timeout: 30000,
+      });
+      assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
+      writeFileSync(adapter, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
+      const input = Buffer.from([0, 255, 10]);
+      const baseline = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
+      assert.equal(baseline.error, undefined); assert.equal(baseline.status, 0);
+      for (const actual of [spawnSync(executable, [], { input, timeout: 5000 }),
+        spawnSync(process.execPath, [adapter], { input, timeout: 5000 })]) {
+        assert.equal(actual.error, undefined); assert.equal(actual.status, baseline.status);
+        assert.equal(actual.signal, baseline.signal);
+        assert.deepEqual(actual.stdout, baseline.stdout, source);
+        assert.deepEqual(actual.stderr, baseline.stderr, source);
+      }
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('quoted closing delimiters remain values in calls, tuple entries and array/list elements', () => {
   assert.equal(run(`report("(", ")", "]", "}");
     pair := ("(", ")"); array := ["[", "]"];
@@ -57,9 +116,7 @@ test('emitted TS and igniter outputs match byte for byte across signed Int liter
   const corePaths: string[] = [];
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    for (const [index, source] of ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
-      '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
-      'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)'].entries()) {
+    for (const [index, source] of reportLiteralPrograms.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const corePath = join(directory, `program-${index}.ts`);
       const adapterPath = join(directory, `run-${index}.ts`);

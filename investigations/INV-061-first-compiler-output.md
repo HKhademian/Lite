@@ -126,4 +126,6 @@ clang 21.0.0 for arm64-apple-darwin27.0.0. A hand-written stdio C program printi
 foreign-tool evidence, not Lite-generated output or performance evidence.
 The [Clang driver documentation](https://clang.llvm.org/docs/CommandGuide/clang.html)
 describes the external compile/link route. No C emitter was implemented by that
-probe; a bounded native parity experiment can follow the first TS milestone.
+probe. The subsequent [018 C emitter](INV-061-c-emission-and-parity.md) now produces
+actual native output for the same restricted source class, with nine three-way
+parity cases. General C ABI/library export and runtime lowering remain open.

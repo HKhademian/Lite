@@ -79,6 +79,12 @@ integer prompts may appear together in captured stdout.
   The [generated-source checking config](generated/tsconfig.json) inherits the
   igniter's strict options. This is an initial emitter, not a self-hosted compiler.
 
+- [018 — Report-to-C compiler](018-report-c-compiler.lts): compiles the same
+  restricted signed-integer report line into standalone readable C. The
+  [C reference](generated/018-report-42.c) builds with a C11 compiler and standard
+  library. Native output bytes/status match the igniter and TS path for the nine
+  tested cases; general libraries/ABI and self-hosting remain future work.
+
 Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

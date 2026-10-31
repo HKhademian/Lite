@@ -6,19 +6,23 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 
 The project now has a **small experimental TypeScript/Node igniter** for a narrow
 FVP checkpoint, now including Boolean logic, conditionals, action loops,
-typed functions, flat fixed tuples and a readable fixed-array subset.
+typed functions, flat tuples, fixed arrays and explicit growable-list operations.
 Run `./lite run examples/001-double-sum.lts` with
 Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
 for setup, strict typechecking, tests, supported behavior, and limitations.
-The wider language remains a design draft; there is no native or self-hosted compiler.
+The wider language remains a design draft. Small compiler applications written
+in Lite now emit [readable TypeScript](examples/017-report-ts-compiler.lts) and
+[standalone C](examples/018-report-c-compiler.lts) for one signed-integer report.
+Nine tested programs have identical output bytes/status across the igniter, TS
+and native C paths. These restricted prototypes are not a full/self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)
-- [First working targets](docs/principles.md#first-working-targets): the small interpreter implements the first experimental checkpoint; practical scripts, wider features, and native compilation follow.
-- [Bootstrap direction](docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting): disposable TypeScript/Node igniter, early transition to a Lite-written compiler, and a preserved source-bootstrap route. The self-hosted chain is not implemented yet.
+- [First working targets](docs/principles.md#first-working-targets): the interpreter and restricted TS/C emission prototypes now run; practical scripts and broader compiled subsets follow.
+- [Bootstrap and target direction](docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting): readable permanent TS bootstrap, maintained TS/web and C/native export targets, and overlapping igniter/self-hosted development. Full self-rebuild and AS/Wasm compatibility remain open.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)

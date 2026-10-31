@@ -59,7 +59,7 @@ direction. No lesson bodies or verification status change with this selection.
 
 The experimental igniter has since added [conditions, loops, typed scalar
 functions, fixed tuples, and experimental text operations](../igniter/README.md#supported-checkpoint),
-with focused examples and 130 test groups. The temporary text helpers now have explicit consent; the full profile awaits
+with focused examples and 132 test groups. The temporary text helpers now have explicit consent; the full profile awaits
 explicit consent. This does not expand the checked lesson outcomes beyond 001,
 002, and 020 or add in-program checks to the lesson sources.
 

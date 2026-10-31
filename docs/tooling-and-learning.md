@@ -192,6 +192,13 @@ execution. Strict checking and 130 interpreter groups pass; the Node-free core
 and visible adapter have separate checks. This is not compiler self-hosting or
 browser/Wasm execution. See [emission evidence](../investigations/INV-061-ts-emission-and-parity.md).
 
+The selected C target now has a matching restricted [018 emitter](../examples/018-report-c-compiler.lts).
+Nine emitted native programs, their TS equivalents and the igniter have equal raw
+stdout/stderr/status. Strict checking and 132 groups pass; the native test ran
+with the local C compiler and skips explicitly if unavailable elsewhere. This is
+first native output for the restricted class, not library export or self-hosting.
+See [C evidence](../investigations/INV-061-c-emission-and-parity.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

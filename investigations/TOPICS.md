@@ -825,6 +825,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — first TS emission and parity](INV-061-ts-emission-and-parity.md) — Lite-written compiler for a single signed-integer report emits readable TS with separate Node adapter. Nine admitted cases have raw stdout/stderr/status parity, strict Node-free core checks and TS-to-JS checks. All 130 interpreter groups pass. Existing quoted-delimiter parser bug fixed; no self-rebuild/browser/AS proof.
 
+**Follow-up:** [INV-061 — first restricted C emission and parity](INV-061-c-emission-and-parity.md) — Lite-written compiler emits standalone C for the same report-literal source class. Nine native/TS/igniter programs have equal output bytes/status after actual local C compilation. Strict checking and 132 interpreter groups plus 9 editor groups pass. General native/library/runtime lowering and self-rebuild remain open.
+
 <a id="inv-062"></a>
 
 ## INV-062 — Compile-time computation
