@@ -2,7 +2,7 @@
 
 Status: in progress
 Contributor: redacted (agent-assisted)
-Last updated: 2026-10-30
+Last updated: 2026-10-31
 Catalog brief: [INV-004](TOPICS.md#inv-004)
 Covered scope: bounded whole-topic question — the first runnable FVP mechanism;
 native deployment, caching, full mode parity, and restricted profiles remain open.
@@ -38,6 +38,29 @@ Selection baseline: `075a10a`. No parser/checker/interpreter has been implemente
 or tested, and no native speed/footprint claim follows from this selection.
 
 ## Current contracts and evidence
+
+### Root shebang launcher, 2026-10-31
+
+The user explicitly requests a root lite command with shebang forwarding to the
+igniter, specifically ./lite run examples/006-fixed-tuples.lts. Implemented as
+the executable [lite](../lite) POSIX shell script. It accepts run, forwards the
+remaining arguments unchanged to node and the existing CLI, and uses exec to
+preserve process status and standard streams. It resolves the igniter relative
+to itself without changing how the caller's source path resolves. The existing
+--check option is passed through; missing/unknown commands print usage and exit 2.
+
+The exact requested command reports number, 12, number: 12, and 42 on the current
+PATH Node 24.16.0. The checking toolchain remains pinned to Node 26.13.0; this
+additional smoke test does not select a new minimum Node version. Strict no-emit
+checking and all 63 interpreter test groups pass with the pinned toolchain.
+Launcher tests cover root-relative use, invocation from another directory,
+paths with spaces (including the project path), stdin, stdout/stderr, explicit
+exit 7, located arithmetic failure, check-only mode and usage errors.
+
+Preserve as igniter-v0.1.0-alpha.7 without moving earlier tags. This changes CLI
+access only, with no new language feature, runtime helper, package installer,
+native compiler or self-hosted stage. No Node installation or user configuration
+is modified. Broader CLI/module/build behavior remains separate.
 
 ### Temporary helper selection, 2026-10-30
 

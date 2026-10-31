@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## User-requested root run command, 2026-10-31
+
+The user selects ./lite run with shebang forwarding to the current igniter.
+The executable root launcher now runs examples/006-fixed-tuples.lts directly,
+preserving arguments, caller-relative source paths, standard streams and statuses.
+It uses node from PATH and forwards the existing --check option. Strict checking
+and 63 interpreter test groups pass; preserve as igniter-v0.1.0-alpha.7. This is
+CLI access to existing behavior, not a new language feature or compiler backend.
+See [INV-004 evidence](../investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
+
 ## Approved fixed-tuple igniter increment, 2026-10-31
 
 The user explicitly accepts the proposed construction, .0/.1 reads, positional

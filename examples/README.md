@@ -7,7 +7,7 @@ is independent of the [520 learning exercises](../samples/list.md).
 Run from the repository root with Node 26.13.0:
 
 ```sh
-node igniter/cli.ts examples/001-double-sum.lts
+./lite run examples/001-double-sum.lts
 ```
 
 - [001 — Double a sum](001-double-sum.lts): enter 7 and 5; reports 24.

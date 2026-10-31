@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname, delimiter } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
@@ -626,4 +626,42 @@ test('tuple demonstration runs from the numbered project examples through the re
   });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);
   assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
+});
+
+test('root shebang launcher forwards run arguments, stdin, diagnostics and statuses from any caller directory', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const launcher = join(root, 'lite');
+  const dir = mkdtempSync(join(tmpdir(), 'lite-launcher-'));
+  const source = join(dir, 'program with spaces.lts');
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''), CDPATH: dir };
+  const invoke = (args: readonly string[], input = '', executable = launcher, cwd = dir) =>
+    spawnSync(executable, args, { cwd, env, input, encoding: 'utf8', timeout: 5000 });
+  try {
+    const example = invoke(['run', 'examples/006-fixed-tuples.lts'], '', launcher, root);
+    assert.equal(example.error, undefined); assert.equal(example.status, 0);
+    assert.equal(example.stdout, 'number\n12\nnumber: 12\n42\n'); assert.equal(example.stderr, '');
+    writeFileSync(source, 'report(inputInt()); reportError("done"); exit(7);');
+    const result = invoke(['run', source], '19\n');
+    assert.equal(result.error, undefined); assert.equal(result.status, 7);
+    assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
+    writeFileSync(source, 'report(inputInt());');
+    const check = invoke(['run', '--check', source]);
+    assert.equal(check.error, undefined); assert.equal(check.status, 0);
+    assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+    writeFileSync(source, 'report(1/0);');
+    const fault = invoke(['run', source]);
+    assert.equal(fault.error, undefined); assert.equal(fault.status, 1);
+    assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:9: ArithmeticPanic:/);
+    for (const args of [[], ['run'], ['unknown', source]]) {
+      const usage = invoke(args);
+      assert.equal(usage.error, undefined); assert.equal(usage.status, 2);
+      assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite run /);
+    }
+    const alias = join(dir, 'project with spaces');
+    symlinkSync(root, alias, 'dir');
+    writeFileSync(source, 'report(23);');
+    const spaced = invoke(['run', source], '', join(alias, 'lite'));
+    assert.equal(spaced.error, undefined); assert.equal(spaced.status, 0);
+    assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

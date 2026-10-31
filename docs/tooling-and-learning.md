@@ -21,10 +21,23 @@ experimental builtins. See [INV-072 evidence](../investigations/INV-072-vscode-h
 The [selected first working targets](principles.md#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. A small interpreter
 is selected for the FVP, with TypeScript/Node as the minimal igniter and early LiteLang
-self-hosting selected below. Command spelling remains open. Temporary input/reporting
+self-hosting selected below. The user-requested ./lite run launcher is recorded below. Temporary input/reporting
 helper names are selected below; their detailed contracts remain open.
 
 ## FVP interpreter
+
+### Root run launcher
+
+Requested and implemented **2026-10-31**: use
+`./lite run examples/006-fixed-tuples.lts` from the project root. The executable
+[lite](../lite) POSIX shebang script forwards to the TypeScript igniter through
+node from PATH. It resolves the implementation from its own location, preserves
+caller-relative source paths, arguments, stdin, output and exit status, and also
+forwards the existing run --check form. No language syntax, builtin, compilation
+backend or installed-command mechanism is added. Strict checking and all 63
+interpreter test groups pass; see [INV-004 evidence](../investigations/INV-004-fvp-execution-path.md#root-shebang-launcher-2026-10-31).
+
+### Interpreter direction
 
 Selected **2026-10-30**: use a small interpreter for the first viable product.
 Read one source file, parse and check the supported subset, then execute it with
@@ -421,6 +434,10 @@ Continue checking other requested valid files. Report overall success only when 
 The existing future two-pass idempotence conformance requirement remains independent; --check does not require a second format pass on every invocation. It adds no full-compilation or name/type-check prerequisite. Exact numeric exit codes, diagnostic/diff presentation, file/configuration discovery, and empty-selection behavior remain open. This is a selected command contract, not an implemented CLI or an executed CI result.
 
 ## Run and build proposals
+
+The root run launcher is now implemented as `./lite run file.lts`, as recorded
+[above](#root-run-launcher). Build/native caching and broader installed-CLI
+behavior below remain proposals.
 
 ```text
 lite run lesson.lts

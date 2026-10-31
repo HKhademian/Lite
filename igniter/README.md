@@ -14,32 +14,41 @@ no npm package dependencies and executes the `.ts` sources directly.
 From the repository root:
 
 ```sh
-node igniter/cli.ts examples/001-double-sum.lts
+./lite run examples/001-double-sum.lts
 ```
 
 Enter `7` and `5` on separate lines; it reports `24`. Redirected stdin works too.
-For basic conditions, run `node igniter/cli.ts examples/002-decisions.lts`
+For basic conditions, run `./lite run examples/002-decisions.lts`
 and supply an integer such as `0` or `5`.
-For loops, run `node igniter/cli.ts examples/003-sum-positive.lts`; enter
+For loops, run `./lite run examples/003-sum-positive.lts`; enter
 `3`, `-2`, `4`, `0` to report `7`.
-For functions and recursion, run `node igniter/cli.ts examples/004-factorial.lts`;
+For functions and recursion, run `./lite run examples/004-factorial.lts`;
 enter `5` to report `120` (or `0` to report `1`). Negative input explicitly
 reports an error and exits with status 2; overflow faults instead of wrapping.
 For a tiny Lite-written tokenizer, run
-`node igniter/cli.ts examples/005-scan-arithmetic.lts`; enter `12 + 30`
+`./lite run examples/005-scan-arithmetic.lts`; enter `12 + 30`
 to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
 For tuple values, destructuring and function inputs/results, run
-`node igniter/cli.ts examples/006-fixed-tuples.lts`. See the
+`./lite run examples/006-fixed-tuples.lts`. See the
 [numbered project examples](../examples/README.md) for the shared index.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
 ```sh
-node igniter/cli.ts --check examples/001-double-sum.lts
+./lite run --check examples/001-double-sum.lts
 npm --prefix igniter ci
 npm --prefix igniter run check
 npm --prefix igniter test
 ```
+
+The root [lite launcher](../lite) is an executable POSIX shell script. It forwards
+run to `node igniter/cli.ts` using node from PATH, preserving arguments, stdin,
+output and exit status. It locates the igniter relative to itself while source
+paths stay relative to the caller's working directory. No installation, build or
+runtime npm dependencies are required. Direct Node invocation remains available
+as the bootstrap entry. The pinned checking toolchain remains Node 26.13.0;
+the exact launcher/example command was also smoke-tested with the current PATH's
+Node 24.16.0, without changing that version policy or the user's Node selection.
 
 Node strips types; it does **not** typecheck this code. Always run the separate
 check before accepting changes. The config enables strict mode, checked indexed
@@ -283,8 +292,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.6**, tag **igniter-v0.1.0-alpha.6**, adds the approved
-flat fixed-tuple subset, positional patterns and tuple function inputs/results.
+Version **0.1.0-alpha.7**, tag **igniter-v0.1.0-alpha.7**, adds the user-requested
+root `./lite run` shebang launcher forwarding to the igniter.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -293,6 +302,8 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.4**, commit `29978ff`: typed scalar functions, return and recursion.
 - **igniter-v0.1.0-alpha.5**, commit `7038ce1`: computed text concatenation and
   experimental scanning helpers; the new helpers/policies still await consent.
+- **igniter-v0.1.0-alpha.6**, commit `d667395`: approved flat fixed tuples,
+  declaration destructuring and tuple function inputs/results.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -301,7 +312,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **62 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **63 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
