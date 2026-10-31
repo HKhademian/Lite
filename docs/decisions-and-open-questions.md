@@ -22,7 +22,7 @@ The registry now covers 26 feature cases, all 19 examples, all 20 samples and
 65 scenarios (79 target executions). Seven feature cases run through the
 reference igniter, emitted TS and native C. All pass; 164 interpreter groups and
 9 editor groups pass. Coverage is blocking for features, examples and samples.
-Broader compiler targets, showcase transcripts and CI remain open. See
+Broader compiler targets and showcase transcripts remain open; the GitHub Actions workflow now runs the test, verification and editor gates. See
 [INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
 [verification guide](../verifications/README.md).
 

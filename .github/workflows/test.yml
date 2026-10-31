@@ -1,0 +1,51 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: |
+            igniter/package-lock.json
+            editors/vscode/package-lock.json
+
+      - name: Install igniter dependencies
+        working-directory: igniter
+        run: npm ci
+
+      - name: Install editor test dependencies
+        working-directory: editors/vscode
+        run: npm ci
+
+      - name: Strict TypeScript check
+        working-directory: igniter
+        run: npm run check
+
+      - name: Lite test and verification gate
+        run: ./lite test
+
+      - name: Coverage gate
+        run: ./lite verify --all --coverage
+
+      - name: Editor grammar tests
+        working-directory: editors/vscode
+        run: npm test

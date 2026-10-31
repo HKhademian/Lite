@@ -1,6 +1,6 @@
 # INV-073 — Feature and artifact verification registry
 
-Status: recorded (first slice implemented; full artifact coverage, compiler targets and CI remain open)
+Status: recorded (first slice implemented; broader compiler targets and showcases remain open)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-073](TOPICS.md#inv-073)
@@ -113,9 +113,10 @@ unchanged. Feature cases remain separate from the sample text.
   compiler fixture corpus.
 - Coverage is blocking for features, examples and samples. Showcase manifests
   and transcripts are still absent.
-- No CI workflow or pre-commit integration exists yet; `./lite verify` and
-  `./lite test` must be run explicitly. Local budgets are documented in the
-  verification README (affected inner loop, full lane with warm cache, sharded CI).
+- GitHub Actions runs `./lite test`, the coverage gate and the editor grammar
+  tests. Pre-commit integration still does not exist. Local budgets are
+  documented in the verification README (affected inner loop, full lane with
+  warm cache, sharded CI).
 - `--update` rewrites expectations from the current reference implementation;
   review is required and is not automated.
 - `append` concatenates source text for observation; it cannot add declarations

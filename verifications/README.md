@@ -154,8 +154,10 @@ sharded or curated, and caches make unchanged work nearly free.
 
 Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any
 feature, example or sample lacks a manifest. Showcases are allowed to remain
-empty until that artifact class is introduced. CI wiring is still a later step;
-today `./lite verify --coverage` and `./lite test` are the local gates.
+empty until that artifact class is introduced. The GitHub Actions workflow
+[.github/workflows/test.yml](../.github/workflows/test.yml) runs the strict
+TypeScript check, `./lite test`, the coverage gate and the editor grammar tests.
+`./lite verify --coverage` and `./lite test` remain the local gates.
 
 ## Adding a case
 
