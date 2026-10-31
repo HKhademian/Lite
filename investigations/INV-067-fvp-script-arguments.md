@@ -1,6 +1,6 @@
-# INV-067 — Proposed script arguments for compiler source context
+# INV-067 — Script arguments for compiler source context
 
-Status: proposed (new temporary helper and runner suffix need explicit consent)
+Status: recorded (explicitly approved helper/runner suffix implemented)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-067](TOPICS.md#inv-067)
@@ -17,9 +17,9 @@ not automatically know the filename supplied to the comparison invocation.
 
 Probe performed at the baseline: two files containing report(1 / 0); each produce
 status 1, empty stdout, and their own exact supplied path followed by
-:1:10: ArithmeticPanic: division by zero and newline on stderr. The current
-launcher invocation with -- and script arguments produces usage/status 2; its
-CLI accepts no script-argument suffix and Lite exposes no argument helper.
+:1:10: ArithmeticPanic: division by zero and newline on stderr. At that baseline, the
+launcher invocation with -- and script arguments produced usage/status 2; no
+script-argument suffix or Lite argument helper existed.
 
 This does not mean argument access alone establishes runtime-fault parity.
 Source-position tracking, checked target lowering and corresponding adapters
@@ -27,9 +27,11 @@ still need implementation. It identifies one missing input rather than choosing
 a placeholder filename, weakening byte comparisons, or building a Node-only
 compiler driver that hides the context from Lite code.
 
-## Proposed temporary surface
+## Selected temporary surface
 
-Add inputArgs(): List<String> to the FVP runner. It takes no arguments and returns
+The proposal was recorded in `7c7d383`; the user explicitly replies
+"Approve inputArgs() and the -- argument suffix". Add inputArgs(): List<String>
+to the FVP runner. It takes no arguments and returns
 the supplied script arguments in order as ordinary readable copied values:
 
 - Exclude the Node/interpreter executable, runner options, Lite script path and
@@ -66,17 +68,34 @@ For a compiler application, an illustrative use is:
 The program can use the first argument as its logical source name and inputAll()
 as source text, with no new file-reading or process-launch operation. That name
 is ordinary untrusted data: any later embedding in emitted source must use a
-valid encoder, not raw code concatenation. This proposal does not choose general
+valid encoder, not raw code concatenation. This selection does not choose general
 compiler target/output flags, generated diagnostic ABI or library-export syntax.
 
-## Checks planned after selection
+## Implemented evidence
 
-Verify empty/repeated argument lists, order, empty/spaced/Unicode/dash arguments,
-helper arity and shadowing, lack of stdin/output effects, caller-relative script
-paths, -- separation and literal later flags, usage errors and silent --check.
-Use a minimal indexed argument demonstration. Record exact invocation/context
-in later emitted fault-parity checks instead of normalizing the expected bytes.
+Implement optional readonly host argument data on the embedding I/O interface,
+snapshot its String values at execute entry, and expose an ordinary readable
+List<String>. Existing callers that omit host arguments get an empty known-type
+list. End-operation updates publish new sequences, so explicitly writable
+receiving copies do not mutate the host argument snapshot.
 
-This is a new helper and CLI capability, so the automatic selected-scope workflow
-stops for explicit consent. No implementation, runtime-fault backend, file API
-or new language syntax is added by this proposal.
+The CLI accepts only a -- separated suffix after the script path; all following
+values are script data. The root shell forwarding remains unchanged apart from
+its usage text. Existing no-suffix invocations remain valid. Invalid suffixes
+produce usage/status 2 before source execution, and --check validates normally
+without executing or consuming stdin. No public compiler flag scheme is added.
+
+Strict TypeScript checking and all 145 interpreter groups pass on pinned Node
+26.13.0/TypeScript 7.0.2. Six new groups cover default/ordered arguments, typed
+copies and permissions, lack of stream effects, host snapshot stability under
+external mutation, before-effects signatures, shadowing, real launcher/direct CLI,
+empty/spaced/Unicode/dash/wildcard-looking/newline values, literal later --/--check,
+invalid suffixes, check-only, caller-relative paths and filenames with spaces.
+The [020 example](../examples/020-script-arguments.lts) reports supplied values;
+no arguments or an empty suffix produces no output. All 9 editor groups pass.
+
+Commit helper, CLI, example, checks and references atomically as
+igniter-v0.1.0-alpha.21, keeping prior tags fixed. The helper/runner contract is
+selected; source-context use in compiler applications is the next bounded step.
+It does not itself implement target runtime fault locations, file/process APIs,
+a self-hosted compiler or a new Lite language grammar.

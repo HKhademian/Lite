@@ -89,6 +89,11 @@ integer prompts may appear together in captured stdout.
   through EOF. Reports the code-point count and the preserved text; report adds
   its own newline. Empty input is a valid empty String.
 
+- [020 — Script arguments](020-script-arguments.lts): reports ordered values from
+  inputArgs(). Run ./lite run examples/020-script-arguments.lts -- "a b" "" --check
+  to report a b, an empty line, and the literal --check. Omit the suffix for no
+  arguments/output. The helper consumes no stdin and adds no prompt.
+
 Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

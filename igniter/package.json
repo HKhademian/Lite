@@ -1,6 +1,6 @@
 {
   "name": "lite-igniter",
-  "version": "0.1.0-alpha.20",
+  "version": "0.1.0-alpha.21",
   "private": true,
   "type": "module",
   "engines": { "node": ">=26.13.0" },

@@ -6,11 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
 
-function run(source: string, input = ''): { code: number; output: string; errors: string } {
+function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   let cursor = 0;
   let output = '';
   let errors = '';
   const code = execute(compile(source), {
+    args,
     read: () => input[cursor++] ?? null,
     report: text => { output += text; },
     reportError: text => { errors += text; },
@@ -20,6 +21,79 @@ function run(source: string, input = ''): { code: number; output: string; errors
 function fault(source: string, category: LiteFault['category'], input = ''): void {
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
+
+test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
+  assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
+    push_front(mut editable, "local"); report(original[0], editable[0]);
+    copy := fn(values: List<String>): List<String> { values }
+    loop copy(inputArgs()) as value { report(value); }`, 'unread', ['first', '', 'سلام🙂', '--check']).output,
+    'first local\nfirst\n\nسلام🙂\n--check\n');
+  assert.equal(run('loop inputArgs() { report("unexpected"); }').output, '');
+  fault('values := inputArgs(); push_back(mut values, "not granted");', 'TypeError');
+});
+test('inputArgs has no stream effects and snapshots host arguments before program execution', () => {
+  const unexpected = (): never => { throw new Error('unexpected stream effect'); };
+  assert.equal(execute(compile('inputArgs();'), { read: unexpected, report: unexpected, reportError: unexpected }), 0);
+  assert.equal(run('inputArgs(); report(inputAll());', 'unread\r\n').output, 'unread\r\n\n');
+  const args = ['original']; let output = '';
+  execute(compile('report(inputArgs()[0]); report(inputArgs()[0]);'), {
+    args, read: unexpected, report: text => { output += text; args[0] = 'changed externally'; }, reportError: unexpected,
+  });
+  assert.equal(output, 'original\noriginal\n');
+});
+test('inputArgs signatures fail before effects and normal helper shadowing is preserved', () => {
+  for (const source of ['inputArgs(1);', 'inputArgs("prompt");', 'inputArgs(value = "x");', 'report(inputArgs());']) {
+    let effects = false;
+    assert.throws(() => execute(compile(`report("before"); ${source}`), {
+      args: ['value'], read: () => { effects = true; return null; }, report: () => { effects = true; }, reportError: () => { effects = true; },
+    }), LiteFault);
+    assert.equal(effects, false, source);
+  }
+  assert.equal(run('inputArgs := fn(n: Int): Int { n + 1 } report(inputArgs(n = 2));', '', ['unread']).output, '3\n');
+});
+test('real launcher preserves only script argument values after the first separating suffix', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const example = join(root, 'examples/020-script-arguments.lts');
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const values = ['', 'a b', 'سلام🙂', '--check', '--', '*.lts', 'line\nbreak'];
+  for (const args of [[], ['--'], ['--', ...values]]) {
+    const result = spawnSync(join(root, 'lite'), ['run', example, ...args], { env, timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
+    assert.deepEqual(result.stdout, Buffer.from(args.length > 1 ? values.map(value => value + '\n').join('') : ''));
+    assert.equal(result.stderr.length, 0);
+  }
+  const direct = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), example, '--', '--check'], { timeout: 5000 });
+  assert.equal(direct.status, 0); assert.deepEqual(direct.stdout, Buffer.from('--check\n')); assert.equal(direct.stderr.length, 0);
+});
+test('argument suffix errors precede execution and check-only ignores all script data', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const directory = mkdtempSync(join(tmpdir(), 'lite-args-'));
+  try {
+    const path = join(directory, 'side-effects.lts'); writeFileSync(path, 'report("before"); inputAll("prompt: ");');
+    for (const suffix of [['extra'], ['--check'], ['extra', '--', 'later']]) {
+      const rejected = spawnSync(join(root, 'lite'), ['run', path, ...suffix], { env, timeout: 5000 });
+      assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2);
+      assert.equal(rejected.stdout.length, 0); assert.match(rejected.stderr.toString(), /Usage:/);
+    }
+    const checked = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', '--check', '', 'x'], { env, timeout: 5000 });
+    assert.equal(checked.error, undefined); assert.equal(checked.status, 0);
+    assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+test('script arguments survive caller-relative paths and script filenames with spaces', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const directory = mkdtempSync(join(tmpdir(), 'lite args '));
+  try {
+    writeFileSync(join(directory, 'argument script.lts'), readFileSync(join(root, 'examples/020-script-arguments.lts')));
+    const result = spawnSync(join(root, 'lite'), ['run', 'argument script.lts', '--', 'a b', ''], {
+      cwd: directory, env, timeout: 5000,
+    });
+    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
+    assert.deepEqual(result.stdout, Buffer.from('a b\n\n')); assert.equal(result.stderr.length, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 
 test('inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF', () => {
   for (const text of ['', 'one', 'one\n', 'one\r\ntwo\r\n', ' \t\r\n\n', 'سلام🙂\né\t ']) {

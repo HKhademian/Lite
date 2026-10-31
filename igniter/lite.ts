@@ -29,7 +29,7 @@ export type Value =
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
 type FunctionValue = Readonly<{ kind: 'Function'; code: FunctionCode; environment: Frame }>;
-type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'inputAll' | 'report' | 'reportError' | 'exit'
+type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'inputAll' | 'inputArgs' | 'report' | 'reportError' | 'exit'
   | 'textLength' | 'textAt' | 'textSlice';
 type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
@@ -95,6 +95,7 @@ type Item =
 type Block = Readonly<{ items: readonly Item[]; type: Type }>;
 export type Program = Readonly<{ items: readonly Item[] }>;
 export type IO = Readonly<{
+  args?: readonly string[];
   read: () => string | null;
   report: (text: string) => void;
   reportError: (text: string) => void;
@@ -207,7 +208,7 @@ function floating(value: number, at: Position, literal = false): Extract<Value, 
 }
 function builtin(name: string): Builtin | undefined {
   switch (name) {
-    case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll':
+    case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll': case 'inputArgs':
     case 'report': case 'reportError': case 'exit':
     case 'textLength': case 'textAt': case 'textSlice': return name;
     default: return undefined;
@@ -950,6 +951,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       const args = raw.args.map(arg => checkExpression(arg.input, names, state));
       let type: Type;
       switch (name) {
+        case 'inputArgs': type = { kind: 'List', element: 'String' }; break;
         case 'inputInt': case 'textLength': type = 'Int'; break;
         case 'inputFloat': type = 'Float'; break;
         case 'inputLine': case 'inputWord': case 'inputAll': case 'textAt': case 'textSlice': type = 'String'; break;
@@ -1184,6 +1186,7 @@ function boolean(value: Value): boolean {
 
 export function execute(program: Program, io: IO): number {
   const input = new Input(io.read);
+  const argumentValues = (io.args ?? []).map((value): Value => ({ kind: 'String', value }));
   const findFrame = (frame: Frame, slot: number): Frame => {
     for (let current: Frame | undefined = frame; current !== undefined; current = current.parent) {
       if (current.values.has(slot)) return current;
@@ -1318,6 +1321,7 @@ export function execute(program: Program, io: IO): number {
       case 'call': {
         const args = expr.args.map(evaluateHere);
         switch (expr.name) {
+          case 'inputArgs': return { kind: 'List', items: argumentValues };
           case 'textLength': case 'textAt': case 'textSlice': {
             const text = args[0];
             if (text?.kind !== 'String') throw new Error('igniter invariant: missing checked text');

@@ -917,7 +917,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/tooling-and-learning.md](../docs/tooling-and-learning.md); [samples/list.md](../samples/list.md).
 
-**Investigation:** waiting for input (bounded helper/CLI proposal); contributor: redacted (agent-assisted); note: [INV-067 — script arguments for source context](INV-067-fvp-script-arguments.md) — proposes inputArgs(): List<String> and a -- separated argument suffix to provide explicit compiler source context. No implementation/new API selected; other host interaction remains open.
+**Investigation:** recorded (bounded helper/CLI implementation); contributor: redacted (agent-assisted); note: [INV-067 — script arguments for source context](INV-067-fvp-script-arguments.md) — explicitly approved inputArgs(): List<String> and -- separated runner suffix implemented with ordered copied argument Strings, no stream effects and silent check-only behavior. Strict checking and 145 interpreter groups plus 9 editor groups pass; source-context application and other host interaction remain separate.
 
 <a id="inv-068"></a>
 

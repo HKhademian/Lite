@@ -384,6 +384,30 @@ sequence contracts, named Boolean/unconditional loop receivers and native inline
 layout/ABI/ownership remain outside this implementation. The host stores immutable
 array values; it does not validate native header-free storage or performance.
 
+### Script arguments
+
+inputArgs() returns a readable List<String> containing only script arguments:
+
+```sh
+./lite run examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
+```
+
+The example reports each supplied value in order, including an empty line for
+the empty argument. Values after the first -- following the script path stay
+data, including another -- or --check. Without arguments, or with an empty --
+suffix, inputArgs returns an empty known-String list. Do not supply extra runner
+arguments without that separator. The general form is
+./lite run [--check] file.lts [-- argument ...].
+
+The zero-argument helper consumes no stdin and produces no prompt/output. It
+snapshots host argument String values at execution entry; repeated calls retain
+them, and ordinary receiving copies get no host write grant. Host executable,
+runner flags, script path and separator are excluded. No path normalization,
+option parsing, glob expansion or conversion occurs inside Lite. Ordinary helper
+shadowing and before-effects signature checking apply. Check-only remains silent
+and does not execute inputArgs or read stdin. The embedding IO.args field is
+optional for existing callers. See [INV-067 evidence](../investigations/INV-067-fvp-script-arguments.md).
+
 ### Whole input with optional prompt
 
 inputAll() returns all remaining decoded stdin text through EOF. It preserves
@@ -501,8 +525,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.20**, tag **igniter-v0.1.0-alpha.20**, moves the restricted
-TS/C emitters to complete-source input with multi-line formatting and validation.
+Version **0.1.0-alpha.21**, tag **igniter-v0.1.0-alpha.21**, adds approved
+inputArgs() and the explicit -- script-argument suffix.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -540,6 +564,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.19**, commit `90754bd`: optional-prompt whole-input helper.
 
+- **igniter-v0.1.0-alpha.20**, commit `9669ee5`: complete-source emitter validation.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -547,7 +573,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **139 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **145 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

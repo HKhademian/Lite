@@ -266,11 +266,13 @@ helper behavior, test evidence, and the first tagged-checkpoint identity.
 
 ## Explicit output and tracing
 
-The next [INV-067 proposal](../investigations/INV-067-fvp-script-arguments.md)
-offers inputArgs(): List<String> and a script-argument suffix separated by --.
-It would supply explicit compiler source context without reading a file or
-adding a hidden host driver. This helper/CLI surface remains unselected; current
-runner argument behavior is unchanged by the proposal.
+The user-approved [INV-067 increment](../investigations/INV-067-fvp-script-arguments.md)
+adds inputArgs(): List<String> and the invocation
+./lite run [--check] file.lts [-- argument ...]. Preserve ordered host argument
+Strings after the separator, excluding runner metadata. The helper produces no
+output/prompt, consumes no stdin and returns ordinary copied values. Strict
+checking and 145 interpreter groups plus 9 editor groups pass. Compiler use of
+source identity remains a separate application step; no file/process API is added.
 
 The approved compiler-input [INV-004 increment](../investigations/INV-004-fvp-whole-input.md)
 adds inputAll() or inputAll(String prompt) for remaining stdin text through EOF,

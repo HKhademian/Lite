@@ -4,8 +4,9 @@ import { compile, execute, LiteFault } from './lite.ts';
 const args = process.argv.slice(2);
 const checkOnly = args[0] === '--check';
 const path = args[checkOnly ? 1 : 0];
-if (path === undefined || args.length !== (checkOnly ? 2 : 1)) {
-  process.stderr.write('Usage: node igniter/cli.ts [--check] file.lts\n');
+const suffix = args.slice(checkOnly ? 2 : 1);
+if (path === undefined || (suffix.length > 0 && suffix[0] !== '--')) {
+  process.stderr.write('Usage: node igniter/cli.ts [--check] file.lts [-- argument ...]\n');
   process.exitCode = 2;
 } else {
   try {
@@ -16,6 +17,7 @@ if (path === undefined || args.length !== (checkOnly ? 2 : 1)) {
       const decoder = new TextDecoder('utf-8', { fatal: true });
       let ended = false;
       process.exitCode = execute(program, {
+        args: suffix.slice(1),
         read: () => {
           if (ended) return null;
           while (true) {

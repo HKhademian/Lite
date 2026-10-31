@@ -2,16 +2,21 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## Script-argument/source-context proposal, 2026-10-31
+## Script arguments and source context input approved, 2026-10-31
 
-After complete-source input, future runtime-fault parity needs explicit source
-identity: the igniter's diagnostic includes the exact supplied filename, while
-the compiler's stdin text has no such name. INV-067 proposes temporary
-inputArgs(): List<String> and ./lite run [--check] file.lts [-- argument ...],
-preserving ordered argument Strings without stdin/output effects. This remains
-unselected and unimplemented; no file/process API, compiler flag grammar or
-diagnostic lowering is selected. See
-[the concrete interface and probe](../investigations/INV-067-fvp-script-arguments.md).
+The user replies "Approve inputArgs() and the -- argument suffix" after the
+proposal in `7c7d383`. Implement zero-argument inputArgs(): List<String> and
+./lite run [--check] file.lts [-- argument ...], preserving ordered host argument
+Strings after the separator without runner metadata, normalization, conversion,
+stdin or output effects. Snapshot values at execution entry; ordinary copies
+expose no write grant to host arguments. Check-only remains silent/nonexecuting.
+
+Strict checking and 145 interpreter groups pass, covering copies, external host
+snapshot mutation, signatures/shadowing and exact real CLI argument forwarding,
+usage, caller-relative/spaced paths and check-only behavior. All 9 editor groups
+pass. Preserve as alpha.21; this adds no file/process API, generated diagnostic
+ABI or compiler self-rebuild. See
+[INV-067 evidence](../investigations/INV-067-fvp-script-arguments.md).
 
 ## Complete-source input for restricted emitters, 2026-10-31
 
