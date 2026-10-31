@@ -71,33 +71,9 @@ integer prompts may appear together in captured stdout.
   reports result: 11. Supports parentheses, unary signs and checked integer
   arithmetic; malformed input exits 2 and arithmetic faults remain terminal.
 
-- [017 — Report-to-TypeScript compiler](017-report-ts-compiler.lts): reads complete
-  Lite source and emits a readable TS module. It supports sequences of
-  `report(...)` statements over Int arithmetic and String values, multi-value
-  reports, and immutable Int/String `x := <expression>;` locals, including
-  concatenation, parentheses, unary signs and left-associative `+ - * /`.
-  Int expressions are checked in signed 64-bit at compile time and lowered to
-  runtime BigInt; String expressions are closed constants and are folded. It
-  accepts multi-line whitespace and rejects unsupported syntax before emitting
-  code. An optional -- source.lts argument adds that exact logical name to
-  compiler rejection diagnostics without changing valid output. Inspect the
-  [TS reference](generated/017-report-42.ts) and
-  [explicit Node adapter](generated/017-run-report.ts); the adapter prints 42.
-  The [generated-source checking config](generated/tsconfig.json) inherits the
-  igniter's strict options. This is an initial emitter, not a self-hosted compiler.
-
-- [018 — Report-to-C compiler](018-report-c-compiler.lts): compiles the same
-  restricted Int/String source into standalone readable C. Int expressions are
-  lowered to `int64_t` and reports use `printf` with `PRId64`; String literals
-  are UTF-8 with escaped quotes, backslashes, control whitespace and trigraph-
-  prone `?`. The [C reference](generated/018-report-42.c) builds with a C11
-  compiler and standard library. It accepts the same optional logical source-name
-  argument after --. Native output bytes/status match the igniter and TS path for
-  the 41 program cases; range faults, division by zero and mixed Int/String
-  operations are compile-time rejections. General libraries/ABI and self-hosting
-  remain future work. The shared source/input/output model is in
-  [compiler cases](../igniter/tests/compiler/), each paired with a sibling `.lts`
-  entry source; the schema is in [tests/README.md](../igniter/tests/README.md).
+The report-to-TypeScript and report-to-C compiler prototypes are no longer
+examples. They live under [compiler/](../compiler/README.md) and are run with
+`./litec` or `./lite compile`; the numbered example gap is intentional.
 
 - [019 — Whole input](019-whole-input.lts): optionally prompted whole-input read
   through EOF. Reports the code-point count and the preserved text; report adds

@@ -1,0 +1,59 @@
+/* TypeScript backend for the temporary Lite compiler. */
+intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
+    if value == 0 { "0n" }
+    else if negative { "(-" + digits + "n)" }
+    else { digits + "n" }
+}
+
+/* Escape a checked String value as a readable TypeScript string literal. */
+textLiteralCode := fn(value: String): String {
+    size := textLength(value);
+    var encoded := "\"";
+    var position := 0;
+    loop position < size {
+        ch := textAt(value, position);
+        if ch == "\\" { encoded = encoded + "\\\\"; }
+        else if ch == "\"" { encoded = encoded + "\\\""; }
+        else if ch == "\n" { encoded = encoded + "\\n"; }
+        else if ch == "\r" { encoded = encoded + "\\r"; }
+        else if ch == "\t" { encoded = encoded + "\\t"; }
+        else { encoded = encoded + ch; }
+        position = position + 1;
+    }
+    encoded + "\""
+}
+
+importFlatAll "frontend.lts";
+
+emitProgram := fn(items: Items): Unit {
+    report("export function main(): string {");
+    var returned := "";
+    var current := "";
+    var count := 0;
+    loop items as item {
+        if item.kind == "LocalInt" or item.kind == "LocalString" {
+            report("    const " + item.runtime + " = " + item.code + ";");
+            report("    void " + item.runtime + ";");
+        } else if item.kind == "End" {
+            if returned =!= "" { returned = returned + " + "; }
+            returned = returned + current + " + \"\\n\"";
+            current = "";
+            count = 0;
+        } else {
+            if count > 0 { current = current + " + \" \" + "; }
+            if item.kind == "Int" {
+                current = current + "(" + item.code + ").toString()";
+            } else {
+                current = current + item.code;
+            }
+            count = count + 1;
+        }
+    }
+    if returned == "" { returned = "\"\""; }
+    report("    return " + returned + ";");
+    report("}");
+}
+
+prefix := sourcePrefix();
+source := inputAll();
+emitProgram(parseProgram(source, prefix));

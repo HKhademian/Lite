@@ -185,14 +185,16 @@ interpreter without host feature changes. Strict checking and 125 groups pass;
 see [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
 This produces a calculated result, not a compiler artifact or self-hosted stage.
 
-The first emitted-code milestone [017](../examples/017-report-ts-compiler.lts)
-compiles one signed-decimal report into readable TS. Nine admitted programs have
+The first emitted-code milestone (originally example 017) is now
+[the TS emitter](../compiler/ts-emitter.lts). It compiles one signed-decimal
+report into readable TS. Nine admitted programs have
 raw stdout/stderr/status parity against the igniter and direct TS/translated JS
 execution. Strict checking and 130 interpreter groups pass; the Node-free core
 and visible adapter have separate checks. This is not compiler self-hosting or
 browser/Wasm execution. See [emission evidence](../investigations/INV-061-ts-emission-and-parity.md).
 
-The selected C target now has a matching restricted [018 emitter](../examples/018-report-c-compiler.lts).
+The selected C target now has a matching restricted
+[C emitter](../compiler/c-emitter.lts).
 Nine emitted native programs, their TS equivalents and the igniter have equal raw
 stdout/stderr/status. Strict checking and 132 groups pass; the native test ran
 with the local C compiler and skips explicitly if unavailable elsewhere. This is
@@ -237,10 +239,19 @@ and `exitCode` (each stream uses inline `text`, inline `bytes` or a sibling
 `file`). Filenames follow `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 155 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 158 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
+
+The two emitter sources moved out of `examples/` into
+[`compiler/`](../compiler/README.md); they are compiler implementation, not
+runnable language examples. The shared front-end is included by each backend
+with the temporary loader directive `importFlatAll "frontend.lts";`
+(implemented in [`igniter/loader.ts`](../igniter/loader.ts), not a language
+feature). Access is `./litec --target ts|c file.lts`, `./lite compile ...`, or
+the `./lts` shorthand. This removes the duplicated parser/checker while keeping
+separate target backends.
 
 ## TypeScript igniter and early self-hosting
 

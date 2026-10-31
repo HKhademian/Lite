@@ -8,8 +8,8 @@ Compatible interpreter: no igniter change; runs on alpha.22 and the later alias 
 
 ## Selected scope
 
-The restricted [TS](../examples/017-report-ts-compiler.lts) and
-[C](../examples/018-report-c-compiler.lts) compiler applications gain a second
+The restricted [TS](../compiler/ts-emitter.lts) and
+[C](../compiler/c-emitter.lts) compiler applications gain a second
 scalar type and a broader report surface:
 
 - String literals with `\"`, `\\`, `\n`, `\r`, `\t`, raw UTF-8 and literal
@@ -109,7 +109,7 @@ bytes or artifact inspection rather than program input/output.
 ## Evidence
 
 - Strict `tsc --noEmit` checking passes.
-- All **155 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **158 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass.
 - All 41 program cases pass four-way execution parity; all 34 rejection
   cases pass exact diagnostics through both compilers.
@@ -118,8 +118,8 @@ bytes or artifact inspection rather than program input/output.
 - The corpus covers empty/Unicode/multiline strings, quotes and backslashes,
   tabs, `%` and trigraph-prone `??/`, concatenation, String locals, multi-value
   reports, mixed-type rejections, malformed literals and the previous Int cases.
-- The checked-in [TS](../examples/generated/017-report-42.ts) and
-  [C](../examples/generated/018-report-42.c) references are unchanged and still
+- The checked-in [TS](../compiler/generated/report-42.ts) and
+  [C](../compiler/generated/report-42.c) references are unchanged and still
   reproduce `42`.
 
 ## Limits

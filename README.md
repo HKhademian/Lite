@@ -10,18 +10,20 @@ typed functions, flat tuples, fixed arrays and explicit growable-list operations
 Run `./lite run examples/001-double-sum.lts` with
 Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
 for setup, strict typechecking, tests, supported behavior, and limitations.
-The wider language remains a design draft. Small compiler applications written
-in Lite now emit [readable TypeScript](examples/017-report-ts-compiler.lts) and
-[standalone C](examples/018-report-c-compiler.lts) for arithmetic/String
-`report(...)` expressions, multi-value reports, and immutable Int/String local
-declarations. Forty-one program cases have identical output bytes/status
+The wider language remains a design draft. The first Lite-written compiler stage
+now lives in [compiler/](compiler/README.md): a shared restricted front-end with
+TypeScript and C backends. Run it with `./litec --target ts file.lts`,
+`./lite compile --target c file.lts`, or the `./lts` shorthand. It supports
+arithmetic/String `report(...)` expressions, multi-value reports, and immutable
+Int/String locals. Forty-one program cases have identical output bytes/status
 across the igniter, TS and native C paths, and 34 rejection cases check exact
 compiler diagnostics. Each case pairs a sibling `.lts` entry source with a JSON
-model under [igniter/tests/compiler](igniter/tests/compiler/). These restricted prototypes
-are not a full/self-hosted compiler.
+model under [igniter/tests/compiler](igniter/tests/compiler/). These restricted
+prototypes are not a full/self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
+- [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./litec` or `./lite compile`.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)

@@ -15,13 +15,13 @@ Lite. Continue automatically within that target and the existing language subset
 No new Lite syntax, helper, ABI or build framework is needed for a first native
 experiment over the same source class as the TS emitter.
 
-[018-report-c-compiler.lts](../examples/018-report-c-compiler.lts) is a Lite-written
+[c-emitter.lts](../compiler/c-emitter.lts) is a Lite-written
 compiler application for one signed-decimal Int report source line. It reuses
-017's validation/normalization as self-contained source because imports remain
+the TS emitter's validation/normalization as self-contained source because imports remain
 outside the FVP. Validate the admitted line and signed range before emitting C;
 reject unsupported expressions/statements instead of copying arbitrary source.
 
-The [readable C reference](../examples/generated/018-report-42.c) for report(42);
+The [readable C reference](../compiler/generated/report-42.c) for report(42);
 contains a stdio include and main that writes the exact constant output text.
 Only validated decimal text and an optional sign enter the C string literal.
 The compiler and output have no eval, subprocess helper or injected arbitrary
@@ -39,7 +39,7 @@ future features.
 With the pinned Node on PATH and a C compiler installed, run from the project root:
 
 ```sh
-printf '%s\n' 'report(42);' | ./lite run examples/018-report-c-compiler.lts > /tmp/lite-report.c
+printf '%s\n' 'report(42);' | ./lite run compiler/c-emitter.lts > /tmp/lite-report.c
 cc -std=c11 -Wall -Wextra -Werror /tmp/lite-report.c -o /tmp/lite-report
 /tmp/lite-report
 ```

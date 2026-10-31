@@ -62,7 +62,7 @@ Use the pinned Node/npm and an isolated temporary directory:
 lite_as_dir=$(mktemp -d)
 printf '%s\n' '{"private":true,"type":"module"}' > "$lite_as_dir/package.json"
 npm install --prefix "$lite_as_dir" --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org --save-exact assemblyscript@0.28.20 binaryen@131.0.0-nightly.20260721 long@5.3.2
-printf '%s\n' 'report(42);' | ./lite run examples/017-report-ts-compiler.lts > "$lite_as_dir/core.ts"
+printf '%s\n' 'report(42);' | ./lite run compiler/ts-emitter.lts > "$lite_as_dir/core.ts"
 node "$lite_as_dir/node_modules/assemblyscript/bin/asc.js" "$lite_as_dir/core.ts" --outFile "$lite_as_dir/core.wasm" --bindings esm --exportRuntime --runtime incremental
 printf '%s\n' 'import { main } from "./core.js"; process.stdout.write(main());' > "$lite_as_dir/run.mjs"
 node "$lite_as_dir/run.mjs"

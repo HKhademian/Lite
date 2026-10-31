@@ -5,6 +5,10 @@ import { join, dirname, delimiter } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
+import { loadSource } from './loader.ts';
+
+const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
+const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
 
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   let cursor = 0;
@@ -18,23 +22,55 @@ function run(source: string, input = '', args: readonly string[] = []): { code: 
   });
   return { code, output, errors };
 }
+function runFile(path: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
+  return run(loadSource(path), input, args);
+}
 function fault(source: string, category: LiteFault['category'], input = ''): void {
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('temporary importFlatAll flattens declarations relative to the importing file', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-'));
+  try {
+    writeFileSync(join(directory, 'base.lts'), 'base := 40;\n');
+    writeFileSync(join(directory, 'shared.lts'), 'importFlatAll "base.lts";\ndouble := fn(x: Int): Int { x + x }\n');
+    writeFileSync(join(directory, 'main.lts'),
+      'importFlatAll "shared.lts";\nimportFlatAll "shared.lts";\n' +
+      '/* importFlatAll "missing.lts"; */\nreport(base + 2);\n' +
+      'report("importFlatAll \\"missing.lts\\";");\n');
+    assert.deepEqual(run(loadSource(join(directory, 'main.lts'))), {
+      code: 0, output: '42\nimportFlatAll "missing.lts";\n', errors: '',
+    });
+    const check = spawnSync(process.execPath,
+      [new URL('./cli.ts', import.meta.url).pathname, '--check', join(directory, 'main.lts')],
+      { encoding: 'utf8', timeout: 5000 });
+    assert.equal(check.error, undefined); assert.equal(check.status, 0);
+    assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+test('temporary importFlatAll reports missing files and cycles', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-import-fault-'));
+  try {
+    writeFileSync(join(directory, 'missing.lts'), 'importFlatAll "nope.lts";\nreport(1);\n');
+    assert.throws(() => loadSource(join(directory, 'missing.lts')), /ENOENT/);
+    writeFileSync(join(directory, 'a.lts'), 'importFlatAll "b.lts";\n');
+    writeFileSync(join(directory, 'b.lts'), 'importFlatAll "a.lts";\n');
+    assert.throws(() => loadSource(join(directory, 'a.lts')), /importFlatAll cycle/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
-  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
-    const source = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
-    const expected = run(source, 'report(42);').output;
+  for (const path of [tsEmitterPath, cEmitterPath]) {
+    const expected = runFile(path, 'report(42);').output;
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
-      assert.deepEqual(run(source, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
-      assert.deepEqual(run(source, 'report(1 +);', [label]), {
+      assert.deepEqual(runFile(path, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
+      assert.deepEqual(runFile(path, 'report(1 +);', [label]), {
         code: 2, output: '', errors: label + ': expected an integer or string expression\n',
       });
     }
-    assert.deepEqual(run(source, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer or string expression\n' });
+    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer or string expression\n' });
     let reads = 0; let errors = '';
-    const code = execute(compile(source), {
+    const code = execute(compile(loadSource(path)), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
       report: () => { throw new Error('unexpected artifact'); }, reportError: text => { errors += text; },
     });
@@ -46,12 +82,12 @@ test('real compiler CLI forwards source-name context without changing emitted by
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const label = 'path with spaces/سلام".lts';
-  for (const [name, reference] of [['017-report-ts-compiler.lts', '017-report-42.ts'],
-    ['018-report-c-compiler.lts', '018-report-42.c']] as const) {
-    const path = join(root, 'examples', name);
+  for (const [name, reference] of [['ts-emitter.lts', 'report-42.ts'],
+    ['c-emitter.lts', 'report-42.c']] as const) {
+    const path = join(root, 'compiler', name);
     const valid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(42);', env, timeout: 5000 });
     assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
-    assert.deepEqual(valid.stdout, readFileSync(join(root, 'examples/generated', reference))); assert.equal(valid.stderr.length, 0);
+    assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference))); assert.equal(valid.stderr.length, 0);
     const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
     assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
     assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an integer or string expression\n'));
@@ -61,6 +97,35 @@ test('real compiler CLI forwards source-name context without changing emitted by
   }
 });
 
+test('litec, lite compile and lts expose the compiler sources directly', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const directory = mkdtempSync(join(tmpdir(), 'litec-'));
+  try {
+    const sourcePath = join(directory, 'sample.lts');
+    writeFileSync(sourcePath, 'report(42);');
+    const ts = spawnSync(join(root, 'litec'), ['--target', 'ts', sourcePath], { env, timeout: 5000 });
+    assert.equal(ts.error, undefined); assert.equal(ts.status, 0, ts.stderr.toString());
+    assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/generated/report-42.ts')));
+    assert.equal(ts.stderr.length, 0);
+    const c = spawnSync(join(root, 'lite'), ['compile', '--target', 'c', sourcePath], { env, timeout: 5000 });
+    assert.equal(c.error, undefined); assert.equal(c.status, 0, c.stderr.toString());
+    assert.deepEqual(c.stdout, readFileSync(join(root, 'compiler/generated/report-42.c')));
+    const shorthand = spawnSync(join(root, 'lts'), ['ts', sourcePath], { env, timeout: 5000 });
+    assert.equal(shorthand.error, undefined); assert.equal(shorthand.status, 0);
+    assert.deepEqual(shorthand.stdout, ts.stdout);
+    const invalidPath = join(directory, 'bad.lts');
+    writeFileSync(invalidPath, 'report(1 +);\n');
+    const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
+    assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}: expected an integer or string expression\n`));
+    for (const args of [[], ['--target', 'x', sourcePath], ['ts', join(directory, 'missing.lts')],
+      ['ts', join(directory, 'sample.txt')]]) {
+      const bad = spawnSync(join(root, 'litec'), args, { env, timeout: 5000 });
+      assert.equal(bad.status, 2, args.join(' ')); assert.equal(bad.stdout.length, 0);
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
     push_front(mut editable, "local"); report(original[0], editable[0]);
@@ -314,8 +379,8 @@ test('compiler verification cases are well-formed and cover both categories', ()
 test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
-    const path = join(root, 'examples', name);
+  for (const name of ['ts-emitter.lts', 'c-emitter.lts']) {
+    const path = join(root, 'compiler', name);
     for (const input of ['', 'report(42);\nunsupported();\n', 'report(42);\nprocess.exit(7);\n']) {
       const rejected = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
       assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
@@ -332,10 +397,9 @@ test('whole-source TS and C emitters reject later statements and decoding failur
 });
 
 test('restricted C compiler emits the readable reference and sequences reports', () => {
-  const source = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
-  const expected = readFileSync(new URL('../examples/generated/018-report-42.c', import.meta.url), 'utf8');
-  assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(run(source, 'report(42);\nreport(9);').output,
+  const expected = readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8');
+  assert.deepEqual(runFile(cEmitterPath, 'report(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runFile(cEmitterPath, 'report(42);\nreport(9);').output,
     '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
@@ -349,8 +413,8 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
   }
   assert.equal(probe.error, undefined); assert.equal(probe.status, 0, probe.stderr);
   const root = new URL('../', import.meta.url).pathname;
-  const cCompiler = join(root, 'examples/018-report-c-compiler.lts');
-  const tsCompiler = join(root, 'examples/017-report-ts-compiler.lts');
+  const cCompiler = cEmitterPath;
+  const tsCompiler = tsEmitterPath;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
@@ -393,22 +457,19 @@ test('quoted closing delimiters remain values in calls, tuple entries and array/
     report(pair.1, array[1], list[1]);`).output, '( ) ] }\n) ] ]\n');
 });
 test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
-  const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  const expected = readFileSync(new URL('../examples/generated/017-report-42.ts', import.meta.url), 'utf8');
-  assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(run(source, 'report(42);').output, run(source, 'report(42);').output);
-  assert.equal(run(source, ' report ( +00042 ) ; ').output, expected);
-  assert.equal(run(source, 'report(-000);').output,
+  const expected = readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url), 'utf8');
+  assert.deepEqual(runFile(tsEmitterPath, 'report(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runFile(tsEmitterPath, 'report(42);').output, runFile(tsEmitterPath, 'report(42);').output);
+  assert.equal(runFile(tsEmitterPath, ' report ( +00042 ) ; ').output, expected);
+  assert.equal(runFile(tsEmitterPath, 'report(-000);').output,
     'export function main(): string {\n    return (0n).toString() + "\\n";\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
-  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
   const program = 'report(10);\nreport(20);\nreport(-30);\n';
-  const tsOutput = run(tsSource, program);
+  const tsOutput = runFile(tsEmitterPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
   assert.equal(tsOutput.output, 'export function main(): string {\n    return (10n).toString() + "\\n" + (20n).toString() + "\\n" + ((-30n)).toString() + "\\n";\n}\n');
-  const cOutput = run(cSource, program);
+  const cOutput = runFile(cEmitterPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
   assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(10))) < 0) { status = 1; }\n' +
@@ -417,15 +478,13 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
     '    return status;\n}\n');
 });
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
-  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
   const program = 'x := 2 * (3 - 4);\nreport(x + 10);\nreport(-x);\n';
-  assert.deepEqual(run(tsSource, program), { code: 0, errors: '', output:
+  assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
     '    void lite_x;\n' +
     '    return ((lite_x + 10n)).toString() + "\\n" + ((-lite_x)).toString() + "\\n";\n}\n' });
-  assert.deepEqual(run(cSource, program), { code: 0, errors: '', output:
+  assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    int64_t lite_x = (INT64_C(2) * ((INT64_C(3) - INT64_C(4))));\n' +
@@ -435,15 +494,13 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
     '    return status;\n}\n' });
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
-  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
   const program = 's := "a\\"b";\nreport(s);\nreport(1, s, 2);\n';
-  assert.deepEqual(run(tsSource, program), { code: 0, errors: '', output:
+  assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
     '    const lite_s = "a\\"b";\n' +
     '    void lite_s;\n' +
     '    return lite_s + "\\n" + (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n}\n' });
-  assert.deepEqual(run(cSource, program), { code: 0, errors: '', output:
+  assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    const char *lite_s = "a\\"b";\n' +
@@ -458,12 +515,11 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    return status;\n}\n' });
 });
 test('compiler applications reject fixture sources with exact diagnostics before artifact output', () => {
-  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
-    const compiler = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
+  for (const [name, path] of [['ts-emitter.lts', tsEmitterPath], ['c-emitter.lts', cEmitterPath]] as const) {
     for (const fixture of rejectionFixtures) {
       assert.notEqual(fixture.exitCode, 0, fixture.name);
       assert.equal(fixture.stdout.length, 0, fixture.name);
-      const result = run(compiler, fixture.source);
+      const result = runFile(path, fixture.source);
       assert.equal(result.code, fixture.exitCode, `${name}: ${fixture.name}`);
       assert.deepEqual(Buffer.from(result.output, 'utf8'), fixture.stdout, `${name}: ${fixture.name}`);
       assert.deepEqual(Buffer.from(result.errors, 'utf8'), fixture.stderr, `${name}: ${fixture.name}`);
@@ -471,13 +527,12 @@ test('compiler applications reject fixture sources with exact diagnostics before
   }
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
-  const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  assert.equal(run(source, 'report(42);\nreport(9);').output,
+  assert.equal(runFile(tsEmitterPath, 'report(42);\nreport(9);').output,
     'export function main(): string {\n    return (42n).toString() + "\\n" + (9n).toString() + "\\n";\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', () => {
   const root = new URL('../', import.meta.url).pathname;
-  const compiler = new URL('../examples/017-report-ts-compiler.lts', import.meta.url).pathname;
+  const compiler = tsEmitterPath;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'lite-ts-output-'));
   const corePaths: string[] = [];
@@ -541,9 +596,9 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
 test('checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes', () => {
   const root = new URL('../', import.meta.url).pathname;
   const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'),
-    '-p', join(root, 'examples/generated')], { encoding: 'utf8', timeout: 30000 });
+    '-p', join(root, 'compiler/generated')], { encoding: 'utf8', timeout: 30000 });
   assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
-  const result = spawnSync(process.execPath, [join(root, 'examples/generated/017-run-report.ts')], { timeout: 5000 });
+  const result = spawnSync(process.execPath, [join(root, 'compiler/generated/run-report.ts')], { timeout: 5000 });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);
   assert.deepEqual(result.stdout, Buffer.from('42\n')); assert.equal(result.stderr.length, 0);
 });

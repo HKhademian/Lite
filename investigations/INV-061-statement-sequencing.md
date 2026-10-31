@@ -7,7 +7,7 @@ Catalog brief: [INV-061](TOPICS.md#inv-061)
 
 ## Delivery
 
-The restricted TypeScript and C compiler applications ([017-report-ts-compiler.lts](../examples/017-report-ts-compiler.lts) and [018-report-c-compiler.lts](../examples/018-report-c-compiler.lts)) are advanced from a single `report(integer);` statement to arbitrary sequences of `report(integer);` statements over the whole source input.
+The restricted TypeScript and C compiler applications ([ts-emitter.lts](../compiler/ts-emitter.lts) and [c-emitter.lts](../compiler/c-emitter.lts)) are advanced from a single `report(integer);` statement to arbitrary sequences of `report(integer);` statements over the whole source input.
 
 This is implemented using existing approved Lite language features:
 - `List<String>` with `mut` and `push_back` to collect parsed and normalized integer string representations.

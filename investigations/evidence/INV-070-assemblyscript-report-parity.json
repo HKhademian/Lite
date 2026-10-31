@@ -7,7 +7,7 @@
     "architecture": "arm64"
   },
   "emitter": {
-    "path": "examples/017-report-ts-compiler.lts",
+    "path": "compiler/ts-emitter.lts",
     "sourceTag": "igniter-v0.1.0-alpha.22",
     "sourceCommit": "02530e3ac5e0103679bb38ca07fff574fbf4a5c6"
   },

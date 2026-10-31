@@ -2,6 +2,30 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Compiler sources extracted from examples with temporary flat imports, 2026-10-31
+
+The Lite-written TS/C emitters moved out of `examples/017` and `examples/018`
+into `compiler/` because they are compiler implementation, not runnable language
+examples. `compiler/frontend.lts` now holds the shared parser, checked Int
+evaluation, String/Int values, local lookup, report statement stream and source
+prefix; `compiler/ts-emitter.lts` and `compiler/c-emitter.lts` contain only
+target literal encoding and `emitProgram`. The duplicated parser is gone.
+
+The backends include the front-end through `importFlatAll "frontend.lts";`,
+a temporary source-loader workaround implemented in `igniter/loader.ts`, not a
+language feature. It splices a relative declaration-only file once per load,
+shares one flat namespace and rejects cycles; absolute paths are rejected and
+flattening shifts diagnostics. It remains replaceable by the future module/import
+design.
+
+Access is `./litec --target ts|c file.lts`, `./lite compile --target ts|c file.lts`,
+or `./lts ts file.lts` (shorthand). `lite` keeps `run`/`--check` and delegates
+`compile`. The 41 program and 34 rejection verification cases are unchanged in
+behavior; 158 interpreter groups and 9 editor groups pass. The examples index
+now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
+[INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
+[compiler guide](../compiler/README.md).
+
 ## String values, multi-value reports and JSON verification fixtures, 2026-10-31
 
 The restricted emitters now admit String literals/escapes, immutable String
@@ -21,7 +45,7 @@ source path, optional `stdin`, required `stdout`/`stderr` streams, and
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 155 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 158 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
@@ -32,7 +56,7 @@ self-rebuild.
 ## Arithmetic expressions and immutable locals in restricted emitters, 2026-10-31
 
 Under automatic selected-scope progression from the alias checkpoint, examples
-017 and 018 now admit left-associative `+ - * /` over decimal Int literals and
+The TS and C emitters (formerly examples 017 and 018) now admit left-associative `+ - * /` over decimal Int literals and
 previously declared immutable locals, plus `x := <expression>;` declarations.
 Expressions are checked in signed 64-bit at compile time and lowered to runtime
 TypeScript BigInt or C `int64_t` code. Reports format through BigInt
@@ -129,8 +153,8 @@ no file/process API or full multi-line compiler. See
 
 ## First restricted native output and three-way parity, 2026-10-31
 
-Under the selected maintained C target, example 018 now emits a standalone C
-program for the same signed-integer report source class as 017's TS emitter.
+Under the selected maintained C target, the C emitter now emits a standalone C
+program for the same signed-integer report source class as the TS emitter.
 All nine admitted cases match native C, TS and igniter stdout/stderr bytes,
 status and signal. The generated file builds with a system C11 compiler and
 standard library without Lite/Node at build/run time after emission.

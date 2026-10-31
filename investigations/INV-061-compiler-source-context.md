@@ -18,7 +18,7 @@ usage rejection before reading source or emitting artifacts.
 For example, run from the project root:
 
 ```sh
-printf '%s\n' 'report(1 + 2);' | ./lite run examples/017-report-ts-compiler.lts -- demo.lts
+printf '%s\n' 'report(1 + 2);' | ./lite run compiler/ts-emitter.lts -- demo.lts
 ```
 
 The source expression is outside this compiler's admitted report-literal subset;

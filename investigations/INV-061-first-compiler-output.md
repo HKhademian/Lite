@@ -58,7 +58,7 @@ self-rebuild remain goals, not current results.
 
 ## Current first TS experiment
 
-[017-report-ts-compiler.lts](../examples/017-report-ts-compiler.lts) compiles one
+[ts-emitter.lts](../compiler/ts-emitter.lts) compiles one
 source line containing a report of a signed decimal Int literal into a readable
 TypeScript module. It uses only approved Lite features and temporary I/O/text
 helpers. Validate the complete admitted line before emitting any source bytes;
@@ -67,7 +67,7 @@ reject unsupported syntax instead of copying arbitrary source into TypeScript.
 The emitted main function returns the exact output text for this restricted
 program. A separate, visible Node adapter writes that text to stdout. The core
 contains no Node/DOM API, imports, dynamic code execution or numeric rounding.
-The checked-in TS reference and adapter are in examples/generated. This private
+The checked-in TS reference and adapter are in compiler/generated. This private
 prototype entry format is not a new Lite public API or a full host-I/O ABI.
 
 See [the emission/parity evidence](INV-061-ts-emission-and-parity.md). This is not
@@ -128,6 +128,6 @@ clang 21.0.0 for arm64-apple-darwin27.0.0. A hand-written stdio C program printi
 foreign-tool evidence, not Lite-generated output or performance evidence.
 The [Clang driver documentation](https://clang.llvm.org/docs/CommandGuide/clang.html)
 describes the external compile/link route. No C emitter was implemented by that
-probe. The subsequent [018 C emitter](INV-061-c-emission-and-parity.md) now produces
+probe. The subsequent [C emitter](INV-061-c-emission-and-parity.md) now produces
 actual native output for the same restricted source class, with nine three-way
 parity cases. General C ABI/library export and runtime lowering remain open.

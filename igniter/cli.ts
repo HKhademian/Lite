@@ -1,5 +1,6 @@
-import { readFileSync, readSync, writeSync } from 'node:fs';
+import { readSync, writeSync } from 'node:fs';
 import { compile, execute, LiteFault } from './lite.ts';
+import { loadSource } from './loader.ts';
 
 const args = process.argv.slice(2);
 const checkOnly = args[0] === '--check';
@@ -10,7 +11,7 @@ if (path === undefined || (suffix.length > 0 && suffix[0] !== '--')) {
   process.exitCode = 2;
 } else {
   try {
-    const source = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path));
+    const source = loadSource(path);
     const program = compile(source);
     if (!checkOnly) {
       const byte = Buffer.alloc(1);

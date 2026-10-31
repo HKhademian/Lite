@@ -9,8 +9,8 @@ Compatible helper milestone: igniter-v0.1.0-alpha.19, `90754bd`
 ## Delivery and selected boundary
 
 After explicit inputAll(prompt?) approval, adapt the existing
-[TS](../examples/017-report-ts-compiler.lts) and
-[C](../examples/018-report-c-compiler.lts) compiler applications to inputAll()
+[TS](../compiler/ts-emitter.lts) and
+[C](../compiler/c-emitter.lts) compiler applications to inputAll()
 without a prompt. Validate the complete source rather than just the first line;
 preserve clean emitted output and reject later unsupported source before emission.
 The admitted source remains one signed-decimal integer report. The existing

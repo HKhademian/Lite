@@ -9,8 +9,8 @@ Compatible interpreter: no igniter change; runs on alpha.22 and the later alias 
 ## Selected scope
 
 Under automatic selected-scope progression from the alias checkpoint, the
-restricted [TS](../examples/017-report-ts-compiler.lts) and
-[C](../examples/018-report-c-compiler.lts) compiler applications advance from
+restricted [TS](../compiler/ts-emitter.lts) and
+[C](../compiler/c-emitter.lts) compiler applications advance from
 sequences of literal `report(integer);` statements to:
 
 - `report(<integer expression>);` over decimal Int literals and previously
@@ -87,8 +87,8 @@ stay inside Int, locals that depend on earlier locals, locals named `status`,
   stdout/stderr bytes, status and signal for every admitted program. The native
   group ran with Apple clang 21.0.0 targeting arm64-apple-darwin27.0.0; it skips
   explicitly where a C compiler is unavailable.
-- The checked-in [TS](../examples/generated/017-report-42.ts) and
-  [C](../examples/generated/018-report-42.c) references were regenerated from
+- The checked-in [TS](../compiler/generated/report-42.ts) and
+  [C](../compiler/generated/report-42.c) references were regenerated from
   `report(42);` and the checked-in TS adapter still prints `42`.
 - Dedicated tests assert the exact emitted bytes for a program combining locals,
   arithmetic and reports, and confirm arithmetic faults fail before output.

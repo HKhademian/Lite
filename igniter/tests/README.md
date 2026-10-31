@@ -1,7 +1,7 @@
 # Compiler verification fixtures
 
-`compiler/` holds one verification case per JSON file plus its sibling entry
-source and optional external stream files:
+`igniter/tests/compiler/` holds one verification case per JSON file plus its
+sibling entry source and optional external stream files:
 
 ```text
 001-001-report-int-42.json
@@ -82,7 +82,7 @@ Top-level keys:
   or binary content; extensions such as `.stdin`, `.stdout`, `.stderr` are
   conventional but not required.
 
-`file` is resolved inside `compiler/`; absolute paths, directories and `..` are
+`file` is resolved inside `igniter/tests/compiler/`; absolute paths, directories and `..` are
 rejected. All three streams are compared byte for byte, so binary I/O is
 representable without embedding it in JSON.
 

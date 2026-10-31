@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30**. Package-registry spelling and release automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30**. The prototype compiler now lives in `compiler/` and is exposed as `./litec`; package-registry spelling, final release packaging and automation remain open.
 
 ## 1. Canonical names
 
@@ -29,6 +29,7 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 - The compiler is the **Lite compiler**, package `lite-compiler`, executable `litec`.
 - The runtime is the **Lite runtime**, package `lite-runtime`, executable `literun`.
 - The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
+- The local prototype exposes `./litec` for the compiler and `./lite compile ...` through the CLI. `./lts` is a convenience shorthand for `./litec` during the prototype, not a second compiler product name.
 - Binary names are lowercase and contain no spaces. Prose names may contain spaces.
 - Existing `lite fmt` documentation is consistent with this policy.
 - Do not introduce a second short name for the language. “Lite” alone is not a language name.

@@ -10,7 +10,7 @@ Direction: [TS bootstrap, web, C native/export and possible AS/Wasm](INV-061-fir
 
 The user selects toy-like TS emission for the first bootstrap path and clarifies
 the safety criterion as identical program output bytes. Implement
-[017-report-ts-compiler.lts](../examples/017-report-ts-compiler.lts) as a small
+[ts-emitter.lts](../compiler/ts-emitter.lts) as a small
 compiler application written in already supported Lite. It admits one source
 line of report(signed decimal Int literal), optional surrounding spaces/tabs and
 final semicolon. Unsupported expressions, strings, additional statements and
@@ -24,8 +24,8 @@ ASCII decimal text and an optional minus sign enter the emitted string literal;
 arbitrary source is never evaluated or copied into executable TS.
 
 For report(42); the output is exactly the checked-in readable
-[TS module](../examples/generated/017-report-42.ts). Its exported main returns
-42 plus newline. The separate [Node adapter](../examples/generated/017-run-report.ts)
+[TS module](../compiler/generated/report-42.ts). Its exported main returns
+42 plus newline. The separate [Node adapter](../compiler/generated/run-report.ts)
 writes that value. This tiny constant-output lowering is sufficient for this
 admitted class; it does not select buffering all effects for general programs.
 

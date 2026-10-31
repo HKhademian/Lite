@@ -1,0 +1,44 @@
+#!/bin/sh
+lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
+
+usage() {
+    printf '%s\n' 'Usage: ./lite compile --target ts|c file.lts' >&2
+    printf '%s\n' '       ./litec --target ts|c file.lts' >&2
+    exit 2
+}
+
+target=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --target)
+            [ "$#" -ge 2 ] || usage
+            target=$2
+            shift 2
+            ;;
+        --target=*)
+            target=${1#--target=}
+            shift
+            ;;
+        ts|c)
+            [ -z "$target" ] || usage
+            target=$1
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+[ -n "$target" ] || usage
+case "$target" in ts|c) ;; *) usage ;; esac
+[ "$#" -eq 1 ] || usage
+source=$1
+case "$source" in *.lts) ;; *) printf '%s\n' 'litec: source must be a .lts file' >&2; exit 2 ;; esac
+[ -f "$source" ] || { printf '%s\n' "litec: cannot read $source" >&2; exit 2; }
+
+exec "$lite_dir/lite" run "$lite_dir/compiler/$target-emitter.lts" -- "$source" < "$source"
