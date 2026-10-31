@@ -1,6 +1,6 @@
 # INV-022 — Named fields for fixed tuples
 
-Status: waiting for input (bounded implementation scope proposed)
+Status: recorded (bounded implementation of selected named-field rules)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-022](TOPICS.md#inv-022)
@@ -13,11 +13,13 @@ two String positions. Would implementing the already selected named-field forms
 make these values easier to read and maintain? token.kind and token.text expose
 the meaning currently carried by token.0 and token.1.
 
-Baseline: `36b301f`, tagged igniter-v0.1.0-alpha.7. "Ok continue" authorizes
-continuing the review, not an unspecified feature addition. This note proposes
-the next implementation scope for explicit approval under the
-[consent rule](README.md#explicit-consent-for-language-changes). No implementation,
-new syntax, builtin or accepted design change is made here.
+The concrete scope was proposed in `d3169ac`, against the alpha.7 baseline.
+The user deferred it with "before that" to request prompt/report improvements,
+then requested fixes to the earlier example prompts. After those were complete
+at `d77e9f1`, the user asked "ok contnue", resuming the deferred scope presented
+here. This implements existing selected named-field rules under the
+[consent rule](README.md#explicit-consent-for-language-changes); it does not
+invent new syntax, helpers or a language-wide semantic choice.
 
 ## Existing selected rules
 
@@ -32,7 +34,7 @@ new syntax, builtin or accepted design change is made here.
 - Constructor expressions evaluate once in written order. Existing copy,
   positional destructuring, singleton and Unit contracts still apply.
 
-## Proposed first implementation scope
+## Implemented first scope
 
 1. Flat fully named scalar tuple values, including =name shorthand.
 2. Named member reads alongside existing numeric reads and positional binding.
@@ -48,7 +50,7 @@ unsupported for this first implementation. Their selected broader behavior is
 unchanged: diagnose those cases as unsupported rather than inventing a permanent
 order restriction or silently relabeling stored values.
 
-## Concrete proposed example (not executable yet)
+## Concrete example
 
 ```text
 kind := "number";
@@ -59,18 +61,30 @@ report(token.text);
 ```
 
 Expected output is number and 12 on separate lines. A compatible explicit
-function tuple type is (kind: String, text: String). A prospective
-examples/008-named-tuples.lts should demonstrate these forms after approval;
+function tuple type is (kind: String, text: String). The runnable
+[008-named-tuples.lts](../examples/008-named-tuples.lts) demonstrates these forms;
 the user's intervening prompt/report request uses example 007 first.
 
-Acceptance checks should cover named/numeric access agreement, singletons,
-source-once evaluation and copying, positional binding order, function inputs/
-results, duplicate/unknown labels, and the boundary between an incompatible
-stored transfer and an unimplemented fresh-constructor routing case.
-These checks are proposed; no new Lite runtime result is claimed.
+Strict TypeScript no-emit checking and all 79 interpreter test groups pass on
+Node 26.13.0/TypeScript 7.0.2. New checks cover named/numeric access agreement,
+Unicode/case-sensitive names, explicit-label versus shorthand reads, singletons
+and Unit fields, source-once evaluation, copying and whole-value replacement,
+positional binding order, named function inputs/results and recursion,
+duplicate/unknown labels and rejection before effects. They distinguish
+incompatible stored transfers from valid but unimplemented contextual constructors.
+
+The real root launcher runs 008 and reports number 12, number: 12, number 12,
+and 42 on separate lines; check-only mode emits nothing. No new runtime tuple
+representation is needed: field reads resolve statically to stored positions.
+No native layout/ABI, ownership, reflection or performance result is claimed.
+Keyword/self field names remain outside the current igniter profile; the full
+reserved-name policy is not settled by this implementation.
 
 ## Handoff
 
-Approve or revise this scope before code changes. Keep the existing unnamed
-tuple behavior and alpha.7 source/tag intact. Experimental text-helper consent,
-file I/O, runtime collections, native layout and self-hosting remain separate.
+Preserve this source as igniter-v0.1.0-alpha.9 with all earlier tags intact.
+The unnamed tuple subset and I/O helpers keep their existing behavior. New
+features and semantic choices still require explicit consent. Mixed/nested
+tuples, named patterns, spread/rest, declaration-site relabeling, constructor
+routing, file I/O, runtime collections and self-hosting are not implemented here.
+Experimental text-helper consent remains unchanged.

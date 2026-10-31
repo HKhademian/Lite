@@ -33,6 +33,8 @@ For tuple values, destructuring and function inputs/results, run
 [numbered project examples](../examples/README.md) for the shared index.
 For explicitly prompted input and multiple report values, run
 `./lite run examples/007-prompts-and-report.lts` and enter 7 and 5.
+For named tuple fields and function contracts, run
+`./lite run examples/008-named-tuples.lts`; no input is needed.
 Prompts are written only when supplied to inputInt; there are no automatic
 binding dumps. `--check` parses and checks
 without executing or reading stdin:
@@ -124,8 +126,8 @@ quadruple := fn(n: Int): Int { double(double(n)) }
 report(quadruple(3));
 ```
 
-Parameters and results require explicit scalar or flat unnamed tuple annotations:
-Int, Float, String, Bool, Unit, (:Int, :String), or (:Int,), for example.
+Parameters and results require explicit scalar or flat tuple annotations:
+Int, Float, String, Bool, Unit, (:Int, :String), (:Int,), or (kind: String, text: String), for example.
 These scalar spellings are the temporary script's primitive type names;
 general type-name resolution is not implemented. Parameters are fixed local
 value bindings. A body yields its final expression; empty/declaration/assignment
@@ -200,13 +202,49 @@ retains the binding's exact tuple type. Copies, ordinary arguments and results
 preserve the evaluated values when the original source is subsequently replaced.
 Passing one tuple is one argument, without implicit argument spread or flattening.
 
-Named/mixed tuples, nested tuple components/patterns, typed declaration patterns,
+Mixed tuples, nested tuple components/patterns, typed declaration patterns,
 rest/spread, array segments, component writes, access grants, tuple equality and
 tuple report formatting remain unsupported. Surrounding tuple data capture is
 rejected just like surrounding scalar capture. Type/return-path analysis remains
 conservative; a noncontinuing expression inside a tuple constructor is outside
 this scalar-component subset. Report scalar members explicitly. Host storage
 does not implement or validate native tuple layout, ABI, ownership or performance.
+
+### Named fixed tuples
+
+The selected named-field forms now work for flat fully named scalar tuples:
+
+```text
+kind := "number";
+text := "12";
+token := (= kind, = text);
+report(token.kind, token.text);
+```
+
+The shorthand =name is exactly label = name: token above is equivalent to
+(kind = kind, text = text). Explicit labels do not assign surrounding variables;
+bare (kind, text) remains unnamed. Require unique labels. Member names are literal,
+case-sensitive selectors, not variable lookups; numeric positions remain available
+in stored order. Both forms evaluate the receiver once.
+
+A named singleton such as (value = 42) or (= value) needs no comma. Its type is
+(value: Int), also with an optional comma. It remains a one-component tuple,
+including when the component is Unit. Existing positional/grouped patterns can
+bind named tuples in stored order; names and values survive ordinary copies.
+
+Explicit function inputs/results can use (kind: String, text: String). Ordinary
+arguments, returns and compatible whole-value replacements check ordered labels
+and component types; they never silently relabel or reorder a stored value.
+Fresh constructors requesting valid contextual positional-to-named construction
+or reordered fields are diagnosed as unimplemented. Write matching labels in
+destination order for this subset. This is an implementation limit, not a new
+restriction on the broader selected constructor-routing rules.
+
+Mixed/nested tuples, named patterns, spread/rest, inferred label types, explicit
+receiving-declaration label conversion and field mutation remain unsupported.
+Keyword/self field names are outside the igniter's current identifier profile;
+this does not settle the full language's reserved-name policy. Labels are checked
+statically; no runtime reflection, native layout/ABI or ownership result is claimed.
 
 ### Temporary text operations
 
@@ -307,8 +345,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.8**, tag **igniter-v0.1.0-alpha.8**, adds the user-approved
-optional inputInt prompt and multiple ordinary report arguments.
+Version **0.1.0-alpha.9**, tag **igniter-v0.1.0-alpha.9**, adds the bounded
+named-field tuple subset and label-sensitive function input/result checks.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -320,6 +358,8 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.6**, commit `d667395`: approved flat fixed tuples,
   declaration destructuring and tuple function inputs/results.
 - **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./lite run launcher.
+- **igniter-v0.1.0-alpha.8**, commit `27d6f03`: optional inputInt prompts and
+  multiple ordinary report arguments.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -328,7 +368,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **69 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **79 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

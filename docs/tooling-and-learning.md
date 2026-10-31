@@ -121,6 +121,14 @@ tuple reporting and native layout remain unsupported; experimental text-helper
 consent is unchanged. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md)
 and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
 
+The following named-field increment implements existing flat fully named tuple
+values, =name shorthand, field reads, named function tuple annotations and
+label-sensitive stored transfers. The [008 example](../examples/008-named-tuples.lts)
+runs with ./lite run; strict checking and all 79 interpreter test groups pass.
+Broader tuple routing, relabeling, named patterns, mixed/nested tuples and mutation
+remain unimplemented. See [INV-022](../investigations/INV-022-fvp-named-tuples.md)
+and [named-field coverage](../igniter/README.md#named-fixed-tuples).
+
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,

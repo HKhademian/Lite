@@ -2,6 +2,24 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Named-field tuple igniter increment, 2026-10-31
+
+After the intervening I/O request and earlier-example prompt fixes, the user
+asks to continue the deferred named-tuple scope. The igniter now executes the
+existing selected explicit named entries, =name shorthand, literal field reads
+and named tuple function inputs/results for flat scalar shapes. Ordinary stored
+transfers check ordered labels/types; numeric access and positional patterns
+keep stored order. No implicit labels are inferred from bare value expressions.
+
+Valid fresh constructors needing contextual routing are diagnosed as unsupported,
+not silently relabeled/reordered or treated as evidence of a new order rule.
+Mixed/nested tuples, named patterns, spread/rest, declaration-site conversion and
+field mutation remain unimplemented. Strict checking and all 79 interpreter test
+groups pass, including the root-command [008 example](../examples/008-named-tuples.lts).
+Preserve prior tags and add igniter-v0.1.0-alpha.9. Experimental text-helper
+consent, full ownership/layout and self-hosting remain separate.
+See [INV-022 evidence](../investigations/INV-022-fvp-named-tuples.md).
+
 ## Optional inputInt prompt and multiple report values, 2026-10-31
 
 The user requests this before named tuples and explicitly chooses: inputInt's

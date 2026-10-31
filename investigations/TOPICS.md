@@ -291,7 +291,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Investigation:** recorded (user-approved bounded implementation); contributor: redacted (agent-assisted); note: [INV-022 — fixed-tuple FVP increment](INV-022-fvp-fixed-tuples.md) — flat unnamed scalar tuples, construction/access, positional binding, explicit function inputs/results and value copies implemented using existing selected syntax. Strict checking and 62 test groups pass. Wider tuple topics remain open or unimplemented; text-helper consent is unchanged.
 
-**Follow-up:** [INV-022 — named fields for fixed tuples](INV-022-fvp-named-tuples.md) — proposed bounded implementation of existing named entry/shorthand/member forms and named function tuple annotations; awaiting explicit approval. No interpreter or language changes made by the proposal.
+**Follow-up:** [INV-022 — named fields for fixed tuples](INV-022-fvp-named-tuples.md) — resumed after the intervening I/O work; bounded implementation of existing named entry/shorthand/member forms, named function tuple annotations and label-sensitive stored transfers. Strict checking and 79 interpreter groups pass. Broader routing/conversion, mixed/nested tuples and named patterns remain unimplemented.
 
 <a id="inv-023"></a>
 

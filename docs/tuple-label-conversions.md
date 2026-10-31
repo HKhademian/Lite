@@ -4,6 +4,12 @@ Status: **selected 2026-10-25: explicit typed label conversion is allowed, while
 
 ## Ordinary transfers check labels
 
+Bounded implementation evidence, **2026-10-31**: the
+[named-tuple igniter subset](../igniter/README.md#named-fixed-tuples) now checks
+ordered labels/types on stored tuple copies, arguments, returns and replacement.
+It does not implement the explicit declaration-site conversion below or general
+contextual constructor routing. See [INV-022](../investigations/INV-022-fvp-named-tuples.md).
+
 Selected on **2026-10-25**, clarified by the user: ordinary tuple/callable compatibility remains label-sensitive. A known expected type alone does not authorize relabeling. Plain assignment to an existing binding, argument passing, and returning an already constructed value must satisfy the destination's label contract as well as its ordinary type/access/omission requirements.
 
 ```text

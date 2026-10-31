@@ -23,6 +23,12 @@ implement intrinsic pack application, argument spread, callable-valued inputs/
 results, tuple data captures, or the wider callable model. See
 [INV-022 evidence](../investigations/INV-022-fvp-fixed-tuples.md).
 
+The [named-field follow-up](../investigations/INV-022-fvp-named-tuples.md) extends
+these explicit tuple inputs/results to fully named scalar shapes. Stored values
+must retain compatible ordered labels and component types. This does not add
+named call arguments, contextual field routing or declaration-site relabeling;
+valid fresh-constructor routing requests receive an unsupported diagnostic.
+
 ## Template
 
 ```text

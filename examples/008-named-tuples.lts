@@ -1,0 +1,16 @@
+makeToken := fn(kind: String, text: String): (kind: String, text: String) {
+    (= kind, = text)
+}
+
+describe := fn(token: (kind: String, text: String)): String {
+    token.kind + ": " + token.text
+}
+
+token := makeToken("number", "12");
+report(token.kind, token.text);
+report(describe(token));
+(first, second) := token;
+report(first, second);
+
+one := (value = 42);
+report(one.value);

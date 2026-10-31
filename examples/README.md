@@ -33,6 +33,10 @@ integer prompts may appear together in captured stdout.
   enter 7 and 5 at the explicit prompts; reports sum: 12 and the two inputs
   with their equality result. Input prompts add no newline; report separates
   its values with spaces and adds a final newline.
+- [008 — Named tuples](008-named-tuples.lts): no input needed; demonstrates
+  named fields, =name shorthand, named function inputs/results, positional
+  destructuring and a named singleton. Reports number 12, number: 12,
+  number 12, and 42 on separate lines.
 
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit

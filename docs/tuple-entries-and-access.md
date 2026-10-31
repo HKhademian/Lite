@@ -12,6 +12,15 @@ singleton shape and Unit-valued positions. This does not implement named/mixed,
 nested, spread/segment, mutation, native layout or complete grammar contracts
 described on this page. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
 
+The following [named-field increment](../investigations/INV-022-fvp-named-tuples.md)
+implements fully named scalar tuple values, =name shorthand, literal member reads,
+named tuple function inputs/results and label-sensitive stored transfers. Named
+singletons need no comma; numeric reads and positional binding keep stored order.
+Mixed/nested tuples, named patterns, spread, explicit receiving-declaration label
+conversion and contextual constructor routing remain unimplemented. Such valid
+contextual cases are diagnosed as unsupported rather than selecting a new order
+restriction. See [current coverage](../igniter/README.md#named-fixed-tuples).
+
 ```text
 cake := 10;
 tea := 20;

@@ -617,7 +617,7 @@ test('invalid tuple shapes, positions and transfers fail before any input or out
   }
   for (const source of ['f := fn(): (:Int) { (1,) }', 'pair := (1, 2); pair.-1;',
     'pair := (1, 2); pair.1.0;', '(a, (b, c)) := (1, 2);',
-    '(a, ...rest) := (1, 2);', '(self, b) := (1, 2);', 'pair := (left = 1, right = 2);',
+    '(a, ...rest) := (1, 2);', '(self, b) := (1, 2);',
     'var pair := (1, 2); pair.0 = 3;']) fault(source, 'SourceError');
 });
 test('tuple demonstration runs from the numbered project examples through the real CLI', () => {
@@ -743,4 +743,127 @@ test('numbered prompt/report example runs through the root command with real red
   });
   assert.equal(checked.error, undefined); assert.equal(checked.status, 0);
   assert.equal(checked.stdout, ''); assert.equal(checked.stderr, '');
+});
+
+test('named scalar tuple members agree with fixed numeric positions without inferring bare-name labels', () => {
+  assert.equal(run(`token := (kind = "number", text = "12", count = 3, ready = true, empty = Unit);
+    report(token.kind, token.0, token.text, token.1, token.count + 1, not token.ready, token.empty);`).output,
+    'number number 12 12 4 false Unit\n');
+  fault('kind := "number"; text := "12"; token := (kind, text); report(token.kind);', 'TypeError');
+  fault('position := "kind"; token := (kind = "number"); report(token.position);', 'TypeError');
+  assert.equal(run('token := (نام = "Ali"); report(token.نام);').output, 'Ali\n');
+  fault('token := (Kind = "number"); report(token.kind);', 'TypeError');
+});
+test('same-name shorthand copies a lexical value while explicit labels do not assign that lexical binding', () => {
+  assert.equal(run(`var kind := "number"; text := "12";
+    token := (= kind, = text); kind = "changed";
+    other := (kind = "label only");
+    report(token.kind, token.text, kind, other.kind);
+    _ := 7; box := (= _); report(box._);`).output,
+    'number 12 changed label only\n7\n');
+  fault('token := (= missing);', 'TypeError');
+  fault('f := fn(): Int { 1 } token := (= f());', 'SourceError');
+  fault('a := (x = 1); token := (= a.x);', 'SourceError');
+});
+test('named singleton value/type forms need no comma and do not erase Unit-valued members', () => {
+  assert.equal(run(`one := (value = 42); oneComma := (value = 43,);
+    value := 44; shorthand := (= value); grouped := (value);
+    take := fn(box: (value: Int)): Int { box.value }
+    takeComma := fn(box: (value: Int,)): Int { box.0 }
+    emptyBox := (empty = Unit);
+    empty := fn(box: (empty: Unit)): Unit { box.empty }
+    report(take(one), takeComma(oneComma), shorthand.value, grouped, empty(emptyBox));
+    (component,) := one; report(component);`).output, '42 43 44 44 Unit\n42\n');
+  fault('() := (empty = Unit);', 'TypeError');
+  fault('f := fn(box: (value: Int)): Int { box.value } f(42);', 'TypeError');
+});
+test('named tuple construction and member receivers evaluate once in written order', () => {
+  assert.equal(run(`token := (kind = ({report("kind"); inputWord()}), text = ({report("text"); inputWord()}));
+    report(token.kind, token.text);
+    make := fn(): (a: Int, b: Int) { report("called"); (a = 1, b = 2) }
+    report(make().b);`, 'number 12').output, 'kind\ntext\nnumber 12\ncalled\n2\n');
+});
+test('named tuple copies, grouping and positional binding preserve stored order and independent values', () => {
+  assert.equal(run(`var source := (text = "12", kind = "number");
+    saved := source; (whole) := source; (first, second) := source;
+    source = (text = "99", kind = "changed");
+    report(saved.text, whole.kind, first, second, source.text);
+    (same, same) := saved; report(same);
+    source := (value = 7); report(saved.text, source.value);`).output,
+    '12 number 12 number 99\nnumber\n12 7\n');
+});
+test('explicit named tuple inputs/results and recursive calls preserve label-sensitive contracts', () => {
+  assert.equal(run(`var make := fn(kind: String, text: String): (kind: String, text: String) { (= kind, = text) }
+    make = fn(kind: String, text: String): (kind: String, text: String) { return (kind = kind, text = text); }
+    describe := fn(token: (kind: String, text: String)): String { token.kind + ": " + token.text }
+    report(describe(make("number", "12")));
+    sum := fn(state: (n: Int, extra: Int)): Int {
+      if state.n == 0 { return state.extra; }
+      state.n + self((n = state.n - 1, extra = state.extra))
+    }
+    report(sum((n = 4, extra = 7)));
+    report((if true { (a = 1) } else { (a = 2) }).a);`).output, 'number: 12\n17\n1\n');
+});
+test('stored tuple transfers never silently relabel or reorder through a known parameter/result type', () => {
+  for (const code of [
+    'var point := (x = 0, y = 0); size := (width = 1, height = 2); point = size;',
+    'var point := (x = 0, y = 0); reversed := (y = 2, x = 1); point = reversed;',
+    'f := fn(point: (x: Int, y: Int)): Int { point.x } size := (width = 1, height = 2); f(size);',
+    'f := fn(point: (x: Int, y: Int)): Int { point.x } reversed := (y = 2, x = 1); f(reversed);',
+    'f := fn(point: (x: Int, y: Int)): Int { point.x } plain := (1, 2); f(plain);',
+    'f := fn(): (x: Int, y: Int) { size := (width = 1, height = 2); size }',
+    'f := fn(): (x: Int, y: Int) { reversed := (y = 2, x = 1); return reversed; }',
+    'f := fn(): (x: Int, y: Int) { plain := (1, 2); plain }',
+  ]) {
+    assert.throws(() => compile(code), (error: unknown) => error instanceof LiteFault &&
+      error.category === 'TypeError' && !error.message.includes('contextual tuple constructor routing'), code);
+  }
+});
+test('valid contextual fresh-constructor routing is diagnosed as unimplemented rather than a new order rule', () => {
+  for (const code of [
+    'f := fn(): (x: Int, y: Int) { (1, 2) }',
+    'f := fn(): (x: Int, y: Int) { return (y = 2, x = 1); }',
+    'f := fn(point: (x: Int, y: Int)): Int { point.x } f((1, 2));',
+    'f := fn(point: (x: Int, y: Int)): Int { point.x } f((y = 2, x = 1));',
+    'var point := (x = 0, y = 0); point = (y = 2, x = 1);',
+  ]) assert.throws(() => compile(code), (error: unknown) => error instanceof LiteFault &&
+    error.category === 'TypeError' && error.message.includes('contextual tuple constructor routing'), code);
+});
+test('invalid labels and unsupported tuple extensions are rejected before effects', () => {
+  for (const [code, category] of [
+    ['token := (kind = "number", kind = "other");', 'SourceError'],
+    ['kind := "number"; token := (= kind, kind = "other");', 'SourceError'],
+    ['f := fn(token: (kind: String, kind: String)): Int { 1 }', 'SourceError'],
+    ['token := (a = 1, 2);', 'SourceError'],
+    ['f := fn(token: (a: Int, :Int)): Int { 1 }', 'SourceError'],
+    ['token := (kind = "number"); token.missing;', 'TypeError'],
+    ['token := (kind = "number"); token.1;', 'TypeError'],
+    ['var token := (kind = "number"); token = (kind = 7);', 'TypeError'],
+    ['token := (kind = "number"); (local = kind) := token;', 'SourceError'],
+    ['var token := (kind = "number"); token.kind = "other";', 'SourceError'],
+    ['token := (kind = "number"); renamed: (name: String) = token;', 'SourceError'],
+    ['token := (kind = "number"); f := fn(): String { token.kind }', 'TypeError'],
+    ['token := (kind = "number"); report(token);', 'TypeError'],
+  ]) {
+    if (code === undefined || category === undefined) throw new Error('bad fixture');
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === category, code);
+    assert.equal(observed, false, code);
+  }
+});
+test('named tuple example runs through the root launcher and check-only mode', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const example = new URL('../examples/008-named-tuples.lts', import.meta.url);
+  const expected = 'number 12\nnumber: 12\nnumber 12\n42\n';
+  assert.equal(run(readFileSync(example, 'utf8')).output, expected);
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const check of [false, true]) {
+    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), example.pathname], {
+      cwd: root, encoding: 'utf8', env, timeout: 5000,
+    });
+    assert.equal(result.error, undefined); assert.equal(result.status, 0);
+    assert.equal(result.stdout, check ? '' : expected); assert.equal(result.stderr, '');
+  }
 });
