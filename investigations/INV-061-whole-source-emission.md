@@ -52,3 +52,8 @@ Commit source, checks and affected references atomically as
 igniter-v0.1.0-alpha.20, preserving all previous tags and the readable artifacts.
 Further ordinary statement sequencing can use this complete-source boundary;
 do not add unselected language semantics or host APIs to advance it.
+
+The next [script-argument proposal](INV-067-fvp-script-arguments.md) addresses
+explicit logical source identity for future runtime-fault parity. Its inputArgs
+helper and runner suffix remain unselected pending consent; complete-input
+reading does not silently add them or complete target fault semantics.

@@ -266,6 +266,12 @@ helper behavior, test evidence, and the first tagged-checkpoint identity.
 
 ## Explicit output and tracing
 
+The next [INV-067 proposal](../investigations/INV-067-fvp-script-arguments.md)
+offers inputArgs(): List<String> and a script-argument suffix separated by --.
+It would supply explicit compiler source context without reading a file or
+adding a hidden host driver. This helper/CLI surface remains unselected; current
+runner argument behavior is unchanged by the proposal.
+
 The approved compiler-input [INV-004 increment](../investigations/INV-004-fvp-whole-input.md)
 adds inputAll() or inputAll(String prompt) for remaining stdin text through EOF,
 with empty text at immediate EOF. The optional prompt follows inputInt: stdout,

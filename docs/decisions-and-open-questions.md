@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Script-argument/source-context proposal, 2026-10-31
+
+After complete-source input, future runtime-fault parity needs explicit source
+identity: the igniter's diagnostic includes the exact supplied filename, while
+the compiler's stdin text has no such name. INV-067 proposes temporary
+inputArgs(): List<String> and ./lite run [--check] file.lts [-- argument ...],
+preserving ordered argument Strings without stdin/output effects. This remains
+unselected and unimplemented; no file/process API, compiler flag grammar or
+diagnostic lowering is selected. See
+[the concrete interface and probe](../investigations/INV-067-fvp-script-arguments.md).
+
 ## Complete-source input for restricted emitters, 2026-10-31
 
 The TS/C report compilers now use approved inputAll() without prompting. They

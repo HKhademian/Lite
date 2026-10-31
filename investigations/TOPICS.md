@@ -917,7 +917,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/tooling-and-learning.md](../docs/tooling-and-learning.md); [samples/list.md](../samples/list.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** waiting for input (bounded helper/CLI proposal); contributor: redacted (agent-assisted); note: [INV-067 — script arguments for source context](INV-067-fvp-script-arguments.md) — proposes inputArgs(): List<String> and a -- separated argument suffix to provide explicit compiler source context. No implementation/new API selected; other host interaction remains open.
 
 <a id="inv-068"></a>
 
