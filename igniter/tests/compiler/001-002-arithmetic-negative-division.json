@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-negative-division",
-  "source": "001-002-arithmetic-negative-division.lts",
-  "stdout": {
-    "text": "-3\n"
+  "source": {
+    "file": "001-002-arithmetic-negative-division.lts",
+    "hash": "sha256:7667998ce50a021f92f089206882969a7629ba0ca565bd5a922861d18c8494b0"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-3\n",
+        "hash": "sha256:0f90e0b3538d04df294950dcec75952d7e07f1bb044e73e795c410d677b3c268"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

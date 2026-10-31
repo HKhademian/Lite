@@ -1,11 +1,21 @@
 {
   "name": "trailing-statement",
-  "source": "002-001-trailing-statement.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-trailing-statement.lts",
+    "hash": "sha256:3a4126f980aac0fd7be4fc5f5f0e07440ae3b22bdc6c3ad3eb3fc4b27c376cc9"
   },
-  "stderr": {
-    "text": "expected := after local name process\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected := after local name process\n",
+        "hash": "sha256:751e2cf58ab8b0b4ec97ab1ef6e2a5eb6f291ebcc180a571b552f8c3e3a8dac3"
+      },
+      "exitCode": 2
+    }
+  ]
 }

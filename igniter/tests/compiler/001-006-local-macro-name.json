@@ -1,11 +1,21 @@
 {
   "name": "local-macro-name",
-  "source": "001-006-local-macro-name.lts",
-  "stdout": {
-    "text": "7\n"
+  "source": {
+    "file": "001-006-local-macro-name.lts",
+    "hash": "sha256:9d628d56dbd8e2a91df4ab559edd87bd231a5542f086c75e1e6c1584147f3915"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "7\n",
+        "hash": "sha256:10159baf262b43a92d95db59dae1f72c645127301661e0a3ce4e38b295a97c58"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

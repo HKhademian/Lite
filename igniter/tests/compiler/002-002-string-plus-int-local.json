@@ -1,11 +1,21 @@
 {
   "name": "string-plus-int-local",
-  "source": "002-002-string-plus-int-local.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-002-string-plus-int-local.lts",
+    "hash": "sha256:82315d20fc7305af48121eba29533957940b542349ed359b4bd812271dad4868"
   },
-  "stderr": {
-    "text": "cannot mix Int and String operands\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "cannot mix Int and String operands\n",
+        "hash": "sha256:ee8b627eb27bb5fd9208281e65117b47cb660ca6be4c299a265c1972220d557f"
+      },
+      "exitCode": 2
+    }
+  ]
 }

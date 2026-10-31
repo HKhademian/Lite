@@ -1,11 +1,21 @@
 {
   "name": "division-by-zero",
-  "source": "002-003-division-by-zero.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-003-division-by-zero.lts",
+    "hash": "sha256:e7b963fcf82a7809f44ff751f80213ce52e10a9a7e2115ae9c8fac3154c5a42e"
   },
-  "stderr": {
-    "file": "002-003-division-by-zero.stderr"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "file": "002-003-division-by-zero.stderr",
+        "hash": "sha256:e496dc9995b4e08562d2aaf75d374674d90d1a5abda761d0a2cfda54a41b54ff"
+      },
+      "exitCode": 2
+    }
+  ]
 }

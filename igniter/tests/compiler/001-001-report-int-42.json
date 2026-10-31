@@ -1,14 +1,25 @@
 {
   "name": "report-int-42",
-  "source": "001-001-report-int-42.lts",
-  "stdin": {
-    "file": "001-001-report-int-42.stdin"
+  "source": {
+    "file": "001-001-report-int-42.lts",
+    "hash": "sha256:cc799a376ca142d21da75b56b138ace671264ce2c21d468d438bd5ab6ad23e5e"
   },
-  "stdout": {
-    "text": "42\n"
-  },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdin": {
+        "file": "001-001-report-int-42.stdin",
+        "hash": "sha256:712450d3c4a79eea9509e75dc1dacdeff58034df538536cfae2da882bd8a0c50"
+      },
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

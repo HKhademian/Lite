@@ -1,11 +1,21 @@
 {
   "name": "report-without-call",
-  "source": "002-001-report-without-call.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-report-without-call.lts",
+    "hash": "sha256:331d26d6d8f862e46ba900811be8a7a1e4dbaa229b14c99becfd5e5151490d95"
   },
-  "stderr": {
-    "text": "expected ( after report\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected ( after report\n",
+        "hash": "sha256:fec9c9de61747932c3899219e51f33ab693cefcea5a538186ac5030aba631dcf"
+      },
+      "exitCode": 2
+    }
+  ]
 }

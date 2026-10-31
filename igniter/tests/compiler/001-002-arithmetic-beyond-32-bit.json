@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-beyond-32-bit",
-  "source": "001-002-arithmetic-beyond-32-bit.lts",
-  "stdout": {
-    "text": "2147483648\n"
+  "source": {
+    "file": "001-002-arithmetic-beyond-32-bit.lts",
+    "hash": "sha256:e549955541397a519dc8615f87027aafcb5a8920fb3008b56825ae63f32f7363"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "2147483648\n",
+        "hash": "sha256:604fec38960d7c5bd3bd6c06ad8f4b42eac0bb30ea02d43518d0f9f11d5e131e"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

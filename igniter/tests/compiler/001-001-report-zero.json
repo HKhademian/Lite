@@ -1,18 +1,29 @@
 {
   "name": "report-zero",
-  "source": "001-001-report-zero.lts",
-  "stdin": {
-    "bytes": [
-      0,
-      255,
-      10
-    ]
+  "source": {
+    "file": "001-001-report-zero.lts",
+    "hash": "sha256:79ece839276967f24b0edfb5a60dbb6836ebc7cb3a8c0ef311a82df2202024ae"
   },
-  "stdout": {
-    "text": "0\n"
-  },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdin": {
+        "bytes": [
+          0,
+          255,
+          10
+        ],
+        "hash": "sha256:712450d3c4a79eea9509e75dc1dacdeff58034df538536cfae2da882bd8a0c50"
+      },
+      "stdout": {
+        "text": "0\n",
+        "hash": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

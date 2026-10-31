@@ -1,11 +1,21 @@
 {
   "name": "string-times-int",
-  "source": "002-002-string-times-int.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-002-string-times-int.lts",
+    "hash": "sha256:adc373f4069ce685f02cb18b6438f41e297d6b1a598c3d73ff3ff7ffe63aee5d"
   },
-  "stderr": {
-    "text": "operator * requires Int operands\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "operator * requires Int operands\n",
+        "hash": "sha256:e84c12c543f8b5b48f34d2f10189fea7b09fe70b2ed1ef158fd288a321fead1a"
+      },
+      "exitCode": 2
+    }
+  ]
 }

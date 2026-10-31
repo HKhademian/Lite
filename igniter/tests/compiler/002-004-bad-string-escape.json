@@ -1,11 +1,21 @@
 {
   "name": "bad-string-escape",
-  "source": "002-004-bad-string-escape.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-004-bad-string-escape.lts",
+    "hash": "sha256:faa7a8629f2a7fcffd6b452d97ced098d0780fcd88185c560b637e384005e3b2"
   },
-  "stderr": {
-    "text": "unsupported string escape \\q\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "unsupported string escape \\q\n",
+        "hash": "sha256:3c28f43058b368221ffd0c83c1bfc75260ea38830026b221adfa151bd566b18a"
+      },
+      "exitCode": 2
+    }
+  ]
 }

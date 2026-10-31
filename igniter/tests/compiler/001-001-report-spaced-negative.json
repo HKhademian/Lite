@@ -1,11 +1,21 @@
 {
   "name": "report-spaced-negative",
-  "source": "001-001-report-spaced-negative.lts",
-  "stdout": {
-    "text": "-42\n"
+  "source": {
+    "file": "001-001-report-spaced-negative.lts",
+    "hash": "sha256:382b0344a473aa9fcd281ae6aeb3a597cc5e62b73ee6bc44a13b5ed22e4885f8"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-42\n",
+        "hash": "sha256:012afc755e9b5f3c266526a8e42a581db2ebadaa9ce194fc26ba830a52912b6c"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

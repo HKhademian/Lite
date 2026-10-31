@@ -1,11 +1,21 @@
 {
   "name": "report-int-max",
-  "source": "001-001-report-int-max.lts",
-  "stdout": {
-    "text": "9223372036854775807\n"
+  "source": {
+    "file": "001-001-report-int-max.lts",
+    "hash": "sha256:d26bb656a9772d4452f9541261da543e28214ba2781ae1a220d15f6b99b421a0"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "9223372036854775807\n",
+        "hash": "sha256:26d928ca7798882c482edb82cf892a2036308dff7482080e65ac947719112ef2"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

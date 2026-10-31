@@ -1,11 +1,21 @@
 {
   "name": "local-dependencies",
-  "source": "001-003-local-dependencies.lts",
-  "stdout": {
-    "text": "10\n-5\n"
+  "source": {
+    "file": "001-003-local-dependencies.lts",
+    "hash": "sha256:08e018c12e0ad51bbe9093f46f7016ac885c8e53a11db1949e3d9420e1c086f3"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "10\n-5\n",
+        "hash": "sha256:67d59f0558c5d821123a32c29bd52d9a00ee664d637861dea96e84322ab15d34"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

@@ -1,11 +1,21 @@
 {
   "name": "string-empty",
-  "source": "001-004-string-empty.lts",
-  "stdout": {
-    "text": "\n"
+  "source": {
+    "file": "001-004-string-empty.lts",
+    "hash": "sha256:1325b348f07207d688bb06c56956764fda86b80ed35a57f15044ef19bd4a653b"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "\n",
+        "hash": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

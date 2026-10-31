@@ -14,7 +14,7 @@ reports coverage and `--filter` selects manifests. `./lite test --fast` runs the
 no-native test lane; `./lite test`/`--full` runs the full local gate. Passing results are cached
 by runner/source/expectation hash; `--changed` selects affected cases for fast
 feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
-one of `file` or `text` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or
+one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or
 external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
@@ -68,9 +68,10 @@ unsupported text forms fail before artifact bytes.
 
 Compiler verification data moved from inline test arrays to one JSON file per
 case under `igniter/tests/compiler/`: 42 program cases and 34 rejection cases.
-Each case pairs a sibling `.lts` entry source with a JSON model holding the
-source path, optional `stdin`, required `stdout`/`stderr` streams, and
-`exitCode`; each stream uses inline `text`, inline `bytes`, or a sibling `file`.
+Each case pairs a sibling `.lts` entry source with a JSON model holding a
+`source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`; each case has
+optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses
+`text`/`bytes`/`file` plus `hash`.
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with

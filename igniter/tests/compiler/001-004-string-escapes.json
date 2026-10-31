@@ -1,11 +1,21 @@
 {
   "name": "string-escapes",
-  "source": "001-004-string-escapes.lts",
-  "stdout": {
-    "text": "quote: \" slash: \\ tab:\t end\n"
+  "source": {
+    "file": "001-004-string-escapes.lts",
+    "hash": "sha256:fb1e8364a73d7ddeefe7ff138863ce6b19ad5c8af78fbbf4cf955d287be2db11"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "quote: \" slash: \\ tab:\t end\n",
+        "hash": "sha256:addb98588eba4bdf6b90897b4c0d290c52fed3f7fbf2248fb70b7ca7fc29a61a"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

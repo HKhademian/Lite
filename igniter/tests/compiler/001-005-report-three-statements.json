@@ -1,11 +1,21 @@
 {
   "name": "report-three-statements",
-  "source": "001-005-report-three-statements.lts",
-  "stdout": {
-    "text": "1\n2\n3\n"
+  "source": {
+    "file": "001-005-report-three-statements.lts",
+    "hash": "sha256:b83ba3864fbf70a6e4c8e5bc941f9e88a225a16b304acab7b90f07675ace3d8a"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "1\n2\n3\n",
+        "hash": "sha256:14c5e74c4b96ccef41cd94db73a9ec3348038ac094feca4fd897cecffa07cdae"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

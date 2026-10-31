@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-precedence",
-  "source": "001-002-arithmetic-precedence.lts",
-  "stdout": {
-    "text": "-1\n"
+  "source": {
+    "file": "001-002-arithmetic-precedence.lts",
+    "hash": "sha256:c161cc3a784223c1819842d63eb5c35d8034fb95c1f212f89ad5bf498e42ddcd"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-1\n",
+        "hash": "sha256:ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

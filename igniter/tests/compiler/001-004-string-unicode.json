@@ -1,11 +1,21 @@
 {
   "name": "string-unicode",
-  "source": "001-004-string-unicode.lts",
-  "stdout": {
-    "text": "سلام🙂\n"
+  "source": {
+    "file": "001-004-string-unicode.lts",
+    "hash": "sha256:61ba917f4193b509d064b2dbeba3f39b038c73119fc9c5637f809b6a9a05b820"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "سلام🙂\n",
+        "hash": "sha256:067b3193c5af0297481c8d831fa80d96e29c8f016104e95680d0b360e42b8ff4"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

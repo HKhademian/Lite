@@ -1,11 +1,21 @@
 {
   "name": "report-mixed-values",
-  "source": "001-005-report-mixed-values.lts",
-  "stdout": {
-    "text": "1 two 3\n"
+  "source": {
+    "file": "001-005-report-mixed-values.lts",
+    "hash": "sha256:2130a96510124da763910e068b94ce298d9a734c3cd1a24517176c2cc2a6320f"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "1 two 3\n",
+        "hash": "sha256:4e8088f053203bb610db4a9d26c09175462cc088064a0a0f07b2092c004e7433"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

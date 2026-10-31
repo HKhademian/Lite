@@ -1,11 +1,21 @@
 {
   "name": "local-arithmetic",
-  "source": "001-003-local-arithmetic.lts",
-  "stdout": {
-    "text": "-1\n"
+  "source": {
+    "file": "001-003-local-arithmetic.lts",
+    "hash": "sha256:30a4786e7609253a8bf5d1591b49e164654da24bcd5da6fce561c67e8c42c20e"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-1\n",
+        "hash": "sha256:ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

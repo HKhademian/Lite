@@ -1,11 +1,21 @@
 {
   "name": "overflow-multiply",
-  "source": "002-003-overflow-multiply.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-003-overflow-multiply.lts",
+    "hash": "sha256:4ad0ec7fc53b4fff64635d25e0955a77a36e062be4c77f855d0e22536acc52fa"
   },
-  "stderr": {
-    "text": "integer expression outside signed 64-bit range\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "integer expression outside signed 64-bit range\n",
+        "hash": "sha256:6fd4cd2563bb2f098250590e82ca059610c5ad918701187a8ee67d9dc7408b6d"
+      },
+      "exitCode": 2
+    }
+  ]
 }

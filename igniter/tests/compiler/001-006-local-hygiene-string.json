@@ -1,11 +1,21 @@
 {
   "name": "local-hygiene-string",
-  "source": "001-006-local-hygiene-string.lts",
-  "stdout": {
-    "text": "xy 1\n"
+  "source": {
+    "file": "001-006-local-hygiene-string.lts",
+    "hash": "sha256:ccfe2193e6dec3fd878b8879df5b6ddd64f5117ec93c4cab14100247a23a6409"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "xy 1\n",
+        "hash": "sha256:6519f1bf5cfcb947e79f1d38ffd9c2b2a5c675a6ca04251cc2db78ba09f677fc"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

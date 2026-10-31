@@ -1,11 +1,21 @@
 {
   "name": "empty-source",
-  "source": "002-001-empty-source.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-empty-source.lts",
+    "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "stderr": {
-    "text": "expected report(integer or string) or an immutable local declaration\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected report(integer or string) or an immutable local declaration\n",
+        "hash": "sha256:a4561e6e54c01fea1e3363f22879e1bcde75b03f6d7e56eda4e743383c0f2333"
+      },
+      "exitCode": 2
+    }
+  ]
 }

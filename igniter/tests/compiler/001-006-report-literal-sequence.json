@@ -1,11 +1,21 @@
 {
   "name": "report-literal-sequence",
-  "source": "001-006-report-literal-sequence.lts",
-  "stdout": {
-    "text": "42\n0\n"
+  "source": {
+    "file": "001-006-report-literal-sequence.lts",
+    "hash": "sha256:b573208a02eecd52fa7179d482e3d4400c308d7fa3e33d82d77edcafe8877c77"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n0\n",
+        "hash": "sha256:54906b1139af2ff71f34ae45f71e7ec34788265b2e1846afb6232ea0098d19e2"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

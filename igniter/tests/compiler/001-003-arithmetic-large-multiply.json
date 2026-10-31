@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-large-multiply",
-  "source": "001-003-arithmetic-large-multiply.lts",
-  "stdout": {
-    "text": "3000000000\n"
+  "source": {
+    "file": "001-003-arithmetic-large-multiply.lts",
+    "hash": "sha256:ae8647d5a5faa20993a4969e2e3c17f697e24a4b214498604a4e0a5723f6bb23"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "3000000000\n",
+        "hash": "sha256:15d6f42ba683d3f3b2b6c1ef7d19ce4e8e776284395e8f200000093559a86b88"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

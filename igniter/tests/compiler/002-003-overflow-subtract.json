@@ -1,11 +1,21 @@
 {
   "name": "overflow-subtract",
-  "source": "002-003-overflow-subtract.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-003-overflow-subtract.lts",
+    "hash": "sha256:1587219fd0bd3870e6550476f13721277620abdc62648a492ed91c67f8085b0c"
   },
-  "stderr": {
-    "text": "integer expression outside signed 64-bit range\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "integer expression outside signed 64-bit range\n",
+        "hash": "sha256:6fd4cd2563bb2f098250590e82ca059610c5ad918701187a8ee67d9dc7408b6d"
+      },
+      "exitCode": 2
+    }
+  ]
 }

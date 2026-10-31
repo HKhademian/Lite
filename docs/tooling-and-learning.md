@@ -234,9 +234,10 @@ are closed constants and fold at compile time; emitted TS/C literals escape
 quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
 verification data moved to `igniter/tests/compiler/`: 42 program cases and 34
 rejection cases, each pairing a sibling `.lts` entry source with a JSON model
-holding the source path, optional `stdin`, required `stdout`/`stderr` streams,
-and `exitCode` (each stream uses inline `text`, inline `bytes` or a sibling
-`file`). Filenames follow `NNN-MMM-title-subtitle.json`
+holding a `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`
+(each case has optional `stdin`/`stdout`/`stderr` and required `exitCode`; each
+stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
+`NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
 and 162 groups pass. Text operations/indexing, NUL handling, runtime input and

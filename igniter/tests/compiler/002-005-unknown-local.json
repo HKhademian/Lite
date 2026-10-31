@@ -1,11 +1,21 @@
 {
   "name": "unknown-local",
-  "source": "002-005-unknown-local.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-005-unknown-local.lts",
+    "hash": "sha256:02e1dea0a8202b740170b268874c0c5abfe5e73a91729ed011bd89b9f18415a2"
   },
-  "stderr": {
-    "text": "unknown value y\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "unknown value y\n",
+        "hash": "sha256:d4f589f7ff5020433c71c1d3ad945d4bc8d8fc7424a5397091e69f2deffb8abd"
+      },
+      "exitCode": 2
+    }
+  ]
 }

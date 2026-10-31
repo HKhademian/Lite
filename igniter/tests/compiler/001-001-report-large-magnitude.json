@@ -1,11 +1,21 @@
 {
   "name": "report-large-magnitude",
-  "source": "001-001-report-large-magnitude.lts",
-  "stdout": {
-    "text": "9999999999999999\n"
+  "source": {
+    "file": "001-001-report-large-magnitude.lts",
+    "hash": "sha256:800681d4023d20507237d95ddfa1f4baa8591404baf27bd295ce1fd894364c95"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "9999999999999999\n",
+        "hash": "sha256:cf163e3e0e72297bc9b1bc5a9995d668a020e98d427a5642569680df26635231"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

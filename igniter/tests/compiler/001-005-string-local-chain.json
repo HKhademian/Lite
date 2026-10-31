@@ -1,11 +1,21 @@
 {
   "name": "string-local-chain",
-  "source": "001-005-string-local-chain.lts",
-  "stdout": {
-    "text": "ab!\n"
+  "source": {
+    "file": "001-005-string-local-chain.lts",
+    "hash": "sha256:33fb9640b602d51f57603555550acc8d0e3be7ebcd37e28fe734b3d4bfbb542b"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "ab!\n",
+        "hash": "sha256:8a9c1e04b9fe98cd7e29a1aaa33cbdb2d134baf938f3f1f71d0c07c047919d9c"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

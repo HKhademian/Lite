@@ -1,11 +1,21 @@
 {
   "name": "report-missing-argument",
-  "source": "002-001-report-missing-argument.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-report-missing-argument.lts",
+    "hash": "sha256:9e5ff0013e4620b17d3f1e4d43ae318ad2111ea7c919f340a2c6863e9f8aa7b3"
   },
-  "stderr": {
-    "text": "expected an integer or string expression\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected an integer or string expression\n",
+        "hash": "sha256:8ca2cfb7d552d74ca352c8a93e266e55f0c2b53c3f0f9aeff6d3ebaa68587051"
+      },
+      "exitCode": 2
+    }
+  ]
 }

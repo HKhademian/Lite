@@ -1,11 +1,21 @@
 {
   "name": "string-local",
-  "source": "001-004-string-local.lts",
-  "stdout": {
-    "text": "hi\n"
+  "source": {
+    "file": "001-004-string-local.lts",
+    "hash": "sha256:c889f04a593e2f3e5ede58ef9a3546fd5422d3b06c3c5757666cf3aecbd07451"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "hi\n",
+        "hash": "sha256:98ea6e4f216f2fb4b69fff9b3a44842c38686ca685f3f55dc48c5d3fb1107be4"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

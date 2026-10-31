@@ -1,11 +1,21 @@
 {
   "name": "unary-minus-string",
-  "source": "002-002-unary-minus-string.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-002-unary-minus-string.lts",
+    "hash": "sha256:1fb179fd755a69c4d4281ae8ac7788348382baadf314b6fbbed1799c0b8af9ac"
   },
-  "stderr": {
-    "text": "unary - requires an Int operand\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "unary - requires an Int operand\n",
+        "hash": "sha256:71222731a13a1bbe0c03c4267bb699331ac28046e6cf39861b8d78b0fec9d820"
+      },
+      "exitCode": 2
+    }
+  ]
 }

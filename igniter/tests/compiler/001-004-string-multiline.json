@@ -1,11 +1,21 @@
 {
   "name": "string-multiline",
-  "source": "001-004-string-multiline.lts",
-  "stdout": {
-    "file": "001-004-string-multiline.stdout"
+  "source": {
+    "file": "001-004-string-multiline.lts",
+    "hash": "sha256:635cac263268846550bf306a3bf471f3861164b3cb267f045b0c80717bd7552f"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "file": "001-004-string-multiline.stdout",
+        "hash": "sha256:2751a3a2f303ad21752038085e2b8c5f98ecff61a2e4ebbd43506a941725be80"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

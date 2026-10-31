@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-unary-signs",
-  "source": "001-002-arithmetic-unary-signs.lts",
-  "stdout": {
-    "text": "5\n"
+  "source": {
+    "file": "001-002-arithmetic-unary-signs.lts",
+    "hash": "sha256:02bcce8f5a8c03cdf9e924b45c14a6306884f886d0e9b0b6869847b2f4f5b215"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "5\n",
+        "hash": "sha256:f0b5c2c2211c8d67ed15e75e656c7862d086e9245420892a7de62cd9ec582a06"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

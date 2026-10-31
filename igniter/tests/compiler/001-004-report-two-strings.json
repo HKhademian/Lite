@@ -1,11 +1,21 @@
 {
   "name": "report-two-strings",
-  "source": "001-004-report-two-strings.lts",
-  "stdout": {
-    "text": "a b\n"
+  "source": {
+    "file": "001-004-report-two-strings.lts",
+    "hash": "sha256:c4a8ea30ceafd62fa669acb79ba02e5bfd77f7852eda1375ad67723b9e0a5e24"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "a b\n",
+        "hash": "sha256:01186fcf04b4b447f393e552964c08c7b419c1ad7a25c342a0b631b1967d3a27"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

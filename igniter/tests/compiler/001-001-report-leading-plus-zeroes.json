@@ -1,11 +1,21 @@
 {
   "name": "report-leading-plus-zeroes",
-  "source": "001-001-report-leading-plus-zeroes.lts",
-  "stdout": {
-    "text": "42\n"
+  "source": {
+    "file": "001-001-report-leading-plus-zeroes.lts",
+    "hash": "sha256:058db78930ace60252625231a83d8a6158f92cc10d4e112b52ff8073f03cf0fb"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

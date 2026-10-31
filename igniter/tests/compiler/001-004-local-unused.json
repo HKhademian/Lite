@@ -1,11 +1,21 @@
 {
   "name": "local-unused",
-  "source": "001-004-local-unused.lts",
-  "stdout": {
-    "text": "42\n"
+  "source": {
+    "file": "001-004-local-unused.lts",
+    "hash": "sha256:2a5d20aafcb082563b8a2575e2356cbc4d67dda0845b4b870944a57990fbfa5d"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

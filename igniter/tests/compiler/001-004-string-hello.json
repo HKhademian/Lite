@@ -1,18 +1,28 @@
 {
   "name": "string-hello",
-  "source": "001-004-string-hello.lts",
-  "stdout": {
-    "bytes": [
-      104,
-      101,
-      108,
-      108,
-      111,
-      10
-    ]
+  "source": {
+    "file": "001-004-string-hello.lts",
+    "hash": "sha256:7160b6932ce320f35ca88b856d44711a22af83f20a49aeb5514da9da3f8cc5c4"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "bytes": [
+          104,
+          101,
+          108,
+          108,
+          111,
+          10
+        ],
+        "hash": "sha256:5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

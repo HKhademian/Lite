@@ -1,11 +1,21 @@
 {
   "name": "report-two-statements",
-  "source": "001-005-report-two-statements.lts",
-  "stdout": {
-    "text": "42\n9\n"
+  "source": {
+    "file": "001-005-report-two-statements.lts",
+    "hash": "sha256:dd3cb5871417c32bb581baa894a7a1fa1c7549b99bc395986e0e3c9e5c6c163c"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n9\n",
+        "hash": "sha256:99254a2bba5147ba6f1993f2c14626e16f2fe6af18382c08bfb955d222bff08a"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

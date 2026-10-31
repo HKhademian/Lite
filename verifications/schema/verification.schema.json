@@ -89,6 +89,14 @@
         "hash": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
         }
       },
       "oneOf": [
@@ -100,6 +108,11 @@
         {
           "required": [
             "text"
+          ]
+        },
+        {
+          "required": [
+            "bytes"
           ]
         }
       ]

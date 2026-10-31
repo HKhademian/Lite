@@ -1,11 +1,21 @@
 {
   "name": "report-crlf-spacing",
-  "source": "001-001-report-crlf-spacing.lts",
-  "stdout": {
-    "text": "-42\n"
+  "source": {
+    "file": "001-001-report-crlf-spacing.lts",
+    "hash": "sha256:f295dc5f0f828d1cdd2062c7cbb85659b96137dbffcb9de18115d2f7fe20b23a"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-42\n",
+        "hash": "sha256:012afc755e9b5f3c266526a8e42a581db2ebadaa9ce194fc26ba830a52912b6c"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

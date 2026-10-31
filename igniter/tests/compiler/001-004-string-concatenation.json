@@ -1,11 +1,21 @@
 {
   "name": "string-concatenation",
-  "source": "001-004-string-concatenation.lts",
-  "stdout": {
-    "text": "ab\n"
+  "source": {
+    "file": "001-004-string-concatenation.lts",
+    "hash": "sha256:efb1365288ca5407ac8e0e44c690c893ee439179ad022a69fa4f8eca17155dd8"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "ab\n",
+        "hash": "sha256:a63d8014dba891345b30174df2b2a57efbb65b4f9f09b98f245d1b3192277ece"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

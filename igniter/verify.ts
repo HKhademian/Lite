@@ -7,7 +7,7 @@ import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
-type Source = Readonly<{ file?: string; text?: string; hash?: string }>;
+type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
 type Scenario = Readonly<{
   name: string;
   args?: readonly string[];
@@ -211,11 +211,17 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
   if (record['kind'] !== kind) throw new Error(`${label}: kind must be ${kind}`);
   const id = text(record['id'], `${label}.id`);
   const sourceRecord = object(record['source'], `${label}.source`);
-  checkKeys(sourceRecord, ['file', 'text', 'hash'], `${label}.source`);
+  checkKeys(sourceRecord, ['file', 'text', 'bytes', 'hash'], `${label}.source`);
   const sourceFile = sourceRecord['file'] === undefined ? undefined : text(sourceRecord['file'], `${label}.source.file`);
   const sourceText = sourceRecord['text'] === undefined ? undefined : text(sourceRecord['text'], `${label}.source.text`);
-  if ((sourceFile === undefined) === (sourceText === undefined)) {
-    throw new Error(`${label}.source: expected exactly one of file or text`);
+  const sourceBytes = sourceRecord['bytes'] === undefined ? undefined : sourceRecord['bytes'];
+  if (sourceBytes !== undefined && (!Array.isArray(sourceBytes) || !sourceBytes.every(byte =>
+    typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255))) {
+    throw new Error(`${label}.source.bytes: expected an array of bytes`);
+  }
+  const sourceForms = [sourceFile, sourceText, sourceBytes].filter(form => form !== undefined);
+  if (sourceForms.length !== 1) {
+    throw new Error(`${label}.source: expected exactly one of file, text or bytes`);
   }
   if (sourceFile !== undefined && isAbsolute(sourceFile)) throw new Error(`${label}.source.file: expected a relative path`);
   const sourcePath = sourceFile === undefined ? undefined : resolve(dirname(file), sourceFile);
@@ -229,6 +235,7 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
   const source: Source = {
     ...(sourceFile === undefined ? {} : { file: sourceFile }),
     ...(sourceText === undefined ? {} : { text: sourceText }),
+    ...(sourceBytes === undefined ? {} : { bytes: sourceBytes as number[] }),
     ...(sourceHash === undefined ? {} : { hash: sourceHash }),
   };
   const names = strings(record['features'], `${label}.features`);
@@ -460,6 +467,7 @@ function writeManifest(item: Manifest, scenarios: readonly Scenario[], sourceHas
     source: {
       ...(item.source.file === undefined ? {} : { file: item.source.file }),
       ...(item.source.text === undefined ? {} : { text: item.source.text }),
+      ...(item.source.bytes === undefined ? {} : { bytes: item.source.bytes }),
       hash: sourceHash,
     },
     features: item.features,
@@ -547,10 +555,13 @@ function main(): void {
     if (selected.length === 0) continue;
     const failuresBefore = failures;
     const sourcePath = item.sourcePath;
-    const sourceBytes = sourcePath === undefined ? Buffer.from(item.source.text ?? '', 'utf8') : readFileSync(sourcePath);
+    const sourceBytes = sourcePath === undefined
+      ? (item.source.bytes === undefined ? Buffer.from(item.source.text ?? '', 'utf8') : Buffer.from(item.source.bytes))
+      : readFileSync(sourcePath);
     const sourceHash = hash(sourceBytes);
-    const source = (sourcePath === undefined ? item.source.text ?? '' : loadSource(sourcePath)) +
-      (item.append === undefined ? '' : `\n${item.append}`);
+    const source = (sourcePath === undefined
+      ? (item.source.bytes === undefined ? item.source.text ?? '' : Buffer.from(item.source.bytes).toString('utf8'))
+      : loadSource(sourcePath)) + (item.append === undefined ? '' : `\n${item.append}`);
     if (!options.update && item.source.hash !== sourceHash) {
       process.stdout.write(`FAIL ${item.id}: source hash changed; run ./lite verify --update\n`);
       failures += 1;

@@ -1,11 +1,21 @@
 {
   "name": "arithmetic-parentheses",
-  "source": "001-002-arithmetic-parentheses.lts",
-  "stdout": {
-    "text": "20\n"
+  "source": {
+    "file": "001-002-arithmetic-parentheses.lts",
+    "hash": "sha256:26edbacb25a3f3a1b85b6e9e2ee46d4bebeee1a3e0ad4bcc69e33806031d51e7"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "20\n",
+        "hash": "sha256:5378796307535df3ec8d8b15a2e2dc5641419c3d3060cfe32238c0fa973f7aa3"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

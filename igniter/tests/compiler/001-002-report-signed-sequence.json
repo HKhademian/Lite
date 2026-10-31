@@ -1,11 +1,21 @@
 {
   "name": "report-signed-sequence",
-  "source": "001-002-report-signed-sequence.lts",
-  "stdout": {
-    "text": "0\n-42\n100\n"
+  "source": {
+    "file": "001-002-report-signed-sequence.lts",
+    "hash": "sha256:dfe886365af880adc68350fee07bf239f2e437222dc17bcc86c56155a57266e4"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "0\n-42\n100\n",
+        "hash": "sha256:c923206a591cb1c250d5438335c2ddd6dddaa913c626e24d79a452fe14d7d2e0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

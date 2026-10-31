@@ -1,11 +1,21 @@
 {
   "name": "report-int-min",
-  "source": "001-001-report-int-min.lts",
-  "stdout": {
-    "text": "-9223372036854775808\n"
+  "source": {
+    "file": "001-001-report-int-min.lts",
+    "hash": "sha256:a56433725f80b8be41d3e91477922560897a33615000decc5f9010741e5b08c2"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "-9223372036854775808\n",
+        "hash": "sha256:6597fb5664deb37b5413ea87a2566ffb9da2fb1376d820e4a40dd30c05aa8b04"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

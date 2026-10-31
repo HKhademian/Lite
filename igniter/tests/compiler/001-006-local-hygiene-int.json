@@ -1,11 +1,21 @@
 {
   "name": "local-hygiene-int",
-  "source": "001-006-local-hygiene-int.lts",
-  "stdout": {
-    "text": "2\n"
+  "source": {
+    "file": "001-006-local-hygiene-int.lts",
+    "hash": "sha256:5444db71ec7f9c82aa5254160c2a37d463fb56125dee5ee935c95d747b679890"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "2\n",
+        "hash": "sha256:53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

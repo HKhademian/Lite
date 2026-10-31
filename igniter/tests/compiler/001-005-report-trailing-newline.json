@@ -1,11 +1,21 @@
 {
   "name": "report-trailing-newline",
-  "source": "001-005-report-trailing-newline.lts",
-  "stdout": {
-    "text": "42\n"
+  "source": {
+    "file": "001-005-report-trailing-newline.lts",
+    "hash": "sha256:cc799a376ca142d21da75b56b138ace671264ce2c21d468d438bd5ab6ad23e5e"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

@@ -1,11 +1,21 @@
 {
   "name": "report-multiline-spacing",
-  "source": "001-001-report-multiline-spacing.lts",
-  "stdout": {
-    "text": "42\n"
+  "source": {
+    "file": "001-001-report-multiline-spacing.lts",
+    "hash": "sha256:4754c771caa24e7989d5ae6f2ccec596dc90dce9c331aa280bc112e8a1eb600d"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "42\n",
+        "hash": "sha256:084c799cd551dd1d8d5c5f9a5d593b2e931f5e36122ee5c793c1d08a19839cc0"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

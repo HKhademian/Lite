@@ -1,11 +1,21 @@
 {
   "name": "local-missing-semicolon",
-  "source": "002-005-local-missing-semicolon.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-005-local-missing-semicolon.lts",
+    "hash": "sha256:e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8"
   },
-  "stderr": {
-    "text": "expected ; after local declaration x\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected ; after local declaration x\n",
+        "hash": "sha256:728ce3ec038c093561fb6d9df966a97a56a4f837f85b707303921cc24ad3db0a"
+      },
+      "exitCode": 2
+    }
+  ]
 }

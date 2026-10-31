@@ -1,11 +1,21 @@
 {
   "name": "call-statement",
-  "source": "002-001-call-statement.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-call-statement.lts",
+    "hash": "sha256:087136c86f7356f69d4a6d1726fe3d009dc1287260d818fe56e779cef94ac593"
   },
-  "stderr": {
-    "text": "expected := after local name system\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected := after local name system\n",
+        "hash": "sha256:cd8b7c9784a6a1790ff46da3880dcba5425fbfbe0b2780ae6c895e1224cf5ebf"
+      },
+      "exitCode": 2
+    }
+  ]
 }

@@ -1,11 +1,21 @@
 {
   "name": "report-missing-expression",
-  "source": "002-001-report-missing-expression.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-001-report-missing-expression.lts",
+    "hash": "sha256:1a2069cd197daea9bf7e4a445ad7efc8eca8768addf0a8ab2e10b7a25430d155"
   },
-  "stderr": {
-    "text": "expected an integer or string expression\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "expected an integer or string expression\n",
+        "hash": "sha256:8ca2cfb7d552d74ca352c8a93e266e55f0c2b53c3f0f9aeff6d3ebaa68587051"
+      },
+      "exitCode": 2
+    }
+  ]
 }

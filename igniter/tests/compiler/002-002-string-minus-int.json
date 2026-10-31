@@ -1,11 +1,21 @@
 {
   "name": "string-minus-int",
-  "source": "002-002-string-minus-int.lts",
-  "stdout": {
-    "text": ""
+  "source": {
+    "file": "002-002-string-minus-int.lts",
+    "hash": "sha256:1a2c224500587946a658aa3c2f0e11c60afeb28b4f68b6a94ad70aa19ba6b62d"
   },
-  "stderr": {
-    "text": "operator - requires Int operands\n"
-  },
-  "exitCode": 2
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "operator - requires Int operands\n",
+        "hash": "sha256:91d50791cc882e488a9b0f17733c782fa39b618ce88212739deb8141e3383c64"
+      },
+      "exitCode": 2
+    }
+  ]
 }

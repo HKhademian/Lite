@@ -1,11 +1,21 @@
 {
   "name": "string-percent-trigraph",
-  "source": "001-005-string-percent-trigraph.lts",
-  "stdout": {
-    "text": "%s ??/\n"
+  "source": {
+    "file": "001-005-string-percent-trigraph.lts",
+    "hash": "sha256:fd7f63036cc31bd1940f1edffd580ab181b9c16426ec5f73381983f5ab7a208a"
   },
-  "stderr": {
-    "text": ""
-  },
-  "exitCode": 0
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "%s ??/\n",
+        "hash": "sha256:5ee248218361b7cb3b04432908b5feaad1a85cde340e2377c1ce548b98e37297"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
 }

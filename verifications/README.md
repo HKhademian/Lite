@@ -28,7 +28,7 @@ verifications/
     showcases/                  # reserved; transcript manifests later
 ```
 
-Each manifest has a `source` object with exactly one of `file` or `text`.
+Each manifest has a `source` object with exactly one of `file`, `text` or `bytes`.
 Feature cases normally use a sibling `.lts`; artifacts use a relative file path.
 Inline `text` is available for tiny cases that need no imports. Manifest JSON uses the stream model from the
 compiler fixtures.
@@ -58,13 +58,13 @@ compiler fixtures.
 - `id` — unique manifest ID. Feature IDs use dotted names (`int.arithmetic`);
   artifact IDs use a kind prefix (`example.001-double-sum`).
 - `kind` — `feature`, `example`, `sample` or `showcase`; must match the directory.
-- `source` — exactly one of `file` (relative path) or `text` (inline source), plus an optional `hash`. Inline text cannot resolve `importFlatAll`; use a file for imports.
+- `source` — exactly one of `file` (relative path), `text` (inline source) or `bytes` (inline raw source), plus an optional `hash`. Inline source cannot resolve `importFlatAll`; use a file for imports.
 - `features` — feature IDs from `features.json`. A feature case includes its own ID.
 - `guideline` — required for `feature`; the one-line verification rationale.
 - `description` — optional artifact summary.
 - `append` — optional text appended to the source for observation. Used by
   samples whose teaching bodies print nothing.
-- `source.hash` — SHA-256 of the original source bytes (file bytes or UTF-8 text).
+- `source.hash` — SHA-256 of the original source bytes (`file`, UTF-8 `text` or raw `bytes`).
   Changed source fails verification until `--update` is reviewed.
 - `cases` — one or more scenarios:
   - `name` — unique within the manifest.
@@ -150,7 +150,7 @@ today `./lite verify --coverage` and `./lite test` are the local gates.
 ## Adding a case
 
 1. Add the `.lts` source.
-2. Add the manifest with id, kind, `source.file` or `source.text`, features,
+2. Add the manifest with id, kind, `source.file`/`source.text`/`source.bytes`, features,
    guideline/description and cases.
 3. Register a new feature in `features.json` if needed.
 4. Run `./lite verify --all --update`, review the generated streams/hash, then
