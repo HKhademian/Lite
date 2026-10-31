@@ -43,7 +43,7 @@ const verifications = resolve(root, 'verifications');
 const options = {
   update: false,
   coverage: false,
-  changed: false,
+  changed: true,
   cache: true,
   quiet: false,
   filter: undefined as string | undefined,
@@ -54,6 +54,7 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
   if (flag === '--update') options.update = true;
   else if (flag === '--coverage') options.coverage = true;
   else if (flag === '--changed') options.changed = true;
+  else if (flag === '--all') options.changed = false;
   else if (flag === '--no-cache') options.cache = false;
   else if (flag === '--quiet') options.quiet = true;
   else if (flag === '--filter') {
@@ -77,7 +78,7 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
 function usage(message?: string, code = 2): never {
   if (message !== undefined) process.stderr.write(`lite verify: ${message}\n`);
   const target = code === 0 ? process.stdout : process.stderr;
-  target.write('Usage: ./lite verify [--update] [--coverage] [--changed] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
+  target.write('Usage: ./lite verify [--all] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
   process.exit(code);
 }
 

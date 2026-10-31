@@ -82,15 +82,18 @@ The runner performs equivalent structural validation in
 ## Runner
 
 ```sh
-./lite verify            # verify all cases; CI mode
-./lite verify --update   # regenerate expected streams and source hashes
-./lite verify --coverage # report feature/artifact coverage without executing
-./lite verify --filter int.arithmetic
+./lite verify                    # only cases affected by git changes
+./lite verify --all              # all cases; cached
+./lite verify --all --update     # regenerate expected streams and hashes
+./lite verify --coverage         # coverage report without executing
+./lite verify --all --filter int.arithmetic
+./lite verify --all --shard 1/4  # one CI shard
 ```
 
 `--update` writes expected streams from the reference igniter, rewrites external
 stdout/stderr files in place, and refreshes source and stream hashes. Review the
 diff before committing; it is the only supported way to change expectations.
+It updates the selected set, so use `--all --update` for a complete refresh.
 
 `--filter` matches manifest IDs, paths or feature IDs.
 
@@ -106,25 +109,26 @@ The verifier is designed for a growing corpus, not a fixed 25 cases:
 - Passing results are cached in `.cache/verifications.json` (gitignored). The
   cache key includes the runner source hash, case source hash, expected streams,
   arguments and exit code. A runner or case change cannot reuse a stale pass.
-- `--changed` runs only manifests affected by the current `git status`:
+- The default runs only manifests affected by the current `git status`:
   changed source/manifest files, plus artifacts tagged with a changed feature.
   Changes to the igniter or verification machinery select everything. A clean
-  tree selects nothing; `--changed` is an inner-loop command, not a merge gate.
+  tree selects nothing; use `--all` for a complete gate. `--changed` remains an
+  explicit alias for the default.
 - `--shard i/n` deterministically partitions scenarios for CI workers.
 - `--no-cache` forces execution; `--quiet` suppresses per-case PASS lines.
 - Native compiler parity is a separate lane. Its builds are cached under
-  `.cache/native/` by C source, compiler version and flags. `npm run test:fast`
-  skips that lane; `npm test`/`npm run test:full` include it.
+  `.cache/native/` by C source, compiler version and flags. `./lite test --fast`
+  skips that lane; `./lite test` / `./lite test --full` include it.
 
 Target budgets:
 
 | Command | Scope | Target |
 |---|---|---|
-| `lite verify --changed` | affected scenarios | < 5s |
-| `lite verify` | all interpreter/artifact cases, warm cache | < 30s |
-| `npm run test:fast` | unit/interpreter/verification without native C | < 30s |
-| `npm run test:full` | full local gate, native builds cached | < 30s warm |
-| `lite verify --shard i/n` | one CI shard of the full matrix | bounded |
+| `lite verify` | affected scenarios | < 5s |
+| `lite verify --all` | all interpreter/artifact cases, warm cache | < 1s |
+| `lite test --fast` | unit/interpreter/verification without native C | ~15s |
+| `lite test` / `lite test --full` | full local gate, native builds cached | ~15s warm |
+| `lite verify --all --shard i/n` | one CI shard of the full matrix | bounded |
 
 At 10k+ cases, the default local lanes must not compile every native case.
 Feature/artifact verification remains in-process, full native coverage is
@@ -150,8 +154,8 @@ later step; today `./lite verify` is the local gate.
 3. Register a new feature in `features.json` if needed.
 4. Run `./lite verify --update`, review the generated streams/hash, then run
    `./lite verify`.
-5. Run `npm test` from `igniter/`; the suite includes verification and coverage
-   checks.
+5. Run `./lite test` from the repository root; the suite includes verification
+   and coverage checks. Use `./lite test --fast` for the no-native lane.
 
 Feature cases are deliberately independent of examples. Do not use an example
 as the only verification for a language feature, and do not make a feature case

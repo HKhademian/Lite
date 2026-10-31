@@ -245,15 +245,17 @@ self-rebuild remain open. See
 and the [fixture schema](../igniter/tests/README.md).
 
 Current CLI entry points are `./lite run`, `./lite check`, `./lite compile`,
-`./lite verify`, `./lite docs` and `./lite help`; compiler aliases are `./ltc`
-and `./litec`. Linker, formatter and tester names are reserved but
+`./lite verify`, `./lite test`, `./lite docs` and `./lite help`; compiler aliases
+are `./ltc` and `./litec`. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
+
 Feature and artifact verification lives in `verifications/`; `./lite verify`
-runs 17 feature cases and the first 8 artifact manifests, with `--update`,
-`--coverage`, `--filter`, `--changed`, `--shard i/n`, `--no-cache` and `--quiet`.
-Passing cases are cached; `--changed` selects affected cases for the inner loop,
-and sharding supports a growing corpus. See the
-[verification guide](../verifications/README.md).
+runs cases affected by git changes, while `./lite verify --all` runs all 17
+feature cases and the first 8 artifact manifests. `--update`, `--coverage`,
+`--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing
+cases are cached. `./lite test --fast` runs unit/interpreter/verification without
+native C; `./lite test` or `./lite test --full` runs the full local gate with
+cached native builds. See the [verification guide](../verifications/README.md).
 
 The two emitter sources moved out of `examples/` into
 [`compiler/`](../compiler/README.md); they are compiler implementation, not

@@ -8,11 +8,11 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test test.ts",
+    "test": "../lite test",
     "run": "node cli.ts",
-    "test:fast": "LITE_SKIP_NATIVE=1 node --test test.ts",
-    "test:full": "node --test test.ts",
-    "verify": "node verify.ts"
+    "test:fast": "../lite test --fast",
+    "test:full": "../lite test --full",
+    "verify": "../lite verify --all"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

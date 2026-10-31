@@ -47,9 +47,20 @@ without executing or reading stdin:
 ```sh
 ./lite check examples/001-double-sum.lts
 ./lite run --check examples/001-double-sum.lts
+```
+
+Install and typecheck the igniter once:
+
+```sh
 npm --prefix igniter ci
 npm --prefix igniter run check
-npm --prefix igniter test
+```
+
+Run tests through the CLI:
+
+```sh
+./lite test --fast   # no native C lane
+./lite test          # full local gate; cached native builds
 ```
 
 The root [lite launcher](../lite) is an executable POSIX shell script. It forwards
@@ -587,7 +598,7 @@ Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
 first slice has 17 feature cases and 8 artifact manifests. Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
-`npm run test:fast` skips the native C lane; `npm test` / `npm run test:full`
+`./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a
 warm cache.
 

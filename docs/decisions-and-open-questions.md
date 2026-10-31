@@ -8,8 +8,10 @@ Feature verifications are selected as the canonical semantic contract, separate
 from examples, samples and showcases, which are verified consumers. The new
 `verifications/` tree holds a JSON schema, a 17-feature registry and canonical
 cases; `igniter/verify.ts` and `./lite verify` run them through the reference
-igniter, with `--update` regenerating expected streams/source hashes, `--coverage`
-reporting coverage and `--filter` selecting manifests. Passing results are cached
+igniter; the default verifies only git-affected cases, while `--all` runs
+everything. `--update` regenerates expected streams/source hashes, `--coverage`
+reports coverage and `--filter` selects manifests. `./lite test --fast` runs the
+no-native test lane; `./lite test`/`--full` runs the full local gate. Passing results are cached
 by runner/source/expectation hash; `--changed` selects affected cases for fast
 feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
 one of `file` or `text` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or
@@ -49,7 +51,7 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter and tester names are reserved but unimplemented; the verifier has a first slice. The 41 program and 34 rejection verification cases are unchanged in
+formatter is reserved but unimplemented; the verifier and tester have first slices. The 41 program and 34 rejection verification cases are unchanged in
 behavior; 161 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the

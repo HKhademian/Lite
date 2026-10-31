@@ -53,14 +53,21 @@ adding `report` calls to the lesson body.
 
 [`igniter/verify.ts`](../igniter/verify.ts) is exposed as `./lite verify`:
 
-- default: run every case through the reference igniter, verify source/stream hashes, compare exact streams
-  and exit codes, and fail on source-hash drift; passing results are cached;
+- default: run cases affected by the current git status through the reference
+  igniter, verify source/stream hashes, compare exact streams and exit codes, and
+  fail on drift; passing results are cached;
+- `--all`: run every case instead of the affected set;
 - `--update`: regenerate expected streams/hashes for review;
 - `--coverage`: report feature/artifact coverage without executing;
 - `--filter <id-or-path>`: select manifests;
-- `--changed`: select cases affected by the current git status;
+- `--changed`: explicit alias for the default affected set;
 - `--shard i/n`: deterministic CI sharding;
 - `--no-cache`/`--quiet`: execution and output controls.
+
+Test access is also CLI-only:
+
+- `./lite test --fast` — unit/interpreter/verification, no native C;
+- `./lite test` / `./lite test --full` — full local gate with cached native builds.
 
 The runner validates the feature registry, manifest structure, source file/text
 fields, feature references, stream forms and duplicate IDs. It is the local gate; CI
@@ -84,7 +91,7 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Evidence
 
-- All 25 scenarios pass `./lite verify`.
+- All 25 scenarios pass `./lite verify --all`.
 - `./lite verify --coverage` reports 17/17 features, 5/19 examples, 3/20
   samples and 0 showcases.
 - All **161 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
@@ -99,9 +106,9 @@ unchanged. Feature cases remain separate from the sample text.
   later steps.
 - Coverage is informational, not yet blocking. Most examples and samples still
   have no manifest, and there are no showcase manifests or transcripts.
-- No CI workflow or pre-commit integration exists yet; `./lite verify` must be
-  run explicitly. Local budgets are documented in the verification README
-  (`--changed` inner loop, full lane with warm cache, sharded CI).
+- No CI workflow or pre-commit integration exists yet; `./lite verify` and
+  `./lite test` must be run explicitly. Local budgets are documented in the
+  verification README (affected inner loop, full lane with warm cache, sharded CI).
 - `--update` rewrites expectations from the current reference implementation;
   review is required and is not automated.
 - `append` concatenates source text for observation; it cannot add declarations

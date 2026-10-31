@@ -23,9 +23,9 @@ prototypes are not a full/self-hosted compiler.
 
 Tool entry points follow one naming matrix: compiler `./ltc`, `./litec` or
 `./lite compile`; runner `./lite run`; checker `./lite check`. Linker
-(`./ltl`/`./lite link`), formatter (`./lite fmt`) and tester (`./lite test`)
-names are reserved but not implemented. The verifier is `./lite verify`; docs are
-`./lite docs`; help is `./lite help`. See
+(`./ltl`/`./lite link`) and formatter (`./lite fmt`) names are reserved but not
+implemented. The verifier is `./lite verify`; the tester is `./lite test`; docs
+are `./lite docs`; help is `./lite help`. See
 [tool naming](docs/versioning-and-naming.md#1-canonical-names).
 
 - [Language documentation and reading order](docs/README.md)

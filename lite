@@ -10,12 +10,13 @@ usage() {
     printf '%s\n' '  run [--check] file.lts [-- argument ...]  Run a Lite source'
     printf '%s\n' '  check file.lts                            Check source only'
     printf '%s\n' '  compile --target ts|c file.lts            Compile to TS or C'
-    printf '%s\n' '  verify [--update|--coverage|--changed]    Run verification cases'
+    printf '%s\n' '  verify [--all|--update|--coverage]        Verify changed cases (--all for everything)'
+    printf '%s\n' '  test [--fast|--full]                      Run the project test suite'
     printf '%s\n' '  docs                                      Show documentation paths'
     printf '%s\n' '  help                                      Show this help'
     printf '%s\n' ''
     printf '%s\n' 'Compiler entry points: ./ltc, ./litec, ./lite compile'
-    printf '%s\n' 'Reserved names: ./ltl/lite link, lite fmt, lite test'
+    printf '%s\n' 'Reserved names: ./ltl/lite link, lite fmt'
 }
 
 docs() {
@@ -53,6 +54,26 @@ case "${1-}" in
     verify)
         shift
         exec node "$lite_dir/igniter/verify.ts" "$@"
+        ;;
+    test)
+        shift
+        test_mode=full
+        case "${1-}" in
+            --fast) test_mode=fast; shift ;;
+            --full) test_mode=full; shift ;;
+            "") ;;
+            *) printf '%s\n' "lite test: unknown option $1" >&2; exit 2 ;;
+        esac
+        if [ "$#" -ne 0 ]; then
+            printf '%s\n' 'Usage: ./lite test [--fast|--full]' >&2
+            exit 2
+        fi
+        cd "$lite_dir/igniter" || exit 1
+        if [ "$test_mode" = fast ]; then
+            LITE_SKIP_NATIVE=1 exec node --test test.ts
+        else
+            exec node --test test.ts
+        fi
         ;;
     check)
         shift

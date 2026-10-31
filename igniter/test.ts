@@ -182,6 +182,7 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   assert.equal(help.error, undefined); assert.equal(help.status, 0);
   assert.match(help.stdout, /Usage: \.\/lite <command>/);
   assert.match(help.stdout, /Compiler entry points: \.\/ltc, \.\/litec, \.\/lite compile/);
+  assert.match(help.stdout, /test \[--fast\|--full\]/);
   assert.equal(help.stderr, '');
   const docs = spawnSync(join(root, 'lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(docs.error, undefined); assert.equal(docs.status, 0);
@@ -197,7 +198,7 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),
     LITE_VERIFY_CACHE: join(directory, 'cache.json') };
   try {
-    const verified = spawnSync(join(root, 'lite'), ['verify', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
+    const verified = spawnSync(join(root, 'lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
@@ -207,16 +208,16 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.match(covered.stdout, /features: 17 registered, 17 cases/);
     assert.match(covered.stdout, /examples: 5\/19 manifests/);
     assert.match(covered.stdout, /samples: 3\/20 manifests/);
-    const first = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'],
+    const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
     assert.match(first.stdout, /verification passed: \d+ executed, 0 cached/);
-    const second = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'],
+    const second = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(second.error, undefined); assert.equal(second.status, 0, second.stderr);
     assert.match(second.stdout, /verification passed: 0 executed, \d+ cached/);
     assert.match(second.stdout, /\(cached\)/);
-    const sharded = spawnSync(join(root, 'lite'), ['verify', '--shard', '1/2', '--no-cache'],
+    const sharded = spawnSync(join(root, 'lite'), ['verify', '--all', '--shard', '1/2', '--no-cache'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(sharded.error, undefined); assert.equal(sharded.status, 0, sharded.stderr);
     assert.match(sharded.stdout, /verification passed: \d+ executed, 0 cached/);
