@@ -40,7 +40,7 @@ Scopes** to inspect highlighting.
 
 `npm test` uses VS Code's TextMate tokenizer and Oniguruma engine, including exact
 raw-fence counts, nested comments, multiline strings, keyword boundaries and
-ordinary source files. The package ships only the manifest, grammar, language
+all project samples, including the indexed FVP demonstrations. The package ships only the manifest, grammar, language
 configuration and this guide; testing/packaging dependencies are development-only.
 
 Source contracts in the repository: `docs/lexical-structure.md`,

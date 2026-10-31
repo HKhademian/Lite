@@ -9,6 +9,19 @@ conformance. Exercises 021–520 remain planned; no native compiler exists.
 
 The `.lts` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
 
+## FVP example organization, 2026-10-31
+
+The user requests that implementation demonstrations live with the project's
+examples and have numbered names. The five former igniter examples now live
+under [samples/fvp](fvp/README.md) as 001-double-sum.lts through
+005-scan-arithmetic.lts. This local sequence leaves exercise IDs 001–520 intact.
+Source bodies are unchanged; tests, run commands, investigation links and the
+editor preview/discovery paths follow the new locations. Implementation-private
+unit-test cases stay in the igniter test file. New demonstrations should join
+the project sample collection with an indexed name and a guide entry.
+Relocation does not approve the experimental text helpers or change lesson
+verification status.
+
 ## Source file kind migration
 
 Selected 2026-10-30: these introductory scripts use .lts; module-based source

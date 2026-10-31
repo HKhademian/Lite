@@ -2,13 +2,22 @@
 
 520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions, **implemented but unverified**; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
 
+Runnable implementation demonstrations are indexed separately in
+[samples/fvp](fvp/README.md), within the same project sample collection. Their
+local numbering does not replace or renumber these exercise IDs.
+
 ## Starting conditions
 
 The [selected initial correctness batch](NOTES.md#initial-correctness-batch) is
 001–020, exercised incrementally as features become executable. All 520 entries
 remain a growth catalog rather than a completion gate for the tiny demonstrator.
 
-The repository is currently a language-design workspace, with no implemented compiler, runtime, or standard library. The syntax and contracts in the [language reference](../docs/README.md) include open proposals. These are learning and design experiments, not claims that the programs can run today. In particular, do not assume existing printing, input, string indexing, collection methods, math functions, filesystem APIs, or generic syntax.
+The repository has a limited [experimental interpreter](../igniter/README.md);
+the wider language and standard library remain design work, with no native or
+self-hosted compiler. The [language reference](../docs/README.md) includes open
+proposals. This exercise catalog does not claim every program runs today.
+Check the interpreter's documented subset before relying on I/O, text operations,
+collection methods, math functions, filesystem APIs, or generic syntax.
 
 - Keep every script self-contained: supplied inputs, any local helpers, and a solution. Use a short problem statement and expected answers to make it readable. Keep verification and design notes separate from the lesson. No manifest, imports from other samples, or third-party dependencies should be necessary.
 - Begin with fixed inputs and a computed result. Console input and printing are optional extensions once host I/O exists; they are not prerequisites for arithmetic lessons.

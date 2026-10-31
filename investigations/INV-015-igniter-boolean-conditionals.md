@@ -45,7 +45,7 @@ with TypeScript 7.0.2. New cases cover:
 - every negated comparison, exact large Int comparisons, and equality types;
 - unselected branch checking, malformed bodies, and unsupported conditional forms.
 
-The runnable example [decisions.lts](../igniter/examples/decisions.lts) accepts an
+The runnable example [decisions.lts](../samples/fvp/002-decisions.lts) accepts an
 integer, reports its sign, tests a range, and guards division from zero. Existing
 lesson sources remain unchanged. This is actual narrow interpreter evidence,
 not a complete language or self-hosted compiler result.

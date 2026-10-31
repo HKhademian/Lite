@@ -5,7 +5,7 @@
       "name": "Preview Lite highlighting",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/../../igniter/examples/factorial.lts"]
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/../../samples/fvp/004-factorial.lts"]
     }
   ]
 }

@@ -22,7 +22,7 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
 }
 
 test('first checkpoint: stdin integers, mutation, arithmetic and explicit report', () => {
-  const code = readFileSync(new URL('./examples/double-sum.lts', import.meta.url), 'utf8');
+  const code = readFileSync(new URL('../samples/fvp/001-double-sum.lts', import.meta.url), 'utf8');
   assert.deepEqual(run(code, '7\n5\n'), { code: 0, output: '24\n', errors: '' });
   assert.equal(run(code.replace('report(total);', ''), '7\n5\n').output, '');
 });
@@ -148,7 +148,7 @@ test('only the selected branch executes; action conditionals may omit else', () 
   assert.equal(run('if true { report(3); } else { report(inputInt()); }').output, '3\n');
   assert.equal(run('if false { exit(5); } report(8);').output, '8\n');
   assert.equal(run('if true { exit(5); } report(8);').code, 5);
-  const code = readFileSync(new URL('./examples/decisions.lts', import.meta.url), 'utf8');
+  const code = readFileSync(new URL('../samples/fvp/002-decisions.lts', import.meta.url), 'utf8');
   assert.equal(run(code, '0').output, 'zero\nbetween zero and nine\n');
   assert.equal(run(code, '5').output, 'positive\nbetween zero and nine\nquotient exceeds five\n');
 });
@@ -252,7 +252,7 @@ test('program exit and runtime faults propagate through nested loops', () => {
   fault('loop { report(inputInt()); }', 'InputFault', '');
 });
 test('sentinel-input sum example runs through the real CLI', () => {
-  const example = new URL('./examples/sum-positive.lts', import.meta.url);
+  const example = new URL('../samples/fvp/003-sum-positive.lts', import.meta.url);
   const source = readFileSync(example, 'utf8');
   assert.equal(run(source, '3 -2 4 0').output, '7\n');
   assert.equal(run(source, '0').output, '0\n');
@@ -396,7 +396,7 @@ test('invalid signatures, captures, forward references and unsupported forms fai
     'f := fn(n: Int): Int { n } f(n=2);']) fault(code, 'SourceError');
 });
 test('factorial example runs through real CLI with checked results and failures', () => {
-  const example = new URL('./examples/factorial.lts', import.meta.url);
+  const example = new URL('../samples/fvp/004-factorial.lts', import.meta.url);
   const source = readFileSync(example, 'utf8');
   assert.equal(run(source, '0').output, '1\n');
   assert.equal(run(source, '5').output, '120\n');
@@ -478,7 +478,7 @@ test('a Lite function can scan and reconstruct text recursively with the tempora
     report(reverse("a🙂ب")); report(reverse(""));`).output, 'ب🙂a\n\n');
 });
 test('Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection', () => {
-  const source = readFileSync(new URL('./examples/scan-arithmetic.lts', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../samples/fvp/005-scan-arithmetic.lts', import.meta.url), 'utf8');
   assert.equal(run(source, '12 + (003 * 4)\n').output,
     'number: 12\nsymbol: +\nsymbol: (\nnumber: 003\nsymbol: *\nnumber: 4\nsymbol: )\n');
   assert.equal(run(source, '123').output, 'number: 123\n');
@@ -490,7 +490,7 @@ test('Lite arithmetic tokenizer handles final digits, whitespace, punctuation an
 });
 test('real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations', () => {
   const cli = new URL('./cli.ts', import.meta.url).pathname;
-  const example = new URL('./examples/scan-arithmetic.lts', import.meta.url).pathname;
+  const example = new URL('../samples/fvp/005-scan-arithmetic.lts', import.meta.url).pathname;
   for (const [input, status, output, errors] of [
     ['12 + 30', 0, 'number: 12\nsymbol: +\nnumber: 30\n', ''],
     ['🙂', 2, '', 'unsupported symbol: 🙂\n'],

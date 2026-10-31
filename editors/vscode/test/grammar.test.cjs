@@ -108,14 +108,19 @@ test('unfinished comments and multiline strings stay open without guessing a ter
   const rows = await tokenize('"open\nreport(1);');
   has(rows, 1, 'report', 'string.quoted.double.lite');
 });
-test('tokenize every current lesson and igniter example using the real TextMate engine', async () => {
+test('tokenize all project samples, including indexed FVP demonstrations, using the real TextMate engine', async () => {
   let files = 0;
-  for (const dir of [path.join(root, '../../samples'), path.join(root, '../../igniter/examples')]) {
-    for (const name of readdirSync(dir).filter(name => /\.lts?$/.test(name))) {
-      const rows = await tokenize(readFileSync(path.join(dir, name), 'utf8'));
-      assert.ok(rows.length > 0, name);
-      files++;
+  async function visit(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) await visit(file);
+      else if (entry.isFile() && /\.lts?$/.test(entry.name)) {
+        const rows = await tokenize(readFileSync(file, 'utf8'));
+        assert.ok(rows.length > 0, file);
+        files++;
+      }
     }
   }
+  await visit(path.join(root, '../../samples'));
   assert.ok(files >= 25, `expected lessons and examples, got ${files}`);
 });
