@@ -537,10 +537,10 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.25**, tag **igniter-v0.1.0-alpha.25**, lowers Int floor
-division and floor modulo (`:/`, `:%`) in the restricted TS/C compiler, adds a
-four-way compiler fixture and runs the floor feature case through the igniter,
-TS and C targets. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.26**, tag **igniter-v0.1.0-alpha.26**, implements the
+subjectless Boolean `match` form: first-true arm selection, a required final `_`
+fallback, action/value arms, and the current same-result-type limitation.
+Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -587,7 +587,9 @@ TS and C targets. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.24**, commit `99e16c3`: right-associative Float-default power with explicit negative-base grouping.
 
-- **igniter-v0.1.0-alpha.25**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.25**, commit `3eebdde`: restricted TS/C floor division and floor modulo lowering.
+
+- **igniter-v0.1.0-alpha.26**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
