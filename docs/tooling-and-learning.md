@@ -6,6 +6,18 @@ Status: **official formatter required; compact/multiline presentation, unchanged
 
 Students should spend their early effort understanding programs rather than choosing build tools or interpreting parser jargon.
 
+## Small VS Code highlighter
+
+Requested and implemented **2026-10-31**: a local declarative
+[Lite extension](../editors/vscode/README.md) recognizes .lt/.lts files and colors
+existing lexical forms using the editor's theme. It includes nested/raw comments,
+multiline strings, basic numbers, keywords/operators, type names and ordinary calls.
+It has no extension runtime, formatter, runner or language server. Colorization is
+approximate and does not validate code, choose open grammar rules, or approve
+experimental builtins. See [INV-072 evidence](../investigations/INV-072-vscode-highlighter.md).
+
+## FVP direction
+
 The [selected first working targets](principles.md#first-working-targets) call
 for a tiny executable demonstrator before practical scripting. A small interpreter
 is selected for the FVP, with TypeScript/Node as the minimal igniter and early LiteLang

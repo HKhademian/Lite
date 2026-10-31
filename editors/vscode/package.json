@@ -1,0 +1,32 @@
+{
+  "name": "lite",
+  "displayName": "Lite",
+  "description": "Small syntax highlighter for Lite .lt and .lts files.",
+  "version": "0.1.0",
+  "publisher": "lite-local",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lite",
+        "aliases": ["Lite", "lite"],
+        "extensions": [".lt", ".lts"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      { "language": "lite", "scopeName": "source.lite", "path": "./syntaxes/lite.tmLanguage.json" }
+    ]
+  },
+  "scripts": {
+    "test": "node --test test/grammar.test.cjs",
+    "package": "vsce package --no-dependencies --allow-missing-repository --skip-license --out lite-0.1.0.vsix"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "4.1.0",
+    "vscode-oniguruma": "2.0.1",
+    "vscode-textmate": "9.3.2"
+  }
+}

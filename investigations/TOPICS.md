@@ -967,7 +967,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Teaching proposal, 2026-10-30:** [INV-072.05](SUBTOPICS.md#inv-072-05) inventories a final-binding run flag and marked inspection points. Detailed investigation not started; no flag/mark syntax or debugger implementation is selected, and this is not an FVP gate.
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (editor-highlighter scope only); contributor: redacted (agent-assisted); note: [INV-072 — small VS Code highlighter](INV-072-vscode-highlighter.md) — user-requested local .lt/.lts highlighting using existing syntax; no new language feature, semantic checker, formatter, runner or debugger. Other tooling/diagnostic questions remain open.
 
 <a id="inv-073"></a>
 

@@ -12,6 +12,7 @@ for setup, strict typechecking, tests, supported behavior, and limitations.
 The wider language remains a design draft; there is no native or self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
+- [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)
 - [First working targets](docs/principles.md#first-working-targets): the small interpreter implements the first experimental checkpoint; practical scripts, wider features, and native compilation follow.
