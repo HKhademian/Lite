@@ -1182,6 +1182,9 @@ test('floor division, floor modulo and compound updates follow documented signs'
   assert.equal(run('var x := 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 3; report(x);').output, '0\n');
   assert.equal(run('var s := "a"; s += "b"; report(s);').output, 'ab\n');
   assert.equal(run('var y := -7; y :/= 2; report(y); y :%= 3; report(y);').output, '-4\n2\n');
+  assert.equal(run('a := 7; report(a:/2); report(a :/ 2); report(a:%2); report(a :% 2);').output,
+    '3\n3\n1\n1\n');
+  assert.equal(run('var b := 7; b:/=2; report(b); b:%=2; report(b);').output, '3\n1\n');
   fault('report(5 :/ 0);', 'ArithmeticPanic');
   fault('report(5 :% 0);', 'ArithmeticPanic');
   fault('report(5.0 :/ 2.0);', 'TypeError');

@@ -200,7 +200,7 @@ enabled = not enabled;
 
 ## Notes and open decisions
 
-The user selects /, :/, %, and :% and requests named methods in addition, including a.plus(b), a.div(b), and a.floorDiv(b). Working div/rem/floorDiv/mod names follow the matching operations. Complete signatures/dispatch remain open; colon-prefixed operator scanning is unambiguous under the retained compact/spaced equivalence requirement. See [the selected family](arithmetic-methods-and-division-revision.md); future infix methods remain deferred.
+The user selects /, :/, %, and :% and requests named methods in addition, including a.plus(b), a.div(b), and a.floorDiv(b). Working div/rem/floorDiv/mod names follow the matching operations. Complete signatures/dispatch remain open; `a:/b` has exactly one reading, `a :/ b`, while the retired `a_/b` could be read as `a_ / b` or `a _/ b`. See [the selected family](arithmetic-methods-and-division-revision.md); future infix methods remain deferred.
 
 Ordering and equality support for user-defined types, reference identity, floating-point comparison details, exact arithmetic fault cases and payloads, noninteger remainder, bitwise operators, and short-circuit update forms remain open. Basic arithmetic faults use typed panics, not returned `Result` errors; target-level `else` with typed filters supports local recovery. `and` and `or` are intended to short-circuit, but their complete effect and overload rules need specification. See [arithmetic fault boundaries](arithmetic-faults.md).
 

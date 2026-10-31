@@ -88,8 +88,12 @@ a:%b;   /* a, :%, b */
 a :% b; /* a, :%, b */
 ```
 
-`a_b` and `a_ b` retain their ordinary identifier meanings. Standalone `_`
-remains an ordinary readable name under its existing contract.
+This also settles the old `a_/b` ambiguity. The retired underscore spelling had
+two competing readings, `a_ / b` (identifier `a_` then division) and `a _/ b`
+(value `a` then floor division). The colon form has exactly one reading:
+`a:/b` and `a :/ b` both mean `a`, `:/`, `b`. `a_b` and `a_ b` retain their
+ordinary identifier meanings, and standalone `_` remains an ordinary readable
+name under its existing contract.
 
 The corresponding update family is `/=`, `:/=`, `%=`, and `:%=`. Once the
 operator boundary is established, recognize a complete longer update token

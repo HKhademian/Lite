@@ -39,7 +39,7 @@ Selected 2026-10-24: a complete ordinary Boolean expression or condition may sta
 
 ## Selected colon-prefixed floor operators
 
-The selected floor operators are `:/` and `:%`, alongside contextual `/` and remainder `%`. Compact and spaced forms agree: `a:/b` and `a:%b` tokenize as the name `a` plus the colon-prefixed operator, with no identifier conflict or mandatory-space rule. This symbol selection does not introduce `//` line comments. See [the selected arithmetic family](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+The selected floor operators are `:/` and `:%`, alongside contextual `/` and remainder `%`. Compact and spaced forms agree: `a:/b` has exactly one reading, `a` + `:/` + `b`, and `a:%b` reads `a` + `:%` + `b`; no identifier conflict or mandatory-space rule exists. The retired `a_/b` spelling could instead read as `a_` + `/` or `a` + `_/`, which is why the colon prefix was chosen. This symbol selection does not introduce `//` line comments. See [the selected arithmetic family](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 
 ## Identity leading plus
 

@@ -94,7 +94,7 @@ Identifier normalization must not silently establish a normalization rule for st
 
 ## Open decisions
 
-- The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` tokenizes as `a` followed by `:/`; there is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+- The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` has exactly one reading, `a` followed by `:/` and `b`; the retired `a_/b` could read as `a_ / b` or `a _/ b`. There is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 - Pin the Unicode version and complete the identifier profile.
 - Confirm case sensitivity and normalization behavior.
 - Define any restrictions on format-control characters and any identifier escaping syntax.
