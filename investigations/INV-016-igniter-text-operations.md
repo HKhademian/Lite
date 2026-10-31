@@ -2,7 +2,7 @@
 
 Status: waiting for input (implemented experiment; new helpers await explicit consent)
 Contributor: redacted (agent-assisted)
-Last updated: 2026-10-30
+Last updated: 2026-10-31
 Catalog brief: [INV-016](TOPICS.md#inv-016)
 Covered scope: computed concatenation and temporary text-scanning helpers.
 
@@ -82,3 +82,47 @@ Preserve this source as igniter-v0.1.0-alpha.5; alpha.1–alpha.4 stay fixed.
 Collections/structured data and file I/O remain practical gaps for a Lite-written
 compiler. No native compiler, self-hosted successor, or verified forward rebuild
 chain exists yet. Extend the actual bootstrap compatibility map when one does.
+
+## Focused consent review, 2026-10-31
+
+The approved List<T> slice now supplies runtime-sized token storage. The next
+bounded scanner example could retain named token tuples rather than report each
+token immediately. That storage is implemented; text scanning still depends on
+the three unapproved helpers above. This is a concrete next experiment, not a
+claim that this tokenizer or its APIs are required for every compiler approach.
+
+Recommend accepting the existing experiment as temporary FVP runner helpers with
+these exact contracts, leaving the wider text profile deferred:
+
+- textLength(text) takes one String and returns an Int code-point count.
+- textAt(text, index) takes String/Int and returns a one-code-point String.
+- textSlice(text, start, end) takes String/Int/Int and returns the half-open
+  code-point interval. An empty interval is valid, including at the end.
+
+These parameter names explain the positional contract; they do not select public
+named arguments. Keep them as temporary runner bindings, with existing helper
+shadowing and before-effects arity/type checks. Arguments evaluate once in
+written order before bounds checking. Invalid indices/intervals use the existing
+terminal BoundPanic diagnostic, without clamping, negative wrapping or retries.
+
+For example, the proposed temporary interpretation is:
+
+```text
+report(textLength("A🙂B"));     /* 3 */
+report(textAt("A🙂B", 1));      /* 🙂 */
+report(textSlice("A🙂B", 1, 2)); /* 🙂 */
+```
+
+A combining mark counts separately from its base letter. Joined emoji may span
+several positions. This does not choose grapheme positions, normalization, a
+new Char type, ordinary String bracket indexing or a native String layout.
+The current host implementation materializes code points per operation and may
+scan repeatedly; no optimization or constant-time access is promised. The
+detailed encoding/literal/Unicode/profile proposal remains deferred.
+
+The existing helper tests, including combining/supplementary text, positional
+bounds and evaluation order, still pass in the current 120-group interpreter
+suite. This is implementation evidence only. Approval of lists and operation
+names does not supply consent for these helpers. No new scanner example or
+language implementation is added by this review; wait for the explicit helper
+decision before building on the experiment.

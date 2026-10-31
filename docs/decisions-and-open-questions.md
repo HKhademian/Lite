@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Next scanner consent boundary, 2026-10-31
+
+After approved list delivery and the input-history example, the next retained-token
+scanner would depend on the unapproved textLength/textAt/textSlice experiment.
+INV-016 presents their exact existing positional code-point contracts, empty
+interval/bounds behavior and terminal BoundPanic policy for explicit consent.
+No helper is selected and no new scanner is implemented by this review. The
+full text/Unicode/profile investigation remains deferred. See
+[the focused review](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31).
+
 ## Approved FVP list delivery, 2026-10-31
 
 The user replies "Approve this FVP list slice" to the concrete proposal committed

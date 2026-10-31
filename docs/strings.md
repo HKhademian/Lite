@@ -51,6 +51,12 @@ The newline inside the quotes is data. The working direction preserves literal c
 
 ## Notes
 
+The next [focused FVP review](../investigations/INV-016-igniter-text-operations.md#focused-consent-review-2026-10-31)
+asks whether to accept the existing textLength/textAt/textSlice experiments as
+temporary positional code-point helpers with terminal bounds faults. They remain
+unapproved. This review does not settle ordinary String indexing, graphemes,
+normalization, native representation or the deferred complete text profile.
+
 String literal patterns test the whole string through its ordinary equality contract. Existing text uses == expectedText. Neither spelling implies regex, substring, case-folding, or normalization operations. Unicode equality details remain a String contract, not a special pattern conversion.
 
 The [pattern review](pattern-type-review.md#8-strings-and-characterbyte-views) recommends explicit byte/scalar/grapheme views before sequence matching. A proposed [list pattern](sequence-patterns.md) must not silently choose one text unit or treat every string as a list.
