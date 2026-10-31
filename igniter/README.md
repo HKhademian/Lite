@@ -288,6 +288,55 @@ adaptation, aliases or uninitialized typed storage are implemented here. See
 [011](../examples/011-tuple-label-conversion.lts) and
 [INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
 
+### Growable lists
+
+The approved INV-055 slice accepts List<T> for this builtin family, with existing
+scalar or flat scalar tuple T. Construct a list at an explicitly typed declaration:
+
+```text
+values: mut List<Int> = [1, 2];
+saved := values;
+push_front(mut values, 0);
+push_back(mut values, 3);
+report(pop_front(mut values), pop_back(mut values));
+loop saved as value { report(value); }
+```
+
+Output is 0 3, then 1, then 2 on separate lines. A typed empty literal such as
+values: mut List<Int> = [] gets its element contract from the destination;
+uncontextual nonempty literals still infer fixed arrays and bare [] inference
+remains unsupported. Exact element contracts, including tuple labels, are checked.
+Stored list copies and ordinary List<T> function inputs/results retain evaluated
+sequence values under later source mutation. Construct contextual literals only
+at explicit receiving declarations in this subset; other fresh-literal contexts
+remain unsupported. Read with Int bracket indices and traverse with the existing
+action loop. Runtime lists have no fixed numeric dot positions.
+
+The four selected operations are temporary positional runner bindings: pushes
+require mut target plus one element and return Unit; pops require mut target and
+return an element. A declaration with : mut List<T> permits held-data mutation;
+var separately permits whole-binding replacement. Plain inferred copies and
+ordinary function parameters receive no write grant. A separately typed mut
+receiving copy can mutate its own sequence. No public helper argument labels,
+permanent module placement or general generic application is selected.
+
+Only directly named list grant targets are supported. Complex targets, overlapping
+reads/replacement and simultaneous/reentrant mutation during argument preparation,
+general user-function mut parameters and data captures remain unsupported before
+effects. Read a needed element into a separate local before making a mut call.
+The target location is selected once before the supplied element; failures/exits
+stop the operation and later effects. Iteration retains the evaluated source
+snapshot even if the original binding is mutated in its body.
+
+Bounds and empty pops raise the approved temporary terminal BoundPanic diagnostic.
+Catchable host resource failures retain existing terminal CLI handling; fatal host
+exhaustion is not promised recoverable. No allocation Result, capacity helper,
+optimizer, view, indexed write, alias framework or attached recovery is added.
+Each host update builds a fresh immutable sequence, preserving previous values;
+this intentionally simple implementation has no amortized growth or native
+layout/performance claim. See [013](../examples/013-growable-lists.lts) and
+[INV-055 evidence](../investigations/INV-055-fvp-list-slice.md).
+
 ### Fixed arrays and traversal
 
 The approved first array subset accepts nonempty homogeneous literals of existing
@@ -431,8 +480,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.13**, tag **igniter-v0.1.0-alpha.13**, adds existing named
-user-function argument routing and =name shorthand.
+Version **0.1.0-alpha.14**, tag **igniter-v0.1.0-alpha.14**, adds the approved
+bounded List<T> construction, copy and explicit end-mutation slice.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -455,6 +504,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.12**, commit `54d3617`: explicit tuple label conversion.
 
+- **igniter-v0.1.0-alpha.13**, commit `2139003`: fixed-slot named user-function calls.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -462,7 +513,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **108 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **120 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

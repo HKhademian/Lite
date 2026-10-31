@@ -7,7 +7,9 @@ type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
 type ElementType = ScalarType | TupleType;
 type ArrayType = Readonly<{ kind: 'Array'; element: ElementType; length: bigint }>;
-type DataType = ElementType | ArrayType;
+type ListType = Readonly<{ kind: 'List'; element: ElementType }>;
+type DataType = ElementType | ArrayType | ListType;
+type EndOperation = 'push_front' | 'push_back' | 'pop_front' | 'pop_back';
 type Parameter = Readonly<{ name: string; type: DataType }>;
 type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: DataType }>;
 // Never is internal flow information, not a new source-level type.
@@ -22,6 +24,7 @@ export type Value =
   | Readonly<{ kind: 'Unit' }>
   | Readonly<{ kind: 'Tuple'; items: readonly Value[] }>
   | Readonly<{ kind: 'Array'; items: readonly Value[] }>
+  | Readonly<{ kind: 'List'; items: readonly Value[] }>
   | FunctionValue;
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
@@ -32,6 +35,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
   | { kind: 'string'; text: string }
   | { kind: 'name'; name: string }
+  | { kind: 'grant'; name: string }
   | { kind: 'unit' }
   | { kind: 'array'; items: readonly Raw[] }
   | { kind: 'index'; input: Raw; index: Raw }
@@ -54,15 +58,17 @@ type Raw = Readonly<{ at: Position }> & (
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
-  | { kind: 'typedDeclare'; name: string; mutable: boolean; annotation: TupleType; input: Raw }
+  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: TupleType | ListType; input: Raw }
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'destructure'; names: readonly Token[]; input: Raw }
   | { kind: 'expression'; input: Raw }
 );
-type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; owner: number }>;
+type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; writable: boolean; owner: number }>;
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
   | { kind: 'array'; items: readonly Expr[] }
+  | { kind: 'list'; items: readonly Expr[] }
+  | { kind: 'listEnd'; op: EndOperation; target: Binding; input: Expr | undefined }
   | { kind: 'index'; input: Expr; index: Expr }
   | { kind: 'tuple'; items: readonly Expr[] }
   | { kind: 'position'; input: Expr; index: number }
@@ -74,7 +80,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'block'; block: Block }
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
   | { kind: 'loop'; condition: Expr | undefined; body: Expr }
-  | { kind: 'arrayLoop'; input: Expr; item: Binding | undefined; body: Expr }
+  | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; code: FunctionCode }
   | { kind: 'return'; input: Expr }
@@ -137,6 +143,7 @@ function scalarType(name: string, at: Position): ScalarType {
 function sameType(left: Type, right: Type): boolean {
   if (typeof left === 'string' || typeof right === 'string') return left === right;
   if (left.kind === 'Array') return right.kind === 'Array' && left.length === right.length && sameType(left.element, right.element);
+  if (left.kind === 'List') return right.kind === 'List' && sameType(left.element, right.element);
   if (left.kind === 'Tuple') {
     return right.kind === 'Tuple' && left.items.length === right.items.length && left.items.every((item, index) => {
       const other = right.items[index];
@@ -154,6 +161,7 @@ function fits(actual: Type, expected: Type): boolean { return actual === 'Never'
 function typeName(type: Type): string {
   if (typeof type === 'string') return type;
   if (type.kind === 'Array') return `[${typeName(type.element)}; ${type.length}]`;
+  if (type.kind === 'List') return `List<${typeName(type.element)}>`;
   if (type.kind === 'Tuple') return `(${type.items.map(item => `${item.label ?? ''}: ${item.type}`).join(', ')}${type.items.length === 1 && type.items[0]?.label === undefined ? ',' : ''})`;
   return `fn (${type.parameters.map(p => `${p.name}: ${typeName(p.type)}`).join(', ')}): ${typeName(type.result)}`;
 }
@@ -202,6 +210,12 @@ function builtin(name: string): Builtin | undefined {
     case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord':
     case 'report': case 'reportError': case 'exit':
     case 'textLength': case 'textAt': case 'textSlice': return name;
+    default: return undefined;
+  }
+}
+function endOperation(name: string): EndOperation | undefined {
+  switch (name) {
+    case 'push_front': case 'push_back': case 'pop_front': case 'pop_back': return name;
     default: return undefined;
   }
 }
@@ -300,9 +314,9 @@ function tokenize(text: string): readonly Token[] {
 
 type Pattern = Readonly<{ kind: 'name'; token: Token }> | Readonly<{ kind: 'tuple'; items: readonly Pattern[] }>;
 class Parser {
-  readonly tokens: readonly Token[];
+  readonly tokens: Token[];
   index = 0;
-  constructor(tokens: readonly Token[]) { this.tokens = tokens; }
+  constructor(tokens: readonly Token[]) { this.tokens = [...tokens]; }
   peek(distance = 0): Token {
     const token = this.tokens[this.index + distance];
     if (token === undefined) throw new Error('igniter invariant: token past EOF');
@@ -318,10 +332,24 @@ class Parser {
     if (!this.accept(text)) source(`expected ${JSON.stringify(text)}`, this.peek().at);
   }
   dataType(): DataType {
+    if (this.peek().kind === 'id' && this.peek().text === 'List') {
+      const at = this.take().at;
+      this.expect('<');
+      const element = this.dataType();
+      if (!isElement(element)) typeError('List elements must be scalars or flat scalar tuples', at);
+      // A grammatical type close can precede an initializer without whitespace.
+      const close = this.peek();
+      if (close.kind === 'symbol' && close.text === '>=') {
+        this.tokens.splice(this.index, 1, { ...close, text: '>' },
+          { kind: 'symbol', text: '=', at: { line: close.at.line, column: close.at.column + 1 } });
+      }
+      this.expect('>');
+      return { kind: 'List', element };
+    }
     if (this.accept('[')) {
       const at = this.peek().at;
       const element = this.dataType();
-      if (typeof element !== 'string' && element.kind === 'Array') typeError('nested array types are not supported yet', at);
+      if (!isElement(element)) typeError('nested collection element types are not supported yet', at);
       this.expect(';');
       const length = this.take();
       if (length.kind !== 'number' || !/^[0-9]+$/.test(length.text)) source('fixed array extent must be a nonnegative integer literal', length.at);
@@ -369,12 +397,14 @@ class Parser {
   }
   typedDeclaration(name: Token, mutable: boolean): RawItem {
     this.expect(':');
+    const writable = this.accept('mut');
     const annotation = this.dataType();
-    if (typeof annotation === 'string' || annotation.kind !== 'Tuple') {
-      source('explicit receiving declarations currently support flat tuple types only', name.at);
+    if (typeof annotation === 'string' || (annotation.kind !== 'Tuple' && annotation.kind !== 'List')) {
+      source('explicit receiving declarations currently support flat tuple or List types only', name.at);
     }
+    if (writable && annotation.kind !== 'List') typeError('held-data mut declarations currently support lists only', name.at);
     this.expect('=');
-    return { kind: 'typedDeclare', name: name.text, mutable, annotation, input: this.expression(), at: name.at };
+    return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input: this.expression(), at: name.at };
   }
   tupleEntry(): Readonly<{ label: string | undefined; input: Raw }> {
     if (this.accept('=')) {
@@ -614,7 +644,11 @@ class Parser {
         }
         return { kind: 'if', condition, body, otherwise, at: token.at };
       }
-      if (['mut', 'import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
+      if (token.text === 'mut') {
+        const target = this.label();
+        return { kind: 'grant', name: target.text, at: token.at };
+      }
+      if (['import', 'using', 'record', 'type', 'and', 'or', 'else', 'then', 'finally'].includes(token.text)) {
         source(`${token.text} is not supported by this igniter yet`, token.at);
       }
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
@@ -633,8 +667,9 @@ function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
 type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
-type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined };
+type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined };
 function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
+  if (state.activeGrant === binding.slot) typeError('overlapping list access during mut argument preparation is not supported yet', at);
   if (binding.owner !== (state.current?.id ?? 0) && (typeof binding.type === 'string' || binding.type.kind !== 'Function')) {
     typeError(`surrounding runtime data capture (${binding.name}) is not supported yet; pass it as an argument`, at);
   }
@@ -646,7 +681,7 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
   const id = state.nextFunction++;
   const local = new Map(names);
   const parameters = raw.signature.parameters.map(parameter => {
-    const binding: Binding = { ...parameter, mutable: false, slot: state.nextSlot++, owner: id };
+    const binding: Binding = { ...parameter, mutable: false, writable: false, slot: state.nextSlot++, owner: id };
     local.set(parameter.name, binding);
     return binding;
   });
@@ -661,6 +696,7 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
 function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
+    case 'grant': return typeError('mut arguments currently require a direct named list target in a sequence end operation', at);
     case 'number': {
       const value = numericLiteral(raw.text, at);
       return { kind: 'literal', value, type: value.kind, at };
@@ -689,8 +725,8 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
     case 'index': {
       const input = checkExpression(raw.input, names, state);
       const index = checkExpression(raw.index, names, state);
-      if (typeof input.type === 'string' || input.type.kind !== 'Array') typeError('bracket reads currently require a fixed array', at);
-      if (index.type !== 'Int') typeError('array index must be Int', at);
+      if (typeof input.type === 'string' || (input.type.kind !== 'Array' && input.type.kind !== 'List')) typeError('bracket reads currently require a fixed array or list', at);
+      if (index.type !== 'Int') typeError('sequence index must be Int', at);
       return { kind: 'index', input, index, type: input.type.element, at };
     }
     case 'tuple': {
@@ -763,17 +799,18 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       state.loopDepth = 0;
       try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
       finally { state.loopDepth = enclosingDepth; }
-      const array = condition !== undefined && typeof condition.type !== 'string' && condition.type.kind === 'Array' ? condition.type : undefined;
-      if (condition !== undefined && condition.type !== 'Bool' && array === undefined) typeError('loop source must be Bool or a supported fixed array', condition.at);
-      if (raw.item !== undefined && array === undefined) typeError('named receivers for non-array loops are not supported yet', raw.item.at);
+      const array = condition !== undefined && typeof condition.type !== 'string' &&
+        (condition.type.kind === 'Array' || condition.type.kind === 'List') ? condition.type : undefined;
+      if (condition !== undefined && condition.type !== 'Bool' && array === undefined) typeError('loop source must be Bool or a supported array/list', condition.at);
+      if (raw.item !== undefined && array === undefined) typeError('named receivers for non-sequence loops are not supported yet', raw.item.at);
       const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
-        : { name: raw.item.text, type: array.element, mutable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
+        : { name: raw.item.text, type: array.element, mutable: false, writable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
       const bodyNames = item === undefined ? names : new Map(names).set(item.name, item);
       state.loopDepth++;
       let body: Expr;
       try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
       finally { state.loopDepth--; }
-      if (array !== undefined && condition !== undefined) return { kind: 'arrayLoop', input: condition, item, body, type: 'Unit', at };
+      if (array !== undefined && condition !== undefined) return { kind: 'sequenceLoop', input: condition, item, body, type: 'Unit', at };
       return { kind: 'loop', condition, body, type: 'Unit', at };
     }
     case 'loopExit':
@@ -879,6 +916,30 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
         }
         return { kind: 'invoke', callee, args, slots: routed, type: signature.result, at };
       }
+      const operation = endOperation(raw.name);
+      if (operation !== undefined) {
+        if (state.activeGrant !== undefined) typeError('simultaneous/reentrant list mutation during argument preparation is not supported yet', at);
+        if (raw.args.some(arg => arg.label !== undefined)) typeError('list operations currently accept positional arguments only', at);
+        const push = operation === 'push_front' || operation === 'push_back';
+        if (raw.args.length !== (push ? 2 : 1)) typeError(`${operation} expects ${push ? 2 : 1} argument(s)`, at);
+        const first = raw.args[0]?.input;
+        if (first?.kind !== 'grant') typeError(`${operation} requires an explicit mut grant to a named list binding`, at);
+        const target = names.get(first.name);
+        if (target === undefined) typeError(`unknown binding ${first.name}`, first.at);
+        readBinding(target, state, first.at); // Retain the ordinary surrounding-data boundary.
+        if (!target.writable) typeError(`${first.name} requires a mut List declaration for held-data mutation`, first.at);
+        if (typeof target.type === 'string' || target.type.kind !== 'List') typeError('sequence end operations require a growable list', first.at);
+        let input: Expr | undefined;
+        const supplied = raw.args[1];
+        state.activeGrant = target.slot;
+        try {
+          if (supplied !== undefined) {
+            input = checkExpression(supplied.input, names, state);
+            requireCompatible(input, target.type.element, `list element must be ${typeName(target.type.element)}`, input.at);
+          }
+        } finally { state.activeGrant = undefined; }
+        return { kind: 'listEnd', op: operation, target, input, type: push ? 'Unit' : target.type.element, at };
+      }
       const name = builtin(raw.name);
       if (name === undefined) typeError(`unknown helper/function ${raw.name}; forward function lookup is not supported yet`, at);
       if (raw.args.some(arg => arg.label !== undefined)) typeError('named arguments for temporary builtin helpers are not supported; public labels are not selected', at);
@@ -928,10 +989,16 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
     const context = item.kind === 'expression' && index === parsed.length - 1 ? use : 'discard';
     // Only the direct, no-earlier-target declaration is visible to its own deferred body.
     const own: Binding | undefined = item.kind === 'declare' && item.input.kind === 'function'
-      ? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: item.input.signature, owner: state.current?.id ?? 0 }
+      ? { name: item.name, mutable: item.mutable, writable: false, slot: state.nextSlot++, type: item.input.signature, owner: state.current?.id ?? 0 }
       : undefined;
     const bodyNames = own !== undefined && !names.has(own.name) ? new Map(names).set(own.name, own) : names;
-    const input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
+    let input: Expr;
+    if (item.kind === 'typedDeclare' && item.annotation.kind === 'List' && item.input.kind === 'array') {
+      const element = item.annotation.element;
+      const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
+      for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
+      input = { kind: 'list', items: entries, type: item.annotation, at: item.input.at };
+    } else input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
     exits ||= input.type === 'Never';
     switch (item.kind) {
       case 'destructure': {
@@ -944,7 +1011,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
           if (KEYWORDS.has(name.text) || name.text === 'self') source('keyword/self binding names are not supported by this igniter', name.at);
           const type = types[index];
           if (type === undefined) throw new Error('igniter invariant: missing pattern component type');
-          const binding: Binding = { name: name.text, mutable: false, slot: state.nextSlot++, type, owner: state.current?.id ?? 0 };
+          const binding: Binding = { name: name.text, mutable: false, writable: false, slot: state.nextSlot++, type, owner: state.current?.id ?? 0 };
           names.set(name.text, binding);
           return binding;
         });
@@ -958,7 +1025,9 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
         if (item.kind === 'typedDeclare') {
           const destination = item.annotation;
           declared = destination;
-          if (input.type !== 'Never' && !sameType(input.type, declared)) {
+          if (destination.kind === 'List') {
+            requireCompatible(input, destination, 'list initialization requires the same List element contract; construct literals at the typed declaration', input.at);
+          } else if (input.type !== 'Never' && !sameType(input.type, declared)) {
             if (freshTuple(input)) typeError('contextual tuple constructor routing is not supported yet at typed declarations; use a stored tuple for positional label conversion', input.at);
             if (typeof input.type === 'string' || input.type.kind !== 'Tuple' ||
                 input.type.items.length !== destination.items.length ||
@@ -967,7 +1036,8 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
             }
           }
         }
-        const binding: Binding = own ?? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
+        const binding: Binding = own ?? { name: item.name, mutable: item.mutable,
+          writable: item.kind === 'typedDeclare' && item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, binding);
         items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';
@@ -976,6 +1046,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
       case 'assign': {
         const binding = names.get(item.name);
         if (binding === undefined) typeError(`unknown binding ${item.name}`, item.at);
+        if (state.activeGrant === binding.slot) typeError('replacement of a list during its mut argument preparation is not supported yet', item.at);
         if (binding.owner !== (state.current?.id ?? 0)) typeError('replacement of surrounding runtime bindings is not supported yet', item.at);
         if (!binding.mutable) typeError(`${item.name} is fixed; replacement requires var`, item.at);
         requireCompatible(input, binding.type, `cannot replace ${typeName(binding.type)} with ${typeName(input.type)}`, item.at);
@@ -992,7 +1063,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
 
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
-  return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined }, 'discard');
+  return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined, activeGrant: undefined }, 'discard');
 }
 
 class Input {
@@ -1026,6 +1097,7 @@ function format(value: Value): string {
     case 'Unit': return 'Unit';
     case 'Tuple': throw new Error('igniter invariant: formatting a checked tuple');
     case 'Array': throw new Error('igniter invariant: formatting a checked array');
+    case 'List': throw new Error('igniter invariant: formatting a checked list');
     case 'Function': throw new Error('igniter invariant: formatting a checked function');
     default: return unreachable(value);
   }
@@ -1070,6 +1142,7 @@ function sameValue(left: Value, right: Value): boolean {
     case 'Unit': return right.kind === 'Unit';
     case 'Tuple': throw new Error('igniter invariant: comparing a checked tuple');
     case 'Array': throw new Error('igniter invariant: comparing a checked array');
+    case 'List': throw new Error('igniter invariant: comparing a checked list');
     case 'Function': throw new Error('igniter invariant: comparing a checked function');
     default: return unreachable(left);
   }
@@ -1113,11 +1186,32 @@ export function execute(program: Program, io: IO): number {
     switch (expr.kind) {
       case 'literal': return expr.value;
       case 'array': return { kind: 'Array', items: expr.items.map(evaluateHere) };
+      case 'list': return { kind: 'List', items: expr.items.map(evaluateHere) };
+      case 'listEnd': {
+        const target = findFrame(frame, expr.target.slot);
+        const list = target.values.get(expr.target.slot);
+        if (list?.kind !== 'List') throw new Error('igniter invariant: non-list checked mutation');
+        const input = expr.input === undefined ? undefined : evaluateHere(expr.input);
+        // Publish a new immutable sequence only after successful preparation.
+        // Earlier reads/copies and traversal snapshots retain their values.
+        if (expr.op === 'push_front' || expr.op === 'push_back') {
+          if (input === undefined) throw new Error('igniter invariant: missing push value');
+          const items = expr.op === 'push_front' ? [input, ...list.items] : [...list.items, input];
+          target.values.set(expr.target.slot, { kind: 'List', items });
+          return UNIT;
+        }
+        if (list.items.length === 0) throw new LiteFault('BoundPanic', `${expr.op} on an empty list`, expr.at);
+        const value = expr.op === 'pop_front' ? list.items[0] : list.items.at(-1);
+        if (value === undefined) throw new Error('igniter invariant: missing nonempty pop value');
+        const items = expr.op === 'pop_front' ? list.items.slice(1) : list.items.slice(0, -1);
+        target.values.set(expr.target.slot, { kind: 'List', items });
+        return value;
+      }
       case 'index': {
         const input = evaluateHere(expr.input);
         const index = evaluateHere(expr.index);
-        if (input.kind !== 'Array' || index.kind !== 'Int') throw new Error('igniter invariant: invalid checked index input');
-        if (index.value < 0n || index.value >= BigInt(input.items.length)) throw new LiteFault('BoundPanic', 'array index outside its extent', expr.at);
+        if ((input.kind !== 'Array' && input.kind !== 'List') || index.kind !== 'Int') throw new Error('igniter invariant: invalid checked index input');
+        if (index.value < 0n || index.value >= BigInt(input.items.length)) throw new LiteFault('BoundPanic', `${input.kind === 'List' ? 'list' : 'array'} index outside its extent`, expr.at);
         const value = input.items[Number(index.value)];
         if (value === undefined) throw new Error('igniter invariant: missing bounded array element');
         return value;
@@ -1170,9 +1264,9 @@ export function execute(program: Program, io: IO): number {
         }
         return UNIT; // Only action-position loops are admitted by the checker.
       case 'loopExit': throw new LoopTransfer(expr.op);
-      case 'arrayLoop': {
+      case 'sequenceLoop': {
         const input = evaluateHere(expr.input);
-        if (input.kind !== 'Array') throw new Error('igniter invariant: non-array checked traversal');
+        if (input.kind !== 'Array' && input.kind !== 'List') throw new Error('igniter invariant: non-sequence checked traversal');
         for (const value of input.items) {
           const iteration: Frame = { parent: frame, values: new Map() };
           if (expr.item !== undefined) iteration.values.set(expr.item.slot, value);

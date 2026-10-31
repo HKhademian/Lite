@@ -4,7 +4,7 @@ A small syntax highlighter for `.lt` and `.lts` files. The language picker shows
 **Lite**. Colors follow your existing editor theme.
 
 Highlights nested block/raw comments, multiline double-quoted strings, basic
-escapes, decimal numbers, documented keywords/operators, scalar type names,
+escapes, decimal numbers, documented keywords/operators, scalar type names and the approved builtin List name,
 function declarations/calls, tags, and punctuation. Block-comment toggling and
 bracket/quote pairing use existing Lite delimiters. There are no `//` comments.
 

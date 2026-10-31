@@ -1,6 +1,6 @@
 # INV-055 — FVP runtime-owner decision boundary
 
-Status: open (copy-first FVP direction clarified; construction/growth API unresolved)
+Status: recorded (copy-first direction and bounded FVP slice approved; broader owner contracts open)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
@@ -35,14 +35,16 @@ explicit noncopying modes come later. For the current FVP sequence values with
 copyable elements, preserve the ordinary copied sequence value. Do not block this
 work on designing a noncopyable owner or explicit clone/move/borrow surface.
 A host array reference cannot silently turn that copy into shared mutable data.
-List's generic grammar, capacity helpers/APIs and allocation policy remain
-proposals.
+The subsequent approved FVP slice adopts builtin List<T> spelling and temporary
+end-operation/failure handling. General generics, capacity helpers/APIs and
+permanent allocation policy remain proposals.
 [End-operation names](../docs/sequence-end-operations.md) are now selected;
 complete signatures and placement still need review.
 
-Thus inventing a constructor, append helper or public List type spelling now
-would exceed the automatic selected-scope authorization.
-No language implementation is added by this investigation.
+At this review baseline, inventing a constructor, helper or List spelling would
+have exceeded selected scope. The subsequent concrete slice received explicit
+consent and now supplies bounded runtime list support; this owner-review note
+itself remains contract review.
 
 ## Copy-first FVP direction clarified
 
@@ -73,22 +75,21 @@ The [bounded naming decision](INV-055-fvp-list-operations.md) selects the
 push_front/push_back/pop_front/pop_back family. It does not adopt List<Int>
 generic grammar or a construction/failure API.
 
-A [concrete FVP proposal](INV-055-fvp-list-slice.md) now bundles typed list
-construction, the selected operations and temporary fault handling for one
-runnable example. It remains unselected; the naming approval does not authorize
-its type spelling or temporary failure choices.
+The [concrete FVP slice](INV-055-fvp-list-slice.md) subsequently received separate
+explicit consent and implements typed list construction, end operations and
+temporary terminal faults. Its type spelling/failure choices were not inferred
+from the earlier naming approval.
 
 ## Evidence and handoff
 
-This is a repository-contract review, not runtime validation of lists. The last
-delivered interpreter has strict checking, 108 passing test groups and runnable
-examples 010–012. None demonstrates runtime growth. This note and the owning
-reference/catalog updates are committed atomically without a new igniter tag.
+This note began as a repository-contract review at alpha.13, with 108 passing
+interpreter groups and examples 010–012, none demonstrating growth. That was not
+runtime list validation. The later approved slice now provides separate runtime
+evidence at alpha.14 with 120 interpreter groups and example 013; see its note.
+The owner-review-only commits did not create an igniter release tag.
 
 The copy/noncopying question above is resolved for the current focus. The
-[automatic workflow](README.md#automatic-progression-within-selected-contracts)
-now stops at the remaining concrete construction/growth surface and bounded
-allocation behavior. Resume owner implementation after those needed decisions;
-do not substitute a temporary helper or choose from provisional generic syntax
-on the user's behalf. No new igniter tag or runtime claim follows from this
-documentation clarification.
+subsequent approved slice removes the concrete FVP construction/failure blocker.
+Continue under the [automatic workflow](README.md#automatic-progression-within-selected-contracts)
+inside that selected scope. Broader native owner representation, capacity,
+advanced aliases, recovery and generic design remain separate investigations.

@@ -72,6 +72,7 @@ Record the selection and affected references atomically, then continue within th
 No repeated permission is needed for these names; concrete growable construction
 and temporary failure handling still need review before an executable delivery.
 
-The next [bounded FVP slice](INV-055-fvp-list-slice.md) presents those remaining
-choices together, including the existing List<T> spelling, explicit mut calls
-and temporary terminal diagnostics. It remains proposed pending consent.
+The subsequent [bounded FVP slice](INV-055-fvp-list-slice.md) was separately
+approved and implemented, including builtin List<T> spelling, explicit mut calls
+and temporary terminal diagnostics. That approval does not settle full generics,
+permanent module placement, capacity APIs or general ownership.

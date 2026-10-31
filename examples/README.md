@@ -53,6 +53,10 @@ integer prompts may appear together in captured stdout.
   shorthand, replacement of a positional contribution and named self calls.
   Reports 123, 123, and 10 on separate lines.
 
+- [013 — Growable lists](013-growable-lists.lts): typed list construction, all
+  four explicit mut end operations, and an independent saved sequence. Reports
+  0 3, then 1, then 2 on separate lines.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

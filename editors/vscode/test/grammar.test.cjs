@@ -50,6 +50,11 @@ test('ordinary Lite declarations, calls, scalar types, literals and Unicode iden
   has(rows, 3, 'if', 'keyword.control.lite');
   has(rows, 3, 'and', 'keyword.operator.word.lite');
   has(rows, 3, 'Unit', 'constant.language.lite');
+  const list = await tokenize('values: mut List<Int> = []; push_back(mut values, 1);');
+  has(list, 0, 'List', 'support.type.lite');
+  has(list, 0, 'mut', 'storage.modifier.lite');
+  has(list, 0, 'push_back', 'entity.name.function.call.lite');
+
 });
 test('multiline strings and escaped quotes keep comment/keyword text inside the string', async () => {
   const rows = await tokenize('message := "if /* not a comment\n\\"quoted\\" and // text"; report(1);');

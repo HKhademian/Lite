@@ -7,7 +7,8 @@ Status: **front/back operation names selected by the user, 2026-10-31; structura
 FVP review, **2026-10-31**: [INV-055](../investigations/INV-055-fvp-list-operations.md)
 records the user's acceptance of the existing front/back name family below. This
 does not adopt generic notation, a constructor, public argument labels or
-allocation failure handling, and adds no runtime operations.
+allocation failure handling by itself. The separately approved bounded FVP
+slice below now implements these operations.
 
 The selected canonical family is:
 
@@ -23,7 +24,7 @@ Push_start/push_end/pop_start/pop_end are coherent alternatives. Front/back has 
 ## Examples
 
 ```text
-/* Selected operation names; List<T> type notation remains provisional. */
+/* Selected names and builtin List<T> spelling; full API contracts remain open. */
 numbers: mut List<Int> = [2, 3];
 push_front(mut numbers, 1);
 push_back(mut numbers, 4);
@@ -87,7 +88,10 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 The [INV-055 FVP slice](../investigations/INV-055-fvp-list-slice.md) proposes a
 bounded construction/grant surface and temporary diagnostic policy for the
-runner. These remain unselected; canonical name approval does not select them.
+runner. The user separately approves that bounded slice after name selection;
+the igniter implements it with explicit named-list mut grants and terminal
+BoundPanic for empty pops. Permanent allocation policy, capacity APIs and recovery
+remain open; see the linked implementation evidence.
 
 - Canonical front/back names are selected. Specify the chosen direct-operation/else recovery direction, including operation fault attribution and mixed failure typing under the selected operation/block scopes. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.

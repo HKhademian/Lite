@@ -2,16 +2,27 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## Bounded FVP list proposal, 2026-10-31
+## Approved FVP list delivery, 2026-10-31
 
-After recording the selected front/back names, INV-055 reaches the remaining
-concrete construction/failure boundary. A proposal bundles the existing List<T>
-spelling for the builtin list family, explicitly typed bracket construction,
-explicit mut calls to the four operations, independent copies and temporary
-terminal bounds/empty/resource diagnostics. It requires explicit consent and
-adds no implementation or generic infrastructure. Broader generics, capacity APIs,
-views, general user-function grants and recovery remain outside this slice.
-See [the concrete example and scope](../investigations/INV-055-fvp-list-slice.md).
+The user replies "Approve this FVP list slice" to the concrete proposal committed
+in `8f637d6`. The igniter implements builtin List<T> typed construction, including
+typed empty literals, scalar/flat-tuple elements, ordinary sequence copies,
+readable indexing/traversal and the four end operations through explicit mut
+grants to named writable bindings. A fixed binding's mut permission does not
+permit whole-binding replacement; var remains separate. Prior copies and loop
+snapshots retain their evaluated sequence values under later mutation.
+
+Bounds/empty pops use approved temporary terminal BoundPanic diagnostics, and
+catchable host resource failures retain existing terminal CLI handling. The
+implementation uses immutable host sequence updates; no native layout, capacity
+strategy, optimizer or performance result is claimed. General generics, views,
+capacity APIs, indexed writes, user-function mut parameters, complex/overlapping/
+reentrant grants and recovery remain unimplemented.
+
+Strict no-emit checking, all 120 interpreter groups and 9 editor groups pass,
+including the real [013 example](../examples/013-growable-lists.lts), check-only
+mode and located empty-pop diagnostics. Preserve as igniter-v0.1.0-alpha.14;
+see [INV-055 evidence](../investigations/INV-055-fvp-list-slice.md).
 
 ## List end-operation names selected, 2026-10-31
 
@@ -33,8 +44,9 @@ their ordinary copied sequence independently of later source mutation; designing
 noncopyable owners or clone/move/borrow syntax is not a prerequisite. Optimization
 must preserve selected values, effects, failures and access contracts.
 
-Concrete list type/construction/growth APIs and bounded allocation behavior remain
-unselected; no helper, noncopying syntax or optimization implementation is added.
+The later explicitly approved FVP slice above selects bounded List<T> construction,
+end helpers and terminal diagnostics. Permanent capacity/allocation behavior and
+noncopying syntax remain separate; no optimization implementation is added.
 Broader resource eligibility remains separate. Growth is not asserted to be a
 prerequisite for every possible self-hosting approach. See
 [the investigation](../investigations/INV-055-fvp-owner-boundary.md).

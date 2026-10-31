@@ -169,6 +169,13 @@ builtin labels. Strict checking and 108 interpreter groups pass, including
 source-order effects and callee selection; see
 [bounded evidence](../investigations/INV-031-fvp-named-calls.md).
 
+The user-approved INV-055 slice adds builtin List<T> typed construction, ordinary
+sequence copies, readable indexing/traversal and four explicit mut end operations.
+Strict checking and 120 interpreter groups pass, including real launcher/check-only
+execution of 013; editor checks include List highlighting. General generics,
+capacity, views, user-function mutation grants and recovery remain outside the
+increment. See [bounded evidence](../investigations/INV-055-fvp-list-slice.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

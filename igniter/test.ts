@@ -21,6 +21,147 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('typed list construction supports known empty elements and preserves the fixed-array default', () => {
+  assert.equal(run(`empty: mut List<Int>=[]; push_back(mut empty, 7); report(empty[0]);
+    floats: List<Float> = [1.5]; text: List<String> = ["tea"]; flags: List<Bool> = [true];
+    units: mut List<Unit> = [(), Unit]; report(floats[0], text[0], flags[0], pop_back(mut units));
+    fixed := [3, 4]; report(fixed.1);`).output, '7\n1.5 tea true Unit\n4\n');
+  fault('fixed := [1]; list: List<Int> = fixed;', 'TypeError');
+  fault('list: List<Int> = [1]; f := fn(a: [Int; 1]): Int { a[0] } f(list);', 'TypeError');
+  fault('[];', 'TypeError');
+});
+test('both list ends preserve element order, duplicate occurrences and direct pop values', () => {
+  assert.equal(run(`values: mut List<Int> = []; report(push_back(mut values, 2));
+    push_front(mut values, 1); push_back(mut values, 2); push_front(mut values, 0);
+    loop values as item { report(item); }
+    report(pop_front(mut values), pop_back(mut values), pop_back(mut values), pop_front(mut values));
+    loop values { report("unexpected"); }`).output, 'Unit\n0\n1\n2\n2\n0 2 2 1\n');
+});
+test('list copies and typed mutable receiving copies remain independent under end operations', () => {
+  assert.equal(run(`var original: mut List<Int> = [1, 2]; saved := original;
+    editable: mut List<Int> = original; push_front(mut editable, 8);
+    push_back(mut original, 3); report(pop_front(mut original));
+    original = editable; push_back(mut original, 9);
+    report(saved[0], saved[1], editable[0], editable[2], original[3]);`).output,
+    '1\n1 2 8 2 9\n');
+});
+test('list arguments and results retain evaluated snapshots through later argument mutation', () => {
+  assert.equal(run(`values: mut List<Int> = [1, 2];
+    keep := fn(items: List<Int>, ignored: Unit): List<Int> { items }
+    saved := keep(values, push_front(mut values, 9));
+    returned: mut List<Int> = saved; push_back(mut returned, 3);
+    report(values[0], saved[0], saved[1], returned[2]);
+    make := fn(): List<Int> { local: mut List<Int> = []; push_back(mut local, 6); local }
+    report(make()[0]);`).output, '9 1 2 3\n6\n');
+});
+test('flat tuple list elements preserve labels, positional shape and popped copies', () => {
+  assert.equal(run(`tokens: mut List<(kind: String, text: String)> = [];
+    kind := "number"; text := "12"; push_back(mut tokens, (=kind, =text));
+    push_front(mut tokens, (kind = "symbol", text = "+"));
+    first := pop_front(mut tokens); report(first.kind, first.text, tokens[0].text);
+    mixed: List<(:Int, text: String)> = [(7, text = "tea")];
+    loop mixed as pair { (number, word) := pair; report(number, word); }`).output,
+    'symbol + 12\n7 tea\n');
+  fault('tokens: mut List<(kind: String)> = []; push_back(mut tokens, (text = "wrong"));', 'TypeError');
+});
+test('list construction, supplied elements and indexed receivers evaluate once in written order', () => {
+  assert.equal(run(`values: mut List<Int> = [({report("first"); 1}), ({report("second"); 2})];
+    push_back(mut values, ({report("supplied"); inputInt("value: ")}));
+    source := fn(items: List<Int>): List<Int> { report("receiver"); items }
+    report(source(values)[({report("index"); 2})]);`, '7').output,
+    'first\nsecond\nsupplied\nvalue: receiver\nindex\n7\n');
+});
+test('list traversal evaluates a source snapshot once while original end mutations remain independent', () => {
+  assert.equal(run(`values: mut List<Int> = [1, 2];
+    source := fn(items: List<Int>): List<Int> { report("source"); items }
+    loop source(values) as item { report(item); push_back(mut values, item + 10); }
+    loop values as item { if item == 2 { continue; } report(item); if item == 11 { break; } }
+    report(values[3]);`).output, 'source\n1\n2\n1\n11\n12\n');
+});
+test('list mutation grants follow lexical slots and never silently capture surrounding runtime data', () => {
+  assert.equal(run(`values: mut List<Int> = [1];
+    { push_back(mut values, 2); values: mut List<Int> = [9]; push_front(mut values, 8); report(values[0]); }
+    report(values[1]);
+    f := fn(): Int { local: mut List<Int> = [3]; push_back(mut local, 4); pop_back(mut local) }
+    report(f());`).output, '8\n2\n4\n');
+  fault('values: mut List<Int> = []; f := fn(): Unit { push_back(mut values, 1); }', 'TypeError');
+});
+test('list bounds and empty pops are located terminal BoundPanic failures', () => {
+  for (const code of [
+    'values: List<Int> = [1]; values[-1];',
+    'values: List<Int> = [1]; values[1];',
+    'values: List<Int> = [1]; values[9223372036854775807];',
+    'values: List<Int> = []; values[0];',
+    'values: mut List<Int> = []; pop_front(mut values);',
+    'values: mut List<Int> = [1]; pop_back(mut values); pop_back(mut values);',
+  ]) {
+    assert.throws(() => run(code), (error: unknown) => error instanceof LiteFault &&
+      error.category === 'BoundPanic' && error.at.line === 1 && error.at.column > 0, code);
+  }
+});
+test('faults and exits during list preparation stop later effects and invocation', () => {
+  assert.deepEqual(run(`values: mut List<Int> = [];
+    push_back(mut values, ({report("supplied"); exit(7); 1})); report("later");`),
+    { code: 7, output: 'supplied\n', errors: '' });
+  assert.deepEqual(run(`values: List<Int> = [({report("first"); exit(6); 1}), ({report("later"); 2})];`),
+    { code: 6, output: 'first\n', errors: '' });
+  let observed = '';
+  assert.throws(() => execute(compile(`values: mut List<Int> = []; pop_back(mut values); report("later");`), {
+    read: () => null, report: text => { observed += text; }, reportError: () => {},
+  }), LiteFault);
+  assert.equal(observed, '');
+});
+test('invalid list contracts, grants and unsupported aliasing fail before any input or output', () => {
+  for (const code of [
+    'values: mut List<Int> = []; push_back(values, 1);',
+    'values: List<Int> = []; push_back(mut values, 1);',
+    'var values: List<Int> = []; push_back(mut values, 1);',
+    'values: mut List<Int> = []; copy := values; push_back(mut copy, 1);',
+    'values: mut List<Int> = []; values = values;',
+    'values: mut List<Int> = []; push_back(mut values, "wrong");',
+    'values: List<Int> = [true];', 'values: List<Int> = [1.0];',
+    'values: List<List<Int>> = [];', 'values: [List<Int>; 1] = [];',
+    'values: List<Int> = [1]; values.0;', 'values: List<Int> = [1]; values[true];',
+    'values: List<Int> = [1]; report(values);', 'values: List<Int> = [1]; values == values;',
+    'values: mut List<Int> = []; push_back(target = mut values, value = 1);',
+    'values: mut List<Int> = []; push_back(mut values);',
+    'values: mut List<Int> = []; pop_front(mut values, 1);',
+    'values: mut List<Int> = []; push_back(mut missing, 1);',
+    'values: mut List<Int> = []; push_back(mut values[0], 1);',
+    'values: mut List<Int> = []; report(mut values);',
+    'f := fn(a: List<Int>): Unit {} values: mut List<Int> = []; f(mut values);',
+    'values: mut List<Int> = [1]; push_back(mut values, values[0]);',
+    'values: mut List<Int> = [1]; push_back(mut values, pop_back(mut values));',
+    'a: mut List<Int> = []; b: mut List<Int> = [1]; push_back(mut a, pop_front(mut b));',
+    'var values: mut List<Int> = [1]; push_back(mut values, ({other: List<Int> = [2]; values = other; 7}));',
+  ]) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; },
+      reportError: () => { observed = true; },
+    }), LiteFault, code);
+    assert.equal(observed, false, code);
+  }
+});
+test('growable list example runs and checks through the launcher with runtime fault diagnostics', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const example = new URL('../examples/013-growable-lists.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const check of [false, true]) {
+    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), example], { encoding: 'utf8', env });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, check ? '' : '0 3\n1\n2\n'); assert.equal(result.stderr, '');
+  }
+  const directory = mkdtempSync(join(tmpdir(), 'lite-list-'));
+  try {
+    const path = join(directory, 'empty.lts');
+    writeFileSync(path, 'values: mut List<Int> = []; pop_back(mut values);');
+    const result = spawnSync(join(root, 'lite'), ['run', path], { encoding: 'utf8', env });
+    assert.equal(result.status, 1); assert.equal(result.stdout, '');
+    assert.match(result.stderr, /empty\.lts:1:\d+: BoundPanic: pop_back on an empty list/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('named calls route interleaved positional entries into the next unfilled slot', () => {
   assert.equal(run(`op := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c }
     b := 2; report(op(c = 3, 1, =b), op(9, a = 1, 2, 3), op(c = 3, b = 2, a = 1));

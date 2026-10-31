@@ -1,27 +1,29 @@
-# INV-055 — Proposed bounded FVP list slice
+# INV-055 — Approved bounded FVP list slice
 
-Status: proposed (source spelling and temporary runtime scope need explicit consent)
+Status: recorded (explicitly approved bounded implementation)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
 Baseline: `7cafc24`; interpreter remains igniter-v0.1.0-alpha.13
 
-## Why another decision is needed
+## Consent and baseline
 
 The user selects the four front/back operation names and authorizes automatic
 progression until another permission is required. Copies are the current semantic
-model; explicit noncopying modes are later work. Those decisions do not select
+model; explicit noncopying modes are later work. At the proposal baseline, those decisions did not select
 the concrete growable type/construction spelling. The owning
 [generic convention](../docs/generic-notation.md) explicitly says List<Int> is
-explanatory notation, and [allocation behavior](../docs/sequence-end-operations.md#remaining-contracts)
-is still open. The current igniter also lacks explicit mut argument support.
+explanatory notation before this approval, and [allocation behavior](../docs/sequence-end-operations.md#remaining-contracts)
+was still open. The baseline igniter also lacked explicit mut argument support.
 
-This proposal bundles the smallest runnable list demonstration and its temporary
-failure boundary so those remaining choices can be reviewed together. It draws
+The proposal in `8f637d6` bundled the smallest runnable list demonstration and its temporary
+failure boundary so those remaining choices could be reviewed together. It drew
 on existing List and mut examples; it introduces no alternative notation.
-It is not implementation consent and does not change the selected language yet.
+The user explicitly replies "Approve this FVP list slice" to that concrete scope.
+This authorizes the builtin List<T> spelling and temporary runtime policy below,
+without selecting the broader generic/library/ownership design.
 
-## Proposed concrete source
+## Approved runnable example
 
 ```text
 values: mut List<Int> = [1, 2];
@@ -34,12 +36,12 @@ loop saved as value {
 }
 ```
 
-Proposed expected output: 0 3, then 1, then 2 on separate lines. Both pop calls
+Verified output: 0 3, then 1, then 2 on separate lines. Both pop calls
 execute in report's written argument order. Mutating values leaves saved's
 sequence intact under the copy-first contract. The fixed binding values permits
 held-data mutation, not whole-binding replacement.
 
-## Proposed implementation scope
+## Approved implemented scope
 
 1. Adopt List<T> as source spelling for this builtin FVP family only. T is an
    existing scalar or flat scalar tuple type; do not implement generic
@@ -78,7 +80,7 @@ held-data mutation, not whole-binding replacement.
    performance guarantee follows. Do not add an optimizer or resource framework
    to the disposable igniter.
 
-## Proposed temporary failure boundary
+## Approved temporary failure boundary
 
 - Reuse the igniter's existing terminal BoundPanic diagnostic for an invalid list
   index or empty ordinary pop, with a clear operation-specific message. A failed
@@ -96,20 +98,43 @@ held-data mutation, not whole-binding replacement.
   earlier effects or implement attached else recovery in this increment.
 
 The direct-pop fault direction is already selected. Reusing BoundPanic for empty
-pop and retaining terminal allocation handling are explicitly part of this
-proposal, not inferred consent from the operation-name approval.
+pop and retaining terminal allocation handling were explicitly part of the
+approved scope, not inferred consent from the operation-name approval.
 
-## Verification planned after consent
+## Verification and implementation limits
 
-Run separate strict TypeScript checking and the interpreter suite. Add meaningful
-checks for typed empty/nonempty construction; fixed-array versus list identity;
-both ends, ordering and duplicate values; independent saved/argument/result
-copies; runtime indexing/traversal; source/argument evaluation order; wrong types
-and missing mut grants before effects; bounds/empty failures; and deliberate
-unsupported grant cases. Add the next indexed runnable example only when the
-runner supports it, and run it through ./lite run and --check plus editor checks.
+Separate strict TypeScript no-emit checking and all 120 interpreter test groups
+pass on Node 26.13.0/TypeScript 7.0.2. New tests cover typed empty/nonempty lists,
+compact type-close/initializer boundaries, fixed-array/list identity, both ends,
+ordering/duplicate values, scalar and named/mixed tuple elements, independent
+saved/argument/result copies, indexed receiver order, snapshot traversal and
+nearest-loop exits. Negative cases check wrong element contracts, missing grants,
+readonly copies, captured data, bounds/empty pops, complex targets, overlapping
+reads/replacement and simultaneous/reentrant mutations before effects.
 
-No list code, executable example or release tag is produced by this proposal.
-After explicit consent, complete the bounded investigation/implementation/docs
-and appropriate checks in one atomic milestone, preserve previous tags, then
-continue automatically within selected scope.
+The real launcher runs [013](../examples/013-growable-lists.lts), reporting
+0 3, then 1, then 2; --check emits nothing. The real CLI reports a located
+BoundPanic and status 1 for an empty pop. Existing CLI resource-limit handling is
+retained; these checks do not simulate host heap exhaustion or promise recovery
+from fatal host failures. All 9 editor checks pass with the expanded corpus and
+List type-name highlighting.
+
+The disposable evaluator publishes a new immutable host sequence after each
+successful end operation, preserving older copied values and traversal snapshots.
+This is deliberately simple and may copy the whole sequence per mutation; no
+amortized growth, capacity ABI, native ownership or performance claim is made.
+There is no optimizer or mandatory physical-copy strategy for a future compiler.
+
+Explicit receiving declarations construct fresh list literals. Other fresh
+literal contexts, nested collections, indexed writes, views, generic machinery,
+capacity controls, arbitrary resource elements, user-function mut parameters,
+advanced aliases and recovery remain outside this slice. Those limits do not
+select new permanent language restrictions. Text-helper consent is unchanged.
+
+## Handoff
+
+Commit implementation, tests, example, editor changes and owning documentation
+atomically as igniter-v0.1.0-alpha.14, preserving all earlier tags. Continue with
+already selected scope automatically. A runtime input-history example can now use
+this supported list/I/O subset; a character tokenizer still depends on the
+existing unapproved text-helper experiment and needs its own explicit review.

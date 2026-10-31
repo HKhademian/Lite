@@ -11,7 +11,7 @@
     { "name": "storage.type.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:fn|record|enum|type)(?![\\p{L}\\p{M}\\p{N}_])" },
     { "name": "keyword.operator.word.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:and|or|not)(?![\\p{L}\\p{M}\\p{N}_])" },
     { "name": "keyword.control.import.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:import|using)(?![\\p{L}\\p{M}\\p{N}_])" },
-    { "name": "support.type.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int|Float|String|Bool)(?![\\p{L}\\p{M}\\p{N}_])" },
+    { "name": "support.type.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int|Float|String|Bool|List)(?![\\p{L}\\p{M}\\p{N}_])" },
     { "name": "constant.numeric.lite", "match": "(?<![\\p{L}\\p{M}\\p{N}_.])[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?(?![\\p{L}\\p{M}\\p{N}_])" },
     { "name": "entity.name.function.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?![\\p{L}\\p{M}\\p{N}_]))" },
     { "name": "entity.name.function.call.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*\\()" },

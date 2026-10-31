@@ -735,11 +735,11 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-055).
 
-**Investigation:** open (reviewed; design decision needed); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. Concrete construction/growth surface and allocation behavior remain open. No implementation, new API or optimization pass selected.
+**Investigation:** recorded (bounded FVP implementation; broader contracts open); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. The subsequent explicitly approved list slice supplies bounded runtime construction/end operations and temporary faults. General generics, capacity and permanent allocation behavior remain open; no optimizer added.
 
 **Follow-up:** [INV-055 — list end-operation names](INV-055-fvp-list-operations.md) — records the user-selected canonical push_front/push_back/pop_front/pop_back names. No generic grammar, constructor, helper implementation or allocation policy selected.
 
-**Follow-up:** [INV-055 — bounded FVP list proposal](INV-055-fvp-list-slice.md) — concrete existing List<T>/mut example, typed construction, four selected operations and temporary terminal diagnostic scope. Proposed, awaiting explicit consent; no runnable list support or generic grammar selected.
+**Follow-up:** [INV-055 — approved bounded FVP list slice](INV-055-fvp-list-slice.md) — explicitly approved builtin List<T>/mut construction, four end operations, ordinary sequence copies and temporary terminal diagnostics implemented. Strict checking and 120 interpreter groups pass; all 9 editor groups pass. Broader generics, capacity, aliasing, views and recovery remain outside scope.
 
 <a id="inv-056"></a>
 

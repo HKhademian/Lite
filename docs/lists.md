@@ -1,16 +1,17 @@
 # Growable owning lists
 
-Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24; copy-first FVP focus clarified 2026-10-31**. Full List<T> generic grammar, contiguous owner representation, capacity helper names, capacity APIs and allocation/error policy remain proposals. Current FVP sequence values follow ordinary copy semantics, with no implicit references; explicit noncopying modes come later. Physical copy elimination must preserve behavior. Broader resource eligibility and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Status: **growable List family selected; fixed-array inference supersedes unconditional List literals; copy-first FVP focus and builtin List<T> slice approved 2026-10-31**. The igniter implements the bounded construction/copy/end-operation slice below. General generic grammar, native contiguous owner representation, capacity APIs and permanent allocation/error policy remain open. Explicit noncopying modes come later; physical copy elimination must preserve behavior. Broader resources and safety remain separate.
 
 ## Purpose and beginner examples
 
 FVP clarification, **2026-10-31**: focus on copies and compiler/post-compilation
 optimizations; explicit noncopying modes come later. Do not block ordinary FVP
 sequence copies on designing noncopyable owners. Concrete type/construction,
-growth APIs and allocation behavior remain unresolved. See
+capacity APIs and permanent allocation behavior remain unresolved. The next
+bounded construction/end-operation slice is now approved and implemented. See
 [INV-055 decision boundary](../investigations/INV-055-fvp-owner-boundary.md).
 
-`List<Int>` is [temporary explanatory notation](generic-notation.md), not selected generic application syntax. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
+`List<Int>` is selected for this builtin FVP family under the [narrow generic-notation exception](generic-notation.md); other families remain explanatory notation. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 A list owns a contiguous allocation with a current initialized length and possibly larger capacity. Adding/removing elements changes length. A list is not a linked list in this proposal.
 
@@ -29,18 +30,23 @@ The explicit mut argument follows selected caller grants. Mut grants supported m
 
 A var binding with an explicit List contract permits compatible whole-binding replacement; adding mut also permits supported held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`. An unannotated var numbers := [1, 2, 3] instead remains a fixed [Int; 3] binding with replacement permission.
 
-The [end-operation review](sequence-end-operations.md) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Capture scope, complete operation signatures, and allocation failure policy remain open.
+The [end-operation review](sequence-end-operations.md) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Broader capture scope, permanent operation signatures and allocation failure policy remain open.
 
 The [FVP naming decision](../investigations/INV-055-fvp-list-operations.md)
 selects that existing front/back family without adopting generic grammar or a
 constructor. No helper implementation or public parameter labels are selected
 by the naming decision.
 
-The [bounded FVP proposal](../investigations/INV-055-fvp-list-slice.md) offers a
-single runnable slice using the existing provisional List<T> notation, explicit
-mut calls and temporary terminal faults. Its construction spelling and temporary
-policies still require explicit consent; it does not implement lists or select
-general generic syntax.
+The user approves the [bounded FVP slice](../investigations/INV-055-fvp-list-slice.md):
+List<T> construction at fully initialized typed declarations (including typed
+empty lists), scalar/flat-tuple elements, readable indexing/traversal, ordinary
+sequence copies, and temporary positional end-operation bindings with explicit
+mut grants to named writable list bindings. Bounds/empty pops use terminal
+BoundPanic; catchable host resource failures retain terminal CLI handling.
+Strict checking and 120 interpreter groups pass, including [example 013](../examples/013-growable-lists.lts).
+Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
+user-function mut parameters, recovery and generic infrastructure remain outside
+this implementation. No native/performance claim follows.
 
 ## Length, capacity, and initialization
 

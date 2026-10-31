@@ -10,9 +10,9 @@ These are provider/storage roles. The user's later [abstraction-first API direct
 - List: owns a contiguous sequence whose length can grow or shrink.
 - Slice: views a contiguous region of existing initialized elements; it does not own or grow their storage.
 
-The array family needs a distinction between a compile-time length and a length chosen once at runtime. Schematic types below use `Array<T, N>` for inline compile-time arrays and `Array<T>` for runtime-sized fixed-length owners. `List<T>` and `Slice<T>` name the other roles. These are illustrative names, not a selected generic declaration grammar.
+The array family needs a distinction between a compile-time length and a length chosen once at runtime. Schematic types below use `Array<T, N>` for inline compile-time arrays and `Array<T>` for runtime-sized fixed-length owners. `List<T>` and `Slice<T>` name the other roles. List<T> now has the explicitly approved builtin FVP spelling; the other names remain illustrative and general generic declaration grammar is unselected.
 
-The user explicitly deferred generic syntax: these angle-bracket forms describe concepts for now and can be replaced after the future generic-design review. Type inputs and static value inputs must not be conflated by the placeholder punctuation. See [temporary generic notation](generic-notation.md).
+The user explicitly deferred generic syntax: except for the approved builtin List<T> slice, these angle-bracket forms describe concepts for now and can be replaced after the future generic-design review. Type inputs and static value inputs must not be conflated by the placeholder punctuation. See [temporary generic notation](generic-notation.md).
 
 ## Selected literal default and proposed advanced forms
 
@@ -33,8 +33,10 @@ Teach literals, indexing, and loop iteration first. Introduce fixed layout when 
 The FVP [INV-055 clarification](../investigations/INV-055-fvp-owner-boundary.md)
 focuses on ordinary sequence copies now, with behavior-preserving compiler and
 post-compilation copy optimization. Explicit noncopying modes come later.
-Concrete construction/growth APIs and bounded allocation behavior remain open;
-current fixed-array execution does not implement runtime owners.
+The approved bounded List<T> slice now implements typed construction and the four
+explicit end operations with ordinary value copies and terminal FVP diagnostics.
+General generic/owner representations, capacity APIs and permanent allocation
+behavior remain open. See [implementation evidence](../investigations/INV-055-fvp-list-slice.md).
 
 The selected [header-free fixed-array layout](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage) equals the corresponding homogeneous unnamed fixed tuple: inline elements without an array-specific runtime count or descriptor. An inline fixed array participates in its containing value's layout. Zero-sized elements retain their static positions: [Unit; 5] needs no element payload or runtime count field. Runtime-sized Unit providers still need count information in their enclosing container; Unit itself carries none. Equal layout does not merge array and tuple types. A slice copies its view metadata when that copy is permitted; it still views the original elements. An owning heap container needs an ownership contract: duplicating its header alone cannot create two independent owners.
 

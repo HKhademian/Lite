@@ -42,6 +42,11 @@ only surviving contributions against destination slots. Stored tuple receiving
 label conversion is also [implemented narrowly](../investigations/INV-022-fvp-label-conversion.md).
 Defaults, spread and named builtin helper arguments remain unsupported.
 
+The approved [INV-055 slice](../investigations/INV-055-fvp-list-slice.md) adds
+ordinary List<T> inputs/results with exact element contracts and preserved
+sequence copies. Mut grants are limited to the four temporary list operations;
+general user-function mut parameters remain unsupported.
+
 ## Template
 
 ```text
