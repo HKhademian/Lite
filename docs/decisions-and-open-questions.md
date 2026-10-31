@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Isolated early Wasm feasibility evidence, 2026-10-31
+
+The existing emitted TS report core compiles unchanged with AssemblyScript
+0.28.20 in a temporary environment. All 12 admitted report-literal cases execute
+through generated Wasm/ESM bindings with stdout/stderr bytes, status and signal
+matching the igniter. Incremental runtime and tool/dependency integrity are
+recorded explicitly. Project dependency sets remain unchanged; this is not
+adoption of a general AS backend, browser execution or a final Wasm memory policy.
+See [INV-070 evidence](../investigations/INV-070-assemblyscript-report-probe.md).
+
 ## Explicit compiler source context, 2026-10-31
 
 Using approved inputArgs, both restricted emitter applications now accept an

@@ -104,8 +104,10 @@ and [types](https://www.assemblyscript.org/types.html) require a separately chec
 compatibility profile, including integer widths, representation, effects and host
 bindings. Its [runtime variants](https://www.assemblyscript.org/runtime.html) also
 need review before claiming the native no-mandatory-tracing goal there. Strict
-TypeScript typing alone does not establish AS/Wasm parity. No AS dependency is
-added and no Wasm compatibility is claimed by this increment.
+TypeScript typing alone does not establish AS/Wasm parity. No project AS dependency is
+added. A subsequent [isolated probe](INV-070-assemblyscript-report-probe.md) now
+verifies this tiny report core on AS/Wasm for 12 cases; general compatibility and
+a permanent runtime profile remain unselected.
 
 The first emitted core is deliberately independent of Node I/O. It typechecks
 without Node/DOM libraries and can be translated to standard ES-module JavaScript.

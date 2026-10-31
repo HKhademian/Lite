@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-31",
+  "scope": "isolated compatibility probe; not a selected general backend",
+  "host": {
+    "node": "v26.13.0",
+    "platform": "<redacted>",
+    "architecture": "arm64"
+  },
+  "emitter": {
+    "path": "examples/017-report-ts-compiler.lts",
+    "sourceTag": "igniter-v0.1.0-alpha.22",
+    "sourceCommit": "02530e3ac5e0103679bb38ca07fff574fbf4a5c6"
+  },
+  "tools": [
+    {
+      "name": "assemblyscript",
+      "version": "0.28.20",
+      "integrity": "sha512-5PM7GZpvcLypHcLmi30aP8mqm5HjU+LL3BdV1xDyA3USGtL2w+iMiUnhtH+vW8+2kOuHlAyPu7M+QgyEw5he1g=="
+    },
+    {
+      "name": "binaryen",
+      "version": "131.0.0-nightly.20260721",
+      "integrity": "sha512-AAQIkhfbYXh4FBObwBrlO+5L+6Rp6OOMOjh6AdT0M+GLNLyrwKWgtW+EzmizNgx9CWDfTJPfDtKoZi62QESbtg=="
+    },
+    {
+      "name": "long",
+      "version": "5.3.2",
+      "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
+    }
+  ],
+  "runtime": "incremental",
+  "flags": [
+    "--bindings",
+    "esm",
+    "--exportRuntime"
+  ],
+  "projectDependenciesChanged": false,
+  "cases": [
+    {
+      "source": "report(42);",
+      "emittedTsSha256": "4839b6ccbcca385b50d0351502b2f76feeaa36e175ae14d8cd4c286310bfe1e8",
+      "stdoutHex": "34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(0);",
+      "emittedTsSha256": "dd0574277b859e8851fea9b8f14e15605eee565a608090bb2128c655bcb2cbae",
+      "stdoutHex": "300a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(-0);",
+      "emittedTsSha256": "dd0574277b859e8851fea9b8f14e15605eee565a608090bb2128c655bcb2cbae",
+      "stdoutHex": "300a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(+00042);",
+      "emittedTsSha256": "4839b6ccbcca385b50d0351502b2f76feeaa36e175ae14d8cd4c286310bfe1e8",
+      "stdoutHex": "34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "\treport ( - 00042 ) ; \t",
+      "emittedTsSha256": "2bf3868aee132f7cf8afcaad984acf8f22f89690fc9130166d8a223ec4a7484f",
+      "stdoutHex": "2d34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(9223372036854775807);",
+      "emittedTsSha256": "ab55063db1b0034398b248ed0fb3dc0339ebce365c8c259ea5c493a15ec8b436",
+      "stdoutHex": "393232333337323033363835343737353830370a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(-9223372036854775808);",
+      "emittedTsSha256": "ee76f02d9a55f11d2c551384d5a056b5339ab253a62dfa61c0c0d0b97a31eb16",
+      "stdoutHex": "2d393232333337323033363835343737353830380a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(9999999999999999);",
+      "emittedTsSha256": "69f2bc69c4b76590eb00683c90f758583513bdfc17e805b182cc042b7c502b55",
+      "stdoutHex": "393939393939393939393939393939390a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(0000)",
+      "emittedTsSha256": "dd0574277b859e8851fea9b8f14e15605eee565a608090bb2128c655bcb2cbae",
+      "stdoutHex": "300a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "\nreport(\n42\n);\n",
+      "emittedTsSha256": "4839b6ccbcca385b50d0351502b2f76feeaa36e175ae14d8cd4c286310bfe1e8",
+      "stdoutHex": "34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n",
+      "emittedTsSha256": "2bf3868aee132f7cf8afcaad984acf8f22f89690fc9130166d8a223ec4a7484f",
+      "stdoutHex": "2d34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    },
+    {
+      "source": "report(42);\n",
+      "emittedTsSha256": "4839b6ccbcca385b50d0351502b2f76feeaa36e175ae14d8cd4c286310bfe1e8",
+      "stdoutHex": "34320a",
+      "stderrHex": "",
+      "status": 0,
+      "signal": null
+    }
+  ]
+}

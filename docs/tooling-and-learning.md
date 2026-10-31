@@ -270,6 +270,13 @@ typecheck before accepting changes; Node's type stripping does not typecheck.
 See the [igniter guide](../igniter/README.md) for commands, exact provisional
 helper behavior, test evidence, and the first tagged-checkpoint identity.
 
+An isolated [AS/Wasm probe](../investigations/INV-070-assemblyscript-report-probe.md)
+now compiles the unchanged emitted report core with AssemblyScript 0.28.20 and
+matches all 12 output/status cases through Wasm bindings. The compiler/tools are
+installed only in a temporary directory; no project dependency or permanent AS
+runtime/profile is selected. This does not block TS-first self-hosting or prove
+general emitted-TS compatibility.
+
 ## Explicit output and tracing
 
 The user-approved [INV-067 increment](../investigations/INV-067-fvp-script-arguments.md)

@@ -961,6 +961,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Investigation:** target direction recorded; full platform investigation open; contributor: redacted (agent-assisted); note: [TS/web, C/native and possible AS/Wasm direction](INV-061-first-compiler-output.md) — TS is a maintained web/bootstrap target; C is first native and a maintained export target; possible AS/early Wasm needs separate compatibility/host/runtime checks. No platform matrix, ABI or Wasm execution claim.
 
+**Follow-up:** [INV-070 — isolated AssemblyScript report-core probe](INV-070-assemblyscript-report-probe.md) — unchanged emitted TS compiles/runs with AS 0.28.20 in a temporary environment for 12 report-literal cases, matching raw output/status/signal. Incremental runtime and host bindings are explicit; no project dependency, general AS support, browser claim or memory policy selected.
+
 <a id="inv-071"></a>
 
 ## INV-071 — Standard-library boundaries
