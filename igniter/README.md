@@ -14,25 +14,25 @@ no npm package dependencies and executes the `.ts` sources directly.
 From the repository root:
 
 ```sh
-node igniter/cli.ts samples/fvp/001-double-sum.lts
+node igniter/cli.ts examples/001-double-sum.lts
 ```
 
 Enter `7` and `5` on separate lines; it reports `24`. Redirected stdin works too.
-For basic conditions, run `node igniter/cli.ts samples/fvp/002-decisions.lts`
+For basic conditions, run `node igniter/cli.ts examples/002-decisions.lts`
 and supply an integer such as `0` or `5`.
-For loops, run `node igniter/cli.ts samples/fvp/003-sum-positive.lts`; enter
+For loops, run `node igniter/cli.ts examples/003-sum-positive.lts`; enter
 `3`, `-2`, `4`, `0` to report `7`.
-For functions and recursion, run `node igniter/cli.ts samples/fvp/004-factorial.lts`;
+For functions and recursion, run `node igniter/cli.ts examples/004-factorial.lts`;
 enter `5` to report `120` (or `0` to report `1`). Negative input explicitly
 reports an error and exits with status 2; overflow faults instead of wrapping.
 For a tiny Lite-written tokenizer, run
-`node igniter/cli.ts samples/fvp/005-scan-arithmetic.lts`; enter `12 + 30`
+`node igniter/cli.ts examples/005-scan-arithmetic.lts`; enter `12 + 30`
 to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
 ```sh
-node igniter/cli.ts --check samples/fvp/001-double-sum.lts
+node igniter/cli.ts --check examples/001-double-sum.lts
 npm --prefix igniter ci
 npm --prefix igniter run check
 npm --prefix igniter test
@@ -187,7 +187,7 @@ byte/grapheme views, interpolation, formatting and the full text profile remain
 unsupported or open. These helper names obey ordinary shadowing and are not
 first-class builtin values.
 
-The [arithmetic tokenizer](../samples/fvp/005-scan-arithmetic.lts) groups ASCII decimal
+The [arithmetic tokenizer](../examples/005-scan-arithmetic.lts) groups ASCII decimal
 digit runs, skips spaces/tabs, and reports individual `+ - * / ( )` symbols.
 It preserves digit text, including leading zeroes. An unsupported character
 explicitly reports an error and exits 2; an empty supplied line has no output,

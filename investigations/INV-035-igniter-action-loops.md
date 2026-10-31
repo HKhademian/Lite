@@ -36,7 +36,7 @@ targeting in nested loops, body-local reinitialization, lexical shadowing,
 fault/exit propagation, and rejected sources/unsupported transfer forms. Invalid
 or unknown code in an untaken body is still rejected before effects.
 
-The real CLI example [sum-positive.lts](../samples/fvp/003-sum-positive.lts)
+The real CLI example [sum-positive.lts](../examples/003-sum-positive.lts)
 reads 3, -2, 4, 0 and reports 7; initial 0 reports 0. Its negative values exercise
 continue and its sentinel exercises break. No existing lesson source is changed.
 No native, iterable, lifetime, cleanup, or self-hosted compiler result is claimed.

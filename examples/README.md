@@ -1,13 +1,13 @@
 # Runnable FVP examples
 
 Short programs for exploring the current Lite interpreter. These are project
-samples, shared by the interpreter tests and editor tooling. Their local index
-is independent of the [520 learning exercises](../list.md).
+examples, shared by the interpreter tests and editor tooling. Their local index
+is independent of the [520 learning exercises](../samples/list.md).
 
 Run from the repository root with Node 26.13.0:
 
 ```sh
-node igniter/cli.ts samples/fvp/001-double-sum.lts
+node igniter/cli.ts examples/001-double-sum.lts
 ```
 
 - [001 — Double a sum](001-double-sum.lts): enter 7 and 5; reports 24.
@@ -28,5 +28,5 @@ index, a descriptive hyphenated filename and an entry in this guide. Module
 examples, when supported, should use .lt; runnable scripts use .lts. No .lite
 compatibility extension is introduced.
 
-See the [interpreter guide](../../igniter/README.md) for supported features and
+See the [interpreter guide](../igniter/README.md) for supported features and
 limits. Numbering/navigation and successful tests do not select language designs.

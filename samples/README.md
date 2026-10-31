@@ -3,8 +3,8 @@
 Start with [adding two numbers](001_add_two_numbers.lts), then follow exercises 001–020 in the [full list](list.md). Each file tells a small story, supplies the numbers, and calculates an answer. Comments beside the answers show what to expect.
 
 For short programs you can run with the current interpreter, use the
-[indexed FVP examples](fvp/README.md). They belong to this project sample
-collection; their local 001–005 numbering is separate from the 520 exercise IDs.
+[indexed FVP examples](../examples/README.md) in the root examples directory.
+Their local 001–005 numbering is separate from the 520 exercise IDs.
 
 You do not need to know LiteScript to read the first example:
 

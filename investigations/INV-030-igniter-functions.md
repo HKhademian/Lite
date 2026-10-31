@@ -63,7 +63,7 @@ activations. Return through loops, nearest-function targeting, exit/fault propag
 and invalid captures/signatures/unsupported forms are checked. Invalid uncalled
 bodies are rejected before any I/O.
 
-The real CLI [factorial example](../samples/fvp/004-factorial.lts) reports 120 for
+The real CLI [factorial example](../examples/004-factorial.lts) reports 120 for
 5 and exits 2 with an explicit error for negative input. The evaluator reports 1
 for 0 and faults on 21! overflow. Existing lesson files are unchanged; this does
 not claim full language or 20-lesson coverage.

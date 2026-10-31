@@ -3,7 +3,7 @@
 520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions, **implemented but unverified**; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
 
 Runnable implementation demonstrations are indexed separately in
-[samples/fvp](fvp/README.md), within the same project sample collection. Their
+[examples](../examples/README.md), at the project root. Their
 local numbering does not replace or renumber these exercise IDs.
 
 ## Starting conditions

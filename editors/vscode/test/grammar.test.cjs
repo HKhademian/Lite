@@ -108,7 +108,7 @@ test('unfinished comments and multiline strings stay open without guessing a ter
   const rows = await tokenize('"open\nreport(1);');
   has(rows, 1, 'report', 'string.quoted.double.lite');
 });
-test('tokenize all project samples, including indexed FVP demonstrations, using the real TextMate engine', async () => {
+test('tokenize project samples and indexed examples using the real TextMate engine', async () => {
   let files = 0;
   async function visit(dir) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -122,5 +122,6 @@ test('tokenize all project samples, including indexed FVP demonstrations, using 
     }
   }
   await visit(path.join(root, '../../samples'));
+  await visit(path.join(root, '../../examples'));
   assert.ok(files >= 25, `expected lessons and examples, got ${files}`);
 });

@@ -58,7 +58,7 @@ interpolation, formatting, and full Unicode policy remain unimplemented/open.
 
 ## Concrete experiment and evidence
 
-The [arithmetic tokenizer](../samples/fvp/005-scan-arithmetic.lts) is written
+The [arithmetic tokenizer](../examples/005-scan-arithmetic.lts) is written
 in Lite using ordinary functions, loops, short-circuit logic and the helpers.
 It groups ASCII decimal runs, skips spaces/tabs, and reports individual
 `+ - * / ( )` symbols. It preserves leading zeroes and emits tokens explicitly.
