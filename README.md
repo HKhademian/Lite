@@ -5,13 +5,15 @@ Lite is a language-design project for **LiteLang**, a readable, strongly typed l
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
 The project now has a **small experimental TypeScript/Node igniter** for a narrow
-FVP checkpoint, now including Boolean logic, basic conditionals, and action loops.
+FVP checkpoint, now including Boolean logic, conditionals, action loops,
+typed functions and a flat fixed-tuple subset.
 Run `node igniter/cli.ts examples/001-double-sum.lts` with
 Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/README.md)
 for setup, strict typechecking, tests, supported behavior, and limitations.
 The wider language remains a design draft; there is no native or self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
+- [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)

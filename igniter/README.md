@@ -28,6 +28,9 @@ reports an error and exits with status 2; overflow faults instead of wrapping.
 For a tiny Lite-written tokenizer, run
 `node igniter/cli.ts examples/005-scan-arithmetic.lts`; enter `12 + 30`
 to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
+For tuple values, destructuring and function inputs/results, run
+`node igniter/cli.ts examples/006-fixed-tuples.lts`. See the
+[numbered project examples](../examples/README.md) for the shared index.
 There are no automatic prompts or binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -47,7 +50,8 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 ## Supported checkpoint
 
 One file; fixed/inferred `:=` bindings, `var`/replacement, shadowing and scalar
-copies; integer/float/text/Bool/Unit values; `+ - * /`, unary signs and parentheses;
+copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
+`+ - * /`, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
 parsed and checked before effects, including uncalled function bodies.
 Ordinary statements need semicolons between them; complete braced items do not.
@@ -108,8 +112,9 @@ quadruple := fn(n: Int): Int { double(double(n)) }
 report(quadruple(3));
 ```
 
-Parameters and results require explicit scalar annotations: Int, Float, String,
-Bool, or Unit. These spellings are the temporary script's primitive type names;
+Parameters and results require explicit scalar or flat unnamed tuple annotations:
+Int, Float, String, Bool, Unit, (:Int, :String), or (:Int,), for example.
+These scalar spellings are the temporary script's primitive type names;
 general type-name resolution is not implemented. Parameters are fixed local
 value bindings. A body yields its final expression; empty/declaration/assignment
 tails yield Unit. `return value` exits the nearest invoked function, including
@@ -143,10 +148,53 @@ there is no native capture representation or resource-lifetime implementation.
 Later helper declarations and mutual recursion, general captures, first-class
 self, self binding/parameter names, keyword-free literals, omitted annotations,
 named/default/rest arguments, access-qualified parameters, callable parameters/
-results, typed receiving declarations, and calls through arbitrary expressions
+results, general typed receiving declarations, and calls through arbitrary expressions
 remain unsupported. The temporary builtin helpers are not first-class values.
 Function reporting/comparison is also rejected. Program exit and runtime faults
 propagate through function calls; cleanup and recoverable failures remain absent.
+
+### Flat fixed tuples
+
+The user approved this bounded subset of existing tuple syntax:
+
+```text
+makeToken := fn(kind: String, text: String): (:String, :String) {
+    (kind, text)
+}
+token := makeToken("number", "12");
+(kind, text) := token;
+report(token.0);
+report(text);
+```
+
+Construct flat unnamed tuples of existing scalar values, evaluating components
+once in written order. Read fixed zero-based positions with .0, .1, and so on;
+the receiver evaluates once and invalid positions are rejected before execution.
+Parenthesize a block/conditional before applying a member, as for other block
+continuations. Tuple-valued function parameters/results use explicit annotations
+such as (:Int, :String), preserving component types and fixed arity.
+
+() is Unit. (value) groups the value; (value,) makes a distinct singleton tuple.
+Its unnamed type requires a comma too: (:Int,) is valid and (:Int) is rejected.
+An empty pattern matches only Unit; a singleton pattern needs its comma.
+Grouped patterns preserve the whole source value. Unit-valued components retain
+their positions and do not disappear from a nonempty tuple.
+
+Positional declaration patterns evaluate the source once before introducing
+their names, then bind in written order. Repeated names shadow earlier bindings,
+including underscore, which remains readable. Require exact known arity and
+irrefutable shapes. Each extracted name is fixed; whole-value var replacement
+retains the binding's exact tuple type. Copies, ordinary arguments and results
+preserve the evaluated values when the original source is subsequently replaced.
+Passing one tuple is one argument, without implicit argument spread or flattening.
+
+Named/mixed tuples, nested tuple components/patterns, typed declaration patterns,
+rest/spread, array segments, component writes, access grants, tuple equality and
+tuple report formatting remain unsupported. Surrounding tuple data capture is
+rejected just like surrounding scalar capture. Type/return-path analysis remains
+conservative; a noncontinuing expression inside a tuple constructor is outside
+this scalar-component subset. Report scalar members explicitly. Host storage
+does not implement or validate native tuple layout, ABI, ownership or performance.
 
 ### Temporary text operations
 
@@ -226,7 +274,7 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   text profile. Identifier admission uses the host's Unicode ID properties plus
   underscore; the full Lite identifier profile remains open.
 
-Tuples/destructuring, general typed declarations, collections,
+Wider tuples/patterns, general typed declarations, collections,
 modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
 currently terminal because recovery is not implemented. Advanced operators
@@ -235,14 +283,16 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.5**, tag **igniter-v0.1.0-alpha.5**, adds computed text
-concatenation, temporary scanning helpers, and a Lite-written tokenizer example.
+Version **0.1.0-alpha.6**, tag **igniter-v0.1.0-alpha.6**, adds the approved
+flat fixed-tuple subset, positional patterns and tuple function inputs/results.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
 - **igniter-v0.1.0-alpha.3**, commit `1dcf92f`: action loops and bare break/continue.
 - **igniter-v0.1.0-alpha.4**, commit `29978ff`: typed scalar functions, return and recursion.
+- **igniter-v0.1.0-alpha.5**, commit `7038ce1`: computed text concatenation and
+  experimental scanning helpers; the new helpers/policies still await consent.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -251,7 +301,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **52 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **62 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

@@ -1,8 +1,16 @@
 # Tuple value entries and positional access
 
-Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, the empty tuple pattern, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract, not an implemented parser/runtime**.
+Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, the empty tuple pattern, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract; limited igniter implementation coverage is recorded below**.
 
 ## Selected value entry forms
+
+Implementation coverage, **2026-10-31**: the user-approved
+[flat fixed-tuple subset](../igniter/README.md#flat-fixed-tuples) now executes
+unnamed scalar tuple construction, fixed .0/.1 reads, declaration destructuring,
+tuple copies and explicit function inputs/results. It preserves grouping versus
+singleton shape and Unit-valued positions. This does not implement named/mixed,
+nested, spread/segment, mutation, native layout or complete grammar contracts
+described on this page. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
 
 ```text
 cake := 10;

@@ -4,7 +4,7 @@ Start with [adding two numbers](001_add_two_numbers.lts), then follow exercises 
 
 For short programs you can run with the current interpreter, use the
 [indexed FVP examples](../examples/README.md) in the root examples directory.
-Their local 001–005 numbering is separate from the 520 exercise IDs.
+Their local numbering is separate from the 520 exercise IDs.
 
 You do not need to know LiteScript to read the first example:
 

@@ -516,3 +516,114 @@ test('real CLI runs the Lite tokenizer, preserves supplementary text, and report
     assert.equal(invalid.stdout, ''); assert.match(invalid.stderr, /:1:1: BoundPanic:/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('flat fixed tuple construction and positional reads retain heterogeneous scalar types', () => {
+  assert.equal(run(`values := (7, 2.5, "tea", true, Unit);
+    report(values.0 + 1); report(values.1); report(values.2); report(not values.3); report(values.4);
+    report((1, 2,).1); report(-(3, 4).0);`).output, '8\n2.5\ntea\nfalse\nUnit\n2\n-3\n');
+  assert.equal(run('pair := (1, 2); pair;').output, '');
+});
+test('tuple expressions and receivers evaluate once in written order', () => {
+  assert.equal(run(`pair := (({report(1); inputInt()}), ({report(2); inputInt()}));
+    report(pair.0); report(pair.1);
+    make := fn(): (:Int, :Int) { report(3); (8, 9) }
+    (a, b) := make(); report(a); report(b); report(make().1);`, '4 5').output,
+    '1\n2\n4\n5\n3\n8\n9\n3\n9\n');
+});
+test('Unit, grouping, singleton tuples and Unit-valued positions keep distinct shapes', () => {
+  assert.equal(run(`one := (42,); (whole) := one; (value,) := one;
+    report(whole.0); report(value);
+    unitBox := (Unit,); report(unitBox.0);
+    () := (); () := Unit;
+    action := fn(): () { report(7); () }
+    () := action();
+    takeUnit := fn(value: (Unit)): Int { 9 }
+    report(takeUnit(()));`).output, '42\n42\nUnit\n7\n9\n');
+  for (const source of ['(value,) := 42;', 'value := (42); report(value.0);',
+    '() := 42;', '() := (Unit,);', 'report(().0);',
+    'f := fn(value: Unit): Unit { value } f();',
+    'f := fn(box: (:Unit,)): Unit { box.0 } f(());']) fault(source, 'TypeError');
+});
+test('destructuring resolves the source first, then shadows receiver names in written order', () => {
+  assert.equal(run(`x := 7; y := 9;
+    (x, y) := (y, x); report(x); report(y);
+    (x, x) := (1, "last"); report(x);
+    (_, _) := (3, "visible"); report(_);
+    ((whole)) := (4, 5); report(whole.1);
+    (a, (b)) := (6, 7); report(a); report(b);`).output, '9\n7\nlast\nvisible\n5\n6\n7\n');
+  assert.equal(run('report({ (a, b) := (1, 2); });').output, 'Unit\n');
+  fault('{ (a, b) := (1, 2); } report(a);', 'TypeError');
+  fault('(a, b) := (a, 2);', 'TypeError');
+});
+test('ordinary tuple copies survive whole-value var replacement and later shadows', () => {
+  assert.equal(run(`var pair := (1, "first");
+    saved := pair; (count, text) := pair;
+    pair = (2, "second");
+    pair := (3, "third");
+    report(saved.0); report(saved.1); report(count); report(text); report(pair.1);`).output,
+    '1\nfirst\n1\nfirst\nthird\n');
+  fault('pair := (1, 2); pair = (3, 4);', 'TypeError');
+  fault('var pair := (1, 2); pair = (3, "wrong");', 'TypeError');
+  fault('var pair := (1, 2); pair = (3,);', 'TypeError');
+});
+test('explicit tuple inputs and outputs support tail returns, early returns and compatible replacement', () => {
+  assert.equal(run(`var make := fn(n: Int): (:Int, :String) { (n, "first") }
+    make = fn(n: Int): (:Int, :String) { if n < 0 { return (0, "negative"); } (n, "normal") }
+    describe := fn(pair: (:Int, :String)): String { pair.1 }
+    report(describe(make(7))); report(describe(make(-1)));
+    one := fn(n: Int): (:Int,) { (n,) }
+    takeOne := fn(pair: (:Int,)): Int { pair.0 }
+    report(takeOne(one(8)));
+    report((if true { (1, "yes") } else { (2, "no") }).1);`).output, 'normal\nnegative\n8\nyes\n');
+  fault('one := fn(): (:Int,) { 42 }', 'TypeError');
+  fault('one := fn(): Int { (42,) }', 'TypeError');
+  fault('make := fn(): (:Int, :String) { return (1, false); }', 'TypeError');
+});
+test('a tuple is one ordinary call argument and is copied at its evaluation position', () => {
+  assert.equal(run(`var pair := (10, 11);
+    first := fn(original: (:Int, :Int), ignored: Unit): Int { original.0 }
+    report(first(pair, ({pair = (20, 30); Unit}))); report(pair.0);
+    combine := fn(a: Int, b: Int): Int { a + b }
+    report(combine(pair.0, pair.1));`).output, '10\n20\n50\n');
+  fault('f := fn(pair: (:Int, :Int)): Int { pair.0 } f(1, 2);', 'TypeError');
+  fault('f := fn(a: Int, b: Int): Int { a + b } f((1, 2));', 'TypeError');
+});
+test('tuple parameters and destructured locals remain separate across recursive calls', () => {
+  assert.equal(run(`sum := fn(pair: (:Int, :Int)): Int {
+      (n, extra) := pair;
+      if n == 0 { return extra; }
+      saved := n;
+      saved + self((n - 1, extra))
+    }
+    report(sum((4, 7))); report(sum((2, 1)));`).output, '17\n4\n');
+  fault('pair := (1, 2); f := fn(): Int { pair.0 }', 'TypeError');
+});
+test('invalid tuple shapes, positions and transfers fail before any input or output', () => {
+  for (const source of ['(a, b) := (1,);', '(a,) := ();',
+    'pair := (1, 2); pair.2;', 'pair := (1, 2); pair.9223372036854775807;',
+    'f := fn(pair: (:Int, :String)): String { pair.1 } f((1, true));',
+    'pair := (1, 2); report(pair);', 'pair := (1, 2); report(pair == pair);',
+    'pair := (1, 2); pair();', 'textLength((1, 2));',
+    'f := fn(): Int { 1 } value := (f,);', 'value := ((1, 2), 3);',
+    'f := fn(): (:Int, :(:Int, :Int)) { (1, 2) }']) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report(99); ${source}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', source);
+    assert.equal(observed, false, source);
+  }
+  for (const source of ['f := fn(): (:Int) { (1,) }', 'pair := (1, 2); pair.-1;',
+    'pair := (1, 2); pair.1.0;', '(a, (b, c)) := (1, 2);',
+    '(a, ...rest) := (1, 2);', '(self, b) := (1, 2);', 'pair := (left = 1, right = 2);',
+    'var pair := (1, 2); pair.0 = 3;']) fault(source, 'SourceError');
+});
+test('tuple demonstration runs from the numbered project examples through the real CLI', () => {
+  const example = new URL('../examples/006-fixed-tuples.lts', import.meta.url);
+  const expected = 'number\n12\nnumber: 12\n42\n';
+  assert.equal(run(readFileSync(example, 'utf8')).output, expected);
+  const result = spawnSync(process.execPath, [new URL('./cli.ts', import.meta.url).pathname, example.pathname], {
+    encoding: 'utf8', timeout: 5000,
+  });
+  assert.equal(result.error, undefined); assert.equal(result.status, 0);
+  assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
+});

@@ -21,6 +21,9 @@ node igniter/cli.ts examples/001-double-sum.lts
   12 + 30; reports number/symbol tokens. **Its agent-added text helpers and
   their policies still await explicit consent.** This is implementation
   evidence, not an accepted language feature or the full Lite lexer.
+- [006 — Fixed tuples](006-fixed-tuples.lts): no input needed; demonstrates
+  construction, positional reads, destructuring, singleton/Unit distinctions,
+  and tuple function inputs/results. Reports number, 12, number: 12, and 42.
 
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit

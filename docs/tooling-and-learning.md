@@ -99,6 +99,15 @@ user consent and await review; their implementation does not select them.
 Follow the [explicit-consent rule](../investigations/README.md#explicit-consent-for-language-changes)
 before adding syntax/features, even for temporary scaffolding.
 
+The user-approved **2026-10-31** increment adds flat fixed tuples of existing
+scalars, literal positional reads, declaration destructuring and explicit tuple
+function inputs/results, using already selected syntax. The runnable example is
+[006-fixed-tuples.lts](../examples/006-fixed-tuples.lts). Strict checking and all
+62 interpreter test groups pass. Named/nested/rest tuples, mutation/access grants,
+tuple reporting and native layout remain unsupported; experimental text-helper
+consent is unchanged. See [INV-022](../investigations/INV-022-fvp-fixed-tuples.md)
+and [implemented tuple coverage](../igniter/README.md#flat-fixed-tuples).
+
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,

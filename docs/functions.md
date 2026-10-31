@@ -15,6 +15,14 @@ unsupported. Admitting surrounding function-valued helper dependencies is a
 temporary implementation boundary, not a general capture-policy selection.
 See [INV-030 evidence](../investigations/INV-030-igniter-functions.md).
 
+The approved **2026-10-31** [fixed-tuple increment](../igniter/README.md#flat-fixed-tuples)
+extends explicit function inputs/results to flat unnamed tuples of scalar values,
+using existing annotations such as (:Int, :String) and (:Int,). A tuple remains
+one ordinary argument and preserves its evaluated component values. It does not
+implement intrinsic pack application, argument spread, callable-valued inputs/
+results, tuple data captures, or the wider callable model. See
+[INV-022 evidence](../investigations/INV-022-fvp-fixed-tuples.md).
+
 ## Template
 
 ```text

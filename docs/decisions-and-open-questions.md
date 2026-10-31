@@ -2,6 +2,23 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Approved fixed-tuple igniter increment, 2026-10-31
+
+The user explicitly accepts the proposed construction, .0/.1 reads, positional
+destructuring and tuple function inputs/results subset. It implements existing
+selected syntax and value/shape rules, adding no builtin or new language spelling.
+The first subset is flat unnamed tuples of existing scalar values, with exact
+arity/types, singleton/grouping/Unit distinctions, source-once destructuring,
+ordered receiver shadowing, value copies and compatible whole-value replacement.
+
+Strict no-emit checking and all 62 interpreter test groups pass, including the
+real [006 example](../examples/006-fixed-tuples.lts). Preserve alpha.1–alpha.5
+and add igniter-v0.1.0-alpha.6. Named/mixed/nested/rest tuples, member mutation,
+access grants, tuple reporting/equality, native layout and self-hosting remain
+unimplemented. The text helpers still await separate consent.
+Coverage: [fixed tuples](../igniter/README.md#flat-fixed-tuples).
+Evidence and approval: [INV-022](../investigations/INV-022-fvp-fixed-tuples.md).
+
 ## Explicit design consent required, 2026-10-30
 
 The user requires explicit consent before new language syntax/features, including

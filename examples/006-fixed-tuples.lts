@@ -1,0 +1,18 @@
+makeToken := fn(kind: String, text: String): (:String, :String) {
+    (kind, text)
+}
+
+describe := fn(token: (:String, :String)): String {
+    token.0 + ": " + token.1
+}
+
+token := makeToken("number", "12");
+(kind, text) := token;
+report(kind);
+report(text);
+report(describe(token));
+
+one := (42,);
+(value,) := one;
+report(value);
+() := ();

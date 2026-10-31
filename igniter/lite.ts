@@ -3,10 +3,12 @@ export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
 type Operator = '+' | '-' | '*' | '/';
 type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
-type Parameter = Readonly<{ name: string; type: ScalarType }>;
-type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: ScalarType }>;
+type TupleType = Readonly<{ kind: 'Tuple'; items: readonly ScalarType[] }>;
+type DataType = ScalarType | TupleType;
+type Parameter = Readonly<{ name: string; type: DataType }>;
+type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: DataType }>;
 // Never is internal flow information, not a new source-level type.
-type Type = ScalarType | FunctionType | 'Never';
+type Type = DataType | FunctionType | 'Never';
 type Comparison = '==' | '=!=' | '<' | '<!' | '<=' | '<!=' | '>' | '>!' | '>=' | '>!=';
 type Use = 'value' | 'discard';
 export type Value =
@@ -15,6 +17,7 @@ export type Value =
   | Readonly<{ kind: 'String'; value: string }>
   | Readonly<{ kind: 'Bool'; value: boolean }>
   | Readonly<{ kind: 'Unit' }>
+  | Readonly<{ kind: 'Tuple'; items: readonly Value[] }>
   | FunctionValue;
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
@@ -26,6 +29,8 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'string'; text: string }
   | { kind: 'name'; name: string }
   | { kind: 'unit' }
+  | { kind: 'tuple'; items: readonly Raw[] }
+  | { kind: 'position'; input: Raw; index: bigint }
   | { kind: 'bool'; value: boolean }
   | { kind: 'boolLeader'; input: Raw }
   | { kind: 'unary'; op: '+' | '-' | 'not'; input: Raw }
@@ -43,11 +48,14 @@ type Raw = Readonly<{ at: Position }> & (
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
   | { kind: 'assign'; name: string; input: Raw }
+  | { kind: 'destructure'; names: readonly Token[]; input: Raw }
   | { kind: 'expression'; input: Raw }
 );
 type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; owner: number }>;
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
+  | { kind: 'tuple'; items: readonly Expr[] }
+  | { kind: 'position'; input: Expr; index: number }
   | { kind: 'read'; binding: Binding }
   | { kind: 'unary'; op: '+' | '-' | 'not'; input: Expr }
   | { kind: 'binary'; op: Operator; left: Expr; right: Expr }
@@ -65,6 +73,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
 );
 type Item =
   | Readonly<{ kind: 'store'; binding: Binding; input: Expr; declare: boolean }>
+  | Readonly<{ kind: 'destructure'; bindings: readonly Binding[]; input: Expr }>
   | Readonly<{ kind: 'expression'; input: Expr }>;
 type Block = Readonly<{ items: readonly Item[]; type: Type }>;
 export type Program = Readonly<{ items: readonly Item[] }>;
@@ -116,15 +125,24 @@ function scalarType(name: string, at: Position): ScalarType {
 }
 function sameType(left: Type, right: Type): boolean {
   if (typeof left === 'string' || typeof right === 'string') return left === right;
-  return left.result === right.result && left.parameters.length === right.parameters.length &&
+  if (left.kind === 'Tuple') {
+    return right.kind === 'Tuple' && left.items.length === right.items.length && left.items.every((item, index) => item === right.items[index]);
+  }
+  if (right.kind !== 'Function') return false;
+  return sameType(left.result, right.result) && left.parameters.length === right.parameters.length &&
     left.parameters.every((parameter, index) => {
       const other = right.parameters[index];
-      return other !== undefined && parameter.name === other.name && parameter.type === other.type;
+      return other !== undefined && parameter.name === other.name && sameType(parameter.type, other.type);
     });
 }
 function fits(actual: Type, expected: Type): boolean { return actual === 'Never' || sameType(actual, expected); }
 function typeName(type: Type): string {
-  return typeof type === 'string' ? type : `fn (${type.parameters.map(p => `${p.name}: ${p.type}`).join(', ')}): ${type.result}`;
+  if (typeof type === 'string') return type;
+  if (type.kind === 'Tuple') return `(${type.items.map(item => `:${item}`).join(', ')}${type.items.length === 1 ? ',' : ''})`;
+  return `fn (${type.parameters.map(p => `${p.name}: ${typeName(p.type)}`).join(', ')}): ${typeName(type.result)}`;
+}
+function isScalar(type: Type): type is ScalarType {
+  return typeof type === 'string' && type !== 'Never';
 }
 function integer(value: bigint, at: Position, literal = false): Extract<Value, { kind: 'Int' }> {
   if (value < MIN || value > MAX) {
@@ -229,7 +247,7 @@ function tokenize(text: string): readonly Token[] {
       if (operator !== undefined) {
         advance(operator.length);
         tokens.push({ kind: 'symbol', text: operator, at: start });
-      } else if ('+-*/=();,{}<>:'.includes(ch)) {
+      } else if ('+-*/=();,{}<>:.'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -239,6 +257,7 @@ function tokenize(text: string): readonly Token[] {
   return tokens;
 }
 
+type Pattern = Readonly<{ kind: 'name'; token: Token }> | Readonly<{ kind: 'tuple'; items: readonly Pattern[] }>;
 class Parser {
   readonly tokens: readonly Token[];
   index = 0;
@@ -256,6 +275,57 @@ class Parser {
   }
   expect(text: string): void {
     if (!this.accept(text)) source(`expected ${JSON.stringify(text)}`, this.peek().at);
+  }
+  dataType(): DataType {
+    if (!this.accept('(')) {
+      const token = this.take();
+      if (token.kind !== 'id') source('expected a scalar or fixed tuple type', token.at);
+      return scalarType(token.text, token.at);
+    }
+    if (this.accept(')')) return 'Unit';
+    if (!this.accept(':')) {
+      const grouped = this.dataType(); this.expect(')'); return grouped;
+    }
+    const items: ScalarType[] = [];
+    while (true) {
+      const at = this.peek().at;
+      const type = this.dataType();
+      if (typeof type !== 'string') typeError('nested tuple annotations are not supported yet', at);
+      items.push(type);
+      if (!this.accept(',')) {
+        if (items.length === 1) source('an unnamed singleton tuple type requires a comma: (:Int,)', this.peek().at);
+        this.expect(')'); break;
+      }
+      if (this.accept(')')) break;
+      this.expect(':');
+    }
+    return { kind: 'Tuple', items };
+  }
+  startsPatternDeclaration(): boolean {
+    let depth = 0;
+    for (let index = this.index; index < this.tokens.length; index++) {
+      const token = this.tokens[index];
+      if (token?.kind !== 'symbol') continue;
+      if (token.text === '(') depth++;
+      if (token.text === ')' && --depth === 0) return this.tokens[index + 1]?.text === ':=';
+    }
+    return false;
+  }
+  pattern(): Pattern {
+    if (!this.accept('(')) {
+      const token = this.take();
+      if (token.kind !== 'id') source('expected a positional binding name', token.at);
+      return { kind: 'name', token };
+    }
+    if (this.accept(')')) return { kind: 'tuple', items: [] };
+    const first = this.pattern();
+    if (!this.accept(',')) { this.expect(')'); return first; }
+    const items = [first];
+    if (!this.accept(')')) {
+      do { items.push(this.pattern()); } while (this.accept(',') && this.peek().text !== ')');
+      this.expect(')');
+    }
+    return { kind: 'tuple', items };
   }
   parse(close = false): readonly RawItem[] {
     const items: RawItem[] = [];
@@ -275,6 +345,19 @@ class Parser {
         items.push(op.text === ':='
           ? { kind: 'declare', name: start.text, mutable: false, input, at: start.at }
           : { kind: 'assign', name: start.text, input, at: start.at });
+      } else if (start.kind === 'symbol' && start.text === '(' && this.startsPatternDeclaration()) {
+        const pattern = this.pattern();
+        this.expect(':=');
+        const input = this.expression();
+        if (pattern.kind === 'name') {
+          items.push({ kind: 'declare', name: pattern.token.text, mutable: false, input, at: start.at });
+        } else {
+          const names = pattern.items.map(item => {
+            if (item.kind !== 'name') source('nested tuple patterns are not supported yet', start.at);
+            return item.token;
+          });
+          items.push({ kind: 'destructure', names, input, at: start.at });
+        }
       } else { items.push({ kind: 'expression', input: this.expression(), at: start.at }); }
       const previous = this.tokens[this.index - 1];
       const endedBlock = previous?.kind === 'symbol' && previous.text === '}';
@@ -326,6 +409,20 @@ class Parser {
     return leader === undefined ? left : { kind: 'boolLeader', input: left, at: leader.at };
   }
   prefix(): Raw {
+    let input = this.atom();
+    while (true) {
+      const previous = this.tokens[this.index - 1];
+      if (previous?.kind === 'symbol' && previous.text === '}') break;
+      if (!this.accept('.')) break;
+      const index = this.take();
+      if (index.kind !== 'number' || !/^[0-9]+$/.test(index.text)) {
+        source('only literal fixed tuple positions such as value.0 are supported here', index.at);
+      }
+      input = { kind: 'position', input, index: BigInt(index.text), at: index.at };
+    }
+    return input;
+  }
+  atom(): Raw {
     const token = this.take();
     if (token.kind === 'symbol' && (token.text === '+' || token.text === '-')) {
       return { kind: 'unary', op: token.text, input: this.prefix(), at: token.at };
@@ -338,7 +435,14 @@ class Parser {
     }
     if (token.kind === 'symbol' && token.text === '(') {
       if (this.accept(')')) return { kind: 'unit', at: token.at };
-      const value = this.expression(); this.expect(')'); return value;
+      const value = this.expression();
+      if (!this.accept(',')) { this.expect(')'); return value; }
+      const items = [value];
+      if (!this.accept(')')) {
+        do { items.push(this.expression()); } while (this.accept(',') && this.peek().text !== ')');
+        this.expect(')');
+      }
+      return { kind: 'tuple', items, at: token.at };
     }
     if (token.kind === 'symbol' && token.text === '{') {
       const items = this.parse(true); this.expect('}');
@@ -356,16 +460,12 @@ class Parser {
             }
             if (parameters.some(p => p.name === name.text)) source(`duplicate parameter ${name.text}`, name.at);
             this.expect(':');
-            const type = this.take();
-            if (type.kind !== 'id') source('expected a scalar parameter type', type.at);
-            parameters.push({ name: name.text, type: scalarType(type.text, type.at) });
+            parameters.push({ name: name.text, type: this.dataType() });
           } while (this.accept(',') && this.peek().text !== ')');
           this.expect(')');
         }
         this.expect(':');
-        const result = this.take();
-        if (result.kind !== 'id') source('expected a scalar result type', result.at);
-        const signature: FunctionType = { kind: 'Function', parameters, result: scalarType(result.text, result.at) };
+        const signature: FunctionType = { kind: 'Function', parameters, result: this.dataType() };
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('fn requires a braced body', this.peek().at);
         return { kind: 'function', signature, body: this.prefix(), at: token.at };
       }
@@ -420,7 +520,7 @@ function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int
 type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
 type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined };
 function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
-  if (binding.owner !== (state.current?.id ?? 0) && typeof binding.type === 'string') {
+  if (binding.owner !== (state.current?.id ?? 0) && (typeof binding.type === 'string' || binding.type.kind !== 'Function')) {
     typeError(`surrounding runtime data capture (${binding.name}) is not supported yet; pass it as an argument`, at);
   }
   return { kind: 'read', binding, type: binding.type, at };
@@ -441,7 +541,7 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
   try { body = checkExpression(raw.body, local, state); }
   finally { state.current = enclosing; state.loopDepth = depth; }
   if (!fits(body.type, raw.signature.result)) {
-    typeError(`function body produces ${typeName(body.type)}; expected ${raw.signature.result}`, raw.body.at);
+    typeError(`function body produces ${typeName(body.type)}; expected ${typeName(raw.signature.result)}`, raw.body.at);
   }
   return { kind: 'function', code: { parameters, body }, type: raw.signature, at: raw.at };
 }
@@ -460,13 +560,30 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return input;
     }
     case 'unit': return { kind: 'literal', value: UNIT, type: 'Unit', at };
+    case 'tuple': {
+      const items = raw.items.map(item => checkExpression(item, names, state));
+      const types = items.map(item => {
+        if (!isScalar(item.type)) typeError('only scalar components in flat fixed tuples are supported yet', item.at);
+        return item.type;
+      });
+      return { kind: 'tuple', items, type: { kind: 'Tuple', items: types }, at };
+    }
+    case 'position': {
+      const input = checkExpression(raw.input, names, state);
+      if (typeof input.type === 'string' || input.type.kind !== 'Tuple') typeError('fixed positional access requires a tuple', at);
+      if (raw.index >= BigInt(input.type.items.length)) typeError('tuple position outside its static shape', at);
+      const index = Number(raw.index);
+      const type = input.type.items[index];
+      if (type === undefined) throw new Error('igniter invariant: checked tuple position absent');
+      return { kind: 'position', input, index, type, at };
+    }
     case 'function': return checkFunction(raw, names, state);
     case 'return': {
       if (state.current === undefined) typeError('return requires an enclosing function', at);
       const input = raw.input === undefined ? { kind: 'literal', value: UNIT, type: 'Unit', at } satisfies Expr
         : checkExpression(raw.input, names, state);
       if (!fits(input.type, state.current.signature.result)) {
-        typeError(`return produces ${typeName(input.type)}; expected ${state.current.signature.result}`, at);
+        typeError(`return produces ${typeName(input.type)}; expected ${typeName(state.current.signature.result)}`, at);
       }
       return { kind: 'return', input, type: 'Never', at };
     }
@@ -558,7 +675,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       let previous = first;
       for (const pair of rest) {
         if (typeof previous.type !== 'string' || typeof pair.right.type !== 'string') {
-          typeError('function-value comparisons are not supported yet', pair.right.at);
+          typeError('tuple/function-value comparisons are not supported yet', pair.right.at);
         }
         if (!sameType(previous.type, pair.right.type)) typeError('mixed-type comparisons are not supported yet', pair.right.at);
         if (pair.op !== '==' && pair.op !== '=!=' && previous.type !== 'Int' && previous.type !== 'Float') {
@@ -579,13 +696,13 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           if (binding === undefined) throw new Error('igniter invariant: missing callee binding');
           callee = readBinding(binding, state, at);
         }
-        if (typeof callee.type === 'string') typeError(`${raw.name} is not callable`, at);
+        if (typeof callee.type === 'string' || callee.type.kind !== 'Function') typeError(`${raw.name} is not callable`, at);
         const signature = callee.type;
         const args = raw.args.map(arg => checkExpression(arg, names, state));
         if (args.length !== signature.parameters.length) typeError(`${raw.name} expects ${signature.parameters.length} argument(s)`, at);
         for (const [index, parameter] of signature.parameters.entries()) {
           const arg = args[index];
-          if (arg === undefined || !fits(arg.type, parameter.type)) typeError(`argument ${parameter.name} must be ${parameter.type}`, arg?.at ?? at);
+          if (arg === undefined || !fits(arg.type, parameter.type)) typeError(`argument ${parameter.name} must be ${typeName(parameter.type)}`, arg?.at ?? at);
         }
         return { kind: 'invoke', callee, args, type: signature.result, at };
       }
@@ -615,7 +732,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
-      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept function values yet', at);
+      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept tuple/function values yet; report scalar components', at);
       return { kind: 'call', name, args, type, at };
     }
     default: return unreachable(raw);
@@ -637,6 +754,24 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
     const input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
     exits ||= input.type === 'Never';
     switch (item.kind) {
+      case 'destructure': {
+        let types: readonly ScalarType[];
+        if (input.type === 'Unit') types = [];
+        else if (typeof input.type !== 'string' && input.type.kind === 'Tuple') types = input.type.items;
+        else typeError('a positional tuple pattern requires a known tuple or Unit shape', item.at);
+        if (types.length !== item.names.length) typeError('tuple pattern requires exact static arity', item.at);
+        const bindings = item.names.map((name, index) => {
+          if (KEYWORDS.has(name.text) || name.text === 'self') source('keyword/self binding names are not supported by this igniter', name.at);
+          const type = types[index];
+          if (type === undefined) throw new Error('igniter invariant: missing pattern component type');
+          const binding: Binding = { name: name.text, mutable: false, slot: state.nextSlot++, type, owner: state.current?.id ?? 0 };
+          names.set(name.text, binding);
+          return binding;
+        });
+        items.push({ kind: 'destructure', bindings, input });
+        type = 'Unit';
+        break;
+      }
       case 'declare': {
         if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
         const binding: Binding = own ?? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: input.type, owner: state.current?.id ?? 0 };
@@ -696,6 +831,7 @@ function format(value: Value): string {
     case 'String': return value.value;
     case 'Bool': return value.value ? 'true' : 'false';
     case 'Unit': return 'Unit';
+    case 'Tuple': throw new Error('igniter invariant: formatting a checked tuple');
     case 'Function': throw new Error('igniter invariant: formatting a checked function');
     default: return unreachable(value);
   }
@@ -738,6 +874,7 @@ function sameValue(left: Value, right: Value): boolean {
     case 'String': return right.kind === 'String' && left.value === right.value;
     case 'Bool': return right.kind === 'Bool' && left.value === right.value;
     case 'Unit': return right.kind === 'Unit';
+    case 'Tuple': throw new Error('igniter invariant: comparing a checked tuple');
     case 'Function': throw new Error('igniter invariant: comparing a checked function');
     default: return unreachable(left);
   }
@@ -780,6 +917,14 @@ export function execute(program: Program, io: IO): number {
     const evaluateHere = (child: Expr): Value => evaluate(child, frame, self);
     switch (expr.kind) {
       case 'literal': return expr.value;
+      case 'tuple': return { kind: 'Tuple', items: expr.items.map(evaluateHere) };
+      case 'position': {
+        const input = evaluateHere(expr.input);
+        if (input.kind !== 'Tuple') throw new Error('igniter invariant: non-tuple checked access');
+        const value = input.items[expr.index];
+        if (value === undefined) throw new Error('igniter invariant: missing checked tuple component');
+        return value;
+      }
       case 'block': return evaluateBlock(expr.block.items, frame, self);
       case 'function': return { kind: 'Function', code: expr.code, environment: frame };
       case 'self': {
@@ -921,6 +1066,16 @@ export function execute(program: Program, io: IO): number {
         const value = evaluate(item.input, frame, self);
         const target = item.declare ? frame : findFrame(frame, item.binding.slot);
         target.values.set(item.binding.slot, value);
+        result = UNIT;
+      } else if (item.kind === 'destructure') {
+        const input = evaluate(item.input, frame, self);
+        if (input.kind !== 'Unit' && input.kind !== 'Tuple') throw new Error('igniter invariant: checked pattern source shape');
+        const components = input.kind === 'Unit' ? [] : input.items;
+        for (const [index, binding] of item.bindings.entries()) {
+          const value = components[index];
+          if (value === undefined) throw new Error('igniter invariant: missing checked pattern value');
+          frame.values.set(binding.slot, value);
+        }
         result = UNIT;
       } else result = evaluate(item.input, frame, self);
     }
