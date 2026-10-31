@@ -1,13 +1,13 @@
 # Growable owning lists
 
-Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24**. Full List<T> generic grammar, contiguous owner representation, helper names, and capacity APIs remain proposals. Ordinary value transfers follow the general copy default, with no implicit references; this does not decide the List owner's copy contract, copy eligibility, storage sharing, explicit move modes, or allocation/error policy. Those type-specific and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24; copy-first FVP focus clarified 2026-10-31**. Full List<T> generic grammar, contiguous owner representation, helper names, capacity APIs and allocation/error policy remain proposals. Current FVP sequence values follow ordinary copy semantics, with no implicit references; explicit noncopying modes come later. Physical copy elimination must preserve behavior. Broader resource eligibility and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 ## Purpose and beginner examples
 
-FVP review, **2026-10-31**: implementation stops before choosing a runtime-owner
-copy contract, concrete type/constructor or growth API. The next concrete question
-is whether ordinary owner copies preserve an independent sequence or are rejected
-as noncopyable. Neither is selected. See
+FVP clarification, **2026-10-31**: focus on copies and compiler/post-compilation
+optimizations; explicit noncopying modes come later. Do not block ordinary FVP
+sequence copies on designing noncopyable owners. Concrete type/construction,
+growth APIs and allocation behavior remain unresolved. See
 [INV-055 decision boundary](../investigations/INV-055-fvp-owner-boundary.md).
 
 `List<Int>` is [temporary explanatory notation](generic-notation.md), not selected generic application syntax. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
@@ -55,9 +55,24 @@ Reserve capacity and construct elements separately. Growing initialized length m
 
 ## Copy and ownership decision
 
-Copying an owning header must not accidentally create two independent owners of the same allocation. Candidate semantics include transferring an owner with explicit cloning for a new allocation, shared ownership, or value semantics backed by copying/copy-on-write. The lightweight starting recommendation is explicit independent cloning and scoped views, with the exact transfer rules still open.
+Clarified by the user, **2026-10-31**: current work focuses on ordinary copies and
+compiler/post-compilation optimization. For FVP list values with copyable elements,
+an ordinary copy preserves its sequence independently of later element updates,
+growth or replacement of the source. Explicit noncopying modes are deferred;
+designing noncopyable owners or a clone/move/borrow API is not a prerequisite.
 
-This does not rewrite shallow record copying. Inline descriptor fields and stored references retain their existing semantics, while resource copy eligibility and release rules determine whether a particular owner is copyable. Mut copy := existing_list must not silently be advertised as an independent payload clone before that decision.
+This is observable value behavior, not a mandate to allocate and copy at every
+read. Compiler and post-compilation optimizations may eliminate physical copies
+when they preserve all selected behavior, including effects and failures. No
+copy-on-write strategy, shared-owner representation or optimization pass is
+selected here. Copying an owning header alone must not create accidental shared
+mutable sequence storage or duplicate release responsibility.
+
+Existing shallow record/reference-element contracts remain intact: preserving the
+sequence does not recursively clone referenced objects or invent a copy operation
+for arbitrary resources. Broader resource eligibility, allocation-failure handling,
+views and lifetime safety remain separate investigations. No public syntax or
+helper API follows from this clarification.
 
 ## Growth and active views
 

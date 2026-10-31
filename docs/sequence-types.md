@@ -30,14 +30,20 @@ Teach literals, indexing, and loop iteration first. Introduce fixed layout when 
 
 ## Copying and access
 
-The FVP [INV-055 review](../investigations/INV-055-fvp-owner-boundary.md) identifies
-owner-copy eligibility and concrete construction/growth APIs as unresolved before
-runtime collection implementation. Current fixed-array execution does not settle
-these owner contracts.
+The FVP [INV-055 clarification](../investigations/INV-055-fvp-owner-boundary.md)
+focuses on ordinary sequence copies now, with behavior-preserving compiler and
+post-compilation copy optimization. Explicit noncopying modes come later.
+Concrete construction/growth APIs and bounded allocation behavior remain open;
+current fixed-array execution does not implement runtime owners.
 
 The selected [header-free fixed-array layout](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage) equals the corresponding homogeneous unnamed fixed tuple: inline elements without an array-specific runtime count or descriptor. An inline fixed array participates in its containing value's layout. Zero-sized elements retain their static positions: [Unit; 5] needs no element payload or runtime count field. Runtime-sized Unit providers still need count information in their enclosing container; Unit itself carries none. Equal layout does not merge array and tuple types. A slice copies its view metadata when that copy is permitted; it still views the original elements. An owning heap container needs an ownership contract: duplicating its header alone cannot create two independent owners.
 
-The existing shallow record-copy rule preserves stored references and permissions. It does not silently select list cloning, shared allocation ownership, copy-on-write, or move semantics. Those choices must be settled before claiming that mut copy := existing_list creates an independent element allocation. See the individual concept documents.
+The existing shallow record-copy rule preserves stored references and permissions.
+For current FVP lists with copyable elements, ordinary copies preserve their own
+sequence values under later source mutation. This does not mandate an immediate
+independent allocation or select shared ownership, copy-on-write or move semantics.
+Reference-valued elements retain their own contracts; resource eligibility and
+explicit noncopying modes remain separate. See the individual concept documents.
 
 Var permits replacing a collection binding. Mut permits permitted changes to held data, such as indexed writes or list growth. Slice formation must not upgrade read-only source access. Public pointer syntax is not necessary just to introduce a bounded view, but lifetime and alias rules are necessary.
 

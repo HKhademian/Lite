@@ -30,6 +30,13 @@ The compiler should carry that work where possible. Consequential copying,
 sharing, and ownership changes must retain understandable contracts and the
 selected copy/access semantics.
 
+Current FVP focus clarified **2026-10-31**: use ordinary copy semantics and let
+compiler/post-compilation optimizations remove physical copying where they can
+preserve all observable behavior. Explicit noncopying modes are later work. This
+sets the current investigation boundary; it does not select an optimization pass
+or make a zero-copy/performance claim. See
+[INV-055 clarification](../investigations/INV-055-fvp-owner-boundary.md).
+
 Advanced memory controls must remain available through an explicit step with
 little ceremony. They should stay outside the default beginner surface and be
 introduced as needed within the same language. Importing a built-in memory

@@ -14,6 +14,13 @@ The copy default does not classify every type or resource as copyable. Type-spec
 
 These are observable semantics, not a requirement to execute a physical copy instruction at every expression. Direct construction, registers, indirect calling conventions, and copy elimination may be used only while preserving evaluated values, valid copy-contract effects, and all other observable behavior. No universal memcpy, deep clone, zero-copy guarantee, or new public reference syntax follows.
 
+FVP focus clarified by the user, **2026-10-31**: work with copies now and optimize
+physical copying in the compiler or after compilation where behavior is preserved.
+Explicit noncopying modes come later. Do not require a new clone/move/borrow
+surface before ordinary FVP sequence values can follow this copy model. This
+does not declare every resource copyable or select an optimization implementation.
+See [INV-055](../investigations/INV-055-fvp-owner-boundary.md).
+
 ## Ordinary return values are copies selected
 
 Selected on **2026-10-25**: ordinary explicit return payloads and implicit function-tail results follow the general copy rule. A plain value result read through a var parameter is a copy of the evaluated value, not an escaping caller-location grant:

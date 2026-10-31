@@ -735,7 +735,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-055).
 
-**Investigation:** open (reviewed; design decision needed); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — growable storage roles are selected, but owner-copy eligibility, concrete construction/growth surface and allocation behavior remain open. No implementation or new API selected; ordinary value-copy semantics do not settle owner eligibility.
+**Investigation:** open (reviewed; design decision needed); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. Concrete construction/growth surface and allocation behavior remain open. No implementation, new API or optimization pass selected.
 
 <a id="inv-056"></a>
 

@@ -1,6 +1,6 @@
 # INV-055 — FVP runtime-owner decision boundary
 
-Status: open (reviewed; user decision required before implementation)
+Status: open (copy-first FVP direction clarified; construction/growth API unresolved)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
@@ -29,39 +29,42 @@ fresh literals infer fixed arrays. Explicit mut access alone does not add growth
 have copy semantics with no implicit references or moves. That rule explicitly
 leaves type-specific resource copy eligibility open.
 
-The [List contract](../docs/lists.md#copy-and-ownership-decision) does not yet
-choose whether this owner is ordinarily copyable, independently cloned, shared
-under an explicit contract, or subject to future move/borrow modes. A host array
-reference cannot settle this public contract. The same document says List's
-generic grammar, helper names, capacity APIs and allocation policy are proposals.
+The user clarifies the [List direction](../docs/lists.md#copy-and-ownership-decision)
+on 2026-10-31: focus on copies and compiler/post-compilation optimizations now;
+explicit noncopying modes come later. For the current FVP sequence values with
+copyable elements, preserve the ordinary copied sequence value. Do not block this
+work on designing a noncopyable owner or explicit clone/move/borrow surface.
+A host array reference cannot silently turn that copy into shared mutable data.
+List's generic grammar, helper names, capacity APIs and allocation policy remain
+proposals.
 [End-operation spellings](../docs/sequence-end-operations.md) remain under review
 even though the user has requested push/pop behavior.
 
-Thus implementing a constructor, append helper, public List type spelling, or
-owner sharing rule now would exceed the automatic selected-scope authorization.
+Thus inventing a constructor, append helper or public List type spelling now
+would exceed the automatic selected-scope authorization.
 No language implementation is added by this investigation.
 
-## First decision to resolve: ordinary copies
+## Copy-first FVP direction clarified
 
 Use a behavior probe without inventing syntax: create a growable list containing
 one scalar element; initialize a second binding from it through an ordinary
 value read; then change an element or append through authorized mutable access
-to the original. Should the second binding preserve its own original sequence,
-or should the ordinary owner-copy operation be rejected?
+to the original. Under the clarified current focus, the second binding preserves
+its original sequence. Owner noncopyability and explicit noncopying operations
+are later investigations, not prerequisites to this FVP copy behavior.
 
-- A copyable independent-value contract would preserve the second sequence.
-  Its physical implementation and allocation-failure handling need separate
-  care; it need not prescribe copying instructions at every read.
-- A noncopyable-owner contract would reject the ordinary transfer until an
-  explicitly selected cloning/moving/borrowing path exists. No such new spelling
-  follows merely from choosing noncopyability.
+The observable model is a copy; it does not require a physical allocation or copy
+instruction at every transfer. Compiler and post-compilation optimizations may
+remove or combine work only while preserving evaluated values, effects, failures
+and all other selected behavior. This does not select copy-on-write, shared
+ownership, a backend optimization pass, or a zero-copy guarantee.
 
-Neither alternative is selected here. Silent shared mutable aliases and implicit
-moves are not fallback implementations of the existing ordinary-copy default.
+Silent shared mutable aliases and implicit moves are not fallback implementations
+of the existing ordinary-copy default.
 Reference-valued elements, if admitted later, retain their own copy contracts;
 an independent sequence does not imply a recursive clone of arbitrary objects.
 
-After copy eligibility, settle the concrete type/construction/growth surface and
+Next settle the concrete type/construction/growth surface and
 bounded allocation behavior before implementing it. Keep views, generalized
 protocols, capacity tuning and native layout outside a first implementation
 unless an actual example requires their design.
@@ -73,7 +76,10 @@ delivered interpreter has strict checking, 108 passing test groups and runnable
 examples 010–012. None demonstrates runtime growth. This note and the owning
 reference/catalog updates are committed atomically without a new igniter tag.
 
-The [automatic workflow](README.md#automatic-progression-within-selected-contracts)
-stops at this concrete uncertainty. Resume owner implementation only after the
-needed public behavior and surface have explicit consent; do not substitute a
-temporary helper or choose from provisional generic syntax on the user's behalf.
+The copy/noncopying question above is resolved for the current focus. The
+[automatic workflow](README.md#automatic-progression-within-selected-contracts)
+now stops at the remaining concrete construction/growth surface and bounded
+allocation behavior. Resume owner implementation after those needed decisions;
+do not substitute a temporary helper or choose from provisional generic syntax
+on the user's behalf. No new igniter tag or runtime claim follows from this
+documentation clarification.
