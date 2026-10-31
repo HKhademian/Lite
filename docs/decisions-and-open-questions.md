@@ -9,7 +9,9 @@ from examples, samples and showcases, which are verified consumers. The new
 `verifications/` tree holds a JSON schema, a 17-feature registry and canonical
 cases; `igniter/verify.ts` and `./lite verify` run them through the reference
 igniter, with `--update` regenerating expected streams/source hashes, `--coverage`
-reporting coverage and `--filter` selecting manifests. `source` holds exactly
+reporting coverage and `--filter` selecting manifests. Passing results are cached
+by runner/source/expectation hash; `--changed` selects affected cases for fast
+feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
 one of `file` or `text` plus an optional `hash`. A `source.hash` prevents a
 source edit from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
@@ -47,7 +49,7 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter, verifier and tester names are reserved but unimplemented. The 41 program and 34 rejection verification cases are unchanged in
+formatter and tester names are reserved but unimplemented; the verifier has a first slice. The 41 program and 34 rejection verification cases are unchanged in
 behavior; 161 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the

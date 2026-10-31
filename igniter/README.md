@@ -585,7 +585,11 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 17 feature cases and 8 artifact manifests.
+first slice has 17 feature cases and 8 artifact manifests. Verification results
+and native C builds are cached under the gitignored `.cache/` directory.
+`npm run test:fast` skips the native C lane; `npm test` / `npm run test:full`
+include it. The full suite is designed to stay under the 30s local budget with a
+warm cache.
 
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow

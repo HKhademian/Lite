@@ -96,6 +96,38 @@ The runner currently executes through the reference igniter. Compiler-target
 feature cases (`targets: ["igniter", "ts", "c"]`) are a later step; compiler
 verification remains in [igniter/tests/compiler](../igniter/tests/compiler/).
 
+## Performance and scaling
+
+The verifier is designed for a growing corpus, not a fixed 25 cases:
+
+- All cases execute in one Node process; no per-case process spawn.
+- Passing results are cached in `.cache/verifications.json` (gitignored). The
+  cache key includes the runner source hash, case source hash, expected streams,
+  arguments and exit code. A runner or case change cannot reuse a stale pass.
+- `--changed` runs only manifests affected by the current `git status`:
+  changed source/manifest files, plus artifacts tagged with a changed feature.
+  Changes to the igniter or verification machinery select everything. A clean
+  tree selects nothing; `--changed` is an inner-loop command, not a merge gate.
+- `--shard i/n` deterministically partitions scenarios for CI workers.
+- `--no-cache` forces execution; `--quiet` suppresses per-case PASS lines.
+- Native compiler parity is a separate lane. Its builds are cached under
+  `.cache/native/` by C source, compiler version and flags. `npm run test:fast`
+  skips that lane; `npm test`/`npm run test:full` include it.
+
+Target budgets:
+
+| Command | Scope | Target |
+|---|---|---|
+| `lite verify --changed` | affected scenarios | < 5s |
+| `lite verify` | all interpreter/artifact cases, warm cache | < 30s |
+| `npm run test:fast` | unit/interpreter/verification without native C | < 30s |
+| `npm run test:full` | full local gate, native builds cached | < 30s warm |
+| `lite verify --shard i/n` | one CI shard of the full matrix | bounded |
+
+At 10k+ cases, the default local lanes must not compile every native case.
+Feature/artifact verification remains in-process, full native coverage is
+sharded or curated, and caches make unchanged work nearly free.
+
 ## Coverage status
 
 - Features: 17 registered, 17 cases.

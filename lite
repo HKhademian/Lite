@@ -10,7 +10,7 @@ usage() {
     printf '%s\n' '  run [--check] file.lts [-- argument ...]  Run a Lite source'
     printf '%s\n' '  check file.lts                            Check source only'
     printf '%s\n' '  compile --target ts|c file.lts            Compile to TS or C'
-    printf '%s\n' '  verify [--update] [--coverage]            Run verification cases'
+    printf '%s\n' '  verify [--update|--coverage|--changed]    Run verification cases'
     printf '%s\n' '  docs                                      Show documentation paths'
     printf '%s\n' '  help                                      Show this help'
     printf '%s\n' ''

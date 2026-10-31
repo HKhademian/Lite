@@ -52,10 +52,13 @@ adding `report` calls to the lesson body.
 [`igniter/verify.ts`](../igniter/verify.ts) is exposed as `./lite verify`:
 
 - default: run every case through the reference igniter, compare exact streams
-  and exit codes, and fail on source-hash drift;
+  and exit codes, and fail on source-hash drift; passing results are cached;
 - `--update`: regenerate expected streams/hashes for review;
 - `--coverage`: report feature/artifact coverage without executing;
-- `--filter <id-or-path>`: select manifests.
+- `--filter <id-or-path>`: select manifests;
+- `--changed`: select cases affected by the current git status;
+- `--shard i/n`: deterministic CI sharding;
+- `--no-cache`/`--quiet`: execution and output controls.
 
 The runner validates the feature registry, manifest structure, source file/text
 fields, feature references, stream forms and duplicate IDs. It is the local gate; CI
@@ -70,7 +73,8 @@ wiring is a later step.
 - **5 examples** (001, 006, 016, 020, 021).
 - **3 samples** (001, 002, 020). The migration plan named samples 021 and 023,
   but only 001–020 exist; 002 and 020 are used instead.
-- **25 scenarios** total.
+- **25 scenarios** total, in one process; passing scenarios are cached and the
+  verifier supports `--changed`, `--shard` and `--no-cache`.
 
 The samples are teaching bodies that print nothing. Their manifests verify
 computed values through `append` observation calls, leaving the sample files
@@ -83,7 +87,8 @@ unchanged. Feature cases remain separate from the sample text.
   samples and 0 showcases.
 - All **161 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
-- New tests cover the verifier pass, coverage report and filtered run.
+- New tests cover the verifier pass, coverage report, filtered run, cache hit and
+  shard selection.
 
 ## Limits
 
@@ -93,7 +98,8 @@ unchanged. Feature cases remain separate from the sample text.
 - Coverage is informational, not yet blocking. Most examples and samples still
   have no manifest, and there are no showcase manifests or transcripts.
 - No CI workflow or pre-commit integration exists yet; `./lite verify` must be
-  run explicitly.
+  run explicitly. Local budgets are documented in the verification README
+  (`--changed` inner loop, full lane with warm cache, sharded CI).
 - `--update` rewrites expectations from the current reference implementation;
   review is required and is not automated.
 - `append` concatenates source text for observation; it cannot add declarations

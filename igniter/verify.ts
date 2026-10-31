@@ -1,6 +1,7 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
@@ -39,15 +40,35 @@ type RegistryEntry = Readonly<{
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const verifications = resolve(root, 'verifications');
 
-const options = { update: false, coverage: false, filter: undefined as string | undefined };
+const options = {
+  update: false,
+  coverage: false,
+  changed: false,
+  cache: true,
+  quiet: false,
+  filter: undefined as string | undefined,
+  shard: undefined as Readonly<{ index: number; count: number }> | undefined,
+};
 for (let index = 0; index < process.argv.length - 2; index += 1) {
   const flag = process.argv[index + 2] ?? '';
   if (flag === '--update') options.update = true;
   else if (flag === '--coverage') options.coverage = true;
+  else if (flag === '--changed') options.changed = true;
+  else if (flag === '--no-cache') options.cache = false;
+  else if (flag === '--quiet') options.quiet = true;
   else if (flag === '--filter') {
     const value = process.argv[index + 3];
     if (value === undefined) usage('--filter requires a value');
     options.filter = value;
+    index += 1;
+  } else if (flag === '--shard') {
+    const value = process.argv[index + 3];
+    const match = value === undefined ? null : /^(\d+)\/(\d+)$/.exec(value);
+    if (match === null) usage('--shard requires i/n');
+    const shardIndex = Number(match[1]);
+    const shardCount = Number(match[2]);
+    if (shardIndex < 1 || shardCount < 1 || shardIndex > shardCount) usage('--shard requires 1 <= i <= n');
+    options.shard = { index: shardIndex, count: shardCount };
     index += 1;
   } else if (flag === '--help' || flag === '-h') usage(undefined, 0);
   else usage(`unknown argument ${flag}`);
@@ -56,7 +77,7 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
 function usage(message?: string, code = 2): never {
   if (message !== undefined) process.stderr.write(`lite verify: ${message}\n`);
   const target = code === 0 ? process.stdout : process.stderr;
-  target.write('Usage: ./lite verify [--update] [--coverage] [--filter id-or-path]\n');
+  target.write('Usage: ./lite verify [--update] [--coverage] [--changed] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
   process.exit(code);
 }
 
@@ -246,6 +267,104 @@ function hash(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+const runtimeHash = createHash('sha256')
+  .update(readFileSync(resolve(root, 'igniter/lite.ts')))
+  .update(readFileSync(resolve(root, 'igniter/loader.ts')))
+  .update(readFileSync(resolve(root, 'igniter/verify.ts')))
+  .update(process.version)
+  .digest('hex');
+
+type CacheData = { version: 1; passed: Record<string, true> };
+const cacheFile = process.env['LITE_VERIFY_CACHE'] === undefined
+  ? resolve(root, '.cache/verifications.json')
+  : resolve(process.env['LITE_VERIFY_CACHE']);
+
+function loadCache(): CacheData {
+  if (!options.cache) return { version: 1, passed: {} };
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(cacheFile, 'utf8'));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return { version: 1, passed: {} };
+    const record = parsed as Record<string, unknown>;
+    if (record['version'] !== 1 || typeof record['passed'] !== 'object' || record['passed'] === null ||
+        Array.isArray(record['passed'])) return { version: 1, passed: {} };
+    const passed: Record<string, true> = {};
+    for (const [key, value] of Object.entries(record['passed'])) {
+      if (value === true) passed[key] = true;
+    }
+    return { version: 1, passed };
+  } catch {
+    return { version: 1, passed: {} };
+  }
+}
+
+function saveCache(cache: CacheData): void {
+  if (!options.cache) return;
+  mkdirSync(dirname(cacheFile), { recursive: true });
+  const temporary = `${cacheFile}.tmp-${process.pid}`;
+  writeFileSync(temporary, `${JSON.stringify(cache)}\n`, 'utf8');
+  renameSync(temporary, cacheFile);
+}
+
+function caseKey(item: Manifest, scenario: Scenario, sourceHash: string): string {
+  return createHash('sha256')
+    .update(runtimeHash)
+    .update(item.id)
+    .update(item.kind)
+    .update(sourceHash)
+    .update(item.append ?? '')
+    .update(JSON.stringify({ stdin: scenario.stdin, args: scenario.args, stdout: scenario.stdout,
+      stderr: scenario.stderr, exitCode: scenario.exitCode }))
+    .digest('hex');
+}
+
+function shardMatches(item: Manifest, scenario: Scenario): boolean {
+  const shard = options.shard;
+  if (shard === undefined) return true;
+  const value = createHash('sha256').update(`${item.id}/${scenario.name}`).digest().readUInt32BE(0);
+  return value % shard.count === shard.index - 1;
+}
+
+function changedPaths(): Set<string> | undefined {
+  const status = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' });
+  if (status.error !== undefined || status.status !== 0) return undefined;
+  const paths = new Set<string>();
+  for (const line of status.stdout.split('\n')) {
+    if (line.trim() === '') continue;
+    let path = line.slice(3).trim();
+    const arrow = path.lastIndexOf(' -> ');
+    if (arrow >= 0) path = path.slice(arrow + 4);
+    paths.add(path.replace(/^"|"$/g, ''));
+  }
+  return paths;
+}
+
+const invalidating = new Set([
+  'igniter/lite.ts', 'igniter/loader.ts', 'igniter/verify.ts', 'igniter/cli.ts',
+  'verifications/features.json', 'verifications/schema/verification.schema.json',
+]);
+
+function affectedFeatures(items: readonly Manifest[], changed: ReadonlySet<string>): Set<string> {
+  const features = new Set<string>();
+  for (const item of items) {
+    if (item.kind !== 'feature') continue;
+    const manifestPath = relative(root, item.file);
+    const sourcePath = item.sourcePath === undefined ? undefined : relative(root, item.sourcePath);
+    if (changed.has(manifestPath) || (sourcePath !== undefined && changed.has(sourcePath))) features.add(item.id);
+  }
+  return features;
+}
+
+function affected(item: Manifest, changed: ReadonlySet<string> | undefined,
+                  features: ReadonlySet<string>): boolean {
+  if (!options.changed || changed === undefined) return true;
+  if ([...invalidating].some(path => changed.has(path))) return true;
+  const manifestPath = relative(root, item.file);
+  if (changed.has(manifestPath)) return true;
+  const sourcePath = item.sourcePath === undefined ? undefined : relative(root, item.sourcePath);
+  if (sourcePath !== undefined && changed.has(sourcePath)) return true;
+  return item.features.some(feature => features.has(feature));
+}
+
 function matches(item: Manifest, filter: string | undefined): boolean {
   if (filter === undefined) return true;
   return item.id.includes(filter) || item.file.includes(filter) || item.features.some(feature => feature.includes(filter));
@@ -362,9 +481,17 @@ function main(): void {
     return;
   }
   let failures = 0;
-  let scenariosRun = 0;
+  let executed = 0;
+  let cached = 0;
+  const changed = options.changed ? changedPaths() : undefined;
+  const changedFeatureIds = changed === undefined ? new Set<string>() : affectedFeatures(items, changed);
+  const cache = options.update ? { version: 1 as const, passed: {} } : loadCache();
+  let cacheDirty = false;
   for (const item of items) {
     if (!matches(item, options.filter)) continue;
+    if (!affected(item, changed, changedFeatureIds)) continue;
+    const selected = item.cases.filter(scenario => shardMatches(item, scenario));
+    if (selected.length === 0) continue;
     const failuresBefore = failures;
     const sourcePath = item.sourcePath;
     const sourceBytes = sourcePath === undefined ? Buffer.from(item.source.text ?? '', 'utf8') : readFileSync(sourcePath);
@@ -376,25 +503,33 @@ function main(): void {
       failures += 1;
       continue;
     }
-    const scenarios: Scenario[] = [];
-    for (const original of item.cases) {
-      scenariosRun += 1;
+    const updates = new Map<string, Scenario>();
+    for (const original of selected) {
+      const key = caseKey(item, original, sourceHash);
+      if (!options.update && options.cache && cache.passed[key] === true) {
+        cached += 1;
+        if (!options.quiet) process.stdout.write(`PASS ${item.id}/${original.name} (cached)\n`);
+        continue;
+      }
+      executed += 1;
       let actual: { stdout: Buffer; stderr: Buffer; exitCode: number };
       try {
         actual = runCase(source, item, original);
       } catch (error: unknown) {
+        delete cache.passed[key]; cacheDirty = true;
         process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
         failures += 1;
         continue;
       }
-      const expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`);
-      const expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`);
       if (options.update) {
-        scenarios.push(updatedScenario(original, actual));
+        updates.set(original.name, updatedScenario(original, actual));
         continue;
       }
+      const expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`);
+      const expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`);
       if (!actual.stdout.equals(expectedStdout) || !actual.stderr.equals(expectedStderr) ||
           actual.exitCode !== original.exitCode) {
+        delete cache.passed[key]; cacheDirty = true;
         process.stdout.write(`FAIL ${item.id}/${original.name}\n`);
         if (!actual.stdout.equals(expectedStdout)) {
           process.stdout.write(`  stdout expected ${describe(expectedStdout)} got ${describe(actual.stdout)}\n`);
@@ -408,23 +543,26 @@ function main(): void {
         failures += 1;
         continue;
       }
-      process.stdout.write(`PASS ${item.id}/${original.name}\n`);
-      scenarios.push(original);
+      cache.passed[key] = true; cacheDirty = true;
+      if (!options.quiet) process.stdout.write(`PASS ${item.id}/${original.name}\n`);
     }
     if (options.update) {
       if (failures === failuresBefore) {
+        const scenarios = item.cases.map(original => updates.get(original.name) ?? original);
         writeManifest(item, scenarios, sourceHash);
         process.stdout.write(`updated ${item.file.slice(root.length + 1)}\n`);
       }
     }
   }
+  if (cacheDirty && !options.update) saveCache(cache);
   if (failures > 0) {
-    process.stdout.write(`verification failed: ${failures} failing scenario(s)\n`);
+    process.stdout.write(`verification failed: ${failures} failing scenario(s), ${executed} executed, ${cached} cached\n`);
     process.exitCode = 1;
     return;
   }
   if (!options.update) {
-    process.stdout.write(`verification passed: ${scenariosRun} scenario(s)\n`);
+    if (executed === 0 && cached === 0) process.stdout.write('verification passed: no selected scenarios\n');
+    else process.stdout.write(`verification passed: ${executed} executed, ${cached} cached\n`);
   }
 }
 

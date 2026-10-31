@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -192,20 +193,34 @@ test('lite help and docs expose the command matrix and documentation roots', () 
 });
 test('lite verify runs feature and artifact cases and reports coverage', () => {
   const root = new URL('../', import.meta.url).pathname;
-  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  const verified = spawnSync(join(root, 'lite'), ['verify'], { env, encoding: 'utf8', timeout: 30000 });
-  assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
-  assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
-  assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-  assert.match(verified.stdout, /verification passed: 25 scenario\(s\)/);
-  const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
-  assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-  assert.match(covered.stdout, /features: 17 registered, 17 cases/);
-  assert.match(covered.stdout, /examples: 5\/19 manifests/);
-  assert.match(covered.stdout, /samples: 3\/20 manifests/);
-  const filtered = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'], { env, encoding: 'utf8', timeout: 30000 });
-  assert.equal(filtered.error, undefined); assert.equal(filtered.status, 0, filtered.stderr);
-  assert.match(filtered.stdout, /PASS int\.arithmetic\/precedence-and-division/);
+  const directory = mkdtempSync(join(tmpdir(), 'lite-verify-test-'));
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),
+    LITE_VERIFY_CACHE: join(directory, 'cache.json') };
+  try {
+    const verified = spawnSync(join(root, 'lite'), ['verify', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
+    assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
+    assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
+    assert.match(verified.stdout, /verification passed: 25 executed, 0 cached/);
+    const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
+    assert.match(covered.stdout, /features: 17 registered, 17 cases/);
+    assert.match(covered.stdout, /examples: 5\/19 manifests/);
+    assert.match(covered.stdout, /samples: 3\/20 manifests/);
+    const first = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'],
+      { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
+    assert.match(first.stdout, /verification passed: \d+ executed, 0 cached/);
+    const second = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'],
+      { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(second.error, undefined); assert.equal(second.status, 0, second.stderr);
+    assert.match(second.stdout, /verification passed: 0 executed, \d+ cached/);
+    assert.match(second.stdout, /\(cached\)/);
+    const sharded = spawnSync(join(root, 'lite'), ['verify', '--shard', '1/2', '--no-cache'],
+      { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(sharded.error, undefined); assert.equal(sharded.status, 0, sharded.stderr);
+    assert.match(sharded.stdout, /verification passed: \d+ executed, 0 cached/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
@@ -491,12 +506,18 @@ test('restricted C compiler emits the readable reference and sequences reports',
     '    return status;\n}\n');
 });
 test('Lite-generated native C, TS and igniter programs have identical output bytes and status', async context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') {
+    context.skip('LITE_SKIP_NATIVE=1'); return;
+  }
   const cc = process.env['CC'] ?? 'cc';
   const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
   if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
     context.skip('C compiler unavailable; native parity requires cc or CC pointing to a compiler'); return;
   }
   assert.equal(probe.error, undefined); assert.equal(probe.status, 0, probe.stderr);
+  const ccVersion = `${probe.stdout}\n${probe.stderr}`.trim();
+  const cacheDirectory = new URL('../.cache/native/', import.meta.url).pathname;
+  mkdirSync(cacheDirectory, { recursive: true });
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
@@ -511,10 +532,21 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
         assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
         writeFileSync(path, emitted.output);
       }
-      const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable], {
-        encoding: 'utf8', timeout: 30000,
-      });
-      assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
+      const cacheKey = createHash('sha256').update(readFileSync(cPath)).update(ccVersion)
+        .update('-std=c11 -Wall -Wextra -Werror').update(process.platform).update(process.arch).digest('hex');
+      const cached = join(cacheDirectory, cacheKey);
+      let executablePath = executable;
+      if (process.env['LITE_NO_NATIVE_CACHE'] !== '1' && existsSync(cached)) {
+        executablePath = cached;
+      } else {
+        const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable], {
+          encoding: 'utf8', timeout: 30000,
+        });
+        assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
+        if (process.env['LITE_NO_NATIVE_CACHE'] !== '1') {
+          copyFileSync(executable, cached); chmodSync(cached, 0o755); executablePath = cached;
+        }
+      }
       const expectedOutput = fixture.stdout.toString('utf8');
       const expectedError = fixture.stderr.toString('utf8');
       const baseline = runFile(sourcePath, fixture.stdin.toString('utf8'));
@@ -523,7 +555,7 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       assert.equal(baseline.errors, expectedError, fixture.name);
       const typescript = await importedMain(tsPath);
       assert.equal(typescript, expectedOutput, fixture.name);
-      const native = spawnSync(executable, [], { input: fixture.stdin, timeout: 5000 });
+      const native = spawnSync(executablePath, [], { input: fixture.stdin, timeout: 5000 });
       assert.equal(native.error, undefined, fixture.name);
       assert.equal(native.status, fixture.exitCode, fixture.name);
       assert.equal(native.signal, null, fixture.name);

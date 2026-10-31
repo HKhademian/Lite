@@ -250,7 +250,9 @@ and `./litec`. Linker, formatter and tester names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 Feature and artifact verification lives in `verifications/`; `./lite verify`
 runs 17 feature cases and the first 8 artifact manifests, with `--update`,
-`--coverage` and `--filter`. See the
+`--coverage`, `--filter`, `--changed`, `--shard i/n`, `--no-cache` and `--quiet`.
+Passing cases are cached; `--changed` selects affected cases for the inner loop,
+and sharding supports a growing corpus. See the
 [verification guide](../verifications/README.md).
 
 The two emitter sources moved out of `examples/` into
