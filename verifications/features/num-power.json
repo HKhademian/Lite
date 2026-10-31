@@ -1,0 +1,22 @@
+{
+  "id": "num.power",
+  "kind": "feature",
+  "source": {
+    "file": "num-power.lts",
+    "hash": "sha256:4ed8ea19bfb8eb6e1622544457aa1cbbf8cf571d7f9b065b068135a66a373a1c"
+  },
+  "features": [
+    "num.power"
+  ],
+  "guideline": "Checks right-associative Float-default power, explicit negative-base grouping, and completed-power negation.",
+  "cases": [
+    {
+      "name": "association-and-grouping",
+      "stdout": {
+        "text": "8\n512\n2\n-8\n-4\n",
+        "hash": "sha256:c9baf1dfaf0d5d8e648fb1d2c36282b08ef891c5cb7682069eeb20685d38358a"
+      },
+      "exitCode": 0
+    }
+  ]
+}

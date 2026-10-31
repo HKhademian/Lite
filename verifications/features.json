@@ -237,6 +237,16 @@
       "docs": [
         "docs/mutability.md"
       ]
+    },
+    {
+      "id": "num.power",
+      "summary": "Right-associative Float-default power.",
+      "case": "features/num-power.json",
+      "status": "verified",
+      "docs": [
+        "docs/power-and-negation.md",
+        "docs/operators.md"
+      ]
     }
   ]
 }

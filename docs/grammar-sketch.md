@@ -744,11 +744,11 @@ The optional leading + is admitted only at a complete additive-chain entry. Esta
 
 Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; :/, %, and :% gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
-## Power and unary-minus boundary selected
+## Power association and unary-minus boundary selected
 
 Selected 2026-10-25: `**` is the power spelling; reject -base `**` exponent without grouping. Require (-base) `**` exponent or -(base `**` exponent). This includes -2 `**` 3 despite equal mathematical results for the two interpretations; (-base `**` exponent) remains invalid inside its outer group. Whitespace, comments, leading identity +, constant values, and type-check success do not resolve the boundary. See [power and negation](power-and-negation.md).
 
-The arithmetic fragment above does not complete recursive power integration. Do not extend its generic unary production in a way that admits an ungrouped unary-minus/power form. Chained-power association, full precedence, signed/right-operand forms, and numeric domains remain open. No `**=` or redundant power prefix is introduced.
+The arithmetic fragment above does not complete recursive power integration. Do not extend its generic unary production in a way that admits an ungrouped unary-minus/power form. Right association, Float-default result typing and a positive-exponent checkpoint are selected 2026-11-01. Zero/negative exponents, exact overflow/faults and compiler-target lowering remain open. No `**=` or redundant power prefix is introduced.
 
 ## Logical grouping
 

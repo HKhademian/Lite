@@ -1,7 +1,7 @@
 // Disposable igniter: no JS eval, emitted JavaScript, or compiler framework.
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
-type Operator = '+' | '-' | '*' | '/' | '%' | ':/' | ':%';
+type Operator = '+' | '-' | '*' | '/' | '%' | ':/' | ':%' | '**';
 type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
 type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
@@ -42,6 +42,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
   | { kind: 'string'; text: string }
   | { kind: 'name'; name: string }
+  | { kind: 'grouped'; input: Raw }
   | { kind: 'grant'; name: string }
   | { kind: 'unit' }
   | { kind: 'array'; items: readonly Raw[] }
@@ -597,11 +598,14 @@ class Parser {
         left = { kind: 'compare', first: left, rest, at: token.at };
         continue;
       }
-      if (op !== '+' && op !== '-' && op !== '*' && op !== '/' && op !== '%' && op !== ':/' && op !== ':%') break;
-      const precedence = op === '+' || op === '-' ? 5 : 6;
+      if (op !== '+' && op !== '-' && op !== '*' && op !== '/' && op !== '%' && op !== ':/' && op !== ':%' && op !== '**') break;
+      const precedence = op === '**' ? 7 : op === '+' || op === '-' ? 5 : 6;
       if (precedence < minimum) break;
+      if (op === '**' && left.kind === 'unary' && left.op === '-') {
+        source('group a negative power base as (-base) or negate the completed power as -(base ** exponent)', token.at);
+      }
       this.take();
-      left = { kind: 'binary', op, left, right: this.expression(precedence + 1), at: token.at };
+      left = { kind: 'binary', op, left, right: this.expression(op === '**' ? 7 : precedence + 1), at: token.at };
     }
     return leader === undefined ? left : { kind: 'boolLeader', input: left, at: leader.at };
   }
@@ -646,7 +650,7 @@ class Parser {
       const value = this.tupleEntry();
       if (!this.accept(',')) {
         this.expect(')');
-        return value.label === undefined ? value.input : { kind: 'tuple', items: [value], at: token.at };
+        return value.label === undefined ? { kind: 'grouped', input: value.input, at: token.at } : { kind: 'tuple', items: [value], at: token.at };
       }
       const items = [value];
       if (!this.accept(')')) {
@@ -772,6 +776,7 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
 function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
+    case 'grouped': return checkExpression(raw.input, names, state, use);
     case 'grant': return typeError('mut arguments currently require a direct named list target in a sequence end operation', at);
     case 'number': {
       const value = numericLiteral(raw.text, at);
@@ -928,6 +933,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       }
       if ((raw.op === '%' || raw.op === ':/' || raw.op === ':%') && (left.type !== 'Int' || right.type !== 'Int')) {
         typeError(`${raw.op} requires Int operands`, at);
+      }
+      if (raw.op === '**') {
+        return { kind: 'binary', op: raw.op, left, right, type: 'Float', at };
       }
       if (raw.op !== '/' && left.type !== right.type) {
         typeError('mixed Int/Float arithmetic other than division is not supported yet', at);
@@ -1248,6 +1256,7 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
         if (remainder !== 0n && (remainder < 0n) !== (right.value < 0n)) remainder += right.value;
         return integer(remainder, at);
       }
+      case '**': return power(left, right, at); // Unreachable after the Float-default type split; kept for exhaustiveness.
       default: return unreachable(op);
     }
   }
@@ -1264,8 +1273,20 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
       if (b === 0) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
       return floating(a / b, at);
     case '%': case ':/': case ':%': throw new Error('igniter invariant: remainder/floor requires Int operands');
+    case '**': return power(left, right, at);
     default: return unreachable(op);
   }
+}
+
+function power(left: Value, right: Value, at: Position): Value {
+  if ((left.kind !== 'Int' && left.kind !== 'Float') || (right.kind !== 'Int' && right.kind !== 'Float')) {
+    throw new Error('igniter invariant: nonnumeric power operands after checking');
+  }
+  const exponent = Number(right.value);
+  if (!Number.isFinite(exponent) || exponent <= 0) {
+    throw new LiteFault('ArithmeticPanic', 'power exponent must be positive in this checkpoint', at);
+  }
+  return floating(Math.pow(Number(left.value), exponent), at);
 }
 
 function sameValue(left: Value, right: Value): boolean {

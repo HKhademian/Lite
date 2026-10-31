@@ -41,7 +41,7 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 - The runner is `lite-runner` / `./lite run`. It currently executes scripts through the igniter.
 - The checker is `lite-checker` / `./lite check`; `./lite run --check` remains compatible.
 - Documentation is `lite-docs` / `./lite docs`; help is `lite-help` / `./lite help` (also `--help`/`-h`).
-- The verifier is `lite-verifier` / `./lite verify`; its first slice covers 26 features and all 39 artifacts, with seven feature cases running through TS and C. Showcase transcripts remain open; GitHub Actions runs the test gates.
+- The verifier is `lite-verifier` / `./lite verify`; its first slice covers 27 features and all 39 artifacts, with seven feature cases running through TS and C. Showcase transcripts remain open; GitHub Actions runs the test gates.
 - The tester is `lite-tester` / `./lite test`, with `--fast` and `--full` lanes. The formatter is reserved as `lite-formatter`/`./lite fmt` and is not implemented.
 - The separate compiled-program runtime remains `lite-runtime` / `literun` and is not the same tool as `lite-runner`.
 - These names describe one component with several entry points; `ltc`, `litec`, `lite-compiler` and `lite compile` are not competing product names.

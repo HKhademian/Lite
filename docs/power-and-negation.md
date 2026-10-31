@@ -1,6 +1,6 @@
 # Power and negation
 
-Status: **`**` power spelling and rejection of ambiguous unparenthesized unary-minus/power forms selected 2026-10-25; full power grammar, association, operand/result types, and exact numeric/fault contracts remain open**. This is a documentation-level language decision, not an implemented parser claim.
+Status: **`**` spelling and explicit unary-minus grouping selected 2026-10-25; right association, Float-default result typing and a positive-exponent checkpoint selected 2026-11-01. The igniter implements that subset; zero/negative exponents, exact overflow/fault rules and compiler-target lowering remain open.**
 
 ## Selected grouping requirement
 
@@ -48,9 +48,37 @@ Use an even exponent to expose the difference. Do not accept an ambiguous source
 
 These languages have deterministic grammars, but their conventions do not give a portable reading of the source. The user selected rejection when the intent remains ambiguous. LiteScript therefore requires the visible choice instead of adopting either precedence interpretation for this spelling.
 
+## Association across languages
+
+Power is right-associative in the common mathematical and programming convention:
+
+| Right-associative | Left-associative | Function-only |
+|---|---|---|
+| Python `**`, Ruby `**`, JavaScript `**`, Lua `^`, Haskell `^`/`**`, R `^`, Perl `**`, PHP `**`, Julia `^`, Fortran `**` | MATLAB `^`, Excel `^` | Java, C#, Go, Rust, Swift, Kotlin, Zig, Dart |
+
+Right association gives `2 ** 3 ** 2` the reading `2 ** (3 ** 2) = 512`. Left
+association gives `(2 ** 3) ** 2 = 64`. Right association is now selected.
+
+## Association, result and checkpoint selected 2026-11-01
+
+Power is **right-associative**: `2 ** 3 ** 2` is `2 ** (3 ** 2) = 512`.
+The result is **Float by default** for admitted Int or Float operands;
+`2 ** 3` is Float 8. Int results wait for a future real NonNegInt exponent
+type. Int and Float operands may mix.
+
+The current igniter checkpoint admits only **positive exponents**. `x ** 0`
+and negative exponents raise `ArithmeticPanic` as explicitly unsupported, not
+as final language semantics. Non-finite Float results use the existing
+arithmetic-fault path. Zero exponent, negative exponents, exact overflow and
+the complete power fault contract remain open. Compiler targets do not lower
+`**` yet.
+
 ## Separate decisions still open
 
-The rule above selects the `**` symbol and this grouping restriction. It does not by itself settle chained-power association or a complete precedence ladder, signed right operands, integer versus fractional exponents, promotions, complex numbers, zero/negative-base domain cases, signed zero, overflow, or fault categories. Right-associative power remains the documented recommendation; it is not newly selected by rejecting a unary-minus base. The recursive grammar must enforce the selected boundary rather than accidentally admitting -(ungrouped power) through a generic unary production.
+The selected rule settles association and the first Float-default result/checkpoint.
+It does not settle zero/negative exponents, signed zero, exact overflow,
+non-finite/domain faults, or compiler-target lowering. The recursive grammar
+enforces the selected unary-minus boundary.
 
 The examples' values describe ordinary mathematical powers for admitted operands. Complete typing and numeric rules determine which programs are accepted and how their values are represented. `**=` and redundant leading `**` are not selected. Leading minus remains a real operation; identity leading + gains no new operation or exception.
 

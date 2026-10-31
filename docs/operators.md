@@ -45,7 +45,9 @@ This selects the basic ladder, not a completed expression grammar. The `**` powe
 
 Selected 2026-10-25: use `**` for power and reject an unparenthesized unary-minus/power spelling such as -2 `**` 2 or -base `**` exponent. Require (-base) `**` exponent for a negative base, or -(base `**` exponent) to negate the completed power. The odd case -2 `**` 3 is also invalid even though its two mathematical interpretations both give -8. Outer grouping alone, (-2 `**` 2), does not clarify the inner boundary. This is a syntax restriction, independent of values, types, whitespace, comments, and constant folding.
 
-This selects the spelling and grouping requirement, not a complete power contract. Chained-power association, right-operand forms, full precedence/recursive grammar, result types, and exact numeric/fault rules remain open; `**=` is not selected. See [power and negation](power-and-negation.md) for primary-source comparisons and the selected distinction from Python/Lua precedence.
+This selects the spelling and grouping requirement, not a complete power contract. Right association, Float-default result typing and a positive-exponent checkpoint are selected on 2026-11-01; zero/negative exponents, exact overflow/faults and compiler-target lowering remain open. `**=` is not selected. See [power and negation](power-and-negation.md) for primary-source comparisons and the selected distinction from Python/Lua precedence.
+
+Implementation note, 2026-11-01: the igniter parses right-associative `**`, returns Float for admitted Int/Float operands, and rejects zero or negative exponents as unsupported. `2 ** 3` evaluates to Float 8. Compiler targets do not lower `**` yet.
 
 ## Division
 

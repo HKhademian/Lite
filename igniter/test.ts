@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 79 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 80 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 26 registered, 26 cases/);
+    assert.match(covered.stdout, /features: 27 registered, 27 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -575,7 +575,9 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       const cPath = join(directory, `program-${index}.c`);
       const tsPath = join(directory, `program-${index}.ts`);
       const executable = join(directory, `native-${index}`);
+      const stdinPath = join(directory, `stdin-${index}.bin`);
       writeFileSync(sourcePath, fixture.source);
+      writeFileSync(stdinPath, fixture.stdin);
       for (const [compiler, path] of [[cEmitterPath, cPath], [tsEmitterPath, tsPath]] as const) {
         const emitted = runFile(compiler, fixture.source);
         assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
@@ -604,7 +606,13 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       assert.equal(baseline.errors, expectedError, fixture.name);
       const typescript = await importedMain(tsPath);
       assert.equal(typescript, expectedOutput, fixture.name);
-      const native = spawnSync(executablePath, [], { input: fixture.stdin, timeout: 5000 });
+      // Feed stdin through a file descriptor rather than a pipe: a program that
+      // exits without reading its input (report(0) ignores the fixture bytes)
+      // otherwise races the parent's write and spuriously reports EPIPE, which
+      // is a harness artifact, not an output or status difference.
+      const stdinFd = openSync(stdinPath, 'r');
+      const native = spawnSync(executablePath, [], { stdio: [stdinFd, 'pipe', 'pipe'], timeout: 5000 });
+      closeSync(stdinFd);
       assert.equal(native.error, undefined, fixture.name);
       assert.equal(native.status, fixture.exitCode, fixture.name);
       assert.equal(native.signal, null, fixture.name);
@@ -1200,6 +1208,16 @@ test('inferred mut and var mut declarations grant writable list access', () => {
   fault('mut args := inputArgs(); args = inputArgs();', 'TypeError');
   fault('var mut x: List<Int> = [1];', 'SourceError');
   fault('var mut args := inputArgs(); args = 1;', 'TypeError');
+});
+test('power is right-associative, Float-default and positive-exponent only', () => {
+  assert.equal(run('report(2 ** 3); report(2 ** 3 ** 2); report(4 ** 0.5); report((-2) ** 3); report(-(2 ** 2)); report(2 ** 3 + 0.5);').output,
+    '8\n512\n2\n-8\n-4\n8.5\n');
+  fault('report(-2 ** 2);', 'SourceError');
+  fault('report(2 ** 0);', 'ArithmeticPanic');
+  fault('report(2 ** -1);', 'ArithmeticPanic');
+  fault('report("a" ** 2);', 'TypeError');
+  fault('report(2 ** "a");', 'TypeError');
+  fault('report(2 ** 3 * 2);', 'TypeError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

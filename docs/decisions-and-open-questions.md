@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Power association and Float-default result, 2026-11-01
+
+`**` is right-associative: `2 ** 3 ** 2` reads as `2 ** (3 ** 2) = 512`.
+Admitted Int or Float operands produce a Float result by default; Int results
+wait for a real NonNegInt exponent type. The current igniter checkpoint admits
+only positive exponents. `x ** 0` and negative exponents raise
+`ArithmeticPanic` as explicitly unsupported rather than final semantics.
+Exact zero/negative/overflow/fault contracts and compiler-target lowering
+remain open. `**=` and redundant power prefixes are not selected.
+
 ## Feature and artifact verification registry, 2026-10-31
 
 Feature verifications are selected as the canonical semantic contract, separate
@@ -18,9 +28,9 @@ one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-
 external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
-The registry now covers 26 feature cases, all 19 examples, all 20 samples and
-65 scenarios (79 target executions). Seven feature cases run through the
-reference igniter, emitted TS and native C. All pass; 164 interpreter groups and
+The registry now covers 27 feature cases, all 19 examples, all 20 samples and
+66 scenarios (80 target executions). Seven feature cases run through the
+reference igniter, emitted TS and native C. All pass; 165 interpreter groups and
 9 editor groups pass. Coverage is blocking for features, examples and samples.
 Broader compiler targets and showcase transcripts remain open; the GitHub Actions workflow now runs the test, verification and editor gates. See
 [INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
@@ -51,7 +61,7 @@ canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
 formatter is reserved but unimplemented; the verifier and tester have first slices. The 42 program and 34 rejection verification cases are unchanged in
-behavior; 164 interpreter groups and 9 editor groups pass. The examples index
+behavior; 165 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -76,7 +86,7 @@ optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 164 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 165 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
