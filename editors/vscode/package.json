@@ -5,19 +5,37 @@
   "version": "0.1.0",
   "publisher": "lite-local",
   "license": "UNLICENSED",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Programming Languages"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "lite",
-        "aliases": ["Lite", "lite"],
-        "extensions": [".lt", ".lts"],
-        "configuration": "./language-configuration.json"
+        "aliases": [
+          "Lite",
+          "lite"
+        ],
+        "extensions": [
+          ".lt",
+          ".lts"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/lite-light.svg",
+          "dark": "./icons/lite-dark.svg"
+        }
       }
     ],
     "grammars": [
-      { "language": "lite", "scopeName": "source.lite", "path": "./syntaxes/lite.tmLanguage.json" }
+      {
+        "language": "lite",
+        "scopeName": "source.lite",
+        "path": "./syntaxes/lite.tmLanguage.json"
+      }
     ]
   },
   "scripts": {

@@ -4,17 +4,18 @@ A small syntax highlighter for `.lt` and `.lts` files. The language picker shows
 **Lite**. Colors follow your existing editor theme.
 
 Highlights nested block/raw comments, multiline double-quoted strings, basic
-escapes, decimal numbers, documented keywords/operators, scalar type names and the approved builtin List name,
-function declarations/calls, tags, and punctuation. Block-comment toggling and
+escapes, decimal numbers, documented keywords/operators (including `:/`, `:%`,
+`:/=` and `:%=`), scalar type names and the approved builtin List name, inferred
+`mut`/`var mut` declarations, function declarations/calls, tags, and punctuation. Block-comment toggling and
 bracket/quote pairing use existing Lite delimiters. There are no `//` comments.
 
 This is a declarative TextMate extension with no runtime code or dependencies.
 It adds no language syntax, snippets, builtins, formatter, runner, or language
 server. Coloring is approximate lexical feedback, not parsing, typechecking,
 name resolution, or evidence that a feature is selected or implemented by the
-igniter. Calls use the same coloring for any identifier; temporary runner
-helpers receive no special builtin status. Open lexical boundaries, such as
-compact underscore operators, remain open.
+igniter. Calls use the same coloring for any identifier; temporary runner helpers receive
+no special builtin status. Compact and spaced colon operators are highlighted as
+one operator token.
 
 ## Install locally
 
@@ -40,8 +41,10 @@ Scopes** to inspect highlighting.
 
 `npm test` uses VS Code's TextMate tokenizer and Oniguruma engine, including exact
 raw-fence counts, nested comments, multiline strings, keyword boundaries and
-project samples and the indexed examples. The package ships only the manifest, grammar, language
-configuration and this guide; testing/packaging dependencies are development-only.
+project samples and the indexed examples. The package ships only the manifest, grammar, language configuration, the
+light/dark language icons and this guide; testing/packaging dependencies are
+development-only. The language contribution supplies 16×16 light/dark SVG icons
+for file icon themes that do not define their own Lite icon.
 
 Source contracts in the repository: `docs/lexical-structure.md`,
 `docs/comments.md`, `docs/strings.md`, and `docs/operators.md`. Implementation references:
