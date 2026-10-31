@@ -1,0 +1,27 @@
+{
+  "id": "report.multi",
+  "kind": "feature",
+  "source": {
+    "file": "report-multi.lts",
+    "hash": "sha256:2130a96510124da763910e068b94ce298d9a734c3cd1a24517176c2cc2a6320f"
+  },
+  "features": [
+    "report.multi"
+  ],
+  "guideline": "Checks space-separated Int/String report values through the reference interpreter and both restricted compiler targets.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "int-string-int",
+      "stdout": {
+        "text": "1 two 3\n",
+        "hash": "sha256:4e8088f053203bb610db4a9d26c09175462cc088064a0a0f07b2092c004e7433"
+      },
+      "exitCode": 0
+    }
+  ]
+}

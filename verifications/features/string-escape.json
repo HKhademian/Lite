@@ -1,0 +1,27 @@
+{
+  "id": "string.escape",
+  "kind": "feature",
+  "source": {
+    "file": "string-escape.lts",
+    "hash": "sha256:a378b005664b113fe4d897e24c15ae07654f2d4011375adc168da00b29e16899"
+  },
+  "features": [
+    "string.escape"
+  ],
+  "guideline": "Checks newline and quote escapes through the reference interpreter and both restricted compiler targets.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "escaped-newline-and-quote",
+      "stdout": {
+        "text": "line\nnext\nquote: \"\n",
+        "hash": "sha256:a80dcbbd3c345bf1bdc8f3bb4f262f3ad68531a15ac3ee0d622b4ca655004939"
+      },
+      "exitCode": 0
+    }
+  ]
+}

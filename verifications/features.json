@@ -181,6 +181,33 @@
       "docs": [
         "docs/declarations-and-assignment.md"
       ]
+    },
+    {
+      "id": "string.escape",
+      "summary": "String escape sequences.",
+      "case": "features/string-escape.json",
+      "status": "verified",
+      "docs": [
+        "docs/strings.md"
+      ]
+    },
+    {
+      "id": "report.multi",
+      "summary": "Multi-value reports.",
+      "case": "features/report-multi.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "int.limits",
+      "summary": "Signed 64-bit Int boundaries.",
+      "case": "features/int-limits.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md"
+      ]
     }
   ]
 }

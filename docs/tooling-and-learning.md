@@ -251,8 +251,8 @@ are `./ltc` and `./litec`. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`; `./lite verify`
-runs cases affected by git changes, while `./lite verify --all` runs all 20
-feature cases and all 39 artifact manifests. Four feature cases also execute
+runs cases affected by git changes, while `./lite verify --all` runs all 23
+feature cases and all 39 artifact manifests. Seven feature cases also execute
 through the restricted TS and C compiler targets. `--update`, `--coverage`,
 `--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing
 cases are cached. `./lite test --fast` runs unit/interpreter/verification without

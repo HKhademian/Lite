@@ -77,15 +77,17 @@ wiring is a later step.
 
 ## First slice
 
-- **20 feature cases**: Int arithmetic/remainder, Bool/conditionals, conditional
-  and sequence loops, recursion, tuples, fixed arrays, mutable lists, text
-  helpers/concatenation, transparent aliases, immutable locals, block locals,
-  var assignment, inputInt, inputArgs, inputAll, exit and multi-value report.
+- **23 feature cases**: Int arithmetic/remainder/limits, Bool/conditionals,
+  conditional and sequence loops, recursion, tuples, fixed arrays, mutable
+  lists, text helpers/concatenation/escapes, transparent aliases, immutable
+  locals, block locals, var assignment, inputInt, inputArgs, inputAll, exit,
+  and multi-value reports.
 - **All 19 examples** and **all 20 samples** have manifests.
-- **59 scenarios / 67 target executions**; Int arithmetic, remainder, String
-  concatenation and immutable locals run through the reference igniter, emitted
-  TS and native C. Passing results are cached; the verifier supports `--all`,
-  affected-only default, `--shard` and `--no-cache`.
+- **62 scenarios / 76 target executions**; Int arithmetic, remainder, limits,
+  String concatenation/escapes, multi-value reports and immutable locals run
+  through the reference igniter, emitted TS and native C. Passing results are
+  cached; the verifier supports `--all`, affected-only default, `--shard` and
+  `--no-cache`.
 - Coverage is blocking: `./lite verify --coverage` fails if any feature, example
   or sample lacks a manifest.
 
@@ -95,8 +97,8 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Evidence
 
-- All 67 target executions pass `./lite verify --all`.
-- `./lite verify --coverage` reports 20/20 features, 19/19 examples, 20/20
+- All 76 target executions pass `./lite verify --all`.
+- `./lite verify --coverage` reports 23/23 features, 19/19 examples, 20/20
   samples and 0 showcases.
 - All **162 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
@@ -105,9 +107,10 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Limits
 
-- Compiler-target feature coverage is limited to four compatible cases
-  (Int arithmetic, remainder, String concatenation, immutable locals); broader
-  compiler verification remains in the compiler fixture corpus.
+- Compiler-target feature coverage is limited to seven compatible cases
+  (Int arithmetic, remainder, limits, String concatenation, escapes, multi-value
+  reports, immutable locals); broader compiler verification remains in the
+  compiler fixture corpus.
 - Coverage is blocking for features, examples and samples. Showcase manifests
   and transcripts are still absent.
 - No CI workflow or pre-commit integration exists yet; `./lite verify` and
