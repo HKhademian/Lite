@@ -1,3 +1,5 @@
+/** Temporary CLI: loads source through the flat-import loader, checks or executes it, and forwards stdio. */
+
 import { readSync, writeSync } from 'node:fs';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';

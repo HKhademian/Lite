@@ -1,4 +1,5 @@
 /* C backend for the temporary Lite compiler. */
+/** Formats a checked Int value as a C signed 64-bit literal (`INT64_C`, `INT64_MIN`). */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == -9223372036854775808 { "INT64_MIN" }
     else if value == 0 { "INT64_C(0)" }
@@ -6,7 +7,7 @@ intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     else { "INT64_C(" + digits + ")" }
 }
 
-/* Escape a checked String value as a readable C string literal. */
+/** Escapes a String as a readable C literal, including trigraph-safe `?`. */
 textLiteralCode := fn(value: String): String {
     size := textLength(value);
     var encoded := "\"";
@@ -27,6 +28,7 @@ textLiteralCode := fn(value: String): String {
 
 importFlatAll "frontend.lts";
 
+/** Builds one checked printf call for an Int or String report value; newline controls the trailing newline in the format. */
 cCall := fn(kind: String, code: String, newline: Bool): String {
     if kind == "Int" {
         if newline {
@@ -43,6 +45,7 @@ cCall := fn(kind: String, code: String, newline: Bool): String {
     }
 }
 
+/** Emits the C program from the flat item stream. Locals become int64_t or const char readings; report segments become checked printf calls with a shared write-failure status. */
 emitProgram := fn(items: Items): Unit {
     report("#include <stdio.h>");
     report("#include <inttypes.h>");

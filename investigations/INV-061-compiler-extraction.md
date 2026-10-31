@@ -87,13 +87,16 @@ name for compiler diagnostics, and writes the artifact to stdout. `lite` keeps
 
 ## Verification
 
-- All **158 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **159 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
 - The 41 program and 34 rejection cases under
   [`igniter/tests/compiler/`](../igniter/tests/compiler/) are unchanged in
   expected behavior. Program cases still pass four-way parity across the
   igniter, emitted TS, translated JS and native C; rejection cases still match
   exact diagnostics through both backends.
+- Every compiler type/function carries a `/** ... */` doc comment, and a test
+  enforces presence for declarations in `frontend.lts`, `ts-emitter.lts` and
+  `c-emitter.lts`.
 - New tests cover nested/duplicate flat imports, comments and multiline strings
   containing the directive, missing files, cycles, `--check`, and the
   `litec`/`lite compile`/`lts` commands.

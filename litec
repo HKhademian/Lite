@@ -1,4 +1,5 @@
 #!/bin/sh
+# litec: temporary Lite-written compiler driver. Selects the TS or C backend.
 lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
 
 usage() {

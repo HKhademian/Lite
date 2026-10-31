@@ -10,6 +10,7 @@ import { loadSource } from './loader.ts';
 const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
 const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
 
+/** Executes inline Lite source with captured reports and scripted stdin. */
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   let cursor = 0;
   let output = '';
@@ -22,9 +23,11 @@ function run(source: string, input = '', args: readonly string[] = []): { code: 
   });
   return { code, output, errors };
 }
+/** Loads a file through the temporary flat-import loader and executes it. */
 function runFile(path: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   return run(loadSource(path), input, args);
 }
+/** Asserts that inline source raises one Lite fault category. */
 function fault(source: string, category: LiteFault['category'], input = ''): void {
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
@@ -59,6 +62,32 @@ test('temporary importFlatAll reports missing files and cycles', () => {
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('compiler declarations carry doc comments', () => {
+  const paths = [new URL('../compiler/frontend.lts', import.meta.url),
+    new URL('../compiler/ts-emitter.lts', import.meta.url),
+    new URL('../compiler/c-emitter.lts', import.meta.url)];
+  for (const path of paths) {
+    const lines = readFileSync(path, 'utf8').split('\n');
+    for (const [index, line] of lines.entries()) {
+      if (!/^[A-Za-z_][A-Za-z0-9_]* := (?:fn|type)\b/.test(line)) continue;
+      let previous = index - 1;
+      while (previous >= 0 && lines[previous]?.trim() === '') previous -= 1;
+      let documented = false;
+      if (previous >= 0) {
+        const last = lines[previous]?.trim() ?? '';
+        if (last.startsWith('/**') && last.endsWith('*/')) documented = true;
+        else if (last.endsWith('*/')) {
+          for (let start = previous; start >= 0; start -= 1) {
+            const text = lines[start]?.trim() ?? '';
+            if (text.startsWith('/**')) { documented = true; break; }
+            if (text.startsWith('/*')) break;
+          }
+        }
+      }
+      assert.ok(documented, `${path.pathname}:${index + 1}: missing /** ... */ doc comment`);
+    }
+  }
+});
 test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
   for (const path of [tsEmitterPath, cEmitterPath]) {
     const expected = runFile(path, 'report(42);').output;
@@ -288,6 +317,7 @@ type CompilerFixture = Readonly<{
 const fixtureFile = /^(\d{3})-(\d{3})-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
 const fixtureStream = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
+/** Narrows one parsed JSON value to an object, with the fixture file in the error. */
 function fixtureRecord(value: unknown, file: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error(`${file}: expected a JSON object`);
@@ -295,12 +325,14 @@ function fixtureRecord(value: unknown, file: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/** Rejects unknown keys so fixture typos cannot silently change semantics. */
 function checkKeys(record: Record<string, unknown>, allowed: readonly string[], file: string, label: string): void {
   for (const key of Object.keys(record)) {
     if (!allowed.includes(key)) throw new Error(`${file}: unexpected ${label} key ${key}`);
   }
 }
 
+/** Reads one stdin/stdout/stderr fixture stream from text, bytes or a sibling file. */
 function readStream(value: unknown, file: string, label: string, directory: URL, required: boolean): Buffer {
   if (value === undefined) {
     if (required) throw new Error(`${file}: ${label} is required`);
@@ -331,6 +363,7 @@ function readStream(value: unknown, file: string, label: string, directory: URL,
   return readFileSync(new URL(pathName, directory));
 }
 
+/** Loads and validates every compiler verification case under tests/compiler/. */
 function loadCompilerFixtures(): readonly CompilerFixture[] {
   const directory = new URL('./tests/compiler/', import.meta.url);
   const files = readdirSync(directory).filter(file => file.endsWith('.json')).sort();

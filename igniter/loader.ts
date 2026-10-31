@@ -1,15 +1,26 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-// Temporary source-loading workaround, not a language feature: a top-level
-// `importFlatAll "path";` line is replaced by the UTF-8 source of that file,
-// relative to the importing file. Each file is included at most once per load.
+/**
+ * Whole-line temporary directive that splices a relative, declaration-only
+ * source file. This is a loader workaround, not language syntax.
+ */
 const directive = /^\s*importFlatAll\s+"([^"]*)"\s*;\s*$/;
 
+/**
+ * Loads one UTF-8 Lite source file and expands temporary `importFlatAll`
+ * directives. Each resolved file is included at most once; cycles, absolute
+ * paths, missing files and invalid UTF-8 throw.
+ */
 export function loadSource(path: string): string {
   return flatten(resolve(path), [], new Set<string>());
 }
 
+/**
+ * Recursively expands one file. `stack` detects cycles, while `included` keeps
+ * a file from being spliced twice in the same load. Imported text replaces the
+ * directive line; all other lines are preserved.
+ */
 function flatten(path: string, stack: readonly string[], included: Set<string>): string {
   if (stack.includes(path)) {
     throw new Error(`importFlatAll cycle: ${[...stack, path].join(' -> ')}`);
@@ -51,8 +62,14 @@ function flatten(path: string, stack: readonly string[], included: Set<string>):
   return output.join('\n');
 }
 
+/** Per-line scanner result: code outside comments plus carried block/string state. */
 type Scan = Readonly<{ code: string; inBlockComment: boolean; inString: boolean }>;
 
+/**
+ * Removes comment text from one line while tracking block-comment and
+ * multiline-string state across lines. Used only to recognize directives in
+ * code context, not to tokenize Lite source.
+ */
 function scanLine(line: string, startBlockComment: boolean, startString: boolean): Scan {
   let inBlockComment = startBlockComment;
   let inString = startString;

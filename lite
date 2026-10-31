@@ -1,4 +1,5 @@
 #!/bin/sh
+# lite CLI: run or check a Lite source, or delegate compile to litec.
 
 lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
 

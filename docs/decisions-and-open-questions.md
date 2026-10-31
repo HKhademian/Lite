@@ -10,6 +10,8 @@ examples. `compiler/frontend.lts` now holds the shared parser, checked Int
 evaluation, String/Int values, local lookup, report statement stream and source
 prefix; `compiler/ts-emitter.lts` and `compiler/c-emitter.lts` contain only
 target literal encoding and `emitProgram`. The duplicated parser is gone.
+Every compiler type and function carries a `/** ... */` doc comment stating its
+contract and failure behavior; a test enforces presence.
 
 The backends include the front-end through `importFlatAll "frontend.lts";`,
 a temporary source-loader workaround implemented in `igniter/loader.ts`, not a
@@ -21,7 +23,7 @@ design.
 Access is `./litec --target ts|c file.lts`, `./lite compile --target ts|c file.lts`,
 or `./lts ts file.lts` (shorthand). `lite` keeps `run`/`--check` and delegates
 `compile`. The 41 program and 34 rejection verification cases are unchanged in
-behavior; 158 interpreter groups and 9 editor groups pass. The examples index
+behavior; 159 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -45,7 +47,7 @@ source path, optional `stdin`, required `stdout`/`stderr` streams, and
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 158 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 159 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 

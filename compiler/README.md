@@ -19,6 +19,14 @@ parse a restricted Lite subset and emit TypeScript or C. The igniter in
 The backends contain no duplicated parser. They define only the target-specific
 literal encoders and `emitProgram`, then include the shared front-end.
 
+## Documentation style
+
+Every type alias and function in this directory carries a `/** ... */` doc
+comment describing its contract, checked-value meaning, and failure behavior
+(especially diagnostics/status 2). Comments explain intent and invariants; the
+executable contract remains the verification cases under
+[`../igniter/tests/compiler/`](../igniter/tests/compiler/).
+
 ## Temporary `importFlatAll`
 
 The front-end is included with:

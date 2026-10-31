@@ -575,7 +575,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **158 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **159 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. Only lessons 001, 002
 and 020 currently have focused checked outcomes by appending explicit reports in

@@ -1,15 +1,21 @@
 /* Shared restricted front-end. Not a standalone program: a backend defines
    intLiteralCode/textLiteralCode and includes this file with importFlatAll. */
+/** One parsed Int or String expression: target `code`, its checked compile-time value, and the next source position. */
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, next: Int);
+/** An immutable local visible to later expressions: source name, hygienic runtime name, value kind, target code and compile-time value. */
 Local := type (name: String, runtime: String, kind: String, code: String, intValue: Int, textValue: String);
+/** One entry in the flat program stream: an Int/String report argument, an End report boundary, or a LocalInt/LocalString declaration. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+/** Flat program stream returned by parseProgram and consumed by a backend emitter. */
 Items := type List<Item>;
 
+/** True when `text` is exactly one ASCII decimal digit. */
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
 }
 
+/** Numeric value of one checked ASCII decimal digit. */
 digitValue := fn(text: String): Int {
     if text == "0" { return 0; }
     if text == "1" { return 1; }
@@ -23,6 +29,7 @@ digitValue := fn(text: String): Int {
     9
 }
 
+/** Returns the first position at or after `start` that is not Lite whitespace. */
 skipSpaces := fn(source: String, start: Int): Int {
     size := textLength(source);
     var position := start;
@@ -32,6 +39,7 @@ skipSpaces := fn(source: String, start: Int): Int {
     position
 }
 
+/** Consumes the exact `symbol` at `position`, or reports a prefixed diagnostic and exits 2. */
 expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int {
     if position >= textLength(source) or textAt(source, position) =!= symbol {
         reportError(prefix + "expected " + symbol);
@@ -40,6 +48,7 @@ expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String
     position + 1
 }
 
+/** True for an ASCII identifier start or underscore accepted by the compiler subset. */
 isNameStart := fn(ch: String): Bool {
     starts := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
     size := textLength(starts);
@@ -51,10 +60,12 @@ isNameStart := fn(ch: String): Bool {
     false
 }
 
+/** True for an identifier continuation character. */
 isNameContinue := fn(ch: String): Bool {
     isNameStart(ch) or isDigit(ch)
 }
 
+/** Returns the position after the identifier run starting at `start`. */
 skipName := fn(source: String, start: Int): Int {
     size := textLength(source);
     var position := start;
@@ -64,15 +75,18 @@ skipName := fn(source: String, start: Int): Int {
     position
 }
 
+/** Builds an Int parsed value; `textValue` is empty. */
 intParsed := fn(code: String, value: Int, next: Int): Parsed {
     (kind = "Int", code = code, intValue = value, textValue = "", next = next)
 }
 
+/** Builds a String parsed value; `intValue` is zero. */
 textParsed := fn(code: String, value: String, next: Int): Parsed {
     (kind = "String", code = code, intValue = 0, textValue = value, next = next)
 }
 
 /* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
+/** Checked signed 64-bit addition; reports and exits 2 on overflow. */
 addIntegers := fn(left: Int, right: Int, prefix: String): Int {
     if right > 0 and left > 9223372036854775807 - right {
         reportError(prefix + "integer expression outside signed 64-bit range");
@@ -85,6 +99,7 @@ addIntegers := fn(left: Int, right: Int, prefix: String): Int {
     left + right
 }
 
+/** Checked signed 64-bit subtraction; reports and exits 2 on overflow. */
 subtractIntegers := fn(left: Int, right: Int, prefix: String): Int {
     if right < 0 and left > 9223372036854775807 + right {
         reportError(prefix + "integer expression outside signed 64-bit range");
@@ -97,6 +112,7 @@ subtractIntegers := fn(left: Int, right: Int, prefix: String): Int {
     left - right
 }
 
+/** Checked signed 64-bit multiplication; reports and exits 2 on overflow. */
 multiplyIntegers := fn(left: Int, right: Int, prefix: String): Int {
     if left == 0 or right == 0 { return 0; }
     if left > 0 {
@@ -127,6 +143,7 @@ multiplyIntegers := fn(left: Int, right: Int, prefix: String): Int {
     left * right
 }
 
+/** Truncating signed 64-bit division; reports and exits 2 on zero or MIN divided by -1. */
 divideIntegers := fn(left: Int, right: Int, prefix: String): Int {
     if right == 0 {
         reportError(prefix + "division by zero in integer expression");
@@ -139,6 +156,7 @@ divideIntegers := fn(left: Int, right: Int, prefix: String): Int {
     left / right
 }
 
+/** Checked unary negation; reports and exits 2 for the signed minimum. */
 negateInteger := fn(value: Int, prefix: String): Int {
     if value == -9223372036854775808 {
         reportError(prefix + "integer expression outside signed 64-bit range");
@@ -147,6 +165,7 @@ negateInteger := fn(value: Int, prefix: String): Int {
     0 - value
 }
 
+/** Returns the index of `name` in `locals`, or -1 when it is not visible. */
 localIndex := fn(locals: List<Local>, name: String): Int {
     var index := 0;
     loop locals as local {
@@ -156,7 +175,7 @@ localIndex := fn(locals: List<Local>, name: String): Int {
     -1
 }
 
-/* Returns emitted target code, its checked value and the next source position. */
+/** Parses a signed decimal literal, allowing whitespace after the sign. Returns target code, checked value and next position; exits 2 on malformed or out-of-range input. */
 parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     var cursor := position;
     var negative := false;
@@ -195,6 +214,7 @@ parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     intParsed(code, value, cursor)
 }
 
+/** Parses one double-quoted literal with n/t/r/quote/backslash escapes. Returns escaped target code, text value and next position; exits 2 on malformed input. */
 parseText := fn(source: String, position: Int, prefix: String): Parsed {
     var cursor := position + 1;
     var value := "";
@@ -233,7 +253,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
     textParsed(textLiteralCode(value), value, cursor)
 }
 
-/* Precedence climbing; self(..., 30) parses a unary operand without binary operators. */
+/** Precedence-climbing parser for + - * /, parentheses and unary signs. Folds Int arithmetic and String concatenation, and exits 2 on mixed-type or range faults. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
     start := skipSpaces(source, position);
     if start >= textLength(source) {
@@ -307,10 +327,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
     left
 }
 
+/** Parses one complete expression at the lowest precedence. */
 parseExpression := fn(source: String, position: Int, prefix: String, locals: List<Local>): Parsed {
     parseBinary(source, position, prefix, locals, 0)
 }
 
+/** Reads the optional logical source name from inputArgs. Returns 'name: ' or empty text; exits 2 for more than one argument. */
 sourcePrefix := fn(): String {
     var prefix := "";
     var argumentCountValue := 0;
@@ -325,6 +347,7 @@ sourcePrefix := fn(): String {
     prefix
 }
 
+/** Parses complete source into a flat Items stream while keeping one visible-local list. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
     locals: mut List<Local> = [];

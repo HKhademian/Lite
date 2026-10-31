@@ -1,11 +1,12 @@
 /* TypeScript backend for the temporary Lite compiler. */
+/** Formats a checked Int value as a TypeScript BigInt literal. */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
     if value == 0 { "0n" }
     else if negative { "(-" + digits + "n)" }
     else { digits + "n" }
 }
 
-/* Escape a checked String value as a readable TypeScript string literal. */
+/** Escapes a String as a readable TypeScript double-quoted literal. */
 textLiteralCode := fn(value: String): String {
     size := textLength(value);
     var encoded := "\"";
@@ -25,6 +26,7 @@ textLiteralCode := fn(value: String): String {
 
 importFlatAll "frontend.lts";
 
+/** Emits the TS module from the flat item stream. Locals become consts; report segments become a returned concatenated string expression. */
 emitProgram := fn(items: Items): Unit {
     report("export function main(): string {");
     var returned := "";
