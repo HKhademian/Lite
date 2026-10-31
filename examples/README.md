@@ -41,6 +41,10 @@ integer prompts may appear together in captured stdout.
   tuples, asks for an index from 0 to 2, reports that token's text, then reports
   sum: 60 using an explicit fixed-array function input. An invalid index faults.
 
+- [010 — Mixed tuples](010-mixed-tuples.lts): interleaves named and unnamed
+  fields, uses a mixed function contract and destructures in stored order.
+  Reports 7 green 2 true twice.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

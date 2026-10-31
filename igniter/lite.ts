@@ -357,7 +357,6 @@ class Parser {
       }
       if (this.accept(')')) break;
     }
-    if (labels.size !== 0 && labels.size !== items.length) source('mixed named/unnamed tuple types are not supported yet', this.peek().at);
     return { kind: 'Tuple', items };
   }
   label(): Token {
@@ -685,7 +684,6 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
         if (labels.has(item.label)) source(`duplicate tuple label ${item.label}`, at);
         labels.add(item.label);
       }
-      if (labels.size !== 0 && labels.size !== raw.items.length) source('mixed named/unnamed tuple values are not supported yet', at);
       const items = raw.items.map(item => checkExpression(item.input, names, state));
       const types = items.map((item, index) => {
         if (!isScalar(item.type)) typeError('only scalar components in flat fixed tuples are supported yet', item.at);

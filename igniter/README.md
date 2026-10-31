@@ -244,16 +244,25 @@ or reordered fields are diagnosed as unimplemented. Write matching labels in
 destination order for this subset. This is an implementation limit, not a new
 restriction on the broader selected constructor-routing rules.
 
-Mixed/nested tuples, named patterns, spread/rest, inferred label types, explicit
+Nested tuples, named patterns, spread/rest, inferred label types, explicit
 receiving-declaration label conversion and field mutation remain unsupported.
 Keyword/self field names are outside the igniter's current identifier profile;
 this does not settle the full language's reserved-name policy. Labels are checked
 statically; no runtime reflection, native layout/ABI or ownership result is claimed.
 
+### Mixed fixed tuples
+
+Named and unnamed scalar fields may interleave in written order, for example
+(7, tea = "green", 2) with type (:Int, tea: String, :Int). Numeric access covers
+every position; field access covers labeled positions. Copies, function contracts
+and homogeneous arrays preserve each position's label or absence of a label.
+See [010](../examples/010-mixed-tuples.lts) and
+[INV-022 evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+
 ### Fixed arrays and traversal
 
 The approved first array subset accepts nonempty homogeneous literals of existing
-scalars or flat scalar tuples, including fully named tuples. For example:
+scalars or flat scalar tuples, including named and mixed tuples. For example:
 
 ```text
 values := [10, 20, 30];
@@ -393,8 +402,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.10**, tag **igniter-v0.1.0-alpha.10**, adds the approved
-nonempty fixed-array subset, indexed reads and action traversal.
+Version **0.1.0-alpha.11**, tag **igniter-v0.1.0-alpha.11**, adds interleaved
+named/unnamed flat tuples using the existing selected forms.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -411,6 +420,8 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.9**, commit `fc0fb5d`: named fixed-tuple fields,
   shorthand and label-sensitive function contracts.
 
+- **igniter-v0.1.0-alpha.10**, commit `1e253b5`: readable fixed arrays and traversal.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -418,7 +429,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **93 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **97 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

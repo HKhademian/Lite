@@ -2,6 +2,10 @@
 
 Status: **named-entry shorthand and zero-based positional access selected by the user, 2026-10-21; runtime variable indexing rejected, mixed named/unnamed tuples, singleton value/type forms, singleton binding/grouped patterns, the empty tuple pattern, and Unit/() empty tuple identity selected by the user, 2026-10-22. Design contract; limited igniter implementation coverage is recorded below**.
 
+The FVP implements flat scalar mixed tuples in written order; see
+[bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+Broader nesting, pattern and contextual routing contracts remain separate.
+
 ## Selected value entry forms
 
 Implementation coverage, **2026-10-31**: the user-approved

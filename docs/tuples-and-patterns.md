@@ -2,6 +2,10 @@
 
 Status: **same-value binding/destructuring and union type-pattern narrowing established; variable-or-pattern collection selected 2026-10-23, with no combined whole-value/nested binding; complete recursive pattern syntax open**.
 
+The FVP implements flat scalar mixed tuples in written order; see
+[bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+Broader nesting, pattern and contextual routing contracts remain separate.
+
 ## Purpose
 
 Give names to an entire value or destructure that same value without making the binding pattern change what a producer supplies.

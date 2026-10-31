@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Mixed tuple FVP delivery, 2026-10-31
+
+Under the automatic selected-scope workflow, INV-022 now executes interleaved
+named/unnamed flat scalar tuples and matching annotations. Written order,
+label-sensitive transfers, copies and homogeneous array elements are preserved.
+Strict checking and 97 interpreter groups pass, including example 010 through
+the root launcher and check-only mode. This implements existing decisions;
+contextual routing, nested tuples and broader patterns remain unimplemented.
+Preserve the source as igniter-v0.1.0-alpha.11. See
+[INV-022 evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+
 ## Automatic selected-scope progression, 2026-10-31
 
 The user authorizes automatic investigation and delivery of already selected

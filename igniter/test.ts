@@ -21,6 +21,49 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('mixed tuples preserve interleaved positions, shorthand and source evaluation order', () => {
+  assert.equal(run(`tea := "green";
+    value := (({report("first"); 7}), =tea, cups = ({report("third"); 2}), true);
+    report(value.0, value.tea, value.2, value.3);
+    (a, b, c, d) := value; report(a, b, c, d);`).output,
+    'first\nthird\n7 green 2 true\n7 green 2 true\n');
+});
+test('mixed tuple copies, function contracts and homogeneous arrays retain labels and order', () => {
+  assert.equal(run(`var value := (1, name = "first", false); saved := value;
+    value = (2, name = "second", true);
+    identity := fn(v: (:Int, name: String, :Bool)): (:Int, name: String, :Bool) { v }
+    items := [identity(saved), value];
+    loop items as item { report(item.0, item.name, item.2); }`).output,
+    '1 first false\n2 second true\n');
+});
+test('mixed tuple identity rejects label movement, duplication and unknown fields before effects', () => {
+  for (const code of [
+    'var a := (1, x = 2); a = (x = 1, 2);',
+    'f := fn(v: (:Int, x: Int)): Int { v.x } a := (1, y = 2); f(a);',
+    'a := [(1, x = 2), (x = 1, 2)];',
+    'a := (1, x = 2, x = 3);',
+    'f := fn(v: (x: Int, :Int, x: Int)): Int { 0 }',
+    'a := (1, x = 2); a.missing;',
+  ]) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => null, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), LiteFault);
+    assert.equal(observed, false, code);
+  }
+});
+test('indexed mixed tuple example executes and checks without effects', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = new URL('../examples/010-mixed-tuples.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const check of [false, true]) {
+    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, check ? '' : '7 green 2 true\n7 green 2 true\n');
+    assert.equal(result.stderr, '');
+  }
+});
+
 test('first checkpoint: stdin integers, mutation, arithmetic and explicit report', () => {
   const code = readFileSync(new URL('../examples/001-double-sum.lts', import.meta.url), 'utf8');
   assert.deepEqual(run(code, '7\n5\n'), { code: 0, output: 'First integer: Second integer: 24\n', errors: '' });
@@ -834,8 +877,6 @@ test('invalid labels and unsupported tuple extensions are rejected before effect
     ['token := (kind = "number", kind = "other");', 'SourceError'],
     ['kind := "number"; token := (= kind, kind = "other");', 'SourceError'],
     ['f := fn(token: (kind: String, kind: String)): Int { 1 }', 'SourceError'],
-    ['token := (a = 1, 2);', 'SourceError'],
-    ['f := fn(token: (a: Int, :Int)): Int { 1 }', 'SourceError'],
     ['token := (kind = "number"); token.missing;', 'TypeError'],
     ['token := (kind = "number"); token.1;', 'TypeError'],
     ['var token := (kind = "number"); token = (kind = 7);', 'TypeError'],

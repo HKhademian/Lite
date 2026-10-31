@@ -293,6 +293,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-022 — named fields for fixed tuples](INV-022-fvp-named-tuples.md) — resumed after the intervening I/O work; bounded implementation of existing named entry/shorthand/member forms, named function tuple annotations and label-sensitive stored transfers. Strict checking and 79 interpreter groups pass. Broader routing/conversion, mixed/nested tuples and named patterns remain unimplemented.
 
+**Follow-up:** [INV-022 — mixed fixed tuples](INV-022-fvp-mixed-tuples.md) — interleaved named/unnamed scalar fields and annotations implemented under existing selected rules; strict checking and 97 interpreter groups pass. No new syntax or APIs.
+
 <a id="inv-023"></a>
 
 ## INV-023 — Records
