@@ -1,10 +1,28 @@
 # INV-029 — Alias names versus ordinary value shadowing
 
-Status: waiting for input (namespace choice required; no alias implementation)
+Status: approved (one ordinary lexical binding namespace selected; ready for implementation)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-029](TOPICS.md#inv-029)
-Baseline: igniter-v0.1.0-alpha.22, `02530e3`
+Baseline: igniter-v0.1.0-alpha.22, `dd31cb0`
+
+## Selected decision
+
+The user selects Option 1 (one ordinary lexical binding namespace) and explicitly
+rejects Option 2 (dual namespaces):
+"easier to reason; a value identifier could contain a value and has a type, but a
+type could not have any mem address."
+
+- Names introduced by `Alias := type TypeExpression;` and ordinary value
+  bindings share a single lexical scope.
+- In type annotations, identifier resolution checks the nearest visible lexical
+  binding. If the binding is a value binding, it fails with a compile-time static
+  `TypeError` (`binding <name> does not denote a type`). It does not skip the
+  value binding to find an earlier alias in a hidden namespace.
+- If a type alias is referenced in value/expression context, it fails with a
+  static `TypeError` (`type alias <name> cannot be used as a value`).
+- Type aliases are purely static compile-time contracts with zero runtime memory,
+  allocation, wrapper, or storage overhead. Transparent identity is preserved.
 
 ## Why this is the next bounded question
 

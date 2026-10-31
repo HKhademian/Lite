@@ -14,6 +14,13 @@ type Parameter = Readonly<{ name: string; type: DataType }>;
 type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: DataType }>;
 // Never is internal flow information, not a new source-level type.
 type Type = DataType | FunctionType | 'Never';
+type RawType = Readonly<{ at: Position }> & (
+  | { kind: 'named'; name: string }
+  | { kind: 'unit' }
+  | { kind: 'tuple'; items: readonly Readonly<{ label: string | undefined; type: RawType }>[] }
+  | { kind: 'array'; element: RawType; length: bigint }
+  | { kind: 'list'; element: RawType }
+);
 type Comparison = '==' | '=!=' | '<' | '<!' | '<=' | '<!=' | '>' | '>!' | '>=' | '>!=';
 type Use = 'value' | 'discard';
 export type Value =
@@ -52,18 +59,22 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
   | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
-  | { kind: 'function'; signature: FunctionType; body: Raw }
+  | { kind: 'function'; parameters: readonly Readonly<{ name: string; type: RawType }>[]; result: RawType; body: Raw }
   | { kind: 'return'; input: Raw | undefined }
   | { kind: 'call'; name: string; args: readonly Readonly<{ label: string | undefined; input: Raw }>[] }
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
-  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: TupleType | ListType; input: Raw }
+  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw }
+  | { kind: 'typeAlias'; name: string; target: RawType }
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'destructure'; names: readonly Token[]; input: Raw }
   | { kind: 'expression'; input: Raw }
 );
 type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; writable: boolean; owner: number }>;
+type ScopeEntry =
+  | { kind: 'value'; binding: Binding }
+  | { kind: 'type'; type: DataType };
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
   | { kind: 'array'; items: readonly Expr[] }
@@ -171,6 +182,46 @@ function isScalar(type: Type): type is ScalarType {
 }
 function isElement(type: Type): type is ElementType {
   return isScalar(type) || (typeof type !== 'string' && type.kind === 'Tuple');
+}
+function resolveType(raw: RawType, scope: ReadonlyMap<string, ScopeEntry>): DataType {
+  switch (raw.kind) {
+    case 'unit': return 'Unit';
+    case 'named': {
+      const entry = scope.get(raw.name);
+      if (entry !== undefined) {
+        if (entry.kind === 'value') typeError(`binding ${raw.name} does not denote a type`, raw.at);
+        return entry.type;
+      }
+      return scalarType(raw.name, raw.at);
+    }
+    case 'list': {
+      const element = resolveType(raw.element, scope);
+      if (!isElement(element)) typeError('List elements must be scalars or flat scalar tuples', raw.at);
+      return { kind: 'List', element };
+    }
+    case 'array': {
+      const element = resolveType(raw.element, scope);
+      if (!isElement(element)) typeError('nested collection element types are not supported yet', raw.at);
+      return { kind: 'Array', element, length: raw.length };
+    }
+    case 'tuple': {
+      const items = raw.items.map(item => {
+        const type = resolveType(item.type, scope);
+        if (typeof type !== 'string') typeError('nested tuple annotations are not supported yet', item.type.at);
+        return { label: item.label, type };
+      });
+      return { kind: 'Tuple', items };
+    }
+    default: return unreachable(raw);
+  }
+}
+function resolveFunctionSignature(raw: Extract<Raw, { kind: 'function' }>, scope: ReadonlyMap<string, ScopeEntry>): FunctionType {
+  const parameters = raw.parameters.map(parameter => ({
+    name: parameter.name,
+    type: resolveType(parameter.type, scope),
+  }));
+  const result = resolveType(raw.result, scope);
+  return { kind: 'Function', parameters, result };
 }
 function freshTuple(expr: Expr): boolean {
   if (expr.kind === 'tuple') return true;
@@ -336,12 +387,11 @@ class Parser {
   expect(text: string): void {
     if (!this.accept(text)) source(`expected ${JSON.stringify(text)}`, this.peek().at);
   }
-  dataType(): DataType {
+  rawType(): RawType {
     if (this.peek().kind === 'id' && this.peek().text === 'List') {
       const at = this.take().at;
       this.expect('<');
-      const element = this.dataType();
-      if (!isElement(element)) typeError('List elements must be scalars or flat scalar tuples', at);
+      const element = this.rawType();
       // A grammatical type close can precede an initializer without whitespace.
       const close = this.peek();
       if (close.kind === 'symbol' && close.text === '>=') {
@@ -349,28 +399,28 @@ class Parser {
           { kind: 'symbol', text: '=', at: { line: close.at.line, column: close.at.column + 1 } });
       }
       this.expect('>');
-      return { kind: 'List', element };
+      return { kind: 'list', element, at };
     }
     if (this.accept('[')) {
-      const at = this.peek().at;
-      const element = this.dataType();
-      if (!isElement(element)) typeError('nested collection element types are not supported yet', at);
+      const at = this.tokens[this.index - 1]!.at;
+      const element = this.rawType();
       this.expect(';');
       const length = this.take();
       if (length.kind !== 'number' || !/^[0-9]+$/.test(length.text)) source('fixed array extent must be a nonnegative integer literal', length.at);
       this.expect(']');
-      return { kind: 'Array', element, length: BigInt(length.text) };
+      return { kind: 'array', element, length: BigInt(length.text), at };
     }
     if (!this.accept('(')) {
       const token = this.take();
       if (token.kind !== 'id') source('expected a scalar, fixed tuple or fixed array type', token.at);
-      return scalarType(token.text, token.at);
+      return { kind: 'named', name: token.text, at: token.at };
     }
-    if (this.accept(')')) return 'Unit';
+    const openAt = this.tokens[this.index - 1]!.at;
+    if (this.accept(')')) return { kind: 'unit', at: openAt };
     if (!(this.peek().text === ':' || (this.peek().kind === 'id' && this.peek(1).text === ':'))) {
-      const grouped = this.dataType(); this.expect(')'); return grouped;
+      const grouped = this.rawType(); this.expect(')'); return grouped;
     }
-    const items: TupleMember[] = [];
+    const items: Readonly<{ label: string | undefined; type: RawType }>[] = [];
     const labels = new Set<string>();
     while (true) {
       let label: string | undefined;
@@ -381,9 +431,7 @@ class Parser {
         labels.add(label);
         this.expect(':');
       }
-      const at = this.peek().at;
-      const type = this.dataType();
-      if (typeof type !== 'string') typeError('nested tuple annotations are not supported yet', at);
+      const type = this.rawType();
       items.push({ label, type });
       if (!this.accept(',')) {
         if (items.length === 1 && label === undefined) source('an unnamed singleton tuple type requires a comma: (:Int,)', this.peek().at);
@@ -391,7 +439,7 @@ class Parser {
       }
       if (this.accept(')')) break;
     }
-    return { kind: 'Tuple', items };
+    return { kind: 'tuple', items, at: openAt };
   }
   label(): Token {
     const token = this.take();
@@ -403,11 +451,7 @@ class Parser {
   typedDeclaration(name: Token, mutable: boolean): RawItem {
     this.expect(':');
     const writable = this.accept('mut');
-    const annotation = this.dataType();
-    if (typeof annotation === 'string' || (annotation.kind !== 'Tuple' && annotation.kind !== 'List')) {
-      source('explicit receiving declarations currently support flat tuple or List types only', name.at);
-    }
-    if (writable && annotation.kind !== 'List') typeError('held-data mut declarations currently support lists only', name.at);
+    const annotation = this.rawType();
     this.expect('=');
     return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input: this.expression(), at: name.at };
   }
@@ -460,8 +504,17 @@ class Parser {
         if (this.peek().text === ':') items.push(this.typedDeclaration(name, true));
         else {
           this.expect(':=');
+          if (this.peek().kind === 'id' && this.peek().text === 'type') {
+            source('type aliases cannot be declared with var', start.at);
+          }
           items.push({ kind: 'declare', name: name.text, mutable: true, input: this.expression(), at: start.at });
         }
+      } else if (start.kind === 'id' && this.peek(1).text === ':=' && this.peek(2).kind === 'id' && this.peek(2).text === 'type') {
+        this.take();
+        this.take();
+        this.take();
+        const target = this.rawType();
+        items.push({ kind: 'typeAlias', name: start.text, target, at: start.at });
       } else if (start.kind === 'id' && this.peek(1).text === ':') {
         this.take();
         items.push(this.typedDeclaration(start, false));
@@ -600,7 +653,7 @@ class Parser {
     if (token.kind === 'id') {
       if (token.text === 'fn') {
         this.expect('(');
-        const parameters: Parameter[] = [];
+        const parameters: Readonly<{ name: string; type: RawType }>[] = [];
         if (!this.accept(')')) {
           do {
             const name = this.take();
@@ -609,14 +662,14 @@ class Parser {
             }
             if (parameters.some(p => p.name === name.text)) source(`duplicate parameter ${name.text}`, name.at);
             this.expect(':');
-            parameters.push({ name: name.text, type: this.dataType() });
+            parameters.push({ name: name.text, type: this.rawType() });
           } while (this.accept(',') && !this.isSymbol(')'));
           this.expect(')');
         }
         this.expect(':');
-        const signature: FunctionType = { kind: 'Function', parameters, result: this.dataType() };
+        const result = this.rawType();
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('fn requires a braced body', this.peek().at);
-        return { kind: 'function', signature, body: this.prefix(), at: token.at };
+        return { kind: 'function', parameters, result, body: this.prefix(), at: token.at };
       }
       if (token.text === 'return') {
         const next = this.peek();
@@ -680,25 +733,26 @@ function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
   }
   return { kind: 'read', binding, type: binding.type, at };
 }
-function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyMap<string, Binding>, state: CheckState): Expr {
+function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyMap<string, ScopeEntry>, state: CheckState): Expr {
+  const signature = resolveFunctionSignature(raw, names);
   const enclosing = state.current;
   const depth = state.loopDepth;
   const id = state.nextFunction++;
   const local = new Map(names);
-  const parameters = raw.signature.parameters.map(parameter => {
+  const parameters = signature.parameters.map(parameter => {
     const binding: Binding = { ...parameter, mutable: false, writable: false, slot: state.nextSlot++, owner: id };
-    local.set(parameter.name, binding);
+    local.set(parameter.name, { kind: 'value', binding });
     return binding;
   });
-  state.current = { id, signature: raw.signature };
+  state.current = { id, signature };
   state.loopDepth = 0;
   let body: Expr;
   try { body = checkExpression(raw.body, local, state); }
   finally { state.current = enclosing; state.loopDepth = depth; }
-  requireCompatible(body, raw.signature.result, `function body produces ${typeName(body.type)}; expected ${typeName(raw.signature.result)}`, raw.body.at);
-  return { kind: 'function', code: { parameters, body }, type: raw.signature, at: raw.at };
+  requireCompatible(body, signature.result, `function body produces ${typeName(body.type)}; expected ${typeName(signature.result)}`, raw.body.at);
+  return { kind: 'function', code: { parameters, body }, type: signature, at: raw.at };
 }
-function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: CheckState, use: Use = 'value'): Expr {
+function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
     case 'grant': return typeError('mut arguments currently require a direct named list target in a sequence end operation', at);
@@ -810,7 +864,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       if (raw.item !== undefined && array === undefined) typeError('named receivers for non-sequence loops are not supported yet', raw.item.at);
       const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
         : { name: raw.item.text, type: array.element, mutable: false, writable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
-      const bodyNames = item === undefined ? names : new Map(names).set(item.name, item);
+      const bodyNames = item === undefined ? names : new Map(names).set(item.name, { kind: 'value', binding: item });
       state.loopDepth++;
       let body: Expr;
       try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
@@ -824,8 +878,11 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return { kind: 'loopExit', op: raw.op, type: 'Unit', at };
     case 'name': {
       if (raw.name === 'self') typeError('only self(...) calls are supported; first-class self remains open', at);
-      const binding = names.get(raw.name);
-      if (binding !== undefined) return readBinding(binding, state, at);
+      const entry = names.get(raw.name);
+      if (entry !== undefined) {
+        if (entry.kind === 'type') typeError(`type alias ${raw.name} cannot be used as a value`, at);
+        return readBinding(entry.binding, state, at);
+      }
       if (raw.name === 'Unit') return { kind: 'literal', value: UNIT, type: 'Unit', at };
       return typeError(`unknown value ${raw.name}`, at);
     }
@@ -881,7 +938,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return { kind: 'compare', first, rest, type: 'Bool', at };
     }
     case 'call': {
-      const binding = names.get(raw.name);
+      const entry = names.get(raw.name);
+      if (entry !== undefined && entry.kind === 'type') typeError(`type alias ${raw.name} is not callable`, at);
+      const binding = entry?.kind === 'value' ? entry.binding : undefined;
       if (binding !== undefined || raw.name === 'self') {
         let callee: Expr;
         if (raw.name === 'self') {
@@ -929,8 +988,10 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
         if (raw.args.length !== (push ? 2 : 1)) typeError(`${operation} expects ${push ? 2 : 1} argument(s)`, at);
         const first = raw.args[0]?.input;
         if (first?.kind !== 'grant') typeError(`${operation} requires an explicit mut grant to a named list binding`, at);
-        const target = names.get(first.name);
-        if (target === undefined) typeError(`unknown binding ${first.name}`, first.at);
+        const targetEntry = names.get(first.name);
+        if (targetEntry === undefined) typeError(`unknown binding ${first.name}`, first.at);
+        if (targetEntry.kind === 'type') typeError(`type alias ${first.name} cannot be mutated`, first.at);
+        const target = targetEntry.binding;
         readBinding(target, state, first.at); // Retain the ordinary surrounding-data boundary.
         if (!target.writable) typeError(`${first.name} requires a mut List declaration for held-data mutation`, first.at);
         if (typeof target.type === 'string' || target.type.kind !== 'List') typeError('sequence end operations require a growable list', first.at);
@@ -986,24 +1047,44 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
   }
 }
 
-function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Binding>, state: CheckState, use: Use): Block {
+function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use): Block {
   const names = new Map(outer);
   const items: Item[] = [];
   let type: Type = 'Unit';
   let exits = false;
   for (const [index, item] of parsed.entries()) {
+    if (item.kind === 'typeAlias') {
+      if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
+      const resolved = resolveType(item.target, names);
+      names.set(item.name, { kind: 'type', type: resolved });
+      type = 'Unit';
+      continue;
+    }
     const context = item.kind === 'expression' && index === parsed.length - 1 ? use : 'discard';
     // Only the direct, no-earlier-target declaration is visible to its own deferred body.
-    const own: Binding | undefined = item.kind === 'declare' && item.input.kind === 'function'
-      ? { name: item.name, mutable: item.mutable, writable: false, slot: state.nextSlot++, type: item.input.signature, owner: state.current?.id ?? 0 }
+    const fnInput = item.kind === 'declare' && item.input.kind === 'function' ? item.input : undefined;
+    const ownSignature = fnInput !== undefined
+      ? resolveFunctionSignature(fnInput, names)
       : undefined;
-    const bodyNames = own !== undefined && !names.has(own.name) ? new Map(names).set(own.name, own) : names;
+    const own: Binding | undefined = ownSignature !== undefined && item.kind === 'declare'
+      ? { name: item.name, mutable: item.mutable, writable: false, slot: state.nextSlot++, type: ownSignature, owner: state.current?.id ?? 0 }
+      : undefined;
+    const bodyNames = own !== undefined && !names.has(own.name)
+      ? new Map(names).set(own.name, { kind: 'value', binding: own })
+      : names;
     let input: Expr;
-    if (item.kind === 'typedDeclare' && item.annotation.kind === 'List' && item.input.kind === 'array') {
-      const element = item.annotation.element;
-      const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
-      for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
-      input = { kind: 'list', items: entries, type: item.annotation, at: item.input.at };
+    if (item.kind === 'typedDeclare') {
+      const destination = resolveType(item.annotation, bodyNames);
+      if (typeof destination === 'string' || (destination.kind !== 'Tuple' && destination.kind !== 'List')) {
+        source('explicit receiving declarations currently support flat tuple or List types only', item.at);
+      }
+      if (item.writable && destination.kind !== 'List') typeError('held-data mut declarations currently support lists only', item.at);
+      if (destination.kind === 'List' && item.input.kind === 'array') {
+        const element = destination.element;
+        const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
+        for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
+        input = { kind: 'list', items: entries, type: destination, at: item.input.at };
+      } else input = checkExpression(item.input, bodyNames, state, 'value');
     } else input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
     exits ||= input.type === 'Never';
     switch (item.kind) {
@@ -1018,7 +1099,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
           const type = types[index];
           if (type === undefined) throw new Error('igniter invariant: missing pattern component type');
           const binding: Binding = { name: name.text, mutable: false, writable: false, slot: state.nextSlot++, type, owner: state.current?.id ?? 0 };
-          names.set(name.text, binding);
+          names.set(name.text, { kind: 'value', binding });
           return binding;
         });
         items.push({ kind: 'destructure', bindings, input });
@@ -1029,13 +1110,14 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
         if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
         let declared = input.type;
         if (item.kind === 'typedDeclare') {
-          const destination = item.annotation;
+          const destination = resolveType(item.annotation, names);
           declared = destination;
-          if (destination.kind === 'List') {
+          if (typeof destination !== 'string' && destination.kind === 'List') {
             requireCompatible(input, destination, 'list initialization requires the same List element contract; construct literals at the typed declaration', input.at);
           } else if (input.type !== 'Never' && !sameType(input.type, declared)) {
             if (freshTuple(input)) typeError('contextual tuple constructor routing is not supported yet at typed declarations; use a stored tuple for positional label conversion', input.at);
             if (typeof input.type === 'string' || input.type.kind !== 'Tuple' ||
+                typeof destination === 'string' || destination.kind !== 'Tuple' ||
                 input.type.items.length !== destination.items.length ||
                 !input.type.items.every((member, index) => member.type === destination.items[index]?.type)) {
               typeError('tuple label conversion requires the same ordered shape and component types', input.at);
@@ -1044,14 +1126,16 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
         }
         const binding: Binding = own ?? { name: item.name, mutable: item.mutable,
           writable: item.kind === 'typedDeclare' && item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
-        names.set(item.name, binding);
+        names.set(item.name, { kind: 'value', binding });
         items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';
         break;
       }
       case 'assign': {
-        const binding = names.get(item.name);
-        if (binding === undefined) typeError(`unknown binding ${item.name}`, item.at);
+        const entry = names.get(item.name);
+        if (entry === undefined) typeError(`unknown binding ${item.name}`, item.at);
+        if (entry.kind === 'type') typeError(`type alias ${item.name} cannot be assigned`, item.at);
+        const binding = entry.binding;
         if (state.activeGrant === binding.slot) typeError('replacement of a list during its mut argument preparation is not supported yet', item.at);
         if (binding.owner !== (state.current?.id ?? 0)) typeError('replacement of surrounding runtime bindings is not supported yet', item.at);
         if (!binding.mutable) typeError(`${item.name} is fixed; replacement requires var`, item.at);

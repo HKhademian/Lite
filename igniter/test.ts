@@ -1767,3 +1767,74 @@ test('numbered fixed-array example runs and checks through the root launcher', (
   assert.equal(check.error, undefined); assert.equal(check.status, 0);
   assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
 });
+test('transparent type aliases support scalar, tuple, array and list forms', () => {
+  assert.equal(run('Token := type (kind: String, text: String);\n' +
+    'take := fn(t: Token): String { t.text };\n' +
+    'report(take((kind = "id", text = "hello")));').output, 'hello\n');
+
+  assert.equal(run('Token := type (kind: String, text: String);\n' +
+    'make := fn(s: String): Token { (kind = "text", text = s) };\n' +
+    'report(make("world").text);').output, 'world\n');
+
+  assert.equal(run('Token := type (kind: String, text: String);\n' +
+    'tok: Token = (kind = "op", text = "+");\n' +
+    'report(tok.text);').output, '+\n');
+
+  assert.equal(run('MyInt := type Int;\n' +
+    'double := fn(x: MyInt): MyInt { x + x };\n' +
+    'report(double(21));').output, '42\n');
+
+  assert.equal(run('Pair := type [Int; 2];\n' +
+    'sum := fn(p: Pair): Int { p[0] + p[1] };\n' +
+    'report(sum([10, 20]));').output, '30\n');
+
+  assert.equal(run('Token := type (kind: String, text: String);\n' +
+    'Tokens := type List<Token>;\n' +
+    'tokens: mut Tokens = [];\n' +
+    'push_back(mut tokens, (kind = "num", text = "42"));\n' +
+    'report(tokens[0].text);').output, '42\n');
+
+  assert.equal(run('Token := type (kind: String, text: String);').output, '');
+});
+test('type aliases follow single lexical scope with value shadowing and rejection', () => {
+  fault('Token := type (kind: String, text: String);\n' +
+    'Token := 7;\n' +
+    'f := fn(t: Token): String { t.text };', 'TypeError');
+
+  assert.equal(run('x := 10;\n' +
+    'x := type String;\n' +
+    'f := fn(s: x): String { s };\n' +
+    'report(f("ok"));').output, 'ok\n');
+
+  assert.equal(run('Token := type (kind: String, text: String);\n' +
+    '{\n' +
+    '    Token := 42;\n' +
+    '    report(Token);\n' +
+    '}\n' +
+    'take := fn(t: Token): String { t.text };\n' +
+    'report(take((kind = "id", text = "restored")));').output, '42\nrestored\n');
+
+  fault('Token := type (kind: String, text: String); x := Token;', 'TypeError');
+  fault('Token := type (kind: String, text: String); x := Token();', 'TypeError');
+  fault('Token := type (kind: String, text: String); Token = 5;', 'TypeError');
+  fault('Token := type (kind: String, text: String); push_back(mut Token, (kind = "a", text = "b"));', 'TypeError');
+  fault('var Token := type Int;', 'SourceError');
+  fault('fn := type Int;', 'SourceError');
+  fault('self := type Int;', 'SourceError');
+});
+test('type alias example runs and checks through the root launcher', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const source = new URL('../examples/021-type-aliases.lts', import.meta.url);
+  const expected = 'ident: total\nop: +=\nnum: 100\n';
+  assert.equal(run(readFileSync(source, 'utf8')).output, expected);
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const invoke = (check = false) => spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), source.pathname], {
+    cwd: root, env, encoding: 'utf8', timeout: 5000,
+  });
+  const result = invoke(false);
+  assert.equal(result.error, undefined); assert.equal(result.status, 0);
+  assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
+  const check = invoke(true);
+  assert.equal(check.error, undefined); assert.equal(check.status, 0);
+  assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+});

@@ -96,6 +96,10 @@ integer prompts may appear together in captured stdout.
   to report a b, an empty line, and the literal --check. Omit the suffix for no
   arguments/output. The helper consumes no stdin and adds no prompt.
 
+- [021 — Type aliases](021-type-aliases.lts): demonstrates Alias := type TypeExpression
+  defining transparent named contracts for tuples and growable lists with zero
+  runtime memory overhead. Reports ident: total, op: +=, and num: 100.
+
 Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

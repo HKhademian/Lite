@@ -387,7 +387,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/type-aliases.md](../docs/type-aliases.md); [docs/record-type-identity.md](../docs/record-type-identity.md); [docs/type-categories.md](../docs/type-categories.md).
 
-**Investigation:** waiting for input (ordinary namespace choice); contributor: redacted (agent-assisted); note: [INV-029 — alias names versus ordinary shadowing](INV-029-fvp-alias-name-resolution.md) — selected alias syntax/transparent meaning stays intact; a concrete later same-name value probes shared binding lookup versus separate type lookup. Recommendation unselected; no alias implementation or runtime type-value model added.
+**Investigation:** approved (one ordinary namespace selected); contributor: redacted (agent-assisted); note: [INV-029 — alias names versus ordinary shadowing](INV-029-fvp-alias-name-resolution.md) — selected alias syntax/transparent meaning stays intact; user selects one ordinary lexical binding namespace ("easier to reason; a value identifier could contain a value and has a type, but a type could not have any mem address") and rejects dual namespaces. Later same-name value shadows alias; subsequent type lookup fails with static TypeError.
 
 <a id="inv-030"></a>
 

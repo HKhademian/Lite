@@ -2,16 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## Alias namespace/shadowing question, 2026-10-31
+## One lexical namespace selected for ordinary aliases and value bindings, 2026-10-31
 
-To reduce repeated compiler type annotations, INV-029 reviews selected
-Alias := type TypeExpression. The remaining ordinary name-resolution choice is
-whether a later same-name value shadows the alias even in type annotations, or
-whether type lookup retains a separate namespace. Recommendation: one ordinary
-lexical binding namespace, with a type error when the nearest binding is a value;
-no alternative is selected. Builtin/module/type-value questions remain separate.
-No alias code or new syntax is added. See
-[the concrete case](../investigations/INV-029-fvp-alias-name-resolution.md).
+The user approves Option 1 from INV-029 and rejects dual namespaces: "easier to
+reason; a value identifier could contain a value and has a type, but a type could
+not have any mem address." Implement one ordinary lexical binding namespace for
+source-introduced names. A value binding shadows an earlier same-name type alias;
+subsequent lookup in a type annotation finding that value fails with a static
+type error stating the binding does not denote a type. It does not skip the
+nearest binding to recover an older alias. Type aliases have transparent identity
+and zero runtime memory or storage. See
+[INV-029 recorded decision](../investigations/INV-029-fvp-alias-name-resolution.md).
 
 ## Isolated early Wasm feasibility evidence, 2026-10-31
 

@@ -1,0 +1,16 @@
+/* Type aliases: transparent named contracts with zero runtime memory. */
+Token := type (kind: String, text: String);
+Tokens := type List<Token>;
+
+describe := fn(token: Token): String {
+    token.kind + ": " + token.text
+}
+
+tokens: mut Tokens = [];
+push_back(mut tokens, (kind = "ident", text = "total"));
+push_back(mut tokens, (kind = "op", text = "+="));
+push_back(mut tokens, (kind = "num", text = "100"));
+
+loop tokens as token {
+    report(describe(token));
+}

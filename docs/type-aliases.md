@@ -106,10 +106,11 @@ An explicit prefix raises an additional boundary: should Name := type { ... } be
 
 FVP follow-up, **2026-10-31**: the
 [INV-029 name-resolution review](../investigations/INV-029-fvp-alias-name-resolution.md)
-asks whether an ordinary value declaration with an alias's name shadows that
-alias in subsequent type annotations, or whether type lookup retains a separate
-namespace. This remains open. The selected spelling/transparent meaning below
-does not decide the answer, and no igniter alias implementation is claimed.
+selects one ordinary lexical namespace for source-introduced aliases and value
+bindings. A value binding shadows an earlier same-name alias; subsequent lookup
+in a type annotation finds the value and fails with a static type error stating
+the binding does not denote a type. Dual namespaces are rejected. The alias
+remains transparent with zero runtime memory or allocation.
 
 Use one spelling for all named aliases:
 
