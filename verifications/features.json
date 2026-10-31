@@ -247,6 +247,15 @@
         "docs/power-and-negation.md",
         "docs/operators.md"
       ]
+    },
+    {
+      "id": "match.subjectless",
+      "summary": "Subjectless Boolean match selection.",
+      "case": "features/match-subjectless.json",
+      "status": "verified",
+      "docs": [
+        "docs/match.md"
+      ]
     }
   ]
 }

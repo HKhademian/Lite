@@ -4,6 +4,12 @@ Status: **subject-based pattern matching and subjectless Boolean selection selec
 
 Branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints.
 
+Implementation checkpoint, 2026-11-01: the igniter implements the subjectless
+Boolean form only. Arms evaluate in order and the first true body wins; a final
+`_` fallback is required; action and value arms work. Subject-based patterns,
+guards, alternatives, nested patterns and branch-result unions remain
+unimplemented. Value arms must currently share one result type.
+
 ## Purpose and template
 
 Select behavior by variant, type, or destructured data with a subject, or by Boolean conditions without a subject. Both match forms work for actions and values.

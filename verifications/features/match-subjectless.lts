@@ -1,0 +1,11 @@
+x := 2;
+label := match {
+  x == 1 { "one" }
+  x == 2 { "two" }
+  _ { "other" }
+}
+report(label);
+match {
+  false { report("bad"); }
+  _ { report("ok"); }
+}

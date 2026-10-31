@@ -9,6 +9,11 @@
     "int.floor"
   ],
   "guideline": "Checks floor division and floor modulo across all sign combinations.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "all-signs",
@@ -18,10 +23,5 @@
       },
       "exitCode": 0
     }
-  ],
-  "targets": [
-    "igniter",
-    "ts",
-    "c"
   ]
 }

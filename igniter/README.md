@@ -80,7 +80,7 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 ## Supported checkpoint
 
-One file; fixed/inferred `:=` bindings, `var`/replacement, inferred `mut`/`var mut` list declarations, shadowing and scalar
+One file; fixed/inferred `:=` bindings, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, shadowing and scalar
 copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
 `+ - * / % :/ :% **`, compound `+= -= *= /= %= :/= :%=` updates, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
@@ -596,7 +596,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **165 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **166 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -605,7 +605,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 27 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 28 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

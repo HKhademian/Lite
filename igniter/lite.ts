@@ -58,6 +58,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'compare'; first: Raw; rest: readonly Readonly<{ op: Comparison; right: Raw }>[] }
   | { kind: 'block'; items: readonly RawItem[] }
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
+  | { kind: 'match'; arms: readonly Readonly<{ condition: Raw | undefined; body: Raw }>[] }
   | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; parameters: readonly Readonly<{ name: string; type: RawType }>[]; result: RawType; body: Raw }
@@ -91,6 +92,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'compare'; first: Expr; rest: readonly Readonly<{ op: Comparison; right: Expr }>[] }
   | { kind: 'block'; block: Block }
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
+  | { kind: 'match'; arms: readonly Readonly<{ condition: Expr | undefined; body: Expr }>[] }
   | { kind: 'loop'; condition: Expr | undefined; body: Expr }
   | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
@@ -120,7 +122,7 @@ const INPUT_NUMBER = /^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
 const INPUT_INTEGER = /^[+-]?[0-9]+$/;
 const SPACE = /^[ \t\n\r\f\v]$/;
 const KEYWORDS = new Set(['var', 'true', 'false', 'if', 'else', 'and', 'or', 'not',
-  'fn', 'loop', 'break', 'continue', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally']);
+  'fn', 'loop', 'break', 'continue', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally', 'match']);
 
 export class LiteFault extends Error {
   readonly at: Position;
@@ -723,6 +725,31 @@ class Parser {
         }
         return { kind: 'if', condition, body, otherwise, at: token.at };
       }
+      if (token.text === 'match') {
+        if (this.peek().kind !== 'symbol' || this.peek().text !== '{') {
+          source('subject-based match is not supported by this igniter yet; use match { ... }', this.peek().at);
+        }
+        this.expect('{');
+        const arms: Readonly<{ condition: Raw | undefined; body: Raw }>[] = [];
+        while (!this.isSymbol('}')) {
+          if (this.peek().kind === 'eof') source('unterminated match body', this.peek().at);
+          if (this.accept(';')) continue;
+          let condition: Raw | undefined;
+          if (this.peek().kind === 'id' && this.peek().text === '_' &&
+              this.peek(1).kind === 'symbol' && this.peek(1).text === '{') {
+            this.take();
+          } else {
+            condition = this.expression();
+          }
+          if (this.peek().kind !== 'symbol' || this.peek().text !== '{') {
+            source('match arm requires a braced body', this.peek().at);
+          }
+          const body = this.prefix();
+          arms.push({ condition, body });
+        }
+        this.expect('}');
+        return { kind: 'match', arms, at: token.at };
+      }
       if (token.text === 'mut') {
         const target = this.label();
         return { kind: 'grant', name: target.text, at: token.at };
@@ -856,6 +883,29 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
     case 'block': {
       const block = checkBlock(raw.items, names, state, use);
       return { kind: 'block', block, type: block.type, at };
+    }
+    case 'match': {
+      if (raw.arms.length === 0) typeError('match requires at least one arm', at);
+      const fallback = raw.arms.findIndex(arm => arm.condition === undefined);
+      if (fallback < 0) typeError('subjectless match requires a final _ fallback', at);
+      if (fallback !== raw.arms.length - 1) typeError('the subjectless match _ fallback must be last', at);
+      const arms: Readonly<{ condition: Expr | undefined; body: Expr }>[] = [];
+      for (const arm of raw.arms) {
+        const condition = arm.condition === undefined ? undefined : checkExpression(arm.condition, names, state);
+        if (condition !== undefined && condition.type !== 'Bool') {
+          typeError('match condition must be Bool; there is no implicit truthiness', condition.at);
+        }
+        const body = checkExpression(arm.body, names, state, use === 'discard' ? 'discard' : 'value');
+        arms.push({ condition, body });
+      }
+      const candidates = arms.map(arm => arm.body.type).filter(type => type !== 'Never');
+      const type = candidates.length === 0 ? 'Never' : candidates[0]!;
+      for (const candidate of candidates.slice(1)) {
+        if (!fits(candidate, type) && !fits(type, candidate)) {
+          typeError('match branch-result unions are not supported yet; use the same result type in each arm', at);
+        }
+      }
+      return { kind: 'match', arms, type: use === 'discard' ? 'Unit' : type, at };
     }
     case 'if': {
       const condition = checkExpression(raw.condition, names, state);
@@ -1406,6 +1456,13 @@ export function execute(program: Program, io: IO): number {
           throw error;
         }
       }
+      case 'match':
+        for (const arm of expr.arms) {
+          if (arm.condition === undefined || boolean(evaluateHere(arm.condition))) {
+            return evaluateHere(arm.body);
+          }
+        }
+        throw new Error('igniter invariant: subjectless match has no fallback');
       case 'if':
         if (boolean(evaluateHere(expr.condition))) return evaluateHere(expr.body);
         // This missing branch is permitted only where its contribution is discarded.

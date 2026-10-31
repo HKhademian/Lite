@@ -1,0 +1,22 @@
+{
+  "id": "match.subjectless",
+  "kind": "feature",
+  "source": {
+    "file": "match-subjectless.lts",
+    "hash": "sha256:0463ec0b46603dcfe30b6615f86a490f18f5689e0bec217bc64c4d7083ccb3e5"
+  },
+  "features": [
+    "match.subjectless"
+  ],
+  "guideline": "Checks first-true subjectless Boolean selection, a required final fallback, and action/value arms.",
+  "cases": [
+    {
+      "name": "first-true-and-fallback",
+      "stdout": {
+        "text": "two\nok\n",
+        "hash": "sha256:9cbc6c20ed2996173b2ea8a0b3ccfd2aba9bcd99362e19db93b21b77f6c7d462"
+      },
+      "exitCode": 0
+    }
+  ]
+}

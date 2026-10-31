@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 82 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 83 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 27 registered, 27 cases/);
+    assert.match(covered.stdout, /features: 28 registered, 28 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1218,6 +1218,17 @@ test('power is right-associative, Float-default and positive-exponent only', () 
   fault('report("a" ** 2);', 'TypeError');
   fault('report(2 ** "a");', 'TypeError');
   fault('report(2 ** 3 * 2);', 'TypeError');
+});
+test('subjectless match selects the first true arm and requires a final fallback', () => {
+  assert.equal(run('x := 2; label := match { x == 1 { "one" } x == 2 { "two" } _ { "other" } } report(label);').output,
+    'two\n');
+  assert.equal(run('match { false { report("no"); } true { report("yes"); } _ { report("other"); } }').output,
+    'yes\n');
+  fault('match { true { 1 } }', 'TypeError');
+  fault('match { _ { 1 } true { 2 } }', 'TypeError');
+  fault('match { 1 { 2 } _ { 3 } }', 'TypeError');
+  fault('label := match { true { 1 } _ { "x" } }', 'TypeError');
+  fault('match true { _ { 1 } }', 'SourceError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',
