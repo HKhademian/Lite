@@ -537,10 +537,10 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.24**, tag **igniter-v0.1.0-alpha.24**, adds the
-right-associative, Float-default `**` power checkpoint with positive exponents,
-an explicit negative-base grouping requirement, and a power feature verification
-case. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.25**, tag **igniter-v0.1.0-alpha.25**, lowers Int floor
+division and floor modulo (`:/`, `:%`) in the restricted TS/C compiler, adds a
+four-way compiler fixture and runs the floor feature case through the igniter,
+TS and C targets. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -585,7 +585,9 @@ case. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.23**, commit `28141c9`: verification registry, complete artifact coverage, compiler-target cases, floor/compound arithmetic, inferred mutability, VS Code icons and CI.
 
-- **igniter-v0.1.0-alpha.24**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.24**, commit `99e16c3`: right-associative Float-default power with explicit negative-base grouping.
+
+- **igniter-v0.1.0-alpha.25**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
