@@ -6,7 +6,6 @@
     "hash": "sha256:1b6bc3775886ed497e31a6d31bcb7688cc0298df65b120212b29b74435c9eb3a"
   },
   "features": [
-    "function.recursion",
     "tuple.shape",
     "scope.locals",
     "io.report"

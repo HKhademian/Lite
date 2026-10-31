@@ -1,0 +1,23 @@
+{
+  "id": "example.010-mixed-tuples",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/010-mixed-tuples.lts",
+    "hash": "sha256:7535885f377f5467f7820e391c25ef34f55416803040ea9bf614cd16641f7786"
+  },
+  "features": [
+    "tuple.shape",
+    "io.report"
+  ],
+  "description": "Interleaves named and unnamed tuple fields and destructures stored order.",
+  "cases": [
+    {
+      "name": "mixed-tuple",
+      "stdout": {
+        "text": "7 green 2 true\n7 green 2 true\n",
+        "hash": "sha256:b05d2e4cb52ac3270b26e3c2e4e7795adccbf1f249ac760ccd43c467c0d2a467"
+      },
+      "exitCode": 0
+    }
+  ]
+}

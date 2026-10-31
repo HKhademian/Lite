@@ -156,6 +156,19 @@ divideIntegers := fn(left: Int, right: Int, prefix: String): Int {
     left / right
 }
 
+/** Checked truncating Int remainder; reports and exits 2 on zero divisor or signed overflow. */
+remainderIntegers := fn(left: Int, right: Int, prefix: String): Int {
+    if right == 0 {
+        reportError(prefix + "remainder by zero in integer expression");
+        exit(2);
+    }
+    if left == -9223372036854775808 and right == -1 {
+        reportError(prefix + "integer expression outside signed 64-bit range");
+        exit(2);
+    }
+    left % right
+}
+
 /** Checked unary negation; reports and exits 2 for the signed minimum. */
 negateInteger := fn(value: Int, prefix: String): Int {
     if value == -9223372036854775808 {
@@ -253,7 +266,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
     textParsed(textLiteralCode(value), value, cursor)
 }
 
-/** Precedence-climbing parser for + - * /, parentheses and unary signs. Folds Int arithmetic and String concatenation, and exits 2 on mixed-type or range faults. self(..., 30) parses a unary operand without binary operators. */
+/** Precedence-climbing parser for + - * / %, parentheses and unary signs. Folds Int arithmetic and String concatenation, and exits 2 on mixed-type or range faults. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
     start := skipSpaces(source, position);
     if start >= textLength(source) {
@@ -303,7 +316,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         operatorPosition := skipSpaces(source, left.next);
         if operatorPosition >= textLength(source) { break; }
         operator := textAt(source, operatorPosition);
-        if operator =!= "+" and operator =!= "-" and operator =!= "*" and operator =!= "/" { break; }
+        if operator =!= "+" and operator =!= "-" and operator =!= "*" and operator =!= "/" and operator =!= "%" { break; }
         level := if operator == "+" or operator == "-" { 10 } else { 20 };
         if level < minimum { break; }
         right := self(source, operatorPosition + 1, prefix, locals, level + 1);
@@ -314,6 +327,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             folded := if operator == "+" { addIntegers(left.intValue, right.intValue, prefix) }
                 else if operator == "-" { subtractIntegers(left.intValue, right.intValue, prefix) }
                 else if operator == "*" { multiplyIntegers(left.intValue, right.intValue, prefix) }
+                else if operator == "%" { remainderIntegers(left.intValue, right.intValue, prefix) }
                 else { divideIntegers(left.intValue, right.intValue, prefix) };
             left = intParsed("(" + left.code + " " + operator + " " + right.code + ")", folded, right.next);
         } else if operator == "+" {

@@ -1,0 +1,24 @@
+{
+  "id": "sample.007-distance-conversion",
+  "kind": "sample",
+  "source": {
+    "file": "../../../samples/007_distance_conversion.lts",
+    "hash": "sha256:8edd2740d7e958194073a8a8875dace6ab23399ba56805c6f778c4076e8df956"
+  },
+  "features": [
+    "int.arithmetic",
+    "scope.locals"
+  ],
+  "description": "Meters converted to kilometers and centimeters.",
+  "append": "report(kilometers); report(centimeters);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "0.75\n75000\n",
+        "hash": "sha256:b54af5f6a34420ce5c1f482ba206654c0dabfe726f12f2197bf6ce9ea5ee9d0b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

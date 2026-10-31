@@ -486,6 +486,11 @@ function verifyFeatures() {
     const entry = features.get(item.id);
     if (entry === undefined) throw new Error(`${item.file}: feature ${item.id} is not registered`);
   }
+  for (const item of items) {
+    for (const feature of item.features) {
+      if (!features.has(feature)) throw new Error(`${item.file}: unknown feature ${feature}`);
+    }
+  }
   return { features, items };
 }
 
@@ -507,6 +512,11 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
     .map(item => item.source.file ?? '(inline text)');
   process.stdout.write(`covered examples: ${pending('example').join(', ') || '(none)'}\n`);
   process.stdout.write(`covered samples: ${pending('sample').join(', ') || '(none)'}\n`);
+  if (counts('feature') !== features.size || counts('example') !== examples ||
+      counts('sample') !== samples || counts('showcase') !== showcases) {
+    process.stdout.write('coverage incomplete: every feature, example and sample needs a manifest\n');
+    process.exitCode = 1;
+  }
 }
 
 function main(): void {

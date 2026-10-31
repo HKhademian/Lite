@@ -82,7 +82,7 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 One file; fixed/inferred `:=` bindings, `var`/replacement, shadowing and scalar
 copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
-`+ - * /`, unary signs and parentheses;
+`+ - * / %`, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
 parsed and checked before effects, including uncalled function bodies.
 Ordinary statements need semicolons between them; complete braced items do not.
@@ -587,16 +587,16 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **161 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **162 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
-and evaluator, including overflow and negative programs. Lessons 001, 002 and 020
+and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
 remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 17 feature cases and 8 artifact manifests. Verification results
+first slice has 18 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a
@@ -656,7 +656,7 @@ AS/Wasm or compiler self-rebuild claim follows. See
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
 source before emission. Empty source is a compiler rejection (2), not an
-inputLine EOF fault. The shared corpus now has 41 program cases and 34
+inputLine EOF fault. The shared corpus now has 42 program cases and 34
 rejection cases under [tests/compiler](tests/compiler/), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See

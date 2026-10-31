@@ -75,15 +75,15 @@ wiring is a later step.
 
 ## First slice
 
-- **17 feature cases**: Int arithmetic, Bool/conditionals, conditional and
-  sequence loops, recursion, tuples, fixed arrays, mutable lists, text helpers,
-  transparent aliases, block locals, var assignment, inputInt, inputArgs,
-  inputAll, exit and multi-value report.
-- **5 examples** (001, 006, 016, 020, 021).
-- **3 samples** (001, 002, 020). The migration plan named samples 021 and 023,
-  but only 001–020 exist; 002 and 020 are used instead.
-- **25 scenarios** total, in one process; passing scenarios are cached and the
-  verifier supports `--changed`, `--shard` and `--no-cache`.
+- **18 feature cases**: Int arithmetic/remainder, Bool/conditionals, conditional
+  and sequence loops, recursion, tuples, fixed arrays, mutable lists, text
+  helpers, transparent aliases, block locals, var assignment, inputInt,
+  inputArgs, inputAll, exit and multi-value report.
+- **All 19 examples** and **all 20 samples** have manifests.
+- **57 scenarios** total, in one process; passing scenarios are cached and the
+  verifier supports `--all`, affected-only default, `--shard` and `--no-cache`.
+- Coverage is blocking: `./lite verify --coverage` fails if any feature, example
+  or sample lacks a manifest.
 
 The samples are teaching bodies that print nothing. Their manifests verify
 computed values through `append` observation calls, leaving the sample files
@@ -91,10 +91,10 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Evidence
 
-- All 25 scenarios pass `./lite verify --all`.
-- `./lite verify --coverage` reports 17/17 features, 5/19 examples, 3/20
+- All 57 scenarios pass `./lite verify --all`.
+- `./lite verify --coverage` reports 18/18 features, 19/19 examples, 20/20
   samples and 0 showcases.
-- All **161 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **162 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
 - New tests cover the verifier pass, coverage report, filtered run, cache hit and
   shard selection.
@@ -104,8 +104,8 @@ unchanged. Feature cases remain separate from the sample text.
 - Only the reference igniter target is executed. Compiler-target feature cases
   (`targets: ["igniter", "ts", "c"]`) and migration of the compiler corpus are
   later steps.
-- Coverage is informational, not yet blocking. Most examples and samples still
-  have no manifest, and there are no showcase manifests or transcripts.
+- Coverage is blocking for features, examples and samples. Showcase manifests
+  and transcripts are still absent.
 - No CI workflow or pre-commit integration exists yet; `./lite verify` and
   `./lite test` must be run explicitly. Local budgets are documented in the
   verification README (affected inner loop, full lane with warm cache, sharded CI).

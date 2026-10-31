@@ -1,0 +1,24 @@
+{
+  "id": "example.013-growable-lists",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/013-growable-lists.lts",
+    "hash": "sha256:b0555bfc42aef610661755b69f42f2b018b899ac8a851e1cf02171b54526a180"
+  },
+  "features": [
+    "list.mutation",
+    "loop.sequence",
+    "io.report"
+  ],
+  "description": "Exercises all four explicit mut list end operations.",
+  "cases": [
+    {
+      "name": "list-ends",
+      "stdout": {
+        "text": "0 3\n1\n2\n",
+        "hash": "sha256:a762cc95b6fe48b7c82261a4fda6a9bf4f79c54f6a8cae4a66d1fb4c32438043"
+      },
+      "exitCode": 0
+    }
+  ]
+}

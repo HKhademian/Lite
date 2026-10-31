@@ -1,7 +1,7 @@
 // Disposable igniter: no JS eval, emitted JavaScript, or compiler framework.
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
-type Operator = '+' | '-' | '*' | '/';
+type Operator = '+' | '-' | '*' | '/' | '%';
 type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
 type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
@@ -354,7 +354,7 @@ function tokenize(text: string): readonly Token[] {
       if (operator !== undefined) {
         advance(operator.length);
         tokens.push({ kind: 'symbol', text: operator, at: start });
-      } else if ('+-*/=();,{}<>:.[]'.includes(ch)) {
+      } else if ('+-*/%=();,{}<>:.[]'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -580,7 +580,7 @@ class Parser {
         left = { kind: 'compare', first: left, rest, at: token.at };
         continue;
       }
-      if (op !== '+' && op !== '-' && op !== '*' && op !== '/') break;
+      if (op !== '+' && op !== '-' && op !== '*' && op !== '/' && op !== '%') break;
       const precedence = op === '+' || op === '-' ? 5 : 6;
       if (precedence < minimum) break;
       this.take();
@@ -909,6 +909,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if ((left.type !== 'Int' && left.type !== 'Float') || (right.type !== 'Int' && right.type !== 'Float')) {
         typeError('arithmetic requires numeric operands', at);
       }
+      if (raw.op === '%' && (left.type !== 'Int' || right.type !== 'Int')) {
+        typeError('remainder requires Int operands', at);
+      }
       if (raw.op !== '/' && left.type !== right.type) {
         typeError('mixed Int/Float arithmetic other than division is not supported yet', at);
       }
@@ -1209,6 +1212,9 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
       case '/':
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
         return integer(left.value / right.value, at);
+      case '%':
+        if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'remainder by zero', at);
+        return integer(left.value % right.value, at);
       default: return unreachable(op);
     }
   }
@@ -1224,6 +1230,7 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
     case '/':
       if (b === 0) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
       return floating(a / b, at);
+    case '%': throw new Error('igniter invariant: remainder requires Int operands');
     default: return unreachable(op);
   }
 }

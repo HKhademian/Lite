@@ -1,0 +1,31 @@
+{
+  "id": "example.014-input-history",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/014-input-history.lts",
+    "hash": "sha256:dadc54bc5b4451e906125c3b965e0fb34d713ca4530ae7faae70ed0100dbb5f2"
+  },
+  "features": [
+    "list.mutation",
+    "io.input",
+    "loop.conditional",
+    "loop.sequence",
+    "scope.assignment",
+    "io.report"
+  ],
+  "description": "Collects integers until zero, then reports the retained history and sum.",
+  "cases": [
+    {
+      "name": "history",
+      "stdin": {
+        "text": "7\n-2\n5\n0\n",
+        "hash": "sha256:76a292c60c29b92b07d8d6d92a9580539757007472b5a9114f41cb6a260fe542"
+      },
+      "stdout": {
+        "text": "Integer (0 to finish): Integer (0 to finish): Integer (0 to finish): Integer (0 to finish): entered:\n7\n-2\n5\nsum: 10\n",
+        "hash": "sha256:849e93f7059c7348cdf3b0e5acb48abab3b27a660419c94b1aa0b91edaacb464"
+      },
+      "exitCode": 0
+    }
+  ]
+}

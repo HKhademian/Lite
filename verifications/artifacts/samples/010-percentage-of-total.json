@@ -1,0 +1,24 @@
+{
+  "id": "sample.010-percentage-of-total",
+  "kind": "sample",
+  "source": {
+    "file": "../../../samples/010_percentage_of_total.lts",
+    "hash": "sha256:5c686ddba60f7ca9e1c54049460a7001841efb2608e73fb93af724295f0f9d54"
+  },
+  "features": [
+    "int.arithmetic",
+    "scope.locals"
+  ],
+  "description": "Completed percentage and a percentage of the total.",
+  "append": "report(percent_done); report(tasks);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "37.5\n2\n",
+        "hash": "sha256:62a8e72263c8dcfaab497613a4c38a58a7e360066c8b6498d91ef2693ca520a4"
+      },
+      "exitCode": 0
+    }
+  ]
+}

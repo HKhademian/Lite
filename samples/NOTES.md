@@ -1,10 +1,10 @@
 # Notes for language contributors
 
-Exercises 001–020 are written; the complete batch remains **unverified** against
-the language design. The limited [TypeScript/Node igniter](../igniter/README.md)
-now checks and runs the supported subset. The [`verifications/`](../verifications/README.md)
-registry verifies outcomes for lessons 001, 002 and 020 by appending explicit
-report calls in each artifact manifest, without changing lesson bodies. This is bounded interpreter evidence, not full language or batch
+Exercises 001–020 are written and all 20 now have verification manifests. The
+limited [TypeScript/Node igniter](../igniter/README.md) checks and runs the
+supported subset; the [`verifications/`](../verifications/README.md) registry
+verifies outcomes by appending explicit report calls in each artifact manifest,
+without changing lesson bodies. This is bounded interpreter evidence, not full language or batch
 conformance. Exercises 021–520 remain planned; no native compiler exists.
 
 The `.lts` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.
@@ -35,7 +35,8 @@ include those requested effects. The learning exercise files are unchanged.
 Selected 2026-10-30: these introductory scripts use .lts; module-based source
 uses .lt and has no implicit imports. The 20 existing files were renamed from
 .lite to .lts and catalog/readme paths updated without changing lesson bodies.
-Their implemented-but-unverified status is unchanged. Legacy .lite names in
+At that rename their status remained implemented but unverified; the current
+verification registry covers all 20. Legacy .lite names in
 dated investigation/backlog snapshots describe earlier revisions. No compiler
 alias or source conversion is implemented. General script conveniences remain
 proposals; [temporary FVP input/reporting names](../docs/tooling-and-learning.md#temporary-fvp-input-and-reporting)
@@ -67,7 +68,8 @@ The selected acceptance direction is in-program checks for 001–020, with misma
 using the panic channel, followed later by a grading harness. Comment answers
 remain documentation. Check syntax/API, exit status, numeric contracts, and host
 observation still need definition; no checks have been added to the lessons and
-all 20 remain implemented but unverified. See
+at that checkpoint all 20 remained implemented but unverified; the current
+verification registry now covers all 20. See
 [INV-002](../investigations/INV-002-01-exercise-contracts-001-020.md) for evidence,
 selected policy, and remaining dependencies. Exact later milestone coverage is open.
 

@@ -6,7 +6,7 @@ Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. N
 
 Feature verifications are selected as the canonical semantic contract, separate
 from examples, samples and showcases, which are verified consumers. The new
-`verifications/` tree holds a JSON schema, a 17-feature registry and canonical
+`verifications/` tree holds a JSON schema, an 18-feature registry and canonical
 cases; `igniter/verify.ts` and `./lite verify` run them through the reference
 igniter; the default verifies only git-affected cases, while `--all` runs
 everything. `--update` regenerates expected streams/source hashes, `--coverage`
@@ -18,12 +18,10 @@ one of `file` or `text` plus an optional `hash`. `source.hash` and per-stream `s
 external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
-The first slice has 17 feature cases, 5 example manifests (001, 006, 016, 020,
-021), 3 sample manifests (001, 002, 020) and 25 scenarios. The migration plan
-named samples 021/023, which do not exist. All scenarios pass; 161 interpreter
-groups and 9 editor groups pass. Coverage is currently informational (5/19
-examples, 3/20 samples), and compiler targets, showcase transcripts, CI and the
-blocking coverage gate remain open. See
+The registry now covers 18 feature cases, all 19 examples, all 20 samples and
+57 scenarios. All scenarios pass; 162 interpreter groups and 9 editor groups
+pass. Coverage is blocking for features, examples and samples. Compiler targets,
+showcase transcripts and CI remain open. See
 [INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
 [verification guide](../verifications/README.md).
 
@@ -51,8 +49,8 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter is reserved but unimplemented; the verifier and tester have first slices. The 41 program and 34 rejection verification cases are unchanged in
-behavior; 161 interpreter groups and 9 editor groups pass. The examples index
+formatter is reserved but unimplemented; the verifier and tester have first slices. The 42 program and 34 rejection verification cases are unchanged in
+behavior; 162 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -69,14 +67,14 @@ trigraph-prone `?`; String locals are `const`/`const char *` with the existing
 unsupported text forms fail before artifact bytes.
 
 Compiler verification data moved from inline test arrays to one JSON file per
-case under `igniter/tests/compiler/`: 41 program cases and 34 rejection cases.
+case under `igniter/tests/compiler/`: 42 program cases and 34 rejection cases.
 Each case pairs a sibling `.lts` entry source with a JSON model holding the
 source path, optional `stdin`, required `stdout`/`stderr` streams, and
 `exitCode`; each stream uses inline `text`, inline `bytes`, or a sibling `file`.
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 161 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 162 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
@@ -87,7 +85,7 @@ self-rebuild.
 ## Arithmetic expressions and immutable locals in restricted emitters, 2026-10-31
 
 Under automatic selected-scope progression from the alias checkpoint, examples
-The TS and C emitters (formerly examples 017 and 018) now admit left-associative `+ - * /` over decimal Int literals and
+The TS and C emitters (formerly examples 017 and 018) now admit left-associative `+ - * / %` over decimal Int literals and
 previously declared immutable locals, plus `x := <expression>;` declarations.
 Expressions are checked in signed 64-bit at compile time and lowered to runtime
 TypeScript BigInt or C `int64_t` code. Reports format through BigInt

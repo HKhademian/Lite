@@ -1,0 +1,24 @@
+{
+  "id": "sample.013-simple-interest",
+  "kind": "sample",
+  "source": {
+    "file": "../../../samples/013_simple_interest.lts",
+    "hash": "sha256:6202620a2db831fd8e4b57ce38237c64436e70129882e6e037e95e422ad280a3"
+  },
+  "features": [
+    "int.arithmetic",
+    "scope.locals"
+  ],
+  "description": "Simple interest over three years.",
+  "append": "report(interest_cents); report(balance_cents);",
+  "cases": [
+    {
+      "name": "observed-values",
+      "stdout": {
+        "text": "1500\n11500\n",
+        "hash": "sha256:a429635b4dfe44b40b62edbfc0a4665074aabd7bcbbb901b7784cc89d1b5009c"
+      },
+      "exitCode": 0
+    }
+  ]
+}

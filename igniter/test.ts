@@ -202,12 +202,12 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 25 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 57 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 17 registered, 17 cases/);
-    assert.match(covered.stdout, /examples: 5\/19 manifests/);
-    assert.match(covered.stdout, /samples: 3\/20 manifests/);
+    assert.match(covered.stdout, /features: 18 registered, 18 cases/);
+    assert.match(covered.stdout, /examples: 19\/19 manifests/);
+    assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
@@ -1117,6 +1117,14 @@ test('precedence, exact integer division and fractional mixed division', () => {
     '14\n20\n-3\n3.5\n');
   assert.equal(run('report(9223372036854775807 / 3);').output, '3074457345618258602\n');
   assert.equal(run('report(-9223372036854775808);').output, '-9223372036854775808\n');
+});
+test('truncating remainder follows the dividend and rejects zero or Float', () => {
+  assert.equal(run('report(7 % 3); report(-7 % 3); report(7 % -3); report(6 % 3);').output,
+    '1\n-1\n1\n0\n');
+  assert.equal(run('report(9223372036854775807 % 2);').output, '1\n');
+  fault('report(5 % 0);', 'ArithmeticPanic');
+  fault('report(5.0 % 2.0);', 'TypeError');
+  fault('report(5 % 2.0);', 'TypeError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

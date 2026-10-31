@@ -153,6 +153,16 @@
       "docs": [
         "docs/tooling-and-learning.md"
       ]
+    },
+    {
+      "id": "int.remainder",
+      "summary": "Truncating Int remainder.",
+      "case": "features/int-remainder.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md",
+        "docs/operators.md"
+      ]
     }
   ]
 }

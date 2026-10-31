@@ -1,0 +1,4 @@
+report(7 % 3);
+report(-7 % 3);
+report(7 % -3);
+report(6 % 3);

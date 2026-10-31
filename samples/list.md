@@ -1,6 +1,6 @@
 # LiteScript single-file problem catalog
 
-520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions, **implemented but unverified**; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
+520 exercises, ordered from first expressions to small applications. Each entry names its `.lts` file and describes its problem. Exercises 001–020 have written solutions and verification manifests; 021–520 remain planned. See the [sample guide](README.md) for status, conventions, and exposed design gaps.
 
 Runnable implementation demonstrations are indexed separately in
 [examples](../examples/README.md), at the project root. Their
@@ -43,7 +43,7 @@ Stage notes identify likely dependencies and design pressure. They are capabilit
 
 Needs: numeric values, bindings, expressions. Design pressure: inferred numeric types, division, rounding, and expression results. All inputs can be literals.
 
-Status: **implemented; 001, 002 and 020 have verification manifests, while 003–019 remain unverified**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
+Status: **implemented; all 20 files have verification manifests**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
 
 1. `samples/001_add_two_numbers.lts` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
 2. `samples/002_arithmetic_operations.lts` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.
@@ -693,7 +693,7 @@ Needs: coherent domain models, commands, validation, and reports. Keep the state
 
 ## Completion and gap tracking
 
-Current state: **001–020 implemented but unverified; 021–520 planned**. Add a script only when working on its subject; do not create hundreds of empty placeholder files.
+Current state: **001–020 implemented and verified through `verifications/`; 021–520 planned**. Add a script only when working on its subject; do not create hundreds of empty placeholder files.
 
 When attempting a script, keep its problem statement short and put expected answers next to the solution. Track supported input bounds, extra verification cases, and current status in the [contributor notes](NOTES.md). Suggested statuses are **draft**, **blocked by design**, **blocked by library/host support**, **implemented but unverified**, and **verified**. Verification requires an actual available toolchain and observed results; documentation examples alone do not qualify.
 

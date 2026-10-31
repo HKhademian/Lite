@@ -1,0 +1,22 @@
+{
+  "id": "int.remainder",
+  "kind": "feature",
+  "source": {
+    "file": "int-remainder.lts",
+    "hash": "sha256:db644418bdc6f46ab13dc026852206c8958f811b441f5dea6a2f39ab4d285940"
+  },
+  "features": [
+    "int.remainder"
+  ],
+  "guideline": "Checks truncating Int remainder, signed dividends/divisors, exact division, and remainder-by-zero failure.",
+  "cases": [
+    {
+      "name": "signed-remainders",
+      "stdout": {
+        "text": "1\n-1\n1\n0\n",
+        "hash": "sha256:4d99495f4fe632b53c16348f2d1c9767bb2dff9f5c5187c7bd65a32a3cde31f3"
+      },
+      "exitCode": 0
+    }
+  ]
+}

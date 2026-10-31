@@ -103,7 +103,7 @@ verification remains in [igniter/tests/compiler](../igniter/tests/compiler/).
 
 ## Performance and scaling
 
-The verifier is designed for a growing corpus, not a fixed 25 cases:
+The verifier is designed for a growing corpus, not a fixed case count:
 
 - All cases execute in one Node process; no per-case process spawn.
 - Passing results are cached in `.cache/verifications.json` (gitignored). The
@@ -136,15 +136,16 @@ sharded or curated, and caches make unchanged work nearly free.
 
 ## Coverage status
 
-- Features: 17 registered, 17 cases.
-- Examples: 5 of 19 manifest-covered (001, 006, 016, 020, 021).
-- Samples: 3 of 20 manifest-covered (001, 002, 020). Samples 021 and 023 in the
-  initial migration plan do not exist; existing 002 and 020 are used instead.
+- Features: 18 registered, 18 cases.
+- Examples: 19 of 19 manifest-covered.
+- Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
+- Scenarios: 57 (18 feature + 19 example + 20 sample).
 
-The coverage report is currently informational. The migration plan makes it a
-blocking gate after all examples and samples have manifests. CI wiring is also a
-later step; today `./lite verify` is the local gate.
+Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any
+feature, example or sample lacks a manifest. Showcases are allowed to remain
+empty until that artifact class is introduced. CI wiring is still a later step;
+today `./lite verify --coverage` and `./lite test` are the local gates.
 
 ## Adding a case
 
@@ -152,8 +153,8 @@ later step; today `./lite verify` is the local gate.
 2. Add the manifest with id, kind, `source.file` or `source.text`, features,
    guideline/description and cases.
 3. Register a new feature in `features.json` if needed.
-4. Run `./lite verify --update`, review the generated streams/hash, then run
-   `./lite verify`.
+4. Run `./lite verify --all --update`, review the generated streams/hash, then
+   run `./lite verify --all`.
 5. Run `./lite test` from the repository root; the suite includes verification
    and coverage checks. Use `./lite test --fast` for the no-native lane.
 

@@ -1,0 +1,30 @@
+{
+  "id": "example.015-retained-tokens",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/015-retained-tokens.lts",
+    "hash": "sha256:b6570ce7af23b8f3a698eb964cfdaf00bae236623141406d14a57511210254c8"
+  },
+  "features": [
+    "list.mutation",
+    "loop.sequence",
+    "text.helpers",
+    "io.input",
+    "io.report"
+  ],
+  "description": "Tokenizes a line into a retained list before reporting it.",
+  "cases": [
+    {
+      "name": "retained-tokens",
+      "stdin": {
+        "text": "12 + 30\n",
+        "hash": "sha256:5c646650739ebb5409a8e10c31a058027657ccbf0fcc3259c170145b39438da1"
+      },
+      "stdout": {
+        "text": "Arithmetic expression:\nnumber 12\nsymbol +\nnumber 30\n",
+        "hash": "sha256:067acb71bc4a92bf9ec2a1ba8499545bc4106f514685fd3a6f0cc770f6cf63b9"
+      },
+      "exitCode": 0
+    }
+  ]
+}

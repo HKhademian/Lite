@@ -1,0 +1,29 @@
+{
+  "id": "example.005-scan-arithmetic",
+  "kind": "example",
+  "source": {
+    "file": "../../../examples/005-scan-arithmetic.lts",
+    "hash": "sha256:01141e9a3d44acb7ea328f9cec644026337bea250913e4793fdd055acb37fbaf"
+  },
+  "features": [
+    "io.input",
+    "loop.conditional",
+    "text.helpers",
+    "io.report"
+  ],
+  "description": "Scans an arithmetic line into number and symbol tokens.",
+  "cases": [
+    {
+      "name": "tokens",
+      "stdin": {
+        "text": "12 + 30\n",
+        "hash": "sha256:5c646650739ebb5409a8e10c31a058027657ccbf0fcc3259c170145b39438da1"
+      },
+      "stdout": {
+        "text": "Arithmetic expression:\nnumber: 12\nsymbol: +\nnumber: 30\n",
+        "hash": "sha256:b550257b1eafe3d71f778c9cf3c191450646870d7e1b829777f8395c5f60b78b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

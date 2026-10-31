@@ -232,14 +232,14 @@ They now also admit String literals/escapes, immutable String locals, String `+`
 concatenation and multi-value reports over Int/String values. String expressions
 are closed constants and fold at compile time; emitted TS/C literals escape
 quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
-verification data moved to `igniter/tests/compiler/`: 41 program cases and 34
+verification data moved to `igniter/tests/compiler/`: 42 program cases and 34
 rejection cases, each pairing a sibling `.lts` entry source with a JSON model
 holding the source path, optional `stdin`, required `stdout`/`stderr` streams,
 and `exitCode` (each stream uses inline `text`, inline `bytes` or a sibling
 `file`). Filenames follow `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 161 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 162 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
@@ -250,8 +250,8 @@ are `./ltc` and `./litec`. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`; `./lite verify`
-runs cases affected by git changes, while `./lite verify --all` runs all 17
-feature cases and the first 8 artifact manifests. `--update`, `--coverage`,
+runs cases affected by git changes, while `./lite verify --all` runs all 18
+feature cases and all 39 artifact manifests. `--update`, `--coverage`,
 `--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing
 cases are cached. `./lite test --fast` runs unit/interpreter/verification without
 native C; `./lite test` or `./lite test --full` runs the full local gate with
