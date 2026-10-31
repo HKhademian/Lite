@@ -21,6 +21,14 @@ Make a convenient language compatible with predictable data representation and a
 
 No benchmark, compiler, allocator, or binary-size result exists for this project. Universally outperforming C is not an established guarantee.
 
+Selected target clarification, **2026-10-31**: readable TS emission first supports
+early self-hosting and remains an important web target. C is the first native
+target and an important maintained route for shippable libraries/projects and
+migration outside Lite. Possible AssemblyScript/early Wasm support remains an
+investigation. Native no-mandatory-VM/tracing goals remain native-path goals;
+this does not claim them for a JS host or an unverified AS runtime profile. See
+[INV-061 direction](../investigations/INV-061-first-compiler-output.md).
+
 ## Ordinary and advanced memory control
 
 Selected by the user, **2026-10-28**: ordinary LiteLang programs should receive

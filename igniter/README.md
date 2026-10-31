@@ -1,8 +1,11 @@
 # Lite igniter
 
 An experimental TypeScript interpreter for the first Lite FVP checkpoints.
-Disposable bootstrap code: move compiler development into Lite as soon as it
-can support it. This is not a native compiler or a self-hosted build chain.
+Keep active handwritten host development minimal; move compiler development into
+Lite as soon as the supported subset and TS emission permit, keeping the igniter
+alongside it until the self-hosted path is satisfactory. Preserve this readable TS
+bootstrap permanently. TS remains a maintained web target and C the first native/
+export target; full self-hosting and library export are not implemented yet.
 
 ## Run
 
@@ -481,8 +484,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.16**, tag **igniter-v0.1.0-alpha.16**, adds a Lite-written
-arithmetic parser/evaluator application without changing the host language subset.
+Version **0.1.0-alpha.17**, tag **igniter-v0.1.0-alpha.17**, adds the first restricted
+Lite-to-TS emitter, byte-parity checks and a quoted-delimiter parser correction.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -512,6 +515,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.15**, commit `f5f9cbe`: explicit helper approval and retained scanning.
 
+- **igniter-v0.1.0-alpha.16**, commit `30f1d3e`: Lite-written arithmetic front end.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -519,7 +524,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **125 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **130 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
@@ -538,3 +543,16 @@ scanner's arithmetic input using ordinary Lite recursion and position/value
 pairs. It runs on the preserved alpha.15 interpreter too. This is application
 front-end evidence, not a Lite compiler, AST/IR choice, code generator or
 self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+
+For the first emitted-code experiment, run
+./lite run examples/017-report-ts-compiler.lts with input report(42);. Inspect
+[its exact TS output](../examples/generated/017-report-42.ts) and
+[explicit adapter](../examples/generated/017-run-report.ts), then run
+node examples/generated/017-run-report.ts. Strictly check the reference/adapter
+with node igniter/node_modules/typescript/bin/tsc -p examples/generated.
+The emitter admits a single report of a signed decimal Int literal, validates
+before producing source, and handles signed limits without JS number rounding.
+Nine admitted programs match the igniter's raw stdout/stderr/status through TS
+and translated JS. The emitted core checks without Node/DOM types; no actual
+browser, AS/Wasm or compiler self-rebuild claim follows. See
+[INV-061 evidence](../investigations/INV-061-ts-emission-and-parity.md).

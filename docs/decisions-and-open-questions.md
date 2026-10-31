@@ -2,20 +2,33 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## First compiler output proposal, 2026-10-31
+## TS bootstrap/web, C native/export and overlapping self-hosting, 2026-10-31
 
-After the Lite-written arithmetic parser exercise, INV-061.06 reaches the next
-unselected choice: the first compiler's output/execution route. The proposal
-recommends a restricted Lite-written compiler emitting C source, with an explicit
-external C build and native-output comparison against the igniter. The first
-vertical case would cover an existing source line such as report(42);. No new
-Lite syntax or host helper is proposed.
+The user refines `87546c9`: start with toy-like readable TypeScript emission for
+early self-hosting and keep TS as an important maintained web target. Possible
+AssemblyScript compatibility could enable early Wasm; it remains to investigate.
+C is selected as the first native target and an important maintained target for
+shippable/shareable libraries/projects and migration away from Lite. No FFI or
+public export syntax, ABI, web framework or native runtime is selected here.
 
-The local Apple clang C tool path compiled/ran a hand-written foreign probe that
-prints 42 successfully. This is external-tool evidence, not Lite-generated native
-code, performance evidence or a self-hosted stage. The backend/output route
-remains proposed pending explicit consent; see
-[INV-061.06](../investigations/INV-061-first-compiler-output.md).
+The user clarifies safe as identical observable program output, byte for byte,
+with readable TS so people can inspect the compiler for hidden behavior. Compare
+raw stdout/stderr and exit/termination without normalization; later effects need
+parity too. Preserve auditable TS bootstrap sources, provenance and reproducible
+stage evidence; finite tests/readability do not constitute a universal proof.
+Begin self-hosted development when basic facilities and reliable TS output permit,
+keeping the igniter active for a transition period until confidence is sufficient.
+Preserve the TS bootstrap permanently after active igniter development ends.
+
+Example 017 now compiles a restricted signed-integer report line into readable
+Node-independent TS with a visible adapter. Nine valid cases match the igniter's
+stdout/stderr bytes and status, including Int boundaries; strict TS and translated
+JS checks pass. All 130 interpreter groups and 9 editor groups pass. A quoted
+closing-delimiter parser defect discovered by the example is fixed with regression
+coverage. Preserve as igniter-v0.1.0-alpha.17; this is not a self-hosted compiler
+or proof of browser/AS/Wasm execution. See
+[target/safety direction](../investigations/INV-061-first-compiler-output.md) and
+[implementation evidence](../investigations/INV-061-ts-emission-and-parity.md).
 
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 

@@ -69,6 +69,16 @@ the bootstrap path when source language requirements change. Exact required
 revisions, stage dependencies, preservation/rebuild verification, and distribution
 procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06).
 See [the owning self-hosting direction](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
+Clarified **2026-10-31**: preserve a permanent shippable readable TypeScript
+bootstrap while moving compiler development into Lite. Keep igniter and
+self-hosted work overlapping until sufficient confidence; retirement of active
+igniter development does not remove the seed or the maintained TS/web target.
+For generated compiler snapshots, preserve generating Lite sources, exact builder
+and source tags/commits, tool versions and commands. Verify reproducible emitted
+bytes and behavioral parity separately; readable source/tags alone do not prove
+the absence of hidden compiler behavior. C remains a maintained native/export
+path. See [the target/safety direction](../investigations/INV-061-first-compiler-output.md).
+
 The first [igniter checkpoint](../igniter/README.md) exists; there is no self-hosted
 bootstrap bundle or verified compiler-to-compiler rebuild chain yet.
 

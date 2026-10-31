@@ -71,7 +71,15 @@ integer prompts may appear together in captured stdout.
   reports result: 11. Supports parentheses, unary signs and checked integer
   arithmetic; malformed input exits 2 and arithmetic faults remain terminal.
 
-Each file is self-contained. Its visible output is explicitly requested with
+- [017 — Report-to-TypeScript compiler](017-report-ts-compiler.lts): reads one
+  Lite source line such as report(42); and emits a readable TS module. It supports
+  a signed decimal Int literal only and rejects unsupported syntax before emitting
+  code. Inspect the [TS reference](generated/017-report-42.ts) and
+  [explicit Node adapter](generated/017-run-report.ts); the adapter prints 42.
+  The [generated-source checking config](generated/tsconfig.json) inherits the
+  igniter's strict options. This is an initial emitter, not a self-hosted compiler.
+
+Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module
 examples, when supported, should use .lt; runnable scripts use .lts. No .lite

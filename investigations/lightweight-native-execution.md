@@ -1,7 +1,7 @@
 # Lightweight native execution — investigation points
 
-Status: **question map only**, 2026-10-28. All newly added questions are **not
-started**; contributor: unassigned. This is a cross-topic focus, not a completed
+Status: **question map**, created 2026-10-28; bounded follow-up direction recorded
+2026-10-31. Detailed question status belongs to the linked owning topics. This is a cross-topic focus, not a completed
 investigation, selected implementation plan, or additional topic ID.
 
 ## Selected priority and open mechanisms
@@ -13,8 +13,12 @@ should not require a VM or tracing collector. The [decision ledger](../docs/deci
 separates this priority from unselected implementation mechanisms.
 
 Owned storage, deterministic cleanup, checked views, explicit sharing, static
-specialization, a common typed compiler core, C emission, and a later LLVM path
-are candidates to investigate. They are not decisions. Preserve selected copies,
+specialization, a shared typed compiler core and a later LLVM path remain
+candidates. C is now the selected
+first native and maintained library/project export/migration target; TS first
+supports bootstrapping and maintained web output, with possible AS/early Wasm to
+investigate. See [the selected direction](INV-061-first-compiler-output.md).
+Those target choices do not select the other mechanisms listed here. Preserve selected copies,
 access permissions, safety, zero mappings, failure behavior, and cleanup. No
 numeric budget or universal ordering among speed, size, and other goals is set.
 
@@ -53,7 +57,8 @@ individual tracking status; listing them here does not restart or complete work.
    [INV-061.03–.04](SUBTOPICS.md#inv-061) with C/LLVM lowering questions. Use
    evaluation-order, arithmetic-boundary, aggregate-copy, bounds-fault, panic, and
    cleanup cases to expose backend differences. Compiler dependencies are separate
-   from produced-program dependencies. Backend order remains a proposal.
+   from produced-program dependencies. TS-first bootstrap/web and C-first-native directions are now selected; a shared
+   IR or direct LLVM path remains unselected.
 6. **Speed versus code size.** New
    [INV-063.01–.04](SUBTOPICS.md#inv-063), together with
    [INV-027.03](SUBTOPICS.md#inv-027-03), compare specialization, sharing,
@@ -100,7 +105,7 @@ module; a top-level-effects ban has not been selected.
 - Compare equal work with matching numeric, safety, and failure behavior. Show
   speed/size tradeoffs rather than labeling every change an improvement.
 - State whether evidence comes from document review, foreign-language probes,
-  or actual LiteLang execution. The repository remains design-only; no compiler,
+  or actual LiteLang execution. This question map alone validates no compiler,
   no-GC, performance, or footprint result follows from creating these questions.
 
 Use the [note template](NOTE-TEMPLATE.md) when investigation begins. The

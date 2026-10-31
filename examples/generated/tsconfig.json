@@ -1,0 +1,7 @@
+{
+  "extends": "../../igniter/tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": ["../../igniter/node_modules/@types"]
+  },
+  "include": ["*.ts"]
+}

@@ -13,9 +13,12 @@ Historical Python sections below are superseded by the follow-up here.
 Current bounded follow-ups, **2026-10-31**: the
 [Lite arithmetic front-end exercise](INV-061-lite-arithmetic-front-end.md) runs
 on preserved alpha.15 without host additions. The
-[first compiler-output proposal](INV-061-first-compiler-output.md) reviews C
-emission plus an external C build as the next possible step. The output route
-is unselected; the foreign C probe is not a Lite compiler or self-hosting result.
+[output/transition direction](INV-061-first-compiler-output.md) now records the
+user's TS-first bootstrap/web target, overlapping igniter/self-hosted development,
+permanent readable TS seed and byte-output equivalence criterion. C is selected
+as the first native and maintained library/project export target; possible AS/Wasm
+support is an investigation. The [first TS emitter](INV-061-ts-emission-and-parity.md)
+now has bounded execution parity; no self-rebuilding compiler is claimed.
 
 ## TypeScript/Node replacement and implementation, 2026-10-30
 

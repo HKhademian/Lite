@@ -1,104 +1,129 @@
-# INV-061.06 — Proposed first compiler output route
+# INV-061.06 — Bootstrap and maintained output targets
 
-Status: proposed (first output/execution route needs explicit consent)
+Status: recorded (user-selected target direction; bounded TS emitter implemented)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-061](TOPICS.md#inv-061)
 Subtopic: [INV-061.06](SUBTOPICS.md#inv-061-06)
-Baseline: `30f1d3e`, preserved as igniter-v0.1.0-alpha.16
+Baseline for the earlier proposal: `30f1d3e`, igniter-v0.1.0-alpha.16
 
-## Concrete boundary reached
+## User-selected direction
 
-The approved subset now runs a scanner and recursive arithmetic parser written
-in Lite, using named-token lists and value/position tuple results. The preserved
-alpha.15 interpreter runs that new source unchanged. This demonstrates useful
-front-end expressiveness, but produces a calculated value rather than compiler
-output. The selected early-self-hosting direction still lacks a chosen first
-compiler artifact and its execution route.
+The user refines the first-output proposal in `87546c9`:
 
-The [native-execution investigation](lightweight-native-execution.md) lists C
-emission and a possible LLVM path as candidates, not decisions. The automatic
-selected-scope workflow does not authorize silently choosing one. No backend,
-IR, ABI, runtime design or new source/file/process helper is selected here.
+- Start with toy-like, readable TypeScript emission to reach self-hosting sooner.
+  TypeScript remains an important maintained target for web support, not merely
+  an artifact to discard after bootstrapping. TS-to-JavaScript and environment
+  adapters belong to that web execution route.
+- Explore possible AssemblyScript compatibility as an early WebAssembly route.
+  This is an investigation goal, not verified compatibility or a mandatory
+  prerequisite for TS emission/self-hosting.
+- C is the first native target and an important maintained output target. It
+  should support shipping/shareable libraries and projects and a practical path
+  to migrate away from Lite, without framework trapping. The user's V comparison
+  motivates that goal; it does not adopt V syntax, memory policy or ABI.
+- Begin compiler development in Lite once basic facilities and reliable TS output
+  are sufficient. Keep the igniter active alongside that work as a reference and
+  fallback until the self-hosted path is satisfactory. Do not require abrupt
+  retirement on the first successful compiler run.
+- Preserve a permanent, shippable, readable TypeScript bootstrap version and the
+  source/version history needed to rebuild forward. Retiring active handwritten
+  igniter development does not delete this seed or abandon the TS target.
 
-## Recommendation for the first experiment
+These are selected goals and target directions. Concrete full-language lowering,
+compiler self-rebuild criteria, distribution format, web adapters, AS profile,
+C library ABI and project-export layout still need bounded investigations.
+No new Lite syntax, file/process helper or generic infrastructure follows.
 
-Use C source as the first output of a tiny Lite-written compiler. Run that
-compiler source in the preserved TypeScript/Node igniter, emit C text through
-existing explicit report calls, and use an external system C compiler to produce
-a native executable. Keep this external build step visible rather than adding
-a process-launch API or build framework to the igniter.
+## What safe means here
 
-This recommendation is a bounded engineering judgment: existing Lite code can
-produce text, C output is inspectable, and the local C compilation route is now
-verified. It does not claim a speed/size advantage, settle a permanent backend,
-require C source in future releases, or select a common typed IR/LLVM backend.
+The user clarifies safety as behavioral equivalence: for the same supported Lite
+program, inputs and corresponding environment, the TS equivalent must generate
+identical observable output, byte for byte. Check stdout and stderr as raw bytes,
+exit status and termination, without whitespace, encoding or newline normalization.
+As features add files or other effects, parity must cover those observables too.
+Generated source/binary byte identity across different targets is not the claim.
 
-The first vertical experiment should accept a deliberately restricted existing
-Lite source line sufficient for report(42);, emit a C program with matching
-observable output, then compile/run it and compare stdout/status against the
-igniter. Reject unsupported source in the admitted input before emitting a
-completed C program. The prototype input contract is one source line through
-inputLine; full multi-line/file/argument handling remains a separate need.
+Readable emitted TypeScript and a preserved TS bootstrap let people inspect the
+compiler and its support code for hidden behavior. Keep adapters, dependencies,
+provenance and build steps visible. Reproducible generation/source hashes and
+rebuild comparisons should connect the reviewed source to shipped artifacts.
+Readability and passing finite tests are useful evidence, not a mathematical
+proof that every compiler or host tool is Trojan-free. No such proof is claimed.
 
-For this initial constant-report case, C generation need not add arithmetic,
-allocation, copies, user functions, strings as source inputs, or native runtime
-machinery. Later compiler increments must preserve Lite's selected checked
-arithmetic, evaluation order, value copies, faults and explicit I/O; producing
-C text does not prove those lowerings or authorize inheriting foreign semantics.
+Until a native/backend reference exists, use the executable igniter as a
+comparison implementation. Add cross-backend comparisons as each target works.
+Tests establish the cases actually run; full language equivalence and compiler
+self-rebuild remain goals, not current results.
 
-This proposal changes no Lite syntax or language feature. The backend/output
-route itself is the needed user decision, not another request to implement
-already selected list/text rules.
+## Current first TS experiment
 
-## External-tool probe actually performed
+[017-report-ts-compiler.lts](../examples/017-report-ts-compiler.lts) compiles one
+source line containing a report of a signed decimal Int literal into a readable
+TypeScript module. It uses only approved Lite features and temporary I/O/text
+helpers. Validate the complete admitted line before emitting any source bytes;
+reject unsupported syntax instead of copying arbitrary source into TypeScript.
 
-On 2026-10-31, /usr/bin/cc reports Apple clang 21.0.0 targeting
-arm64-apple-darwin27.0.0. A temporary, hand-written foreign C file contained:
+The emitted main function returns the exact output text for this restricted
+program. A separate, visible Node adapter writes that text to stdout. The core
+contains no Node/DOM API, imports, dynamic code execution or numeric rounding.
+The checked-in TS reference and adapter are in examples/generated. This private
+prototype entry format is not a new Lite public API or a full host-I/O ABI.
 
-```c
-#include <stdio.h>
-int main(void) {
-    puts("42");
-    return 0;
-}
-```
+See [the emission/parity evidence](INV-061-ts-emission-and-parity.md). This is not
+yet a compiler that can compile its own source, a complete multi-line compiler,
+a generated compiler bootstrap snapshot, or an AssemblyScript/browser proof.
 
-Compile it with cc -std=c11 -Wall -Wextra -Werror and run the temporary executable.
-Observed status 0, stdout 42 followed by newline, and empty stderr. Temporary
-source/executable were removed. This validates only the installed foreign build
-route; no Lite compiler emitted this C and no generated-Lite native result is
-claimed. No benchmark or deployment-size measurement was performed.
+## Maintained C export and migration goal
 
-The official [Clang driver documentation](https://clang.llvm.org/docs/CommandGuide/clang.html)
-describes compiling C and the driver stages through linking, with -std=c11
-available. That supports the proposed external build mechanism, not a claim
-about a Lite backend, target portability or the project's future semantics.
+C is selected as the first native target, not just a throwaway code-generation
+experiment. Investigate readable/exportable source, build recipes, documented
+support-code dependencies and licensing/provenance, reusable library boundaries
+and independently maintainable projects. An exported project should have an
+understandable route to build without continuing to run the Lite compiler or
+framework. Necessary support code must be visible and accounted for, not hidden
+behind a claim of dependency-free output.
 
-## Proposed next delivery after selection
+Exact C API names, headers, symbol visibility, ABI/versioning, foreign resources,
+callbacks, ownership across boundaries, portable builds and export layout remain
+[INV-065](TOPICS.md#inv-065), [INV-066](TOPICS.md#inv-066) and
+[INV-070](TOPICS.md#inv-070) work. Do not invent source-level FFI/export syntax.
+C generation must preserve selected arithmetic, evaluation order, value copies,
+faults and explicit I/O rather than inheriting host accidents.
 
-1. Implement the small source-line-to-C compiler as ordinary Lite application
-   code using the approved subset, without a new host helper or framework.
-2. Validate its supported source shape and diagnostic/exit behavior, preserve
-   explicit output, and test accepted/rejected inputs before calling it a compiler
-   for that restricted subset.
-3. Compile its emitted C with the visible external command and compare the
-   resulting native program's output/status with the same supported Lite program
-   on the igniter. Record the compiler-source commit/tag, exact compatible
-   interpreter tag, C tool version and build/check command.
-4. Commit source, tests, examples and evidence atomically; preserve prior tags.
-   Continue toward the next required subset without treating this tiny result
-   as permission to add unselected syntax, helpers or language semantics.
+Reference context only: V documents [portable C output](https://docs.vlang.io/cross-compilation.html#portable-c-output-os-cross)
+and [shared-library export](https://docs.vlang.io/v-and-c.html#export-to-shared-library).
+These motivate concrete migration/library questions; they are not evidence that
+Lite already supports them or that their exact implementation is adopted.
 
-Even if successful, this first experiment would not compile its own compiler
-source or establish a compiler-to-compiler rebuild chain. Keep the igniter active
-until a Lite-written successor has a defined execution path and reproducibly
-builds the needed next stage. The later retirement threshold and stage map remain
-INV-061.06 work.
+## AssemblyScript and web boundary
 
-## Decision required
+AssemblyScript describes itself as a TypeScript-like variant, not an arbitrary
+TypeScript compiler. Its [concepts](https://www.assemblyscript.org/concepts.html)
+and [types](https://www.assemblyscript.org/types.html) require a separately checked
+compatibility profile, including integer widths, representation, effects and host
+bindings. Its [runtime variants](https://www.assemblyscript.org/runtime.html) also
+need review before claiming the native no-mandatory-tracing goal there. Strict
+TypeScript typing alone does not establish AS/Wasm parity. No AS dependency is
+added and no Wasm compatibility is claimed by this increment.
 
-Select C source plus an external C compiler for this first restricted native
-experiment, or keep the output route open for a different backend discussion.
-The proposal remains unselected until the user explicitly decides. No Lite
-compiler or emitter implementation is added by this investigation.
+The first emitted core is deliberately independent of Node I/O. It typechecks
+without Node/DOM libraries and can be translated to standard ES-module JavaScript.
+This is a useful web-target boundary, not a browser execution, DOM API or bundler
+implementation. Node's [direct TypeScript support](https://nodejs.org/api/typescript.html)
+still needs a separate strict typecheck; stripping types does not check them.
+
+## Earlier foreign C probe
+
+The original proposal recommended C as the very first output before the user's
+TS-first refinement. That ordering was not selected. The same user subsequently
+selects C as the first native target and an important maintained export path.
+
+The historical external-tool probe remains valid: /usr/bin/cc reported Apple
+clang 21.0.0 for arm64-apple-darwin27.0.0. A hand-written stdio C program printing
+42 compiled with -std=c11 -Wall -Wextra -Werror and ran with status 0, stdout
+42 followed by newline and empty stderr. Temporary files were removed. This was
+foreign-tool evidence, not Lite-generated output or performance evidence.
+The [Clang driver documentation](https://clang.llvm.org/docs/CommandGuide/clang.html)
+describes the external compile/link route. No C emitter was implemented by that
+probe; a bounded native parity experiment can follow the first TS milestone.

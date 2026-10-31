@@ -821,7 +821,9 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — arithmetic front-end exercise in Lite](INV-061-lite-arithmetic-front-end.md) — application-only recursive parser/evaluator uses approved token lists and value/position pairs; runs on the preserved alpha.15 interpreter without host changes. Strict checking and 125 interpreter groups plus 9 editor groups pass. No compiler output, AST/IR/backend selection or self-hosted stage; first execution/output/rebuild contracts remain open.
 
-**Follow-up:** [INV-061.06 — first compiler output route](INV-061-first-compiler-output.md) — proposes a tiny Lite-written C emitter plus an explicit external C build. A local hand-written foreign C probe compiles/runs; no Lite-generated output or self-hosted stage exists. Output/backend choice remains unselected pending consent.
+**Follow-up:** [INV-061.06 — bootstrap and maintained targets](INV-061-first-compiler-output.md) — user selects TS first for early self-hosting and maintained web output, a permanent readable TS bootstrap with byte-output equivalence, overlapping igniter/self-hosted development, and C as first native/maintained project-library export and migration target. Possible AS/early Wasm remains an investigation; no FFI/API/layout implied.
+
+**Follow-up:** [INV-061 — first TS emission and parity](INV-061-ts-emission-and-parity.md) — Lite-written compiler for a single signed-integer report emits readable TS with separate Node adapter. Nine admitted cases have raw stdout/stderr/status parity, strict Node-free core checks and TS-to-JS checks. All 130 interpreter groups pass. Existing quoted-delimiter parser bug fixed; no self-rebuild/browser/AS proof.
 
 <a id="inv-062"></a>
 
@@ -895,9 +897,9 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/deferred-cleanup-and-resources.md](../docs/deferred-cleanup-and-resources.md).
 
-**Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-066).
+**Starter subtopics:** [5 bounded questions](SUBTOPICS.md#inv-066).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** direction recorded; export/ABI implementation not started; contributor: redacted (agent-assisted); note: [maintained C export and migration goal](INV-061-first-compiler-output.md#maintained-c-export-and-migration-goal) — user requests shippable/shareable libraries/projects and a migration path outside Lite. Exact C interfaces, support dependencies, ABI and export layout remain open.
 
 <a id="inv-067"></a>
 
@@ -949,7 +951,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/memory-and-performance.md](../docs/memory-and-performance.md); [docs/modules-and-packages.md](../docs/modules-and-packages.md); [docs/versioning-and-naming.md](../docs/versioning-and-naming.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** target direction recorded; full platform investigation open; contributor: redacted (agent-assisted); note: [TS/web, C/native and possible AS/Wasm direction](INV-061-first-compiler-output.md) — TS is a maintained web/bootstrap target; C is first native and a maintained export target; possible AS/early Wasm needs separate compatibility/host/runtime checks. No platform matrix, ABI or Wasm execution claim.
 
 <a id="inv-071"></a>
 

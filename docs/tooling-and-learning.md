@@ -48,7 +48,7 @@ unsupported features clearly. This is a bounded experimental execution path.
 Native compilation remains a later language/deployment goal, not a requirement
 for this first runnable FVP. Do not require both interpreted and native paths,
 caching, a JIT/bytecode engine, a full debugger, or module/package machinery to
-deliver this slice. TypeScript/Node is selected only as the minimal igniter. Concrete
+deliver this slice. TypeScript/Node hosts the minimal igniter; TypeScript emission is now also selected for early self-hosting and maintained web output. Concrete
 internal structure, numeric/text details, and remaining helper contracts are open.
 The first narrow checkpoint is now implemented in [igniter/](../igniter/README.md);
 this is not a complete language implementation or a native performance result.
@@ -185,6 +185,13 @@ interpreter without host feature changes. Strict checking and 125 groups pass;
 see [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
 This produces a calculated result, not a compiler artifact or self-hosted stage.
 
+The first emitted-code milestone [017](../examples/017-report-ts-compiler.lts)
+compiles one signed-decimal report into readable TS. Nine admitted programs have
+raw stdout/stderr/status parity against the igniter and direct TS/translated JS
+execution. Strict checking and 130 interpreter groups pass; the Node-free core
+and visible adapter have separate checks. This is not compiler self-hosting or
+browser/Wasm execution. See [emission evidence](../investigations/INV-061-ts-emission-and-parity.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable
@@ -194,22 +201,30 @@ The earlier Python choice is superseded. Move compiler development into LiteLang
 language is sufficient to implement its compiler. Keep the selected first
 executable checkpoint small; a complete self-hosted compiler is not its gate.
 
-After the transition, abandon TypeScript/Node as the actively developed compiler path.
-Retain a versioned bootstrap copy so a new user can download the igniter and
-the required compiler sources and build forward to the current compiler. Do
-not delete the only usable bootstrap route when retiring TypeScript/Node from daily work.
-This is a source-bootstrap goal, not a claim that such a route exists yet.
+Clarified **2026-10-31**: first emit readable, tightly checked TypeScript to move
+compiler development into Lite sooner. Keep the igniter active as a reference
+and fallback during the transition, until the self-hosted path is satisfactory.
+Retire handwritten igniter development after that evidence is sufficient; retain
+a permanent shippable readable TS bootstrap, source provenance and fixed tags.
+TypeScript remains an important maintained web target, while C is the selected
+first native target and a maintained library/project export and migration path.
+Possible AssemblyScript/early Wasm support needs its own compatibility checks.
+This target direction is selected; a complete self-hosted compiler snapshot and
+verified compiler-to-compiler rebuild chain do not exist yet.
 
 The selected [bootstrap version-control rule](versioning-and-naming.md#bootstrap-source-continuity)
 requires stable milestone tags tied to exact commits and a recorded map of which
 builder/source revisions work together. Retain the igniter and required source
 history; verify the full build chain rather than treating tags alone as proof.
 
-Conceptual route, not a selected build mechanism:
+Selected target route, with concrete self-rebuild stages still open:
 
 ```text
-TypeScript/Node igniter -> first compatible Lite-written compiler
-               -> compatible compiler revisions -> current compiler
+preserved TypeScript/Node igniter -> Lite-written compiler -> readable TS output
+  -> TS-hosted compiler development, with overlapping igniter validation
+  -> reproducible self-hosted stages and preserved TS bootstrap snapshots
+C: first native target and maintained project/library export path
+AssemblyScript/Wasm: possible early route, compatibility investigation required
 ```
 
 An interpreter can execute the first Lite-written compiler source; producing a
@@ -221,9 +236,14 @@ of the chain, and rebuild reproducibility remain open under
 [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06). A direct igniter-to-latest
 route is not promised if later compiler source uses newer language features.
 
-This direction chooses LiteLang for the self-hosted compiler. It selects neither
-the self-hosting threshold nor a native backend, release infrastructure, or a
-TypeScript/Node expansion beyond what the experiments and eventual handoff need.
+This direction chooses Lite for compiler development, TS for the first emitted
+bootstrap/web path and C as the first native/export target. It does not settle
+the self-rebuild/retirement threshold, general runtime lowering, web adapters,
+AS compatibility or C library ABI. Keep the igniter minimal. Safety here means
+matching observable output bytes, status and effects for equivalent supported
+programs/inputs, with readable auditable TS and reproducible provenance. Tests
+provide bounded evidence, not a universal absence-of-Trojan proof. See
+[INV-061 target/safety clarification](../investigations/INV-061-first-compiler-output.md).
 
 The implementation pins Node 26.13.0 and TypeScript 7.0.2, checked against stable
 releases on 2026-10-30. Execute the TS sources directly and run the separate strict

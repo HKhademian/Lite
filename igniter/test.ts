@@ -21,6 +21,101 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('quoted closing delimiters remain values in calls, tuple entries and array/list elements', () => {
+  assert.equal(run(`report("(", ")", "]", "}");
+    pair := ("(", ")"); array := ["[", "]"];
+    list: List<String> = ["[", "]"];
+    report(pair.1, array[1], list[1]);`).output, '( ) ] }\n) ] ]\n');
+});
+test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
+  const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../examples/generated/017-report-42.ts', import.meta.url), 'utf8');
+  assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(run(source, 'report(42);').output, run(source, 'report(42);').output);
+  assert.equal(run(source, ' report ( +00042 ) ; ').output, expected);
+  assert.equal(run(source, 'report(-000);').output,
+    'export function main(): string {\n    return "0\\n";\n}\n');
+});
+test('restricted TS compiler rejects malformed, unsupported and injected source before emitting bytes', () => {
+  const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  for (const input of ['\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
+    'report("text");', 'report(1 + 2);', 'report(1.5);', 'report(1e2);',
+    'report(42); report(9);', 'report(42); process.exit(7);',
+    'report(9223372036854775808);', 'report(-9223372036854775809);',
+    'report(999999999999999999999999);', 'report(42); "}; throw 1; //']) {
+    const result = run(source, input);
+    assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
+    assert.notEqual(result.errors, '', input);
+  }
+  fault(source, 'InputFault');
+});
+test('emitted TS and igniter outputs match byte for byte across signed Int literal boundaries', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const compiler = new URL('../examples/017-report-ts-compiler.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const directory = mkdtempSync(join(tmpdir(), 'lite-ts-output-'));
+  const corePaths: string[] = [];
+  try {
+    writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
+    for (const [index, source] of ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
+      '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
+      'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)'].entries()) {
+      const sourcePath = join(directory, `input-${index}.lts`);
+      const corePath = join(directory, `program-${index}.ts`);
+      const adapterPath = join(directory, `run-${index}.ts`);
+      writeFileSync(sourcePath, source);
+      const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: source, env, timeout: 5000 });
+      assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
+      assert.equal(emitted.stderr.length, 0); writeFileSync(corePath, emitted.stdout); corePaths.push(corePath);
+      writeFileSync(adapterPath, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
+      const input = Buffer.from([0, 255, 10]); // These admitted programs have no runtime reads.
+      const expected = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
+      const actual = spawnSync(process.execPath, [adapterPath], { input, timeout: 5000 });
+      assert.equal(expected.error, undefined); assert.equal(actual.error, undefined);
+      assert.equal(expected.status, 0); assert.equal(actual.status, expected.status);
+      assert.equal(actual.signal, expected.signal);
+      assert.deepEqual(actual.stdout, expected.stdout, source);
+      assert.deepEqual(actual.stderr, expected.stderr, source);
+    }
+    const base: unknown = JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8'));
+    if (typeof base !== 'object' || base === null || !('compilerOptions' in base) ||
+        typeof base.compilerOptions !== 'object' || base.compilerOptions === null) throw new Error('invalid checking config');
+    const configPath = join(directory, 'tsconfig.json');
+    writeFileSync(configPath, JSON.stringify({ compilerOptions: { ...base.compilerOptions,
+      types: [], typeRoots: [], lib: ['ESNext'] }, files: corePaths }));
+    const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', configPath], {
+      encoding: 'utf8', timeout: 30000,
+    });
+    assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+    const jsDirectory = join(directory, 'javascript');
+    writeFileSync(configPath, JSON.stringify({ compilerOptions: { ...base.compilerOptions,
+      types: [], typeRoots: [], lib: ['ESNext'], noEmit: false, outDir: jsDirectory,
+      module: 'ESNext', moduleResolution: 'Bundler', allowImportingTsExtensions: false }, files: corePaths }));
+    const translated = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'), '-p', configPath], {
+      encoding: 'utf8', timeout: 30000,
+    });
+    assert.equal(translated.error, undefined); assert.equal(translated.status, 0, translated.stdout + translated.stderr);
+    for (const index of corePaths.keys()) {
+      const adapter = join(jsDirectory, `run-${index}.mjs`);
+      writeFileSync(adapter, `import { main } from './program-${index}.js';\nprocess.stdout.write(main());\n`);
+      const javascript = spawnSync(process.execPath, [adapter], { timeout: 5000 });
+      const typescript = spawnSync(process.execPath, [join(directory, `run-${index}.ts`)], { timeout: 5000 });
+      assert.equal(javascript.error, undefined); assert.equal(typescript.error, undefined);
+      assert.equal(javascript.status, typescript.status);
+      assert.deepEqual(javascript.stdout, typescript.stdout); assert.deepEqual(javascript.stderr, typescript.stderr);
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+test('checked-in TS output and explicit Node adapter typecheck and reproduce the reference bytes', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const checked = spawnSync(process.execPath, [join(root, 'igniter/node_modules/typescript/bin/tsc'),
+    '-p', join(root, 'examples/generated')], { encoding: 'utf8', timeout: 30000 });
+  assert.equal(checked.error, undefined); assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+  const result = spawnSync(process.execPath, [join(root, 'examples/generated/017-run-report.ts')], { timeout: 5000 });
+  assert.equal(result.error, undefined); assert.equal(result.status, 0);
+  assert.deepEqual(result.stdout, Buffer.from('42\n')); assert.equal(result.stderr.length, 0);
+});
+
 test('Lite-written integer calculator handles precedence, associativity, nesting and unary signs', () => {
   const source = readFileSync(new URL('../examples/016-integer-calculator.lts', import.meta.url), 'utf8');
   for (const [input, expected] of [

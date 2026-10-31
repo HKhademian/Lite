@@ -323,6 +323,10 @@ class Parser {
     return token;
   }
   take(): Token { const token = this.peek(); this.index++; return token; }
+  isSymbol(text: string): boolean {
+    const token = this.peek();
+    return token.kind === 'symbol' && token.text === text;
+  }
   accept(text: string): boolean {
     const token = this.peek();
     if (token.kind !== (/^[a-z]+$/.test(text) ? 'id' : 'symbol') || token.text !== text) return false;
@@ -438,7 +442,7 @@ class Parser {
     if (!this.accept(',')) { this.expect(')'); return first; }
     const items = [first];
     if (!this.accept(')')) {
-      do { items.push(this.pattern()); } while (this.accept(',') && this.peek().text !== ')');
+      do { items.push(this.pattern()); } while (this.accept(',') && !this.isSymbol(')'));
       this.expect(')');
     }
     return { kind: 'tuple', items };
@@ -575,7 +579,7 @@ class Parser {
       }
       const items = [value];
       if (!this.accept(')')) {
-        do { items.push(this.tupleEntry()); } while (this.accept(',') && this.peek().text !== ')');
+        do { items.push(this.tupleEntry()); } while (this.accept(',') && !this.isSymbol(')'));
         this.expect(')');
       }
       return { kind: 'tuple', items, at: token.at };
@@ -583,7 +587,7 @@ class Parser {
     if (token.kind === 'symbol' && token.text === '[') {
       const items: Raw[] = [];
       if (!this.accept(']')) {
-        do { items.push(this.expression()); } while (this.accept(',') && this.peek().text !== ']');
+        do { items.push(this.expression()); } while (this.accept(',') && !this.isSymbol(']'));
         this.expect(']');
       }
       return { kind: 'array', items, at: token.at };
@@ -605,7 +609,7 @@ class Parser {
             if (parameters.some(p => p.name === name.text)) source(`duplicate parameter ${name.text}`, name.at);
             this.expect(':');
             parameters.push({ name: name.text, type: this.dataType() });
-          } while (this.accept(',') && this.peek().text !== ')');
+          } while (this.accept(',') && !this.isSymbol(')'));
           this.expect(')');
         }
         this.expect(':');
@@ -654,7 +658,7 @@ class Parser {
       if (!this.accept('(')) return { kind: 'name', name: token.text, at: token.at };
       const args: Readonly<{ label: string | undefined; input: Raw }>[] = [];
       if (!this.accept(')')) {
-        do { args.push(this.tupleEntry()); } while (this.accept(',') && this.peek().text !== ')');
+        do { args.push(this.tupleEntry()); } while (this.accept(',') && !this.isSymbol(')'));
         this.expect(')');
       }
       return { kind: 'call', name: token.text, args, at: token.at };
