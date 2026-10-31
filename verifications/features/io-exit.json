@@ -1,0 +1,19 @@
+{
+  "id": "io.exit",
+  "kind": "feature",
+  "source": "io-exit.lts",
+  "features": [
+    "io.exit"
+  ],
+  "guideline": "Checks explicit exit status and that later reports are skipped.",
+  "sourceHash": "sha256:e06fc516cd47a9b368cf59b86ef5b29fa7ea0595576f8abec226267ba75f208a",
+  "cases": [
+    {
+      "name": "exit-three",
+      "stdout": {
+        "text": "before\n"
+      },
+      "exitCode": 3
+    }
+  ]
+}

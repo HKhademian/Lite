@@ -23,14 +23,15 @@ prototypes are not a full/self-hosted compiler.
 
 Tool entry points follow one naming matrix: compiler `./ltc`, `./litec` or
 `./lite compile`; runner `./lite run`; checker `./lite check`. Linker
-(`./ltl`/`./lite link`), formatter (`./lite fmt`), verifier (`./lite verify`)
-and tester (`./lite test`) names are reserved but not implemented. Docs are
+(`./ltl`/`./lite link`), formatter (`./lite fmt`) and tester (`./lite test`)
+names are reserved but not implemented. The verifier is `./lite verify`; docs are
 `./lite docs`; help is `./lite help`. See
 [tool naming](docs/versioning-and-naming.md#1-canonical-names).
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./ltc`, `./litec`, or `./lite compile`.
+- [Verification cases](verifications/README.md): feature contracts and artifact manifests, run with `./lite verify`.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.
 - [Principles and goals](docs/principles.md)

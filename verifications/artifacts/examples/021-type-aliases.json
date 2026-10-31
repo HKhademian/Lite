@@ -1,0 +1,22 @@
+{
+  "id": "example.021-type-aliases",
+  "kind": "example",
+  "source": "../../../examples/021-type-aliases.lts",
+  "features": [
+    "alias.transparent",
+    "list.mutation",
+    "loop.sequence",
+    "io.report"
+  ],
+  "description": "Transparent tuple/list aliases with list traversal.",
+  "sourceHash": "sha256:e905e4476c00754cc475c92aa3a4e0475b0dc5b4ac80692897d48a23fb06caa7",
+  "cases": [
+    {
+      "name": "alias-list",
+      "stdout": {
+        "text": "ident: total\nop: +=\nnum: 100\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

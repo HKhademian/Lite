@@ -2,6 +2,26 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Feature and artifact verification registry, 2026-10-31
+
+Feature verifications are selected as the canonical semantic contract, separate
+from examples, samples and showcases, which are verified consumers. The new
+`verifications/` tree holds a JSON schema, a 17-feature registry and canonical
+cases; `igniter/verify.ts` and `./lite verify` run them through the reference
+igniter, with `--update` regenerating expected streams/source hashes, `--coverage`
+reporting coverage and `--filter` selecting manifests. `sourceHash` prevents a
+source edit from silently keeping stale expectations; samples can use `append`
+observation calls without changing their teaching bodies.
+
+The first slice has 17 feature cases, 5 example manifests (001, 006, 016, 020,
+021), 3 sample manifests (001, 002, 020) and 25 scenarios. The migration plan
+named samples 021/023, which do not exist. All scenarios pass; 161 interpreter
+groups and 9 editor groups pass. Coverage is currently informational (5/19
+examples, 3/20 samples), and compiler targets, showcase transcripts, CI and the
+blocking coverage gate remain open. See
+[INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
+[verification guide](../verifications/README.md).
+
 ## Compiler sources extracted from examples with temporary flat imports, 2026-10-31
 
 The Lite-written TS/C emitters moved out of `examples/017` and `examples/018`
@@ -27,7 +47,7 @@ canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
 formatter, verifier and tester names are reserved but unimplemented. The 41 program and 34 rejection verification cases are unchanged in
-behavior; 160 interpreter groups and 9 editor groups pass. The examples index
+behavior; 161 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -51,7 +71,7 @@ source path, optional `stdin`, required `stdout`/`stderr` streams, and
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 160 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 161 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 

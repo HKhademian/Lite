@@ -1,0 +1,19 @@
+{
+  "id": "text.helpers",
+  "kind": "feature",
+  "source": "text-helpers.lts",
+  "features": [
+    "text.helpers"
+  ],
+  "guideline": "Checks textLength, textAt, and half-open textSlice positions on ASCII text.",
+  "sourceHash": "sha256:e33cdd721f2363dba03829abb63b7468f2ab3f959081188c23e0aa758d219561",
+  "cases": [
+    {
+      "name": "length-at-slice",
+      "stdout": {
+        "text": "3\nb\nbc\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

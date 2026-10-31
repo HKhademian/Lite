@@ -1,0 +1,25 @@
+{
+  "id": "example.001-double-sum",
+  "kind": "example",
+  "source": "../../../examples/001-double-sum.lts",
+  "features": [
+    "io.input",
+    "int.arithmetic",
+    "scope.assignment",
+    "io.report"
+  ],
+  "description": "Prompted integer addition doubled and reported.",
+  "sourceHash": "sha256:ac8a28b0284da427280c6c4b40297c06f75d26d25289ff1c9f20836a67afd954",
+  "cases": [
+    {
+      "name": "seven-and-five",
+      "stdin": {
+        "text": "7\n5\n"
+      },
+      "stdout": {
+        "text": "First integer: Second integer: 24\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "scope.assignment",
+  "kind": "feature",
+  "source": "scope-assignment.lts",
+  "features": [
+    "scope.assignment"
+  ],
+  "guideline": "Checks replacement of a var binding while preserving its checked type.",
+  "sourceHash": "sha256:a2d829ee3a20e4012e29c684d6d8cdf12b4216907986a3488535f5e04455dcd4",
+  "cases": [
+    {
+      "name": "replacement",
+      "stdout": {
+        "text": "3\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

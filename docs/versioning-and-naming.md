@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker/formatter/verifier/tester names are reserved but unimplemented. Package-registry spelling, final release packaging and automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker, formatter and tester names are reserved but unimplemented; the verifier has a first implemented slice. Package-registry spelling, final release packaging and automation remain open.
 
 ## 1. Canonical names
 
@@ -18,7 +18,7 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 | Script source | **LiteScript file** | `.lts` | Convenient standalone script body |
 | Module source | **LiteLang module file** | `.lt` | Package/module-owned declarations and explicit module access |
 | Formatter | **Lite formatter** | `lite-formatter` | CLI `lite fmt` (planned) |
-| Verifier | **Lite verifier** | `lite-verifier` | CLI `lite verify` (planned) |
+| Verifier | **Lite verifier** | `lite-verifier` | CLI `lite verify` (first slice implemented) |
 | Tester | **Lite tester** | `lite-tester` | CLI `lite test` (planned) |
 | Documentation | **Lite docs** | `lite-docs` | CLI `lite docs` |
 | Help | **Lite help** | `lite-help` | CLI `lite help` |
@@ -41,7 +41,8 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 - The runner is `lite-runner` / `./lite run`. It currently executes scripts through the igniter.
 - The checker is `lite-checker` / `./lite check`; `./lite run --check` remains compatible.
 - Documentation is `lite-docs` / `./lite docs`; help is `lite-help` / `./lite help` (also `--help`/`-h`).
-- The formatter, verifier and tester are reserved as `lite-formatter`/`./lite fmt`, `lite-verifier`/`./lite verify`, and `lite-tester`/`./lite test`; they are not implemented.
+- The verifier is `lite-verifier` / `./lite verify`; its first slice covers 17 features and 8 artifacts. Full coverage, showcase transcripts and CI remain open.
+- The formatter and tester are reserved as `lite-formatter`/`./lite fmt` and `lite-tester`/`./lite test`; they are not implemented.
 - The separate compiled-program runtime remains `lite-runtime` / `literun` and is not the same tool as `lite-runner`.
 - These names describe one component with several entry points; `ltc`, `litec`, `lite-compiler` and `lite compile` are not competing product names.
 - Binary names are lowercase and contain no spaces. Prose names may contain spaces.

@@ -1,0 +1,22 @@
+{
+  "id": "example.006-fixed-tuples",
+  "kind": "example",
+  "source": "../../../examples/006-fixed-tuples.lts",
+  "features": [
+    "function.recursion",
+    "tuple.shape",
+    "scope.locals",
+    "io.report"
+  ],
+  "description": "Tuple construction, fields, destructuring, and singleton grouping.",
+  "sourceHash": "sha256:1b6bc3775886ed497e31a6d31bcb7688cc0298df65b120212b29b74435c9eb3a",
+  "cases": [
+    {
+      "name": "tuple-demo",
+      "stdout": {
+        "text": "number\n12\nnumber: 12\n42\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

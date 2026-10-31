@@ -1,0 +1,19 @@
+{
+  "id": "function.recursion",
+  "kind": "feature",
+  "source": "function-recursion.lts",
+  "features": [
+    "function.recursion"
+  ],
+  "guideline": "Checks a typed parameter, return, base case, and self recursion.",
+  "sourceHash": "sha256:19c3f0b721452a43a3559e5d857a3117a106beb6e3f475fdf47271d9d4216705",
+  "cases": [
+    {
+      "name": "factorial-five",
+      "stdout": {
+        "text": "120\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

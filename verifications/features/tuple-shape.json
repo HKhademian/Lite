@@ -1,0 +1,19 @@
+{
+  "id": "tuple.shape",
+  "kind": "feature",
+  "source": "tuple-shape.lts",
+  "features": [
+    "tuple.shape"
+  ],
+  "guideline": "Checks named field access, positional destructuring, and tuple construction.",
+  "sourceHash": "sha256:8fc783a4d86efcf53f813c3efb31ef92cc91d0839878eeeb6713456a0e117508",
+  "cases": [
+    {
+      "name": "named-and-positional",
+      "stdout": {
+        "text": "number 12\n3\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

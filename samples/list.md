@@ -43,7 +43,7 @@ Stage notes identify likely dependencies and design pressure. They are capabilit
 
 Needs: numeric values, bindings, expressions. Design pressure: inferred numeric types, division, rounding, and expression results. All inputs can be literals.
 
-Status: **implemented but unverified** for all 20 files below. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
+Status: **implemented; 001, 002 and 020 have verification manifests, while 003–019 remain unverified**. Each is a short worked example with a plain-language problem and expected answers. See the [reading guide](README.md) for a first introduction and [contributor notes](NOTES.md) for verification limits and design gaps.
 
 1. `samples/001_add_two_numbers.lts` — **Add two numbers:** Compute the sum of two supplied integers and check positive, negative, and zero inputs.
 2. `samples/002_arithmetic_operations.lts` — **Four arithmetic operations:** Compute sum, difference, product, and truncating integer quotient for two whole numbers with a nonzero divisor.

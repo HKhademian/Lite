@@ -1,0 +1,22 @@
+{
+  "id": "io.input",
+  "kind": "feature",
+  "source": "io-input.lts",
+  "features": [
+    "io.input"
+  ],
+  "guideline": "Checks inputInt prompt bytes and ordered integer reads.",
+  "sourceHash": "sha256:0ec4b3be268c830d4dc88f65ce92790d443c6965691a8fec16f57cea550fe79a",
+  "cases": [
+    {
+      "name": "two-integers",
+      "stdin": {
+        "text": "7\n5\n"
+      },
+      "stdout": {
+        "text": "First: Second: 12\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

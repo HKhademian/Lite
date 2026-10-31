@@ -1,0 +1,29 @@
+{
+  "id": "example.016-integer-calculator",
+  "kind": "example",
+  "source": "../../../examples/016-integer-calculator.lts",
+  "features": [
+    "int.arithmetic",
+    "list.mutation",
+    "loop.conditional",
+    "loop.sequence",
+    "function.recursion",
+    "text.helpers",
+    "io.input",
+    "io.report"
+  ],
+  "description": "Tokenized integer calculator with precedence and nesting.",
+  "sourceHash": "sha256:7548293609eddf18c4179a9f48a8c0557384ffb8ea8a52f064ec3ba5ad5e5d05",
+  "cases": [
+    {
+      "name": "precedence",
+      "stdin": {
+        "text": "2 + 3 * (4 - 1)\n"
+      },
+      "stdout": {
+        "text": "Arithmetic expression:\nresult: 11\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

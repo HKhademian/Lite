@@ -1,0 +1,19 @@
+{
+  "id": "loop.sequence",
+  "kind": "feature",
+  "source": "loop-sequence.lts",
+  "features": [
+    "loop.sequence"
+  ],
+  "guideline": "Checks fixed-array traversal in positional order with a named receiver.",
+  "sourceHash": "sha256:be916317fedc53afe8889494fc48b64cacdfd00e9065397cc648bf2f884d6b39",
+  "cases": [
+    {
+      "name": "array-sum",
+      "stdout": {
+        "text": "60\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "scope.locals",
+  "kind": "feature",
+  "source": "scope-locals.lts",
+  "features": [
+    "scope.locals"
+  ],
+  "guideline": "Checks that a block-local binding shadows and restores the outer binding.",
+  "sourceHash": "sha256:dd103ca4b8f599c58b116a4f5f90dc62ce8952285e27f401b4d878af14d94ed2",
+  "cases": [
+    {
+      "name": "block-shadowing",
+      "stdout": {
+        "text": "20\n10\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

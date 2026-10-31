@@ -2,9 +2,9 @@
 
 Exercises 001–020 are written; the complete batch remains **unverified** against
 the language design. The limited [TypeScript/Node igniter](../igniter/README.md)
-now checks and runs the supported subset. Its tests verify outcomes for lessons
-001, 002, and 020 by appending explicit report calls in memory, without changing
-lesson bodies. This is bounded interpreter evidence, not full language or batch
+now checks and runs the supported subset. The [`verifications/`](../verifications/README.md)
+registry verifies outcomes for lessons 001, 002 and 020 by appending explicit
+report calls in each artifact manifest, without changing lesson bodies. This is bounded interpreter evidence, not full language or batch
 conformance. Exercises 021–520 remain planned; no native compiler exists.
 
 The `.lts` files are introductory reading material. Keep each focused on one worked example, with a plain-language problem, named inputs, and expected answers next to the calculation. Put verification records and language-design questions here. A printed answer, assertion API, or script exit-value convention is not assumed.

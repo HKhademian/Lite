@@ -1,0 +1,21 @@
+{
+  "id": "sample.002-arithmetic-operations",
+  "kind": "sample",
+  "source": "../../../samples/002_arithmetic_operations.lts",
+  "features": [
+    "int.arithmetic",
+    "scope.locals"
+  ],
+  "description": "Four integer operations; the verification appends reports for each result.",
+  "append": "report(sum); report(difference); report(product); report(quotient);",
+  "sourceHash": "sha256:e20688c5f43c3a6ba98fffc022caeba65a6b70b66745869543e3e1ef7a5c987d",
+  "cases": [
+    {
+      "name": "four-operations",
+      "stdout": {
+        "text": "9\n5\n14\n3\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

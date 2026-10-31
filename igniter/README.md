@@ -576,12 +576,16 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **160 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **161 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
-and evaluator, including overflow and negative programs. Only lessons 001, 002
-and 020 currently have focused checked outcomes by appending explicit reports in
-test memory; lesson files remain unchanged. This is not proof of the full
+and evaluator, including overflow and negative programs. Lessons 001, 002 and 020
+have focused checked outcomes through `verifications/` manifests; lesson files
+remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
+
+Project-level feature and artifact verification is `./lite verify`, backed by
+[verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
+first slice has 17 feature cases and 8 artifact manifests.
 
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow

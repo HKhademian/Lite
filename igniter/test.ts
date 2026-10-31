@@ -177,6 +177,23 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   const noArgs = spawnSync(join(root, 'lite'), [], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
+test('lite verify runs feature and artifact cases and reports coverage', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const verified = spawnSync(join(root, 'lite'), ['verify'], { env, encoding: 'utf8', timeout: 30000 });
+  assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
+  assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
+  assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
+  assert.match(verified.stdout, /verification passed: 25 scenario\(s\)/);
+  const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
+  assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
+  assert.match(covered.stdout, /features: 17 registered, 17 cases/);
+  assert.match(covered.stdout, /examples: 5\/19 manifests/);
+  assert.match(covered.stdout, /samples: 3\/20 manifests/);
+  const filtered = spawnSync(join(root, 'lite'), ['verify', '--filter', 'int.arithmetic'], { env, encoding: 'utf8', timeout: 30000 });
+  assert.equal(filtered.error, undefined); assert.equal(filtered.status, 0, filtered.stderr);
+  assert.match(filtered.stdout, /PASS int\.arithmetic\/precedence-and-division/);
+});
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
     push_front(mut editable, "local"); report(original[0], editable[0]);

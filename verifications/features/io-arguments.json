@@ -1,0 +1,24 @@
+{
+  "id": "io.arguments",
+  "kind": "feature",
+  "source": "io-arguments.lts",
+  "features": [
+    "io.arguments"
+  ],
+  "guideline": "Checks inputArgs ordering and preservation of spaces, empty values, and flag-like text.",
+  "sourceHash": "sha256:f37be6d1cbdc471d7da9ecb90fadcc756119fb13ec0883c7aa3336492d12966d",
+  "cases": [
+    {
+      "name": "argument-order",
+      "args": [
+        "a b",
+        "",
+        "--check"
+      ],
+      "stdout": {
+        "text": "a b\n\n--check\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

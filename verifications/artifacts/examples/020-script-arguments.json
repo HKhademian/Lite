@@ -1,0 +1,26 @@
+{
+  "id": "example.020-script-arguments",
+  "kind": "example",
+  "source": "../../../examples/020-script-arguments.lts",
+  "features": [
+    "io.arguments",
+    "loop.sequence",
+    "io.report"
+  ],
+  "description": "Reports ordered script arguments after --.",
+  "sourceHash": "sha256:992130acdecf308a31db5f13cc693c03d418e80a55d90d24cea0515e7c298c24",
+  "cases": [
+    {
+      "name": "ordered-values",
+      "args": [
+        "a b",
+        "",
+        "--check"
+      ],
+      "stdout": {
+        "text": "a b\n\n--check\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}

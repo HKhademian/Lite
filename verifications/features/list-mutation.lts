@@ -1,0 +1,4 @@
+values: mut List<Int> = [1, 2];
+push_back(mut values, 3);
+push_front(mut values, 0);
+report(values[0], values[3]);

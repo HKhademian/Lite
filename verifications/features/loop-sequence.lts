@@ -1,0 +1,6 @@
+values := [10, 20, 30];
+var total := 0;
+loop values as value {
+    total = total + value;
+}
+report(total);

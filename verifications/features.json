@@ -1,0 +1,158 @@
+{
+  "features": [
+    {
+      "id": "int.arithmetic",
+      "summary": "Signed Int arithmetic and precedence.",
+      "case": "features/int-arithmetic.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md",
+        "docs/operators.md"
+      ]
+    },
+    {
+      "id": "bool.conditions",
+      "summary": "Bool comparisons and conditional selection.",
+      "case": "features/bool-conditions.json",
+      "status": "verified",
+      "docs": [
+        "docs/conditionals.md"
+      ]
+    },
+    {
+      "id": "loop.conditional",
+      "summary": "Conditional action loops with mutable state.",
+      "case": "features/loop-conditional.json",
+      "status": "verified",
+      "docs": [
+        "docs/loops.md"
+      ]
+    },
+    {
+      "id": "loop.sequence",
+      "summary": "Ordered sequence traversal loops.",
+      "case": "features/loop-sequence.json",
+      "status": "verified",
+      "docs": [
+        "docs/loops.md"
+      ]
+    },
+    {
+      "id": "function.recursion",
+      "summary": "Typed functions and own-name recursion.",
+      "case": "features/function-recursion.json",
+      "status": "verified",
+      "docs": [
+        "docs/functions.md"
+      ]
+    },
+    {
+      "id": "tuple.shape",
+      "summary": "Flat tuple values and fields.",
+      "case": "features/tuple-shape.json",
+      "status": "verified",
+      "docs": [
+        "docs/tuples-and-patterns.md"
+      ]
+    },
+    {
+      "id": "array.fixed",
+      "summary": "Fixed arrays and indexed reads.",
+      "case": "features/array-fixed.json",
+      "status": "verified",
+      "docs": [
+        "docs/arrays.md"
+      ]
+    },
+    {
+      "id": "list.mutation",
+      "summary": "Growable lists and end operations.",
+      "case": "features/list-mutation.json",
+      "status": "verified",
+      "docs": [
+        "docs/lists.md"
+      ]
+    },
+    {
+      "id": "text.helpers",
+      "summary": "Temporary code-point text helpers.",
+      "case": "features/text-helpers.json",
+      "status": "verified",
+      "docs": [
+        "docs/strings.md"
+      ]
+    },
+    {
+      "id": "alias.transparent",
+      "summary": "Transparent type aliases.",
+      "case": "features/alias-transparent.json",
+      "status": "verified",
+      "docs": [
+        "docs/type-aliases.md"
+      ]
+    },
+    {
+      "id": "scope.locals",
+      "summary": "Lexical local scope and shadowing.",
+      "case": "features/scope-locals.json",
+      "status": "verified",
+      "docs": [
+        "docs/declarations-and-assignment.md"
+      ]
+    },
+    {
+      "id": "scope.assignment",
+      "summary": "Mutable var replacement.",
+      "case": "features/scope-assignment.json",
+      "status": "verified",
+      "docs": [
+        "docs/mutability.md"
+      ]
+    },
+    {
+      "id": "io.input",
+      "summary": "Prompted integer input.",
+      "case": "features/io-input.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "io.arguments",
+      "summary": "Ordered script arguments.",
+      "case": "features/io-arguments.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "io.whole-input",
+      "summary": "Whole remaining input through EOF.",
+      "case": "features/io-whole-input.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "io.exit",
+      "summary": "Explicit process exit.",
+      "case": "features/io-exit.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
+      "id": "io.report",
+      "summary": "Multiple report values.",
+      "case": "features/io-report.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+pair := (kind = "number", text = "12");
+report(pair.kind, pair.text);
+(one, two) := (1, 2);
+report(one + two);

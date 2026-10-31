@@ -1,0 +1,3 @@
+report("before");
+exit(3);
+report("after");

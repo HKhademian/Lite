@@ -10,11 +10,12 @@ usage() {
     printf '%s\n' '  run [--check] file.lts [-- argument ...]  Run a Lite source'
     printf '%s\n' '  check file.lts                            Check source only'
     printf '%s\n' '  compile --target ts|c file.lts            Compile to TS or C'
+    printf '%s\n' '  verify [--update] [--coverage]            Run verification cases'
     printf '%s\n' '  docs                                      Show documentation paths'
     printf '%s\n' '  help                                      Show this help'
     printf '%s\n' ''
     printf '%s\n' 'Compiler entry points: ./ltc, ./litec, ./lite compile'
-    printf '%s\n' 'Reserved names: ./ltl/lite link, lite fmt, lite verify, lite test'
+    printf '%s\n' 'Reserved names: ./ltl/lite link, lite fmt, lite test'
 }
 
 docs() {
@@ -26,6 +27,7 @@ docs() {
     printf '  %s\n' "$lite_dir/samples/list.md"
     printf '  %s\n' "$lite_dir/igniter/README.md"
     printf '  %s\n' "$lite_dir/igniter/tests/README.md"
+    printf '  %s\n' "$lite_dir/verifications/README.md"
     printf '  %s\n' "$lite_dir/investigations/TOPICS.md"
 }
 
@@ -47,6 +49,10 @@ case "${1-}" in
     compile)
         shift
         exec "$lite_dir/litec" "$@"
+        ;;
+    verify)
+        shift
+        exec node "$lite_dir/igniter/verify.ts" "$@"
         ;;
     check)
         shift

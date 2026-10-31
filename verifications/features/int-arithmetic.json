@@ -1,0 +1,19 @@
+{
+  "id": "int.arithmetic",
+  "kind": "feature",
+  "source": "int-arithmetic.lts",
+  "features": [
+    "int.arithmetic"
+  ],
+  "guideline": "Checks precedence, left associativity, truncating division, and a negative quotient.",
+  "sourceHash": "sha256:948df5604e9fde058ee2670050c247020096abc794622024b71ede67cced1c18",
+  "cases": [
+    {
+      "name": "precedence-and-division",
+      "stdout": {
+        "text": "-1\n6\n-3\n"
+      },
+      "exitCode": 0
+    }
+  ]
+}
