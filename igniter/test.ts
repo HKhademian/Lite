@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 76 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 78 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 23 registered, 23 cases/);
+    assert.match(covered.stdout, /features: 25 registered, 25 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1173,6 +1173,20 @@ test('truncating remainder follows the dividend and rejects zero or Float', () =
   fault('report(5 % 0);', 'ArithmeticPanic');
   fault('report(5.0 % 2.0);', 'TypeError');
   fault('report(5 % 2.0);', 'TypeError');
+});
+test('floor division, floor modulo and compound updates follow documented signs', () => {
+  assert.equal(run('report(7 _/ 3); report(-7 _/ 3); report(7 _/ -3); report(-7 _/ -3);').output,
+    '2\n-3\n-3\n2\n');
+  assert.equal(run('report(7 _% 3); report(-7 _% 3); report(7 _% -3); report(-7 _% -3);').output,
+    '1\n2\n-2\n-1\n');
+  assert.equal(run('var x := 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 3; report(x);').output, '0\n');
+  assert.equal(run('var s := "a"; s += "b"; report(s);').output, 'ab\n');
+  assert.equal(run('var y := -7; y _/= 2; report(y); y _%= 3; report(y);').output, '-4\n2\n');
+  fault('report(5 _/ 0);', 'ArithmeticPanic');
+  fault('report(5 _% 0);', 'ArithmeticPanic');
+  fault('report(5.0 _/ 2.0);', 'TypeError');
+  fault('x := 1; x += 1;', 'TypeError');
+  fault('var x := 1; x += "a";', 'TypeError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

@@ -208,6 +208,26 @@
       "docs": [
         "docs/numbers.md"
       ]
+    },
+    {
+      "id": "int.floor",
+      "summary": "Floor division and floor modulo.",
+      "case": "features/int-floor.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md",
+        "docs/operators.md"
+      ]
+    },
+    {
+      "id": "scope.compound",
+      "summary": "Compound arithmetic updates.",
+      "case": "features/scope-compound.json",
+      "status": "verified",
+      "docs": [
+        "docs/mutability.md",
+        "docs/operators.md"
+      ]
     }
   ]
 }

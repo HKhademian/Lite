@@ -1,0 +1,22 @@
+{
+  "id": "int.floor",
+  "kind": "feature",
+  "source": {
+    "file": "int-floor.lts",
+    "hash": "sha256:5dba761f4f11c9bc182cfe895ac92478b3a5019f7f1d4e37090e7d2e66e41e5b"
+  },
+  "features": [
+    "int.floor"
+  ],
+  "guideline": "Checks floor division and floor modulo across all sign combinations.",
+  "cases": [
+    {
+      "name": "all-signs",
+      "stdout": {
+        "text": "2\n-3\n-3\n2\n1\n2\n-2\n-1\n",
+        "hash": "sha256:9da0cb2926291a3311f598542d22ecae78b4d52ed8a066af317a0ff57139c9bc"
+      },
+      "exitCode": 0
+    }
+  ]
+}

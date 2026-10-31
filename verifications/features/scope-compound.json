@@ -1,0 +1,22 @@
+{
+  "id": "scope.compound",
+  "kind": "feature",
+  "source": {
+    "file": "scope-compound.lts",
+    "hash": "sha256:bec2731ec5b7005d7fc095c373a42bd476d233a889700545aeedb6b228adcfbb"
+  },
+  "features": [
+    "scope.compound"
+  ],
+  "guideline": "Checks compound arithmetic updates, including floor variants, on mutable Int bindings.",
+  "cases": [
+    {
+      "name": "compound-chain",
+      "stdout": {
+        "text": "15\n12\n24\n6\n0\n-4\n2\n",
+        "hash": "sha256:60f88d3428019b565044e4b892a0dd478e7c89ddfc0b3e39085b7d1115e0bc3e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

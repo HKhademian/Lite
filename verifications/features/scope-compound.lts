@@ -1,0 +1,16 @@
+var total := 10;
+total += 5;
+report(total);
+total -= 3;
+report(total);
+total *= 2;
+report(total);
+total /= 4;
+report(total);
+total %= 3;
+report(total);
+var floor := -7;
+floor _/= 2;
+report(floor);
+floor _%= 3;
+report(floor);
