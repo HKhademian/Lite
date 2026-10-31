@@ -537,8 +537,10 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.22**, tag **igniter-v0.1.0-alpha.22**, adds explicit logical
-source context to the restricted TS/C compiler applications.
+Version **0.1.0-alpha.23**, tag **igniter-v0.1.0-alpha.23**, adds the verification
+registry, complete artifact coverage, compiler-target feature cases, floor and
+compound arithmetic, inferred mutability, nested verification fixtures, the
+`lite test`/`lite verify` lanes, the VS Code language icon support and CI gates.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -579,6 +581,10 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.20**, commit `9669ee5`: complete-source emitter validation.
 
 - **igniter-v0.1.0-alpha.21**, commit `7ebd22d`: script argument snapshots and forwarding.
+
+- **igniter-v0.1.0-alpha.22**, commit `02530e3`: explicit logical compiler source names.
+
+- **igniter-v0.1.0-alpha.23**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
