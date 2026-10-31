@@ -20,7 +20,8 @@
         "--check"
       ],
       "stdout": {
-        "text": "a b\n\n--check\n"
+        "text": "a b\n\n--check\n",
+        "hash": "sha256:2c07d0ade10232b64b5e1cc4c72cd74be30b5488b1108393139bc32b7895ddda"
       },
       "exitCode": 0
     }

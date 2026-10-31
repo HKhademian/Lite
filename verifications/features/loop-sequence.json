@@ -13,7 +13,8 @@
     {
       "name": "array-sum",
       "stdout": {
-        "text": "60\n"
+        "text": "60\n",
+        "hash": "sha256:95cf32708a31caa478a0e9141103ac567d85e5186e697e7e0c81f75589999e31"
       },
       "exitCode": 0
     }

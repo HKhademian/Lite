@@ -12,8 +12,8 @@ igniter, with `--update` regenerating expected streams/source hashes, `--coverag
 reporting coverage and `--filter` selecting manifests. Passing results are cached
 by runner/source/expectation hash; `--changed` selects affected cases for fast
 feedback, and `--shard i/n` supports a growing CI matrix. `source` holds exactly
-one of `file` or `text` plus an optional `hash`. A `source.hash` prevents a
-source edit from silently keeping stale expectations; samples can use `append`
+one of `file` or `text` plus an optional `hash`. `source.hash` and per-stream `stdin`/`stdout`/`stderr` hashes prevent source or
+external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
 The first slice has 17 feature cases, 5 example manifests (001, 006, 016, 020,

@@ -16,10 +16,12 @@
     {
       "name": "seven-and-five",
       "stdin": {
-        "text": "7\n5\n"
+        "text": "7\n5\n",
+        "hash": "sha256:a306945b3426c6e39e12df5545b639fced2532630eab11987ae2cf3a2f0ff2c1"
       },
       "stdout": {
-        "text": "First integer: Second integer: 24\n"
+        "text": "First integer: Second integer: 24\n",
+        "hash": "sha256:109cd849679117c3305078b889cc0a85550582dafd4b88abc9aaa77e031addb8"
       },
       "exitCode": 0
     }

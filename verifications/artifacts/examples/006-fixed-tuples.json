@@ -16,7 +16,8 @@
     {
       "name": "tuple-demo",
       "stdout": {
-        "text": "number\n12\nnumber: 12\n42\n"
+        "text": "number\n12\nnumber: 12\n42\n",
+        "hash": "sha256:6a41acc0779529542dd16622553d573944dd2094988b9acb930021750fe809cc"
       },
       "exitCode": 0
     }

@@ -13,7 +13,8 @@
     {
       "name": "sum-zero-to-three",
       "stdout": {
-        "text": "6\n"
+        "text": "6\n",
+        "hash": "sha256:06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7"
       },
       "exitCode": 0
     }

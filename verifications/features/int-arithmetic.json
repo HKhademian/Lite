@@ -13,7 +13,8 @@
     {
       "name": "precedence-and-division",
       "stdout": {
-        "text": "-1\n6\n-3\n"
+        "text": "-1\n6\n-3\n",
+        "hash": "sha256:d2d4f6a710003ba3ae4b730b005d39350c4e1f406536f119b7a957942ec46e65"
       },
       "exitCode": 0
     }

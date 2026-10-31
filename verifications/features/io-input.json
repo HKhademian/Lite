@@ -13,10 +13,12 @@
     {
       "name": "two-integers",
       "stdin": {
-        "text": "7\n5\n"
+        "text": "7\n5\n",
+        "hash": "sha256:a306945b3426c6e39e12df5545b639fced2532630eab11987ae2cf3a2f0ff2c1"
       },
       "stdout": {
-        "text": "First: Second: 12\n"
+        "text": "First: Second: 12\n",
+        "hash": "sha256:7c7da2f5a51f972215971640aae254f71f323d8b1cb0264f5ecc6f10ea135fd2"
       },
       "exitCode": 0
     }

@@ -15,7 +15,8 @@
     {
       "name": "swapped",
       "stdout": {
-        "text": "3\n7\n"
+        "text": "3\n7\n",
+        "hash": "sha256:2d65ba73dd83363826d117438319b05674f16d55faef1e57f780964edae7bba1"
       },
       "exitCode": 0
     }

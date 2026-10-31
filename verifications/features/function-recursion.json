@@ -13,7 +13,8 @@
     {
       "name": "factorial-five",
       "stdout": {
-        "text": "120\n"
+        "text": "120\n",
+        "hash": "sha256:97b912eb4a61df5f806ca6239dde3e1a4f51ad20aced1642cbb83dc510a5fa6b"
       },
       "exitCode": 0
     }

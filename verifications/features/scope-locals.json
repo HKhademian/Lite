@@ -13,7 +13,8 @@
     {
       "name": "block-shadowing",
       "stdout": {
-        "text": "20\n10\n"
+        "text": "20\n10\n",
+        "hash": "sha256:07810d98aa996457c2f89c4ab8125fe8e367b137eb3d0fe81d3eb4062d42c2c6"
       },
       "exitCode": 0
     }

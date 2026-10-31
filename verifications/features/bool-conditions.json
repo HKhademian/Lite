@@ -13,7 +13,8 @@
     {
       "name": "comparison-and-branches",
       "stdout": {
-        "text": "inside\nsingle\n"
+        "text": "inside\nsingle\n",
+        "hash": "sha256:c1da79d0600dafc30612f36f7995b56f2e73b27e66d8ad405c6d2a669917db20"
       },
       "exitCode": 0
     }

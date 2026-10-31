@@ -13,7 +13,8 @@
     {
       "name": "named-and-positional",
       "stdout": {
-        "text": "number 12\n3\n"
+        "text": "number 12\n3\n",
+        "hash": "sha256:1b194b61f456e2533d47876d17c4802d0f28434ddc6198c9f84cc12052e5f718"
       },
       "exitCode": 0
     }

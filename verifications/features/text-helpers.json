@@ -13,7 +13,8 @@
     {
       "name": "length-at-slice",
       "stdout": {
-        "text": "3\nb\nbc\n"
+        "text": "3\nb\nbc\n",
+        "hash": "sha256:862be729cb9b0f73f630214a5f18bdb897c18b0f3f63bf96ceebdd753a666154"
       },
       "exitCode": 0
     }

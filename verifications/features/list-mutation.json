@@ -13,7 +13,8 @@
     {
       "name": "push-front-back",
       "stdout": {
-        "text": "0 3\n"
+        "text": "0 3\n",
+        "hash": "sha256:350195e792e3f97da28b8c02fe2f90f2c128d5713ea1414caa32c5c3c98c64cf"
       },
       "exitCode": 0
     }

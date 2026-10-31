@@ -15,7 +15,8 @@
     {
       "name": "four-operations",
       "stdout": {
-        "text": "9\n5\n14\n3\n"
+        "text": "9\n5\n14\n3\n",
+        "hash": "sha256:e706dd533b4eff346e692db490c906536acac123637b7cc6eff43cb958b6b2b2"
       },
       "exitCode": 0
     }

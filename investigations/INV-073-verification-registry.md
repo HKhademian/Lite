@@ -42,7 +42,9 @@ A manifest records `id`, `kind`, `source`, `features`, optional
 `stdin`/`stdout`/`stderr` streams (`text`, `bytes` or `file`), optional `args`,
 and `exitCode`. The stream model matches the compiler verification fixtures.
 
-`source.hash` covers the original source bytes (file bytes or UTF-8 text). Editing an artifact without
+`source.hash` covers the original source bytes (file bytes or UTF-8 text);
+each `stdin`/`stdout`/`stderr` stream can also carry a `hash` pinning its resolved
+bytes. Editing an artifact without
 reviewing its expectations fails verification until `--update` is run and its
 diff is accepted. `append` lets the verifier observe sample values without
 adding `report` calls to the lesson body.
@@ -51,7 +53,7 @@ adding `report` calls to the lesson body.
 
 [`igniter/verify.ts`](../igniter/verify.ts) is exposed as `./lite verify`:
 
-- default: run every case through the reference igniter, compare exact streams
+- default: run every case through the reference igniter, verify source/stream hashes, compare exact streams
   and exit codes, and fail on source-hash drift; passing results are cached;
 - `--update`: regenerate expected streams/hashes for review;
 - `--coverage`: report feature/artifact coverage without executing;

@@ -16,7 +16,8 @@
     {
       "name": "alias-list",
       "stdout": {
-        "text": "ident: total\nop: +=\nnum: 100\n"
+        "text": "ident: total\nop: +=\nnum: 100\n",
+        "hash": "sha256:8d5aa74124ccf9c2d93af62382efb4c19abef6fc238fe991d4bdd75ad85bcb94"
       },
       "exitCode": 0
     }

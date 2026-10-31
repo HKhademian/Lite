@@ -48,7 +48,7 @@ compiler fixtures.
   "cases": [
     {
       "name": "precedence-and-division",
-      "stdout": { "text": "-1\n6\n-3\n" },
+      "stdout": { "text": "-1\n6\n-3\n", "hash": "sha256:<64 lowercase hex>" },
       "exitCode": 0
     }
   ]
@@ -69,7 +69,9 @@ compiler fixtures.
 - `cases` — one or more scenarios:
   - `name` — unique within the manifest.
   - `stdin`/`stdout`/`stderr` — `{ "text": ... }`, `{ "bytes": [...] }` or
-    `{ "file": "relative-file" }`; omitted means empty.
+    `{ "file": "relative-file" }`, optionally with `hash`; omitted means empty.
+    `hash` pins the resolved stream bytes, so editing an external input or
+    expected-output file fails verification until `--update` is reviewed.
   - `args` — optional script arguments after `--`.
   - `exitCode` — required process status.
 
@@ -86,9 +88,9 @@ The runner performs equivalent structural validation in
 ./lite verify --filter int.arithmetic
 ```
 
-`--update` writes expected streams from the reference igniter and updates source
-hashes. Review the diff before committing; it is the only supported way to change
-expectations.
+`--update` writes expected streams from the reference igniter, rewrites external
+stdout/stderr files in place, and refreshes source and stream hashes. Review the
+diff before committing; it is the only supported way to change expectations.
 
 `--filter` matches manifest IDs, paths or feature IDs.
 

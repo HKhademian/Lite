@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
 
-type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string }>;
+type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; hash?: string }>;
 type Scenario = Readonly<{
   name: string;
@@ -107,35 +107,47 @@ function strings(value: unknown, label: string): readonly string[] {
 function stream(value: unknown, label: string): Stream | undefined {
   if (value === undefined) return undefined;
   const record = object(value, label);
-  checkKeys(record, ['text', 'bytes', 'file'], label);
+  checkKeys(record, ['text', 'bytes', 'file', 'hash'], label);
   const forms = ['text', 'bytes', 'file'].filter(key => record[key] !== undefined);
   if (forms.length !== 1) throw new Error(`${label}: expected exactly one of text, bytes or file`);
+  const hashValue = record['hash'] === undefined ? undefined : text(record['hash'], `${label}.hash`);
+  if (hashValue !== undefined && !/^sha256:[0-9a-f]{64}$/.test(hashValue)) {
+    throw new Error(`${label}.hash: expected sha256:<64 lowercase hex>`);
+  }
+  const hashField = hashValue === undefined ? {} : { hash: hashValue };
   const form = forms[0];
-  if (form === 'text') return { text: text(record['text'], `${label}.text`) };
+  if (form === 'text') return { text: text(record['text'], `${label}.text`), ...hashField };
   if (form === 'bytes') {
     const bytes = record['bytes'];
     if (!Array.isArray(bytes) || !bytes.every(byte =>
       typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
       throw new Error(`${label}.bytes: expected an array of bytes`);
     }
-    return { bytes: bytes as number[] };
+    return { bytes: bytes as number[], ...hashField };
   }
   const file = text(record['file'], `${label}.file`);
   if (isAbsolute(file)) throw new Error(`${label}.file: expected a relative path`);
-  return { file };
+  return { file, ...hashField };
 }
 
-function streamBytes(value: Stream | undefined, base: string, label: string): Buffer {
+function streamBytes(value: Stream | undefined, base: string, label: string, checkHash = true): Buffer {
   if (value === undefined) return Buffer.alloc(0);
-  if (value.text !== undefined) return Buffer.from(value.text, 'utf8');
-  if (value.bytes !== undefined) return Buffer.from(value.bytes);
-  const path = resolve(base, value.file ?? '');
-  if (!path.startsWith(`${base}/`) && path !== base) throw new Error(`${label}.file: path escapes its directory`);
-  return readFileSync(path);
+  let bytes: Buffer;
+  if (value.text !== undefined) bytes = Buffer.from(value.text, 'utf8');
+  else if (value.bytes !== undefined) bytes = Buffer.from(value.bytes);
+  else {
+    const path = resolve(base, value.file ?? '');
+    if (!path.startsWith(`${base}/`) && path !== base) throw new Error(`${label}.file: path escapes its directory`);
+    bytes = readFileSync(path);
+  }
+  if (checkHash && value.hash !== undefined && value.hash !== hash(bytes)) {
+    throw new Error(`${label}.hash: content changed; run ./lite verify --update`);
+  }
+  return bytes;
 }
 
-function streamText(value: Stream | undefined, base: string, label: string): string {
-  const bytes = streamBytes(value, base, label);
+function streamText(value: Stream | undefined, base: string, label: string, checkHash = true): string {
+  const bytes = streamBytes(value, base, label, checkHash);
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
@@ -376,7 +388,7 @@ function describe(buffer: Buffer): string {
 
 function runCase(source: string, item: Manifest, fallback: Scenario): { stdout: Buffer; stderr: Buffer; exitCode: number } {
   const base = dirname(item.file);
-  const input = streamText(fallback.stdin, base, `${item.id}/${fallback.name}/stdin`);
+  const input = streamText(fallback.stdin, base, `${item.id}/${fallback.name}/stdin`, !options.update);
   let cursor = 0;
   let stdout = '';
   let stderr = '';
@@ -397,13 +409,43 @@ function runCase(source: string, item: Manifest, fallback: Scenario): { stdout: 
   }
 }
 
-function updatedScenario(original: Scenario, actual: { stdout: Buffer; stderr: Buffer; exitCode: number }): Scenario {
-  const stdout = actual.stdout.length === 0 ? undefined : { text: actual.stdout.toString('utf8') };
-  const stderr = actual.stderr.length === 0 ? undefined : { text: actual.stderr.toString('utf8') };
+function withStreamHash(value: Stream, bytes: Buffer): Stream {
+  return {
+    ...(value.text === undefined ? {} : { text: value.text }),
+    ...(value.bytes === undefined ? {} : { bytes: value.bytes }),
+    ...(value.file === undefined ? {} : { file: value.file }),
+    hash: hash(bytes),
+  };
+}
+
+function updatedInput(value: Stream, base: string, label: string): Stream {
+  return withStreamHash(value, streamBytes(value, base, label, false));
+}
+
+function updatedExpected(value: Stream | undefined, bytes: Buffer, base: string, label: string): Stream | undefined {
+  if (value === undefined) {
+    if (bytes.length === 0) return undefined;
+    return { text: bytes.toString('utf8'), hash: hash(bytes) };
+  }
+  if (value.file !== undefined) {
+    const path = resolve(base, value.file);
+    if (!path.startsWith(`${base}/`) && path !== base) throw new Error(`${label}.file: path escapes its directory`);
+    writeFileSync(path, bytes);
+    return { file: value.file, hash: hash(bytes) };
+  }
+  if (value.bytes !== undefined) return { bytes: [...bytes], hash: hash(bytes) };
+  return { text: bytes.toString('utf8'), hash: hash(bytes) };
+}
+
+function updatedScenario(original: Scenario, actual: { stdout: Buffer; stderr: Buffer; exitCode: number },
+                         base: string, id: string): Scenario {
+  const stdin = original.stdin === undefined ? undefined : updatedInput(original.stdin, base, `${id}/${original.name}/stdin`);
+  const stdout = updatedExpected(original.stdout, actual.stdout, base, `${id}/${original.name}/stdout`);
+  const stderr = updatedExpected(original.stderr, actual.stderr, base, `${id}/${original.name}/stderr`);
   return {
     name: original.name,
     ...(original.args === undefined ? {} : { args: original.args }),
-    ...(original.stdin === undefined ? {} : { stdin: original.stdin }),
+    ...(stdin === undefined ? {} : { stdin }),
     ...(stdout === undefined ? {} : { stdout }),
     ...(stderr === undefined ? {} : { stderr }),
     exitCode: actual.exitCode,
@@ -522,11 +564,19 @@ function main(): void {
         continue;
       }
       if (options.update) {
-        updates.set(original.name, updatedScenario(original, actual));
+        updates.set(original.name, updatedScenario(original, actual, dirname(item.file), item.id));
         continue;
       }
-      const expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`);
-      const expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`);
+      let expectedStdout: Buffer;
+      let expectedStderr: Buffer;
+      try {
+        expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`, true);
+        expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`, true);
+      } catch (error: unknown) {
+        process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+        failures += 1;
+        continue;
+      }
       if (!actual.stdout.equals(expectedStdout) || !actual.stderr.equals(expectedStderr) ||
           actual.exitCode !== original.exitCode) {
         delete cache.passed[key]; cacheDirty = true;

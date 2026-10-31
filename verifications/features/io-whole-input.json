@@ -13,10 +13,12 @@
     {
       "name": "three-chars-and-newline",
       "stdin": {
-        "text": "abc\n"
+        "text": "abc\n",
+        "hash": "sha256:edeaaff3f1774ad2888673770c6d64097e391bc362d7d6fb34982ddf0efd18cb"
       },
       "stdout": {
-        "text": "4\n"
+        "text": "4\n",
+        "hash": "sha256:7de1555df0c2700329e815b93b32c571c3ea54dc967b89e81ab73b9972b72d1d"
       },
       "exitCode": 0
     }
