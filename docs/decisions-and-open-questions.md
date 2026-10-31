@@ -2,15 +2,20 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## Whole compiler-input proposal, 2026-10-31
+## Whole compiler input with optional prompt approved, 2026-10-31
 
-After the restricted TS/C emission prototypes, a compiler-input review proposes
-temporary inputAll(): String for exact remaining UTF-8 stdin through EOF,
-preserving whitespace/newlines and returning empty text at immediate EOF. It
-would let compiler applications obtain multi-line source without a new file or
-process API or changing inputLine's selected EOF-fault behavior. This is a new
-helper/name/EOF contract, remains unselected and has no implementation. See
-[INV-004 proposal](../investigations/INV-004-fvp-whole-input.md).
+The user accepts inputAll with the refinement "1. inputAll(prompt?)" after the
+whole-input proposal in `1dcee41`. Implement zero or one positional String prompt,
+using inputInt's selected convention: evaluate once, write exact stdout text
+without an added newline before reading; omission is silent. Read remaining
+decoded stdin through EOF, preserving lookahead/whitespace/line endings and
+returning empty text at immediate EOF. Other input helper EOF rules stay intact.
+
+Strict checking and 138 interpreter groups pass, including prompt/read ordering,
+read/write failures, invalid signatures, lookahead, Unicode/CRLF and real launcher
+checks. All 9 editor groups pass. Preserve as igniter-v0.1.0-alpha.19; this adds
+no file/process API or full multi-line compiler. See
+[INV-004 evidence](../investigations/INV-004-fvp-whole-input.md).
 
 ## First restricted native output and three-way parity, 2026-10-31
 

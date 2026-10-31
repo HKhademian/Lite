@@ -29,7 +29,7 @@ export type Value =
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
 type FunctionValue = Readonly<{ kind: 'Function'; code: FunctionCode; environment: Frame }>;
-type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'report' | 'reportError' | 'exit'
+type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'inputAll' | 'report' | 'reportError' | 'exit'
   | 'textLength' | 'textAt' | 'textSlice';
 type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
@@ -207,7 +207,7 @@ function floating(value: number, at: Position, literal = false): Extract<Value, 
 }
 function builtin(name: string): Builtin | undefined {
   switch (name) {
-    case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord':
+    case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll':
     case 'report': case 'reportError': case 'exit':
     case 'textLength': case 'textAt': case 'textSlice': return name;
     default: return undefined;
@@ -952,7 +952,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       switch (name) {
         case 'inputInt': case 'textLength': type = 'Int'; break;
         case 'inputFloat': type = 'Float'; break;
-        case 'inputLine': case 'inputWord': case 'textAt': case 'textSlice': type = 'String'; break;
+        case 'inputLine': case 'inputWord': case 'inputAll': case 'textAt': case 'textSlice': type = 'String'; break;
         case 'report': case 'reportError': type = 'Unit'; break;
         case 'exit': type = 'Never'; break;
         default: return unreachable(name);
@@ -966,9 +966,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           const arg = args[index];
           if (arg === undefined || !fits(arg.type, parameter)) typeError(`${name} argument ${index + 1} must be ${parameter}`, arg?.at ?? at);
         }
-      } else if (name === 'inputInt') {
+      } else if (name === 'inputInt' || name === 'inputAll') {
         if (args.length > 1 || (args[0] !== undefined && !fits(args[0].type, 'String'))) {
-          typeError('inputInt accepts zero arguments or one String prompt', at);
+          typeError(`${name} accepts zero arguments or one String prompt`, at);
         }
       } else if (name === 'report') {
         if (args.length === 0) typeError('report expects at least one value', at);
@@ -1090,6 +1090,11 @@ class Input {
     if (ch === null) return null;
     while (ch !== null && ch !== '\n') { value += ch; ch = this.take(); }
     return ch === '\n' && value.endsWith('\r') ? value.slice(0, -1) : value;
+  }
+  all(): string {
+    let value = '';
+    for (let ch = this.take(); ch !== null; ch = this.take()) value += ch;
+    return value;
   }
 }
 function format(value: Value): string {
@@ -1348,20 +1353,20 @@ export function execute(program: Program, io: IO): number {
             if (code < 0n || code > 255n) typeError('temporary exit code must be between 0 and 255', expr.at);
             throw new EndRun(Number(code));
           }
-          case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': {
-            if (expr.name === 'inputInt' && args[0] !== undefined) {
+          case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll': {
+            if ((expr.name === 'inputInt' || expr.name === 'inputAll') && args[0] !== undefined) {
               const prompt = args[0];
               if (prompt.kind !== 'String') throw new Error('igniter invariant: non-String checked prompt');
               io.report(prompt.value);
             }
             let text: string | null;
-            try { text = expr.name === 'inputLine' ? input.line() : input.word(); }
+            try { text = expr.name === 'inputAll' ? input.all() : expr.name === 'inputLine' ? input.line() : input.word(); }
             catch (error: unknown) {
               if (error instanceof LiteFault) throw error;
               throw new LiteFault('InputFault', `cannot read input: ${error instanceof Error ? error.message : String(error)}`, expr.at);
             }
             if (text === null) throw new LiteFault('InputFault', `EOF before ${expr.name} value`, expr.at);
-            if (expr.name === 'inputLine' || expr.name === 'inputWord') return { kind: 'String', value: text };
+            if (expr.name === 'inputLine' || expr.name === 'inputWord' || expr.name === 'inputAll') return { kind: 'String', value: text };
             if (expr.name === 'inputInt') {
               if (!INPUT_INTEGER.test(text)) throw new LiteFault('InputFault', 'expected an integer token', expr.at);
               const value = BigInt(text);

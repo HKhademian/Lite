@@ -65,7 +65,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Helper follow-up:** [INV-004 — optional input prompt and multiple report values](INV-004-fvp-prompt-and-report-values.md) — explicit user selections implemented: inputInt prompt on stdout without an added newline, report values space-separated with a final newline, ordinary multiple arguments only. Strict checking and 69 interpreter test groups pass.
 
-**Follow-up:** [INV-004 — whole-input proposal](INV-004-fvp-whole-input.md) — proposes temporary inputAll() to read exact remaining stdin through EOF, empty on immediate EOF, for multi-line compiler input. New helper/name/EOF contract awaits explicit consent; no implementation or changes to existing inputLine behavior.
+**Follow-up:** [INV-004 — whole input with optional prompt](INV-004-fvp-whole-input.md) — explicitly approved inputAll(prompt?) implemented: zero/one String prompt uses inputInt stdout/no-newline convention; remaining stdin preserves lookahead/whitespace/line endings through EOF, empty on immediate EOF. Strict checking and 138 interpreter groups plus 9 editor groups pass; older EOF rules unchanged.
 
 <a id="inv-005"></a>
 

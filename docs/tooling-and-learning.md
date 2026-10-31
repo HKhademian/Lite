@@ -260,11 +260,13 @@ helper behavior, test evidence, and the first tagged-checkpoint identity.
 
 ## Explicit output and tracing
 
-The next compiler-input [INV-004 proposal](../investigations/INV-004-fvp-whole-input.md)
-offers temporary inputAll() for the exact remaining stdin text until EOF, with
-empty text on immediate EOF. It remains unselected and unimplemented; existing
-input helper EOF behavior is unchanged. This would address source ingestion only,
-not add a full multi-line compiler or file/process API.
+The approved compiler-input [INV-004 increment](../investigations/INV-004-fvp-whole-input.md)
+adds inputAll() or inputAll(String prompt) for remaining stdin text through EOF,
+with empty text at immediate EOF. The optional prompt follows inputInt: stdout,
+no added newline, once before reading. Preserve lookahead, CR/LF and whitespace;
+other helper EOF rules are unchanged. Strict checking and 138 interpreter groups
+pass, plus 9 editor groups. This addresses source ingestion, not full compiler
+syntax, files or processes.
 
 Selected 2026-10-28: program output, value display, and execution tracing require
 an explicit request. Evaluating an expression or completing a source file does

@@ -21,6 +21,79 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF', () => {
+  for (const text of ['', 'one', 'one\n', 'one\r\ntwo\r\n', ' \t\r\n\n', 'سلام🙂\né\t ']) {
+    assert.equal(run('text := inputAll(); report(text);', text).output, text + '\n');
+  }
+  assert.deepEqual(run('text := inputAll(); text;', 'one\ntwo\n'), { code: 0, output: '', errors: '' });
+  assert.equal(run('report(inputAll()); report(inputAll());', 'first\nlast').output, 'first\nlast\n\n');
+});
+test('inputAll consumes unread lookahead and the remainder after other input helpers', () => {
+  assert.equal(run('first := inputWord(); report(first); report(inputAll());', 'first \tsecond\r\n').output,
+    'first\n \tsecond\r\n\n');
+  assert.equal(run('first := inputInt(); report(first); report(inputAll());', '7\r\nmore\n').output,
+    '7\n\r\nmore\n\n');
+  assert.equal(run('first := inputLine(); report(first); report(inputAll());', 'first\r\nsecond\r\n').output,
+    'first\nsecond\r\n\n');
+  assert.equal(run('report(inputAll());', '').output, '\n');
+  for (const helper of ['inputInt', 'inputFloat', 'inputWord', 'inputLine']) fault(`${helper}();`, 'InputFault');
+});
+test('inputAll prompt evaluates once and writes exact stdout before the first read even at EOF', () => {
+  const events: string[] = [];
+  let read = false;
+  execute(compile('text := inputAll(({report("prepare"); "source: "})); report(text);'), {
+    read: () => { events.push('read'); if (read) return null; read = true; return 'x'; },
+    report: text => { events.push(`write:${text}`); }, reportError: () => { throw new Error('unexpected stderr'); },
+  });
+  assert.deepEqual(events, ['write:prepare\n', 'write:source: ', 'read', 'read', 'write:x\n']);
+  assert.equal(run('inputAll("source: ");').output, 'source: ');
+  assert.equal(run('inputAll("");').output, '');
+  assert.deepEqual(run('inputAll(({exit(7); "later"}));', 'unread'), { code: 7, output: '', errors: '' });
+});
+test('inputAll retains terminal read failures and never reads after a failed prompt write', () => {
+  let reads = 0;
+  assert.throws(() => execute(compile('inputAll("source: ");'), {
+    read: () => { reads++; return null; }, report: () => { throw new Error('closed output'); }, reportError: () => {},
+  }), /closed output/);
+  assert.equal(reads, 0);
+  let output = '';
+  assert.throws(() => execute(compile('inputAll("source: "); report("later");'), {
+    read: () => { throw new Error('read failed'); }, report: text => { output += text; }, reportError: () => {},
+  }), (error: unknown) => error instanceof LiteFault && error.category === 'InputFault' && error.message.includes('read failed'));
+  assert.equal(output, 'source: ');
+});
+test('inputAll signatures and named arguments fail before effects while ordinary shadowing works', () => {
+  for (const code of ['inputAll(1);', 'inputAll(false);', 'inputAll("a", "b");',
+    'inputAll(prompt = "source: ");', 'inputAll((1,));']) {
+    let effects = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { effects = true; return null; }, report: () => { effects = true; }, reportError: () => { effects = true; },
+    }), LiteFault);
+    assert.equal(effects, false, code);
+  }
+  assert.equal(run('inputAll := fn(): String { "local" } report(inputAll());', 'unread').output, 'local\n');
+});
+test('whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = join(root, 'examples/019-whole-input.lts');
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const input of ['', 'a\r\n🙂\n']) {
+    const result = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, 0);
+    assert.deepEqual(result.stdout, Buffer.from(`Text (finish with EOF): code points: ${Array.from(input).length}\n${input}\n`));
+    assert.equal(result.stderr.length, 0);
+  }
+  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { env, timeout: 5000 });
+  assert.equal(check.error, undefined); assert.equal(check.status, 0); assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
+  const directory = mkdtempSync(join(tmpdir(), 'lite-whole-utf8-'));
+  try {
+    const source = join(directory, 'read.lts'); writeFileSync(source, 'inputAll();');
+    const invalid = spawnSync(join(root, 'lite'), ['run', source], { input: Buffer.from([0xff]), env, timeout: 5000 });
+    assert.equal(invalid.status, 1); assert.equal(invalid.stdout.length, 0);
+    assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 const reportLiteralPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
   '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
   'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)'];

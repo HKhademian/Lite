@@ -92,7 +92,8 @@ input; silently changing it to an EOF iterator or adding a read-file/input helpe
 would exceed selected scope. Keep the igniter active during further self-hosting
 work and preserve the readable TS seed regardless of later retirement timing.
 
-The next [whole-input proposal](INV-004-fvp-whole-input.md) presents inputAll()
-for exact remaining UTF-8 text through EOF, including an empty result at immediate
-EOF. It remains unselected pending explicit consent; the current inputLine
-behavior is not changed by the proposal.
+The subsequent [whole-input increment](INV-004-fvp-whole-input.md) is explicitly
+approved and implemented as inputAll(prompt?) for remaining text through EOF,
+empty at immediate EOF. Optional prompting follows inputInt; the older inputLine
+contract is unchanged. Compiler applications can now adopt it in a separate
+bounded source-ingestion delivery.

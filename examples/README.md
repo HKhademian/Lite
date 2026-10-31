@@ -85,6 +85,10 @@ integer prompts may appear together in captured stdout.
   library. Native output bytes/status match the igniter and TS path for the nine
   tested cases; general libraries/ABI and self-hosting remain future work.
 
+- [019 — Whole input](019-whole-input.lts): optionally prompted whole-input read
+  through EOF. Reports the code-point count and the preserved text; report adds
+  its own newline. Empty input is a valid empty String.
+
 Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

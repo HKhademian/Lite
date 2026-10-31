@@ -40,7 +40,7 @@ For named tuple fields and function contracts, run
 `./lite run examples/008-named-tuples.lts`; no input is needed.
 For fixed arrays, indexed reads and traversal, run
 `./lite run examples/009-fixed-arrays.lts` and enter a token index from 0 to 2.
-Prompts are written only when supplied to inputInt; there are no automatic
+Prompts are written only when supplied to inputInt or inputAll; there are no automatic
 binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
@@ -384,6 +384,23 @@ sequence contracts, named Boolean/unconditional loop receivers and native inline
 layout/ABI/ownership remain outside this implementation. The host stores immutable
 array values; it does not validate native header-free storage or performance.
 
+### Whole input with optional prompt
+
+inputAll() returns all remaining decoded stdin text through EOF. It preserves
+unread lookahead, spaces/tabs and CR/LF, including a final newline when present.
+Immediate EOF returns an empty String. inputAll("Source: ") evaluates the String
+prompt once and writes it exactly to stdout without an added newline before the
+first read, matching inputInt's prompt convention. Omission produces no output;
+an empty prompt adds nothing. A failed prompt write prevents reading.
+
+The helper accepts zero or one positional String argument. Named helper arguments
+remain unsupported; ordinary shadowing works. Invalid signatures fail before
+program effects, read failures stay terminal and the other input helpers retain
+their EOF-fault rules. It reads all remaining text and may use proportional memory;
+no file API, rewind, streaming guarantee or normalization is added. See
+[019](../examples/019-whole-input.lts) and
+[INV-004 evidence](../investigations/INV-004-fvp-whole-input.md).
+
 ### Temporary text operations
 
 **Explicitly approved, 2026-10-31:** textLength/textAt/textSlice and their exact
@@ -484,8 +501,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.18**, tag **igniter-v0.1.0-alpha.18**, adds the restricted
-Lite-to-C emitter and native/TS/igniter output-byte parity checks.
+Version **0.1.0-alpha.19**, tag **igniter-v0.1.0-alpha.19**, adds approved
+inputAll with an optional String prompt and exact remaining-text/EOF handling.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -519,6 +536,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.17**, commit `d5d1c63`: readable TS emission and exact-byte parity.
 
+- **igniter-v0.1.0-alpha.18**, commit `3bce277`: native C and three-way byte parity.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -526,7 +545,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **132 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **138 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
