@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
@@ -26,6 +27,18 @@ function run(source: string, input = '', args: readonly string[] = []): { code: 
 /** Loads a file through the temporary flat-import loader and executes it. */
 function runFile(path: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   return run(loadSource(path), input, args);
+}
+/** Imports an emitted TS/JS core and returns its main() string. */
+async function importedMain(path: string): Promise<string> {
+  const imported: unknown = await import(pathToFileURL(path).href);
+  if (typeof imported !== 'object' || imported === null || !('main' in imported)) {
+    throw new Error(`${path}: missing main export`);
+  }
+  const main = (imported as { main: unknown }).main;
+  if (typeof main !== 'function') throw new Error(`${path}: main is not a function`);
+  const result: unknown = (main as () => unknown)();
+  if (typeof result !== 'string') throw new Error(`${path}: main did not return a string`);
+  return result;
 }
 /** Asserts that inline source raises one Lite fault category. */
 function fault(source: string, category: LiteFault['category'], input = ''): void {
@@ -477,17 +490,13 @@ test('restricted C compiler emits the readable reference and sequences reports',
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
     '    return status;\n}\n');
 });
-test('Lite-generated native C, TS and igniter programs have identical output bytes and status', context => {
+test('Lite-generated native C, TS and igniter programs have identical output bytes and status', async context => {
   const cc = process.env['CC'] ?? 'cc';
   const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
   if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
     context.skip('C compiler unavailable; native parity requires cc or CC pointing to a compiler'); return;
   }
   assert.equal(probe.error, undefined); assert.equal(probe.status, 0, probe.stderr);
-  const root = new URL('../', import.meta.url).pathname;
-  const cCompiler = cEmitterPath;
-  const tsCompiler = tsEmitterPath;
-  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
@@ -496,28 +505,30 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       const cPath = join(directory, `program-${index}.c`);
       const tsPath = join(directory, `program-${index}.ts`);
       const executable = join(directory, `native-${index}`);
-      const adapter = join(directory, `run-${index}.ts`);
       writeFileSync(sourcePath, fixture.source);
-      for (const [compiler, path] of [[cCompiler, cPath], [tsCompiler, tsPath]] as const) {
-        const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: fixture.source, env, timeout: 5000 });
-        assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
-        assert.equal(emitted.stderr.length, 0); writeFileSync(path, emitted.stdout);
+      for (const [compiler, path] of [[cEmitterPath, cPath], [tsEmitterPath, tsPath]] as const) {
+        const emitted = runFile(compiler, fixture.source);
+        assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
+        writeFileSync(path, emitted.output);
       }
       const built = spawnSync(cc, ['-std=c11', '-Wall', '-Wextra', '-Werror', cPath, '-o', executable], {
         encoding: 'utf8', timeout: 30000,
       });
       assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
-      writeFileSync(adapter, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
-      const input = fixture.stdin;
-      const baseline = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
-      for (const actual of [baseline, spawnSync(executable, [], { input, timeout: 5000 }),
-        spawnSync(process.execPath, [adapter], { input, timeout: 5000 })]) {
-        assert.equal(actual.error, undefined, fixture.name);
-        assert.equal(actual.status, fixture.exitCode, fixture.name);
-        assert.equal(actual.signal, null, fixture.name);
-        assert.deepEqual(actual.stdout, fixture.stdout, fixture.name);
-        assert.deepEqual(actual.stderr, fixture.stderr, fixture.name);
-      }
+      const expectedOutput = fixture.stdout.toString('utf8');
+      const expectedError = fixture.stderr.toString('utf8');
+      const baseline = runFile(sourcePath, fixture.stdin.toString('utf8'));
+      assert.equal(baseline.code, fixture.exitCode, fixture.name);
+      assert.equal(baseline.output, expectedOutput, fixture.name);
+      assert.equal(baseline.errors, expectedError, fixture.name);
+      const typescript = await importedMain(tsPath);
+      assert.equal(typescript, expectedOutput, fixture.name);
+      const native = spawnSync(executable, [], { input: fixture.stdin, timeout: 5000 });
+      assert.equal(native.error, undefined, fixture.name);
+      assert.equal(native.status, fixture.exitCode, fixture.name);
+      assert.equal(native.signal, null, fixture.name);
+      assert.deepEqual(native.stdout, fixture.stdout, fixture.name);
+      assert.deepEqual(native.stderr, fixture.stderr, fixture.name);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -602,10 +613,8 @@ test('restricted TS compiler emits a deterministic report sequence', () => {
   assert.equal(runFile(tsEmitterPath, 'report(42);\nreport(9);').output,
     'export function main(): string {\n    return (42n).toString() + "\\n" + (9n).toString() + "\\n";\n}\n');
 });
-test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', () => {
+test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
   const root = new URL('../', import.meta.url).pathname;
-  const compiler = tsEmitterPath;
-  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'lite-ts-output-'));
   const corePaths: string[] = [];
   try {
@@ -613,22 +622,17 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
     for (const [index, fixture] of programFixtures.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const corePath = join(directory, `program-${index}.ts`);
-      const adapterPath = join(directory, `run-${index}.ts`);
       writeFileSync(sourcePath, fixture.source);
-      const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: fixture.source, env, timeout: 5000 });
-      assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
-      assert.equal(emitted.stderr.length, 0); writeFileSync(corePath, emitted.stdout); corePaths.push(corePath);
-      writeFileSync(adapterPath, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
-      const input = fixture.stdin;
-      const baseline = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
-      const actual = spawnSync(process.execPath, [adapterPath], { input, timeout: 5000 });
-      for (const result of [baseline, actual]) {
-        assert.equal(result.error, undefined, fixture.name);
-        assert.equal(result.status, fixture.exitCode, fixture.name);
-        assert.equal(result.signal, null, fixture.name);
-        assert.deepEqual(result.stdout, fixture.stdout, fixture.name);
-        assert.deepEqual(result.stderr, fixture.stderr, fixture.name);
-      }
+      const emitted = runFile(tsEmitterPath, fixture.source);
+      assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
+      writeFileSync(corePath, emitted.output); corePaths.push(corePath);
+      const expectedOutput = fixture.stdout.toString('utf8');
+      const expectedError = fixture.stderr.toString('utf8');
+      const baseline = runFile(sourcePath, fixture.stdin.toString('utf8'));
+      assert.equal(baseline.code, fixture.exitCode, fixture.name);
+      assert.equal(baseline.output, expectedOutput, fixture.name);
+      assert.equal(baseline.errors, expectedError, fixture.name);
+      assert.equal(await importedMain(corePath), expectedOutput, fixture.name);
     }
     const base: unknown = JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8'));
     if (typeof base !== 'object' || base === null || !('compilerOptions' in base) ||
@@ -649,19 +653,7 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
     });
     assert.equal(translated.error, undefined); assert.equal(translated.status, 0, translated.stdout + translated.stderr);
     for (const [index, fixture] of programFixtures.entries()) {
-      const adapter = join(jsDirectory, `run-${index}.mjs`);
-      writeFileSync(adapter, `import { main } from './program-${index}.js';\nprocess.stdout.write(main());\n`);
-      const javascript = spawnSync(process.execPath, [adapter], { input: fixture.stdin, timeout: 5000 });
-      const typescript = spawnSync(process.execPath, [join(directory, `run-${index}.ts`)], {
-        input: fixture.stdin, timeout: 5000,
-      });
-      for (const result of [javascript, typescript]) {
-        assert.equal(result.error, undefined, fixture.name);
-        assert.equal(result.status, fixture.exitCode, fixture.name);
-        assert.equal(result.signal, null, fixture.name);
-        assert.deepEqual(result.stdout, fixture.stdout, fixture.name);
-        assert.deepEqual(result.stderr, fixture.stderr, fixture.name);
-      }
+      assert.equal(await importedMain(join(jsDirectory, `program-${index}.js`)), fixture.stdout.toString('utf8'), fixture.name);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
