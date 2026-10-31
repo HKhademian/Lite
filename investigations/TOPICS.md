@@ -63,6 +63,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Investigation:** in progress; contributor: redacted (agent-assisted); note: [INV-004 — minimal FVP execution path](INV-004-fvp-execution-path.md) — small interpreter selected for the FVP: read one file, parse/check the supported subset, and execute with temporary helpers; native compilation is a later goal. Temporary inputInt/inputFloat/inputLine/inputWord/report/reportError helper names selected for the FVP; invalid input/EOF input faults selected, with clear diagnostics/nonzero status when unhandled, no automatic retry/default, and intentionally empty inputLine allowed. The first executable feature checkpoint is selected under INV-002.02. The user-requested root ./lite run shebang launcher now forwards to the TypeScript/Node igniter; strict checking and 63 interpreter test groups pass. Complete numeric/text and I/O contracts, native deployment/backend, caching, full mode parity and restricted profiles remain open.
 
+**Helper follow-up:** [INV-004 — optional input prompt and multiple report values](INV-004-fvp-prompt-and-report-values.md) — explicit user selections implemented: inputInt prompt on stdout without an added newline, report values space-separated with a final newline, ordinary multiple arguments only. Strict checking and 69 interpreter test groups pass.
+
 <a id="inv-005"></a>
 
 ## INV-005 — Program lifecycle

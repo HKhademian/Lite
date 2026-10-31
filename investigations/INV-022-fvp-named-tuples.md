@@ -60,7 +60,8 @@ report(token.text);
 
 Expected output is number and 12 on separate lines. A compatible explicit
 function tuple type is (kind: String, text: String). A prospective
-examples/007-named-tuples.lts should demonstrate these forms after approval.
+examples/008-named-tuples.lts should demonstrate these forms after approval;
+the user's intervening prompt/report request uses example 007 first.
 
 Acceptance checks should cover named/numeric access agreement, singletons,
 source-once evaluation and copying, positional binding order, function inputs/

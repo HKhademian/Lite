@@ -68,8 +68,11 @@ The user proposes a minimal temporary/fake surface for now: inputInt, inputFloat
 inputLine, inputWord, report(...), and reportError(...). Adopt these provisional
 FVP names/roles, supplied by demonstrator scaffolding without requiring a module
 system or permanent stdlib design. report supersedes the assistant's unselected
-show illustration. The ellipsis does not select further helpers or a variadic
-signature. Real versus scripted/mock input, numeric parsing and token/line
+show illustration. The original ellipsis alone did not select further helpers
+or a variadic signature. The later user-approved
+[prompt/report increment](INV-004-fvp-prompt-and-report-values.md) adds an optional
+inputInt prompt and multiple ordinary report values, without call spread.
+Real versus scripted/mock input, numeric parsing and token/line
 consumption, complete signatures, reporting formats/destinations,
 and reportError's I/O-failure behavior remain open. No mock values are chosen.
 Invalid input/EOF behavior is subsequently selected in the input-failure section

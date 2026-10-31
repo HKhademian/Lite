@@ -24,6 +24,10 @@ Run from the repository root with Node 26.13.0:
 - [006 — Fixed tuples](006-fixed-tuples.lts): no input needed; demonstrates
   construction, positional reads, destructuring, singleton/Unit distinctions,
   and tuple function inputs/results. Reports number, 12, number: 12, and 42.
+- [007 — Prompts and multiple report values](007-prompts-and-report.lts):
+  enter 7 and 5 at the explicit prompts; reports sum: 12 and the two inputs
+  with their equality result. Input prompts add no newline; report separates
+  its values with spaces and adds a final newline.
 
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit

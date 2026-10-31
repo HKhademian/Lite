@@ -1,0 +1,4 @@
+first := inputInt("First number: ");
+second := inputInt("Second number: ");
+report("sum:", first + second);
+report("inputs:", first, second, "equal:", first == second);

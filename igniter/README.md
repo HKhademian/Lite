@@ -31,7 +31,10 @@ to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
 For tuple values, destructuring and function inputs/results, run
 `./lite run examples/006-fixed-tuples.lts`. See the
 [numbered project examples](../examples/README.md) for the shared index.
-There are no automatic prompts or binding dumps. `--check` parses and checks
+For explicitly prompted input and multiple report values, run
+`./lite run examples/007-prompts-and-report.lts` and enter 7 and 5.
+Prompts are written only when supplied to inputInt; there are no automatic
+binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
 ```sh
@@ -264,15 +267,27 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   floats; `.5`, digit separators, hex and non-finite input are not supported.
   Integer input permits an optional sign. Out-of-range literals are source
   errors; malformed/out-of-range input is `InputFault`.
+- `inputInt()` or `inputInt(prompt)` reads an integer token. The optional prompt
+  must be a String; write it exactly to stdout without adding a newline, then
+  read. Its argument evaluates once before prompt output. Invalid input/EOF still
+  faults after that one prompt, without retry. A prompt is also emitted with
+  redirected stdin; no TTY-dependent suppression is introduced.
 - `inputInt()`, `inputFloat()` and `inputWord()` read whitespace-separated tokens.
   The separator after a token is left unread. `inputLine()` returns the remaining
   line without LF/CRLF, including a valid empty line or nonempty final EOF line.
   Thus `inputInt()` followed by `inputLine()` can return empty text at a newline.
   EOF without a requested value faults; there is no retry or fabricated value.
-- `report(value)` writes one value and a newline to stdout; `reportError(value)`
-  does the same on stderr and continues. Each currently accepts exactly one
-  scalar/Unit. String values are shown as text, Unit as `Unit`, floats using
-  Number's string conversion. These are provisional helper contracts.
+- `report(value, ...)` accepts one or more ordinary scalar/Unit arguments.
+  Evaluate them once left to right, then join their displayed values with one
+  space and append one newline on stdout. An optional first String such as
+  "sum:" is just another value, with no special detection or formatting syntax.
+  Empty strings remain values and still participate in spacing. Embedded
+  newlines are data; the helper always appends its own final newline.
+  Tuple/callable values, report() and report(...tuple) remain unsupported.
+  `reportError(value)` keeps its one-value stderr/report-only behavior, and
+  inputFloat/inputLine/inputWord retain their zero-argument forms.
+  Strings are shown as text, Unit as `Unit`, floats using Number's conversion.
+  These are temporary FVP helper contracts, not a general variadic callable API.
 - `exit()` currently ends the run with 0; `exit(code)` admits Int codes 0–255.
   These are provisional igniter choices for the previously open default/domain,
   not permanent language decisions. Arguments evaluate before exit. No cleanup
@@ -292,8 +307,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.7**, tag **igniter-v0.1.0-alpha.7**, adds the user-requested
-root `./lite run` shebang launcher forwarding to the igniter.
+Version **0.1.0-alpha.8**, tag **igniter-v0.1.0-alpha.8**, adds the user-approved
+optional inputInt prompt and multiple ordinary report arguments.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -304,6 +319,7 @@ Previous checkpoints stay fixed:
   experimental scanning helpers; the new helpers/policies still await consent.
 - **igniter-v0.1.0-alpha.6**, commit `d667395`: approved flat fixed tuples,
   declaration destructuring and tuple function inputs/results.
+- **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./lite run launcher.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -312,7 +328,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **63 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **69 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

@@ -2,6 +2,23 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Optional inputInt prompt and multiple report values, 2026-10-31
+
+The user requests this before named tuples and explicitly chooses: inputInt's
+optional String prompt goes to stdout with no added newline before the read;
+report joins ordinary values with spaces and adds a final newline. The first
+String is ordinary printed data, with no template interpretation. ...values means
+multiple supplied arguments only, not tuple call spread. Existing argument order,
+pre-execution checking, unprompted input, single-value reporting and input faults
+remain. reportError/other input signatures, empty report calls and aggregate
+reporting are outside this change.
+
+Strict checking and 69 interpreter test groups pass, including the root-command
+[007 example](../examples/007-prompts-and-report.lts). Preserve alpha.1–alpha.7
+and tag this source as igniter-v0.1.0-alpha.8. Named tuples remain pending approval;
+experimental text-helper consent is unchanged. See
+[INV-004 evidence](../investigations/INV-004-fvp-prompt-and-report-values.md).
+
 ## User-requested root run command, 2026-10-31
 
 The user selects ./lite run with shebang forwarding to the current igniter.

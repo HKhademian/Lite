@@ -718,7 +718,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
         case 'exit': type = 'Never'; break;
         default: return unreachable(name);
       }
-      const count = name === 'report' || name === 'reportError' ? 1 : 0;
+      const count = name === 'reportError' ? 1 : 0;
       if (name === 'textLength' || name === 'textAt' || name === 'textSlice') {
         const parameters: readonly ScalarType[] = name === 'textLength' ? ['String']
           : name === 'textAt' ? ['String', 'Int'] : ['String', 'Int', 'Int'];
@@ -727,6 +727,12 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           const arg = args[index];
           if (arg === undefined || !fits(arg.type, parameter)) typeError(`${name} argument ${index + 1} must be ${parameter}`, arg?.at ?? at);
         }
+      } else if (name === 'inputInt') {
+        if (args.length > 1 || (args[0] !== undefined && !fits(args[0].type, 'String'))) {
+          typeError('inputInt accepts zero arguments or one String prompt', at);
+        }
+      } else if (name === 'report') {
+        if (args.length === 0) typeError('report expects at least one value', at);
       } else if (name === 'exit') {
         if (args.length > 1 || (args[0] !== undefined && args[0].type !== 'Int')) {
           typeError('exit accepts zero arguments or one Int code', at);
@@ -1020,10 +1026,9 @@ export function execute(program: Program, io: IO): number {
             return { kind: 'String', value: points.slice(Number(start.value), Number(end.value)).join('') };
           }
           case 'report': case 'reportError': {
-            const value = args[0];
-            if (value === undefined) throw new Error('igniter invariant: missing report argument');
+            if (args.length === 0) throw new Error('igniter invariant: missing report argument');
             const writer = expr.name === 'report' ? io.report : io.reportError;
-            writer(format(value) + '\n'); return UNIT;
+            writer(args.map(format).join(' ') + '\n'); return UNIT;
           }
           case 'exit': {
             const value = args[0];
@@ -1032,6 +1037,11 @@ export function execute(program: Program, io: IO): number {
             throw new EndRun(Number(code));
           }
           case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': {
+            if (expr.name === 'inputInt' && args[0] !== undefined) {
+              const prompt = args[0];
+              if (prompt.kind !== 'String') throw new Error('igniter invariant: non-String checked prompt');
+              io.report(prompt.value);
+            }
             let text: string | null;
             try { text = expr.name === 'inputLine' ? input.line() : input.word(); }
             catch (error: unknown) {

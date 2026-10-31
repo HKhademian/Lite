@@ -665,3 +665,79 @@ test('root shebang launcher forwards run arguments, stdin, diagnostics and statu
     assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('inputInt optionally writes an exact String prompt before reading without an added newline', () => {
+  assert.deepEqual(run('x := inputInt("Age: "); report(x);', '7'), { code: 0, output: 'Age: 7\n', errors: '' });
+  assert.equal(run('x := inputInt(""); report(x);', '8').output, '8\n');
+  assert.equal(run('x := inputInt("first\nsecond: "); report(x);', '9').output, 'first\nsecond: 9\n');
+  const events: string[] = [];
+  let supplied = false;
+  execute(compile('inputInt(({report("argument"); "prompt: "}));'), {
+    read: () => { events.push('read'); if (supplied) return null; supplied = true; return '1'; },
+    report: text => { events.push(text); }, reportError: () => {},
+  });
+  assert.deepEqual(events, ['argument\n', 'prompt: ', 'read', 'read']);
+});
+test('invalid or missing input faults after one prompt; prompt output failure prevents reading', () => {
+  for (const input of ['', 'bad', '9223372036854775808']) {
+    let output = '';
+    let cursor = 0;
+    assert.throws(() => execute(compile('inputInt("Number: "); report("unreachable");'), {
+      read: () => input[cursor++] ?? null, report: text => { output += text; }, reportError: () => {},
+    }), (error: unknown) => error instanceof LiteFault && error.category === 'InputFault');
+    assert.equal(output, 'Number: ');
+  }
+  const failure = new Error('writer failed');
+  let read = false;
+  assert.throws(() => execute(compile('inputInt("prompt");'), {
+    read: () => { read = true; return '1'; }, report: () => { throw failure; }, reportError: () => {},
+  }), error => error === failure);
+  assert.equal(read, false);
+});
+test('report joins one or more ordinary scalar values with spaces and exactly one final newline', () => {
+  assert.equal(run('report("sum:", 1, 2); report(1, 2, 3); report("hello", "world");').output,
+    'sum: 1 2\n1 2 3\nhello world\n');
+  assert.equal(run('report("", "", 7); report(false, (), 2.5); report("%s {}", "literal");').output,
+    '  7\nfalse Unit 2.5\n%s {} literal\n');
+  assert.equal(run('report("single"); reportError("error");').output, 'single\n');
+});
+test('report evaluates each argument once left to right and writes the joined line after evaluation', () => {
+  assert.equal(run('report(({report("left"); inputInt()}), ({report("right"); inputInt()}));', '3 4').output,
+    'left\nright\n3 4\n');
+  let output = '';
+  assert.throws(() => execute(compile('report(({report("first effect"); 1}), 1/0);'), {
+    read: () => null, report: text => { output += text; }, reportError: () => {},
+  }), (error: unknown) => error instanceof LiteFault && error.category === 'ArithmeticPanic');
+  assert.equal(output, 'first effect\n');
+});
+test('prompt and report signatures fail before effects without broadening other helpers or tuple spread', () => {
+  for (const code of ['inputInt(7);', 'inputInt("a", "b");', 'inputInt(("a",));',
+    'report();', 'report("prefix", (1, 2));', 'report("prefix", missing);',
+    'inputFloat("prompt");', 'inputLine("prompt");', 'inputWord("prompt");', 'reportError("a", 1);']) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
+    assert.equal(observed, false, code);
+  }
+  fault('values := (1, 2); report(...values);', 'SourceError');
+  assert.equal(run('report := fn(a: Int, b: Int): Int { a + b } result := report(2, 3);').output, '');
+});
+test('numbered prompt/report example runs through the root command with real redirected stdin', () => {
+  const example = new URL('../examples/007-prompts-and-report.lts', import.meta.url);
+  const expected = 'First number: Second number: sum: 12\ninputs: 7 5 equal: false\n';
+  assert.equal(run(readFileSync(example, 'utf8'), '7 5').output, expected);
+  const root = new URL('../', import.meta.url).pathname;
+  const result = spawnSync(join(root, 'lite'), ['run', 'examples/007-prompts-and-report.lts'], {
+    cwd: root, input: '7\n5\n', encoding: 'utf8', timeout: 5000,
+    env: { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') },
+  });
+  assert.equal(result.error, undefined); assert.equal(result.status, 0);
+  assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
+  const checked = spawnSync(join(root, 'lite'), ['run', '--check', example.pathname], {
+    cwd: root, encoding: 'utf8', timeout: 5000,
+    env: { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') },
+  });
+  assert.equal(checked.error, undefined); assert.equal(checked.status, 0);
+  assert.equal(checked.stdout, ''); assert.equal(checked.stderr, '');
+});

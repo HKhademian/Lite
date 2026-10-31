@@ -222,8 +222,9 @@ Teaching inspection remains a proposal; this clarification does not implement it
 The intended roles are integer input, floating input, a line of text, a word of
 text, explicit ordinary reporting, and explicit error reporting. The trailing
 ellipsis in the user's suggestion leaves room for later helpers; it does not
-select a complete I/O library. The notation report(...) does not yet choose a
-variadic callable contract or a formatting language.
+select a complete I/O library. That earlier notation alone did not choose a
+variadic callable contract or a formatting language. The later bounded
+prompt/report selection below now supplies concrete helper behavior.
 
 Illustrative FVP use, not a complete executable contract:
 
@@ -247,6 +248,31 @@ scaffolding, not any particular mock-input values or transport. No stdout/stderr
 prompt, exception, or panic policy is selected by these names alone.
 The [igniter guide](../igniter/README.md) records implemented helper behavior and
 its limitations; it does not freeze the permanent API.
+
+### Optional integer-input prompt and multiple report values
+
+Explicitly requested and clarified **2026-10-31** before the pending named-tuple
+increment: inputInt accepts zero arguments or one String prompt. When supplied,
+evaluate it once, write its exact text to stdout without an added newline, then
+read the integer. Invalid input or EOF still faults with no retry or repeated
+prompt. This is an explicit output request, including when stdin is redirected.
+
+report accepts one or more ordinary scalar/Unit values. Evaluate each once in
+written order before writing the report; join displayed values with one space
+and append one newline. A first String is an ordinary value, so an optional label
+needs no special recognition. No template placeholders or formatting language are
+selected. Single-value reporting retains its previous behavior.
+
+The user explicitly chooses ordinary multiple arguments only: ...values in the
+request describes the helper's argument count, not source-level tuple call spread.
+report() and tuple/callable reporting stay unsupported. reportError and the other
+input helpers retain their current signatures. This is temporary FVP scaffolding,
+not a general variadic function implementation or a permanent standard-library API.
+
+The [007 example](../examples/007-prompts-and-report.lts) runs through ./lite run.
+Strict checking and all 69 interpreter test groups pass, including effect order,
+prompt/output failure, invalid input, pre-effect rejection and real CLI output.
+See [INV-004 evidence](../investigations/INV-004-fvp-prompt-and-report-values.md).
 
 ### Temporary input failures
 
