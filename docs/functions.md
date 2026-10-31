@@ -493,7 +493,7 @@ rename := fn (user: mut User, name: String): Unit {
 
 The example assumes `name` is an accessible writable field in the implementation context. The operation requires writable access to `user`; it only reads the replacement `name` parameter. Each affected receiver or parameter needs its own `mut` marker. A read-only argument cannot satisfy a writable-access requirement.
 
-The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. There is no additional `mut fn` or other function-level mutation marker.
+The same rule applies to a method's receiver binding. The complete method notation and whether it uses an explicit `self` parameter remain open. The Kotlin-inspired `List.push_front := fn(self, ...)` candidate and its many open questions are recorded in [method declaration syntax](../investigations/INV-030-method-declaration-syntax.md); neither that spelling nor `self` as a receiver is selected. There is no additional `mut fn` or other function-level mutation marker.
 
 The declaration `mut rename := fn (...) { ... }` would instead describe writable access to the held function value. It does not replace the mutation contracts on the function's parameters.
 

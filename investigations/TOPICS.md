@@ -401,7 +401,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Starter subtopics:** [4 bounded questions](SUBTOPICS.md#inv-030).
 
-**Investigation:** recorded (bounded implementation); contributor: redacted (agent-assisted); note: [INV-030 — typed-function igniter increment](INV-030-igniter-functions.md) — explicit scalar functions, positional calls, tail/explicit returns and own-name/self recursion implemented; strict checking and 43 test groups pass. General capture policy, later helper lookup, inference, full argument routing and callable inputs/results remain open or unsupported.
+**Investigation:** recorded (bounded implementation); contributor: redacted (agent-assisted); note: [INV-030 — typed-function igniter increment](INV-030-igniter-functions.md) — explicit scalar functions, positional calls, tail/explicit returns and own-name/self recursion implemented; strict checking and 43 test groups pass. General capture policy, later helper lookup, inference, full argument routing and callable inputs/results remain open or unsupported. **Follow-up:** [INV-030 — method and extension-operation declaration syntax](INV-030-method-declaration-syntax.md) — inventoried only; Kotlin's `fun T.method()` is a reference, and the user's `List.push_front := fn(self, ...)` candidate with `self` as a special receiver is recorded but not selected. Dot-call scope, receiver binding, `self` versus self-recursion, mutation grants, overloads, generics, and implementation remain open.
 
 <a id="inv-031"></a>
 
