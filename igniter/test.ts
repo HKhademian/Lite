@@ -96,7 +96,28 @@ test('whole-input example runs via the real launcher preserving UTF-8 bytes and 
 
 const reportLiteralPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
   '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
-  'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)'];
+  'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)',
+  '\nreport(\n42\n);\n', '\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n', 'report(42);\n'];
+
+test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
+    const path = join(root, 'examples', name);
+    for (const input of ['', 'report(42);\nreport(9);\n', 'report(42);\nprocess.exit(7);\n']) {
+      const rejected = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
+      assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
+      assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
+    }
+    const invalidBytes = Buffer.concat([Buffer.from('report(42);\n'), Buffer.from([0xff])]);
+    const invalid = spawnSync(join(root, 'lite'), ['run', path], { input: invalidBytes, env, timeout: 5000 });
+    assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
+    assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
+    const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { env, timeout: 5000 });
+    assert.equal(check.error, undefined); assert.equal(check.status, 0);
+    assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
+  }
+});
 
 test('restricted C compiler emits the readable reference and rejects unsupported source before output', () => {
   const source = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
@@ -170,7 +191,7 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
 });
 test('restricted TS compiler rejects malformed, unsupported and injected source before emitting bytes', () => {
   const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
-  for (const input of ['\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
+  for (const input of ['', '\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
     'report("text");', 'report(1 + 2);', 'report(1.5);', 'report(1e2);',
     'report(42); report(9);', 'report(42); process.exit(7);',
     'report(9223372036854775808);', 'report(-9223372036854775809);',
@@ -179,7 +200,6 @@ test('restricted TS compiler rejects malformed, unsupported and injected source 
     assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
     assert.notEqual(result.errors, '', input);
   }
-  fault(source, 'InputFault');
 });
 test('emitted TS and igniter outputs match byte for byte across signed Int literal boundaries', () => {
   const root = new URL('../', import.meta.url).pathname;

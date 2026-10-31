@@ -501,8 +501,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.19**, tag **igniter-v0.1.0-alpha.19**, adds approved
-inputAll with an optional String prompt and exact remaining-text/EOF handling.
+Version **0.1.0-alpha.20**, tag **igniter-v0.1.0-alpha.20**, moves the restricted
+TS/C emitters to complete-source input with multi-line formatting and validation.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -538,6 +538,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.18**, commit `3bce277`: native C and three-way byte parity.
 
+- **igniter-v0.1.0-alpha.19**, commit `90754bd`: optional-prompt whole-input helper.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -545,7 +547,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **138 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **139 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.
@@ -587,3 +589,9 @@ explicitly skipped if the tool is absent. It ran successfully here with Apple
 clang 21.0.0. Nine emitted native programs match TS and igniter stdout/stderr
 bytes, status and signal. Broader source support, error-environment parity,
 C library exports and compiler self-rebuild are not established.
+
+Both report-literal compilers now use inputAll() without prompts, accepting
+multi-line spaces/tabs/CR/LF around their admitted statement and rejecting later
+unsupported source before emission. Empty source is a compiler rejection (2),
+not an inputLine EOF fault. Twelve admitted cases retain exact output-byte/status
+parity. See [whole-source evidence](../investigations/INV-061-whole-source-emission.md).

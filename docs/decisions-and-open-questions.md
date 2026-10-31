@@ -2,6 +2,19 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Complete-source input for restricted emitters, 2026-10-31
+
+The TS/C report compilers now use approved inputAll() without prompting. They
+accept the existing single signed-integer report across LF/CRLF layouts and
+validate all source before emission. Empty input is an unsupported compiler-source
+case with status 2; additional statements/late invalid UTF-8 cannot be silently
+ignored. Reference generated artifacts stay unchanged.
+
+Strict checking and 139 interpreter groups pass; twelve admitted inputs have
+byte/status parity across native C, TS/translated JS and the igniter. All 9 editor
+groups pass. Preserve as alpha.20; full language parsing and self-rebuild remain
+open. See [INV-061 evidence](../investigations/INV-061-whole-source-emission.md).
+
 ## Whole compiler input with optional prompt approved, 2026-10-31
 
 The user accepts inputAll with the refinement "1. inputAll(prompt?)" after the

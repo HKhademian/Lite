@@ -13,7 +13,7 @@ for setup, strict typechecking, tests, supported behavior, and limitations.
 The wider language remains a design draft. Small compiler applications written
 in Lite now emit [readable TypeScript](examples/017-report-ts-compiler.lts) and
 [standalone C](examples/018-report-c-compiler.lts) for one signed-integer report.
-Nine tested programs have identical output bytes/status across the igniter, TS
+Twelve tested programs have identical output bytes/status across the igniter, TS
 and native C paths. These restricted prototypes are not a full/self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)

@@ -829,6 +829,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — first restricted C emission and parity](INV-061-c-emission-and-parity.md) — Lite-written compiler emits standalone C for the same report-literal source class. Nine native/TS/igniter programs have equal output bytes/status after actual local C compilation. Strict checking and 132 interpreter groups plus 9 editor groups pass. General native/library/runtime lowering and self-rebuild remain open.
 
+**Follow-up:** [INV-061 — whole-source compiler input](INV-061-whole-source-emission.md) — existing restricted TS/C emitters adopt approved inputAll, multi-line whitespace and complete-input validation. Twelve native/TS/JS/igniter parity cases pass; strict checking and 139 interpreter groups plus 9 editor groups pass. No new syntax/helper, full parser or self-rebuild claim.
+
 <a id="inv-062"></a>
 
 ## INV-062 — Compile-time computation

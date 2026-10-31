@@ -17,17 +17,17 @@ digitValue := fn(text: String): Int {
     9
 }
 
-skipSpaces := fn(line: String, start: Int): Int {
-    size := textLength(line);
+skipSpaces := fn(source: String, start: Int): Int {
+    size := textLength(source);
     var position := start;
-    loop position < size and (textAt(line, position) == " " or textAt(line, position) == "\t") {
+    loop position < size and (textAt(source, position) == " " or textAt(source, position) == "\t" or textAt(source, position) == "\r" or textAt(source, position) == "\n") {
         position = position + 1;
     }
     position
 }
 
-expectSymbol := fn(line: String, position: Int, symbol: String): Int {
-    if position >= textLength(line) or textAt(line, position) =!= symbol {
+expectSymbol := fn(source: String, position: Int, symbol: String): Int {
+    if position >= textLength(source) or textAt(source, position) =!= symbol {
         reportError("expected " + symbol);
         exit(2);
     }
@@ -63,35 +63,35 @@ normalizeInteger := fn(digits: String, negative: Bool): String {
     if negative and magnitude =!= "0" { "-" + magnitude } else { magnitude }
 }
 
-line := inputLine();
-size := textLength(line);
-var position := skipSpaces(line, 0);
-if position + 6 > size or textSlice(line, position, position + 6) =!= "report" {
+source := inputAll();
+size := textLength(source);
+var position := skipSpaces(source, 0);
+if position + 6 > size or textSlice(source, position, position + 6) =!= "report" {
     reportError("expected report(integer)");
     exit(2);
 }
-position = skipSpaces(line, position + 6);
-position = expectSymbol(line, position, "(");
-position = skipSpaces(line, position);
+position = skipSpaces(source, position + 6);
+position = expectSymbol(source, position, "(");
+position = skipSpaces(source, position);
 var negative := false;
-if position < size and (textAt(line, position) == "+" or textAt(line, position) == "-") {
-    negative = textAt(line, position) == "-";
-    position = skipSpaces(line, position + 1);
+if position < size and (textAt(source, position) == "+" or textAt(source, position) == "-") {
+    negative = textAt(source, position) == "-";
+    position = skipSpaces(source, position + 1);
 }
 start := position;
-loop position < size and isDigit(textAt(line, position)) {
+loop position < size and isDigit(textAt(source, position)) {
     position = position + 1;
 }
 if start == position {
     reportError("expected a decimal integer literal");
     exit(2);
 }
-digits := textSlice(line, start, position);
-position = skipSpaces(line, position);
-position = expectSymbol(line, position, ")");
-position = skipSpaces(line, position);
-if position < size and textAt(line, position) == ";" {
-    position = skipSpaces(line, position + 1);
+digits := textSlice(source, start, position);
+position = skipSpaces(source, position);
+position = expectSymbol(source, position, ")");
+position = skipSpaces(source, position);
+if position < size and textAt(source, position) == ";" {
+    position = skipSpaces(source, position + 1);
 }
 if position =!= size {
     reportError("unsupported trailing source");

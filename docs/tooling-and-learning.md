@@ -199,6 +199,12 @@ with the local C compiler and skips explicitly if unavailable elsewhere. This is
 first native output for the restricted class, not library export or self-hosting.
 See [C evidence](../investigations/INV-061-c-emission-and-parity.md).
 
+The restricted TS/C emitters subsequently adopt approved inputAll() for complete
+source, with multi-line whitespace and rejection of later unsupported source
+before any artifact. Twelve admitted cases retain byte/status parity; strict
+checking and 139 interpreter groups pass. See
+[whole-source evidence](../investigations/INV-061-whole-source-emission.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable
