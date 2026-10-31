@@ -69,6 +69,11 @@ decision has been made, say so.
 
 ## Handoff
 
+Apply the [automatic progression rule](README.md#automatic-progression-within-selected-contracts):
+continue to the next selected, bounded implementation without another prompt.
+Stop and identify a concrete unresolved design or scope question when one is
+required for progress; do not invent syntax/features to bypass it.
+
 Summarize the current question, evidence collected, unresolved assumptions, and
 where another contributor can resume. Do not turn the handoff into an implementation
 plan unless that work has been requested.

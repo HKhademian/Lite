@@ -2,6 +2,15 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Automatic selected-scope progression, 2026-10-31
+
+The user authorizes automatic investigation and delivery of already selected
+syntax/features within bounded INV scope, without stopping for another prompt.
+Continue through investigation, implementation, checks and atomic commits. Stop
+at a concrete unresolved behavior, conflicting decision or required scope/new
+design expansion; new syntax/features/APIs still require explicit consent.
+See the [workflow rule](../investigations/README.md#automatic-progression-within-selected-contracts).
+
 ## Approved readable fixed-array increment, 2026-10-31
 
 The user accepts the INV-054 proposal with "sure". The igniter now executes

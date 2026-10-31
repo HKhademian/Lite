@@ -139,6 +139,23 @@ then obtain explicit consent before implementing it or marking it selected.
 Implementation evidence, passing tests, commits and milestone tags do not grant
 design approval. Keep unapproved experiments clearly labeled pending review.
 
+### Automatic progression within selected contracts
+
+Authorized by the user, **2026-10-31**: continue automatically to the next bounded
+investigation and delivery while the existing selected rules determine the work.
+Do not stop for another user prompt or repeated scope approval merely because a
+new implementation increment begins. Review its owning contracts, record the
+bounded investigation, implement, verify, update references/examples and commit
+atomically before proceeding to the next increment.
+
+This authorizes implementation of existing decisions, not new language syntax,
+features, helper APIs or semantics. Stay inside the active investigation's scope.
+Stop when a required behavior is unresolved, selected rules conflict, or progress
+requires a new design choice or scope expansion. Identify that concrete
+uncertainty and the affected examples rather than filling the gap with a host
+default or inventing a feature. The explicit-consent requirement above still
+applies to new language decisions.
+
 ## Reconsidering decisions and postponed ideas
 
 This applies to **every investigation point**. A selected decision is the current
