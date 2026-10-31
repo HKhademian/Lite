@@ -11,6 +11,15 @@ entry. Value-producing loops, metadata, iterables, tags, payload exits, header
 transfers and completion/cleanup hooks remain unsupported. This implements a
 bounded effect-only use of the rules below without changing their value contract.
 
+The approved **2026-10-31** [fixed-array increment](../igniter/README.md#fixed-arrays-and-traversal)
+adds action traversal of the supported array values, with source-once evaluation,
+positional order and an optional fixed as item binding. Body/item scopes are
+fresh on each entry; bare continue advances and break stops the nearest loop.
+Whole-source variable replacement does not retarget that evaluated traversal.
+General iterables, metadata, named Boolean/unconditional receivers, loop values
+and completion/cleanup remain unimplemented; no new always-Unit loop contract
+is selected. See [INV-054](../investigations/INV-054-fvp-fixed-arrays.md).
+
 ## Template
 
 ```text

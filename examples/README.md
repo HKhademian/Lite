@@ -37,6 +37,9 @@ integer prompts may appear together in captured stdout.
   named fields, =name shorthand, named function inputs/results, positional
   destructuring and a named singleton. Reports number 12, number: 12,
   number 12, and 42 on separate lines.
+- [009 — Fixed arrays](009-fixed-arrays.lts): traverses three named token
+  tuples, asks for an index from 0 to 2, reports that token's text, then reports
+  sum: 60 using an explicit fixed-array function input. An invalid index faults.
 
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit

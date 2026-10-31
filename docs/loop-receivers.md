@@ -4,6 +4,13 @@ Status: **one optional item identifier using `as` selected; `Unit` payload for B
 
 ## Template
 
+Bounded implementation, **2026-10-31**: the
+[fixed-array igniter subset](../igniter/README.md#fixed-arrays-and-traversal)
+supports the existing as item spelling for arrays. Its item is fixed, local to
+the body and initialized for each entry; positional destructuring belongs inside
+the body. Other iterable providers, metadata and named Boolean/unconditional
+receivers remain unimplemented. This does not revise the full contracts below.
+
 ```text
 [@tag] loop [source] [as item_name] {
     body

@@ -129,6 +129,15 @@ Broader tuple routing, relabeling, named patterns, mixed/nested tuples and mutat
 remain unimplemented. See [INV-022](../investigations/INV-022-fvp-named-tuples.md)
 and [named-field coverage](../igniter/README.md#named-fixed-tuples).
 
+The user-approved fixed-array increment adds nonempty homogeneous arrays of
+scalars/flat tuples, indexed reads, exact [T; N] function inputs/results and
+action traversal with optional as item. The [009 example](../examples/009-fixed-arrays.lts)
+runs through ./lite run. Strict checking and all 93 interpreter test groups pass.
+Empty construction, mixed-type inference, nested arrays, mutation/growth, views,
+count helpers and native layout remain unimplemented; see
+[INV-054](../investigations/INV-054-fvp-fixed-arrays.md) and
+[array coverage](../igniter/README.md#fixed-arrays-and-traversal).
+
 The selected [temporary numeric profile](numbers.md#temporary-fvp-numeric-profile)
 uses checked signed 64-bit integers and one finite 64-bit binary floating family.
 Division by zero and non-finite arithmetic results fault. Exact rounding,

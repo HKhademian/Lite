@@ -867,3 +867,149 @@ test('named tuple example runs through the root launcher and check-only mode', (
     assert.equal(result.stdout, check ? '' : expected); assert.equal(result.stderr, '');
   }
 });
+
+test('homogeneous scalar arrays have fixed extents and matching dot/bracket reads', () => {
+  assert.equal(run(`integers := [1, 2, 3,]; floats := [1.5, 2.5]; words := ["a", "b"];
+    flags := [true, false]; units := [(), Unit, ()];
+    report(integers[0], integers.2, floats[1], words.0, not flags[1], units.2);
+    loop units as value { report(value); }`).output, '1 3 2.5 a true Unit\nUnit\nUnit\nUnit\n');
+  fault('pair := (1, 2); pair[0];', 'TypeError');
+});
+test('array constructors and bracket receivers/indices evaluate once in written order', () => {
+  assert.equal(run(`values := [({report("first"); inputInt()}), ({report("second"); inputInt()})];
+    report(values[0], values[1]);
+    make := fn(): [Int; 3] { report("receiver"); [10, 20, 30] }
+    report(make()[({report("index"); inputInt()})]); report(inputInt());`, '3 4 2 9').output,
+    'first\nsecond\n3 4\nreceiver\nindex\n30\n9\n');
+  assert.equal(run('var values := [10, 20]; report(values[({values = [30, 40]; 1})]); report(values[1]);').output,
+    '20\n40\n');
+});
+test('array bracket bounds fault safely while invalid static dot positions fail before execution', () => {
+  for (const index of ['-1', '3', '9223372036854775807']) fault(`values := [10, 20, 30]; report(values[${index}]);`, 'BoundPanic');
+  fault('values := [10, 20, 30]; if false { values.3; }', 'TypeError');
+  assert.equal(run('values := [1]; if false { report(values[7]); } report(2);').output, '2\n');
+  fault('values := [1]; report(values[0.0]);', 'TypeError');
+  fault('values := [1]; values.9223372036854775807;', 'TypeError');
+});
+test('array traversal evaluates its source once and creates fresh scoped body/item bindings', () => {
+  assert.equal(run(`make := fn(): [Int; 3] { report("source"); [2, 4, 6] }
+    var sum := 0;
+    loop make() as value {
+      var local := 0; local = local + 1;
+      sum = sum + value + local;
+    }
+    report(sum);`).output, 'source\n15\n');
+  fault('loop [1, 2] as value {} report(value);', 'TypeError');
+  fault('loop [1, 2] as value { value = 3; }', 'TypeError');
+});
+test('unnamed array traversal introduces no implicit variable and receiver shadowing stays in the body', () => {
+  assert.equal(run('loop [1, 2] { report("tick"); }').output, 'tick\ntick\n');
+  assert.equal(run('values := [3, 4]; loop values as values { report(values); } report(values[0]);').output, '3\n4\n3\n');
+  fault('loop [1] { report(it); }', 'TypeError');
+  fault('loop true as value { break; }', 'TypeError');
+  fault('result := loop [1] as value {};', 'TypeError');
+});
+test('traversal retains the evaluated array value when its original variable is replaced', () => {
+  assert.equal(run(`var values := [1, 2, 3];
+    loop values as value { report(value); values = [9, 8, 7]; }
+    report(values[0], values[2]);`).output, '1\n2\n3\n9 7\n');
+});
+test('array loop break/continue target the nearest loop without restarting the source', () => {
+  assert.equal(run(`var total := 0;
+    loop [1, 2, 3, 4] as value {
+      if value == 2 { continue; }
+      if value == 4 { break; }
+      total = total + value;
+    }
+    report(total);
+    loop [1, 2] as outer {
+      loop [3, 4] as inner { if inner == 3 { continue; } report(outer, inner); break; }
+    }`).output, '4\n1 4\n2 4\n');
+  assert.equal(run(`loop [({report("a"); 1}), ({report("b"); 2})] as item {
+    report(item); break;
+  }`).output, 'a\nb\n1\n');
+  assert.equal(run('loop [1, 2] as value { loop { report(value); break; } }').output, '1\n2\n');
+});
+test('arrays of flat named and unnamed tuples preserve member types and body destructuring', () => {
+  assert.equal(run(`tokens := [(kind = "number", text = "12"), (kind = "symbol", text = "+")];
+    report(tokens.0.kind, tokens[1].text);
+    loop tokens as token { (kind, text) := token; report(kind, text); }
+    pairs := [(1, "a"), (2, "b")];
+    loop pairs as pair { report(pair.0, pair.1); }`).output, 'number +\nnumber 12\nsymbol +\n1 a\n2 b\n');
+});
+test('explicit fixed-array inputs/results check element contracts and extents', () => {
+  assert.equal(run(`make := fn(): [Int; 3] { return [1, 2, 3]; }
+    first := fn(values: [Int; 3]): Int { values[0] }
+    token := fn(values: [(kind: String, text: String); 2]): String { values[1].text }
+    report(first(make())); report(token([(kind = "n", text = "1"), (kind = "s", text = "+")]));`).output, '1\n+\n');
+  fault('f := fn(values: [Int; 3]): Int { values[0] } f([1, 2]);', 'TypeError');
+  fault('f := fn(): [Int; 2] { [1.0, 2.0] }', 'TypeError');
+  fault('f := fn(values: [(x: Int); 1]): Int { values[0].x } f([(y = 1)]);', 'TypeError');
+  fault('var f := fn(values: [Int; 2]): Int { values[0] } f = fn(values: [Int; 3]): Int { values[0] }', 'TypeError');
+});
+test('ordinary fixed-array copies and supplied arguments survive source replacement', () => {
+  assert.equal(run(`var values := [10, 11]; saved := values;
+    first := fn(original: [Int; 2], ignored: Unit): Int { original[0] }
+    report(first(values, ({values = [20, 30]; Unit})), saved[0], values[0]);
+    values := [40, 50]; report(saved[1], values[1]);`).output, '10 10 20\n11 50\n');
+  fault('values := [1, 2]; values = [3, 4];', 'TypeError');
+  fault('var values := [1, 2]; values = [3];', 'TypeError');
+});
+test('array arguments and item locals stay separate through recursive calls', () => {
+  assert.equal(run(`sum := fn(values: [Int; 3], count: Int): Int {
+      if count == 0 { return 0; }
+      saved := values[count - 1];
+      saved + self(values, count - 1)
+    }
+    report(sum([1, 2, 3], 3)); report(sum([4, 5, 6], 2));`).output, '6\n9\n');
+  fault('values := [1, 2]; f := fn(): Int { values[0] }', 'TypeError');
+});
+test('returns, exit and bounds faults propagate correctly through array traversal', () => {
+  assert.equal(run(`first := fn(values: [Int; 2]): Int { loop values as value { return value; } 0 }
+    report(first([7, 8]));`).output, '7\n');
+  assert.deepEqual(run('loop [1, 2] { reportError("stop"); exit(6); } report(9);'), { code: 6, output: '', errors: 'stop\n' });
+  fault('loop [1] as value { values := [2]; values[value]; }', 'BoundPanic');
+  fault('loop [1] { f := fn(): Unit { break; } }', 'TypeError');
+  fault('loop { loop ({ break; [1] }) {} break; }', 'TypeError');
+});
+test('unsupported array forms fail before effects without inventing empty types, unions or mutation', () => {
+  for (const [code, category] of [
+    ['values := [];', 'TypeError'], ['f := fn(): [Int; 0] { [] }', 'TypeError'],
+    ['values := [1, true];', 'TypeError'], ['values := [[1], [2]];', 'TypeError'],
+    ['f := fn(): [[Int; 1]; 1] { [1] }', 'TypeError'],
+    ['values := [fn(): Int { 1 }];', 'TypeError'], ['values := ([1, 2],);', 'TypeError'],
+    ['loop [1] as value { unknown; }', 'TypeError'], ['report([1, 2]);', 'TypeError'],
+    ['var values := [1, 2]; values[0] = 3;', 'SourceError'],
+    ['mut values := [1, 2];', 'SourceError'], ['f := fn(values: [Int]): Int { 1 }', 'SourceError'],
+    ['f := fn(values: [Int; 2.0]): Int { 1 }', 'SourceError'],
+    ['loop [1, 2] as (a, b) {}', 'SourceError'],
+    ['values := [1, 2]; report(values.count);', 'TypeError'],
+    ['values := [1, 2]; values[0:1];', 'SourceError'],
+  ]) {
+    if (code === undefined || category === undefined) throw new Error('bad fixture');
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), (error: unknown) => error instanceof LiteFault && error.category === category, code);
+    assert.equal(observed, false, code);
+  }
+});
+test('numbered fixed-array example runs and checks through the root launcher', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const source = new URL('../examples/009-fixed-arrays.lts', import.meta.url);
+  const expected = 'number 12\nsymbol +\nnumber 30\nToken index: +\nsum: 60\n';
+  assert.equal(run(readFileSync(source, 'utf8'), '1').output, expected);
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const invoke = (input: string, check = false) => spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), source.pathname], {
+    cwd: root, env, input, encoding: 'utf8', timeout: 5000,
+  });
+  const result = invoke('1\n');
+  assert.equal(result.error, undefined); assert.equal(result.status, 0);
+  assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
+  const invalid = invoke('-1\n');
+  assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
+  assert.equal(invalid.stdout, 'number 12\nsymbol +\nnumber 30\nToken index: '); assert.match(invalid.stderr, /BoundPanic:/);
+  const check = invoke('', true);
+  assert.equal(check.error, undefined); assert.equal(check.status, 0);
+  assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+});

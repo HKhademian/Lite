@@ -29,6 +29,13 @@ must retain compatible ordered labels and component types. This does not add
 named call arguments, contextual field routing or declaration-site relabeling;
 valid fresh-constructor routing requests receive an unsupported diagnostic.
 
+The approved [fixed-array increment](../investigations/INV-054-fvp-fixed-arrays.md)
+also admits explicit [T; N] inputs/results for the supported scalar or flat-tuple
+element T and literal extent N. Exact extents and element contracts are checked;
+ordinary arguments retain their evaluated values when the original variable
+changes. General [T] contracts, array views/access grants and nested arrays
+remain outside the interpreter subset.
+
 ## Template
 
 ```text

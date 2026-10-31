@@ -5,7 +5,9 @@ type Operator = '+' | '-' | '*' | '/';
 type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
 type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
-type DataType = ScalarType | TupleType;
+type ElementType = ScalarType | TupleType;
+type ArrayType = Readonly<{ kind: 'Array'; element: ElementType; length: bigint }>;
+type DataType = ElementType | ArrayType;
 type Parameter = Readonly<{ name: string; type: DataType }>;
 type FunctionType = Readonly<{ kind: 'Function'; parameters: readonly Parameter[]; result: DataType }>;
 // Never is internal flow information, not a new source-level type.
@@ -19,6 +21,7 @@ export type Value =
   | Readonly<{ kind: 'Bool'; value: boolean }>
   | Readonly<{ kind: 'Unit' }>
   | Readonly<{ kind: 'Tuple'; items: readonly Value[] }>
+  | Readonly<{ kind: 'Array'; items: readonly Value[] }>
   | FunctionValue;
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
@@ -30,6 +33,8 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'string'; text: string }
   | { kind: 'name'; name: string }
   | { kind: 'unit' }
+  | { kind: 'array'; items: readonly Raw[] }
+  | { kind: 'index'; input: Raw; index: Raw }
   | { kind: 'tuple'; items: readonly Readonly<{ label: string | undefined; input: Raw }>[] }
   | { kind: 'position'; input: Raw; index: bigint }
   | { kind: 'member'; input: Raw; name: string }
@@ -41,7 +46,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'compare'; first: Raw; rest: readonly Readonly<{ op: Comparison; right: Raw }>[] }
   | { kind: 'block'; items: readonly RawItem[] }
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
-  | { kind: 'loop'; condition: Raw | undefined; body: Raw }
+  | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; signature: FunctionType; body: Raw }
   | { kind: 'return'; input: Raw | undefined }
@@ -56,6 +61,8 @@ type RawItem = Readonly<{ at: Position }> & (
 type Binding = Readonly<{ slot: number; name: string; type: Type; mutable: boolean; owner: number }>;
 type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'literal'; value: Value }
+  | { kind: 'array'; items: readonly Expr[] }
+  | { kind: 'index'; input: Expr; index: Expr }
   | { kind: 'tuple'; items: readonly Expr[] }
   | { kind: 'position'; input: Expr; index: number }
   | { kind: 'read'; binding: Binding }
@@ -66,6 +73,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'block'; block: Block }
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
   | { kind: 'loop'; condition: Expr | undefined; body: Expr }
+  | { kind: 'arrayLoop'; input: Expr; item: Binding | undefined; body: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; code: FunctionCode }
   | { kind: 'return'; input: Expr }
@@ -127,6 +135,7 @@ function scalarType(name: string, at: Position): ScalarType {
 }
 function sameType(left: Type, right: Type): boolean {
   if (typeof left === 'string' || typeof right === 'string') return left === right;
+  if (left.kind === 'Array') return right.kind === 'Array' && left.length === right.length && sameType(left.element, right.element);
   if (left.kind === 'Tuple') {
     return right.kind === 'Tuple' && left.items.length === right.items.length && left.items.every((item, index) => {
       const other = right.items[index];
@@ -143,11 +152,15 @@ function sameType(left: Type, right: Type): boolean {
 function fits(actual: Type, expected: Type): boolean { return actual === 'Never' || sameType(actual, expected); }
 function typeName(type: Type): string {
   if (typeof type === 'string') return type;
+  if (type.kind === 'Array') return `[${typeName(type.element)}; ${type.length}]`;
   if (type.kind === 'Tuple') return `(${type.items.map(item => `${item.label ?? ''}: ${item.type}`).join(', ')}${type.items.length === 1 && type.items[0]?.label === undefined ? ',' : ''})`;
   return `fn (${type.parameters.map(p => `${p.name}: ${typeName(p.type)}`).join(', ')}): ${typeName(type.result)}`;
 }
 function isScalar(type: Type): type is ScalarType {
   return typeof type === 'string' && type !== 'Never';
+}
+function isElement(type: Type): type is ElementType {
+  return isScalar(type) || (typeof type !== 'string' && type.kind === 'Tuple');
 }
 function freshTuple(expr: Expr): boolean {
   if (expr.kind === 'tuple') return true;
@@ -274,7 +287,7 @@ function tokenize(text: string): readonly Token[] {
       if (operator !== undefined) {
         advance(operator.length);
         tokens.push({ kind: 'symbol', text: operator, at: start });
-      } else if ('+-*/=();,{}<>:.'.includes(ch)) {
+      } else if ('+-*/=();,{}<>:.[]'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -304,9 +317,19 @@ class Parser {
     if (!this.accept(text)) source(`expected ${JSON.stringify(text)}`, this.peek().at);
   }
   dataType(): DataType {
+    if (this.accept('[')) {
+      const at = this.peek().at;
+      const element = this.dataType();
+      if (typeof element !== 'string' && element.kind === 'Array') typeError('nested array types are not supported yet', at);
+      this.expect(';');
+      const length = this.take();
+      if (length.kind !== 'number' || !/^[0-9]+$/.test(length.text)) source('fixed array extent must be a nonnegative integer literal', length.at);
+      this.expect(']');
+      return { kind: 'Array', element, length: BigInt(length.text) };
+    }
     if (!this.accept('(')) {
       const token = this.take();
-      if (token.kind !== 'id') source('expected a scalar or fixed tuple type', token.at);
+      if (token.kind !== 'id') source('expected a scalar, fixed tuple or fixed array type', token.at);
       return scalarType(token.text, token.at);
     }
     if (this.accept(')')) return 'Unit';
@@ -467,6 +490,12 @@ class Parser {
     while (true) {
       const previous = this.tokens[this.index - 1];
       if (previous?.kind === 'symbol' && previous.text === '}') break;
+      if (this.accept('[')) {
+        const at = this.peek().at;
+        const index = this.expression(); this.expect(']');
+        input = { kind: 'index', input, index, at };
+        continue;
+      }
       if (!this.accept('.')) break;
       if (this.peek().kind === 'id') {
         const name = this.label();
@@ -506,6 +535,14 @@ class Parser {
       }
       return { kind: 'tuple', items, at: token.at };
     }
+    if (token.kind === 'symbol' && token.text === '[') {
+      const items: Raw[] = [];
+      if (!this.accept(']')) {
+        do { items.push(this.expression()); } while (this.accept(',') && this.peek().text !== ']');
+        this.expect(']');
+      }
+      return { kind: 'array', items, at: token.at };
+    }
     if (token.kind === 'symbol' && token.text === '{') {
       const items = this.parse(true); this.expect('}');
       return { kind: 'block', items, at: token.at };
@@ -544,8 +581,9 @@ class Parser {
       if (token.text === 'loop') {
         const next = this.peek();
         const condition = next.kind === 'symbol' && next.text === '{' ? undefined : this.expression();
+        const item = this.accept('as') ? this.label() : undefined;
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('loop requires a braced body', this.peek().at);
-        return { kind: 'loop', condition, body: this.prefix(), at: token.at };
+        return { kind: 'loop', condition, item, body: this.prefix(), at: token.at };
       }
       if (token.text === 'if') {
         const condition = this.expression();
@@ -620,6 +658,26 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       return input;
     }
     case 'unit': return { kind: 'literal', value: UNIT, type: 'Unit', at };
+    case 'array': {
+      if (raw.items.length === 0) typeError('empty array construction and element-type inference are not supported yet', at);
+      const items = raw.items.map(item => checkExpression(item, names, state));
+      const first = items[0];
+      if (first === undefined) throw new Error('igniter invariant: missing nonempty array element');
+      if (!isElement(first.type)) typeError('array elements must be scalars or flat scalar tuples in this igniter', first.at);
+      const element = first.type;
+      for (const item of items) {
+        if (!isElement(item.type)) typeError('array elements must be scalars or flat scalar tuples in this igniter', item.at);
+        if (!sameType(item.type, element)) typeError('heterogeneous arrays and union-element inference are not supported yet', item.at);
+      }
+      return { kind: 'array', items, type: { kind: 'Array', element, length: BigInt(items.length) }, at };
+    }
+    case 'index': {
+      const input = checkExpression(raw.input, names, state);
+      const index = checkExpression(raw.index, names, state);
+      if (typeof input.type === 'string' || input.type.kind !== 'Array') typeError('bracket reads currently require a fixed array', at);
+      if (index.type !== 'Int') typeError('array index must be Int', at);
+      return { kind: 'index', input, index, type: input.type.element, at };
+    }
     case 'tuple': {
       const labels = new Set<string>();
       for (const item of raw.items) {
@@ -637,6 +695,10 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
     }
     case 'position': {
       const input = checkExpression(raw.input, names, state);
+      if (typeof input.type !== 'string' && input.type.kind === 'Array') {
+        if (raw.index >= input.type.length) typeError('array position outside its static extent', at);
+        return { kind: 'position', input, index: Number(raw.index), type: input.type.element, at };
+      }
       if (typeof input.type === 'string' || input.type.kind !== 'Tuple') typeError('fixed positional access requires a tuple', at);
       if (raw.index >= BigInt(input.type.items.length)) typeError('tuple position outside its static shape', at);
       const index = Number(raw.index);
@@ -687,13 +749,17 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       state.loopDepth = 0;
       try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
       finally { state.loopDepth = enclosingDepth; }
-      if (condition !== undefined && condition.type !== 'Bool') {
-        typeError('loop source must be Bool in this igniter; iterables are not supported yet', condition.at);
-      }
+      const array = condition !== undefined && typeof condition.type !== 'string' && condition.type.kind === 'Array' ? condition.type : undefined;
+      if (condition !== undefined && condition.type !== 'Bool' && array === undefined) typeError('loop source must be Bool or a supported fixed array', condition.at);
+      if (raw.item !== undefined && array === undefined) typeError('named receivers for non-array loops are not supported yet', raw.item.at);
+      const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
+        : { name: raw.item.text, type: array.element, mutable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
+      const bodyNames = item === undefined ? names : new Map(names).set(item.name, item);
       state.loopDepth++;
       let body: Expr;
-      try { body = checkExpression(raw.body, names, state, 'discard'); }
+      try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
       finally { state.loopDepth--; }
+      if (array !== undefined && condition !== undefined) return { kind: 'arrayLoop', input: condition, item, body, type: 'Unit', at };
       return { kind: 'loop', condition, body, type: 'Unit', at };
     }
     case 'loopExit':
@@ -748,7 +814,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
       let previous = first;
       for (const pair of rest) {
         if (typeof previous.type !== 'string' || typeof pair.right.type !== 'string') {
-          typeError('tuple/function-value comparisons are not supported yet', pair.right.at);
+          typeError('aggregate/function-value comparisons are not supported yet', pair.right.at);
         }
         if (!sameType(previous.type, pair.right.type)) typeError('mixed-type comparisons are not supported yet', pair.right.at);
         if (pair.op !== '==' && pair.op !== '=!=' && previous.type !== 'Int' && previous.type !== 'Float') {
@@ -812,7 +878,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, Binding>, state: C
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
-      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept tuple/function values yet; report scalar components', at);
+      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept aggregate/function values yet; report scalar components', at);
       return { kind: 'call', name, args, type, at };
     }
     default: return unreachable(raw);
@@ -912,6 +978,7 @@ function format(value: Value): string {
     case 'Bool': return value.value ? 'true' : 'false';
     case 'Unit': return 'Unit';
     case 'Tuple': throw new Error('igniter invariant: formatting a checked tuple');
+    case 'Array': throw new Error('igniter invariant: formatting a checked array');
     case 'Function': throw new Error('igniter invariant: formatting a checked function');
     default: return unreachable(value);
   }
@@ -955,6 +1022,7 @@ function sameValue(left: Value, right: Value): boolean {
     case 'Bool': return right.kind === 'Bool' && left.value === right.value;
     case 'Unit': return right.kind === 'Unit';
     case 'Tuple': throw new Error('igniter invariant: comparing a checked tuple');
+    case 'Array': throw new Error('igniter invariant: comparing a checked array');
     case 'Function': throw new Error('igniter invariant: comparing a checked function');
     default: return unreachable(left);
   }
@@ -997,10 +1065,20 @@ export function execute(program: Program, io: IO): number {
     const evaluateHere = (child: Expr): Value => evaluate(child, frame, self);
     switch (expr.kind) {
       case 'literal': return expr.value;
+      case 'array': return { kind: 'Array', items: expr.items.map(evaluateHere) };
+      case 'index': {
+        const input = evaluateHere(expr.input);
+        const index = evaluateHere(expr.index);
+        if (input.kind !== 'Array' || index.kind !== 'Int') throw new Error('igniter invariant: invalid checked index input');
+        if (index.value < 0n || index.value >= BigInt(input.items.length)) throw new LiteFault('BoundPanic', 'array index outside its extent', expr.at);
+        const value = input.items[Number(index.value)];
+        if (value === undefined) throw new Error('igniter invariant: missing bounded array element');
+        return value;
+      }
       case 'tuple': return { kind: 'Tuple', items: expr.items.map(evaluateHere) };
       case 'position': {
         const input = evaluateHere(expr.input);
-        if (input.kind !== 'Tuple') throw new Error('igniter invariant: non-tuple checked access');
+        if (input.kind !== 'Tuple' && input.kind !== 'Array') throw new Error('igniter invariant: non-aggregate checked access');
         const value = input.items[expr.index];
         if (value === undefined) throw new Error('igniter invariant: missing checked tuple component');
         return value;
@@ -1044,6 +1122,20 @@ export function execute(program: Program, io: IO): number {
         }
         return UNIT; // Only action-position loops are admitted by the checker.
       case 'loopExit': throw new LoopTransfer(expr.op);
+      case 'arrayLoop': {
+        const input = evaluateHere(expr.input);
+        if (input.kind !== 'Array') throw new Error('igniter invariant: non-array checked traversal');
+        for (const value of input.items) {
+          const iteration: Frame = { parent: frame, values: new Map() };
+          if (expr.item !== undefined) iteration.values.set(expr.item.slot, value);
+          try { evaluate(expr.body, iteration, self); }
+          catch (error: unknown) {
+            if (!(error instanceof LoopTransfer)) throw error;
+            if (error.op === 'break') break;
+          }
+        }
+        return UNIT;
+      }
       case 'read': {
         const value = findFrame(frame, expr.binding.slot).values.get(expr.binding.slot);
         if (value === undefined) throw new Error('igniter invariant: uninitialized checked binding');

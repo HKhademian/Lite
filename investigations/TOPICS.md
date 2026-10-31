@@ -717,7 +717,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/arrays.md](../docs/arrays.md); [docs/tuple-array-shapes.md](../docs/tuple-array-shapes.md); [docs/call-replacement-flow.md](../docs/call-replacement-flow.md).
 
-**Investigation:** waiting for input on implementation scope; contributor: redacted (agent-assisted); note: [INV-054 — readable fixed arrays for the FVP](INV-054-fvp-fixed-arrays.md) — proposes existing literal/index/type forms plus action traversal for nonempty homogeneous arrays of scalars or flat tuples; no new helper APIs. Approval pending; no interpreter or language changes made.
+**Investigation:** recorded (user-approved bounded implementation); contributor: redacted (agent-assisted); note: [INV-054 — readable fixed arrays for the FVP](INV-054-fvp-fixed-arrays.md) — existing literal/index/type forms and action traversal implemented for nonempty homogeneous arrays of scalars/flat tuples. Strict checking and 93 interpreter test groups pass. No new helper APIs; empty construction, mutation/growth, union/nested inference, views, general protocols and native layout remain unimplemented.
 
 <a id="inv-055"></a>
 

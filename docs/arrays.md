@@ -4,6 +4,16 @@ Status: **fixed-array [T; N] source examples, known-size literal inference, and 
 
 ## Compile-time size
 
+Approved implementation coverage, **2026-10-31**: the experimental
+[igniter](../igniter/README.md#fixed-arrays-and-traversal) now runs nonempty
+homogeneous fixed arrays of scalars or flat scalar tuples, dot/bracket reads,
+explicit fixed-array function inputs/results and action traversal. Runtime
+indices fault safely; invalid literal dot positions fail before execution.
+Exact extents/types and ordinary value-copy behavior are preserved. Empty
+construction, union-element inference, nested arrays, mutation/access grants,
+growth, views and native layout remain unimplemented. See
+[INV-054 evidence](../investigations/INV-054-fvp-fixed-arrays.md).
+
 The angle brackets in examples such as `Array<Float, 3>` are [temporary generic notation](generic-notation.md). Float names the intended element type; 3 names the intended static extent. Their joint spelling does not select a generic parameter mechanism or const-generic syntax. The fixed-array surface used here is [T; N]; runtime-array spelling remains open.
 
 The selected representation of [T; N] has exactly N contiguous inline T positions and the same size, alignment, and corresponding offsets as an unnamed fixed tuple of N components of T. It adds no runtime length field, header, tag, wrapper, indirection, or allocation. N is part of the static type, so lengths 3 and 4 remain distinct array types. Ordinary nonzero-sized elements use their normal stride; zero-sized elements keep N semantic positions without element payload bytes. Element-owned metadata remains part of T. This layout contract does not select stack placement, universal copyability, array/tuple type identity, arbitrary reinterpretation, or an identical ABI. See [fixed-array storage](memory-and-performance.md#fixed-arrays-share-homogeneous-tuple-storage).

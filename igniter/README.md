@@ -35,6 +35,8 @@ For explicitly prompted input and multiple report values, run
 `./lite run examples/007-prompts-and-report.lts` and enter 7 and 5.
 For named tuple fields and function contracts, run
 `./lite run examples/008-named-tuples.lts`; no input is needed.
+For fixed arrays, indexed reads and traversal, run
+`./lite run examples/009-fixed-arrays.lts` and enter a token index from 0 to 2.
 Prompts are written only when supplied to inputInt; there are no automatic
 binding dumps. `--check` parses and checks
 without executing or reading stdin:
@@ -111,8 +113,9 @@ Bodies have lexical scope and initialize their locals on each entry. Permitted
 outer var writes persist; body shadows do not retarget the header's bindings.
 The whole source, including untaken loop bodies, is checked before any I/O.
 
-Only action-position loops are implemented. Value-producing loop expressions,
-metadata/accumulators, iterables/ranges, tags, payload break/continue, source/header
+Only action-position loops are implemented. Fixed-array traversal is described
+below. Value-producing loop expressions, metadata/accumulators, general iterables/
+ranges, tags, payload break/continue, source/header
 break/continue targeting an enclosing loop, and then/finally remain unsupported.
 The body tail still evaluates for its effects, but no loop value can be observed
 in this subset. This does not replace the wider language's selected loop-result
@@ -126,8 +129,9 @@ quadruple := fn(n: Int): Int { double(double(n)) }
 report(quadruple(3));
 ```
 
-Parameters and results require explicit scalar or flat tuple annotations:
+Parameters and results use explicit scalar, flat tuple or supported fixed-array annotations:
 Int, Float, String, Bool, Unit, (:Int, :String), (:Int,), or (kind: String, text: String), for example.
+The fixed-array subset below also accepts [T; N] for those scalar/flat tuple T.
 These scalar spellings are the temporary script's primitive type names;
 general type-name resolution is not implemented. Parameters are fixed local
 value bindings. A body yields its final expression; empty/declaration/assignment
@@ -246,6 +250,50 @@ Keyword/self field names are outside the igniter's current identifier profile;
 this does not settle the full language's reserved-name policy. Labels are checked
 statically; no runtime reflection, native layout/ABI or ownership result is claimed.
 
+### Fixed arrays and traversal
+
+The approved first array subset accepts nonempty homogeneous literals of existing
+scalars or flat scalar tuples, including fully named tuples. For example:
+
+```text
+values := [10, 20, 30];
+loop values as value {
+    report(value);
+}
+index := inputInt("Index: ");
+report(values[index]);
+```
+
+All literal elements evaluate once in written order before the completed array
+is used. Infer [T; N] with the literal extent; every element must currently have
+the same type, including tuple labels/order. Explicit function inputs/results can
+use [Int; 3] or [(kind: String, text: String); 3]. Extents are nonnegative integer
+literals; exact element contracts and extents are checked. Arrays remain distinct
+from tuples, including Unit-valued positions and zero-sized type shapes.
+
+Read with array[index] using an Int or with literal .0/.1 positions. Evaluate the
+receiver once, then the bracket index once. Invalid runtime indices raise terminal
+BoundPanic, without negative wrapping or clamping; bounds are checked as BigInt
+before host-number conversion. Invalid static dot positions fail before effects.
+Report scalar elements or tuple members explicitly; array formatting is absent.
+
+Array traversal is action-only. Evaluate its source once and visit the evaluated
+elements in positional order. Optional as item introduces a fixed local name;
+body/item bindings are fresh per iteration, and destructuring belongs in the body.
+Without as, no implicit ordinary name or metadata is injected. Bare continue
+advances to the next element; break stops the nearest loop. Returns, exit and
+faults retain their existing targets/propagation. Later whole-value replacement
+of the original variable does not redirect an in-progress read or traversal.
+Ordinary copies/arguments/results likewise preserve their evaluated values.
+
+Empty array construction (even under a known annotation), heterogeneous/union
+element inference, nested arrays, element writes, growth, slices, access grants,
+spread, array equality, metadata and loop completion/cleanup remain unsupported.
+No default element type for [] or count/length helper is invented. General [T]
+sequence contracts, named Boolean/unconditional loop receivers and native inline
+layout/ABI/ownership remain outside this implementation. The host stores immutable
+array values; it does not validate native header-free storage or performance.
+
 ### Temporary text operations
 
 **Awaiting explicit consent:** textLength/textAt/textSlice and their indexing/
@@ -336,7 +384,7 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   text profile. Identifier admission uses the host's Unicode ID properties plus
   underscore; the full Lite identifier profile remains open.
 
-Wider tuples/patterns, general typed declarations, collections,
+Wider tuples/patterns, general typed declarations and collection protocols,
 modules, recovery and cleanup are unsupported.
 Errors include source positions and return nonzero status. Runtime faults are
 currently terminal because recovery is not implemented. Advanced operators
@@ -345,8 +393,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.9**, tag **igniter-v0.1.0-alpha.9**, adds the bounded
-named-field tuple subset and label-sensitive function input/result checks.
+Version **0.1.0-alpha.10**, tag **igniter-v0.1.0-alpha.10**, adds the approved
+nonempty fixed-array subset, indexed reads and action traversal.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -360,6 +408,8 @@ Previous checkpoints stay fixed:
 - **igniter-v0.1.0-alpha.7**, commit `36b301f`: root ./lite run launcher.
 - **igniter-v0.1.0-alpha.8**, commit `27d6f03`: optional inputInt prompts and
   multiple ordinary report arguments.
+- **igniter-v0.1.0-alpha.9**, commit `fc0fb5d`: named fixed-tuple fields,
+  shorthand and label-sensitive function contracts.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
@@ -368,7 +418,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **79 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **93 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

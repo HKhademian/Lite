@@ -2,6 +2,25 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Approved readable fixed-array increment, 2026-10-31
+
+The user accepts the INV-054 proposal with "sure". The igniter now executes
+nonempty homogeneous fixed-array literals of existing scalars/flat tuples,
+Int bracket reads, literal dot reads, explicit [T; N] function inputs/results
+and action traversal with optional as item. Literal elements, receivers/indices
+and traversal sources retain their selected evaluation rules and ordinary copies.
+Items are fixed/scoped per entry; nearest-loop exits and function/program exits
+retain their existing targets. Runtime bounds use the temporary BoundPanic
+diagnostic; static dot positions fail before execution.
+
+Strict checking and all 93 interpreter test groups pass, including the real
+[009 example](../examples/009-fixed-arrays.lts) through ./lite run. Empty array
+construction/default element typing, union-element inference, nested arrays,
+element mutation, growth, access grants, slices, metadata and native layout remain
+unimplemented. No length/count helper or public panic API is invented. Preserve
+prior tags and add igniter-v0.1.0-alpha.10. See
+[INV-054 evidence](../investigations/INV-054-fvp-fixed-arrays.md).
+
 ## Named-field tuple igniter increment, 2026-10-31
 
 After the intervening I/O request and earlier-example prompt fixes, the user

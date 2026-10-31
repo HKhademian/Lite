@@ -16,6 +16,12 @@ evaluate before helper bounds checks; an earlier argument fault prevents reachin
 the helper's check. This is a provisional interpreter diagnostic, not a first-class
 panic value or an implementation of capture, category matching, or recovery.
 
+The approved [fixed-array subset](../igniter/README.md#fixed-arrays-and-traversal)
+uses the same terminal BoundPanic diagnostic for invalid runtime bracket indices,
+after evaluating the receiver and index. Literal dot positions are checked
+statically. This adds no implicit Result or checked panic-effect signature;
+the interpreter still lacks capture/recovery and a complete public panic API.
+
 Selected [LP-0018 r1](proposals/LP-0018-implicit-panics-without-effect-declarations.md): live panics remain implicit. Semantic panic-effect declarations are prohibited; functions do not declare or infer exhaustive lists of the bounds, overflow, division, helper, or other live panics that can escape. Ordinary indexing/arithmetic remains ordinary value-producing code, without forcing a train of transitive panic alternatives into every callable signature.
 
 ```text

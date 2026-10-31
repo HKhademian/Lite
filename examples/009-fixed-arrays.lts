@@ -1,0 +1,19 @@
+tokens := [
+    (kind = "number", text = "12"),
+    (kind = "symbol", text = "+"),
+    (kind = "number", text = "30"),
+];
+loop tokens as token {
+    report(token.kind, token.text);
+}
+index := inputInt("Token index: ");
+report(tokens[index].text);
+
+sum := fn(values: [Int; 3]): Int {
+    var total := 0;
+    loop values as value {
+        total = total + value;
+    }
+    total
+}
+report("sum:", sum([10, 20, 30]));
