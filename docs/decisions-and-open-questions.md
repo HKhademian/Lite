@@ -2,6 +2,21 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Lite-written arithmetic front-end exercise, 2026-10-31
+
+Under automatic selected-scope progression, example 016 now parses and evaluates
+integer arithmetic using existing Lite features, without a new host helper or
+language change. It retains token tuples, uses self recursion and private
+value/position pairs, and checks full input consumption. The unchanged preserved
+alpha.15 interpreter runs/checks this source successfully.
+
+Strict checking, 125 interpreter groups and 9 editor groups pass, including real
+launcher syntax/arithmetic failures and silent check-only mode. Preserve the
+application milestone as igniter-v0.1.0-alpha.16. This is not a full Lite parser,
+AST/IR selection, code-generation backend or self-hosting result. First compiler
+source/output/rebuild contracts remain open; see
+[INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+
 ## Temporary text helpers approved and retained scanning delivered, 2026-10-31
 
 The user explicitly replies "Approve these temporary text helpers" to the focused

@@ -21,6 +21,49 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('Lite-written integer calculator handles precedence, associativity, nesting and unary signs', () => {
+  const source = readFileSync(new URL('../examples/016-integer-calculator.lts', import.meta.url), 'utf8');
+  for (const [input, expected] of [
+    ['2 + 3 * (4 - 1)', 11], ['(2 + 3) * 4', 20], ['20 - 3 - 2', 15],
+    ['20 / 3 / 2', 3], ['8 / 3 * 3', 6], ['-7 / 2', -3], ['7 / -2', -3],
+    ['2 * -3 + 4', -2], ['--2 + +3', 5], ['-(2 + 3) * 4', -20],
+    ['((003))', 3], ['0', 0], ['2\t+\t3', 5], ['9223372036854775807', 9223372036854775807n],
+    ['-9223372036854775807 - 1', -9223372036854775808n],
+  ] as const) {
+    assert.deepEqual(run(source, input), { code: 0, output: `Arithmetic expression:\nresult: ${expected}\n`, errors: '' }, input);
+  }
+});
+test('Lite calculator distinguishes malformed input, unsupported text, EOF and checked arithmetic faults', () => {
+  const source = readFileSync(new URL('../examples/016-integer-calculator.lts', import.meta.url), 'utf8');
+  for (const input of ['\n', ' \t\n', '1 +', '()', '(1 + 2', '1 2', '1)', '2(3)', '1 ** 2', '/1']) {
+    const result = run(source, input);
+    assert.equal(result.code, 2, input); assert.equal(result.output, 'Arithmetic expression:\n', input);
+    assert.match(result.errors, /expected|unexpected trailing token/, input);
+  }
+  assert.deepEqual(run(source, '2 + 🙂'), { code: 2, output: 'Arithmetic expression:\n', errors: 'unsupported symbol: 🙂\n' });
+  for (const input of ['1 / 0', '9223372036854775807 + 1', '9223372036854775808', '3037000500 * 3037000500']) {
+    fault(source, 'ArithmeticPanic', input);
+  }
+  fault(source, 'InputFault');
+});
+test('integer calculator runs and checks through the root launcher without extending host syntax', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = new URL('../examples/016-integer-calculator.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const [input, status, output, pattern] of [
+    ['2 + 3 * (4 - 1)', 0, 'Arithmetic expression:\nresult: 11\n', /^$/],
+    ['(1 + 2', 2, 'Arithmetic expression:\n', /expected '\)'/],
+    ['1 / 0', 1, 'Arithmetic expression:\n', /ArithmeticPanic: division by zero/],
+  ] as const) {
+    const result = spawnSync(join(root, 'lite'), ['run', path], { input, encoding: 'utf8', env, timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, status);
+    assert.equal(result.stdout, output); assert.match(result.stderr, pattern);
+  }
+  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { encoding: 'utf8', env, timeout: 5000 });
+  assert.equal(check.error, undefined); assert.equal(check.status, 0);
+  assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+});
+
 test('retained tokenizer returns named token lists, preserving text and rejecting before traversal output', () => {
   const source = readFileSync(new URL('../examples/015-retained-tokens.lts', import.meta.url), 'utf8');
   const prompt = 'Arithmetic expression:\n';

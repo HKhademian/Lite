@@ -178,6 +178,13 @@ execution of 013; editor checks include List highlighting. General generics,
 capacity, views, user-function mutation grants and recovery remain outside the
 increment. See [bounded evidence](../investigations/INV-055-fvp-list-slice.md).
 
+The next application-only increment, [016](../examples/016-integer-calculator.lts),
+implements a recursive integer arithmetic parser/evaluator in Lite, using retained
+token lists and value/position tuple results. It runs on the preserved alpha.15
+interpreter without host feature changes. Strict checking and 125 groups pass;
+see [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
+This produces a calculated result, not a compiler artifact or self-hosted stage.
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

@@ -66,6 +66,11 @@ integer prompts may appear together in captured stdout.
   reports number 12, symbol +, number 30; invalid text exits 2 before printing
   partial tokens.
 
+- [016 — Integer calculator](016-integer-calculator.lts): a scanner and recursive
+  arithmetic parser written entirely in supported Lite. Input 2 + 3 * (4 - 1)
+  reports result: 11. Supports parentheses, unary signs and checked integer
+  arithmetic; malformed input exits 2 and arithmetic faults remain terminal.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module
