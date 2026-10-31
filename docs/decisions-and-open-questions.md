@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Runtime-owner uncertainty reached, 2026-10-31
+
+After automatic deliveries through alpha.13, INV-055 reaches an open design
+boundary: growable lists are a selected storage family, while owner-copy
+eligibility and concrete type/construction/growth APIs remain unselected.
+The first behavior question is whether an ordinary owner copy preserves an
+independent sequence or is rejected pending explicit clone/move/borrow design.
+No alternative is selected and no list helper is invented. Growth is not asserted
+to be a prerequisite for every possible self-hosting approach. See
+[the investigation](../investigations/INV-055-fvp-owner-boundary.md).
+
 ## Named user-function call delivery, 2026-10-31
 
 INV-031 implements existing fixed-slot argument routing: unnamed entries fill

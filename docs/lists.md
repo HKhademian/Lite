@@ -4,6 +4,12 @@ Status: **growable List remains an explicitly selected collection family; the un
 
 ## Purpose and beginner examples
 
+FVP review, **2026-10-31**: implementation stops before choosing a runtime-owner
+copy contract, concrete type/constructor or growth API. The next concrete question
+is whether ordinary owner copies preserve an independent sequence or are rejected
+as noncopyable. Neither is selected. See
+[INV-055 decision boundary](../investigations/INV-055-fvp-owner-boundary.md).
+
 `List<Int>` is [temporary explanatory notation](generic-notation.md), not selected generic application syntax. An expected concrete List type or an explicit constructor requests growable storage. Fresh statically sized literals instead follow [fixed-array inference](tuple-array-shapes.md#known-size-fresh-literals-infer-fixed-arrays).
 
 A list owns a contiguous allocation with a current initialized length and possibly larger capacity. Adding/removing elements changes length. A list is not a linked list in this proposal.
