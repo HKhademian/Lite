@@ -18,5 +18,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

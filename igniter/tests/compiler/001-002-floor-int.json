@@ -1,0 +1,21 @@
+{
+  "name": "floor-int",
+  "source": {
+    "file": "001-002-floor-int.lts",
+    "hash": "sha256:d47893fd9f346bdfe9759277ad69db1f59c0d31e9cd58196cbd62c7d62c9a8ba"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "2\n-3\n1\n2\n",
+        "hash": "sha256:054dcfe84cad2cd04d51be9d20089cb25ef515893f3734c847a63b751f661e3d"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

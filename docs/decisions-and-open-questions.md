@@ -29,7 +29,7 @@ external-stream edits from silently keeping stale expectations; samples can use 
 observation calls without changing their teaching bodies.
 
 The registry now covers 27 feature cases, all 19 examples, all 20 samples and
-66 scenarios (80 target executions). Seven feature cases run through the
+66 scenarios (82 target executions). Eight feature cases run through the
 reference igniter, emitted TS and native C. All pass; 165 interpreter groups and
 9 editor groups pass. Coverage is blocking for features, examples and samples.
 Broader compiler targets and showcase transcripts remain open; the GitHub Actions workflow now runs the test, verification and editor gates. See
@@ -60,7 +60,7 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter is reserved but unimplemented; the verifier and tester have first slices. The 42 program and 34 rejection verification cases are unchanged in
+formatter is reserved but unimplemented; the verifier and tester have first slices. The 43 program and 34 rejection verification cases are unchanged in
 behavior; 165 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
@@ -78,7 +78,7 @@ trigraph-prone `?`; String locals are `const`/`const char *` with the existing
 unsupported text forms fail before artifact bytes.
 
 Compiler verification data moved from inline test arrays to one JSON file per
-case under `igniter/tests/compiler/`: 42 program cases and 34 rejection cases.
+case under `igniter/tests/compiler/`: 43 program cases and 34 rejection cases.
 Each case pairs a sibling `.lts` entry source with a JSON model holding a
 `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`; each case has
 optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses

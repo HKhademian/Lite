@@ -24,6 +24,16 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
+floorDivCode := fn(left: String, right: String): String {
+    "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
+}
+
+/** Emits a BigInt floor-modulo expression. */
+floorModCode := fn(left: String, right: String): String {
+    "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
+}
+
 importFlatAll "frontend.lts";
 
 /** Emits the TS module from the flat item stream. Locals become consts; report segments become a returned concatenated string expression. */

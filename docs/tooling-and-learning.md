@@ -232,7 +232,7 @@ They now also admit String literals/escapes, immutable String locals, String `+`
 concatenation and multi-value reports over Int/String values. String expressions
 are closed constants and fold at compile time; emitted TS/C literals escape
 quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
-verification data moved to `igniter/tests/compiler/`: 42 program cases and 34
+verification data moved to `igniter/tests/compiler/`: 43 program cases and 34
 rejection cases, each pairing a sibling `.lts` entry source with a JSON model
 holding a `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`
 (each case has optional `stdin`/`stdout`/`stderr` and required `exitCode`; each
@@ -252,7 +252,7 @@ unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`; `./lite verify`
 runs cases affected by git changes, while `./lite verify --all` runs all 26
-feature cases and all 39 artifact manifests. Seven feature cases also execute
+feature cases and all 39 artifact manifests. Eight feature cases also execute
 through the restricted TS and C compiler targets. `--update`, `--coverage`,
 `--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing
 cases are cached. `./lite test --fast` runs unit/interpreter/verification without

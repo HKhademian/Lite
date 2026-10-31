@@ -26,6 +26,16 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Emits an int64_t floor-division expression. */
+floorDivCode := fn(left: String, right: String): String {
+    "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? 1 : 0))"
+}
+
+/** Emits an int64_t floor-modulo expression. */
+floorModCode := fn(left: String, right: String): String {
+    "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? " + right + " : 0))"
+}
+
 importFlatAll "frontend.lts";
 
 /** Builds one checked printf call for an Int or String report value; newline controls the trailing newline in the format. */
