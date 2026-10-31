@@ -28,11 +28,11 @@ test('compiler applications preserve optional logical source names in their own 
     const expected = run(source, 'report(42);').output;
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
       assert.deepEqual(run(source, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
-      assert.deepEqual(run(source, 'report(1 + 2);', [label]), {
-        code: 2, output: '', errors: label + ': expected )\n',
+      assert.deepEqual(run(source, 'report(1 +);', [label]), {
+        code: 2, output: '', errors: label + ': expected an integer expression\n',
       });
     }
-    assert.deepEqual(run(source, 'report(1 + 2);'), { code: 2, output: '', errors: 'expected )\n' });
+    assert.deepEqual(run(source, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(source), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -52,9 +52,9 @@ test('real compiler CLI forwards source-name context without changing emitted by
     const valid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(42);', env, timeout: 5000 });
     assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
     assert.deepEqual(valid.stdout, readFileSync(join(root, 'examples/generated', reference))); assert.equal(valid.stderr.length, 0);
-    const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 + 2);', env, timeout: 5000 });
+    const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
     assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected )\n'));
+    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an integer expression\n'));
     const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
     assert.equal(check.error, undefined); assert.equal(check.status, 0);
     assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
@@ -207,12 +207,21 @@ test('whole-input example runs via the real launcher preserving UTF-8 bytes and 
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-const reportLiteralPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
+const compilerPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
   '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
   'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)',
   '\nreport(\n42\n);\n', '\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n', 'report(42);\n',
   'report(42);\nreport(9);\n', 'report(1); report(2); report(3);',
-  'report(0);\nreport(-42);\nreport(+100);\n'];
+  'report(0);\nreport(-42);\nreport(+100);\n',
+  'report(1 + 2 * (3 - 4));', 'report((2 + 3) * 4);', 'report(7 / -2);',
+  'report(--2 + +3);', 'report(-9223372036854775807 - 1);',
+  'report(2147483647 + 1);', 'report(1000000000 * 3);',
+  'x := 1 + 2 * (3 - 4);\nreport(x);\n',
+  'a := 5;\nb := a * 2;\nreport(b);\nreport(a - b);\n',
+  'report(00042); report(-000);',
+  'status := 1;\nprintf := status + 1;\nreport(printf);\n',
+  'INT64_MIN := 7;\nreport(INT64_MIN);\n',
+  'unused := 5;\nreport(42);\n'];
 
 test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -239,9 +248,13 @@ test('restricted C compiler emits the readable reference and rejects unsupported
   const expected = readFileSync(new URL('../examples/generated/018-report-42.c', import.meta.url), 'utf8');
   assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
   assert.equal(run(source, 'report(42);\nreport(9);').output,
-    '#include <stdio.h>\nint main(void) {\n    return fputs("42\\n9\\n", stdout) == EOF ? 1 : 0;\n}\n');
-  for (const input of ['report(1 + 2);', 'report("text");', 'report(42); report("text");',
-    'report(42); system("anything");', 'report(9223372036854775808);', 'report(-9223372036854775809);']) {
+    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
+    '    return status;\n}\n');
+  for (const input of ['report(1 +);', 'report(1 / 0);', 'report("text");', 'report(42); report("text");',
+    'report(42); system("anything");', 'report(9223372036854775808);', 'report(-9223372036854775809);',
+    'report(9223372036854775807 + 1);', 'report(-9223372036854775808 / -1);']) {
     const result = run(source, input);
     assert.equal(result.code, 2); assert.equal(result.output, ''); assert.notEqual(result.errors, '');
   }
@@ -260,7 +273,7 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    for (const [index, source] of reportLiteralPrograms.entries()) {
+    for (const [index, source] of compilerPrograms.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const cPath = join(directory, `program-${index}.c`);
       const tsPath = join(directory, `program-${index}.ts`);
@@ -304,7 +317,7 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
   assert.equal(run(source, 'report(42);').output, run(source, 'report(42);').output);
   assert.equal(run(source, ' report ( +00042 ) ; ').output, expected);
   assert.equal(run(source, 'report(-000);').output,
-    'export function main(): string {\n    return "0\\n";\n}\n');
+    'export function main(): string {\n    return (0n).toString() + "\\n";\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
   const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
@@ -312,26 +325,63 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
   const program = 'report(10);\nreport(20);\nreport(-30);\n';
   const tsOutput = run(tsSource, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
-  assert.equal(tsOutput.output, 'export function main(): string {\n    return "10\\n20\\n-30\\n";\n}\n');
+  assert.equal(tsOutput.output, 'export function main(): string {\n    return (10n).toString() + "\\n" + (20n).toString() + "\\n" + ((-30n)).toString() + "\\n";\n}\n');
   const cOutput = run(cSource, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
-  assert.equal(cOutput.output, '#include <stdio.h>\nint main(void) {\n    return fputs("10\\n20\\n-30\\n", stdout) == EOF ? 1 : 0;\n}\n');
+  assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(10))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(20))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)((-INT64_C(30)))) < 0) { status = 1; }\n' +
+    '    return status;\n}\n');
+});
+test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
+  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
+  const program = 'x := 2 * (3 - 4);\nreport(x + 10);\nreport(-x);\n';
+  assert.deepEqual(run(tsSource, program), { code: 0, errors: '', output:
+    'export function main(): string {\n' +
+    '    const lite_x = (2n * ((3n - 4n)));\n' +
+    '    void lite_x;\n' +
+    '    return ((lite_x + 10n)).toString() + "\\n" + ((-lite_x)).toString() + "\\n";\n}\n' });
+  assert.deepEqual(run(cSource, program), { code: 0, errors: '', output:
+    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
+    '    int status = 0;\n' +
+    '    int64_t lite_x = (INT64_C(2) * ((INT64_C(3) - INT64_C(4))));\n' +
+    '    (void)lite_x;\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)((lite_x + INT64_C(10)))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64 "\\n", (int64_t)((-lite_x))) < 0) { status = 1; }\n' +
+    '    return status;\n}\n' });
+});
+test('compiler applications reject checked arithmetic faults and malformed locals before output', () => {
+  for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
+    const source = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
+    for (const input of ['report(1 / 0);', 'report(9223372036854775807 + 1);',
+      'report(-9223372036854775808 - 1);', 'report(-9223372036854775808 * -1);',
+      'report(-9223372036854775808 / -1);', 'report(3037000500 * 3037000500);',
+      'report(unknown);', 'x := 1; x := 2;', 'x := 1', 'x := 1; report(y);']) {
+      const result = run(source, input);
+      assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
+      assert.notEqual(result.errors, '', input);
+    }
+  }
 });
 test('restricted TS compiler rejects malformed, unsupported and injected source before emitting bytes', () => {
   const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
   assert.equal(run(source, 'report(42);\nreport(9);').output,
-    'export function main(): string {\n    return "42\\n9\\n";\n}\n');
+    'export function main(): string {\n    return (42n).toString() + "\\n" + (9n).toString() + "\\n";\n}\n');
   for (const input of ['', '\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
-    'report("text");', 'report(1 + 2);', 'report(1.5);', 'report(1e2);',
+    'report("text");', 'report(1 +);', 'report(1.5);', 'report(1e2);',
     'report(42); report("text");', 'report(42); process.exit(7);',
     'report(9223372036854775808);', 'report(-9223372036854775809);',
-    'report(999999999999999999999999);', 'report(42); "}; throw 1; //']) {
+    'report(999999999999999999999999);', 'report(42); "}; throw 1; //',
+    'report(1 / 0);', 'report(9223372036854775807 + 1);', 'report(unknown);',
+    'x := 1; x := 2;', 'x := 1']) {
     const result = run(source, input);
     assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
     assert.notEqual(result.errors, '', input);
   }
 });
-test('emitted TS and igniter outputs match byte for byte across signed Int literal boundaries', () => {
+test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', () => {
   const root = new URL('../', import.meta.url).pathname;
   const compiler = new URL('../examples/017-report-ts-compiler.lts', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -339,7 +389,7 @@ test('emitted TS and igniter outputs match byte for byte across signed Int liter
   const corePaths: string[] = [];
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    for (const [index, source] of reportLiteralPrograms.entries()) {
+    for (const [index, source] of compilerPrograms.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const corePath = join(directory, `program-${index}.ts`);
       const adapterPath = join(directory, `run-${index}.ts`);

@@ -216,6 +216,16 @@ statements across the whole input without language extensions. Emitted TS and na
 preserve exact byte/status parity across 15 admitted programs. Strict checking and 148
 groups pass. See [statement sequencing evidence](../investigations/INV-061-statement-sequencing.md).
 
+They then admit left-associative `+ - * /`, parentheses, unary signs and immutable
+`x := <expression>;` locals. Expressions are checked in signed 64-bit at compile
+time and lowered to runtime TypeScript BigInt or C `int64_t`; reports use BigInt
+formatting or `printf` with `PRId64`, and collision-prone local names receive a
+`lite_` runtime prefix. Twenty-eight admitted programs have byte/status/signal
+parity across emitted TS, translated JS, native C and the igniter; strict checking
+and 153 groups pass. Range faults and division by zero are compile-time
+rejections, not emitted runtime panic parity. See
+[arithmetic/local evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

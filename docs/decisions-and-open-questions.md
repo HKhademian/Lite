@@ -2,6 +2,24 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Arithmetic expressions and immutable locals in restricted emitters, 2026-10-31
+
+Under automatic selected-scope progression from the alias checkpoint, examples
+017 and 018 now admit left-associative `+ - * /` over decimal Int literals and
+previously declared immutable locals, plus `x := <expression>;` declarations.
+Expressions are checked in signed 64-bit at compile time and lowered to runtime
+TypeScript BigInt or C `int64_t` code. Reports format through BigInt
+`toString()` or C `printf` with `PRId64`; locals use `lite_` runtime names to
+avoid generated/library/macro collisions, and every local is explicitly voided.
+Literal/expression range faults, division by zero, duplicate/unknown
+names and malformed declarations fail with status 2 before artifact bytes.
+
+Twenty-eight admitted programs have raw byte/status/signal parity across emitted
+TS, translated JS, native C and the igniter. Strict checking and 153 interpreter
+groups plus 9 editor groups pass. This is not a full parser, emitted runtime
+panic parity or self-rebuild; see
+[INV-061 evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
+
 ## One lexical namespace selected for ordinary aliases and value bindings, 2026-10-31
 
 The user approves Option 1 from INV-029 and rejects dual namespaces: "easier to

@@ -72,20 +72,27 @@ integer prompts may appear together in captured stdout.
   arithmetic; malformed input exits 2 and arithmetic faults remain terminal.
 
 - [017 — Report-to-TypeScript compiler](017-report-ts-compiler.lts): reads complete
-  Lite source such as report(42); and emits a readable TS module. It supports
-  one signed-decimal Int report with multi-line whitespace and rejects unsupported syntax before emitting
-  code. An optional -- source.lts argument adds that exact logical name to
-  compiler rejection diagnostics without changing valid output. Inspect the [TS reference](generated/017-report-42.ts) and
+  Lite source and emits a readable TS module. It supports sequences of
+  `report(<integer expression>);` statements and immutable `x := <expression>;`
+  locals, including parentheses, unary signs and left-associative `+ - * /`.
+  Expressions are checked in signed 64-bit at compile time and lowered to runtime
+  BigInt, so the emitted module formats the reports itself. Multi-line whitespace
+  is accepted and unsupported syntax is rejected before emitting code. An optional
+  -- source.lts argument adds that exact logical name to compiler rejection
+  diagnostics without changing valid output. Inspect the
+  [TS reference](generated/017-report-42.ts) and
   [explicit Node adapter](generated/017-run-report.ts); the adapter prints 42.
   The [generated-source checking config](generated/tsconfig.json) inherits the
   igniter's strict options. This is an initial emitter, not a self-hosted compiler.
 
 - [018 — Report-to-C compiler](018-report-c-compiler.lts): compiles the same
-  restricted signed-integer report source into standalone readable C. The
+  restricted arithmetic/local source into standalone readable C. Expressions are
+  lowered to `int64_t` and reports use `printf` with `PRId64`; the
   [C reference](generated/018-report-42.c) builds with a C11 compiler and standard
   library. It accepts the same optional logical source-name argument after --.
-  Native output bytes/status match the igniter and TS path for the 12
-  tested cases; general libraries/ABI and self-hosting remain future work.
+  Native output bytes/status match the igniter and TS path for the 28 tested
+  cases; range faults and division by zero are compile-time rejections. General
+  libraries/ABI and self-hosting remain future work.
 
 - [019 — Whole input](019-whole-input.lts): optionally prompted whole-input read
   through EOF. Reports the code-point count and the preserved text; report adds

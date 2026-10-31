@@ -835,6 +835,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-061 — statement sequencing in compiler applications](INV-061-statement-sequencing.md) — the TS/C applications sequence arbitrary report(integer) statements over whole source input using existing List/loops without language additions. Emitted TS and native C preserve exact byte/status parity across 15 admitted programs. Strict checking and 148 interpreter groups plus 9 editor groups pass. Control flow and runtime fault generation remain open.
 
+**Follow-up:** [INV-061 — arithmetic expressions and immutable locals](INV-061-arithmetic-and-locals-emission.md) — the TS/C applications now parse `+ - * /`, parentheses, unary signs and immutable `x := <expression>;` locals. Expressions are checked in signed 64-bit and lowered to TS BigInt or C `int64_t`; 28 admitted programs have raw byte/status/signal parity across TS, translated JS, native C and the igniter. Strict checking and 153 interpreter groups plus 9 editor groups pass. Full parsing, runtime panic parity and self-rebuild remain open.
+
 <a id="inv-062"></a>
 
 ## INV-062 — Compile-time computation
