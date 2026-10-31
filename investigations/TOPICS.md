@@ -295,6 +295,8 @@ questions; check their status and current owning pages before relying on them.
 
 **Follow-up:** [INV-022 — mixed fixed tuples](INV-022-fvp-mixed-tuples.md) — interleaved named/unnamed scalar fields and annotations implemented under existing selected rules; strict checking and 97 interpreter groups pass. No new syntax or APIs.
 
+**Follow-up:** [INV-022 — explicit tuple label conversion](INV-022-fvp-label-conversion.md) — stored flat scalar tuples can acquire destination labels at a fully initialized typed declaration; strict checking and 102 interpreter groups pass. Shape/types and ordinary label-sensitive transfers are preserved.
+
 <a id="inv-023"></a>
 
 ## INV-023 — Records

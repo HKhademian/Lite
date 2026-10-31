@@ -2,6 +2,16 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Explicit tuple label conversion delivery, 2026-10-31
+
+INV-022 implements the selected receiving-declaration bypass for stored flat
+scalar tuples: preserve ordered shape/types and values, expose destination labels,
+and keep source labels intact. Ordinary replacements/arguments/returns still
+check labels. Fresh constructors needing contextual routing remain unsupported.
+Strict checking and 102 interpreter groups pass, including example 011 and
+check-only execution through the launcher. Tag igniter-v0.1.0-alpha.12; see
+[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
+
 ## Mixed tuple FVP delivery, 2026-10-31
 
 Under the automatic selected-scope workflow, INV-022 now executes interleaved

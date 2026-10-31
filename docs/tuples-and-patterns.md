@@ -5,6 +5,8 @@ Status: **same-value binding/destructuring and union type-pattern narrowing esta
 The FVP implements flat scalar mixed tuples in written order; see
 [bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
 Broader nesting, pattern and contextual routing contracts remain separate.
+Stored-value explicit typed label conversion also has
+[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
 
 ## Purpose
 
@@ -12,7 +14,7 @@ Give names to an entire value or destructure that same value without making the 
 
 Approved implementation coverage, **2026-10-31**: the experimental
 [igniter](../igniter/README.md#flat-fixed-tuples) supports flat scalar tuples,
-unnamed or fully named, fixed-position/literal-field reads, ordinary positional
+unnamed, fully named or mixed, fixed-position/literal-field reads, ordinary positional
 declaration patterns, and
 explicit tuple function inputs/results. Empty/singleton/grouped patterns keep
 their selected meanings; repeated receiver names bind in written order. Named,

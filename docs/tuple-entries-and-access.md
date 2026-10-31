@@ -5,6 +5,8 @@ Status: **named-entry shorthand and zero-based positional access selected by the
 The FVP implements flat scalar mixed tuples in written order; see
 [bounded implementation evidence](../investigations/INV-022-fvp-mixed-tuples.md).
 Broader nesting, pattern and contextual routing contracts remain separate.
+Stored-value explicit typed label conversion also has
+[bounded evidence](../investigations/INV-022-fvp-label-conversion.md).
 
 ## Selected value entry forms
 
@@ -20,8 +22,9 @@ The following [named-field increment](../investigations/INV-022-fvp-named-tuples
 implements fully named scalar tuple values, =name shorthand, literal member reads,
 named tuple function inputs/results and label-sensitive stored transfers. Named
 singletons need no comma; numeric reads and positional binding keep stored order.
-Mixed/nested tuples, named patterns, spread, explicit receiving-declaration label
-conversion and contextual constructor routing remain unimplemented. Such valid
+Nested tuples, named patterns, spread and contextual constructor routing remain
+unimplemented. Flat mixed tuples and stored-value declaration-site relabeling
+now have bounded implementation coverage. Such valid
 contextual cases are diagnosed as unsupported rather than selecting a new order
 restriction. See [current coverage](../igniter/README.md#named-fixed-tuples).
 

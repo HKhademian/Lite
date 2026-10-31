@@ -21,6 +21,65 @@ function fault(source: string, category: LiteFault['category'], input = ''): voi
   assert.throws(() => run(source, input), (error: unknown) => error instanceof LiteFault && error.category === category);
 }
 
+test('typed tuple receiving declarations rename positions without reordering source values', () => {
+  assert.equal(run(`stored := (r = 20, l = 10); renamed: (l: Int, r: Int) = stored;
+    plain: (:Int, :Int) = renamed; mixed: (:Int, last: Int) = plain;
+    report(stored.r, stored.l, renamed.l, renamed.r, mixed.0, mixed.last);`).output,
+    '20 10 20 10 20 10\n');
+});
+test('typed tuple declarations evaluate once and preserve source copies and old shadow targets', () => {
+  assert.equal(run(`var original := (a = 1, b = 2);
+    var renamed: (x: Int, y: Int) = ({report("source"); original});
+    original = (a = 3, b = 4); renamed = (x = 5, y = 6);
+    renamed: (left: Int, right: Int) = renamed;
+    report(original.a, renamed.left, renamed.right);
+    boxed := (v = Unit); unit: (:Unit,) = boxed; report(unit.0);`).output,
+    'source\n3 5 6\nUnit\n');
+});
+test('typed tuple conversions produce ordinary label-sensitive values usable in calls and arrays', () => {
+  assert.equal(run(`size := (width = 7, height = 9); point: (x: Int, y: Int) = size;
+    take := fn(p: (x: Int, y: Int)): Int { p.x + p.y }
+    copies := [point, point]; report(take(copies[0]));
+    make := fn(): (x: Int, y: Int) { source := (7, 9); result: (x: Int, y: Int) = source; result }
+    report(take(make()));`).output, '16\n16\n');
+  for (const code of [
+    'source := (a = 1); renamed: (x: Int) = source; var target := renamed; target = source;',
+    'source := (a = 1); renamed: (x: Int) = source; source.x;',
+    'source := (a = 1); renamed: (x: Int) = source; renamed = renamed;',
+  ]) fault(code, 'TypeError');
+});
+test('typed tuple conversion rejects incompatible shapes and types before effects', () => {
+  for (const code of [
+    'source := (1, 2); target: (x: Int) = source;',
+    'source := (1, "two"); target: (x: String, y: Int) = source;',
+    'source := (1,); target: (x: Float) = source;',
+    'source := 1; target: (x: Int) = source;',
+    'source := [1]; target: (x: Int) = source;',
+    'source := (); target: (x: Unit) = source;',
+    'target: (x: Int) = (missing = 1);',
+  ]) {
+    let observed = false;
+    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+      read: () => null, report: () => { observed = true; }, reportError: () => { observed = true; },
+    }), LiteFault);
+    assert.equal(observed, false, code);
+  }
+  assert.throws(() => compile('target: (x: Int, y: Int) = (y = 2, x = 1);'),
+    (error: unknown) => error instanceof LiteFault && error.message.includes('contextual tuple constructor routing'));
+  assert.equal(run('target: (x: Int) = (x = 3); report(target.x);').output, '3\n');
+});
+test('indexed typed tuple conversion example runs and checks through the launcher', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const path = new URL('../examples/011-tuple-label-conversion.lts', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  for (const check of [false, true]) {
+    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, check ? '' : '640 480\n640 480\n640 480\n');
+    assert.equal(result.stderr, '');
+  }
+});
+
 test('mixed tuples preserve interleaved positions, shorthand and source evaluation order', () => {
   assert.equal(run(`tea := "green";
     value := (({report("first"); 7}), =tea, cups = ({report("third"); 2}), true);
@@ -882,7 +941,6 @@ test('invalid labels and unsupported tuple extensions are rejected before effect
     ['var token := (kind = "number"); token = (kind = 7);', 'TypeError'],
     ['token := (kind = "number"); (local = kind) := token;', 'SourceError'],
     ['var token := (kind = "number"); token.kind = "other";', 'SourceError'],
-    ['token := (kind = "number"); renamed: (name: String) = token;', 'SourceError'],
     ['token := (kind = "number"); f := fn(): String { token.kind }', 'TypeError'],
     ['token := (kind = "number"); report(token);', 'TypeError'],
   ]) {

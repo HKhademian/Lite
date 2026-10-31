@@ -45,6 +45,10 @@ integer prompts may appear together in captured stdout.
   fields, uses a mixed function contract and destructures in stored order.
   Reports 7 green 2 true twice.
 
+- [011 — Tuple label conversion](011-tuple-label-conversion.lts): gives stored
+  positions new labels through explicit receiving types. Reports 640 480 three
+  times, retaining source order and values.
+
 Each file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

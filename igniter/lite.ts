@@ -54,6 +54,7 @@ type Raw = Readonly<{ at: Position }> & (
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; input: Raw }
+  | { kind: 'typedDeclare'; name: string; mutable: boolean; annotation: TupleType; input: Raw }
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'destructure'; names: readonly Token[]; input: Raw }
   | { kind: 'expression'; input: Raw }
@@ -366,6 +367,15 @@ class Parser {
     }
     return token;
   }
+  typedDeclaration(name: Token, mutable: boolean): RawItem {
+    this.expect(':');
+    const annotation = this.dataType();
+    if (typeof annotation === 'string' || annotation.kind !== 'Tuple') {
+      source('explicit receiving declarations currently support flat tuple types only', name.at);
+    }
+    this.expect('=');
+    return { kind: 'typedDeclare', name: name.text, mutable, annotation, input: this.expression(), at: name.at };
+  }
   tupleEntry(): Readonly<{ label: string | undefined; input: Raw }> {
     if (this.accept('=')) {
       const name = this.label();
@@ -412,8 +422,14 @@ class Parser {
       if (this.accept('var')) {
         const name = this.take();
         if (name.kind !== 'id') source('expected binding name after var', name.at);
-        this.expect(':=');
-        items.push({ kind: 'declare', name: name.text, mutable: true, input: this.expression(), at: start.at });
+        if (this.peek().text === ':') items.push(this.typedDeclaration(name, true));
+        else {
+          this.expect(':=');
+          items.push({ kind: 'declare', name: name.text, mutable: true, input: this.expression(), at: start.at });
+        }
+      } else if (start.kind === 'id' && this.peek(1).text === ':') {
+        this.take();
+        items.push(this.typedDeclaration(start, false));
       } else if (start.kind === 'id' && [':=', '='].includes(this.peek(1).text)) {
         this.take();
         const op = this.take();
@@ -916,9 +932,22 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Bindi
         type = 'Unit';
         break;
       }
-      case 'declare': {
+      case 'typedDeclare': case 'declare': {
         if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
-        const binding: Binding = own ?? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: input.type, owner: state.current?.id ?? 0 };
+        let declared = input.type;
+        if (item.kind === 'typedDeclare') {
+          const destination = item.annotation;
+          declared = destination;
+          if (input.type !== 'Never' && !sameType(input.type, declared)) {
+            if (freshTuple(input)) typeError('contextual tuple constructor routing is not supported yet at typed declarations; use a stored tuple for positional label conversion', input.at);
+            if (typeof input.type === 'string' || input.type.kind !== 'Tuple' ||
+                input.type.items.length !== destination.items.length ||
+                !input.type.items.every((member, index) => member.type === destination.items[index]?.type)) {
+              typeError('tuple label conversion requires the same ordered shape and component types', input.at);
+            }
+          }
+        }
+        const binding: Binding = own ?? { name: item.name, mutable: item.mutable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, binding);
         items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';

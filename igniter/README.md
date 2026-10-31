@@ -244,8 +244,7 @@ or reordered fields are diagnosed as unimplemented. Write matching labels in
 destination order for this subset. This is an implementation limit, not a new
 restriction on the broader selected constructor-routing rules.
 
-Nested tuples, named patterns, spread/rest, inferred label types, explicit
-receiving-declaration label conversion and field mutation remain unsupported.
+Nested tuples, named patterns, spread/rest, inferred label types and field mutation remain unsupported.
 Keyword/self field names are outside the igniter's current identifier profile;
 this does not settle the full language's reserved-name policy. Labels are checked
 statically; no runtime reflection, native layout/ABI or ownership result is claimed.
@@ -258,6 +257,19 @@ every position; field access covers labeled positions. Copies, function contract
 and homogeneous arrays preserve each position's label or absence of a label.
 See [010](../examples/010-mixed-tuples.lts) and
 [INV-022 evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+
+### Explicit tuple label conversion
+
+A fully initialized receiving declaration such as point: (x: Int, y: Int) = size
+may rename a stored flat scalar tuple by position. Labels can be added, removed
+or changed; shape and ordered component types must match exactly in this subset.
+The source is evaluated once and retains its own labels/value. Both fixed and var
+receiving bindings work; later replacement still checks the destination labels.
+Fresh constructors with matching labels work, but contextual construction needing
+routing remains diagnosed as unimplemented. No numeric casts, callable label
+adaptation, aliases or uninitialized typed storage are implemented here. See
+[011](../examples/011-tuple-label-conversion.lts) and
+[INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
 
 ### Fixed arrays and traversal
 
@@ -402,8 +414,8 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.11**, tag **igniter-v0.1.0-alpha.11**, adds interleaved
-named/unnamed flat tuples using the existing selected forms.
+Version **0.1.0-alpha.12**, tag **igniter-v0.1.0-alpha.12**, adds existing explicit
+receiving-declaration label conversion for stored flat scalar tuples.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -422,6 +434,8 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.10**, commit `1e253b5`: readable fixed arrays and traversal.
 
+- **igniter-v0.1.0-alpha.11**, commit `b8583ff`: mixed flat tuple fields and annotations.
+
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
 It requires Node 26.13.0 to run and the pinned dev dependencies to typecheck.
@@ -429,7 +443,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **97 test groups** pass under the pinned Node/TypeScript versions. The tests
+All **102 test groups** pass under the pinned Node/TypeScript versions. The tests
 exercise the real CLI and evaluator, including overflow and negative
 programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
 by appending explicit reports in test memory; lesson files remain unchanged.

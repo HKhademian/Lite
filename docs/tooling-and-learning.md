@@ -125,7 +125,7 @@ The following named-field increment implements existing flat fully named tuple
 values, =name shorthand, field reads, named function tuple annotations and
 label-sensitive stored transfers. The [008 example](../examples/008-named-tuples.lts)
 runs with ./lite run; strict checking and all 79 interpreter test groups pass.
-Broader tuple routing, relabeling, named patterns and nested tuples and mutation
+Broader tuple routing, named patterns, nested tuples and mutation
 remain unimplemented. See [INV-022](../investigations/INV-022-fvp-named-tuples.md)
 and [named-field coverage](../igniter/README.md#named-fixed-tuples).
 
@@ -157,6 +157,11 @@ The next INV-022 increment implements already selected interleaved named/unnamed
 flat tuples, including mixed annotations, copies and array elements. Strict
 checking and all 97 interpreter groups pass; see
 [the evidence](../investigations/INV-022-fvp-mixed-tuples.md).
+
+Explicit typed receiving declarations can now relabel stored flat scalar tuples
+by position with exact shape/types. Ordinary transfers remain label-sensitive;
+fresh-constructor routing stays unimplemented. Strict checking and 102 groups
+pass; see [INV-022 evidence](../investigations/INV-022-fvp-label-conversion.md).
 
 ## TypeScript igniter and early self-hosting
 

@@ -1,0 +1,7 @@
+stored := (width = 640, height = 480);
+point: (x: Int, y: Int) = stored;
+plain: (:Int, :Int) = point;
+mixed: (:Int, height: Int) = plain;
+report(stored.width, stored.height);
+report(point.x, point.y);
+report(mixed.0, mixed.height);
