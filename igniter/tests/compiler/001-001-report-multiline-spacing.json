@@ -1,0 +1,11 @@
+{
+  "name": "report-multiline-spacing",
+  "source": "001-001-report-multiline-spacing.lts",
+  "stdout": {
+    "text": "42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "string-empty",
+  "source": "001-004-string-empty.lts",
+  "stdout": {
+    "text": "\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

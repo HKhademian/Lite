@@ -1,0 +1,11 @@
+{
+  "name": "string-minus-int",
+  "source": "002-002-string-minus-int.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "operator - requires Int operands\n"
+  },
+  "exitCode": 2
+}

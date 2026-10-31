@@ -1,0 +1,11 @@
+{
+  "name": "min-divide-minus-one",
+  "source": "002-003-min-divide-minus-one.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "integer expression outside signed 64-bit range\n"
+  },
+  "exitCode": 2
+}

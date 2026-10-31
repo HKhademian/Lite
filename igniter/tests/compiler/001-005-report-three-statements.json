@@ -1,0 +1,11 @@
+{
+  "name": "report-three-statements",
+  "source": "001-005-report-three-statements.lts",
+  "stdout": {
+    "text": "1\n2\n3\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

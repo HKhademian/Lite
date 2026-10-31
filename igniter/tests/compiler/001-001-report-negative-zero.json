@@ -1,0 +1,14 @@
+{
+  "name": "report-negative-zero",
+  "source": "001-001-report-negative-zero.lts",
+  "stdin": {
+    "text": "ignored input\n"
+  },
+  "stdout": {
+    "text": "0\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

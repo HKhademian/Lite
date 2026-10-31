@@ -1,0 +1,11 @@
+{
+  "name": "report-spaced-negative",
+  "source": "001-001-report-spaced-negative.lts",
+  "stdout": {
+    "text": "-42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

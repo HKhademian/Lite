@@ -1,0 +1,11 @@
+{
+  "name": "local-hygiene-string",
+  "source": "001-006-local-hygiene-string.lts",
+  "stdout": {
+    "text": "xy 1\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

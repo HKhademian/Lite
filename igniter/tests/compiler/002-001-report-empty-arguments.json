@@ -1,0 +1,11 @@
+{
+  "name": "report-empty-arguments",
+  "source": "002-001-report-empty-arguments.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected an integer or string expression\n"
+  },
+  "exitCode": 2
+}

@@ -1,0 +1,11 @@
+{
+  "name": "unknown-local",
+  "source": "002-005-unknown-local.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "unknown value y\n"
+  },
+  "exitCode": 2
+}

@@ -1,0 +1,11 @@
+{
+  "name": "string-unicode",
+  "source": "001-004-string-unicode.lts",
+  "stdout": {
+    "text": "سلام🙂\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

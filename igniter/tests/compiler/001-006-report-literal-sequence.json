@@ -1,0 +1,11 @@
+{
+  "name": "report-literal-sequence",
+  "source": "001-006-report-literal-sequence.lts",
+  "stdout": {
+    "text": "42\n0\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

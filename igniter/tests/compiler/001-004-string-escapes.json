@@ -1,0 +1,11 @@
+{
+  "name": "string-escapes",
+  "source": "001-004-string-escapes.lts",
+  "stdout": {
+    "text": "quote: \" slash: \\ tab:\t end\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

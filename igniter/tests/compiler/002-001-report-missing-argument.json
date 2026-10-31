@@ -1,0 +1,11 @@
+{
+  "name": "report-missing-argument",
+  "source": "002-001-report-missing-argument.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected an integer or string expression\n"
+  },
+  "exitCode": 2
+}

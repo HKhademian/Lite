@@ -220,11 +220,27 @@ They then admit left-associative `+ - * /`, parentheses, unary signs and immutab
 `x := <expression>;` locals. Expressions are checked in signed 64-bit at compile
 time and lowered to runtime TypeScript BigInt or C `int64_t`; reports use BigInt
 formatting or `printf` with `PRId64`, and collision-prone local names receive a
-`lite_` runtime prefix. Twenty-eight admitted programs have byte/status/signal
+`lite_` runtime prefix. The 28-case arithmetic/local corpus has byte/status/signal
 parity across emitted TS, translated JS, native C and the igniter; strict checking
-and 153 groups pass. Range faults and division by zero are compile-time
+and 153 groups passed. Range faults and division by zero are compile-time
 rejections, not emitted runtime panic parity. See
 [arithmetic/local evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
+
+They now also admit String literals/escapes, immutable String locals, String `+`
+concatenation and multi-value reports over Int/String values. String expressions
+are closed constants and fold at compile time; emitted TS/C literals escape
+quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
+verification data moved to `igniter/tests/compiler/`: 41 program cases and 34
+rejection cases, each pairing a sibling `.lts` entry source with a JSON model
+holding the source path, optional `stdin`, required `stdout`/`stderr` streams,
+and `exitCode` (each stream uses inline `text`, inline `bytes` or a sibling
+`file`). Filenames follow `NNN-MMM-title-subtitle.json`
+(category 001 program, 002 rejection). Program cases pass four-way parity and
+rejection cases pass exact diagnostics through both compilers. Strict checking
+and 155 groups pass. Text operations/indexing, NUL handling, runtime input and
+self-rebuild remain open. See
+[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
+and the [fixture schema](../igniter/tests/README.md).
 
 ## TypeScript igniter and early self-hosting
 

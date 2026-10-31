@@ -1,0 +1,11 @@
+{
+  "name": "overflow-multiply-large",
+  "source": "002-003-overflow-multiply-large.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "integer expression outside signed 64-bit range\n"
+  },
+  "exitCode": 2
+}

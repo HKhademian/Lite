@@ -1,0 +1,11 @@
+{
+  "name": "report-two-statements",
+  "source": "001-005-report-two-statements.lts",
+  "stdout": {
+    "text": "42\n9\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

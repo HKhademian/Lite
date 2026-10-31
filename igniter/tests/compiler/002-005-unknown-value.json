@@ -1,0 +1,11 @@
+{
+  "name": "unknown-value",
+  "source": "002-005-unknown-value.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "unknown value unknown\n"
+  },
+  "exitCode": 2
+}

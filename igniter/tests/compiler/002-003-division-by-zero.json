@@ -1,0 +1,11 @@
+{
+  "name": "division-by-zero",
+  "source": "002-003-division-by-zero.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "file": "002-003-division-by-zero.stderr"
+  },
+  "exitCode": 2
+}

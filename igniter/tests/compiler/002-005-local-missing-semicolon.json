@@ -1,0 +1,11 @@
+{
+  "name": "local-missing-semicolon",
+  "source": "002-005-local-missing-semicolon.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected ; after local declaration x\n"
+  },
+  "exitCode": 2
+}

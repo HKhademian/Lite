@@ -72,7 +72,7 @@ accepts an optional trailing semicolon; local declarations require one.
 
 ## Evidence
 
-The shared admitted corpus now has 28 programs. It covers signed literal
+The arithmetic/local corpus at this checkpoint had 28 programs. It covers signed literal
 boundaries, leading signs and zeroes, multi-line whitespace, multiple reports,
 precedence and associativity, nested parentheses, unary signs, negative
 division, expression-built Int minimum, expressions that exceed 32-bit range but

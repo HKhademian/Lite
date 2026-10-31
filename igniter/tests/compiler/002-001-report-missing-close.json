@@ -1,0 +1,11 @@
+{
+  "name": "report-missing-close",
+  "source": "002-001-report-missing-close.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected )\n"
+  },
+  "exitCode": 2
+}

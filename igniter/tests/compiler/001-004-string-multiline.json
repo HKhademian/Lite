@@ -1,0 +1,11 @@
+{
+  "name": "string-multiline",
+  "source": "001-004-string-multiline.lts",
+  "stdout": {
+    "file": "001-004-string-multiline.stdout"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

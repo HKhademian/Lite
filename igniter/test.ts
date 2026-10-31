@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -29,10 +29,10 @@ test('compiler applications preserve optional logical source names in their own 
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
       assert.deepEqual(run(source, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
       assert.deepEqual(run(source, 'report(1 +);', [label]), {
-        code: 2, output: '', errors: label + ': expected an integer expression\n',
+        code: 2, output: '', errors: label + ': expected an integer or string expression\n',
       });
     }
-    assert.deepEqual(run(source, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer expression\n' });
+    assert.deepEqual(run(source, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer or string expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(source), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -54,7 +54,7 @@ test('real compiler CLI forwards source-name context without changing emitted by
     assert.deepEqual(valid.stdout, readFileSync(join(root, 'examples/generated', reference))); assert.equal(valid.stderr.length, 0);
     const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
     assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an integer expression\n'));
+    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an integer or string expression\n'));
     const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
     assert.equal(check.error, undefined); assert.equal(check.status, 0);
     assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
@@ -207,21 +207,109 @@ test('whole-input example runs via the real launcher preserving UTF-8 bytes and 
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-const compilerPrograms = ['report(42);', 'report(0);', 'report(-0);', 'report(+00042);',
-  '\treport ( - 00042 ) ; \t', 'report(9223372036854775807);',
-  'report(-9223372036854775808);', 'report(9999999999999999);', 'report(0000)',
-  '\nreport(\n42\n);\n', '\r\n\treport\r\n(\r\n-00042\r\n)\r\n;\r\n', 'report(42);\n',
-  'report(42);\nreport(9);\n', 'report(1); report(2); report(3);',
-  'report(0);\nreport(-42);\nreport(+100);\n',
-  'report(1 + 2 * (3 - 4));', 'report((2 + 3) * 4);', 'report(7 / -2);',
-  'report(--2 + +3);', 'report(-9223372036854775807 - 1);',
-  'report(2147483647 + 1);', 'report(1000000000 * 3);',
-  'x := 1 + 2 * (3 - 4);\nreport(x);\n',
-  'a := 5;\nb := a * 2;\nreport(b);\nreport(a - b);\n',
-  'report(00042); report(-000);',
-  'status := 1;\nprintf := status + 1;\nreport(printf);\n',
-  'INT64_MIN := 7;\nreport(INT64_MIN);\n',
-  'unused := 5;\nreport(42);\n'];
+type CompilerFixture = Readonly<{
+  file: string;
+  category: 'program' | 'rejected';
+  subcategory: string;
+  name: string;
+  sourcePath: string;
+  source: string;
+  stdin: Buffer;
+  stdout: Buffer;
+  stderr: Buffer;
+  exitCode: number;
+}>;
+
+const fixtureFile = /^(\d{3})-(\d{3})-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
+const fixtureStream = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+function fixtureRecord(value: unknown, file: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`${file}: expected a JSON object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function checkKeys(record: Record<string, unknown>, allowed: readonly string[], file: string, label: string): void {
+  for (const key of Object.keys(record)) {
+    if (!allowed.includes(key)) throw new Error(`${file}: unexpected ${label} key ${key}`);
+  }
+}
+
+function readStream(value: unknown, file: string, label: string, directory: URL, required: boolean): Buffer {
+  if (value === undefined) {
+    if (required) throw new Error(`${file}: ${label} is required`);
+    return Buffer.alloc(0);
+  }
+  const stream = fixtureRecord(value, file);
+  checkKeys(stream, ['text', 'bytes', 'file'], file, label);
+  const forms = ['text', 'bytes', 'file'].filter(key => stream[key] !== undefined);
+  if (forms.length !== 1) throw new Error(`${file}: ${label} must contain exactly one of text, bytes or file`);
+  const form = forms[0];
+  if (form === 'text') {
+    const text = stream['text'];
+    if (typeof text !== 'string') throw new Error(`${file}: ${label}.text must be a string`);
+    return Buffer.from(text, 'utf8');
+  }
+  if (form === 'bytes') {
+    const bytes = stream['bytes'];
+    if (!Array.isArray(bytes) || !bytes.every(byte =>
+      typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+      throw new Error(`${file}: ${label}.bytes must be an array of bytes`);
+    }
+    return Buffer.from(bytes as number[]);
+  }
+  const pathName = stream['file'];
+  if (typeof pathName !== 'string' || !fixtureStream.test(pathName)) {
+    throw new Error(`${file}: ${label}.file must be a sibling file name`);
+  }
+  return readFileSync(new URL(pathName, directory));
+}
+
+function loadCompilerFixtures(): readonly CompilerFixture[] {
+  const directory = new URL('./tests/compiler/', import.meta.url);
+  const files = readdirSync(directory).filter(file => file.endsWith('.json')).sort();
+  const names = new Set<string>();
+  return files.map(file => {
+    const match = fixtureFile.exec(file);
+    if (match === null) throw new Error(`${file}: expected NNN-MMM-title-subtitle.json`);
+    const categoryCode = match[1] ?? '';
+    const subcategory = match[2] ?? '';
+    const slug = match[3] ?? '';
+    const category = categoryCode === '001' ? 'program' : categoryCode === '002' ? 'rejected' : undefined;
+    if (category === undefined) throw new Error(`${file}: category must be 001 (program) or 002 (rejected)`);
+    const record = fixtureRecord(JSON.parse(readFileSync(new URL(file, directory), 'utf8')), file);
+    checkKeys(record, ['name', 'source', 'stdin', 'stdout', 'stderr', 'exitCode'], file, 'fixture');
+    if (record['name'] !== slug) throw new Error(`${file}: name must be ${JSON.stringify(slug)}`);
+    if (names.has(slug)) throw new Error(`${file}: duplicate fixture name ${slug}`);
+    names.add(slug);
+    const sourcePath = `${file.slice(0, -'.json'.length)}.lts`;
+    if (record['source'] !== sourcePath) throw new Error(`${file}: source must be ${JSON.stringify(sourcePath)}`);
+    const source = readFileSync(new URL(sourcePath, directory), 'utf8');
+    if (category === 'rejected' && record['stdin'] !== undefined) {
+      throw new Error(`${file}: rejected fixtures take no stdin`);
+    }
+    const stdin = readStream(record['stdin'], file, 'stdin', directory, false);
+    const stdout = readStream(record['stdout'], file, 'stdout', directory, true);
+    const stderr = readStream(record['stderr'], file, 'stderr', directory, true);
+    const exitCode = record['exitCode'];
+    if (typeof exitCode !== 'number' || !Number.isInteger(exitCode) || exitCode < 0 || exitCode > 255) {
+      throw new Error(`${file}: exitCode must be a byte`);
+    }
+    return { file, category, subcategory, name: slug, sourcePath, source, stdin, stdout, stderr, exitCode };
+  });
+}
+
+const compilerFixtures = loadCompilerFixtures();
+const programFixtures = compilerFixtures.filter(fixture => fixture.category === 'program');
+const rejectionFixtures = compilerFixtures.filter(fixture => fixture.category === 'rejected');
+
+test('compiler verification cases are well-formed and cover both categories', () => {
+  assert.ok(programFixtures.length > 0);
+  assert.ok(rejectionFixtures.length > 0);
+  assert.equal(new Set(compilerFixtures.map(fixture => fixture.file)).size, compilerFixtures.length);
+});
+
 
 test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -243,7 +331,7 @@ test('whole-source TS and C emitters reject later statements and decoding failur
   }
 });
 
-test('restricted C compiler emits the readable reference and rejects unsupported source before output', () => {
+test('restricted C compiler emits the readable reference and sequences reports', () => {
   const source = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
   const expected = readFileSync(new URL('../examples/generated/018-report-42.c', import.meta.url), 'utf8');
   assert.deepEqual(run(source, 'report(42);'), { code: 0, output: expected, errors: '' });
@@ -252,12 +340,6 @@ test('restricted C compiler emits the readable reference and rejects unsupported
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
     '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
     '    return status;\n}\n');
-  for (const input of ['report(1 +);', 'report(1 / 0);', 'report("text");', 'report(42); report("text");',
-    'report(42); system("anything");', 'report(9223372036854775808);', 'report(-9223372036854775809);',
-    'report(9223372036854775807 + 1);', 'report(-9223372036854775808 / -1);']) {
-    const result = run(source, input);
-    assert.equal(result.code, 2); assert.equal(result.output, ''); assert.notEqual(result.errors, '');
-  }
 });
 test('Lite-generated native C, TS and igniter programs have identical output bytes and status', context => {
   const cc = process.env['CC'] ?? 'cc';
@@ -273,15 +355,15 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
   const directory = mkdtempSync(join(tmpdir(), 'lite-native-parity-'));
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    for (const [index, source] of compilerPrograms.entries()) {
+    for (const [index, fixture] of programFixtures.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const cPath = join(directory, `program-${index}.c`);
       const tsPath = join(directory, `program-${index}.ts`);
       const executable = join(directory, `native-${index}`);
       const adapter = join(directory, `run-${index}.ts`);
-      writeFileSync(sourcePath, source);
+      writeFileSync(sourcePath, fixture.source);
       for (const [compiler, path] of [[cCompiler, cPath], [tsCompiler, tsPath]] as const) {
-        const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: source, env, timeout: 5000 });
+        const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: fixture.source, env, timeout: 5000 });
         assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
         assert.equal(emitted.stderr.length, 0); writeFileSync(path, emitted.stdout);
       }
@@ -290,15 +372,15 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       });
       assert.equal(built.error, undefined); assert.equal(built.status, 0, built.stdout + built.stderr);
       writeFileSync(adapter, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
-      const input = Buffer.from([0, 255, 10]);
+      const input = fixture.stdin;
       const baseline = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
-      assert.equal(baseline.error, undefined); assert.equal(baseline.status, 0);
-      for (const actual of [spawnSync(executable, [], { input, timeout: 5000 }),
+      for (const actual of [baseline, spawnSync(executable, [], { input, timeout: 5000 }),
         spawnSync(process.execPath, [adapter], { input, timeout: 5000 })]) {
-        assert.equal(actual.error, undefined); assert.equal(actual.status, baseline.status);
-        assert.equal(actual.signal, baseline.signal);
-        assert.deepEqual(actual.stdout, baseline.stdout, source);
-        assert.deepEqual(actual.stderr, baseline.stderr, source);
+        assert.equal(actual.error, undefined, fixture.name);
+        assert.equal(actual.status, fixture.exitCode, fixture.name);
+        assert.equal(actual.signal, null, fixture.name);
+        assert.deepEqual(actual.stdout, fixture.stdout, fixture.name);
+        assert.deepEqual(actual.stderr, fixture.stderr, fixture.name);
       }
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -352,34 +434,46 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
     '    if (printf("%" PRId64 "\\n", (int64_t)((-lite_x))) < 0) { status = 1; }\n' +
     '    return status;\n}\n' });
 });
-test('compiler applications reject checked arithmetic faults and malformed locals before output', () => {
+test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
+  const tsSource = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
+  const cSource = readFileSync(new URL('../examples/018-report-c-compiler.lts', import.meta.url), 'utf8');
+  const program = 's := "a\\"b";\nreport(s);\nreport(1, s, 2);\n';
+  assert.deepEqual(run(tsSource, program), { code: 0, errors: '', output:
+    'export function main(): string {\n' +
+    '    const lite_s = "a\\"b";\n' +
+    '    void lite_s;\n' +
+    '    return lite_s + "\\n" + (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n}\n' });
+  assert.deepEqual(run(cSource, program), { code: 0, errors: '', output:
+    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
+    '    int status = 0;\n' +
+    '    const char *lite_s = "a\\"b";\n' +
+    '    (void)lite_s;\n' +
+    '    if (printf("%s\\n", lite_s) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
+    '    if (printf(" ") < 0) { status = 1; }\n' +
+    '    if (printf("%s", lite_s) < 0) { status = 1; }\n' +
+    '    if (printf(" ") < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(2))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
+    '    return status;\n}\n' });
+});
+test('compiler applications reject fixture sources with exact diagnostics before artifact output', () => {
   for (const name of ['017-report-ts-compiler.lts', '018-report-c-compiler.lts']) {
-    const source = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
-    for (const input of ['report(1 / 0);', 'report(9223372036854775807 + 1);',
-      'report(-9223372036854775808 - 1);', 'report(-9223372036854775808 * -1);',
-      'report(-9223372036854775808 / -1);', 'report(3037000500 * 3037000500);',
-      'report(unknown);', 'x := 1; x := 2;', 'x := 1', 'x := 1; report(y);']) {
-      const result = run(source, input);
-      assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
-      assert.notEqual(result.errors, '', input);
+    const compiler = readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8');
+    for (const fixture of rejectionFixtures) {
+      assert.notEqual(fixture.exitCode, 0, fixture.name);
+      assert.equal(fixture.stdout.length, 0, fixture.name);
+      const result = run(compiler, fixture.source);
+      assert.equal(result.code, fixture.exitCode, `${name}: ${fixture.name}`);
+      assert.deepEqual(Buffer.from(result.output, 'utf8'), fixture.stdout, `${name}: ${fixture.name}`);
+      assert.deepEqual(Buffer.from(result.errors, 'utf8'), fixture.stderr, `${name}: ${fixture.name}`);
     }
   }
 });
-test('restricted TS compiler rejects malformed, unsupported and injected source before emitting bytes', () => {
+test('restricted TS compiler emits a deterministic report sequence', () => {
   const source = readFileSync(new URL('../examples/017-report-ts-compiler.lts', import.meta.url), 'utf8');
   assert.equal(run(source, 'report(42);\nreport(9);').output,
     'export function main(): string {\n    return (42n).toString() + "\\n" + (9n).toString() + "\\n";\n}\n');
-  for (const input of ['', '\n', 'x', 'report', 'report()', 'report(1', 'report(1, 2);',
-    'report("text");', 'report(1 +);', 'report(1.5);', 'report(1e2);',
-    'report(42); report("text");', 'report(42); process.exit(7);',
-    'report(9223372036854775808);', 'report(-9223372036854775809);',
-    'report(999999999999999999999999);', 'report(42); "}; throw 1; //',
-    'report(1 / 0);', 'report(9223372036854775807 + 1);', 'report(unknown);',
-    'x := 1; x := 2;', 'x := 1']) {
-    const result = run(source, input);
-    assert.equal(result.code, 2, input); assert.equal(result.output, '', input);
-    assert.notEqual(result.errors, '', input);
-  }
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -389,23 +483,25 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
   const corePaths: string[] = [];
   try {
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-    for (const [index, source] of compilerPrograms.entries()) {
+    for (const [index, fixture] of programFixtures.entries()) {
       const sourcePath = join(directory, `input-${index}.lts`);
       const corePath = join(directory, `program-${index}.ts`);
       const adapterPath = join(directory, `run-${index}.ts`);
-      writeFileSync(sourcePath, source);
-      const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: source, env, timeout: 5000 });
+      writeFileSync(sourcePath, fixture.source);
+      const emitted = spawnSync(join(root, 'lite'), ['run', compiler], { input: fixture.source, env, timeout: 5000 });
       assert.equal(emitted.error, undefined); assert.equal(emitted.status, 0, emitted.stderr.toString());
       assert.equal(emitted.stderr.length, 0); writeFileSync(corePath, emitted.stdout); corePaths.push(corePath);
       writeFileSync(adapterPath, `import { main } from './program-${index}.ts';\nprocess.stdout.write(main());\n`);
-      const input = Buffer.from([0, 255, 10]); // These admitted programs have no runtime reads.
-      const expected = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
+      const input = fixture.stdin;
+      const baseline = spawnSync(join(root, 'lite'), ['run', sourcePath], { input, env, timeout: 5000 });
       const actual = spawnSync(process.execPath, [adapterPath], { input, timeout: 5000 });
-      assert.equal(expected.error, undefined); assert.equal(actual.error, undefined);
-      assert.equal(expected.status, 0); assert.equal(actual.status, expected.status);
-      assert.equal(actual.signal, expected.signal);
-      assert.deepEqual(actual.stdout, expected.stdout, source);
-      assert.deepEqual(actual.stderr, expected.stderr, source);
+      for (const result of [baseline, actual]) {
+        assert.equal(result.error, undefined, fixture.name);
+        assert.equal(result.status, fixture.exitCode, fixture.name);
+        assert.equal(result.signal, null, fixture.name);
+        assert.deepEqual(result.stdout, fixture.stdout, fixture.name);
+        assert.deepEqual(result.stderr, fixture.stderr, fixture.name);
+      }
     }
     const base: unknown = JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8'));
     if (typeof base !== 'object' || base === null || !('compilerOptions' in base) ||
@@ -425,14 +521,20 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
       encoding: 'utf8', timeout: 30000,
     });
     assert.equal(translated.error, undefined); assert.equal(translated.status, 0, translated.stdout + translated.stderr);
-    for (const index of corePaths.keys()) {
+    for (const [index, fixture] of programFixtures.entries()) {
       const adapter = join(jsDirectory, `run-${index}.mjs`);
       writeFileSync(adapter, `import { main } from './program-${index}.js';\nprocess.stdout.write(main());\n`);
-      const javascript = spawnSync(process.execPath, [adapter], { timeout: 5000 });
-      const typescript = spawnSync(process.execPath, [join(directory, `run-${index}.ts`)], { timeout: 5000 });
-      assert.equal(javascript.error, undefined); assert.equal(typescript.error, undefined);
-      assert.equal(javascript.status, typescript.status);
-      assert.deepEqual(javascript.stdout, typescript.stdout); assert.deepEqual(javascript.stderr, typescript.stderr);
+      const javascript = spawnSync(process.execPath, [adapter], { input: fixture.stdin, timeout: 5000 });
+      const typescript = spawnSync(process.execPath, [join(directory, `run-${index}.ts`)], {
+        input: fixture.stdin, timeout: 5000,
+      });
+      for (const result of [javascript, typescript]) {
+        assert.equal(result.error, undefined, fixture.name);
+        assert.equal(result.status, fixture.exitCode, fixture.name);
+        assert.equal(result.signal, null, fixture.name);
+        assert.deepEqual(result.stdout, fixture.stdout, fixture.name);
+        assert.deepEqual(result.stderr, fixture.stderr, fixture.name);
+      }
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

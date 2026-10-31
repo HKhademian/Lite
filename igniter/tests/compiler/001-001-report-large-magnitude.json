@@ -1,0 +1,11 @@
+{
+  "name": "report-large-magnitude",
+  "source": "001-001-report-large-magnitude.lts",
+  "stdout": {
+    "text": "9999999999999999\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

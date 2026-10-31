@@ -1,0 +1,11 @@
+{
+  "name": "string-times-int",
+  "source": "002-002-string-times-int.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "operator * requires Int operands\n"
+  },
+  "exitCode": 2
+}

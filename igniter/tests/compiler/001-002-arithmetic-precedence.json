@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-precedence",
+  "source": "001-002-arithmetic-precedence.lts",
+  "stdout": {
+    "text": "-1\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

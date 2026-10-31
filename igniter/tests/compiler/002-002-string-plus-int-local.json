@@ -1,0 +1,11 @@
+{
+  "name": "string-plus-int-local",
+  "source": "002-002-string-plus-int-local.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "cannot mix Int and String operands\n"
+  },
+  "exitCode": 2
+}

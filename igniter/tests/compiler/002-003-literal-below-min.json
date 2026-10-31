@@ -1,0 +1,11 @@
+{
+  "name": "literal-below-min",
+  "source": "002-003-literal-below-min.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "integer literal outside signed 64-bit range\n"
+  },
+  "exitCode": 2
+}

@@ -1,0 +1,11 @@
+{
+  "name": "local-hygiene-int",
+  "source": "001-006-local-hygiene-int.lts",
+  "stdout": {
+    "text": "2\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "call-statement",
+  "source": "002-001-call-statement.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected := after local name system\n"
+  },
+  "exitCode": 2
+}

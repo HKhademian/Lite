@@ -1,0 +1,11 @@
+{
+  "name": "unary-minus-string",
+  "source": "002-002-unary-minus-string.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "unary - requires an Int operand\n"
+  },
+  "exitCode": 2
+}

@@ -1,0 +1,11 @@
+{
+  "name": "report-signed-sequence",
+  "source": "001-002-report-signed-sequence.lts",
+  "stdout": {
+    "text": "0\n-42\n100\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

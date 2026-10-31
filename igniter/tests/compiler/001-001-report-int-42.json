@@ -1,0 +1,14 @@
+{
+  "name": "report-int-42",
+  "source": "001-001-report-int-42.lts",
+  "stdin": {
+    "file": "001-001-report-int-42.stdin"
+  },
+  "stdout": {
+    "text": "42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "bad-string-escape",
+  "source": "002-004-bad-string-escape.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "unsupported string escape \\q\n"
+  },
+  "exitCode": 2
+}

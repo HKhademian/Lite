@@ -1,0 +1,11 @@
+{
+  "name": "literal-too-large",
+  "source": "002-003-literal-too-large.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "integer literal outside signed 64-bit range\n"
+  },
+  "exitCode": 2
+}

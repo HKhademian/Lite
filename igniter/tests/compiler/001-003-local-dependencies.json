@@ -1,0 +1,11 @@
+{
+  "name": "local-dependencies",
+  "source": "001-003-local-dependencies.lts",
+  "stdout": {
+    "text": "10\n-5\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

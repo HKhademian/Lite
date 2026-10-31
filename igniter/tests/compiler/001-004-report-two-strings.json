@@ -1,0 +1,11 @@
+{
+  "name": "report-two-strings",
+  "source": "001-004-report-two-strings.lts",
+  "stdout": {
+    "text": "a b\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

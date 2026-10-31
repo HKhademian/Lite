@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-unary-signs",
+  "source": "001-002-arithmetic-unary-signs.lts",
+  "stdout": {
+    "text": "5\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "report-missing-expression",
+  "source": "002-001-report-missing-expression.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected an integer or string expression\n"
+  },
+  "exitCode": 2
+}

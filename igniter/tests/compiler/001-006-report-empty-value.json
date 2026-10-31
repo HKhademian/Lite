@@ -1,0 +1,11 @@
+{
+  "name": "report-empty-value",
+  "source": "001-006-report-empty-value.lts",
+  "stdout": {
+    "text": "a \n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

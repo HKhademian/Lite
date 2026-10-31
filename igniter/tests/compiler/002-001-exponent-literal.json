@@ -1,0 +1,11 @@
+{
+  "name": "exponent-literal",
+  "source": "002-001-exponent-literal.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected )\n"
+  },
+  "exitCode": 2
+}

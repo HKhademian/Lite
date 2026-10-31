@@ -1,0 +1,11 @@
+{
+  "name": "report-without-call",
+  "source": "002-001-report-without-call.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected ( after report\n"
+  },
+  "exitCode": 2
+}

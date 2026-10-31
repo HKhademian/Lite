@@ -1,0 +1,11 @@
+{
+  "name": "trailing-statement",
+  "source": "002-001-trailing-statement.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected := after local name process\n"
+  },
+  "exitCode": 2
+}

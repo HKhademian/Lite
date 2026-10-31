@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-negative-division",
+  "source": "001-002-arithmetic-negative-division.lts",
+  "stdout": {
+    "text": "-3\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

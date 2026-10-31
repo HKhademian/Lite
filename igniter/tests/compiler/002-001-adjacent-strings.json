@@ -1,0 +1,11 @@
+{
+  "name": "adjacent-strings",
+  "source": "002-001-adjacent-strings.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected )\n"
+  },
+  "exitCode": 2
+}

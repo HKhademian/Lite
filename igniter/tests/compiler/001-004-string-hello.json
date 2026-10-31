@@ -1,0 +1,18 @@
+{
+  "name": "string-hello",
+  "source": "001-004-string-hello.lts",
+  "stdout": {
+    "bytes": [
+      104,
+      101,
+      108,
+      108,
+      111,
+      10
+    ]
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

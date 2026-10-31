@@ -1,0 +1,11 @@
+{
+  "name": "string-percent-trigraph",
+  "source": "001-005-string-percent-trigraph.lts",
+  "stdout": {
+    "text": "%s ??/\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

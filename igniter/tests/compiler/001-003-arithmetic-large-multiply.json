@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-large-multiply",
+  "source": "001-003-arithmetic-large-multiply.lts",
+  "stdout": {
+    "text": "3000000000\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -1,0 +1,11 @@
+{
+  "name": "report-int-min",
+  "source": "001-001-report-int-min.lts",
+  "stdout": {
+    "text": "-9223372036854775808\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

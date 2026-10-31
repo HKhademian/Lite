@@ -1,0 +1,11 @@
+{
+  "name": "decimal-literal",
+  "source": "002-001-decimal-literal.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected )\n"
+  },
+  "exitCode": 2
+}

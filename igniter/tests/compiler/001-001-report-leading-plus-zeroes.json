@@ -1,0 +1,11 @@
+{
+  "name": "report-leading-plus-zeroes",
+  "source": "001-001-report-leading-plus-zeroes.lts",
+  "stdout": {
+    "text": "42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

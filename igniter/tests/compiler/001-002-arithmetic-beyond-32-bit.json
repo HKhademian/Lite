@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-beyond-32-bit",
+  "source": "001-002-arithmetic-beyond-32-bit.lts",
+  "stdout": {
+    "text": "2147483648\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

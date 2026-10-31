@@ -1,0 +1,11 @@
+{
+  "name": "local-macro-name",
+  "source": "001-006-local-macro-name.lts",
+  "stdout": {
+    "text": "7\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

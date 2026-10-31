@@ -1,0 +1,11 @@
+{
+  "name": "local-arithmetic",
+  "source": "001-003-local-arithmetic.lts",
+  "stdout": {
+    "text": "-1\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

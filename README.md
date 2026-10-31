@@ -12,10 +12,13 @@ Node 26.13.0; enter `7` and `5` to report `24`. See the [igniter guide](igniter/
 for setup, strict typechecking, tests, supported behavior, and limitations.
 The wider language remains a design draft. Small compiler applications written
 in Lite now emit [readable TypeScript](examples/017-report-ts-compiler.lts) and
-[standalone C](examples/018-report-c-compiler.lts) for arithmetic `report(...)`
-expressions and immutable local declarations. Twenty-eight tested programs have
-identical output bytes/status across the igniter, TS and native C paths. These
-restricted prototypes are not a full/self-hosted compiler.
+[standalone C](examples/018-report-c-compiler.lts) for arithmetic/String
+`report(...)` expressions, multi-value reports, and immutable Int/String local
+declarations. Forty-one program cases have identical output bytes/status
+across the igniter, TS and native C paths, and 34 rejection cases check exact
+compiler diagnostics. Each case pairs a sibling `.lts` entry source with a JSON
+model under [igniter/tests/compiler](igniter/tests/compiler/). These restricted prototypes
+are not a full/self-hosted compiler.
 
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.

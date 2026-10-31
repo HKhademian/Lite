@@ -1,4 +1,7 @@
-/* A deliberately small compiler: immutable Int locals and arithmetic reports. */
+/* A deliberately small compiler: Int/String values, arithmetic, text and immutable locals. */
+Parsed := type (kind: String, code: String, intValue: Int, textValue: String, next: Int);
+Local := type (name: String, runtime: String, kind: String, code: String, intValue: Int, textValue: String);
+
 isDigit := fn(text: String): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
     or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
@@ -56,6 +59,32 @@ skipName := fn(source: String, start: Int): Int {
         position = position + 1;
     }
     position
+}
+
+intParsed := fn(code: String, value: Int, next: Int): Parsed {
+    (kind = "Int", code = code, intValue = value, textValue = "", next = next)
+}
+
+textParsed := fn(code: String, value: String, next: Int): Parsed {
+    (kind = "String", code = code, intValue = 0, textValue = value, next = next)
+}
+
+/* Escape a checked String value as a readable TypeScript string literal. */
+encodeText := fn(value: String): String {
+    size := textLength(value);
+    var encoded := "\"";
+    var position := 0;
+    loop position < size {
+        ch := textAt(value, position);
+        if ch == "\\" { encoded = encoded + "\\\\"; }
+        else if ch == "\"" { encoded = encoded + "\\\""; }
+        else if ch == "\n" { encoded = encoded + "\\n"; }
+        else if ch == "\r" { encoded = encoded + "\\r"; }
+        else if ch == "\t" { encoded = encoded + "\\t"; }
+        else { encoded = encoded + ch; }
+        position = position + 1;
+    }
+    encoded + "\""
 }
 
 /* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
@@ -133,7 +162,7 @@ negateInteger := fn(value: Int, prefix: String): Int {
     0 - value
 }
 
-localIndex := fn(locals: List<(name: String, runtime: String, code: String, value: Int)>, name: String): Int {
+localIndex := fn(locals: List<Local>, name: String): Int {
     var index := 0;
     loop locals as local {
         if local.name == name { return index; }
@@ -143,7 +172,7 @@ localIndex := fn(locals: List<(name: String, runtime: String, code: String, valu
 }
 
 /* Returns emitted TS expression code, its checked value and the next source position. */
-parseInteger := fn(source: String, position: Int, prefix: String): (:String, :Int, :Int) {
+parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     var cursor := position;
     var negative := false;
     ch := textAt(source, cursor);
@@ -180,44 +209,81 @@ parseInteger := fn(source: String, position: Int, prefix: String): (:String, :In
     code := if value == 0 { "0n" }
         else if negative { "(-" + digits + "n)" }
         else { digits + "n" };
-    (code, value, cursor)
+    intParsed(code, value, cursor)
+}
+
+parseText := fn(source: String, position: Int, prefix: String): Parsed {
+    var cursor := position + 1;
+    var value := "";
+    loop true {
+        if cursor >= textLength(source) {
+            reportError(prefix + "unterminated string literal");
+            exit(2);
+        }
+        ch := textAt(source, cursor);
+        if ch == "\"" {
+            cursor = cursor + 1;
+            break;
+        }
+        if ch == "\\" {
+            cursor = cursor + 1;
+            if cursor >= textLength(source) {
+                reportError(prefix + "unterminated string escape");
+                exit(2);
+            }
+            escaped := textAt(source, cursor);
+            if escaped == "n" { value = value + "\n"; }
+            else if escaped == "t" { value = value + "\t"; }
+            else if escaped == "r" { value = value + "\r"; }
+            else if escaped == "\"" { value = value + "\""; }
+            else if escaped == "\\" { value = value + "\\"; }
+            else {
+                reportError(prefix + "unsupported string escape \\" + escaped);
+                exit(2);
+            }
+            cursor = cursor + 1;
+        } else {
+            value = value + ch;
+            cursor = cursor + 1;
+        }
+    }
+    textParsed(encodeText(value), value, cursor)
 }
 
 /* Precedence climbing; self(..., 30) parses a unary operand without binary operators. */
-parseBinary := fn(source: String, position: Int, prefix: String,
-                  locals: List<(name: String, runtime: String, code: String, value: Int)>,
-                  minimum: Int): (:String, :Int, :Int) {
+parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
     start := skipSpaces(source, position);
     if start >= textLength(source) {
-        reportError(prefix + "expected an integer expression");
+        reportError(prefix + "expected an integer or string expression");
         exit(2);
     }
-    var code := "";
-    var value := 0;
-    var next := start;
+    var left := intParsed("", 0, start);
     ch := textAt(source, start);
     if ch == "(" {
         inner := self(source, start + 1, prefix, locals, 0);
-        next = expectSymbol(source, skipSpaces(source, inner.2), ")", prefix);
-        code = "(" + inner.0 + ")";
-        value = inner.1;
+        next := expectSymbol(source, skipSpaces(source, inner.next), ")", prefix);
+        left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, next = next);
     } else if ch == "+" or ch == "-" {
         after := skipSpaces(source, start + 1);
         if after < textLength(source) and isDigit(textAt(source, after)) {
-            literal := parseInteger(source, start, prefix);
-            code = literal.0; value = literal.1; next = literal.2;
+            left = parseInteger(source, start, prefix);
         } else {
             operand := self(source, start + 1, prefix, locals, 30);
-            value = if ch == "-" { negateInteger(operand.1, prefix) } else { operand.1 };
-            code = if ch == "-" { "(-" + operand.0 + ")" } else { "(" + operand.0 + ")" };
-            next = operand.2;
+            if operand.kind =!= "Int" {
+                reportError(prefix + "unary " + ch + " requires an Int operand");
+                exit(2);
+            }
+            value := if ch == "-" { negateInteger(operand.intValue, prefix) } else { operand.intValue };
+            code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
+            left = intParsed(code, value, operand.next);
         }
     } else if isDigit(ch) {
-        literal := parseInteger(source, start, prefix);
-        code = literal.0; value = literal.1; next = literal.2;
+        left = parseInteger(source, start, prefix);
+    } else if ch == "\"" {
+        left = parseText(source, start, prefix);
     } else if isNameStart(ch) {
         nameStart := start;
-        next = skipName(source, start);
+        next := skipName(source, start);
         name := textSlice(source, nameStart, next);
         index := localIndex(locals, name);
         if index < 0 {
@@ -225,58 +291,97 @@ parseBinary := fn(source: String, position: Int, prefix: String,
             exit(2);
         }
         entry := locals[index];
-        code = entry.runtime; value = entry.value;
+        left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, next = next);
     } else {
-        reportError(prefix + "expected an integer expression");
+        reportError(prefix + "expected an integer or string expression");
         exit(2);
     }
     loop true {
-        operatorPosition := skipSpaces(source, next);
+        operatorPosition := skipSpaces(source, left.next);
         if operatorPosition >= textLength(source) { break; }
         operator := textAt(source, operatorPosition);
         if operator =!= "+" and operator =!= "-" and operator =!= "*" and operator =!= "/" { break; }
         level := if operator == "+" or operator == "-" { 10 } else { 20 };
         if level < minimum { break; }
         right := self(source, operatorPosition + 1, prefix, locals, level + 1);
-        folded := if operator == "+" { addIntegers(value, right.1, prefix) }
-            else if operator == "-" { subtractIntegers(value, right.1, prefix) }
-            else if operator == "*" { multiplyIntegers(value, right.1, prefix) }
-            else { divideIntegers(value, right.1, prefix) };
-        code = "(" + code + " " + operator + " " + right.0 + ")";
-        value = folded;
-        next = right.2;
+        if operator == "+" and left.kind == "String" and right.kind == "String" {
+            combined := left.textValue + right.textValue;
+            left = textParsed(encodeText(combined), combined, right.next);
+        } else if left.kind == "Int" and right.kind == "Int" {
+            folded := if operator == "+" { addIntegers(left.intValue, right.intValue, prefix) }
+                else if operator == "-" { subtractIntegers(left.intValue, right.intValue, prefix) }
+                else if operator == "*" { multiplyIntegers(left.intValue, right.intValue, prefix) }
+                else { divideIntegers(left.intValue, right.intValue, prefix) };
+            left = intParsed("(" + left.code + " " + operator + " " + right.code + ")", folded, right.next);
+        } else if operator == "+" {
+            reportError(prefix + "cannot mix Int and String operands");
+            exit(2);
+        } else {
+            reportError(prefix + "operator " + operator + " requires Int operands");
+            exit(2);
+        }
     }
-    (code, value, next)
+    left
 }
 
-parseExpression := fn(source: String, position: Int, prefix: String,
-                      locals: List<(name: String, runtime: String, code: String, value: Int)>): (:String, :Int, :Int) {
+parseExpression := fn(source: String, position: Int, prefix: String, locals: List<Local>): Parsed {
     parseBinary(source, position, prefix, locals, 0)
 }
 
-var prefix := "";
-var argumentCount := 0;
-loop inputArgs() as argument {
-    if argumentCount == 0 { prefix = argument + ": "; }
-    argumentCount = argumentCount + 1;
+argumentCount := fn(arguments: List<Parsed>): Int {
+    var count := 0;
+    loop arguments { count = count + 1; }
+    count
 }
-if argumentCount > 1 {
+
+/* One complete TS output expression for one report statement. */
+reportText := fn(arguments: List<Parsed>): String {
+    if argumentCount(arguments) == 1 {
+        argument := arguments[0];
+        if argument.kind == "Int" {
+            "(" + argument.code + ").toString() + \"\\n\""
+        } else {
+            argument.code + " + \"\\n\""
+        }
+    } else {
+        var returned := "";
+        var first := true;
+        loop arguments as argument {
+            if not first { returned = returned + " + \" \" + "; }
+            first = false;
+            if argument.kind == "Int" {
+                returned = returned + "(" + argument.code + ").toString()";
+            } else {
+                returned = returned + argument.code;
+            }
+        }
+        returned + " + \"\\n\""
+    }
+}
+
+var prefix := "";
+var argumentCountValue := 0;
+loop inputArgs() as argument {
+    if argumentCountValue == 0 { prefix = argument + ": "; }
+    argumentCountValue = argumentCountValue + 1;
+}
+if argumentCountValue > 1 {
     reportError("expected at most one logical source name argument");
     exit(2);
 }
 source := inputAll();
 size := textLength(source);
-locals: mut List<(name: String, runtime: String, code: String, value: Int)> = [];
+locals: mut List<Local> = [];
 reported: mut List<String> = [];
 var position := skipSpaces(source, 0);
 if position == size {
-    reportError(prefix + "expected report(integer) or an immutable local declaration");
+    reportError(prefix + "expected report(integer or string) or an immutable local declaration");
     exit(2);
 }
 loop position < size {
     nameStart := position;
     if not isNameStart(textAt(source, position)) {
-        reportError(prefix + "expected report(integer) or an immutable local declaration");
+        reportError(prefix + "expected report(integer or string) or an immutable local declaration");
         exit(2);
     }
     position = skipName(source, position);
@@ -287,14 +392,24 @@ loop position < size {
             reportError(prefix + "expected ( after report");
             exit(2);
         }
-        parsed := parseExpression(source, position + 1, prefix, locals);
-        position = skipSpaces(source, parsed.2);
+        position = skipSpaces(source, position + 1);
+        arguments: mut List<Parsed> = [];
+        loop true {
+            argument := parseExpression(source, position, prefix, locals);
+            push_back(mut arguments, argument);
+            position = skipSpaces(source, argument.next);
+            if position < size and textAt(source, position) == "," {
+                position = skipSpaces(source, position + 1);
+            } else {
+                break;
+            }
+        }
         position = expectSymbol(source, position, ")", prefix);
         position = skipSpaces(source, position);
         if position < size and textAt(source, position) == ";" {
             position = skipSpaces(source, position + 1);
         }
-        push_back(mut reported, parsed.0);
+        push_back(mut reported, reportText(arguments));
     } else {
         if position + 2 > size or textSlice(source, position, position + 2) =!= ":=" {
             reportError(prefix + "expected := after local name " + name);
@@ -302,7 +417,7 @@ loop position < size {
         }
         position = skipSpaces(source, position + 2);
         parsed := parseExpression(source, position, prefix, locals);
-        position = skipSpaces(source, parsed.2);
+        position = skipSpaces(source, parsed.next);
         if position >= size or textAt(source, position) =!= ";" {
             reportError(prefix + "expected ; after local declaration " + name);
             exit(2);
@@ -312,7 +427,8 @@ loop position < size {
             reportError(prefix + "duplicate local " + name);
             exit(2);
         }
-        push_back(mut locals, (name = name, runtime = "lite_" + name, code = parsed.0, value = parsed.1));
+        push_back(mut locals, (name = name, runtime = "lite_" + name, kind = parsed.kind,
+            code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
     }
 }
 report("export function main(): string {");
@@ -323,7 +439,7 @@ loop locals as local {
 var returned := "";
 loop reported as code {
     if returned =!= "" { returned = returned + " + "; }
-    returned = returned + "(" + code + ").toString() + \"\\n\"";
+    returned = returned + code;
 }
 if returned == "" { returned = "\"\""; }
 report("    return " + returned + ";");

@@ -1,0 +1,11 @@
+{
+  "name": "string-concatenation",
+  "source": "001-004-string-concatenation.lts",
+  "stdout": {
+    "text": "ab\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

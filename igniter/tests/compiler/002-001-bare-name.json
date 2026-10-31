@@ -1,0 +1,11 @@
+{
+  "name": "bare-name",
+  "source": "002-001-bare-name.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected := after local name x\n"
+  },
+  "exitCode": 2
+}

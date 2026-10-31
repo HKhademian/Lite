@@ -1,0 +1,11 @@
+{
+  "name": "unterminated-string",
+  "source": "002-004-unterminated-string.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "unterminated string literal\n"
+  },
+  "exitCode": 2
+}

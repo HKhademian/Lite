@@ -1,0 +1,11 @@
+{
+  "name": "string-local-chain",
+  "source": "001-005-string-local-chain.lts",
+  "stdout": {
+    "text": "ab!\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

@@ -575,11 +575,20 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **147 test groups** pass under the pinned Node/TypeScript versions. The tests
-exercise the real CLI and evaluator, including overflow and negative
-programs. Only lessons 001, 002 and 020 currently have focused checked outcomes
-by appending explicit reports in test memory; lesson files remain unchanged.
-This is not proof of the full 20-lesson or larger-language contract.
+All **155 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
+and evaluator, including overflow and negative programs. Only lessons 001, 002
+and 020 currently have focused checked outcomes by appending explicit reports in
+test memory; lesson files remain unchanged. This is not proof of the full
+20-lesson or larger-language contract.
+
+Compiler verification cases are one JSON model plus a sibling `.lts` entry
+source per case under [tests/compiler](tests/compiler/); filenames follow
+`NNN-MMM-title-subtitle.json` (category 001 program, 002 rejection). The schema
+and workflow are documented in [tests/README.md](tests/README.md). The suite
+loads all cases and does not keep separate inline source, input, and
+expected-output arrays. Invalid UTF-8 compiler input, source-name diagnostics,
+exact artifact shape, and `--check` remain targeted tests in [test.ts](test.ts).
 
 References checked for the toolchain: [Node release/downloads](https://nodejs.org/en/download),
 [Node TypeScript execution](https://nodejs.org/api/typescript.html),
@@ -595,34 +604,36 @@ pairs. It runs on the preserved alpha.15 interpreter too. This is application
 front-end evidence, not a Lite compiler, AST/IR choice, code generator or
 self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithmetic-front-end.md).
 
-For the first emitted-code experiment, run
-./lite run examples/017-report-ts-compiler.lts with input report(42);. Inspect
-[its exact TS output](../examples/generated/017-report-42.ts) and
-[explicit adapter](../examples/generated/017-run-report.ts), then run
+For the emitted-code experiments, run
+./lite run examples/017-report-ts-compiler.lts with a source such as
+report(1 + 2 * (3 - 4));. Inspect [its exact TS output](../examples/generated/017-report-42.ts)
+and [explicit adapter](../examples/generated/017-run-report.ts), then run
 node examples/generated/017-run-report.ts. Strictly check the reference/adapter
 with node igniter/node_modules/typescript/bin/tsc -p examples/generated.
-The emitter admits a single report of a signed decimal Int literal, validates
-before producing source, and handles signed limits without JS number rounding.
-Nine admitted programs match the igniter's raw stdout/stderr/status through TS
-and translated JS. The emitted core checks without Node/DOM types; no actual
-browser, AS/Wasm or compiler self-rebuild claim follows. See
-[INV-061 evidence](../investigations/INV-061-ts-emission-and-parity.md).
+The TS emitter admits sequences of report(...) statements over signed Int
+arithmetic, String literals/concatenation, immutable Int/String locals, and
+multi-value reports. It checks signed 64-bit ranges and Int/String mixing before
+producing source, and lowers to runtime BigInt or checked String literals. The
+emitted core checks without Node/DOM types; no browser, AS/Wasm or compiler
+self-rebuild claim follows. See
+[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md).
 
-The [C emitter 018](../examples/018-report-c-compiler.lts) supports the same
-restricted report-literal class, with no additional host feature. Inspect its
-[standalone C reference](../examples/generated/018-report-42.c) and
-[build/parity evidence](../investigations/INV-061-c-emission-and-parity.md).
-The native integration test needs cc (or CC as its executable path); it is
-explicitly skipped if the tool is absent. It ran successfully here with Apple
-clang 21.0.0. Nine emitted native programs match TS and igniter stdout/stderr
-bytes, status and signal. Broader source support, error-environment parity,
-C library exports and compiler self-rebuild are not established.
+The [C emitter 018](../examples/018-report-c-compiler.lts) lowers the same
+admitted class to standalone C with `int64_t`/`INT64_C`, `printf` with `PRId64`,
+and UTF-8 string literals. Inspect its
+[standalone C reference](../examples/generated/018-report-42.c). The native
+integration test needs cc (or CC as its executable path); it is explicitly
+skipped if the tool is absent. It ran successfully here with Apple clang 21.0.0.
+Broader source support, error-environment parity, C library exports and compiler
+self-rebuild are not established.
 
-Both report-literal compilers now use inputAll() without prompts, accepting
-multi-line spaces/tabs/CR/LF around their admitted statement and rejecting later
-unsupported source before emission. Empty source is a compiler rejection (2),
-not an inputLine EOF fault. Twelve admitted cases retain exact output-byte/status
-parity. See [whole-source evidence](../investigations/INV-061-whole-source-emission.md).
+Both compilers use inputAll() without prompts, accepting multi-line
+spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
+source before emission. Empty source is a compiler rejection (2), not an
+inputLine EOF fault. The shared corpus now has 41 program cases and 34
+rejection cases, with exact raw bytes/status across emitted TS, translated
+JS, native C and the igniter for the program cases. See
+[String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md).
 
 The two compiler applications accept zero or one logical source-name argument
 after --. One name is preserved exactly as a prefix on compiler rejection

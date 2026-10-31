@@ -2,6 +2,33 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## String values, multi-value reports and JSON verification fixtures, 2026-10-31
+
+The restricted emitters now admit String literals/escapes, immutable String
+locals, String `+` concatenation and multi-value `report` calls over Int and
+String values. String expressions are closed constants in this slice, so
+concatenation is folded at compile time; C needs no allocation runtime. Emitted
+TS/C String literals escape quotes, backslashes, control whitespace and (for C)
+trigraph-prone `?`; String locals are `const`/`const char *` with the existing
+`lite_` runtime prefix. Mixed Int/String operations, malformed strings and other
+unsupported text forms fail before artifact bytes.
+
+Compiler verification data moved from inline test arrays to one JSON file per
+case under `igniter/tests/compiler/`: 41 program cases and 34 rejection cases.
+Each case pairs a sibling `.lts` entry source with a JSON model holding the
+source path, optional `stdin`, required `stdout`/`stderr` streams, and
+`exitCode`; each stream uses inline `text`, inline `bytes`, or a sibling `file`.
+Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
+verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
+translated JS and native C; rejection cases run through both compilers with
+exact diagnostics. All 155 interpreter groups plus 9 editor groups pass. See
+[INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
+and the [fixture schema](../igniter/tests/README.md).
+
+Text operations/indexing, adjacent string-literal joining, embedded-NUL
+diagnosis and runtime input remain open. This is not a full parser or
+self-rebuild.
+
 ## Arithmetic expressions and immutable locals in restricted emitters, 2026-10-31
 
 Under automatic selected-scope progression from the alias checkpoint, examples
@@ -14,7 +41,7 @@ avoid generated/library/macro collisions, and every local is explicitly voided.
 Literal/expression range faults, division by zero, duplicate/unknown
 names and malformed declarations fail with status 2 before artifact bytes.
 
-Twenty-eight admitted programs have raw byte/status/signal parity across emitted
+The 28-case arithmetic/local corpus had raw byte/status/signal parity across emitted
 TS, translated JS, native C and the igniter. Strict checking and 153 interpreter
 groups plus 9 editor groups pass. This is not a full parser, emitted runtime
 panic parity or self-rebuild; see

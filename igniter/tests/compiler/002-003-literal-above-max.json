@@ -1,0 +1,11 @@
+{
+  "name": "literal-above-max",
+  "source": "002-003-literal-above-max.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "integer literal outside signed 64-bit range\n"
+  },
+  "exitCode": 2
+}

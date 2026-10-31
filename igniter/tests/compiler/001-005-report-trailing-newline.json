@@ -1,0 +1,11 @@
+{
+  "name": "report-trailing-newline",
+  "source": "001-005-report-trailing-newline.lts",
+  "stdout": {
+    "text": "42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

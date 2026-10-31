@@ -1,0 +1,11 @@
+{
+  "name": "arithmetic-parentheses",
+  "source": "001-002-arithmetic-parentheses.lts",
+  "stdout": {
+    "text": "20\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

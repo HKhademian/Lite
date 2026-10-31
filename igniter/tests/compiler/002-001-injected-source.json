@@ -1,0 +1,11 @@
+{
+  "name": "injected-source",
+  "source": "002-001-injected-source.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "expected report(integer or string) or an immutable local declaration\n"
+  },
+  "exitCode": 2
+}

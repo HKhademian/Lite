@@ -1,0 +1,11 @@
+{
+  "name": "report-mixed-values",
+  "source": "001-005-report-mixed-values.lts",
+  "stdout": {
+    "text": "1 two 3\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

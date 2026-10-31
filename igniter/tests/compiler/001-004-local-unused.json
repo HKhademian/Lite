@@ -1,0 +1,11 @@
+{
+  "name": "local-unused",
+  "source": "001-004-local-unused.lts",
+  "stdout": {
+    "text": "42\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

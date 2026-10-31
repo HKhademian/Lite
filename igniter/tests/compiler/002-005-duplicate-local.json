@@ -1,0 +1,11 @@
+{
+  "name": "duplicate-local",
+  "source": "002-005-duplicate-local.lts",
+  "stdout": {
+    "text": ""
+  },
+  "stderr": {
+    "text": "duplicate local x\n"
+  },
+  "exitCode": 2
+}

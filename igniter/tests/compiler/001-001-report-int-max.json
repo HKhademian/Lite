@@ -1,0 +1,11 @@
+{
+  "name": "report-int-max",
+  "source": "001-001-report-int-max.lts",
+  "stdout": {
+    "text": "9223372036854775807\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

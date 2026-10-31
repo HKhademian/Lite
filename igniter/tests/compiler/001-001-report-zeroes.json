@@ -1,0 +1,11 @@
+{
+  "name": "report-zeroes",
+  "source": "001-001-report-zeroes.lts",
+  "stdout": {
+    "text": "0\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

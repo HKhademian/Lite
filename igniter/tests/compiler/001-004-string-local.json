@@ -1,0 +1,11 @@
+{
+  "name": "string-local",
+  "source": "001-004-string-local.lts",
+  "stdout": {
+    "text": "hi\n"
+  },
+  "stderr": {
+    "text": ""
+  },
+  "exitCode": 0
+}

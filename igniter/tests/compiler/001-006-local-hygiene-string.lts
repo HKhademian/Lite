@@ -1,0 +1,3 @@
+printf := "x";
+status := printf + "y";
+report(status, 1);
