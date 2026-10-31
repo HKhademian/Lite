@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
 
@@ -17,6 +18,7 @@ type Scenario = Readonly<{
   exitCode: number;
 }>;
 type Kind = 'feature' | 'example' | 'sample' | 'showcase';
+type Target = 'igniter' | 'ts' | 'c';
 type Manifest = {
   file: string;
   kind: Kind;
@@ -27,6 +29,7 @@ type Manifest = {
   guideline?: string;
   description?: string;
   append?: string;
+  targets?: readonly Target[];
   cases: Scenario[];
 };
 type RegistryEntry = Readonly<{
@@ -207,7 +210,7 @@ function registry(): Map<string, RegistryEntry> {
 function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>): Manifest {
   const label = file.slice(root.length + 1);
   const record = object(JSON.parse(readFileSync(file, 'utf8')), label);
-  checkKeys(record, ['id', 'kind', 'source', 'features', 'guideline', 'description', 'append', 'cases'], label);
+  checkKeys(record, ['id', 'kind', 'source', 'features', 'guideline', 'description', 'append', 'targets', 'cases'], label);
   if (record['kind'] !== kind) throw new Error(`${label}: kind must be ${kind}`);
   const id = text(record['id'], `${label}.id`);
   const sourceRecord = object(record['source'], `${label}.source`);
@@ -239,6 +242,17 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
     ...(sourceHash === undefined ? {} : { hash: sourceHash }),
   };
   const names = strings(record['features'], `${label}.features`);
+  const targetValues = record['targets'] === undefined ? undefined : strings(record['targets'], `${label}.targets`);
+  if (targetValues !== undefined) {
+    if (targetValues.length === 0 || new Set(targetValues).size !== targetValues.length) {
+      throw new Error(`${label}.targets: expected unique target names`);
+    }
+    for (const target of targetValues) {
+      if (target !== 'igniter' && target !== 'ts' && target !== 'c') {
+        throw new Error(`${label}.targets: unknown target ${target}`);
+      }
+    }
+  }
   if (names.length === 0) throw new Error(`${label}.features: at least one feature is required`);
   for (const name of names) {
     if (!features.has(name)) throw new Error(`${label}.features: unknown feature ${name}`);
@@ -258,7 +272,8 @@ function manifest(file: string, kind: Kind, features: Map<string, RegistryEntry>
   }
   return { file, kind, id, source, ...(sourcePath === undefined ? {} : { sourcePath }), features: names,
     ...(guideline === undefined ? {} : { guideline }), ...(description === undefined ? {} : { description }),
-    ...(append === undefined ? {} : { append }), cases };
+    ...(append === undefined ? {} : { append }),
+    ...(targetValues === undefined ? {} : { targets: targetValues as Target[] }), cases };
 }
 
 function manifests(features: Map<string, RegistryEntry>): readonly Manifest[] {
@@ -325,9 +340,10 @@ function saveCache(cache: CacheData): void {
   renameSync(temporary, cacheFile);
 }
 
-function caseKey(item: Manifest, scenario: Scenario, sourceHash: string): string {
+function caseKey(item: Manifest, scenario: Scenario, sourceHash: string, target: Target): string {
   return createHash('sha256')
     .update(runtimeHash)
+    .update(target)
     .update(item.id)
     .update(item.kind)
     .update(sourceHash)
@@ -474,6 +490,7 @@ function writeManifest(item: Manifest, scenarios: readonly Scenario[], sourceHas
     ...(item.guideline === undefined ? {} : { guideline: item.guideline }),
     ...(item.description === undefined ? {} : { description: item.description }),
     ...(item.append === undefined ? {} : { append: item.append }),
+    ...(item.targets === undefined ? {} : { targets: item.targets }),
     cases: scenarios,
   };
   writeFileSync(item.file, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
@@ -527,7 +544,72 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
   }
 }
 
-function main(): void {
+type CompilerProgram = ReturnType<typeof compile>;
+const compilerPrograms = new Map<string, CompilerProgram>();
+
+/** Compiles one compiler application and runs it over the feature source. */
+function compilerEmit(path: string, source: string): string {
+  let program = compilerPrograms.get(path);
+  if (program === undefined) {
+    program = compile(loadSource(path));
+    compilerPrograms.set(path, program);
+  }
+  let output = '';
+  let errors = '';
+  let cursor = 0;
+  const code = execute(program, {
+    args: [],
+    read: () => source[cursor++] ?? null,
+    report: value => { output += value; },
+    reportError: value => { errors += value; },
+  });
+  if (code !== 0) throw new Error(`compiler exited ${code}: ${errors.trim()}`);
+  return output;
+}
+
+async function runCompilerTarget(target: Target, source: string,
+                                 scenario: Scenario): Promise<{ stdout: Buffer; stderr: Buffer; exitCode: number }> {
+  if (scenario.stdin !== undefined || (scenario.args !== undefined && scenario.args.length > 0)) {
+    throw new Error('compiler targets do not support stdin or script arguments');
+  }
+  if (target === 'ts') {
+    const emitted = compilerEmit(resolve(root, 'compiler/ts-emitter.lts'), source);
+    const directory = mkdtempSync(join(tmpdir(), 'lite-verify-ts-'));
+    try {
+      writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
+      const path = join(directory, 'program.ts');
+      writeFileSync(path, emitted);
+      const imported: unknown = await import(pathToFileURL(path).href);
+      if (typeof imported !== 'object' || imported === null || !('main' in imported) ||
+          typeof (imported as { main: unknown }).main !== 'function') {
+        throw new Error('emitted TS has no main export');
+      }
+      const result: unknown = (imported as { main: () => unknown }).main();
+      if (typeof result !== 'string') throw new Error('emitted TS main did not return a string');
+      return { stdout: Buffer.from(result, 'utf8'), stderr: Buffer.alloc(0), exitCode: 0 };
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  }
+  if (target === 'c') {
+    const emitted = compilerEmit(resolve(root, 'compiler/c-emitter.lts'), source);
+    const directory = mkdtempSync(join(tmpdir(), 'lite-verify-c-'));
+    try {
+      const cPath = join(directory, 'program.c');
+      const executable = join(directory, 'program');
+      writeFileSync(cPath, emitted);
+      const built = spawnSync(process.env['CC'] ?? 'cc', ['-std=c11', '-Wall', '-Wextra', '-Werror',
+        cPath, '-o', executable], { encoding: 'utf8', timeout: 30000 });
+      if (built.error !== undefined) throw built.error;
+      if (built.status !== 0) throw new Error(`C compiler failed: ${built.stdout}${built.stderr}`);
+      const run = spawnSync(executable, [], { timeout: 5000 });
+      if (run.error !== undefined) throw run.error;
+      if (run.signal !== null) throw new Error(`C program terminated by ${run.signal}`);
+      return { stdout: run.stdout, stderr: run.stderr, exitCode: run.status ?? 1 };
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  }
+  throw new Error(`unsupported target ${target}`);
+}
+
+async function main(): Promise<void> {
   let features: Map<string, RegistryEntry>;
   let items: readonly Manifest[];
   try {
@@ -569,54 +651,69 @@ function main(): void {
     }
     const updates = new Map<string, Scenario>();
     for (const original of selected) {
-      const key = caseKey(item, original, sourceHash);
-      if (!options.update && options.cache && cache.passed[key] === true) {
-        cached += 1;
-        if (!options.quiet) process.stdout.write(`PASS ${item.id}/${original.name} (cached)\n`);
-        continue;
-      }
-      executed += 1;
-      let actual: { stdout: Buffer; stderr: Buffer; exitCode: number };
-      try {
-        actual = runCase(source, item, original);
-      } catch (error: unknown) {
-        delete cache.passed[key]; cacheDirty = true;
-        process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
-        failures += 1;
-        continue;
+      let expectedStdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+      let expectedStderr: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+      if (!options.update) {
+        try {
+          expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`, true);
+          expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`, true);
+        } catch (error: unknown) {
+          process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+          failures += 1;
+          continue;
+        }
       }
       if (options.update) {
-        updates.set(original.name, updatedScenario(original, actual, dirname(item.file), item.id));
+        executed += 1;
+        try {
+          const actual = runCase(source, item, original);
+          updates.set(original.name, updatedScenario(original, actual, dirname(item.file), item.id));
+        } catch (error: unknown) {
+          process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+          failures += 1;
+        }
         continue;
       }
-      let expectedStdout: Buffer;
-      let expectedStderr: Buffer;
-      try {
-        expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`, true);
-        expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`, true);
-      } catch (error: unknown) {
-        process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
-        failures += 1;
-        continue;
+      const targets = item.targets ?? ['igniter'];
+      for (const target of targets) {
+        const label = target === 'igniter' ? `${item.id}/${original.name}` : `${item.id}/${original.name} [${target}]`;
+        const key = caseKey(item, original, sourceHash, target);
+        if (options.cache && cache.passed[key] === true) {
+          cached += 1;
+          if (!options.quiet) process.stdout.write(`PASS ${label} (cached)\n`);
+          continue;
+        }
+        executed += 1;
+        let actual: { stdout: Buffer; stderr: Buffer; exitCode: number };
+        try {
+          actual = target === 'igniter'
+            ? runCase(source, item, original)
+            : await runCompilerTarget(target, source, original);
+        } catch (error: unknown) {
+          delete cache.passed[key]; cacheDirty = true;
+          process.stdout.write(`FAIL ${label}: ${error instanceof Error ? error.message : String(error)}\n`);
+          failures += 1;
+          continue;
+        }
+        if (!actual.stdout.equals(expectedStdout) || !actual.stderr.equals(expectedStderr) ||
+            actual.exitCode !== original.exitCode) {
+          delete cache.passed[key]; cacheDirty = true;
+          process.stdout.write(`FAIL ${label}\n`);
+          if (!actual.stdout.equals(expectedStdout)) {
+            process.stdout.write(`  stdout expected ${describe(expectedStdout)} got ${describe(actual.stdout)}\n`);
+          }
+          if (!actual.stderr.equals(expectedStderr)) {
+            process.stdout.write(`  stderr expected ${describe(expectedStderr)} got ${describe(actual.stderr)}\n`);
+          }
+          if (actual.exitCode !== original.exitCode) {
+            process.stdout.write(`  exitCode expected ${original.exitCode} got ${actual.exitCode}\n`);
+          }
+          failures += 1;
+          continue;
+        }
+        cache.passed[key] = true; cacheDirty = true;
+        if (!options.quiet) process.stdout.write(`PASS ${label}\n`);
       }
-      if (!actual.stdout.equals(expectedStdout) || !actual.stderr.equals(expectedStderr) ||
-          actual.exitCode !== original.exitCode) {
-        delete cache.passed[key]; cacheDirty = true;
-        process.stdout.write(`FAIL ${item.id}/${original.name}\n`);
-        if (!actual.stdout.equals(expectedStdout)) {
-          process.stdout.write(`  stdout expected ${describe(expectedStdout)} got ${describe(actual.stdout)}\n`);
-        }
-        if (!actual.stderr.equals(expectedStderr)) {
-          process.stdout.write(`  stderr expected ${describe(expectedStderr)} got ${describe(actual.stderr)}\n`);
-        }
-        if (actual.exitCode !== original.exitCode) {
-          process.stdout.write(`  exitCode expected ${original.exitCode} got ${actual.exitCode}\n`);
-        }
-        failures += 1;
-        continue;
-      }
-      cache.passed[key] = true; cacheDirty = true;
-      if (!options.quiet) process.stdout.write(`PASS ${item.id}/${original.name}\n`);
     }
     if (options.update) {
       if (failures === failuresBefore) {
@@ -638,4 +735,4 @@ function main(): void {
   }
 }
 
-main();
+void main().catch(error => { process.stderr.write(`lite verify: ${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1; });

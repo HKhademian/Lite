@@ -44,6 +44,7 @@ compiler fixtures.
     "hash": "sha256:<64 lowercase hex>"
   },
   "features": ["int.arithmetic"],
+  "targets": ["igniter", "ts", "c"],
   "guideline": "Checks precedence, left associativity and truncating division.",
   "cases": [
     {
@@ -64,6 +65,9 @@ compiler fixtures.
 - `description` — optional artifact summary.
 - `append` — optional text appended to the source for observation. Used by
   samples whose teaching bodies print nothing.
+- `targets` — optional execution targets: `igniter` (default), `ts`, `c`.
+  Compiler targets are admitted only for sources inside the restricted compiler
+  subset and cannot use stdin or script arguments.
 - `source.hash` — SHA-256 of the original source bytes (`file`, UTF-8 `text` or raw `bytes`).
   Changed source fails verification until `--update` is reviewed.
 - `cases` — one or more scenarios:
@@ -97,18 +101,23 @@ It updates the selected set, so use `--all --update` for a complete refresh.
 
 `--filter` matches manifest IDs, paths or feature IDs.
 
-The runner currently executes through the reference igniter. Compiler-target
-feature cases (`targets: ["igniter", "ts", "c"]`) are a later step; compiler
-verification remains in [igniter/tests/compiler](../igniter/tests/compiler/).
+The default target is the reference igniter. A manifest with
+`targets: ["igniter", "ts", "c"]` also emits and runs the restricted TS and C
+artifacts and compares the same expected streams. `--update` seeds expectations
+from the igniter only; run `./lite verify --all` afterward to check every target.
+Compiler-target coverage is currently limited to the four compatible feature
+cases; broader compiler verification remains in
+[igniter/tests/compiler](../igniter/tests/compiler/).
 
 ## Performance and scaling
 
 The verifier is designed for a growing corpus, not a fixed case count:
 
-- All cases execute in one Node process; no per-case process spawn.
+- Interpreter cases execute in one Node process; compiler targets emit and run
+  only for manifests that opt in.
 - Passing results are cached in `.cache/verifications.json` (gitignored). The
-  cache key includes the runner source hash, case source hash, expected streams,
-  arguments and exit code. A runner or case change cannot reuse a stale pass.
+  cache key includes the target, runner source hash, case source hash, expected
+  streams, arguments and exit code. A runner or case change cannot reuse a stale pass.
 - The default runs only manifests affected by the current `git status`:
   changed source/manifest files, plus artifacts tagged with a changed feature.
   Changes to the igniter or verification machinery select everything. A clean
@@ -136,11 +145,12 @@ sharded or curated, and caches make unchanged work nearly free.
 
 ## Coverage status
 
-- Features: 18 registered, 18 cases.
+- Features: 20 registered, 20 cases.
 - Examples: 19 of 19 manifest-covered.
 - Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
-- Scenarios: 57 (18 feature + 19 example + 20 sample).
+- Scenarios: 59 (20 feature + 19 example + 20 sample); 67 target executions
+  because four feature cases run through all three targets.
 
 Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any
 feature, example or sample lacks a manifest. Showcases are allowed to remain

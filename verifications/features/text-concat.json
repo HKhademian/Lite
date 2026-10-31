@@ -1,0 +1,27 @@
+{
+  "id": "text.concat",
+  "kind": "feature",
+  "source": {
+    "file": "text-concat.lts",
+    "hash": "sha256:ad9fbcea79dba44ca4172479216ac9b9e590b154391f3658bf3687337e1277c6"
+  },
+  "features": [
+    "text.concat"
+  ],
+  "guideline": "Checks String concatenation through the reference interpreter and both restricted compiler targets.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "closed-concatenation",
+      "stdout": {
+        "text": "ab\n",
+        "hash": "sha256:a63d8014dba891345b30174df2b2a57efbb65b4f9f09b98f245d1b3192277ece"
+      },
+      "exitCode": 0
+    }
+  ]
+}

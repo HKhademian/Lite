@@ -163,6 +163,24 @@
         "docs/numbers.md",
         "docs/operators.md"
       ]
+    },
+    {
+      "id": "text.concat",
+      "summary": "String concatenation.",
+      "case": "features/text-concat.json",
+      "status": "verified",
+      "docs": [
+        "docs/strings.md"
+      ]
+    },
+    {
+      "id": "local.immutable",
+      "summary": "Immutable local bindings.",
+      "case": "features/local-immutable.json",
+      "status": "verified",
+      "docs": [
+        "docs/declarations-and-assignment.md"
+      ]
     }
   ]
 }

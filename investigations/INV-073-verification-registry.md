@@ -37,7 +37,7 @@ teaching material.
 - `artifacts/examples|samples|showcases/<id>.json` — artifact manifests.
 
 A manifest records `id`, `kind`, `source`, `features`, optional
-`guideline`/`description`/`append`, and `cases`. `source` holds exactly one of
+`guideline`/`description`/`append`/`targets`, and `cases`. `source` holds exactly one of
 `file` or `text` plus an optional `hash`. A case records
 `stdin`/`stdout`/`stderr` streams (`text`, `bytes` or `file`), optional `args`,
 and `exitCode`. The stream model matches the compiler verification fixtures.
@@ -62,6 +62,8 @@ adding `report` calls to the lesson body.
 - `--filter <id-or-path>`: select manifests;
 - `--changed`: explicit alias for the default affected set;
 - `--shard i/n`: deterministic CI sharding;
+- `targets`: optional `igniter`/`ts`/`c`; compiler targets emit and run the
+  restricted artifacts against the same expected streams;
 - `--no-cache`/`--quiet`: execution and output controls.
 
 Test access is also CLI-only:
@@ -75,13 +77,15 @@ wiring is a later step.
 
 ## First slice
 
-- **18 feature cases**: Int arithmetic/remainder, Bool/conditionals, conditional
+- **20 feature cases**: Int arithmetic/remainder, Bool/conditionals, conditional
   and sequence loops, recursion, tuples, fixed arrays, mutable lists, text
-  helpers, transparent aliases, block locals, var assignment, inputInt,
-  inputArgs, inputAll, exit and multi-value report.
+  helpers/concatenation, transparent aliases, immutable locals, block locals,
+  var assignment, inputInt, inputArgs, inputAll, exit and multi-value report.
 - **All 19 examples** and **all 20 samples** have manifests.
-- **57 scenarios** total, in one process; passing scenarios are cached and the
-  verifier supports `--all`, affected-only default, `--shard` and `--no-cache`.
+- **59 scenarios / 67 target executions**; Int arithmetic, remainder, String
+  concatenation and immutable locals run through the reference igniter, emitted
+  TS and native C. Passing results are cached; the verifier supports `--all`,
+  affected-only default, `--shard` and `--no-cache`.
 - Coverage is blocking: `./lite verify --coverage` fails if any feature, example
   or sample lacks a manifest.
 
@@ -91,8 +95,8 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Evidence
 
-- All 57 scenarios pass `./lite verify --all`.
-- `./lite verify --coverage` reports 18/18 features, 19/19 examples, 20/20
+- All 67 target executions pass `./lite verify --all`.
+- `./lite verify --coverage` reports 20/20 features, 19/19 examples, 20/20
   samples and 0 showcases.
 - All **162 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
@@ -101,9 +105,9 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Limits
 
-- Only the reference igniter target is executed. Compiler-target feature cases
-  (`targets: ["igniter", "ts", "c"]`) and migration of the compiler corpus are
-  later steps.
+- Compiler-target feature coverage is limited to four compatible cases
+  (Int arithmetic, remainder, String concatenation, immutable locals); broader
+  compiler verification remains in the compiler fixture corpus.
 - Coverage is blocking for features, examples and samples. Showcase manifests
   and transcripts are still absent.
 - No CI workflow or pre-commit integration exists yet; `./lite verify` and

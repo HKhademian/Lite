@@ -53,6 +53,18 @@
       "items": {
         "$ref": "#/$defs/case"
       }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "igniter",
+          "ts",
+          "c"
+        ]
+      }
     }
   },
   "allOf": [

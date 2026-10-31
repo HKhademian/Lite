@@ -596,7 +596,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 18 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 20 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

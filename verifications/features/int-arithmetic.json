@@ -9,6 +9,11 @@
     "int.arithmetic"
   ],
   "guideline": "Checks precedence, left associativity, truncating division, and a negative quotient.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
   "cases": [
     {
       "name": "precedence-and-division",

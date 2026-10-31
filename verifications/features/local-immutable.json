@@ -1,0 +1,27 @@
+{
+  "id": "local.immutable",
+  "kind": "feature",
+  "source": {
+    "file": "local-immutable.lts",
+    "hash": "sha256:51aeebee57c29aad890a169d203acc92b22b2dc74893629b75b1f19f2c0f5be6"
+  },
+  "features": [
+    "local.immutable"
+  ],
+  "guideline": "Checks an immutable local through the reference interpreter and both restricted compiler targets.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "local-add",
+      "stdout": {
+        "text": "6\n",
+        "hash": "sha256:06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7"
+      },
+      "exitCode": 0
+    }
+  ]
+}

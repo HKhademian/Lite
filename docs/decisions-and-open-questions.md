@@ -6,7 +6,7 @@ Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. N
 
 Feature verifications are selected as the canonical semantic contract, separate
 from examples, samples and showcases, which are verified consumers. The new
-`verifications/` tree holds a JSON schema, an 18-feature registry and canonical
+`verifications/` tree holds a JSON schema, a 20-feature registry and canonical
 cases; `igniter/verify.ts` and `./lite verify` run them through the reference
 igniter; the default verifies only git-affected cases, while `--all` runs
 everything. `--update` regenerates expected streams/source hashes, `--coverage`
@@ -18,10 +18,11 @@ one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-
 external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
-The registry now covers 18 feature cases, all 19 examples, all 20 samples and
-57 scenarios. All scenarios pass; 162 interpreter groups and 9 editor groups
-pass. Coverage is blocking for features, examples and samples. Compiler targets,
-showcase transcripts and CI remain open. See
+The registry now covers 20 feature cases, all 19 examples, all 20 samples and
+59 scenarios (67 target executions). Four feature cases run through the
+reference igniter, emitted TS and native C. All pass; 162 interpreter groups and
+9 editor groups pass. Coverage is blocking for features, examples and samples.
+Broader compiler targets, showcase transcripts and CI remain open. See
 [INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
 [verification guide](../verifications/README.md).
 

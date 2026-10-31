@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 57 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 67 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 18 registered, 18 cases/);
+    assert.match(covered.stdout, /features: 20 registered, 20 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
