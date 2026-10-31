@@ -96,7 +96,7 @@ test('no line comments, invented builtin classification, or keyword matches with
   lacks(rows, 0, 'textAt', 'support.function.lite');
 });
 test('long operators stay intact; leading-dot access is not a fractional literal', async () => {
-  const operators = ['=!=', '<!=', '>!=', '<!', '>!', '<=', '>=', '==', '<', '>', '_/=', '_%=', '_/', '_%', ':='];
+  const operators = ['=!=', '<!=', '>!=', '<!', '>!', '<=', '>=', '==', '<', '>', ':/=', ':%=', ':/', ':%', ':='];
   const rows = await tokenize(operators.join(' ') + ' @outer .5 0.5');
   const operatorTokens = rows[0].tokens.filter(t => t.scopes.includes('keyword.operator.lite'))
     .map(t => rows[0].line.slice(t.startIndex, t.endIndex));

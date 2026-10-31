@@ -208,7 +208,7 @@ Recommend defining the ordinary static execution path first: concrete values, fi
 
 Two current syntax gaps block a complete parser independently of runtime strategy:
 
-- Compact `a_/b` and `a_%b` conflict with ordinary longest-identifier scanning that would retain `a_`. The operator spellings and compact/spaced equivalence are selected; the recognition rule is not. No runtime disambiguation or mandatory spaces should be inferred. See [the lexical conflict](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+- Compact `a:/b` and `a:%b` tokenize as the name `a` followed by `:/` or `:%`; the colon-prefixed operators do not collide with identifiers. Compact and spaced forms agree. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 - Intrinsic `.call` has selected pack meanings but incomplete operand precedence/chaining. A spelling such as `f.call pack!` needs an explicit parse before reasoning about which Result is extracted. Parenthesized examples do not complete that grammar. See [pack application](callable-input-packs.md#application-with-an-existing-pack).
 
 This review adds no new syntax, mandatory runtime dependency, no-GC guarantee, panic mechanism, or zero-cost performance claim. Measurements remain future work.

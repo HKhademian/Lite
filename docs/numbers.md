@@ -75,11 +75,11 @@ and the [decision ledger](decisions-and-open-questions.md#temporary-fvp-numeric-
 
 ## Arithmetic grouping
 
-Within the selected set, prefix negation binds above multiplicative * / _/ % _%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
+Within the selected set, prefix negation binds above multiplicative * / :/ % :%, then binary + -. Binary operations at each level associate left to right; parentheses override grouping, and operands retain left-to-right evaluation. Identity leading + does not alter that grouping or introduce promotion. See [operators](operators.md#basic-arithmetic-grouping-selected). Power uses `**` and requires explicit negative-base or outer-negation grouping: -2 `**` 2 and -2 `**` 3 are invalid. Chained-power association, full precedence, result types, and signed-exponent rules remain open; see [power and negation](power-and-negation.md). [The language comparison](arithmetic-operators-comparison.md) records alternatives.
 
 ## Division
 
-Selected 2026-10-25: distinguish division calculation from storage. A floating operand supplies floating arithmetic even for an Int destination; / then truncates the quotient for integer storage, while _/ floors it. An expected Float/Double result keeps / fractional, including 2 / 7. Without either source of floating arithmetic, integer-only division retains its integer default:
+Selected 2026-10-25: distinguish division calculation from storage. A floating operand supplies floating arithmetic even for an Int destination; / then truncates the quotient for integer storage, while :/ floors it. An expected Float/Double result keeps / fractional, including 2 / 7. Without either source of floating arithmetic, integer-only division retains its integer default:
 
 ```text
 fraction: Float = 2 / 7;   /* approximately 0.285714... */
@@ -89,18 +89,18 @@ whole: Int = 2.0 / 7;      /* 0 */
 whole: Int = 2 / 7.0;      /* 0 */
 left := 2.0 / 7;           /* fractional */
 right := 2 / 7.0;          /* fractional */
-floored := -7 _/ 2;        /* -4 */
+floored := -7 :/ 2;        /* -4 */
 positive: Int = 7.5 / 2;   /* 3: floating calculation, truncated storage */
 negative: Int = -7.5 / 2;  /* -3 */
-floored: Int = -7.5 _/ 2;  /* -4 */
+floored: Int = -7.5 :/ 2;  /* -4 */
 small: Int = 2 / 0.5;      /* 4: divisor stays 0.5 */
 ```
 
 Nonintegral floating literals and established floating operands are admitted for division into Int. Preserve operand values during the calculation, then round the quotient as the operator requires; do not truncate operands or compute integer zero and widen it for Float/Double. Concrete floating precision, mixed widths, representability/non-finite faults, general assignment conversions, and complete expected-type propagation through unresolved subexpressions/calls/returns remain open. Floating intermediates now stay untruncated until the full value reaches Int storage: (7.5 / 2) * 2.0 stores 7, while half: Int = 7.5 / 2 stores 3 before half * 2 produces 6. Parentheses alone introduce no storage boundary; see [the selected rule](division.md#floating-intermediates-and-storage-boundaries). See [calculation and storage](division.md#floating-calculation-and-integer-storage).
 
-Remainder % pairs with Int-result truncating / and follows the dividend when nonzero. Modulo _% pairs with floor _/ and follows the divisor when nonzero: -7 % 2 is -1, -7 _% 2 is 1, and 7 _% -2 is -1. The corresponding updates are /=, _/=, %=, and _%=.
+Remainder % pairs with Int-result truncating / and follows the dividend when nonzero. Modulo :% pairs with floor :/ and follows the divisor when nonzero: -7 % 2 is -1, -7 :% 2 is 1, and 7 :% -2 is -1. The corresponding updates are /=, :/=, %=, and :%=.
 
-This replaces the operand-only division rule and the earlier // / %% floor spellings. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the unresolved compact underscore/identifier boundary; [division](division.md#contextual-division-selected) owns the contextual cases and their limits.
+This replaces the operand-only division rule and the earlier // / %% floor spellings. The [selected family](arithmetic-methods-and-division-revision.md) records ordinary numeric-method direction and the colon-prefixed floor spellings; [division](division.md#contextual-division-selected) owns the contextual cases and their limits.
 
 ## Ranges
 

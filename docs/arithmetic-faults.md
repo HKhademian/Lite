@@ -31,12 +31,12 @@ The expression has an ordinary integer result on success. Its overflow behavior 
 Integer division keeps the selected rounding rule and uses a typed panic for a defined arithmetic fault such as a zero divisor or an unrepresentable quotient:
 
 ```text
-quotient := dividend _/ divisor
+quotient := dividend :/ divisor
 ```
 
-For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer remainder % and modulo _% fault on a zero divisor. Their minimum % -1 and minimum _% -1 cases still need independent result rules: each mathematical result is representable as zero even though its associated quotient is not, so the quotient rule alone does not settle whether either operation faults.
+For a fixed-width signed type, the minimum value divided by `-1` is one such unrepresentable quotient. It must not wrap. Integer remainder % and modulo :% fault on a zero divisor. Their minimum % -1 and minimum :% -1 cases still need independent result rules: each mathematical result is representable as zero even though its associated quotient is not, so the quotient rule alone does not settle whether either operation faults.
 
-A division with floating operands retains floating arithmetic before its quotient is truncated by / or floored by _/ for Int storage. This admits nonintegral operands but leaves out-of-range, non-finite, and floating zero-divisor behavior to the numeric fault contract; it does not authorize wrapping or saturation on storage. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
+A division with floating operands retains floating arithmetic before its quotient is truncated by / or floored by :/ for Int storage. This admits nonintegral operands but leaves out-of-range, non-finite, and floating zero-divisor behavior to the numeric fault contract; it does not authorize wrapping or saturation on storage. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
 
 The same rule applies to other basic math operators when their numeric contract defines a fault. It does not decide floating-point representation, non-finite results, mixed operands, or conversions.
 
@@ -59,7 +59,7 @@ The selected [operation-specific boundary](expression-recovery.md#operation-spec
 - Exact fixed-width integer types and which operations can overflow.
 - The arithmetic panic categories, payloads, and source information.
 - Whether floating-point division by zero produces non-finite values or a typed panic; define other floating-point edge cases separately.
-- The independent results of min % -1 and min _% -1 for fixed-width signed integers.
+- The independent results of min % -1 and min :% -1 for fixed-width signed integers.
 - Exact arithmetic panic type names and the result type of a panic fallback.
 - Operation fault attribution through helpers, transfer mechanism, block/chain integration, cleanup, and handling of a second panic.
 - Explicit wrapping/saturating operations and conversion behavior.

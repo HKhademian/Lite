@@ -33,7 +33,7 @@ scopes. Ordinary call coloring makes no builtin/permission/name-resolution claim
 Block-comment toggling and bracket/quote pairs use existing delimiters.
 
 The full grammar remains open: highlighting is approximate and preserves that
-boundary, including compact underscore operators and Unicode identifier details.
+boundary, including compact colon-prefixed operators and Unicode identifier details.
 No snippets, formatting, code execution, language server, debugger, new warning,
 or semantic validation is included. The earlier experimental text helpers remain
 unapproved and receive no special builtin scope.

@@ -37,7 +37,7 @@
     {
       "language": "LiteScript",
       "operands": "Int",
-      "expression": "a _/ b",
+      "expression": "a :/ b",
       "rule": "floor_div",
       "results": [
         "3",
@@ -65,7 +65,7 @@
     {
       "language": "LiteScript",
       "operands": "Int",
-      "expression": "a _% b",
+      "expression": "a :% b",
       "rule": "mod",
       "results": [
         "1",

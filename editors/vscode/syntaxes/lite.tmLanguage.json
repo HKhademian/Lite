@@ -16,7 +16,7 @@
     { "name": "entity.name.function.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*:=\\s*fn(?![\\p{L}\\p{M}\\p{N}_]))" },
     { "name": "entity.name.function.call.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*(?=\\s*\\()" },
     { "name": "entity.name.label.lite", "match": "@[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*" },
-    { "name": "keyword.operator.lite", "match": "(?:>!=|<!=|=!=|_/=|_%=|:=|==|>=|<=|>!|<!|\\+=|-=|\\*=|/=|%=|_/|_%|[+*/%=<>!?|&-])" },
+    { "name": "keyword.operator.lite", "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])" },
     { "name": "punctuation.section.brackets.lite", "match": "[{}\\[\\]()]" },
     { "name": "punctuation.separator.lite", "match": "[;,:.]" },
     { "name": "variable.other.lite", "match": "[\\p{L}_][\\p{L}\\p{M}\\p{N}_]*" }

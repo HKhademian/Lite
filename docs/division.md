@@ -1,19 +1,19 @@
 # Division, remainder, and modulo
 
-Status: **contextual division and quotient storage clarified 2026-10-25; / truncates for Int storage, _/ floors; % remainder and _% modulo remain selected**. A floating operand supplies floating arithmetic even when the destination is Int. Float/Double destinations retain the fraction for /. Compact/spaced equivalence remains required, with identifier-boundary scanning unresolved. Complete numeric representation, inference, fault rules, and parsing remain open.
+Status: **contextual division and quotient storage clarified 2026-10-25; / truncates for Int storage, :/ floors; % remainder and :% modulo remain selected**. A floating operand supplies floating arithmetic even when the destination is Int. Float/Double destinations retain the fraction for /. Compact/spaced equivalence remains required, with identifier-boundary scanning unresolved. Complete numeric representation, inference, fault rules, and parsing remain open.
 
 ## Selected family
 
-A floating operand supplies floating division semantics; an Int destination receives the rounded quotient rather than forcing integer operands. For Int storage, / truncates toward zero and _/ rounds toward negative infinity. A Float/Double destination retains the fraction for /, including 2 / 7. Without a result context, a floating operand gives fractional /; integer-only division retains its integer default. Remainder % pairs with truncating integer quotients; modulo _% pairs with floor quotients.
+A floating operand supplies floating division semantics; an Int destination receives the rounded quotient rather than forcing integer operands. For Int storage, / truncates toward zero and :/ rounds toward negative infinity. A Float/Double destination retains the fraction for /, including 2 / 7. Without a result context, a floating operand gives fractional /; integer-only division retains its integer default. Remainder % pairs with truncating integer quotients; modulo :% pairs with floor quotients.
 
 ```text
 b: Int = -7;
 c: Int = 2;
 
 quotient := b / c;  /* -3 */
-floor := b _/ c;    /* -4 */
+floor := b :/ c;    /* -4 */
 remainder := b % c; /* -1 */
-modulo := b _% c;   /* 1 */
+modulo := b :% c;   /* 1 */
 ```
 
 ## Contextual division selected
@@ -40,12 +40,12 @@ A floating operand keeps its floating arithmetic role under Int storage. The fra
 
 ## Floating calculation and integer storage
 
-Selected by the user, 2026-10-25: nonintegral floating operands are admitted for division into Int. Calculate with their floating values, then use truncation for / or floor for _/ when producing the stored integer:
+Selected by the user, 2026-10-25: nonintegral floating operands are admitted for division into Int. Calculate with their floating values, then use truncation for / or floor for :/ when producing the stored integer:
 
 ```text
 positive: Int = 7.5 / 2;       /* 3: quotient 3.75, truncated */
 negative: Int = -7.5 / 2;      /* -3: quotient -3.75, truncated */
-floored: Int = -7.5 _/ 2;      /* -4: quotient -3.75, floored */
+floored: Int = -7.5 :/ 2;      /* -4: quotient -3.75, floored */
 small_divisor: Int = 2 / 0.5;  /* 4: divisor stays 0.5 */
 
 source: Float = 7.5;
@@ -84,28 +84,28 @@ Ordinary integer-only division needs no floating-point intermediate or mandatory
 
 ```text
 truncated: Int = -7 / 2;  /* -3: integer calculation */
-floored: Int = -7 _/ 2;   /* -4: integer floor calculation */
+floored: Int = -7 :/ 2;   /* -4: integer floor calculation */
 ```
 
-The operators have different rounding for negative inexact quotients, so _/ cannot replace truncating /. A typed Int binding already supplies an explicit integer boundary before later calculations. A Float destination such as fraction: Float = 2 / 7 requests fractional division instead; a context-independent integer quotient inside a larger fractional expression is a separate API question. See [the proposed truncDiv method](arithmetic-methods-and-division-revision.md#explicit-truncating-division-proposal). No additional truncation symbol or method is selected by this storage-boundary decision.
+The operators have different rounding for negative inexact quotients, so :/ cannot replace truncating /. A typed Int binding already supplies an explicit integer boundary before later calculations. A Float destination such as fraction: Float = 2 / 7 requests fractional division instead; a context-independent integer quotient inside a larger fractional expression is a separate API question. See [the proposed truncDiv method](arithmetic-methods-and-division-revision.md#explicit-truncating-division-proposal). No additional truncation symbol or method is selected by this storage-boundary decision.
 
 ## Compound updates
 
-The corresponding updates are /=, _/=, %=, and _%=. Each selects its target once, reads its existing value, evaluates the right operand, computes the matching operation, and writes a compatible result.
+The corresponding updates are /=, :/=, %=, and :%=. Each selects its target once, reads its existing value, evaluates the right operand, computes the matching operation, and writes a compatible result.
 
 ```text
 var truncated := -7;
 truncated /= 2; /* -3 */
 
 var floored := -7;
-floored _/= 2; /* -4 */
+floored :/= 2; /* -4 */
 ```
 
-Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= and _/= apply the matching calculation/storage contract. An Int target does not strip fractional parts from a floating right operand before division; the matching quotient rounding supplies the stored integer. Exact width/precision compatibility and fault boundaries still need specification.
+Whole-binding writes require var; held-data writes require mut and the target's ordinary permission. Neither spelling supplies extra write authority. No implicit conversion permits an incompatible result to be stored. /= and :/= apply the matching calculation/storage contract. An Int target does not strip fractional parts from a floating right operand before division; the matching quotient rounding supplies the stored integer. Exact width/precision compatibility and fault boundaries still need specification.
 
 ## Signed floor division
 
-For valid integer operands with an Int division result, a nonzero divisor, and a representable quotient, / discards the fractional part toward zero, while _/ takes the mathematical floor. The unannotated integer-only expressions below retain that default:
+For valid integer operands with an Int division result, a nonzero divisor, and a representable quotient, / discards the fractional part toward zero, while :/ takes the mathematical floor. The unannotated integer-only expressions below retain that default:
 
 ```text
 7 / 2;    /* 3 */
@@ -113,17 +113,17 @@ For valid integer operands with an Int division result, a nonzero divisor, and a
 -7 / 2;   /* -3 */
 -7 / -2;  /* 3 */
 
-7 _/ 2;   /* 3 */
-7 _/ -2;  /* -4 */
--7 _/ 2;  /* -4 */
--7 _/ -2; /* 3 */
+7 :/ 2;   /* 3 */
+7 :/ -2;  /* -4 */
+-7 :/ 2;  /* -4 */
+-7 :/ -2; /* 3 */
 ```
 
-These rules stay consistent across evaluation contexts and build modes. Lowering to a CPU with truncating division must perform any required floor correction; it cannot silently substitute truncation for _/.
+These rules stay consistent across evaluation contexts and build modes. Lowering to a CPU with truncating division must perform any required floor correction; it cannot silently substitute truncation for :/.
 
 ## Integer remainder and modulo selected
 
-The selected names remain remainder (rem) and modulo (mod), following the reviewed Zig terminology. The final LiteScript symbols are % and _%, replacing the earlier %% modulo spelling.
+The selected names remain remainder (rem) and modulo (mod), following the reviewed Zig terminology. The final LiteScript symbols are % and :%, replacing the earlier %% modulo spelling.
 
 ```text
 7 % 2;    /* 1 */
@@ -131,29 +131,29 @@ The selected names remain remainder (rem) and modulo (mod), following the review
 -7 % 2;   /* -1 */
 -7 % -2;  /* -1 */
 
-7 _% 2;   /* 1 */
-7 _% -2;  /* -1 */
--7 _% 2;  /* 1 */
--7 _% -2; /* -1 */
+7 :% 2;   /* 1 */
+7 :% -2;  /* -1 */
+-7 :% 2;  /* 1 */
+-7 :% -2; /* -1 */
 ```
 
-For successful integer operations with an Int quotient, the mathematical identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). They describe mathematical values, not required intermediate fixed-width multiplications or fractional conversions.
+For successful integer operations with an Int quotient, the mathematical identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b). They describe mathematical values, not required intermediate fixed-width multiplications or fractional conversions.
 
-A nonzero remainder follows the dividend's sign, with abs(a % b) < abs(b). A nonzero modulo result follows the divisor's sign. For positive b, 0 <= a _% b < b; for negative b, b < a _% b <= 0. Both results are zero for exact division. Modulo is not always nonnegative for negative divisors.
+A nonzero remainder follows the dividend's sign, with abs(a % b) < abs(b). A nonzero modulo result follows the divisor's sign. For positive b, 0 <= a :% b < b; for negative b, b < a :% b <= 0. Both results are zero for exact division. Modulo is not always nonnegative for negative divisors.
 
-The fixed-width minimum % -1 and minimum _% -1 cases still need independent result/fault contracts: their mathematical result is zero even though an associated quotient may be unrepresentable. A naive overflowing product used only to reconstruct a valid result must not introduce a new fault.
+The fixed-width minimum % -1 and minimum :% -1 cases still need independent result/fault contracts: their mathematical result is zero even though an associated quotient may be unrepresentable. A naive overflowing product used only to reconstruct a valid result must not introduce a new fault.
 
 ## Operator grouping and method surface
 
-The operations * / _/ % _% share the selected multiplicative precedence and binary left association. Parentheses override grouping; actual operands evaluate once in source order. None gains a redundant leading prefix or an implicit initial operand.
+The operations * / :/ % :% share the selected multiplicative precedence and binary left association. Parentheses override grouping; actual operands evaluate once in source order. None gains a redundant leading prefix or an implicit initial operand.
 
 The user requests explicit numeric methods in addition: a.plus(b), a.div(b), and a.floorDiv(b). Working names div/rem/floorDiv/mod describe the matching operations; exact numeric signatures and the general operator/method dispatch mechanism remain open. A method spelling must not introduce different rounding or force an extra runtime call for an admitted built-in operation. Future Kotlin-style infix calls remain deferred.
 
 ## Lexer interaction
 
-The symbols _/ and _% are selected. The user also requires compact/spaced operator equivalence, including a_%b and a _% b, while underscore remains admitted in identifiers. Ordinary maximal-identifier scanning would read a_%b as a_ % b and a_/b as a_ / b. This conflict remains an explicit unresolved lexical integration question; no mandatory-space rule, stolen trailing underscore, or context-sensitive scanner is silently selected. Examples above use explicit boundaries; they are design examples, not parser verification.
+The symbols `:/` and `:%` are selected. The user also requires compact/spaced operator equivalence, including `a:%b` and `a :% b`. Because the spellings begin with a colon, `a:/b` and `a:%b` tokenize as the name `a` followed by the operator; underscore remains admitted in identifiers without conflict. No mandatory-space rule, stolen trailing underscore, or context-sensitive scanner is selected. Examples above use explicit boundaries, but the compact forms are part of the selected contract.
 
-Once an operator boundary is established, longer update tokens _/= and _%= must be recognized before their shorter operator prefixes. Full recognition around identifiers remains pending. See [the compact-form requirement](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+Once an operator boundary is established, longer update tokens :/= and :%= must be recognized before their shorter operator prefixes. Full recognition around identifiers remains pending. See [the compact-form requirement](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 
 The former // and %% arithmetic spellings are superseded. This does not introduce a // line-comment form, spacing-dependent comments, or an alias for the old operators. Current block/raw comment rules remain selected; future line comments require a separate decision.
 

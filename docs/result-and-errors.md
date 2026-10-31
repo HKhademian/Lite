@@ -297,7 +297,7 @@ The final `Unit` represents success without data.
 
 Recoverable errors and panics retain separate origins and propagation channels. Explicit ? can store them together; ! resumes retained origins rather than turning panics into returned Error. Ordinary uncaptured panics still propagate implicitly. Both forwarding paths run applicable exited-scope finally cleanup, retaining primary and secondary failures. See [capture/extraction](failure-capture-and-unwrapping.md) and [cleanup](finally.md#pending-outcomes). Transfer ABI, storage/inspection, hard-abort behavior, and full attachment grammar remain open.
 
-Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The selected target-level `else` can recover a matching typed panic at the operation. Unmatched panics still propagate implicitly; returned errors still require explicit handling or `!`. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width remainder % and modulo _% minimum-value/-1 cases. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
+Basic arithmetic faults use the typed panic channel, not the recoverable `Result` contract. The selected target-level `else` can recover a matching typed panic at the operation. Unmatched panics still propagate implicitly; returned errors still require explicit handling or `!`. Exact fault triggers remain open, including floating-point edge behavior and the fixed-width remainder % and modulo :% minimum-value/-1 cases. Arithmetic must not silently wrap, become undefined, or change between build modes. See [arithmetic fault boundaries](arithmetic-faults.md).
 
 ### Reference-language distinction
 

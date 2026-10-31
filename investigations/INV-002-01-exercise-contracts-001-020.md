@@ -85,10 +85,10 @@ Gap evidence:
    only selected commands in [tooling and learning](../docs/tooling-and-learning.md);
    `lite run` and `lite build` appear under "Run and build proposals" as "a
    proposal, not an implemented path."
-4. **Underscore-operator scanning** — [samples/README.md](../samples/README.md)
-   teaches `_/` and `_%`, while no written sample uses them;
+4. **Colon-prefixed operator scanning** — [samples/README.md](../samples/README.md)
+   teaches `:/` and `:%`, while no written sample uses them;
    [lexical structure](../docs/lexical-structure.md) records "compact
-   underscore/identifier scanning remains unresolved."
+   colon-prefixed operator scanning is unambiguous."
 5. **Beyond this note's scope, recorded as context** — stage 11 says exact
    Option/Result construction "may remain a blocker"; stage 16 says real I/O
    "remains blocked until a host contract exists" (`samples/list.md`).
@@ -115,9 +115,9 @@ offset := rate_from / 2;  /* fine for 019's even rate; generalizing it needs
                              literal-default and promotion rules */
 ```
 
-The teaching text in `samples/README.md` also states `part: Int = -7.5 _/ 2` is
-`-4`; that form is reachable only after the compact underscore-operator scanning
-question is settled, even though no written sample spells it.
+The teaching text in `samples/README.md` also states `part: Int = -7.5 :/ 2` is
+`-4`; that form uses the selected colon-prefixed floor operator and its compact spelling
+is unambiguous, even though no written sample uses it.
 
 Varying one property at a time: removing comments leaves every file valid under
 the selected rules; removing `var` from 020 breaks only 020; replacing any
@@ -214,8 +214,8 @@ Remaining questions:
 - Numeric representation, literal typing, and conversion —
   [INV-014](TOPICS.md#inv-014) ([numeric semantics](SUBTOPICS.md#inv-014)) owns
   the answer; this note only records that 001–020 cannot proceed without it.
-- Whether underscore-operator scanning is resolved before any sample teaches
-  `_/` — lexical structure, [INV-008](TOPICS.md#inv-008).
+- The colon-prefixed `:/`/`:%` spelling is selected and scans unambiguously; no
+  written sample uses it yet. See [lexical structure](../docs/lexical-structure.md).
 
 ## Decision references
 

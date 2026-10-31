@@ -82,7 +82,7 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 One file; fixed/inferred `:=` bindings, `var`/replacement, shadowing and scalar
 copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
-`+ - * / % _/ _%`, compound `+= -= *= /= %= _/= _%=` updates, unary signs and parentheses;
+`+ - * / % :/ :%`, compound `+= -= *= /= %= :/= :%=` updates, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
 parsed and checked before effects, including uncalled function bodies.
 Ordinary statements need semicolons between them; complete braced items do not.

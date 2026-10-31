@@ -1,8 +1,8 @@
-report(7 _/ 3);
-report(-7 _/ 3);
-report(7 _/ -3);
-report(-7 _/ -3);
-report(7 _% 3);
-report(-7 _% 3);
-report(7 _% -3);
-report(-7 _% -3);
+report(7 :/ 3);
+report(-7 :/ 3);
+report(7 :/ -3);
+report(-7 :/ -3);
+report(7 :% 3);
+report(-7 :% 3);
+report(7 :% -3);
+report(-7 :% -3);

@@ -66,9 +66,9 @@ Adjacent string literal tokens with only whitespace or comments between them con
 
 ## Division, remainder, and modulo tokens
 
-Selected 2026-10-25: floating operands supply floating division semantics; Int storage accepts the quotient using / truncation or _/ floor. Nonintegral floating operands are admitted: -7.5 / 2 stores -3 in Int, -7.5 _/ 2 stores -4, and 2 / 0.5 stores 4. Float/Double result contexts keep / fractional, including 2 / 7. Without floating operands or a fractional expected result, integer-only division retains its integer default. These calculation/storage rules do not alter parsing or precedence; floating intermediates remain untruncated until the complete admitted expression reaches Int storage, and parentheses alone add no conversion. Complete expected-type propagation through unresolved subexpressions/calls/returns and numeric typing remain open; see [storage boundaries](division.md#floating-intermediates-and-storage-boundaries). See [calculation and storage](division.md#floating-calculation-and-integer-storage). % is integer truncating remainder and _% is integer floor modulo. With an Int quotient, integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b). Nonzero remainder follows the dividend; nonzero modulo follows the divisor.
+Selected 2026-10-25: floating operands supply floating division semantics; Int storage accepts the quotient using / truncation or :/ floor. Nonintegral floating operands are admitted: -7.5 / 2 stores -3 in Int, -7.5 :/ 2 stores -4, and 2 / 0.5 stores 4. Float/Double result contexts keep / fractional, including 2 / 7. Without floating operands or a fractional expected result, integer-only division retains its integer default. These calculation/storage rules do not alter parsing or precedence; floating intermediates remain untruncated until the complete admitted expression reaches Int storage, and parentheses alone add no conversion. Complete expected-type propagation through unresolved subexpressions/calls/returns and numeric typing remain open; see [storage boundaries](division.md#floating-intermediates-and-storage-boundaries). See [calculation and storage](division.md#floating-calculation-and-integer-storage). % is integer truncating remainder and :% is integer floor modulo. With an Int quotient, integer identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b). Nonzero remainder follows the dividend; nonzero modulo follows the divisor.
 
-The matching updates are /=, _/=, %=, and _%=. Once an operator boundary is established, recognize longer update tokens before shorter prefixes. The symbols are selected, but compact/spaced equivalence still conflicts with ordinary longest-identifier scanning around a_/b and a_%b. No mandatory-space rule, identifier resegmentation, or type-directed lexer has been selected. Standalone _ remains readable. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
+The matching updates are /=, :/=, %=, and :%=. Once an operator boundary is established, recognize longer update tokens before shorter prefixes. Compact and spaced forms agree: `a:/b` and `a:%b` tokenize as the name `a` plus the colon-prefixed operator, with no identifier resegmentation or mandatory-space rule. Standalone _ remains readable. See [the lexical boundary](arithmetic-methods-and-division-revision.md#compact-and-spaced-forms-must-agree).
 
 The arithmetic fragments below describe recognized operators, not a completed lexer. Old // and %% arithmetic spellings are superseded; // line comments and future infix methods are not introduced. Mixed numeric operands, exact conversions/faults, numeric method signatures, and full recursive parsing remain open. See [division](division.md).
 
@@ -734,7 +734,7 @@ See [Result and errors](result-and-errors.md) and [panics](panics.md).
 ```text
 additive_chain_entry := ["+"] additive_expression
 additive_expression := multiplicative_expression { ("+" | "-") multiplicative_expression }
-multiplicative_expression := arithmetic_unary { ("*" | "/" | "_/" | "%" | "_%") arithmetic_unary }
+multiplicative_expression := arithmetic_unary { ("*" | "/" | ":/" | "%" | ":%") arithmetic_unary }
 arithmetic_unary := "-" arithmetic_unary | arithmetic_primary
 ```
 
@@ -742,7 +742,7 @@ Selected 2026-10-25: this is a nonempty arithmetic fragment, not a complete expr
 
 The optional leading + is admitted only at a complete additive-chain entry. Established expression positions or explicit additive grouping supply the entry; an interior operator alone does not open a new prefix position. Permit +A and +A + B as identity-leading forms, preserving the expression/type/evaluation after removing only the first +. No implicit zero, conversion, or extra operator call is introduced. Do not infer stacked/interior extra leaders or an empty/trailing operand.
 
-Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; _/, %, and _% gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
+Minus retains its ordinary negation/subtraction meaning. There is no redundant leading * or / production and no inferred 1 seed/reciprocal; :/, %, and :% gain no such prefix either. Complete unary forms, nonnumeric/custom operator contracts, and recursive integration remain open; the selected basic grouping is recorded above. See [additive leading plus](leading-separators.md#additive-chains-with-leading-plus).
 
 ## Power and unary-minus boundary selected
 

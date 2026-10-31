@@ -1,6 +1,6 @@
 # Arithmetic methods and the selected division family
 
-Status: **/, _/, %, and _% selected 2026-10-25; ordinary arithmetic methods requested in addition; compact/spaced equivalence required, with underscore/identifier scanning unresolved**. The user retained this family after reviewing underscore boundaries and punctuation-only alternatives. This is a language-design selection, not an implemented lexer, compiler, or numeric API.
+Status: **/, :/, %, and :% selected 2026-10-25; colon-prefixed spellings selected 2026-10-31; ordinary arithmetic methods requested in addition; compact/spaced equivalence required**. The user retained this family after reviewing boundary and punctuation-only alternatives. This is a language-design selection; the igniter implements the colon forms, while compiler lowering and the full numeric API remain open.
 
 ## Selected operations
 
@@ -11,12 +11,12 @@ b: Int = -7;
 c: Int = 2;
 
 b / c;  /* truncating quotient: -3 */
-b _/ c; /* floor quotient: -4 */
+b :/ c; /* floor quotient: -4 */
 b % c;  /* remainder: -1 */
-b _% c; /* modulo: 1 */
+b :% c; /* modulo: 1 */
 ```
 
-With an Int quotient, the truncating pair is / and %; the floor pair is _/ and _%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a _/ b) + (a _% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. A floating operand supplies floating arithmetic; Int storage applies / truncation or _/ floor to the quotient. Nonintegral floating literals and established floating values are admitted in this rule. Expected Float/Double results retain fractional /, including integer-spelled literal division. Without a result context, floating operands give fractional /. Exact precision/width compatibility, general conversions, numeric representation, and faults remain separate.
+With an Int quotient, the truncating pair is / and %; the floor pair is :/ and :%. Their integer identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b), for successful admitted operations. Nonzero remainder follows the dividend; nonzero modulo follows the divisor. A floating operand supplies floating arithmetic; Int storage applies / truncation or :/ floor to the quotient. Nonintegral floating literals and established floating values are admitted in this rule. Expected Float/Double results retain fractional /, including integer-spelled literal division. Without a result context, floating operands give fractional /. Exact precision/width compatibility, general conversions, numeric representation, and faults remain separate.
 
 The old always-fractional Int division rule, the subsequent operand-only rule, // floor symbol, and %% modulo symbol are superseded. The new family is recorded in [division](division.md) and the updated [signed table](signed-division-table.md). Foreign-language spellings and observed probe results are unchanged.
 
@@ -40,7 +40,7 @@ The optional identity-leading + remains a no-op entry prefix. It must not invoke
 
 ## Expected result types guide division
 
-Floating operands select floating arithmetic; the destination determines what must be stored. For division stored in Int, / truncates the quotient toward zero and _/ floors it. The source operands retain their values throughout the division. An expected Float/Double result retains the fraction for / and can request fractional arithmetic for integer-spelled literals:
+Floating operands select floating arithmetic; the destination determines what must be stored. For division stored in Int, / truncates the quotient toward zero and :/ floors it. The source operands retain their values throughout the division. An expected Float/Double result retains the fraction for / and can request fractional arithmetic for integer-spelled literals:
 
 ```text
 fraction: Float = 2 / 7;   /* approximately 0.285714... */
@@ -50,7 +50,7 @@ whole: Int = 2.0 / 7;      /* 0: floating calculation, integer storage */
 whole: Int = 2 / 7.0;      /* 0: floating calculation, integer storage */
 positive: Int = 7.5 / 2;   /* 3 */
 negative: Int = -7.5 / 2;  /* -3 */
-floored: Int = -7.5 _/ 2;  /* -4 */
+floored: Int = -7.5 :/ 2;  /* -4 */
 small: Int = 2 / 0.5;      /* 4 */
 
 left := 2.0 / 7;           /* fractional without an integer destination */
@@ -63,7 +63,7 @@ The result contract does not settle general Float-to-Int assignment casts, mixed
 
 ## Explicit truncating division proposal
 
-The user asks whether _/ is sufficient for pure Int calculations or whether explicit truncation is needed. Existing / already truncates in an integer-only calculation with an Int destination, while _/ floors; neither requires floating arithmetic. A typed Int intermediate is sufficient to establish that integer result before using it in a later expression.
+The user asks whether :/ is sufficient for pure Int calculations or whether explicit truncation is needed. Existing / already truncates in an integer-only calculation with an Int destination, while :/ floors; neither requires floating arithmetic. A typed Int intermediate is sufficient to establish that integer result before using it in a later expression.
 
 Recommendation, not selected: add a.truncDiv(b) as an ordinary numeric method for an explicitly truncating integer quotient whose meaning/result contract does not change with a surrounding Float/Double expectation. This complements the requested floorDiv method without requiring another symbolic operator. It would be useful when the programmer wants to choose a quotient inline rather than introduce an Int temporary. Ordinary div remains the requested counterpart of context-sensitive /.
 
@@ -76,21 +76,26 @@ For admitted Int operands, such a method should compute integer division directl
 
 ## Compact and spaced forms must agree
 
-The user requires compact/spaced equivalence for these operators, including a_%b and a _% b. The distinct identifier spellings a_b and a_ b still mean one identifier and two identifier tokens respectively; ordinary identifier separation is not removed.
-
-There is an unresolved conflict with the current identifier direction:
+The user requires compact/spaced equivalence for these operators, including
+`a:%b` and `a :% b`. The colon-prefixed spellings also avoid the earlier
+underscore/identifier boundary concern:
 
 ```text
-a _/ b; /* selected floor operator spelling with an explicit boundary */
-a_/b;   /* ordinary longest-identifier scanning would instead read a_ / b */
+a:/b;   /* a, :/, b */
+a :/ b; /* a, :/, b */
 
-a _% b; /* selected modulo spelling with an explicit boundary */
-a_%b;   /* ordinary longest-identifier scanning would instead read a_ % b */
+a:%b;   /* a, :%, b */
+a :% b; /* a, :%, b */
 ```
 
-Selecting the symbols does not resolve that conflict or waive the compact/spaced requirement. Do not silently impose mandatory operator spaces, steal trailing underscores from names, reserve all underscore identifiers, or choose tokenization by type-check/lookup success. The exact lexical integration remains open and must be settled before claiming a complete unambiguous grammar or implementing it. Standalone _ remains an ordinary readable name under its existing contract.
+`a_b` and `a_ b` retain their ordinary identifier meanings. Standalone `_`
+remains an ordinary readable name under its existing contract.
 
-The corresponding update family is /=, _/=, %=, and _%=. Once the operator boundary is established, recognize a complete longer update token before its shorter prefix. Precedence remains the shared multiplicative level with left association. No redundant prefix floor operator, missing left operand, or implicit seed follows from the symbol choice.
+The corresponding update family is `/=`, `:/=`, `%=`, and `:%=`. Once the
+operator boundary is established, recognize a complete longer update token
+before its shorter prefix. Precedence remains the shared multiplicative level
+with left association. No redundant prefix floor operator, missing left operand,
+or implicit seed follows from the symbol choice.
 
 ## Comments and earlier alternatives
 
@@ -100,7 +105,6 @@ Retiring // as an arithmetic spelling does not itself adopt // line comments. Cu
 
 ## Separate open contracts
 
-- Resolve compact underscore-operator scanning against ordinary identifier rules.
 - Complete numeric width/precision compatibility, expected-type propagation through unresolved subexpressions/calls/returns, general conversions, representability faults, and fixed-width/fractional representations.
 - Specify exact typed arithmetic panic cases and payloads, including zero divisors and minimum-integer/-1 cases; preserve the existing failure channels.
 - Specify exact numeric method signatures and general lookup/overloading/extension behavior.

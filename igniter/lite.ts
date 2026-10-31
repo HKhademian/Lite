@@ -1,7 +1,7 @@
 // Disposable igniter: no JS eval, emitted JavaScript, or compiler framework.
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
-type Operator = '+' | '-' | '*' | '/' | '%' | '_/' | '_%';
+type Operator = '+' | '-' | '*' | '/' | '%' | ':/' | ':%';
 type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
 type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
@@ -344,19 +344,12 @@ function tokenize(text: string): readonly Token[] {
       if (spelling === undefined) source('invalid number', start);
       advance(spelling.length);
       tokens.push({ kind: 'number', text: spelling, at: start });
-    } else if (text.startsWith('_/=', offset) || text.startsWith('_%=', offset) ||
-               text.startsWith('_/', offset) || text.startsWith('_%', offset)) {
-      const operator = text.startsWith('_/=', offset) ? '_/='
-        : text.startsWith('_%=', offset) ? '_%='
-        : text.startsWith('_/', offset) ? '_/' : '_%';
-      advance(operator.length);
-      tokens.push({ kind: 'symbol', text: operator, at: start });
     } else if (/[_\p{ID_Start}]/u.test(ch)) {
       const begin = offset;
       do { advance(); } while (offset < text.length && /[_\p{ID_Continue}]/u.test(text[offset] ?? ''));
       tokens.push({ kind: 'id', text: text.slice(begin, offset), at: start });
     } else {
-      const operator = ['=!=', '>!=', '<!=', ':=', '+=', '-=', '*=', '/=', '%=', '_/=', '_%=', '==', '**', '_/', '_%',
+      const operator = ['=!=', '>!=', '<!=', ':/=', ':%=', ':=', '+=', '-=', '*=', '/=', '%=', '==', '**', ':/', ':%',
         '>=', '<=', '>!', '<!'].find(candidate => text.startsWith(candidate, offset));
       if (operator !== undefined) {
         advance(operator.length);
@@ -525,7 +518,7 @@ class Parser {
       } else if (start.kind === 'id' && this.peek(1).text === ':') {
         this.take();
         items.push(this.typedDeclaration(start, false));
-      } else if (start.kind === 'id' && [':=', '=', '+=', '-=', '*=', '/=', '%=', '_/=', '_%='].includes(this.peek(1).text)) {
+      } else if (start.kind === 'id' && [':=', '=', '+=', '-=', '*=', '/=', '%=', ':/=', ':%=',].includes(this.peek(1).text)) {
         this.take();
         const op = this.take();
         const right = this.expression();
@@ -594,7 +587,7 @@ class Parser {
         left = { kind: 'compare', first: left, rest, at: token.at };
         continue;
       }
-      if (op !== '+' && op !== '-' && op !== '*' && op !== '/' && op !== '%' && op !== '_/' && op !== '_%') break;
+      if (op !== '+' && op !== '-' && op !== '*' && op !== '/' && op !== '%' && op !== ':/' && op !== ':%') break;
       const precedence = op === '+' || op === '-' ? 5 : 6;
       if (precedence < minimum) break;
       this.take();
@@ -923,7 +916,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if ((left.type !== 'Int' && left.type !== 'Float') || (right.type !== 'Int' && right.type !== 'Float')) {
         typeError('arithmetic requires numeric operands', at);
       }
-      if ((raw.op === '%' || raw.op === '_/' || raw.op === '_%') && (left.type !== 'Int' || right.type !== 'Int')) {
+      if ((raw.op === '%' || raw.op === ':/' || raw.op === ':%') && (left.type !== 'Int' || right.type !== 'Int')) {
         typeError(`${raw.op} requires Int operands`, at);
       }
       if (raw.op !== '/' && left.type !== right.type) {
@@ -1229,13 +1222,13 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
       case '%':
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'remainder by zero', at);
         return integer(left.value % right.value, at);
-      case '_/': {
+      case ':/': {
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
         let quotient = left.value / right.value;
         if (left.value % right.value !== 0n && (left.value < 0n) !== (right.value < 0n)) quotient -= 1n;
         return integer(quotient, at);
       }
-      case '_%': {
+      case ':%': {
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'modulo by zero', at);
         let remainder = left.value % right.value;
         if (remainder !== 0n && (remainder < 0n) !== (right.value < 0n)) remainder += right.value;
@@ -1256,7 +1249,7 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
     case '/':
       if (b === 0) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
       return floating(a / b, at);
-    case '%': case '_/': case '_%': throw new Error('igniter invariant: remainder/floor requires Int operands');
+    case '%': case ':/': case ':%': throw new Error('igniter invariant: remainder/floor requires Int operands');
     default: return unreachable(op);
   }
 }

@@ -1175,16 +1175,16 @@ test('truncating remainder follows the dividend and rejects zero or Float', () =
   fault('report(5 % 2.0);', 'TypeError');
 });
 test('floor division, floor modulo and compound updates follow documented signs', () => {
-  assert.equal(run('report(7 _/ 3); report(-7 _/ 3); report(7 _/ -3); report(-7 _/ -3);').output,
+  assert.equal(run('report(7 :/ 3); report(-7 :/ 3); report(7 :/ -3); report(-7 :/ -3);').output,
     '2\n-3\n-3\n2\n');
-  assert.equal(run('report(7 _% 3); report(-7 _% 3); report(7 _% -3); report(-7 _% -3);').output,
+  assert.equal(run('report(7 :% 3); report(-7 :% 3); report(7 :% -3); report(-7 :% -3);').output,
     '1\n2\n-2\n-1\n');
   assert.equal(run('var x := 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 3; report(x);').output, '0\n');
   assert.equal(run('var s := "a"; s += "b"; report(s);').output, 'ab\n');
-  assert.equal(run('var y := -7; y _/= 2; report(y); y _%= 3; report(y);').output, '-4\n2\n');
-  fault('report(5 _/ 0);', 'ArithmeticPanic');
-  fault('report(5 _% 0);', 'ArithmeticPanic');
-  fault('report(5.0 _/ 2.0);', 'TypeError');
+  assert.equal(run('var y := -7; y :/= 2; report(y); y :%= 3; report(y);').output, '-4\n2\n');
+  fault('report(5 :/ 0);', 'ArithmeticPanic');
+  fault('report(5 :% 0);', 'ArithmeticPanic');
+  fault('report(5.0 :/ 2.0);', 'TypeError');
   fault('x := 1; x += 1;', 'TypeError');
   fault('var x := 1; x += "a";', 'TypeError');
 });
