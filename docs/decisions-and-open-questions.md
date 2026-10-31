@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Bounded FVP list proposal, 2026-10-31
+
+After recording the selected front/back names, INV-055 reaches the remaining
+concrete construction/failure boundary. A proposal bundles the existing List<T>
+spelling for the builtin list family, explicitly typed bracket construction,
+explicit mut calls to the four operations, independent copies and temporary
+terminal bounds/empty/resource diagnostics. It requires explicit consent and
+adds no implementation or generic infrastructure. Broader generics, capacity APIs,
+views, general user-function grants and recovery remain outside this slice.
+See [the concrete example and scope](../investigations/INV-055-fvp-list-slice.md).
+
 ## List end-operation names selected, 2026-10-31
 
 Following the copy-first clarification, INV-055 reviews the existing

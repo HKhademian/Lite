@@ -34,6 +34,11 @@ The selected [generic widening criterion](types-and-inference.md#generic-widenin
 
 ## Deferred generic design
 
+The **2026-10-31** [INV-055 FVP proposal](../investigations/INV-055-fvp-list-slice.md)
+asks whether to adopt the existing List<T> spelling for that builtin family only.
+It is unselected pending explicit consent. Operation-name approval alone does
+not change this convention or adopt angle brackets for other families.
+
 The future review should consider declaration and application syntax together, distinguish type inputs from compile-time value inputs, and define inference, defaults, constraints, specialization, and type identity. These are topics for that review, not newly selected features or a replacement syntax proposal.
 
 For now, keep one consistent explanatory notation and link to this convention. Do not implement or treat the examples as a settled generic grammar. Once a source design is selected, migrate the examples together and retain this record as historical context.

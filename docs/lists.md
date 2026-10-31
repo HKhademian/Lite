@@ -36,6 +36,12 @@ selects that existing front/back family without adopting generic grammar or a
 constructor. No helper implementation or public parameter labels are selected
 by the naming decision.
 
+The [bounded FVP proposal](../investigations/INV-055-fvp-list-slice.md) offers a
+single runnable slice using the existing provisional List<T> notation, explicit
+mut calls and temporary terminal faults. Its construction spelling and temporary
+policies still require explicit consent; it does not implement lists or select
+general generic syntax.
+
 ## Length, capacity, and initialization
 
 Conceptually:

@@ -85,6 +85,10 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
+The [INV-055 FVP slice](../investigations/INV-055-fvp-list-slice.md) proposes a
+bounded construction/grant surface and temporary diagnostic policy for the
+runner. These remain unselected; canonical name approval does not select them.
+
 - Canonical front/back names are selected. Specify the chosen direct-operation/else recovery direction, including operation fault attribution and mixed failure typing under the selected operation/block scopes. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.
 - Specify ownership transfer, exception/fault safety during element construction, and cleanup.

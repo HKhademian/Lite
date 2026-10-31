@@ -73,6 +73,11 @@ The [bounded naming decision](INV-055-fvp-list-operations.md) selects the
 push_front/push_back/pop_front/pop_back family. It does not adopt List<Int>
 generic grammar or a construction/failure API.
 
+A [concrete FVP proposal](INV-055-fvp-list-slice.md) now bundles typed list
+construction, the selected operations and temporary fault handling for one
+runnable example. It remains unselected; the naming approval does not authorize
+its type spelling or temporary failure choices.
+
 ## Evidence and handoff
 
 This is a repository-contract review, not runtime validation of lists. The last
