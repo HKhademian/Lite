@@ -1,6 +1,6 @@
 # Growable owning lists
 
-Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24; copy-first FVP focus clarified 2026-10-31**. Full List<T> generic grammar, contiguous owner representation, helper names, capacity APIs and allocation/error policy remain proposals. Current FVP sequence values follow ordinary copy semantics, with no implicit references; explicit noncopying modes come later. Physical copy elimination must preserve behavior. Broader resource eligibility and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
+Status: **growable List remains an explicitly selected collection family; the unconditional bracket-literal List default is superseded by fixed-array inference, 2026-10-24; copy-first FVP focus clarified 2026-10-31**. Full List<T> generic grammar, contiguous owner representation, capacity helper names, capacity APIs and allocation/error policy remain proposals. Current FVP sequence values follow ordinary copy semantics, with no implicit references; explicit noncopying modes come later. Physical copy elimination must preserve behavior. Broader resource eligibility and safety contracts remain deferred; see [the general copy default](parameter-values-and-slots.md#general-copy-default-selected).
 
 ## Purpose and beginner examples
 
@@ -23,18 +23,18 @@ editable[0] = 99;
 push_back(mut editable, 40);
 ```
 
-The explicit expected List types above select growable construction; push_back remains a [proposed end operation](sequence-end-operations.md), and the complete indexing API still needs formalization. Without such an expected concrete type, [10, 20, 30] now infers [Int; 3], regardless of var/mut modifiers. A read-only List value retains its List contract; readable access alone does not turn an existing provider into a fixed array.
+The explicit expected List types above select growable construction; push_back is a [selected end-operation name](sequence-end-operations.md), and the complete indexing API still needs formalization. Without such an expected concrete type, [10, 20, 30] now infers [Int; 3], regardless of var/mut modifiers. A read-only List value retains its List contract; readable access alone does not turn an existing provider into a fixed array.
 
 The explicit mut argument follows selected caller grants. Mut grants supported mutation without changing a collection family or inventing growth. A fixed List binding can permit container mutation without permitting binding replacement. Fixed arrays permit writable elements without supporting growth. Known-type heterogeneous nonempty construction uses normalized-union element inference when no expected element contract selects another compatible type. Uncontextual [] constructs an empty fixed array; its exact default element type is deferred. Unresolved nonempty element types and runtime-length literal provider inference remain open.
 
 A var binding with an explicit List contract permits compatible whole-binding replacement; adding mut also permits supported held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`. An unannotated var numbers := [1, 2, 3] instead remains a fixed [Int; 3] binding with replacement permission.
 
-The [end-operation review](sequence-end-operations.md) proposes push_front/push_back/pop_front/pop_back. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Capture scope, concrete helper names, and allocation failure policy remain open.
+The [end-operation review](sequence-end-operations.md) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Capture scope, complete operation signatures, and allocation failure policy remain open.
 
-The [next FVP naming review](../investigations/INV-055-fvp-list-operations.md)
-recommends selecting that existing front/back family without adopting generic
-grammar or a constructor. It remains a proposal; no helper implementation or
-public parameter labels are selected by the review.
+The [FVP naming decision](../investigations/INV-055-fvp-list-operations.md)
+selects that existing front/back family without adopting generic grammar or a
+constructor. No helper implementation or public parameter labels are selected
+by the naming decision.
 
 ## Length, capacity, and initialization
 

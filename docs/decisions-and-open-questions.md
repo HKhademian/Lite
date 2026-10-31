@@ -2,15 +2,15 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
-## List end-operation naming review, 2026-10-31
+## List end-operation names selected, 2026-10-31
 
 Following the copy-first clarification, INV-055 reviews the existing
-push_front/push_back/pop_front/pop_back proposal as a small independent naming
-decision. Recommendation: select that one canonical family, retaining explicit
-mutation grants and the selected direct-pop fault behavior. Names remain proposed
-pending explicit consent. Generic punctuation, construction, public argument
+push_front/push_back/pop_front/pop_back proposal in `65db67f`. The user accepts
+that canonical family with "sure" and asks for uninterrupted progression until
+another permission is required. Retain explicit mutation grants and the selected
+direct-pop fault behavior. Generic punctuation, construction, public argument
 labels, module placement and allocation failures are not selected. No executable
-list increment is claimed. See [the review](../investigations/INV-055-fvp-list-operations.md).
+list increment is claimed. See [the decision](../investigations/INV-055-fvp-list-operations.md).
 
 ## Copy-first FVP direction clarified, 2026-10-31
 

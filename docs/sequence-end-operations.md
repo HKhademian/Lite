@@ -1,16 +1,15 @@
 # Adding and removing sequence ends
 
-Status: **naming and structural-capability proposal, 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. The later user request accepts direct ordinary pops/indexing and selects attached else recovery for typed faults; operation-specific and explicit whole-block scopes are selected 2026-10-26; fault attribution and mechanics remain pending. Names, allocation failures, and API signatures remain under review.
+Status: **front/back operation names selected by the user, 2026-10-31; structural-capability/API proposal originated 2026-10-19**. The user requests push/pop at both ends. The user objects that Option-returning default pops are inconsistent with the indexing direction. The later user request accepts direct ordinary pops/indexing and selects attached else recovery for typed faults; operation-specific and explicit whole-block scopes are selected 2026-10-26; fault attribution and mechanics remain pending. Allocation failures, API signatures and module placement remain under review.
 
 ## Proposed operations
 
 FVP review, **2026-10-31**: [INV-055](../investigations/INV-055-fvp-list-operations.md)
-recommends selecting the existing front/back name family below as the next
-independent decision. Names remain proposed pending explicit consent. This does
-not adopt generic notation, a constructor, public argument labels or allocation
-failure handling, and adds no runtime operations.
+records the user's acceptance of the existing front/back name family below. This
+does not adopt generic notation, a constructor, public argument labels or
+allocation failure handling, and adds no runtime operations.
 
-Recommend one symmetric family:
+The selected canonical family is:
 
 - push_front adds one element before the current first element.
 - push_back adds one element after the current last element.
@@ -19,12 +18,12 @@ Recommend one symmetric family:
 
 Front/back name logical sequence ends, irrespective of physical buffer layout or element comparisons. Existing element order is preserved. A push adds exactly one occurrence, allowing repeats; it does not implicitly flatten an iterable or enforce set uniqueness. Bulk extension needs its own operation contract.
 
-Push_start/push_end/pop_start/pop_end are coherent alternatives. Front/back has an established deque vocabulary; prepend/append/remove_first/remove_last is more descriptive but less symmetric. Choose one canonical family rather than requiring beginners to learn several equivalent names. This document recommends front/back without treating that recommendation as approved.
+Push_start/push_end/pop_start/pop_end are coherent alternatives. Front/back has an established deque vocabulary; prepend/append/remove_first/remove_last is more descriptive but less symmetric. The user selects front/back as the canonical family; the alternatives remain unselected and no synonyms are added.
 
 ## Examples
 
 ```text
-/* Proposed helpers; ordinary calls retain explicit mutation grants. */
+/* Selected operation names; List<T> type notation remains provisional. */
 numbers: mut List<Int> = [2, 3];
 push_front(mut numbers, 1);
 push_back(mut numbers, 4);
@@ -86,7 +85,7 @@ Consequently a generic end-operation contract must state its complexity guarante
 
 ## Remaining contracts
 
-- Confirm canonical names and specify the chosen direct-operation/else recovery direction, including operation fault attribution and mixed failure typing under the selected operation/block scopes. Keep optional removal as a distinct alternative rather than the assumed default.
+- Canonical front/back names are selected. Specify the chosen direct-operation/else recovery direction, including operation fault attribution and mixed failure typing under the selected operation/block scopes. Keep optional removal as a distinct alternative rather than the assumed default.
 - Define allocation/capacity failure channels and push results; no blanket Result or panic policy is selected here.
 - Specify ownership transfer, exception/fault safety during element construction, and cleanup.
 - Define view/cursor invalidation and overlapping mutation. Structural mutation may relocate or invalidate storage even when indexed replacement is permitted.

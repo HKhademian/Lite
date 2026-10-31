@@ -737,7 +737,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Investigation:** open (reviewed; design decision needed); contributor: redacted (agent-assisted); note: [INV-055 — FVP runtime-owner boundary](INV-055-fvp-owner-boundary.md) — copy-first FVP focus clarified by the user: ordinary sequence copies now, behavior-preserving compiler/post-compilation optimization, explicit noncopying modes later. Concrete construction/growth surface and allocation behavior remain open. No implementation, new API or optimization pass selected.
 
-**Follow-up:** [INV-055 — list end-operation names](INV-055-fvp-list-operations.md) — reviews the existing front/back family as the next independent naming decision. Proposed, awaiting explicit consent; no generic grammar, constructor, helper implementation or allocation policy selected.
+**Follow-up:** [INV-055 — list end-operation names](INV-055-fvp-list-operations.md) — records the user-selected canonical push_front/push_back/pop_front/pop_back names. No generic grammar, constructor, helper implementation or allocation policy selected.
 
 <a id="inv-056"></a>
 

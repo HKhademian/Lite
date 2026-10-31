@@ -1,6 +1,6 @@
 # INV-055 — Concrete list end-operation names
 
-Status: proposed (explicit naming decision needed; no implementation)
+Status: recorded (canonical names selected by the user; no implementation)
 Contributor: redacted (agent-assisted)
 Last updated: 2026-10-31
 Catalog brief: [INV-055](TOPICS.md#inv-055)
@@ -13,15 +13,18 @@ Following the user's copy-first clarification and request to continue, inspect
 the remaining concrete construction/growth surface. The existing
 [end-operation proposal](../docs/sequence-end-operations.md) already contains
 push/pop behavior requested by the user, but explicitly leaves its canonical
-names and signatures under review. Continuing does not select those names.
+names and signatures under review. The concrete naming proposal was committed
+in `65db67f`. The user then accepted it with "sure" and renewed automatic
+progression until another decision needs permission. This selects the four names;
+it does not select the remaining type/construction or allocation surface.
 
 The smallest independent decision here is the operation-name family. It can be
 discussed without adopting generic punctuation, a constructor, a capacity API,
 new ownership modes or a library/module layout.
 
-## Existing candidate to select
+## Selected operation names
 
-Recommend the four names already proposed in the owning reference:
+Selected by the user, **2026-10-31**, from the existing proposal:
 
 - push_front: insert one element before the first element.
 - push_back: insert one element after the last element.
@@ -29,7 +32,7 @@ Recommend the four names already proposed in the owning reference:
 - pop_back: remove and return the last element.
 
 Use one canonical family rather than adding equivalent aliases. The existing
-proposal also lists start/end and first/last alternatives; none is selected.
+proposal also lists start/end and first/last alternatives; those alternatives are not selected.
 Front/back makes the chosen sequence end explicit at the call site.
 
 These remain library operations in the existing free-function proposal, with
@@ -55,7 +58,7 @@ Recovery implementation and operation-specific fault attribution remain separate
 
 ## Remaining boundary
 
-Selecting these names would resolve only naming. The concrete growable type and
+Selecting these names resolves only naming. The concrete growable type and
 construction surface, push allocation-failure channel, and bounded mutation/access
 implementation must still be settled before an executable list increment.
 The [generic notation convention](../docs/generic-notation.md) explicitly says
@@ -64,5 +67,7 @@ not adopt it or invent a replacement.
 
 No parser, evaluator, runtime helper, optimization pass or runnable example is
 added. This is a review of existing proposals, not test evidence for list support.
-Record the proposal and affected references atomically, then obtain the explicit
-naming decision under the [selected-scope workflow](README.md#automatic-progression-within-selected-contracts).
+Record the selection and affected references atomically, then continue within the
+[selected-scope workflow](README.md#automatic-progression-within-selected-contracts).
+No repeated permission is needed for these names; concrete growable construction
+and temporary failure handling still need review before an executable delivery.

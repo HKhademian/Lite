@@ -179,6 +179,7 @@ Selected:
 
 - Consumers request capabilities rather than one concrete collection type.
 - Fixed arrays, growable lists, and slice views are the sequence storage roles.
+- The canonical sequence end-operation names are push_front, push_back, pop_front and pop_back, selected 2026-10-31. Concrete growable construction, allocation behavior and complete signatures remain open; see [INV-055](../../investigations/INV-055-fvp-list-operations.md).
 - A fresh nonempty bracket literal with an established element type and statically known total length `N` infers `[T; N]` unless an expected concrete collection type selects another family.
 - Statically known spreads contribute their lengths to `[T; N]`. `var`/`mut` and later operations do not by themselves change the inferred family or extent; an expected concrete growable collection can request a list.
 - Indexed reads/writes and pops use ordinary syntax; invalid bounds are typed faults recoverable by an attached `else`.

@@ -35,10 +35,10 @@ explicit noncopying modes come later. For the current FVP sequence values with
 copyable elements, preserve the ordinary copied sequence value. Do not block this
 work on designing a noncopyable owner or explicit clone/move/borrow surface.
 A host array reference cannot silently turn that copy into shared mutable data.
-List's generic grammar, helper names, capacity APIs and allocation policy remain
+List's generic grammar, capacity helpers/APIs and allocation policy remain
 proposals.
-[End-operation spellings](../docs/sequence-end-operations.md) remain under review
-even though the user has requested push/pop behavior.
+[End-operation names](../docs/sequence-end-operations.md) are now selected;
+complete signatures and placement still need review.
 
 Thus inventing a constructor, append helper or public List type spelling now
 would exceed the automatic selected-scope authorization.
@@ -69,9 +69,9 @@ bounded allocation behavior before implementing it. Keep views, generalized
 protocols, capacity tuning and native layout outside a first implementation
 unless an actual example requires their design.
 
-The next [bounded naming review](INV-055-fvp-list-operations.md) recommends the
-already proposed push_front/push_back/pop_front/pop_back family. It leaves the
-names unselected pending consent and does not adopt List<Int> generic grammar.
+The [bounded naming decision](INV-055-fvp-list-operations.md) selects the
+push_front/push_back/pop_front/pop_back family. It does not adopt List<Int>
+generic grammar or a construction/failure API.
 
 ## Evidence and handoff
 
