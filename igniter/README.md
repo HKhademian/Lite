@@ -537,11 +537,10 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.23**, tag **igniter-v0.1.0-alpha.23**, adds the verification
-registry, complete artifact coverage, compiler-target feature cases, floor and
-compound arithmetic, inferred mutability, nested verification fixtures, the
-`lite test`/`lite verify` lanes, the VS Code language icon support and CI gates.
-Previous checkpoints stay fixed:
+Version **0.1.0-alpha.24**, tag **igniter-v0.1.0-alpha.24**, adds the
+right-associative, Float-default `**` power checkpoint with positive exponents,
+an explicit negative-base grouping requirement, and a power feature verification
+case. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -584,7 +583,9 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.22**, commit `02530e3`: explicit logical compiler source names.
 
-- **igniter-v0.1.0-alpha.23**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.23**, commit `28141c9`: verification registry, complete artifact coverage, compiler-target cases, floor/compound arithmetic, inferred mutability, VS Code icons and CI.
+
+- **igniter-v0.1.0-alpha.24**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
