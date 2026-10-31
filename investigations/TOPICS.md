@@ -817,9 +817,11 @@ questions; check their status and current owning pages before relying on them.
 
 **Focus:** [Lightweight native execution questions and evidence](lightweight-native-execution.md).
 
-**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — strict TypeScript/Node replaces Python as the minimal igniter; the first checkpoint is implemented and tested, with early transition to a Lite-written compiler still selected; retire active host-language development while preserving the source-bootstrap path. INV-061.06 inventories the threshold and build chain, detailed investigation not started; stages/backend and full compiler architecture remain open.
+**Investigation:** recorded; contributor: redacted (agent-assisted); note: [INV-061 — FVP implementation language](INV-061-fvp-implementation-language.md) — strict TypeScript/Node replaces Python as the minimal igniter; the first checkpoint is implemented and tested, with early transition to a Lite-written compiler still selected; retire active host-language development while preserving the source-bootstrap path. INV-061.06 now reviews a bounded first-output proposal; retirement thresholds, rebuild chain and full compiler architecture remain open.
 
 **Follow-up:** [INV-061 — arithmetic front-end exercise in Lite](INV-061-lite-arithmetic-front-end.md) — application-only recursive parser/evaluator uses approved token lists and value/position pairs; runs on the preserved alpha.15 interpreter without host changes. Strict checking and 125 interpreter groups plus 9 editor groups pass. No compiler output, AST/IR/backend selection or self-hosted stage; first execution/output/rebuild contracts remain open.
+
+**Follow-up:** [INV-061.06 — first compiler output route](INV-061-first-compiler-output.md) — proposes a tiny Lite-written C emitter plus an explicit external C build. A local hand-written foreign C probe compiles/runs; no Lite-generated output or self-hosted stage exists. Output/backend choice remains unselected pending consent.
 
 <a id="inv-062"></a>
 

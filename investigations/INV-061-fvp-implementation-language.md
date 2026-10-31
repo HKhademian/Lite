@@ -10,6 +10,13 @@ the experimental interpreter, subsequent self-hosting, and source-bootstrap cont
 This note records the bootstrap direction and bounded implementation evidence.
 Historical Python sections below are superseded by the follow-up here.
 
+Current bounded follow-ups, **2026-10-31**: the
+[Lite arithmetic front-end exercise](INV-061-lite-arithmetic-front-end.md) runs
+on preserved alpha.15 without host additions. The
+[first compiler-output proposal](INV-061-first-compiler-output.md) reviews C
+emission plus an external C build as the next possible step. The output route
+is unselected; the foreign C probe is not a Lite compiler or self-hosting result.
+
 ## TypeScript/Node replacement and implementation, 2026-10-30
 
 The user requests tightly typed TypeScript, run directly by the latest stable

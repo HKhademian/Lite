@@ -2,6 +2,21 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## First compiler output proposal, 2026-10-31
+
+After the Lite-written arithmetic parser exercise, INV-061.06 reaches the next
+unselected choice: the first compiler's output/execution route. The proposal
+recommends a restricted Lite-written compiler emitting C source, with an explicit
+external C build and native-output comparison against the igniter. The first
+vertical case would cover an existing source line such as report(42);. No new
+Lite syntax or host helper is proposed.
+
+The local Apple clang C tool path compiled/ran a hand-written foreign probe that
+prints 42 successfully. This is external-tool evidence, not Lite-generated native
+code, performance evidence or a self-hosted stage. The backend/output route
+remains proposed pending explicit consent; see
+[INV-061.06](../investigations/INV-061-first-compiler-output.md).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

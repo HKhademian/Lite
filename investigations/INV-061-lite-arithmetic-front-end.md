@@ -74,3 +74,7 @@ retire host development by itself. A restricted Lite-written compiler needs a
 selected source subset, output/execution route and concrete rebuild criterion.
 Do not silently choose C/LLVM/JavaScript/bytecode, add file/argument helpers, or
 turn this calculator's direct-evaluation model into permanent compiler design.
+
+The [first-output proposal](INV-061-first-compiler-output.md) now reviews a
+restricted C-emission experiment and records a successful foreign-tool probe.
+The backend route remains unselected pending consent; no Lite emitter exists.
