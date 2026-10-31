@@ -58,11 +58,12 @@ Equivalent forms:
 
 ```sh
 ./lite compile --target ts program.lts
-./lts ts program.lts
+./ltc ts program.lts
 ```
 
-`lts` is a shorthand for `litec`. `litec` also accepts the target as a bare
-positional word: `./litec ts program.lts`.
+The component/package is `lite-compiler`; its entry points are `ltc` (short
+command), `litec` (full binary) and `lite compile` (CLI form). Both binaries also
+accept the target as a bare positional word: `./ltc ts program.lts`.
 
 The compiler source is still restricted: Int arithmetic, String literals and
 concatenation, `report(...)`, and immutable Int/String locals. It has no runtime

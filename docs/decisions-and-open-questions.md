@@ -20,10 +20,14 @@ shares one flat namespace and rejects cycles; absolute paths are rejected and
 flattening shifts diagnostics. It remains replaceable by the future module/import
 design.
 
-Access is `./litec --target ts|c file.lts`, `./lite compile --target ts|c file.lts`,
-or `./lts ts file.lts` (shorthand). `lite` keeps `run`/`--check` and delegates
-`compile`. The 41 program and 34 rejection verification cases are unchanged in
-behavior; 159 interpreter groups and 9 editor groups pass. The examples index
+Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
+`./lite compile --target ts|c file.lts`. `lite` keeps `run` and adds `check`
+(check-only), `docs` and `help`; `lite run --check` remains compatible. The
+canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
+`lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
+`lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
+formatter, verifier and tester names are reserved but unimplemented. The 41 program and 34 rejection verification cases are unchanged in
+behavior; 160 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -47,7 +51,7 @@ source path, optional `stdin`, required `stdout`/`stderr` streams, and
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 159 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 160 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 

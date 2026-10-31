@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30**. The prototype compiler now lives in `compiler/` and is exposed as `./litec`; package-registry spelling, final release packaging and automation remain open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker/formatter/verifier/tester names are reserved but unimplemented. Package-registry spelling, final release packaging and automation remain open.
 
 ## 1. Canonical names
 
@@ -9,12 +9,19 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 | Umbrella project | **Lite** | `lite` | The whole project; not a language name |
 | Language | **LiteLang** | `litelang` | The language and its reference |
 | Program | **LiteScript** | `litescript` | A script/program; module source is a distinct file kind |
-| Compiler | **Lite compiler** | `lite-compiler`; binary `litec` | Compiles LiteLang programs |
-| Runtime | **Lite runtime** | `lite-runtime`; binary `literun` | Executes compiled LiteScript programs |
-| Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite fmt`, `lite build`, `lite run` |
+| Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc` | Compiles LiteLang programs; CLI `lite compile` |
+| Linker | **Lite linker** | `lite-linker`; executable `ltl` | Links compiled outputs; CLI `lite link` (planned) |
+| Runner | **Lite runner** | `lite-runner` | Runs scripts through the igniter; CLI `lite run` |
+| Checker | **Lite checker** | `lite-checker` | Check-only source validation; CLI `lite check` |
+| Compiled runtime | **Lite runtime** | `lite-runtime`; binary `literun` | Executes compiled LiteScript programs (separate, planned) |
+| Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite compile`, `lite link`, `lite run`, `lite check`, `lite docs`, `lite help`, `lite fmt`, `lite verify`, `lite test` |
 | Script source | **LiteScript file** | `.lts` | Convenient standalone script body |
 | Module source | **LiteLang module file** | `.lt` | Package/module-owned declarations and explicit module access |
-| Formatter | **Lite formatter** | `lite fmt` | Part of the CLI |
+| Formatter | **Lite formatter** | `lite-formatter` | CLI `lite fmt` (planned) |
+| Verifier | **Lite verifier** | `lite-verifier` | CLI `lite verify` (planned) |
+| Tester | **Lite tester** | `lite-tester` | CLI `lite test` (planned) |
+| Documentation | **Lite docs** | `lite-docs` | CLI `lite docs` |
+| Help | **Lite help** | `lite-help` | CLI `lite help` |
 | Standard library | **Lite standard library** | `lite-stdlib` | Reserved default implementation name; replaceable standard providers are intended |
 
 ### Name rules
@@ -29,7 +36,14 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 - The compiler is the **Lite compiler**, package `lite-compiler`, executable `litec`.
 - The runtime is the **Lite runtime**, package `lite-runtime`, executable `literun`.
 - The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
-- The local prototype exposes `./litec` for the compiler and `./lite compile ...` through the CLI. `./lts` is a convenience shorthand for `./litec` during the prototype, not a second compiler product name.
+- Compiler entry points are equivalent: component/package `lite-compiler`, binary `./litec`, short `./ltc`, and CLI `./lite compile`.
+- Linker entry points are reserved as component `lite-linker`, executable `./ltl`, and CLI `./lite link`; no linker is implemented.
+- The runner is `lite-runner` / `./lite run`. It currently executes scripts through the igniter.
+- The checker is `lite-checker` / `./lite check`; `./lite run --check` remains compatible.
+- Documentation is `lite-docs` / `./lite docs`; help is `lite-help` / `./lite help` (also `--help`/`-h`).
+- The formatter, verifier and tester are reserved as `lite-formatter`/`./lite fmt`, `lite-verifier`/`./lite verify`, and `lite-tester`/`./lite test`; they are not implemented.
+- The separate compiled-program runtime remains `lite-runtime` / `literun` and is not the same tool as `lite-runner`.
+- These names describe one component with several entry points; `ltc`, `litec`, `lite-compiler` and `lite compile` are not competing product names.
 - Binary names are lowercase and contain no spaces. Prose names may contain spaces.
 - Existing `lite fmt` documentation is consistent with this policy.
 - Do not introduce a second short name for the language. “Lite” alone is not a language name.

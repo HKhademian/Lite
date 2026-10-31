@@ -239,10 +239,15 @@ and `exitCode` (each stream uses inline `text`, inline `bytes` or a sibling
 `file`). Filenames follow `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 159 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 160 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
+
+Current CLI entry points are `./lite run`, `./lite check`, `./lite compile`,
+`./lite docs` and `./lite help`; compiler aliases are `./ltc` and `./litec`.
+Linker, formatter, verifier and tester names are reserved but unimplemented.
+See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 The two emitter sources moved out of `examples/` into
 [`compiler/`](../compiler/README.md); they are compiler implementation, not
@@ -250,7 +255,7 @@ runnable language examples. The shared front-end is included by each backend
 with the temporary loader directive `importFlatAll "frontend.lts";`
 (implemented in [`igniter/loader.ts`](../igniter/loader.ts), not a language
 feature). Access is `./litec --target ts|c file.lts`, `./lite compile ...`, or
-the `./lts` shorthand. This removes the duplicated parser/checker while keeping
+the short `./ltc` command. This removes the duplicated parser/checker while keeping
 separate target backends.
 
 ## TypeScript igniter and early self-hosting

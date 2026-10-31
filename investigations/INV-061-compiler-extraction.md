@@ -76,18 +76,23 @@ This is a **temporary source-loader workaround**, not language syntax:
 
 ## Command access
 
-- `./litec --target ts file.lts` (also `./litec ts file.lts`)
-- `./litec --target c file.lts`
-- `./lite compile --target ts|c file.lts`
-- `./lts ts file.lts` — shorthand for `litec`
+- `./ltc --target ts file.lts` (also `./ltc ts file.lts`)
+- `./litec --target ts|c file.lts` (full binary)
+- `./lite compile --target ts|c file.lts` (CLI form)
+- `./lite check file.lts` — check-only validation; `lite run --check` remains
+- `./lite docs` and `./lite help` — documentation roots and the command matrix
+- `./ltl`, `./lite link`, `./lite fmt`, `./lite verify`, `./lite test` are
+  reserved component/CLI names but are not implemented
 
-`litec` requires an existing `.lts` file, passes its path as the logical source
-name for compiler diagnostics, and writes the artifact to stdout. `lite` keeps
-`run`/`--check`; `compile` delegates to `litec`. Usage errors exit 2.
+`ltc`/`litec` require an existing `.lts` file, pass its path as the logical
+source name for compiler diagnostics, and write the artifact to stdout. `lite`
+keeps `run` and `--check`, adds `check`, `docs` and `help`, and delegates
+`compile` to `litec`. Usage errors exit 2. The canonical alias matrix is in
+[docs/versioning-and-naming.md](../docs/versioning-and-naming.md#1-canonical-names).
 
 ## Verification
 
-- All **159 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **160 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
 - The 41 program and 34 rejection cases under
   [`igniter/tests/compiler/`](../igniter/tests/compiler/) are unchanged in
@@ -99,7 +104,7 @@ name for compiler diagnostics, and writes the artifact to stdout. `lite` keeps
   `c-emitter.lts`.
 - New tests cover nested/duplicate flat imports, comments and multiline strings
   containing the directive, missing files, cycles, `--check`, and the
-  `litec`/`lite compile`/`lts` commands.
+  `litec`/`lite compile`/`ltc` commands.
 - `compiler/generated/report-42.ts` and `report-42.c` are unchanged after the
   split, and the adapter was updated to import `report-42.ts`.
 

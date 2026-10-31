@@ -126,7 +126,7 @@ test('real compiler CLI forwards source-name context without changing emitted by
   }
 });
 
-test('litec, lite compile and lts expose the compiler sources directly', () => {
+test('litec, ltc, lite compile and lite check expose the compiler sources directly', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'litec-'));
@@ -140,20 +140,42 @@ test('litec, lite compile and lts expose the compiler sources directly', () => {
     const c = spawnSync(join(root, 'lite'), ['compile', '--target', 'c', sourcePath], { env, timeout: 5000 });
     assert.equal(c.error, undefined); assert.equal(c.status, 0, c.stderr.toString());
     assert.deepEqual(c.stdout, readFileSync(join(root, 'compiler/generated/report-42.c')));
-    const shorthand = spawnSync(join(root, 'lts'), ['ts', sourcePath], { env, timeout: 5000 });
+    const shorthand = spawnSync(join(root, 'ltc'), ['ts', sourcePath], { env, timeout: 5000 });
     assert.equal(shorthand.error, undefined); assert.equal(shorthand.status, 0);
     assert.deepEqual(shorthand.stdout, ts.stdout);
+    const validCheck = spawnSync(join(root, 'lite'), ['check', sourcePath], { env, timeout: 5000 });
+    assert.equal(validCheck.error, undefined); assert.equal(validCheck.status, 0);
+    assert.equal(validCheck.stdout.length, 0); assert.equal(validCheck.stderr.length, 0);
     const invalidPath = join(directory, 'bad.lts');
     writeFileSync(invalidPath, 'report(1 +);\n');
     const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
     assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}: expected an integer or string expression\n`));
+    const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
+    assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
+    assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
     for (const args of [[], ['--target', 'x', sourcePath], ['ts', join(directory, 'missing.lts')],
       ['ts', join(directory, 'sample.txt')]]) {
       const bad = spawnSync(join(root, 'litec'), args, { env, timeout: 5000 });
       assert.equal(bad.status, 2, args.join(' ')); assert.equal(bad.stdout.length, 0);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+test('lite help and docs expose the command matrix and documentation roots', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+  const help = spawnSync(join(root, 'lite'), ['help'], { env, encoding: 'utf8', timeout: 5000 });
+  assert.equal(help.error, undefined); assert.equal(help.status, 0);
+  assert.match(help.stdout, /Usage: \.\/lite <command>/);
+  assert.match(help.stdout, /Compiler entry points: \.\/ltc, \.\/litec, \.\/lite compile/);
+  assert.equal(help.stderr, '');
+  const docs = spawnSync(join(root, 'lite'), ['docs'], { env, encoding: 'utf8', timeout: 5000 });
+  assert.equal(docs.error, undefined); assert.equal(docs.status, 0);
+  assert.match(docs.stdout, /compiler\/README\.md/);
+  assert.match(docs.stdout, /igniter\/tests\/README\.md/);
+  assert.equal(docs.stderr, '');
+  const noArgs = spawnSync(join(root, 'lite'), [], { env, encoding: 'utf8', timeout: 5000 });
+  assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
@@ -1655,7 +1677,7 @@ test('root shebang launcher forwards run arguments, stdin, diagnostics and statu
     for (const args of [[], ['run'], ['unknown', source]]) {
       const usage = invoke(args);
       assert.equal(usage.error, undefined); assert.equal(usage.status, 2);
-      assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite run /);
+      assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/);
     }
     const alias = join(dir, 'project with spaces');
     symlinkSync(root, alias, 'dir');

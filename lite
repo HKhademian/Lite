@@ -1,18 +1,71 @@
 #!/bin/sh
-# lite CLI: run or check a Lite source, or delegate compile to litec.
+# lite CLI: dispatcher for run, check, compile, docs and help.
 
 lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
 
-if [ "${1-}" = compile ]; then
-    shift
-    exec "$lite_dir/litec" "$@"
-fi
+usage() {
+    printf '%s\n' 'Usage: ./lite <command> [options]'
+    printf '%s\n' ''
+    printf '%s\n' 'Commands:'
+    printf '%s\n' '  run [--check] file.lts [-- argument ...]  Run a Lite source'
+    printf '%s\n' '  check file.lts                            Check source only'
+    printf '%s\n' '  compile --target ts|c file.lts            Compile to TS or C'
+    printf '%s\n' '  docs                                      Show documentation paths'
+    printf '%s\n' '  help                                      Show this help'
+    printf '%s\n' ''
+    printf '%s\n' 'Compiler entry points: ./ltc, ./litec, ./lite compile'
+    printf '%s\n' 'Reserved names: ./ltl/lite link, lite fmt, lite verify, lite test'
+}
 
-if [ "${1-}" != run ] || [ "$#" -lt 2 ]; then
-    printf '%s\n' 'Usage: ./lite run [--check] file.lts [-- argument ...]' >&2
-    printf '%s\n' '       ./lite compile --target ts|c file.lts' >&2
-    exit 2
-fi
+docs() {
+    printf '%s\n' 'Lite documentation:'
+    printf '  %s\n' "$lite_dir/docs/README.md"
+    printf '  %s\n' "$lite_dir/docs/spec/README.md"
+    printf '  %s\n' "$lite_dir/compiler/README.md"
+    printf '  %s\n' "$lite_dir/examples/README.md"
+    printf '  %s\n' "$lite_dir/samples/list.md"
+    printf '  %s\n' "$lite_dir/igniter/README.md"
+    printf '  %s\n' "$lite_dir/igniter/tests/README.md"
+    printf '  %s\n' "$lite_dir/investigations/TOPICS.md"
+}
 
-shift
-exec node "$lite_dir/igniter/cli.ts" "$@"
+case "${1-}" in
+    help|--help|-h)
+        usage
+        exit 0
+        ;;
+    docs)
+        shift
+        if [ "$#" -gt 0 ]; then
+            printf '%s\n' "lite docs: unknown topic $1" >&2
+            printf '%s\n' 'Run ./lite docs for the complete list.' >&2
+            exit 2
+        fi
+        docs
+        exit 0
+        ;;
+    compile)
+        shift
+        exec "$lite_dir/litec" "$@"
+        ;;
+    check)
+        shift
+        if [ "$#" -lt 1 ]; then
+            printf '%s\n' 'Usage: ./lite check file.lts' >&2
+            exit 2
+        fi
+        exec node "$lite_dir/igniter/cli.ts" --check "$@"
+        ;;
+    run)
+        shift
+        if [ "$#" -lt 1 ]; then
+            usage >&2
+            exit 2
+        fi
+        exec node "$lite_dir/igniter/cli.ts" "$@"
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac

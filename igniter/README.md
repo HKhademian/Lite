@@ -45,6 +45,7 @@ binding dumps. `--check` parses and checks
 without executing or reading stdin:
 
 ```sh
+./lite check examples/001-double-sum.lts
 ./lite run --check examples/001-double-sum.lts
 npm --prefix igniter ci
 npm --prefix igniter run check
@@ -575,7 +576,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **159 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **160 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. Only lessons 001, 002
 and 020 currently have focused checked outcomes by appending explicit reports in
@@ -616,7 +617,7 @@ Run the compiler with:
 ./litec --target ts program.lts > program.ts
 ./litec --target c program.lts > program.c
 ./lite compile --target ts program.lts
-./lts ts program.lts
+./ltc ts program.lts
 ```
 
 Inspect the checked-in [TS reference](../compiler/generated/report-42.ts),
