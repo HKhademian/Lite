@@ -287,7 +287,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/tuples-and-patterns.md](../docs/tuples-and-patterns.md); [docs/tuple-spread-and-rest.md](../docs/tuple-spread-and-rest.md); [docs/tuple-array-segments.md](../docs/tuple-array-segments.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** waiting for input on implementation scope; contributor: redacted (agent-assisted); note: [INV-022 — fixed tuples for the next FVP increment](INV-022-fvp-fixed-tuples.md) — proposes a flat unnamed tuple subset using existing selected syntax: construction/access, positional binding, explicit function inputs/results and value copies. No implementation or new language decision; explicit approval pending. Wider tuple topics remain open.
 
 <a id="inv-023"></a>
 
