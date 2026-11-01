@@ -323,6 +323,14 @@ focused cases are rejected before emission. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 
+## T00 to T11 to T12 priority, 2026-11-01
+
+The immediate bootstrap priority is T00 → T11 → T12. T11 is stage 0 running S on
+S and emitting TS; T12 is T11 running on S and emitting TS. Both must typecheck,
+run and have recorded hashes before C work starts. Prefer byte-identical
+T12 == T11 and record the first difference in the parity ledger otherwise. No
+separate IR artifact is required; TS/C text is the deliverable.
+
 ## Direct TS/C emission, no separate IR, 2026-11-01
 
 The deliverable for P6/P7 is runnable TS and C compiler artifacts, not an IR. The

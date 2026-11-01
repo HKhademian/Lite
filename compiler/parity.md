@@ -47,6 +47,20 @@ T23 = CompileTS(C22, lite)
 The owner's `T1 == T2 == T3` shorthand maps to the defined
 `T11 == T12 == T13` nodes.
 
+**Immediate priority: T00 → T11 → T12.** Stop after T12 is recorded; do not
+start C01/P7 first. T11 is stage 0 running S on S and emitting TS. T12 is T11
+running on S and emitting TS. A TS artifact and its execution are the deliverable;
+no separate IR artifact is produced.
+
+T11/T12 acceptance:
+
+- [ ] S includes the full-L front-end and emits TS directly.
+- [ ] Stage 0 + S produces T11.
+- [ ] T11 typechecks strictly and runs.
+- [ ] T11 + S produces T12.
+- [ ] T12 runs and records its hash.
+- [ ] `T12 == T11` byte for byte, or the first difference is recorded here.
+
 Completion requires all of:
 
 - C fixed point: `C01 == C21 == C22 == C23`
@@ -113,8 +127,8 @@ keeps that target from growing while it is approached.
   T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
-- T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are
-  blocked on the P7 C emitter. No ladder node has been produced yet.
+- T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS
+  emitter. T13 and the C ladder wait until T12 is recorded.
 - The P0 artifact hashes in
   [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) are
   the reference for the 50 program cases.

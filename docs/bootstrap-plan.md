@@ -79,6 +79,11 @@ new documents.
 2026-11-01; update this line when a gate is completed and use the phase
 checklists as the source of truth.
 
+**Critical path priority (owner direction, 2026-11-01): T00 → T11 → T12.**
+Do not start the C emitter (P7) or packaging (P9) until both T11 and T12 are
+recorded. The deliverables are TS artifacts: S emitted through stage 0 is T11;
+T11 compiling S again is T12. No separate IR artifact is required.
+
 **Accepted-surface parity track (owner direction, 2026-11-01):** ahead of the
 P0-P9 order, the compiler's accepted surface grew one control-flow slice:
 Bool values/comparisons/logic, mutable locals and assignment, `if`/`else`, and
@@ -420,20 +425,22 @@ if direct emission becomes unmaintainable.
 - [x] TS runtime support: checked Int64 arithmetic, code-point text, list copy
       semantics, diagnostics and exit. The Node I/O adapter remains with the
       generated entry.
-- [ ] Lower expressions, statements, functions, loops and value conditionals.
+- [ ] Full-L front-end in S emits TS directly for functions, tuples, lists,
+      typed locals, statements and value conditionals.
 - [ ] Single-file artifact; strict TypeScript; erasable syntax; Node entry.
 - [ ] Source-name/args/stdin/stdout/stderr/status contract.
 - [ ] Deterministic output; no timestamps, paths, PIDs or hash-order iteration.
-- [ ] Corpus: T compiles the program cases; run the emitted TS and compare bytes
-      and status with the igniter; rejection diagnostics match.
-- [ ] Parity burndown: run stage 0 and T over the same source, record the first
-      difference in [`parity.md`](../compiler/parity.md), close it, and rerun
-      before moving to the next source.
-- [ ] T compiles S; T2 runs.
+- [ ] **T11:** stage 0 runs S on S and produces a runnable TS compiler.
+- [ ] T11 typechecks and runs; its artifact hash is recorded.
+- [ ] **T12:** T11 runs on S and produces TS.
+- [ ] T12 runs and its artifact hash is recorded.
+- [ ] Prefer `T12 == T11`; record the first difference in
+      [`parity.md`](../compiler/parity.md) if not yet fixed.
+- [ ] Corpus: T11 compiles the program cases; run the emitted TS and compare
+      bytes and status with the igniter; rejection diagnostics match.
 
-**Gate:** T typechecks, runs, compiles every program case with exact behavior and
-produces a runnable T2 from S. The TS fixed point is recorded, but the full
-self-host gate waits for C.
+**Gate:** T11 exists, typechecks and runs; T11 produces T12; T12 runs. T12 should
+equal T11 byte for byte. C/P7 waits until this is recorded.
 
 **Do not:** start the C emitter before the TS gate unless a second agent is
 explicitly assigned the independent C runtime work.
