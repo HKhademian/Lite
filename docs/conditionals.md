@@ -13,7 +13,9 @@ branch, condition/binding correlation, defaults for else-if chains, branch-resul
 unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
 The restricted bootstrap compiler separately accepts total, same-kind value
 `if`/`else if`/`else` expressions in initializers, assignments, arguments,
-returns and function-tail positions, emitting TS conditional expressions; the C
+returns and function-tail positions, emitting TS conditional expressions. A
+function-tail `if` whose branches hold statements before their tail expression
+also yields the function result, keeping the result branches explicit. The C
 path rejects value `if` clearly. In action position it accepts an optional-final
 `else` with any number of `else if` arms whose conditions are `Bool` and whose
 bodies are action blocks, emitting TS and C `else if` chains with nearest-scope

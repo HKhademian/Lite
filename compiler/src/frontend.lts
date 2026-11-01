@@ -1681,8 +1681,13 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
     true
 }
 
-/** Returns the position after one complete value-if chain starting at `position`, or -1 when it lacks a final else or has statement-shaped branches. */
-scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
+/**
+ * Returns the position after one complete value-if chain starting at `position`,
+ * or -1 when it lacks a final else. With `requireValueBranches` every branch must
+ * be a single expression; otherwise branches may hold statements before their
+ * tail expression, which lets a function tail use an action-shaped if.
+ */
+scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireValueBranches: Bool): Int {
     size := textLength(source);
     var cursor := skipTrivia(source, position, prefix);
     if not wordAt(source, cursor, "if") { return -1; }
@@ -1692,7 +1697,7 @@ scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
         if open < 0 { return -1; }
         end := scanBraceEnd(source, open, prefix);
         if end < 0 { return -1; }
-        if not valueIfBranchAt(source, open, end - 1, prefix) { return -1; }
+        if requireValueBranches and not valueIfBranchAt(source, open, end - 1, prefix) { return -1; }
         after := skipTrivia(source, end, prefix);
         if not wordAt(source, after, "else") { return -1; }
         afterElse := skipTrivia(source, after + 4, prefix);
@@ -1702,7 +1707,7 @@ scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
             if afterElse >= size or textAt(source, afterElse) =!= "{" { return -1; }
             finalEnd := scanBraceEnd(source, afterElse, prefix);
             if finalEnd < 0 { return -1; }
-            if not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { return -1; }
+            if requireValueBranches and not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { return -1; }
             return finalEnd;
         }
     }
@@ -1718,6 +1723,16 @@ visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
         }
     }
     kept
+}
+
+/**
+ * True when the innermost block expects a value tail: a function body or one of
+ * the value-if branches that complete one.
+ */
+atValueTail := fn(blocks: List<String>, blockCount: Int): Bool {
+    if blockCount <= 0 { return false; }
+    kind := blocks[blockCount - 1];
+    kind == "function" or kind == "ifvalue"
 }
 
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
@@ -1755,7 +1770,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             blockKind := blocks[blockCount - 1];
             after := skipTrivia(source, position + 1, prefix);
-            if blockKind == "if" and after < size and wordAt(source, after, "else") {
+            if (blockKind == "if" or blockKind == "ifvalue") and after < size and wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
                 afterElse := skipTrivia(source, after + 4, prefix);
                 droppedIf := pop_back(mut blocks);
@@ -1774,11 +1789,11 @@ parseProgram := fn(source: String, prefix: String): Items {
                     position = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
                     push_back(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
                         intValue = 0, textValue = ""));
-                    push_back(mut blocks, "if");
+                    push_back(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 } else {
                     push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-                    push_back(mut blocks, "else");
+                    push_back(mut blocks, if blockKind == "ifvalue" { "ifvalue" } else { "else" });
                     blockCount = blockCount + 1;
                     position = expectSymbol(source, afterElse, "{", prefix);
                 }
@@ -1813,8 +1828,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             wordAt(source, position, "and") or wordAt(source, position, "or")) {
             tail := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
-            if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
-                blocks[blockCount - 1] == "function" {
+            if afterTail < size and textAt(source, afterTail) == "}" and atValueTail(blocks, blockCount) {
                 if currentResult == "Unit" {
                     push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
                         intValue = 0, textValue = ""));
@@ -1903,7 +1917,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
             position = skipTrivia(source, parsed.next, prefix);
             if position < size and textAt(source, position) == "}" and currentName =!= "" and
-                blockCount > 0 and blocks[blockCount - 1] == "function" {
+                atValueTail(blocks, blockCount) {
                 if currentResult == "Unit" {
                     push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
                         intValue = 0, textValue = ""));
@@ -1983,8 +1997,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if name == "if" {
-            if currentName =!= "" and blockCount > 0 and blocks[blockCount - 1] == "function" {
-                valueEnd := scanValueIfEnd(source, nameStart, prefix);
+            var valueTailBranch := false;
+            if currentName =!= "" and atValueTail(blocks, blockCount) {
+                valueEnd := scanValueIfEnd(source, nameStart, prefix, true);
                 if valueEnd >= 0 {
                     afterChain := skipTrivia(source, valueEnd, prefix);
                     if afterChain < size and textAt(source, afterChain) == "}" {
@@ -2005,6 +2020,15 @@ parseProgram := fn(source: String, prefix: String): Items {
                         continue;
                     }
                 }
+                if currentResult =!= "Unit" {
+                    statementEnd := scanValueIfEnd(source, nameStart, prefix, false);
+                    if statementEnd >= 0 {
+                        afterStatement := skipTrivia(source, statementEnd, prefix);
+                        if afterStatement < size and textAt(source, afterStatement) == "}" {
+                            valueTailBranch = true;
+                        }
+                    }
+                }
             }
             conditionStart := position;
             condition := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
@@ -2019,7 +2043,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             position = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
             push_back(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
                 intValue = 0, textValue = ""));
-            push_back(mut blocks, "if");
+            push_back(mut blocks, if valueTailBranch { "ifvalue" } else { "if" });
             blockCount = blockCount + 1;
             depth = depth + 1;
             position = skipTrivia(source, position + 1, prefix);
@@ -2135,8 +2159,7 @@ parseProgram := fn(source: String, prefix: String): Items {
         if (name == "true" or name == "false") and currentName =!= "" {
             tail := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
             afterTail := skipTrivia(source, tail.next, prefix);
-            if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
-                blocks[blockCount - 1] == "function" {
+            if afterTail < size and textAt(source, afterTail) == "}" and atValueTail(blocks, blockCount) {
                 if currentResult =!= "Bool" {
                     failAt(source, nameStart, prefix, "cannot return Bool from function " +
                         currentName + " returning " + currentResult);
@@ -2302,8 +2325,7 @@ parseProgram := fn(source: String, prefix: String): Items {
         if currentName =!= "" {
             tail := parseExpressionAs(source, nameStart, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
-            if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
-                blocks[blockCount - 1] == "function" {
+            if afterTail < size and textAt(source, afterTail) == "}" and atValueTail(blocks, blockCount) {
                 if currentResult == "Unit" {
                     push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
                         intValue = 0, textValue = ""));

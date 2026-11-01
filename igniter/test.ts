@@ -1743,6 +1743,40 @@ test('restricted compiler compiles value if expressions in every value position'
   assert.equal(ts.output, runCompiler(tsManifestPath, source).output);
 });
 
+test('restricted compiler completes statement-shaped if branches as function results', () => {
+  const source = [
+    'pick := fn (x: Int): (text: String, next: Int) {',
+    '    if x < 0 {',
+    '        var y := 0 - x;',
+    '        (text = "neg", next = y)',
+    '    } else {',
+    '        if x == 0 { (text = "zero", next = 0) } else {',
+    '            y := x * 2;',
+    '            (text = "pos", next = y)',
+    '        }',
+    '    }',
+    '}',
+    'bump := fn (x: Int): Int { if x > 0 { y := x; y + 1 } else { 0 } }',
+    'grade := fn (n: Int): String { if n > 90 { "a" } else if n > 80 { "b" } else { "c" } }',
+    'report(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('neg 0 10 0 5 a b c\n'), stderr: Buffer.alloc(0),
+  });
+  // A branch without a value is not a Lite diagnostic here; the strict artifact
+  // typecheck rejects the emitted function that can fall through.
+  const incomplete = runCompiler(tsManifestPath, [
+    'g := fn (x: Bool): Int { if x { reportError("a"); } else { 2 } }',
+    'report(g(true));',
+    '',
+  ].join('\n'));
+  assert.equal(incomplete.code, 0, incomplete.errors);
+  assert.equal(runTsArtifact(incomplete.output).phase, 'typecheck');
+});
+
 test('restricted compiler diagnoses invalid value if expressions and rejects them in C', () => {
   for (const [bad, errors] of [
     ['x := if 1 { 2 } else { 3 };\n', '1:9: if condition must be Bool\n'],
