@@ -10,16 +10,44 @@ The staged path from this prototype to runnable TS/C bootstrap compilers is the
 implementation plan; it does not change the restricted compiler's current
 contract or select new language syntax.
 
+## Bootstrap source subset
+
+These Lite sources are also the bootstrap source **S**. S must remain inside the
+bootstrap subset **L** defined in the
+[bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Do not add
+`match`, records, enums, unions, `Float`, arrays, closures, `mut` parameters,
+modules, `finally`, loop metadata or compound operators to S just because the
+igniter supports them. Adding a construct to L is an owner decision, not an
+implementation convenience: the compiler must parse, check and lower it too.
+
+The current files stay in place until the P1 bundle path is green. The target
+layout, manifest schema, line-map contract and current hashes are recorded in:
+
+- [`manifests/README.md`](manifests/README.md) — P0 manifest and line-map
+  contract; the loader is P1 work.
+- [`baseline.md`](baseline.md) — P0 counts, source hashes, reference artifacts
+  and test evidence.
+- [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) —
+  emitted-artifact hashes for all 50 program cases.
+
+The empty `src/` and `runtime/` directories are P0 placeholders. No source has
+moved into them yet.
+
 ## Layout
 
 | Path | Role |
 |---|---|
+| [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
+| [`manifests/`](manifests/README.md) | P0 manifest schema and line-map contract; bundle loader is P1 |
+| `src/` | P0 target directory for split bootstrap sources (empty) |
+| `runtime/` | P0 target directory for target runtimes (empty) |
 | [`frontend.lts`](frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
 | [`ts-emitter.lts`](ts-emitter.lts) | TypeScript literal encoding, report formatting and program emission |
 | [`c-emitter.lts`](c-emitter.lts) | C literal encoding, `printf` report formatting and program emission |
 | [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `report(42);` |
 | [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
+| [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 
 The backends contain no duplicated parser. They define only the target-specific
 literal encoders and `emitProgram`, then include the shared front-end.

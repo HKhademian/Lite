@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lite.local/schema/compiler-manifest.schema.json",
+  "title": "Lite compiler source manifest",
+  "description": "One ordered bootstrap source bundle for one target under compiler/manifests/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target", "files"],
+  "properties": {
+    "target": {
+      "description": "The artifact target produced from this bundle.",
+      "enum": ["ts", "c"]
+    },
+    "files": {
+      "description": "UTF-8 Lite sources in dependency order, each listed once, relative to the manifest directory.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\).+$"
+      }
+    }
+  }
+}

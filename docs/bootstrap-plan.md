@@ -55,8 +55,9 @@ Related direction:
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
   under [`igniter/tests/compiler/`](../igniter/tests/compiler/).
-- Compiler sources: 1111 lines across `frontend.lts`, `ts-emitter.lts` and
-  `c-emitter.lts`.
+- Compiler sources: 1119 lines across `frontend.lts`, `ts-emitter.lts` and
+  `c-emitter.lts`. Exact hashes and emitted-artifact baselines are recorded in
+  [`compiler/baseline.md`](../compiler/baseline.md).
 - S is valid Lite today: `./lite check compiler/ts-emitter.lts` passes. The
   compiler itself does not parse S yet; its accepted surface is Int/String/Bool
   expressions, immutable and mutable locals, `report(...)`, `if`/`else`, and
@@ -68,8 +69,9 @@ Related direction:
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P0 — baseline and scaffolding, not started.** Update this line
-when a gate is completed; use the phase checklists as the source of truth.
+**Current gate: P1 — Igniter tooling, not started.** P0 was completed on
+2026-11-01; update this line when a gate is completed and use the phase
+checklists as the source of truth.
 
 **Accepted-surface parity track (owner direction, 2026-11-01):** ahead of the
 P0-P9 order, the compiler's accepted surface grew one control-flow slice:
@@ -154,24 +156,34 @@ requires the project owner's explicit selection and an update to this page and t
 **Goal:** record the baseline, lock the manifest/line-map schemas and create the
 target layout without changing behavior.
 
-- [ ] Record the baseline counts and the exact current compiler outputs.
-- [ ] Lock the default manifest schema (paths relative to the manifest, order is
+- [x] Record the baseline counts and the exact current compiler outputs. See
+      [`compiler/baseline.md`](../compiler/baseline.md) and
+      [`compiler/generated/baseline-artifacts.json`](../compiler/generated/baseline-artifacts.json).
+- [x] Lock the default manifest schema (paths relative to the manifest, order is
       dependency order, each file included once, cycles rejected):
 
       ```json
-      { "target": "ts", "files": ["lib/core/int.lts", "compiler/src/..."] }
+      { "target": "ts", "files": ["../../lib/core/int.lts", "../src/lexer.lts", "../src/driver-ts.lts"] }
       ```
 
-- [ ] Add a line-map contract: flattened line → `(source path, original line)`.
-- [ ] Create the target layout directories: `compiler/manifests/`,
+      The machine-readable form is
+      [`compiler/manifests/manifest.schema.json`](../compiler/manifests/manifest.schema.json).
+- [x] Add a line-map contract: flattened line → `(source path, original line)`.
+      See [`compiler/manifests/README.md`](../compiler/manifests/README.md#line-map-contract).
+- [x] Create the target layout directories: `compiler/manifests/`,
       `compiler/src/`, `compiler/runtime/` and `lib/core/`.
-- [ ] Keep the current `frontend.lts`, `ts-emitter.lts` and `c-emitter.lts`
+- [x] Keep the current `frontend.lts`, `ts-emitter.lts` and `c-emitter.lts`
       working in place. Move or split them only when the bundle path is green.
-- [ ] Add a compiler-source README note that S must remain inside L.
+- [x] Add a compiler-source README note that S must remain inside L. See
+      [`compiler/README.md`](../compiler/README.md#bootstrap-source-subset).
 
-**Gate:** the baseline counts and current emitted outputs are recorded; the
-manifest schema and line-map contract are agreed; the current 50/42 path remains
-green. The bundle path itself is P1's gate.
+**Gate passed 2026-11-01:** the baseline counts and current emitted outputs are
+recorded in [`compiler/baseline.md`](../compiler/baseline.md); the manifest
+schema and line-map contract are recorded in
+[`compiler/manifests/README.md`](../compiler/manifests/README.md); `./lite test
+--fast` passes 174 tests with one native-C skip and `./lite test` passes all 175
+tests, and the current 50/42 compiler path remains green. The bundle path itself
+is P1's gate.
 
 **Do not:** add a parser, lexer, language feature, module syntax or std code in
 this phase.
