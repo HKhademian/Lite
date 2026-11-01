@@ -386,7 +386,8 @@ reproduce.
       initialization and expression typing remain.
 - [x] Function signature collection, direct-call arity and simple scalar argument
       type checks. Return-path completeness remains.
-- [ ] Tuple shape/labels, list element types, index element types.
+- [x] Tuple label/field types, list element types, list-literal types and index
+      element types for simple normalized expressions and aliases.
 - [x] Bool conditions for action `if` and `loop`. List mutation grants remain.
 - [x] `break`/`continue` outside-loop rejection and `return` outside-function or
       mismatched scalar return checks. Return-path completeness remains.
@@ -401,10 +402,10 @@ an artifact.
 rejects duplicate names and parameters, validates type names, annotations and
 alias cycles, and checks block scopes, shadowing, local mutability and unknown
 assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
-Direct calls are arity- and simple scalar-argument-checked, returns are checked
-against simple scalar result types, and break/return placement is checked. Full
-expression typing, initialization, return-path completeness, list/tuple
-contracts and exact rejection parity remain.
+Direct calls are arity- and argument-checked, returns are checked against result
+types, break/return placement is checked, and simple tuple/list/field/index types
+are inferred. Full expression typing, initialization, return-path completeness,
+list mutation grants and exact rejection parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.

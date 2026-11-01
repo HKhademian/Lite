@@ -175,7 +175,63 @@ firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
     ""
 }
 
-/** Infers a simple scalar/call/name type from normalized expression text, or empty when unknown. */
+/** Resolves a bare type-alias name to its detail text. */
+resolveAliasName := fn(symbols: Symbols, typeText: String, depth: Int): String {
+    if depth > 16 { return typeText; }
+    index := findSymbol(symbols, typeText);
+    if index >= 0 and symbols[index].kind == SYMBOL_KIND_TYPE() {
+        return resolveAliasName(symbols, symbols[index].detail, depth + 1);
+    }
+    typeText
+}
+
+/** Returns one tuple component type by label or positional index, or empty. */
+tupleComponentType := fn(typeText: String, member: String): String {
+    tokens := tokenize(typeText, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    loop cursor < count {
+        if isSymbol(tokenAt(tokens, cursor), "(") { break; }
+        cursor = cursor + 1;
+    }
+    cursor = cursor + 1;
+    var index := 0;
+    loop cursor < count {
+        if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+        var label := "";
+        if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":") {
+            label = tokenAt(tokens, cursor).text;
+            cursor = cursor + 2;
+        }
+        component := parseType(tokens, cursor, "");
+        if (label =!= "" and member == label) or member == intText(index) {
+            return component.text;
+        }
+        cursor = component.next;
+        index = index + 1;
+        if isSymbol(tokenAt(tokens, cursor), ",") { cursor = cursor + 1; } else { break; }
+    }
+    ""
+}
+
+/** True when two type texts are compatible for the checked subset. */
+typesCompatible := fn(symbols: Symbols, expected: String, actual: String): Bool {
+    if expected == "" or actual == "" { return true; }
+    expectedType := resolveAliasName(symbols, expected, 0);
+    actualType := resolveAliasName(symbols, actual, 0);
+    if isScalarType(expectedType) or isScalarType(actualType) {
+        return expectedType == actualType;
+    }
+    if startsWithAt(expectedType, 0, "List<") and startsWithAt(actualType, 0, "List<") {
+        return typesCompatible(symbols, listElementType(expectedType), listElementType(actualType));
+    }
+    if startsWithAt(expectedType, 0, "(") and startsWithAt(actualType, 0, "(") {
+        return expectedType == actualType;
+    }
+    true
+}
+
+/** Infers a simple scalar/tuple/list/call/name type from normalized expression text. */
 simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     size := textLength(text);
     if size == 0 { return ""; }
@@ -185,6 +241,34 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     if isDigit(first) { return "Int"; }
     if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") { return "Int"; }
     if startsWithAt(text, 0, "not ") { return "Bool"; }
+    if startsWithAt(text, 0, "[") {
+        if size == 2 { return ""; }
+        tokens := tokenize(text, "");
+        count := tokenCount(tokens);
+        var cursor := 1;
+        var depth := 0;
+        var endOffset := 0;
+        loop cursor < count {
+            token := tokenAt(tokens, cursor);
+            if isSymbol(token, "(") or isSymbol(token, "[") or isSymbol(token, "{") {
+                depth = depth + 1;
+            } else if isSymbol(token, ")") or isSymbol(token, "]") or isSymbol(token, "}") {
+                if depth == 0 and isSymbol(token, "]") {
+                    endOffset = token.offset;
+                    break;
+                }
+                depth = depth - 1;
+            } else if isSymbol(token, ",") and depth == 0 {
+                endOffset = token.offset;
+                break;
+            }
+            cursor = cursor + 1;
+        }
+        if endOffset == 0 { return ""; }
+        elementType := simpleType(symbols, locals, textSlice(text, tokenAt(tokens, 1).offset, endOffset));
+        if elementType == "" { return ""; }
+        return "List<" + elementType + ">";
+    }
     if startsWithAt(text, 0, "(") {
         operator := topLevelOperator(text);
         if operator == "and" or operator == "or" or operator == "not" or
@@ -201,11 +285,33 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             operator == ":/" or operator == ":%" or operator == "**" {
             return "Int";
         }
-        if indexOfText(text, ",", 0) >= 0 { return ""; }
+        if indexOfText(text, ",", 0) >= 0 or indexOfText(text, " = ", 0) >= 0 { return ""; }
         if size >= 2 { return simpleType(symbols, locals, textSlice(text, 1, size - 1)); }
         return "";
     }
     if isNameStart(first) {
+        var field := -1;
+        var fieldCursor := 0;
+        loop fieldCursor < size {
+            if textAt(text, fieldCursor) == "." { field = fieldCursor; }
+            fieldCursor = fieldCursor + 1;
+        }
+        if field > 0 {
+            baseText := textSlice(text, 0, field);
+            member := textSlice(text, field + 1, size);
+            baseType := simpleType(symbols, locals, baseText);
+            resolved := resolveAliasName(symbols, baseType, 0);
+            return tupleComponentType(resolved, member);
+        }
+        indexAt := indexOfText(text, "[", 0);
+        if indexAt > 0 and textAt(text, size - 1) == "]" {
+            baseText := textSlice(text, 0, indexAt);
+            indexText := textSlice(text, indexAt + 1, size - 1);
+            baseType := simpleType(symbols, locals, baseText);
+            resolved := resolveAliasName(symbols, baseType, 0);
+            if startsWithAt(resolved, 0, "List<") { return listElementType(resolved); }
+            return tupleComponentType(resolved, indexText);
+        }
         index := findLocal(locals, text);
         if index >= 0 { return locals[index].typeText; }
         call := indexOfText(text, "(", 0);
@@ -448,7 +554,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
             } else {
                 value := parseExpression(tokens, afterReturn, prefix, 0);
                 inferred := simpleType(symbols, locals, value.text);
-                if isScalarType(functionResult) and isScalarType(inferred) and functionResult =!= inferred {
+                if not typesCompatible(symbols, functionResult, inferred) {
                     checkFail(token, prefix, "cannot return " + inferred + " from function returning " + functionResult);
                 }
                 cursor = value.next;
@@ -525,7 +631,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 }
                 if initText =!= "" and initText =!= "?" {
                     inferred := simpleType(symbols, locals, initText);
-                    if isScalarType(typeText) and isScalarType(inferred) and typeText =!= inferred {
+                    if not typesCompatible(symbols, typeText, inferred) {
                         checkFail(nameToken, prefix, "cannot initialize " + typeText + " with " + inferred);
                     }
                 }
@@ -548,7 +654,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
             value := parseExpression(tokens, cursor + 2, prefix, 0);
             inferred := simpleType(symbols, locals, value.text);
             localType := locals[index].typeText;
-            if isScalarType(localType) and isScalarType(inferred) and localType =!= inferred {
+            if not typesCompatible(symbols, localType, inferred) {
                 checkFail(token, prefix, "cannot assign " + inferred + " to " + localType + " local " + token.text);
             }
             cursor = value.next;
@@ -699,7 +805,7 @@ checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
                     argument := parseExpression(tokens, argumentCursor, prefix, 0);
                     inferred := simpleType(symbols, emptyLocals, argument.text);
                     expectedType := parameterTypes[argumentIndex];
-                    if isScalarType(expectedType) and isScalarType(inferred) and expectedType =!= inferred {
+                    if not typesCompatible(symbols, expectedType, inferred) {
                         checkFail(token, prefix, "argument " + decimalText(argumentIndex + 1) + " of " + token.text +
                             " expects " + expectedType + ", got " + inferred);
                     }

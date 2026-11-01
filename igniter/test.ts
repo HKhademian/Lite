@@ -331,6 +331,11 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     ['f := fn(): Int { return; }\n', '1:18: return requires a value\n'],
     ['f := fn(): Int { break; 1 }\n', '1:18: break outside loop\n'],
     ['f := fn(): String { return 1; }\n', '1:21: cannot return Int from function returning String\n'],
+    ['Pair := type (a: Int, b: String); p: Pair = (a = 1, b = "x"); x: Int = p.b;\n',
+      '1:63: cannot initialize Int with String\n'],
+    ['values: List<Int> = [1, 2]; x: String = values[0];\n',
+      '1:29: cannot initialize String with Int\n'],
+    ['values: List<Int> = ["bad"];\n', '1:1: cannot initialize List<Int> with List<String>\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -346,6 +351,10 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'f := fn(a: String): Int { 1 }\ng := fn(): Int { f("ok") }\n',
     'f := fn(): Int { loop true { break; } 1 }\n',
     'f := fn(): Unit { return; }\n',
+    'Pair := type (a: Int, b: String); p: Pair = (a = 1, b = "x"); x: String = p.b;\n',
+    'values: List<Int> = [1, 2]; x: Int = values[0];\n',
+    'values: List<String> = ["ok", "yes"];\n',
+    'values: List<Int> = [];\n',
   ]) {
     const result = runFile(checkerDumpPath, good);
     assert.equal(result.code, 0, good);
