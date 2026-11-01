@@ -88,6 +88,8 @@ examples. They live under [compiler/](../compiler/README.md) and are run with
   defining transparent named contracts for tuples and growable lists with zero
   runtime memory overhead. Reports ident: total, op: +=, and num: 100.
 
+When a language feature lands, revisit these examples for obsolete workarounds. Keep an example that explicitly demonstrates the replaced construct; otherwise prefer the simpler current form. See the [artifact-refresh checklist](../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
+
 Each Lite file is self-contained. Its visible output is explicitly requested with
 report/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module

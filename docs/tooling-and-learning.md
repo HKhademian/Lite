@@ -268,6 +268,29 @@ feature). Access is `./litec --target ts|c file.lts`, `./lite compile ...`, or
 the short `./ltc` command. This removes the duplicated parser/checker while keeping
 separate target backends.
 
+## Refreshing artifacts after a language change
+
+When a language feature lands, audit the existing examples and samples before
+calling the increment complete:
+
+- Search for workarounds the new feature replaces, such as manual encodings,
+  type-annotation-only constructions, or extra helper code.
+- Rewrite an artifact only when the new form is clearer and still teaches the
+  same lesson.
+- Do **not** rewrite an artifact whose purpose is to demonstrate the replaced
+  construct. For example, the decisions example intentionally shows `if`/`else`,
+  and the calculator intentionally shows a hand-written parser.
+- Refresh manifest source hashes and expected streams with `--update`, then run
+  the full verification and coverage gates.
+- Keep feature contracts separate: examples and samples are verified consumers,
+  not the feature contract.
+
+Audit 2026-11-01: the current examples and samples were checked for workarounds
+superseded by subjectless `match`, power, floor/compound operators and inferred
+`mut`. No artifact needed rewriting; the affected examples either explicitly
+demonstrate the old construct or use annotations that remain necessary for
+empty/typed list construction.
+
 ## TypeScript igniter and early self-hosting
 
 Selected direction **2026-10-30**: TypeScript/Node is only the minimal, disposable

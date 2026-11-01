@@ -159,6 +159,16 @@ empty until that artifact class is introduced. The GitHub Actions workflow
 TypeScript check, `./lite test`, the coverage gate and the editor grammar tests.
 `./lite verify --coverage` and `./lite test` remain the local gates.
 
+## Refreshing artifacts after a language change
+
+Feature work is not complete until the existing examples and samples have been
+audited for workarounds the feature replaces. Rewrite them when that makes the
+artifact clearer, but preserve an artifact whose purpose is to demonstrate the
+replaced construct. Update its manifest hashes/streams with `--update`, then run
+the coverage and full verification gates. Feature cases remain the contract;
+examples and samples are verified consumers. See the
+[artifact-refresh checklist](../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
+
 ## Adding a case
 
 1. Add the `.lts` source.
