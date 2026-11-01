@@ -315,8 +315,22 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     ['x: Missing = 1;\n', '1:1: unknown type Missing\n'],
     ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
     ['f := fn(a: Int, a: Int): Int { a }\n', '1:17: duplicate parameter a\n'],
+    ['f := fn(): Int { x := 1; x := 2; x }\n', '1:26: duplicate local x\n'],
+    ['f := fn(a: Int): Int { a = 2; a }\n', '1:24: cannot assign to immutable local a\n'],
+    ['f := fn(): Int { y = 2; 1 }\n', '1:18: unknown local y\n'],
+    ['f := fn(): Int { if true { x := 1; } x = 2; 1 }\n', '1:38: unknown local x\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  for (const good of [
+    'f := fn(): Int { var x := 1; x = 2; x }\n',
+    'f := fn(x: Int): Int { var y := x; y = y + 1; y }\n',
+    'f := fn(value: Int): (value: Int, ok: Bool) { (value = value, ok = true) }\n',
+  ]) {
+    const result = runFile(checkerDumpPath, good);
+    assert.equal(result.code, 0, good);
+    assert.equal(result.errors, '', good);
+    assert.match(result.output, /^function\|/, good);
   }
 });
 

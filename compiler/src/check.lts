@@ -6,6 +6,12 @@ Symbol := type (kind: String, name: String, detail: String, offset: Int, line: I
 /** Top-level symbols in source order. */
 Symbols := type List<Symbol>;
 
+/** One local binding: name, reassignment mutability, block depth and origin kind. */
+Local := type (name: String, mutable: Bool, depth: Int, kind: String);
+
+/** Local bindings in declaration order, removed when their block closes. */
+Locals := type List<Local>;
+
 /** Canonical symbol kind for a type alias. */
 SYMBOL_KIND_TYPE := fn(): String { "type" }
 
@@ -163,6 +169,119 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
     symbols
 }
 
+/** Returns the newest local with `name`, or -1. */
+findLocal := fn(locals: Locals, name: String): Int {
+    var index := 0;
+    var found := -1;
+    loop locals as local {
+        if local.name == name { found = index; }
+        index = index + 1;
+    }
+    found
+}
+
+/** Returns the index of a local with `name` directly in `depth`, or -1. */
+findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
+    var index := 0;
+    loop locals as local {
+        if local.name == name and local.depth == depth { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** Checks block-local declarations, parameter scopes and statement assignments. */
+checkLocals := fn(tokens: Tokens, prefix: String): Unit {
+    count := tokenCount(tokens);
+    locals: mut List<Local> = [];
+    var localCount := 0;
+    var depth := 0;
+    var parens := 0;
+    var brackets := 0;
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() { break; }
+        if isSymbol(token, "{") { depth = depth + 1; cursor = cursor + 1; continue; }
+        if isSymbol(token, "}") {
+            loop localCount > 0 and locals[localCount - 1].depth >= depth {
+                pop_back(mut locals);
+                localCount = localCount - 1;
+            }
+            depth = depth - 1;
+            cursor = cursor + 1;
+            continue;
+        }
+        if isSymbol(token, "(") { parens = parens + 1; cursor = cursor + 1; continue; }
+        if isSymbol(token, ")") { parens = parens - 1; cursor = cursor + 1; continue; }
+        if isSymbol(token, "[") { brackets = brackets + 1; cursor = cursor + 1; continue; }
+        if isSymbol(token, "]") { brackets = brackets - 1; cursor = cursor + 1; continue; }
+        if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
+            afterName := expectSymbol(tokens, cursor + 1, ":=", prefix);
+            aliasType := parseType(tokens, afterName + 1, prefix);
+            cursor = expectSymbol(tokens, aliasType.next, ";", prefix);
+            continue;
+        }
+        if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
+            var parameterCursor := expectSymbol(tokens, cursor + 3, "(", prefix);
+            loop true {
+                if isSymbol(tokenAt(tokens, parameterCursor), ")") { break; }
+                parameter := tokenAt(tokens, parameterCursor);
+                if parameter.kind =!= TOKEN_KIND_NAME() {
+                    checkFail(parameter, prefix, "expected a parameter name");
+                }
+                if findLocalAtDepth(locals, parameter.text, depth + 1) >= 0 {
+                    checkFail(parameter, prefix, "duplicate parameter " + parameter.text);
+                }
+                push_back(mut locals, (name = parameter.text, mutable = false, depth = depth + 1, kind = "parameter"));
+                localCount = localCount + 1;
+                colon := expectSymbol(tokens, parameterCursor + 1, ":", prefix);
+                parameterType := parseType(tokens, colon, prefix);
+                parameterCursor = parameterType.next;
+                if isSymbol(tokenAt(tokens, parameterCursor), ",") {
+                    parameterCursor = parameterCursor + 1;
+                } else {
+                    break;
+                }
+            }
+            parameterCursor = expectSymbol(tokens, parameterCursor, ")", prefix);
+            resultColon := expectSymbol(tokens, parameterCursor, ":", prefix);
+            resultType := parseType(tokens, resultColon, prefix);
+            cursor = resultType.next;
+            continue;
+        }
+        if (token.kind == TOKEN_KIND_KEYWORD() and token.text == "var") or
+            (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
+                isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
+            declaration := parseDeclaration(tokens, cursor, prefix);
+            nameToken := tokenAt(tokens, cursor + (if token.kind == TOKEN_KIND_KEYWORD() { 1 } else { 0 }));
+            if findLocalAtDepth(locals, declaration.name, depth) >= 0 {
+                checkFail(nameToken, prefix, "duplicate local " + declaration.name);
+            }
+            push_back(mut locals, (name = declaration.name, mutable = startsWithAt(declaration.detail, 0, "var "),
+                depth = depth, kind = "local"));
+            localCount = localCount + 1;
+            cursor = declaration.next;
+            continue;
+        }
+        if parens == 0 and brackets == 0 and token.kind == TOKEN_KIND_NAME() and
+            isSymbol(tokenAt(tokens, cursor + 1), "=") {
+            index := findLocal(locals, token.text);
+            if index < 0 {
+                checkFail(token, prefix, "unknown local " + token.text);
+            }
+            if not locals[index].mutable {
+                checkFail(token, prefix, "cannot assign to immutable local " + token.text);
+            }
+            cursor = cursor + 2;
+            continue;
+        }
+        cursor = cursor + 1;
+    }
+}
+
 /** Validates every type name inside one type or signature text. */
 validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbol, prefix: String): Unit {
     if depth > 16 {
@@ -221,6 +340,7 @@ validateSymbols := fn(symbols: Symbols, prefix: String): Unit {
 checkSource := fn(tokens: Tokens, prefix: String): Symbols {
     symbols := collectSymbols(tokens, prefix);
     validateSymbols(symbols, prefix);
+    checkLocals(tokens, prefix);
     symbols
 }
 

@@ -379,12 +379,14 @@ under B3. Do not add records/enums/`match` to make the parser easier.
 reproduce.
 
 - [x] Top-level symbol collection: type aliases, function signatures and value
-      declarations with duplicate-name rejection. Full scope stack, resolved
-      types, mutability and initialization remain.
+      declarations with duplicate-name rejection.
+- [x] Block scopes and local bindings: parameters, declarations, shadowing,
+      duplicate locals, assignment mutability and unknown-local rejection.
+      Initialization tracking and local type checking remain.
 - [x] Function signature collection. Arity, argument/result checking and return
       paths remain.
 - [ ] Tuple shape/labels, list element types, index element types.
-- [ ] Bool conditions; assignment/mutability; list mutation grants.
+- [ ] Bool conditions and list mutation grants.
 - [ ] `break`/`return` placement; unreachable code not required.
 - [x] Diagnostics: source name, position, message, exit 2 for collected symbols.
 - [ ] Accept every construct in S; reject unsupported and ill-typed cases.
@@ -394,11 +396,11 @@ an artifact.
 
 **P5 in progress:** the Lite checker foundation in
 [`compiler/src/check.lts`](../compiler/src/check.lts) collects top-level symbols,
-rejects duplicate names and duplicate parameters, validates type names and alias
-cycles, and checks annotation references, with fixtures under
-[`compiler/tests/checker/`](../compiler/tests/checker/). Scopes, expressions,
-statements, arity/argument/result checks, return paths and exact rejection
-parity remain.
+rejects duplicate names and parameters, validates type names, annotations and
+alias cycles, and checks block scopes, shadowing, local mutability and unknown
+assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
+Expression typing, initialization tracking, arity/return checks, list/tuple
+contracts and exact rejection parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.

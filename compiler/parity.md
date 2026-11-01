@@ -103,8 +103,9 @@ keeps that target from growing while it is approached.
   cases; manifest order is authoritative, compiler source and `lib/core` have no
   `importFlatAll`, and unsupported declarations reject by name.
 - P5 is in progress: the checker collects top-level types, function signatures
-  and values; rejects duplicate names/parameters; and validates type names,
-  annotation references and alias cycles. Scopes, expressions, statements,
+  and values; rejects duplicate names/parameters; validates type names,
+  annotations and alias cycles; and checks block scopes, shadowing, local
+  mutability and unknown assignments. Expression typing, initialization,
   arity/return checks and exact rejection parity remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
