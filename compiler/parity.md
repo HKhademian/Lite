@@ -122,9 +122,9 @@ keeps that target from growing while it is approached.
   checks, the 42 rejection cases retain exact diagnostics, and invalid programs
   do not emit artifacts.
 - P6 is in progress: the TS runtime covers checked Int64 arithmetic, code-point
-  text, list copies, faults and exit. TS/C output is emitted directly; no
-  separate IR deliverable is planned. The full emitter, Node I/O adapter and
-  T-from-S gate remain.
+  text, list copies, faults and exit; the compiler now accepts typed scalar
+  locals. TS/C output is emitted directly; no separate IR deliverable is
+  planned. The full emitter, Node I/O adapter and T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS

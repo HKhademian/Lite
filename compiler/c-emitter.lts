@@ -961,6 +961,26 @@ sourcePrefix := fn(): String {
     prefix
 }
 
+/** Parses one supported scalar local type name. */
+parseScalarType := fn(source: String, position: Int, prefix: String): (kind: String, next: Int) {
+    start := skipSpaces(source, position);
+    after := skipName(source, start);
+    name := textSlice(source, start, after);
+    if name == "Int" or name == "String" or name == "Bool" {
+        (kind = name, next = after)
+    } else {
+        failAt(source, start, prefix, "unsupported local type " + name);
+        (kind = "", next = after)
+    }
+}
+
+/** Builds the zero value for one supported scalar local type. */
+zeroParsed := fn(kind: String, next: Int): Parsed {
+    if kind == "Int" { intParsed(intLiteralCode(0, false, "0"), 0, true, next) }
+    else if kind == "String" { textParsed(textLiteralCode(""), "", true, next) }
+    else { boolParsed(boolLiteralCode(false), false, true, next) }
+}
+
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
@@ -1101,11 +1121,24 @@ parseProgram := fn(source: String, prefix: String): Items {
             localName := textSlice(source, localStart, position);
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
             position = skipSpaces(source, position);
-            if not startsWithAt(source, position, ":=") {
-                failAt(source, position, prefix, "expected := or = after local name " + localName);
+            var parsed := intParsed("", 0, true, position);
+            if startsWithAt(source, position, ":=") {
+                position = skipSpaces(source, position + 2);
+                parsed = parseExpression(source, position, prefix, locals);
+            } else if position < size and textAt(source, position) == ":" {
+                typed := parseScalarType(source, position + 1, prefix);
+                position = skipSpaces(source, typed.next);
+                if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+                    parsed = parseExpression(source, skipSpaces(source, position + 1), prefix, locals);
+                    if parsed.kind =!= typed.kind {
+                        failAt(source, localStart, prefix, "cannot initialize " + typed.kind + " with " + parsed.kind);
+                    }
+                } else {
+                    parsed = zeroParsed(typed.kind, position);
+                }
+            } else {
+                failAt(source, position, prefix, "expected := or : after local name " + localName);
             }
-            position = skipSpaces(source, position + 2);
-            parsed := parseExpression(source, position, prefix, locals);
             position = skipSpaces(source, parsed.next);
             if position >= size or textAt(source, position) =!= ";" {
                 failAt(source, position, prefix, "expected ; after local declaration " + localName);
@@ -1144,6 +1177,33 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + parsed.kind, name = name, runtime = runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        if position < size and textAt(source, position) == ":" {
+            typed := parseScalarType(source, position + 1, prefix);
+            position = skipSpaces(source, typed.next);
+            var parsed := zeroParsed(typed.kind, position);
+            if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+                parsed = parseExpression(source, skipSpaces(source, position + 1), prefix, locals);
+                if parsed.kind =!= typed.kind {
+                    failAt(source, nameStart, prefix, "cannot initialize " + typed.kind + " with " + parsed.kind);
+                }
+            }
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after local declaration " + name);
+            }
+            position = skipSpaces(source, position + 1);
+            if localSameBlock(locals, name, depth) {
+                failAt(source, nameStart, prefix, "duplicate local " + name);
+            }
+            runtime := "lite_" + name;
+            push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
+                mutable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Local" + typed.kind, name = name, runtime = runtime,
                 code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
             continue;
         }

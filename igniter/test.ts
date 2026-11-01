@@ -1007,6 +1007,35 @@ test('TS runtime helpers preserve checked Int64, text and list semantics', () =>
   assert.equal(errors, 'BoundPanic: bad\n');
 });
 
+test('restricted compiler accepts typed scalar locals without changing existing cases', async context => {
+  const source = 'x: Int = 1;\ns: String = "a";\nb: Bool = true;\ny: Int;\nreport(x, s, b, y);\nvar z: Int = 2;\nz = 3;\nreport(z);\n';
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from('1 a true 0\n3\n'), stderr: Buffer.alloc(0),
+  });
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cc = process.env['CC'] ?? 'cc';
+    const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+    if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+      context.skip('C compiler unavailable; typed-local C parity requires cc or CC'); return;
+    }
+    const c = runCompiler(cManifestPath, source);
+    assert.equal(c.code, 0, c.errors);
+    assert.deepEqual(runCArtifact(c.output), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from('1 a true 0\n3\n'), stderr: Buffer.alloc(0),
+    });
+  }
+  for (const [bad, errors] of [
+    ['x: Int = "a";\n', '1:1: cannot initialize Int with String\n'],
+    ['x: Int = 1; x = "a";\n', '1:13: cannot assign to immutable local x\n'],
+    ['x: Missing = 1;\n', '1:4: unsupported local type Missing\n'],
+    ['var x: Bool = 1;\n', '1:5: cannot initialize Bool with Int\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
   const source = 'x := 2 * 3;\nreport(x);\n';
