@@ -26,8 +26,9 @@ validation run at the P6 gate.
 12. ~~Leading `and`/`or`~~ — TS/C done.
 12a. ~~Action `else if` chains (required by S; currently rejected)~~ — done (any number of Bool-conditioned arms, optional final else; TS and C).
 12b. ~~Self-compilation preparation inside S~~ — done (Bool-literal and known-call function tails, top-level declarations between functions, statement-shaped value-`if` function tails, and explicit-return rewrites that avoid remaining block-valued `if` bodies).
-13. T11: stage 0 runs S on S and emits a runnable TS compiler.
-14. T12: T11 runs on S and emits TS; record hashes and compare `T12 == T11`.
+13. ~~T11: stage 0 runs S on S and emits a runnable TS compiler~~ — done 2026-11-02; 243 216 bytes, strict-clean, runs.
+14. ~~T12: T11 runs on S and emits TS; record hashes and compare `T12 == T11`~~ — done 2026-11-02; `T12 == T11` byte for byte (SHA-256 `8273ce69…`).
+15. ~~Corpus parity for T11~~ — done 2026-11-02; all 53 program and 39 rejection cases match stage 0 byte for byte.
 
 ## Constraints
 

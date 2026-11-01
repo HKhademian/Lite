@@ -52,14 +52,45 @@ start C01/P7 first. T11 is stage 0 running S on S and emitting TS. T12 is T11
 running on S and emitting TS. A TS artifact and its execution are the deliverable;
 no separate IR artifact is produced.
 
-T11/T12 acceptance:
+T11/T12 acceptance, recorded 2026-11-02:
 
-- [ ] S includes the full-L front-end and emits TS directly.
-- [ ] Stage 0 + S produces T11.
-- [ ] T11 typechecks strictly and runs.
-- [ ] T11 + S produces T12.
-- [ ] T12 runs and records its hash.
-- [ ] `T12 == T11` byte for byte, or the first difference is recorded here.
+- [x] S includes the full-L front-end and emits TS directly.
+- [x] Stage 0 + S produces T11.
+- [x] T11 typechecks strictly and runs.
+- [x] T11 + S produces T12.
+- [x] T12 runs and records its hash.
+- [x] `T12 == T11` byte for byte.
+- [x] T11 compiles all 92 corpus cases exactly like stage 0: 53 program outputs
+  and 39 rejection streams/status byte for byte.
+
+TS ladder record, 2026-11-02:
+
+| Node | Bytes | SHA-256 |
+|---|---:|---|
+| S (`compiler/manifests/ts.json`) | 155 219 | `827f90152433e65d2134f6e6df294d2c544b4bd665b879e9a3bd55d1eac343b8` |
+| T11 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
+| T12 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
+
+T11 was produced by `./litec ts` from S. T12 was produced by T11 running on the
+same S after a strict artifact typecheck. Both artifacts ran the probe source and
+their emitted TS matched stage 0 byte for byte. T13 is the next TS node; it is
+expected to equal T11/T12 but is not recorded yet.
+
+Regenerate and re-check the ladder with one command:
+
+```sh
+node compiler/scripts/self-host.mjs --out /tmp/selfhost-run
+```
+
+Corpus parity for an emitted compiler:
+
+```sh
+node compiler/scripts/corpus-parity.mjs --artifact /tmp/T11.ts
+```
+
+The 2026-11-02 run compared T11 with stage 0 over all 92 cases in 7.7 s with
+zero mismatches, covering emitted TS bytes, rejection stderr text and exit
+status.
 
 TS ladder commands:
 
@@ -165,8 +196,8 @@ keeps that target from growing while it is approached.
   remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
-- T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS
-  emitter. T13 and the C ladder wait until T12 is recorded.
+- T00 exists. T11 and T12 are recorded and byte-identical; the TS fixed point is
+  reached for the bootstrap surface. T13 and the C ladder are the next nodes.
 - The P0 artifact hashes in
   [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) are
   the reference for the 50 program cases.

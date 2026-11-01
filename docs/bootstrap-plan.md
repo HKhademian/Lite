@@ -443,17 +443,18 @@ are deferred to the P6 gate where full regression and C validation run together.
 - [ ] Single-file artifact; strict TypeScript; erasable syntax; Node entry.
 - [ ] Source-name/args/stdin/stdout/stderr/status contract.
 - [ ] Deterministic output; no timestamps, paths, PIDs or hash-order iteration.
-- [ ] **T11:** stage 0 runs S on S and produces a runnable TS compiler.
-- [ ] T11 typechecks and runs; its artifact hash is recorded.
-- [ ] **T12:** T11 runs on S and produces TS.
-- [ ] T12 runs and its artifact hash is recorded.
-- [ ] Prefer `T12 == T11`; record the first difference in
-      [`parity.md`](../compiler/parity.md) if not yet fixed.
-- [ ] Corpus: T11 compiles the program cases; run the emitted TS and compare
-      bytes and status with the igniter; rejection diagnostics match.
+- [x] **T11:** stage 0 runs S on S and produces a runnable TS compiler.
+- [x] T11 typechecks and runs; its artifact hash is recorded.
+- [x] **T12:** T11 runs on S and produces TS.
+- [x] T12 runs and its artifact hash is recorded.
+- [x] `T12 == T11` byte for byte under SHA-256 `8273ce69…` (2026-11-02).
+- [x] Corpus: T11 compiles all 92 cases exactly like stage 0 (53 program
+      outputs, 39 rejection streams and statuses; zero mismatches 2026-11-02).
 
-**Gate:** T11 exists, typechecks and runs; T11 produces T12; T12 runs. T12 should
-equal T11 byte for byte. C/P7 waits until this is recorded.
+**Gate:** T11 exists, typechecks and runs; T11 produces T12; T12 runs and equals
+T11 byte for byte. Recorded 2026-11-02 in
+[`parity.md`](../compiler/parity.md#bootstrap-ladder). The corpus comparison row
+and the C/P7 ladder remain.
 
 **Do not:** start the C emitter before the TS gate unless a second agent is
 explicitly assigned the independent C runtime work.

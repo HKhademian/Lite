@@ -87,6 +87,8 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 | [`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
+| [`scripts/self-host.mjs`](scripts/self-host.mjs) | Runs the S → T11 → T12 ladder and reports hashes and fixed-point status |
+| [`scripts/corpus-parity.mjs`](scripts/corpus-parity.mjs) | Compares an emitted TS compiler with stage 0 across every compiler corpus case |
 
 The backend source is split by role and assembled by manifest order. The
 compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened
