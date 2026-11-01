@@ -1217,7 +1217,7 @@ test('power is right-associative, Float-default and positive-exponent only', () 
   fault('report(2 ** -1);', 'ArithmeticPanic');
   fault('report("a" ** 2);', 'TypeError');
   fault('report(2 ** "a");', 'TypeError');
-  fault('report(2 ** 3 * 2);', 'TypeError');
+  assert.equal(run('report(2 ** 3 * 2);').output, '16\n');
 });
 test('subjectless match selects the first true arm and requires a final fallback', () => {
   assert.equal(run('x := 2; label := match { x == 1 { "one" } x == 2 { "two" } _ { "other" } } report(label);').output,
@@ -1299,13 +1299,15 @@ test('numeric widths promote, widen losslessly and range-check', () => {
   assert.equal(run('k: Float = 2; report(k);').output, '2\n');
   assert.equal(run('z8: Int8; zf: Float32; report(z8, zf);').output, '0 0\n');
   assert.equal(run('f := fn(x: Int8): Float32 { x } report(f(3));').output, '3\n');
+  assert.equal(run('kg: Int8 = 5; base: Float = 1.2; report(base + kg);').output, '6.2\n');
+  assert.equal(run('kg: Int8 = 5; base: Float32 = 1.5; report(kg + base);').output, '6.5\n');
+  assert.equal(run('report(1.2 + 5); report(5 + 1.2);').output, '6.2\n6.2\n');
   fault('x: Int8 = 128;', 'SourceError');
   fault('x: Int16 = 32768;', 'SourceError');
   fault('x: Int8 = 12345;', 'SourceError');
   fault('x: Float32 = 16777217;', 'SourceError');
   fault('i16: Int16 = 5; x: Int8 = i16;', 'TypeError');
   fault('i64: Int = 5; x: Float = i64;', 'TypeError');
-  fault('i: Int8 = 1; f: Float32 = 0.5; report(i + f);', 'TypeError');
   fault('a: Int8 = 100; report(a + a);', 'ArithmeticPanic');
   fault('a: Float32 = 3e38; b: Float32 = 3e38; report(a * b);', 'ArithmeticPanic');
 });
@@ -1320,7 +1322,7 @@ test('zero divisors, non-finite results, and literals fault', () => {
   for (const code of ['report(1/0);', 'report(1.0 / 0);', 'report(1.0 / -0.0);',
     'report(1e308 * 2.0);']) fault(code, 'ArithmeticPanic');
   fault('report(1e999);', 'SourceError');
-  fault('report(1 + 2.0);', 'TypeError');
+  assert.equal(run('report(1 + 2.0); report(2.0 + 1);').output, '3\n3\n');
 });
 test('direct input faults instead of retrying or fabricating values', () => {
   for (const input of ['', 'hello', '12.5', '9223372036854775808']) fault('report(inputInt());', 'InputFault', input);
@@ -1478,7 +1480,7 @@ test('all ten comparison operators complement their adjacent positive form', () 
     ['"سلام" == "سلام"', 'true'], ['true =!= false', 'true'], ['() == Unit', 'true'],
   ];
   for (const [expression, expected] of cases) assert.equal(run(`report(${expression});`).output, `${expected}\n`, expression);
-  fault('report(1 == 1.0);', 'TypeError');
+  assert.equal(run('report(1 == 1.0); report(2 < 1.5);').output, 'true\nfalse\n');
   fault('report("a" < "b");', 'TypeError');
 });
 

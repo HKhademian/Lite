@@ -1234,11 +1234,15 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         return { kind: 'binary', op: raw.op, left, right, type: 'Float', at };
       }
       const promoted = promoteNumeric(left.type, right.type);
-      if (promoted === undefined) {
-        if (raw.op !== '/') typeError('mixed Int/Float arithmetic other than division is not supported yet', at);
-        return { kind: 'binary', op: raw.op, left, right, type: 'Float', at };
+      if (promoted !== undefined) return { kind: 'binary', op: raw.op, left, right, type: promoted, at };
+      // Mixed Int/Float arithmetic converts the integer operand to the floating operand's width.
+      if (isFloatType(left.type) && isIntegerType(right.type)) {
+        return { kind: 'binary', op: raw.op, left, right, type: left.type, at };
       }
-      return { kind: 'binary', op: raw.op, left, right, type: promoted, at };
+      if (isIntegerType(left.type) && isFloatType(right.type)) {
+        return { kind: 'binary', op: raw.op, left, right, type: right.type, at };
+      }
+      return typeError('mixed-type arithmetic requires one integer and one floating family', at);
     }
     case 'logic': {
       const left = checkExpression(raw.left, names, state);
@@ -1254,7 +1258,8 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         if (typeof previous.type !== 'string' || typeof pair.right.type !== 'string') {
           typeError('aggregate/function-value comparisons are not supported yet', pair.right.at);
         }
-        if (!sameType(previous.type, pair.right.type) && promoteNumeric(previous.type, pair.right.type) === undefined) {
+        if (!sameType(previous.type, pair.right.type) &&
+            !(isNumericType(previous.type) && isNumericType(pair.right.type))) {
           typeError('mixed-type comparisons are not supported yet', pair.right.at);
         }
         if (pair.op !== '==' && pair.op !== '=!=' && (!isNumericType(previous.type) || !isNumericType(pair.right.type))) {
@@ -1707,8 +1712,15 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position, type:
   if ((left.kind !== 'Int' && left.kind !== 'Float') || (right.kind !== 'Int' && right.kind !== 'Float')) {
     throw new Error('igniter invariant: nonnumeric arithmetic after checking');
   }
-  const a = Number(left.value);
-  const b = Number(right.value);
+  const operand = (value: Value): number => {
+    if (value.kind !== 'Int' && value.kind !== 'Float') {
+      throw new Error('igniter invariant: nonnumeric arithmetic after checking');
+    }
+    const number = Number(value.value);
+    return floatType === 'Float32' ? Math.fround(number) : number;
+  };
+  const a = operand(left);
+  const b = operand(right);
   switch (op) {
     case '+': return floatingAt(a + b, floatType, at);
     case '-': return floatingAt(a - b, floatType, at);
@@ -1735,8 +1747,10 @@ function power(left: Value, right: Value, at: Position): Value {
 
 function sameValue(left: Value, right: Value): boolean {
   switch (left.kind) {
-    case 'Int': return right.kind === 'Int' && left.value === right.value;
-    case 'Float': return right.kind === 'Float' && left.value === right.value;
+    case 'Int': return right.kind === 'Int' ? left.value === right.value
+      : right.kind === 'Float' && Number(left.value) === right.value;
+    case 'Float': return right.kind === 'Float' ? left.value === right.value
+      : right.kind === 'Int' && left.value === Number(right.value);
     case 'String': return right.kind === 'String' && left.value === right.value;
     case 'Bool': return right.kind === 'Bool' && left.value === right.value;
     case 'Unit': return right.kind === 'Unit';
@@ -1755,6 +1769,10 @@ function compare(op: Comparison, left: Value, right: Value): boolean {
     order = left.value < right.value ? -1 : left.value > right.value ? 1 : 0;
   } else if (left.kind === 'Float' && right.kind === 'Float') {
     order = left.value < right.value ? -1 : left.value > right.value ? 1 : 0;
+  } else if ((left.kind === 'Int' || left.kind === 'Float') && (right.kind === 'Int' || right.kind === 'Float')) {
+    const a = Number(left.value);
+    const b = Number(right.value);
+    order = a < b ? -1 : a > b ? 1 : 0;
   } else { throw new Error('igniter invariant: nonnumeric ordered comparison'); }
   switch (op) {
     case '<': return order < 0;

@@ -522,11 +522,13 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   `Int8`/`Int16`/`Int32` to `Float`. Narrowing (`Int16` to `Int8`, `Int64` to
   `Float`, `Int32` to `Float32`) is rejected. Unsigned widths, casts and
   component-wise widening of stored tuples/arrays are not implemented.
-- `Float` uses binary64 `number`; mixed Int/Float **division** is supported.
-  Other mixed arithmetic and mixed-type replacement are rejected for now.
-  Int-to-float promotion during division rounds through Number; this is a
-  provisional igniter choice, not a permanent conversion contract. Overflow,
-  zero division and non-finite arithmetic results raise `ArithmeticPanic`.
+- `Float` uses binary64 `number`. Mixed `Int`/`Float` arithmetic and
+  comparisons convert the integer operand to the floating operand's width:
+  `1.2 + kg` is `Float`, and `Int8 + Float32` is `Float32`. The conversion goes
+  through the floating representation, so large `Int64` values can lose
+  precision; this arithmetic conversion does not relax the lossless-only
+  assignment/argument/return rule. Overflow, zero division and non-finite
+  arithmetic results raise `ArithmeticPanic`.
 - Source/input numbers use decimal digits, optional fraction and exponent for
   floats; `.5`, digit separators, hex and non-finite input are not supported.
   Integer input permits an optional sign. Out-of-range literals are source

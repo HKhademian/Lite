@@ -50,8 +50,12 @@ fractional literals remain `Float` (Float64); they do not become minimal-width.
 A literal constant may initialize a narrow annotated type only when it fits:
 integer literals must be inside that width's range (and exactly representable
 for a floating destination), while a fractional literal stored as `Float32`
-rounds to binary32. Arithmetic promotes to the wider width inside one family;
-`Int` and `Float` remain separate except for the existing division rule.
+rounds to binary32. Arithmetic promotes to the wider width inside one family. A mixed
+`Int`/`Float` operation converts the integer operand to the floating operand's
+width and yields that floating type, including comparisons; the conversion goes
+through the floating representation, so large `Int64` values can lose precision.
+Assignment, argument and return admission still requires the lossless widenings
+below rather than this arithmetic conversion.
 Assignments, arguments and returns admit lossless widening only: integer widths
 widen within the integer family, `Float32` widens to `Float`, and
 `Int8`/`Int16` widen to `Float32` while `Int8`/`Int16`/`Int32` widen to

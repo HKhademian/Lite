@@ -8,3 +8,7 @@ report(g);
 i: Int8 = 3;
 h: Float32 = i;
 report(h);
+kg: Int8 = 5;
+base: Float = 1.2;
+report(base + kg);
+report(kg > base);
