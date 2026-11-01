@@ -56,6 +56,20 @@ The [arithmetic methods and selected family](arithmetic-methods-and-division-rev
 
 These moving primary sources were consulted 2026-10-28. They motivate the [selected LiteLang priorities](memory-and-performance.md#lightweight-native-execution-priority) and [open investigations](../investigations/lightweight-native-execution.md), without adopting another language's semantics or selecting a Lite backend.
 
+## Sequence composition and execution models, reviewed 2026-11-01
+
+Thirteen systems were checked against official documentation on 2026-11-01 for one design question: how a language provides general lazy sequence operators over eager collections, cold sources, and hot or warm push sources, and what happens to repeatability, per-element failure, and cost. The systems are **Kotlin 2.4.21, Java SE 25, Dart 3.13.7, Rust 1.99.1, Go 1.27.3, TypeScript 7.0.2, Zig (master, spanning 0.13–0.17), V 0.5.2, Odin dev-2026-10, Jai, ReactiveX (with RxJS 7.8.2), Underscore.js 1.13.8, and Lodash 4.18.1**. Findings, the comparison matrix, options, and open questions are in the [INV-060 note](../investigations/INV-060-sequence-execution-and-surface-models.md).
+
+Primary sources by area:
+
+- **Lazy type distinct from the eager collection:** [Kotlin sequences](https://kotlinlang.org/docs/sequences.html), [Rust `std::iter`](https://doc.rust-lang.org/std/iter/index.html), [Java `java.util.stream`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/stream/package-summary.html).
+- **Cold versus hot production in the type system:** [Kotlin Flow](https://kotlinlang.org/docs/coroutines-flow.html), [ReactiveX observable](https://reactivex.io/documentation/observable.html), [ReactiveX contract](https://reactivex.io/documentation/contract.html), [RxJS glossary](https://rxjs.dev/guide/glossary-and-semantics), [Dart `Stream`](https://api.dart.dev/dart-async/Stream-class.html).
+- **Iteration protocols and generators:** [Go `iter`](https://pkg.go.dev/iter) and [range over function types](https://go.dev/blog/range-functions), [Dart creating streams](https://dart.dev/libraries/async/creating-streams), [MDN iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols), [V custom iterators](https://docs.vlang.io/statements-&-expressions.html#custom-iterators), [Zig `for`](https://ziglang.org/documentation/master/#for).
+- **Failure inside a pipeline:** [JLS 11.2.3 checked exceptions in lambdas](https://docs.oracle.com/javase/specs/jls/se25/html/jls-11.html#jls-11.2.3), [Rust `Result` collection](https://doc.rust-lang.org/std/result/enum.Result.html), [Odin `or_return`](https://odin-lang.org/docs/overview/#or_return-operator).
+- **Composition and cost models:** [Kotlin extension functions](https://kotlinlang.org/docs/extensions.html), [Lodash chain sequence methods](https://lodash.com/docs), [Lodash FP guide](https://github.com/lodash/lodash/wiki/FP-Guide), [Underscore chaining](https://underscorejs.org/#chaining), [Odin `core:slice`](https://pkg.odin-lang.org/core/slice/).
+
+This review adds Java, Go, TypeScript, Jai, ReactiveX, Underscore.js, and Lodash as topic-specific sources; it does **not** change the thirteen project reference languages. Jai has no public official specification, so its entries are low-confidence and community-derived. No toolchain was executed and no benchmark was run: this is documentation evidence, not foreign-language verification or a LiteLang implementation claim. The survey does not select a surface, an execution model, a generator form, or a failure policy.
+
 ## Rust
 
 - [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html): final expressions, unit results, and control-flow boundaries. LiteScript's semicolons deliberately do not suppress a preceding final result.

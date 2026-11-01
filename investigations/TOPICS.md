@@ -791,7 +791,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-algorithms.md](../docs/collection-algorithms.md); [docs/collection-function-signatures.md](../docs/collection-function-signatures.md); [docs/generic-collection-performance.md](../docs/generic-collection-performance.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** in progress (operator-surface and intermediate-allocation portion recorded); contributor: redacted (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — records the composition-surface options, the lazy return-type dependency, and the per-stage-versus-per-element cost split across thirteen reference systems. Sorting and search algorithm selection remain not started.
 
 <a id="inv-060"></a>
 
@@ -803,7 +803,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-source-contracts.md](../docs/collection-source-contracts.md); [docs/collection-order-and-traversal.md](../docs/collection-order-and-traversal.md); [docs/collections-and-iterators.md](../docs/collections-and-iterators.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (reference survey and option analysis; no contract selected); contributor: redacted (agent-assisted); note: [INV-060 — sequence execution and operator-surface models](INV-060-sequence-execution-and-surface-models.md) — the user identifies general sequence operators as a required capability covering cold, warm, lazy, and generator sources. Records thirteen reference systems, the surface options, the execution-model options, the two generator shapes, the per-element failure options, and the per-stage-versus-per-element cost split. No new container type is recommended; the open blockers are receiver declaration (INV-030) and the lazy return-type decision.
 
 <a id="inv-061"></a>
 
