@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **198** interpreter test groups and **9** editor grammar groups; the fast lane
+- **203** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -88,9 +88,12 @@ T11 compiling S again is T12. No separate IR artifact is required.
 P0-P9 order, the compiler's accepted surface grew one control-flow slice:
 Bool values/comparisons/logic, mutable locals and assignment, `if`/`else`, and
 Boolean/unconditional loops with runtime TS/C lowering. This is separate from
-L/S and does not complete a bootstrap phase. Dynamic division, dynamic String
-concatenation, `break`/`continue`, functions, collections, `match`, runtime
-input and checked dynamic C overflow remain open.
+L/S and does not complete a bootstrap phase. Top-level scalar
+functions (Int/String/Bool/Unit parameters/results, positional calls,
+recursion/`self`, and `return`) now emit runnable TS; the C path rejects
+function syntax with a clear status-2 diagnostic. Dynamic division, dynamic
+String concatenation, `break`/`continue`, collections, `match`, runtime input
+and checked dynamic C overflow remain open.
 
 ## Bootstrap parity loop
 

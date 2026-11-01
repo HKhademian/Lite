@@ -3,6 +3,51 @@ dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
 }
 
+/** Maps a restricted Lite scalar kind to its TypeScript type. */
+tsFunctionType := fn(kind: String): String {
+    if kind == "Int" { "bigint" }
+    else if kind == "String" { "string" }
+    else if kind == "Bool" { "boolean" }
+    else { "void" }
+}
+
+/** Formats a comma-separated `name:kind` parameter list as a TypeScript parameter list. */
+tsParameterList := fn(encoded: String): String {
+    if encoded == "" { return ""; }
+    var result := "";
+    var start := 0;
+    loop true {
+        comma := indexOfText(encoded, ",", start);
+        var end := textLength(encoded);
+        if comma >= 0 { end = comma; }
+        entry := textSlice(encoded, start, end);
+        colon := indexOfText(entry, ":", 0);
+        parameterName := textSlice(entry, 0, colon);
+        parameterKind := textSlice(entry, colon + 1, textLength(entry));
+        if textLength(result) > 0 { result = result + ", "; }
+        result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+    result
+}
+
+/** Emits `void` reads for parameters so strict unused-parameter checking accepts bodies that ignore inputs. */
+reportParameterReads := fn(encoded: String, indent: String): Unit {
+    if encoded == "" { return; }
+    var start := 0;
+    loop true {
+        comma := indexOfText(encoded, ",", start);
+        var end := textLength(encoded);
+        if comma >= 0 { end = comma; }
+        entry := textSlice(encoded, start, end);
+        colon := indexOfText(entry, ":", 0);
+        report(indent + "void lite_" + textSlice(entry, 0, colon) + ";");
+        if comma < 0 { break; }
+        start = comma + 1;
+    }
+}
+
 /** Formats one report argument as a TypeScript string expression. */
 reportArgumentCode := fn(item: Item): String {
     if item.kind == "Int" { "(" + item.code + ").toString()" }
@@ -18,7 +63,24 @@ emitProgram := fn(items: Items): Unit {
     var line := "";
     var count := 0;
     loop items as item {
-        if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" {
+        if item.kind == "FunctionStart" {
+            report(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
+                tsFunctionType(item.code) + " {");
+            indent = indent + "    ";
+            reportParameterReads(item.textValue, indent);
+        } else if item.kind == "FunctionEnd" {
+            indent = dedent(indent);
+            report(indent + "}");
+            report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "Return" {
+            if item.code == "" {
+                report(indent + "return;");
+            } else {
+                report(indent + "return " + item.code + ";");
+            }
+        } else if item.kind == "Call" {
+            report(indent + item.code + ";");
+        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" {
             report(indent + "const " + item.runtime + " = " + item.code + ";");
             report(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" {

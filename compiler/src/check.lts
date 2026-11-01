@@ -673,6 +673,11 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
         }
         if parens == 0 and brackets == 0 and token.kind == TOKEN_KIND_NAME() and
             isSymbol(tokenAt(tokens, cursor + 1), "=") {
+            previous := tokenAt(tokens, cursor - 1);
+            if isSymbol(previous, "(") or isSymbol(previous, ",") {
+                cursor = cursor + 1;
+                continue;
+            }
             index := findLocal(locals, token.text);
             if index < 0 {
                 checkFail(token, prefix, "unknown local " + token.text);

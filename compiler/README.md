@@ -127,15 +127,17 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 
 The compiler source is still restricted, but the accepted surface now includes
 Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
-assignment), `report(...)`, `if`/`else`, and Boolean or unconditional `loop`.
-Constant-only expressions keep their compile-time folding and range/division
-diagnostics; runtime expressions lower to target control flow and a runtime
-report accumulator for TS or direct `printf` calls for C. Dynamic
-`/ % :/ :%` and dynamic String concatenation are rejected with explicit
-diagnostics, `break`/`continue` are not implemented yet, and dynamic C integer
-overflow is not checked. Functions, tuples/lists/arrays, `match`, runtime
-input, typed declarations and self-rebuild remain outside this slice. Reserved
-features outside the subset are rejected by name with status 2.
+assignment), `report(...)`, `if`/`else`, Boolean or unconditional `loop`, and
+top-level scalar functions with Int/String/Bool/Unit parameters and results,
+positional calls, recursion/`self` and `return`. Constant-only expressions keep
+their compile-time folding and range/division diagnostics; runtime expressions
+lower to target control flow and a runtime report accumulator for TS or direct
+`printf` calls for C. Dynamic `/ % :/ :%`, dynamic String concatenation and
+`break`/`continue` are rejected with explicit diagnostics, and dynamic C integer
+overflow is not checked. Function syntax is emitted as runnable TS; the C path
+rejects it with a clear status-2 diagnostic. Tuples/lists/arrays, `match`,
+runtime input and self-rebuild remain outside this slice. Reserved features
+outside the subset are rejected by name with status 2.
 
 Diagnostics are source-positioned as `name:line:column: message` (or
 `line:column: message` when no logical source name is supplied). Columns are

@@ -16,6 +16,11 @@ cCall := fn(kind: String, code: String): String {
 
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items): Unit {
+    loop items as item {
+        if item.kind == "FunctionStart" {
+            fail("", "C backend does not support top-level functions yet");
+        }
+    }
     report("#include <stdio.h>");
     report("#include <inttypes.h>");
     report("#include <stdbool.h>");

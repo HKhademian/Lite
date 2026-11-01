@@ -1093,6 +1093,79 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
+test('restricted compiler corpus keeps 50 program and 42 rejection cases', () => {
+  assert.equal(programFixtures.length, 50);
+  assert.equal(rejectionFixtures.length, 42);
+});
+
+test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
+  const source = [
+    'double := fn (x: Int): Int { return x * 2; }',
+    'add := fn (a: Int, b: Int): Int { return a + b; }',
+    'echo := fn (s: String): String { return s; }',
+    'positive := fn (x: Int): Bool { return x > 0; }',
+    'noop := fn (): Unit { return; }',
+    'value := fn (u: Unit): Int { return 7; }',
+    'report(double(21), add(2, 3), echo("ok"), positive(1), positive(-1), value(noop()));',
+    'noop();',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('42 5 ok true false 7\n'), stderr: Buffer.alloc(0),
+  });
+
+  const recursive = [
+    'factorial := fn (n: Int): Int { if n <= 1 { return 1; } return n * self(n - 1); }',
+    'countdown := fn (n: Int): Int { if n == 0 { return 0; } return 1 + countdown(n - 1); }',
+    'report(factorial(5), countdown(3));',
+  ].join('\n');
+  const recursiveTs = runCompiler(tsManifestPath, recursive);
+  assert.equal(recursiveTs.code, 0, recursiveTs.errors);
+  assert.deepEqual(runTsArtifact(recursiveTs.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('120 3\n'), stderr: Buffer.alloc(0),
+  });
+  assert.equal(recursiveTs.output, runCompiler(tsManifestPath, recursive).output);
+});
+
+test('restricted compiler completes scalar functions from tail expressions', () => {
+  const source = [
+    'double := fn (x: Int): Int { x * 2 }',
+    'greeting := fn (): String { "hi" }',
+    'pick := fn (flag: Bool): Int { if flag { return 1; } 2 }',
+    'report(double(21), greeting(), pick(true), pick(false));',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('42 hi 1 2\n'), stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler diagnoses scalar function arity, argument and return mismatches', () => {
+  const prefix = 'f := fn (x: Int): Int { return x; }\n';
+  for (const [bad, errors] of [
+    [prefix + 'report(f());\n', '2:8: function f expects 1 argument, got 0\n'],
+    [prefix + 'report(f("x"));\n', '2:10: argument 1 of f must be Int, got String\n'],
+    ['f := fn (x: Int): Int { return "x"; }\n', '1:32: cannot return String from function f returning Int\n'],
+    ['f := fn (): Int { return; }\n', '1:19: function f must return Int\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
+test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
+  assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), {
+    code: 0, output: readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8'), errors: '',
+  });
+  assert.deepEqual(runCompiler(cManifestPath, 'f := fn (x: Int): Int { return x; }\nreport(f(42));\n'), {
+    code: 2, output: '', errors: 'C backend does not support top-level functions yet\n',
+  });
+});
+
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
   const source = 'x := 2 * 3;\nreport(x);\n';
