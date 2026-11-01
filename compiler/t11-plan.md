@@ -23,7 +23,8 @@ validation run at the P6 gate.
 9. ~~Dynamic Int division/remainder (`/ % :/ :%`)~~ — done.
 10. ~~Dynamic String concatenation~~ — done (TS ordinary `+`; C checked byte-copy helper with intentionally leaked results).
 11. ~~`break`/`continue` lowering in compiler loops~~ — done (bare nearest-loop exits in Boolean, unconditional and list-traversal loops; TS and C).
-12. Leading `and`/`or` and any remaining S expression forms.
+12. ~~Leading `and`/`or`~~ — TS/C done.
+12a. Action `else if` chains (required by S; currently rejected).
 13. T11: stage 0 runs S on S and emits a runnable TS compiler.
 14. T12: T11 runs on S and emits TS; record hashes and compare `T12 == T11`.
 

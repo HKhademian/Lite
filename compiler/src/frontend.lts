@@ -1051,9 +1051,20 @@ parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Loc
 
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
-    start := skipTrivia(source, position, prefix);
+    var start := skipTrivia(source, position, prefix);
     if start >= textLength(source) {
         failAt(source, start, prefix, "expected an Int, String or Bool expression");
+    }
+    var leaderStart := -1;
+    var leaderText := "";
+    if minimum == 0 and (wordAt(source, start, "and") or wordAt(source, start, "or")) {
+        leaderStart = start;
+        leaderEnd := skipName(source, start);
+        leaderText = textSlice(source, start, leaderEnd);
+        start = skipTrivia(source, leaderEnd, prefix);
+        if wordAt(source, start, "and") or wordAt(source, start, "or") {
+            failAt(source, start, prefix, "leading " + leaderText + " may appear only once");
+        }
     }
     var left := intParsed("", 0, true, start);
     ch := textAt(source, start);
@@ -1497,6 +1508,9 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
         }
     }
+    if leaderStart >= 0 and left.kind =!= "Bool" {
+        failAt(source, leaderStart, prefix, "leading " + leaderText + " requires a Bool expression");
+    }
     left
 }
 
@@ -1776,7 +1790,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             continue;
         }
-        if currentName =!= "" and (isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-") {
+        if currentName =!= "" and (isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or
+            wordAt(source, position, "and") or wordAt(source, position, "or")) {
             tail := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
             if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and

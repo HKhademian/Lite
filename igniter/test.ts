@@ -1372,6 +1372,94 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
   }
 });
 
+const leadingSeparatorTsSource = [
+  'pick := fn(flag: Bool, other: Bool): Bool { or flag and other }',
+  'explicit := fn(flag: Bool): Bool { return and flag; }',
+  'var n := 0;',
+  'loop and n < 3 {',
+  '    n = n + 1;',
+  '}',
+  'ready := or n == 3 or n == 4;',
+  'single := and ready;',
+  'var flag := true;',
+  'flag = and ready and not false;',
+  'report(ready, single, flag);',
+  'if or ready and flag {',
+  '    report("or-if");',
+  '}',
+  'if and ready {',
+  '    report("and-if");',
+  '}',
+  'report(pick(or ready and flag, and flag), explicit(or ready));',
+  'value := if and ready { 7 } else { 9 };',
+  'report(value);',
+  'report(and (or ready or false) and flag);',
+  'report(and true, or false);',
+].join('\n');
+const leadingSeparatorTsStdout = 'true true true\nor-if\nand-if\ntrue true\n7\ntrue\ntrue false\n';
+const leadingSeparatorCSource = [
+  'var n := 0;',
+  'loop and n < 3 { n = n + 1; }',
+  'ready := or n == 3 or n == 4;',
+  'single := and ready;',
+  'var flag := true;',
+  'flag = and ready and not false;',
+  'report(ready, single, flag);',
+  'if or ready and flag { report("or-if"); }',
+  'if and ready { report("and-if"); }',
+  'report(and (or ready or false) and flag);',
+  'report(and true, or false);',
+].join('\n');
+const leadingSeparatorCStdout = 'true true true\nor-if\nand-if\ntrue\ntrue false\n';
+
+test('restricted compiler accepts one optional leading and/or in Bool expressions for TS', () => {
+  const ts = runCompiler(tsManifestPath, leadingSeparatorTsSource);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.match(ts.output, /&&|\|\|/);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from(leadingSeparatorTsStdout), stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler accepts one optional leading and/or in Bool expressions for C', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') {
+    context.skip('LITE_SKIP_NATIVE=1'); return;
+  }
+  const cc = process.env['CC'] ?? 'cc';
+  const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+    context.skip('C compiler unavailable; leading separator C lowering requires cc or CC'); return;
+  }
+  const c = runCompiler(cManifestPath, leadingSeparatorCSource);
+  assert.equal(c.code, 0, c.errors);
+  assert.match(c.output, /&&|\|\|/);
+  assert.deepEqual(runCArtifact(c.output), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from(leadingSeparatorCStdout), stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler diagnoses invalid leading and/or forms', () => {
+  for (const [bad, errors] of [
+    ['x := and 1;', '1:6: leading and requires a Bool expression\n'],
+    ['x := or [1];', '1:6: leading or requires a Bool expression\n'],
+    ['flag := or "text";', '1:9: leading or requires a Bool expression\n'],
+    ['if and (1) { report(1); }', '1:4: leading and requires a Bool expression\n'],
+    ['loop and 1 { }', '1:6: leading and requires a Bool expression\n'],
+    ['x := and and true;', '1:10: leading and may appear only once\n'],
+    ['if or and ready { report(1); }', '1:7: leading or may appear only once\n'],
+    ['x := true and;', '1:14: expected an Int, String or Bool expression\n'],
+    ['if true or { report(1); }', '1:12: expected an Int, String or Bool expression\n'],
+    ['x := or;', '1:8: expected an Int, String or Bool expression\n'],
+    ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
+      'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n'],
+    ['x := not and true;', '1:10: unsupported feature "and": see docs/conditionals.md; ' +
+      'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+    assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('restricted compiler compiles list mutation grants, push and pop to runnable TS', () => {
   const source = [
     'Ints := type List<Int>;',
