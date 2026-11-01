@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 90 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 91 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 35 registered, 35 cases/);
+    assert.match(covered.stdout, /features: 36 registered, 36 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1310,6 +1310,25 @@ test('loop metadata, payload exits and tagged targets complete loops', () => {
   fault('break @missing 1;', 'TypeError');
   fault('continue @scan.value;', 'SourceError');
 });
+test('construct-level finally runs after then and on every exit', () => {
+  assert.equal(run('loop [1, 2] as n { report(.count); } then { report("then"); } finally { report("finally"); }').output,
+    '1\n2\nthen\nfinally\n');
+  assert.equal(run('if 1 < 2 { report("body"); } finally { report("cleanup"); }').output, 'body\ncleanup\n');
+  assert.equal(run('x := if true { 1 } else { 2 } finally { report("cond-finally"); } report(x);').output,
+    'cond-finally\n1\n');
+  assert.equal(run('f := fn(): Int { loop [1] { return 5 } finally { report("return-cleanup"); } 0 } report(f());').output,
+    'return-cleanup\n5\n');
+  assert.equal(run('g := fn(): Int { @o loop [1] as n { loop [1] { break @o 7 } finally { report("inner-finally"); } .value + n } then { .value } finally { report("outer-finally"); } 0 } report(g());').output,
+    'inner-finally\nouter-finally\n0\n');
+  const exited = run('if true { exit(0) } finally { report("exit-cleanup"); } report("unreachable");');
+  assert.equal(exited.code, 0);
+  assert.equal(exited.output, 'exit-cleanup\n');
+  let output = '';
+  assert.throws(() => execute(compile('loop [1] { 1 / 0 } finally { report("fault-cleanup"); }'), {
+    read: () => null, report: text => { output += text; }, reportError: () => {},
+  }), (error: unknown) => error instanceof LiteFault && error.category === 'ArithmeticPanic');
+  assert.equal(output, 'fault-cleanup\n');
+});
 test('numeric widths promote, widen losslessly and range-check', () => {
   assert.equal(run('a: Int8 = 127; b: Int16 = 32767; c: Int32 = 2147483647; report(a, b, c);').output,
     '127 32767 2147483647\n');
@@ -1539,7 +1558,7 @@ test('loops reject invalid sources, escaping controls, and value/completion form
     'loop { break 3; }', 'loop { continue 3; }']) fault(code, 'TypeError');
   fault('loop { loop ({ break; true }) {} break; }', 'TypeError');
   fault('loop { loop ({ continue; false }) {} break; }', 'TypeError');
-  for (const code of ['loop true report(1);', 'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
+  for (const code of ['loop true report(1);', 'loop false {} finally 1;', 'var break := 1;']) fault(code, 'SourceError');
   let output = '';
   assert.throws(() => execute(compile('report(1); loop false { continue; missing; }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},

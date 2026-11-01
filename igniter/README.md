@@ -153,9 +153,13 @@ exits `break value` and `continue value` commit to the nearest loop; `break
 @tag`, `continue @tag` and `return @tag` target a tagged enclosing loop, skip
 inner `then` blocks, and run the target's `then`. Tagged `@tag.value`,
 `@tag.count`, `@tag.item` and `@tag.index` read an enclosing tagged loop from
-nested code. Header/source transfers, general iterables/ranges, conditional
-tags, `finally`, and a partial-conditional body tail with no committed value
-remain deferred; give such a tail an `else` in this checkpoint.
+nested code. Header/source transfers, general iterables/ranges, conditional tags, and a
+partial-conditional body tail with no committed value remain deferred; give
+such a tail an `else` in this checkpoint. A construct-level `finally { ... }`
+is supported on `if` and `loop` (after an optional `then`): it runs after
+`then` on normal completion and when the construct is left by `return`, a
+targeted `break`/`continue`, a fault, or `exit`, without replacing the
+construct's result. A faulting cleanup currently replaces a pending exit.
 
 ### Typed user functions
 
@@ -661,7 +665,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **174 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **175 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -670,7 +674,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 35 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

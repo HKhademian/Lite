@@ -1,0 +1,22 @@
+{
+  "id": "finally.cleanup",
+  "kind": "feature",
+  "source": {
+    "file": "finally-cleanup.lts",
+    "hash": "sha256:3d99dc5bd76ee895dda0776f7527c1593e75769e2c521557e33f423f0c5afb23"
+  },
+  "features": [
+    "finally.cleanup"
+  ],
+  "guideline": "Checks then-before-finally ordering, a value conditional's cleanup, and a returning loop's cleanup.",
+  "cases": [
+    {
+      "name": "cleanup",
+      "stdout": {
+        "text": "1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n",
+        "hash": "sha256:9ba8c8479cafa0ad285e8d2e89a62fad90493f70a7c3108ab946b4dd9278b3ee"
+      },
+      "exitCode": 0
+    }
+  ]
+}

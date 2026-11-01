@@ -27,8 +27,9 @@ without `then` the loop result is the final `.value`. `then` receives the final
 `.value` and `.count` and its tail is the result. Action loops without `then`
 remain Unit and commit nothing. Tags, `@name.value`, payload exits, targeted
 return/break, `.item`/`.index` in `then`, `.count` in bodies, and noncontributing
-partial-conditional tails remain unimplemented. See [loop value](loop-value.md)
-and [loop completion](loop-completion.md).
+partial-conditional tails remain unimplemented. A construct-level `finally`
+now runs after `then` and on exits from the loop; see [finally](finally.md).
+See [loop value](loop-value.md) and [loop completion](loop-completion.md).
 
 ## Template
 

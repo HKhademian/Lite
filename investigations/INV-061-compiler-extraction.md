@@ -92,7 +92,7 @@ keeps `run` and `--check`, adds `check`, `docs` and `help`, and delegates
 
 ## Verification
 
-- All **174 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **175 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
 - The 43 program and 34 rejection cases under
   [`igniter/tests/compiler/`](../igniter/tests/compiler/) are unchanged in

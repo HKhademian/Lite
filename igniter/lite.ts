@@ -59,9 +59,9 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'logic'; op: 'and' | 'or'; left: Raw; right: Raw }
   | { kind: 'compare'; first: Raw; rest: readonly Readonly<{ op: Comparison; right: Raw }>[] }
   | { kind: 'block'; items: readonly RawItem[] }
-  | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
+  | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined; finally: Raw | undefined }
   | { kind: 'match'; arms: readonly Readonly<{ condition: Raw | undefined; body: Raw }>[] }
-  | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw; then: Raw | undefined; tag: string | undefined }
+  | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw; then: Raw | undefined; finally: Raw | undefined; tag: string | undefined }
   | { kind: 'metadata'; name: string; tag: string | undefined }
   | { kind: 'loopExit'; op: 'break' | 'continue'; target: string | undefined; value: Raw | undefined }
   | { kind: 'function'; parameters: readonly Readonly<{ name: string; type: RawType }>[]; result: RawType; body: Raw }
@@ -94,10 +94,10 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'logic'; op: 'and' | 'or'; left: Expr; right: Expr }
   | { kind: 'compare'; first: Expr; rest: readonly Readonly<{ op: Comparison; right: Expr }>[] }
   | { kind: 'block'; block: Block }
-  | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
+  | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined; finally: Expr | undefined }
   | { kind: 'match'; arms: readonly Readonly<{ condition: Expr | undefined; body: Expr }>[] }
-  | { kind: 'loop'; condition: Expr | undefined; body: Expr; then: Expr | undefined; seed: Expr; itemSeed: Expr; valueSlot: number; countSlot: number; itemSlot: number; indexSlot: number; commit: boolean; tag: string | undefined }
-  | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr; then: Expr | undefined; seed: Expr; itemSeed: Expr; valueSlot: number; countSlot: number; itemSlot: number; indexSlot: number; commit: boolean; tag: string | undefined }
+  | { kind: 'loop'; condition: Expr | undefined; body: Expr; then: Expr | undefined; finally: Expr | undefined; seed: Expr; itemSeed: Expr; valueSlot: number; countSlot: number; itemSlot: number; indexSlot: number; commit: boolean; tag: string | undefined }
+  | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr; then: Expr | undefined; finally: Expr | undefined; seed: Expr; itemSeed: Expr; valueSlot: number; countSlot: number; itemSlot: number; indexSlot: number; commit: boolean; tag: string | undefined }
   | { kind: 'metadata'; name: 'value' | 'count' | 'item' | 'index'; slot: number }
   | { kind: 'toFloat'; input: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue'; target: string | undefined; value: Expr | undefined }
@@ -744,8 +744,17 @@ class Parser {
     const item = this.accept('as') ? this.label() : undefined;
     if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('loop requires a braced body', this.peek().at);
     const body = this.prefix();
-    const then = this.accept('then') ? this.prefix() : undefined;
-    return { kind: 'loop', condition, item, body, then, tag, at };
+    let then: Raw | undefined;
+    if (this.accept('then')) {
+      if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('then requires a braced body', this.peek().at);
+      then = this.prefix();
+    }
+    let final: Raw | undefined;
+    if (this.accept('finally')) {
+      if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('finally requires a braced body', this.peek().at);
+      final = this.prefix();
+    }
+    return { kind: 'loop', condition, item, body, then, finally: final, tag, at };
   }
   atom(): Raw {
     const token = this.take();
@@ -861,7 +870,12 @@ class Parser {
           }
           otherwise = this.prefix();
         }
-        return { kind: 'if', condition, body, otherwise, at: token.at };
+        let final: Raw | undefined;
+        if (this.accept('finally')) {
+          if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('finally requires a braced body', this.peek().at);
+          final = this.prefix();
+        }
+        return { kind: 'if', condition, body, otherwise, finally: final, at: token.at };
       }
       if (token.text === 'match') {
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') {
@@ -1156,7 +1170,8 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         typeError('conditional branch-result unions are not supported yet; use the same result type in each branch', at);
       }
       const type = body.type === 'Never' && otherwise !== undefined ? otherwise.type : body.type;
-      return { kind: 'if', condition, body, otherwise,
+      const final = raw.finally === undefined ? undefined : checkExpression(raw.finally, names, state, 'discard');
+      return { kind: 'if', condition, body, otherwise, finally: final,
         type: body.type === 'Never' && otherwise?.type === 'Never' ? 'Never' : use === 'discard' ? 'Unit' : type, at };
     }
     case 'loop': {
@@ -1230,11 +1245,18 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         }
         const type: Type = use === 'discard' ? 'Unit' : then !== undefined ? then.type : valueType;
         const commit = contributes;
+        let final: Expr | undefined;
+        if (raw.finally !== undefined) {
+          state.loopMeta = undefined;
+          state.loopTags = savedTags;
+          try { final = checkExpression(raw.finally, names, state, 'discard'); }
+          finally { state.loopMeta = savedMeta; state.loopTags = savedTags; }
+        }
         if (array !== undefined && condition !== undefined) {
-          return { kind: 'sequenceLoop', input: condition, item, body, then, seed, itemSeed, valueSlot, countSlot,
+          return { kind: 'sequenceLoop', input: condition, item, body, then, finally: final, seed, itemSeed, valueSlot, countSlot,
             itemSlot, indexSlot, commit, tag: raw.tag, type, at };
         }
-        return { kind: 'loop', condition, body, then, seed, itemSeed, valueSlot, countSlot, itemSlot, indexSlot,
+        return { kind: 'loop', condition, body, then, finally: final, seed, itemSeed, valueSlot, countSlot, itemSlot, indexSlot,
           commit, tag: raw.tag, type, at };
       } finally {
         state.loopContext--;
@@ -1495,7 +1517,7 @@ function checkPartialConditional(raw: Extract<Raw, { kind: 'if' }>, names: Reado
   const body = checkExpression(raw.body, names, state, 'value');
   const type = body.type === 'Never' ? expected : dataTypeOf(body.type);
   if (type === undefined) typeError('a partial conditional value of function type is not supported yet', raw.at);
-  return { kind: 'if', condition, body, otherwise: zeroExpr(type, raw.at), type, at: raw.at };
+  return { kind: 'if', condition, body, otherwise: zeroExpr(type, raw.at), finally: undefined, type, at: raw.at };
 }
 /** The loop .value type is never a function; a body that only exits leaves the Unit default. */
 function dataTypeOf(type: Type): DataType | undefined {
@@ -1644,7 +1666,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         if (body.type === 'Never') typeError('a partial conditional declaration needs a normally completing value branch; add else', item.at);
         const partialType = dataTypeOf(body.type);
         if (partialType === undefined) typeError('a partial conditional value of function type is not supported yet', item.at);
-        input = { kind: 'if', condition, body, otherwise: zeroExpr(partialType, item.at), type: partialType, at: item.at };
+        input = { kind: 'if', condition, body, otherwise: zeroExpr(partialType, item.at), finally: undefined, type: partialType, at: item.at };
       }
     } else if (item.kind === 'assign') {
       const entry = bodyNames.get(item.name);
@@ -2007,10 +2029,17 @@ export function execute(program: Program, io: IO): number {
           }
         }
         throw new Error('igniter invariant: subjectless match has no fallback');
-      case 'if':
-        if (boolean(evaluateHere(expr.condition))) return evaluateHere(expr.body);
-        // This missing branch is permitted only where its contribution is discarded.
-        return expr.otherwise === undefined ? UNIT : evaluateHere(expr.otherwise);
+      case 'if': {
+        let result: Value;
+        try {
+          result = boolean(evaluateHere(expr.condition)) ? evaluateHere(expr.body)
+            // This missing branch is permitted only where its contribution is discarded.
+            : expr.otherwise === undefined ? UNIT : evaluateHere(expr.otherwise);
+        } finally {
+          if (expr.finally !== undefined) evaluate(expr.finally, frame, self);
+        }
+        return result;
+      }
       case 'loop': {
         const meta: Frame = { parent: frame, values: new Map([
           [expr.valueSlot, evaluate(expr.seed, frame, self)],
@@ -2018,20 +2047,26 @@ export function execute(program: Program, io: IO): number {
           [expr.itemSlot, evaluate(expr.itemSeed, frame, self)],
           [expr.indexSlot, { kind: 'Int', value: 0n }],
         ]) };
-        while (expr.condition === undefined || boolean(evaluate(expr.condition, frame, self))) {
-          bumpCount(meta, expr.countSlot);
-          try {
-            const value = evaluate(expr.body, meta, self);
-            if (expr.commit) meta.values.set(expr.valueSlot, value);
-          } catch (error: unknown) {
-            if (!(error instanceof LoopTransfer)) throw error;
-            if (error.target !== undefined && error.target !== expr.tag) throw error;
-            if (error.value !== undefined) meta.values.set(expr.valueSlot, error.value);
-            if (error.op === 'break') break;
-            // Continue returns to this loop's header without committing the body tail.
+        let result: Value;
+        try {
+          while (expr.condition === undefined || boolean(evaluate(expr.condition, frame, self))) {
+            bumpCount(meta, expr.countSlot);
+            try {
+              const value = evaluate(expr.body, meta, self);
+              if (expr.commit) meta.values.set(expr.valueSlot, value);
+            } catch (error: unknown) {
+              if (!(error instanceof LoopTransfer)) throw error;
+              if (error.target !== undefined && error.target !== expr.tag) throw error;
+              if (error.value !== undefined) meta.values.set(expr.valueSlot, error.value);
+              if (error.op === 'break') break;
+              // Continue returns to this loop's header without committing the body tail.
+            }
           }
+          result = expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
+        } finally {
+          if (expr.finally !== undefined) evaluate(expr.finally, frame, self);
         }
-        return expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
+        return result;
       }
       case 'loopExit': {
         const value = expr.value === undefined ? undefined : evaluateHere(expr.value);
@@ -2052,23 +2087,29 @@ export function execute(program: Program, io: IO): number {
           [expr.itemSlot, evaluate(expr.itemSeed, frame, self)],
           [expr.indexSlot, { kind: 'Int', value: 0n }],
         ]) };
-        for (const [position, value] of input.items.entries()) {
-          bumpCount(meta, expr.countSlot);
-          meta.values.set(expr.itemSlot, value);
-          meta.values.set(expr.indexSlot, { kind: 'Int', value: BigInt(position) });
-          const iteration: Frame = { parent: meta, values: new Map() };
-          if (expr.item !== undefined) iteration.values.set(expr.item.slot, value);
-          try {
-            const bodyValue = evaluate(expr.body, iteration, self);
-            if (expr.commit) meta.values.set(expr.valueSlot, bodyValue);
-          } catch (error: unknown) {
-            if (!(error instanceof LoopTransfer)) throw error;
-            if (error.target !== undefined && error.target !== expr.tag) throw error;
-            if (error.value !== undefined) meta.values.set(expr.valueSlot, error.value);
-            if (error.op === 'break') break;
+        let result: Value;
+        try {
+          for (const [position, value] of input.items.entries()) {
+            bumpCount(meta, expr.countSlot);
+            meta.values.set(expr.itemSlot, value);
+            meta.values.set(expr.indexSlot, { kind: 'Int', value: BigInt(position) });
+            const iteration: Frame = { parent: meta, values: new Map() };
+            if (expr.item !== undefined) iteration.values.set(expr.item.slot, value);
+            try {
+              const bodyValue = evaluate(expr.body, iteration, self);
+              if (expr.commit) meta.values.set(expr.valueSlot, bodyValue);
+            } catch (error: unknown) {
+              if (!(error instanceof LoopTransfer)) throw error;
+              if (error.target !== undefined && error.target !== expr.tag) throw error;
+              if (error.value !== undefined) meta.values.set(expr.valueSlot, error.value);
+              if (error.op === 'break') break;
+            }
           }
+          result = expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
+        } finally {
+          if (expr.finally !== undefined) evaluate(expr.finally, frame, self);
         }
-        return expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
+        return result;
       }
       case 'read': {
         const value = findFrame(frame, expr.binding.slot).values.get(expr.binding.slot);
