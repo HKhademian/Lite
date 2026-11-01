@@ -53,7 +53,7 @@ Implementation note, 2026-11-01: the igniter parses right-associative `**`, retu
 
 Selected 2026-10-25: floating operands supply floating division semantics, even for Int storage. For an Int destination, / truncates the quotient toward zero and :/ floors it: -7.5 / 2 stores -3, while -7.5 :/ 2 stores -4. Nonintegral literals and established floating values are admitted; operands retain their values, so 2 / 0.5 stores 4. Float/Double results keep / fractional, including 2 / 7. With no floating operand or fractional expected result, integer-only division retains its integer default. See [calculation and storage](division.md#floating-calculation-and-integer-storage).
 
-Implementation note, 2026-10-31: the igniter currently implements Int `%`, `:/` and `:%`, plus compound `+= -= *= /= %= :/= :%=` updates. Float floor/remainder and compound lowering remain open; the restricted TS/C compiler now lowers Int `:/` and `:%`.
+Implementation note, 2026-10-31: the igniter currently implements Int `%`, `:/` and `:%`, plus compound `+= -= *= /= %= :/= :%=` updates. Float floor/remainder and compound lowering remain open; the restricted TS/C compiler lowers all four Int operations `/`, `%`, `:/` and `:%`, including dynamic operands.
 
 Integer % is truncating remainder and :% is floor modulo. A nonzero remainder follows the dividend; a nonzero modulo follows the divisor. With an Int quotient, the successful integer identities are a == b * (a / b) + (a % b) and a == b * (a :/ b) + (a :% b). The corresponding updates are /=, :/=, %=, and :%=.
 

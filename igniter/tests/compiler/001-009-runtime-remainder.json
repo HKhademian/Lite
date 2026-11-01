@@ -1,0 +1,21 @@
+{
+  "name": "runtime-remainder",
+  "source": {
+    "file": "001-009-runtime-remainder.lts",
+    "hash": "sha256:e0047671442d3f89d79d4936b200f4200c58fe593a494fed981631baf6a1f930"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "1\n",
+        "hash": "sha256:4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

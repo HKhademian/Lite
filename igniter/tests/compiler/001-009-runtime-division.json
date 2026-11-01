@@ -1,0 +1,21 @@
+{
+  "name": "runtime-division",
+  "source": {
+    "file": "001-009-runtime-division.lts",
+    "hash": "sha256:883f20d5a1ae282a688dab70b52fc2c9ba5a036af3811386a8d523f1021a9a97"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "2\n",
+        "hash": "sha256:53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

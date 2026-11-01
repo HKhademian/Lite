@@ -497,6 +497,26 @@ floorDivCode := fn(left: String, right: String): String {
 floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
 }
+
+/** Emits a checked truncating BigInt division call. */
+intDivideCode := fn(left: String, right: String): String {
+    "lite$divideInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt remainder call. */
+intRemainderCode := fn(left: String, right: String): String {
+    "lite$remainderInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt floor-division call. */
+intFloorDivideCode := fn(left: String, right: String): String {
+    "lite$floorDivideInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt floor-modulo call. */
+intFloorModuloCode := fn(left: String, right: String): String {
+    "lite$floorModuloInt(" + left + ", " + right + ")"
+}
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
    after it. */
@@ -1970,8 +1990,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     else if operator.text == ":%" { floorModCode(left.code, right.code) }
                     else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                 left = intParsed(code, folded, true, right.next);
-            } else if operator.text == "/" or operator.text == "%" or operator.text == ":/" or operator.text == ":%" {
-                failAt(source, operatorPosition, prefix, "runtime division is not supported by this compiler checkpoint yet");
+            } else if operator.text == "/" {
+                left = intParsed(intDivideCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == "%" {
+                left = intParsed(intRemainderCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == ":/" {
+                left = intParsed(intFloorDivideCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == ":%" {
+                left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
             } else {
                 left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
             }
@@ -2956,6 +2982,65 @@ emitListPopHelper := fn(): Unit {
     report("");
 }
 
+/** Emits the checked truncating BigInt division helper used by generated programs that divide at runtime. */
+emitIntDivideHelper := fn(): Unit {
+    report("function lite$divideInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");");
+    report("    }");
+    report("    if (left === -(1n << 63n) && right === -1n) {");
+    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    report("    }");
+    report("    return left / right;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt remainder helper used by generated programs that take a runtime remainder. */
+emitIntRemainderHelper := fn(): Unit {
+    report("function lite$remainderInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: remainder by zero in integer expression\");");
+    report("    }");
+    report("    if (left === -(1n << 63n) && right === -1n) {");
+    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    report("    }");
+    report("    return left % right;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt floor-division helper used by generated programs that floor-divide at runtime. */
+emitIntFloorDivideHelper := fn(): Unit {
+    report("function lite$floorDivideInt(left: bigint, right: bigint): bigint {");
+    report("    const quotient = lite$divideInt(left, right);");
+    report("    const remainder = left % right;");
+    report("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt floor-modulo helper used by generated programs that take a runtime floor modulo. */
+emitIntFloorModuloHelper := fn(): Unit {
+    report("function lite$floorModuloInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: modulo by zero in integer expression\");");
+    report("    }");
+    report("    const remainder = left % right;");
+    report("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
+    report("}");
+    report("");
+}
+
+/** Emits every checked Int division-family helper the program reads. */
+emitIntDivisionHelpers := fn(items: Items): Unit {
+    if (usesBuiltin(items, "divideInt") or usesBuiltin(items, "floorDivideInt")) { emitIntDivideHelper(); }
+    if usesBuiltin(items, "remainderInt") { emitIntRemainderHelper(); }
+    if usesBuiltin(items, "floorDivideInt") { emitIntFloorDivideHelper(); }
+    if usesBuiltin(items, "floorModuloInt") { emitIntFloorModuloHelper(); }
+    return;
+}
+
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
     hasExit := usesBuiltin(items, "exit");
@@ -2966,6 +3051,7 @@ emitProgram := fn(items: Items): Unit {
     emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
+    emitIntDivisionHelpers(items);
     report("export function main(): string {");
     if not hasExit { report("    let lite_out = \"\";"); }
     var indent := "    ";

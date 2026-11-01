@@ -210,6 +210,65 @@ emitListPopHelper := fn(): Unit {
     report("");
 }
 
+/** Emits the checked truncating BigInt division helper used by generated programs that divide at runtime. */
+emitIntDivideHelper := fn(): Unit {
+    report("function lite$divideInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");");
+    report("    }");
+    report("    if (left === -(1n << 63n) && right === -1n) {");
+    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    report("    }");
+    report("    return left / right;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt remainder helper used by generated programs that take a runtime remainder. */
+emitIntRemainderHelper := fn(): Unit {
+    report("function lite$remainderInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: remainder by zero in integer expression\");");
+    report("    }");
+    report("    if (left === -(1n << 63n) && right === -1n) {");
+    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    report("    }");
+    report("    return left % right;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt floor-division helper used by generated programs that floor-divide at runtime. */
+emitIntFloorDivideHelper := fn(): Unit {
+    report("function lite$floorDivideInt(left: bigint, right: bigint): bigint {");
+    report("    const quotient = lite$divideInt(left, right);");
+    report("    const remainder = left % right;");
+    report("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
+    report("}");
+    report("");
+}
+
+/** Emits the checked BigInt floor-modulo helper used by generated programs that take a runtime floor modulo. */
+emitIntFloorModuloHelper := fn(): Unit {
+    report("function lite$floorModuloInt(left: bigint, right: bigint): bigint {");
+    report("    if (right === 0n) {");
+    report("        throw new Error(\"ArithmeticPanic: modulo by zero in integer expression\");");
+    report("    }");
+    report("    const remainder = left % right;");
+    report("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
+    report("}");
+    report("");
+}
+
+/** Emits every checked Int division-family helper the program reads. */
+emitIntDivisionHelpers := fn(items: Items): Unit {
+    if (usesBuiltin(items, "divideInt") or usesBuiltin(items, "floorDivideInt")) { emitIntDivideHelper(); }
+    if usesBuiltin(items, "remainderInt") { emitIntRemainderHelper(); }
+    if usesBuiltin(items, "floorDivideInt") { emitIntFloorDivideHelper(); }
+    if usesBuiltin(items, "floorModuloInt") { emitIntFloorModuloHelper(); }
+    return;
+}
+
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
     hasExit := usesBuiltin(items, "exit");
@@ -220,6 +279,7 @@ emitProgram := fn(items: Items): Unit {
     emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
+    emitIntDivisionHelpers(items);
     report("export function main(): string {");
     if not hasExit { report("    let lite_out = \"\";"); }
     var indent := "    ";

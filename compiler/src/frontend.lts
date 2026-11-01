@@ -1471,8 +1471,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     else if operator.text == ":%" { floorModCode(left.code, right.code) }
                     else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                 left = intParsed(code, folded, true, right.next);
-            } else if operator.text == "/" or operator.text == "%" or operator.text == ":/" or operator.text == ":%" {
-                failAt(source, operatorPosition, prefix, "runtime division is not supported by this compiler checkpoint yet");
+            } else if operator.text == "/" {
+                left = intParsed(intDivideCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == "%" {
+                left = intParsed(intRemainderCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == ":/" {
+                left = intParsed(intFloorDivideCode(left.code, right.code), 0, false, right.next);
+            } else if operator.text == ":%" {
+                left = intParsed(intFloorModuloCode(left.code, right.code), 0, false, right.next);
             } else {
                 left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
             }

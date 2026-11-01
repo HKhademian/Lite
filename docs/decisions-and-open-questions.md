@@ -60,8 +60,7 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter is reserved but unimplemented; the verifier and tester have first slices. The 50 program and 42 rejection verification cases are unchanged in
-behavior; 175 interpreter groups and 9 editor groups pass. The examples index
+formatter is reserved but unimplemented; the verifier and tester have first slices. The 52 program and 40 rejection verification cases keep their behavior; 175 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -74,13 +73,28 @@ mutable `var` locals with whole-value assignment, `if`/`else`, and Boolean or
 unconditional `loop`. Constant-only expressions keep compile-time folding and
 the existing range/division diagnostics; dynamic Int `+ - *` and comparisons are
 lowered to target control flow, with generated TS accumulating report output in
-`main(): string` and C printing directly. Dynamic `/ % :/ :%` and dynamic
-String concatenation are explicit rejections. `break`/`continue`, typed
+`main(): string` and C printing directly. Dynamic `/ % :/ :%` were later
+admitted in the division slice below; dynamic String concatenation remains an
+explicit rejection. `break`/`continue`, typed
 declarations, functions, tuples/lists/arrays, `match`, runtime input, and
 checked dynamic C overflow remain outside this slice. Diagnostics are
 source-positioned (`name:line:column: message`, 1-based source characters) and
 unsupported reserved features name their documentation page. The compiler
-corpus is now 50 program and 42 rejection cases.
+corpus is now 52 program and 40 rejection cases.
+
+## Dynamic Int division and remainder, 2026-11-01
+
+The restricted TS/C compiler lowers dynamic Int `/`, `%`, `:/` and `:%` instead
+of rejecting non-constant operands. Emitted TS and C artifacts call checked
+helpers that preserve truncating versus floor semantics for negative operands,
+throw or exit nonzero on a zero divisor, and reject `INT64_MIN / -1` and
+`INT64_MIN % -1` while leaving `INT64_MIN :% -1` at its representable zero.
+Division artifacts include only the helpers they use, so sources without dynamic
+division keep their existing output and P0 hashes. The corpus moved the two
+former rejection cases to program cases under
+`001-009-runtime-division` and `001-009-runtime-remainder`: 52 program and 40
+rejection cases. The historical P0 `baseline-artifacts.json` remains a 50-case
+hash record; newly added program cases are checked by live compilation and run.
 
 ## String values, multi-value reports and JSON verification fixtures, 2026-10-31
 
@@ -94,7 +108,7 @@ trigraph-prone `?`; String locals are `const`/`const char *` with the existing
 unsupported text forms fail before artifact bytes.
 
 Compiler verification data moved from inline test arrays to one JSON file per
-case under `igniter/tests/compiler/`: 50 program cases and 42 rejection cases.
+case under `igniter/tests/compiler/`: 52 program cases and 40 rejection cases.
 Each case pairs a sibling `.lts` entry source with a JSON model holding a
 `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`; each case has
 optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses

@@ -20,7 +20,7 @@ validation run at the P6 gate.
 7. ~~Value `if` expressions in the compiler emitter~~ — TS done (total, same-kind value branches); C rejects value `if` clearly.
 8a. ~~I/O builtins: `inputArgs`, `inputAll`, `reportError`, `exit`, `textLength`, `textAt`, `textSlice`, with TS emission~~ — TS done; C rejects clearly.
 8b. Generated compiler entry contract: read stdin/args, write stdout/stderr and exit status while preserving the existing `main(): string` corpus contract.
-9. Dynamic Int division/remainder (`/ % :/ :%`).
+9. ~~Dynamic Int division/remainder (`/ % :/ :%`)~~ — done.
 10. Dynamic String concatenation.
 11. `break`/`continue` lowering in compiler loops.
 12. Leading `and`/`or` and any remaining S expression forms.
@@ -31,6 +31,8 @@ validation run at the P6 gate.
 
 - No separate IR artifact; emit TS/C directly.
 - No new language surface beyond the slice.
-- Preserve the existing 50 program / 42 rejection outputs until the slice
+- Preserve the current 52 program / 40 rejection outputs unless a slice
   changes an admitted surface intentionally.
+- The historical P0 `baseline-artifacts.json` retains its 50 program / 42
+  rejection hashes; newly added program cases are checked by live output.
 - Every slice updates the bootstrap plan, parity ledger and counts.

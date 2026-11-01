@@ -4,7 +4,7 @@ Status: **active, 2026-11-01**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 50 program / 42 rejection
+Immediate scope: the bootstrap subset L, S, and the 52 program / 40 rejection
 cases. Replacing the TS igniter for features outside L is a larger owner
 decision and is not assumed here.
 
@@ -119,7 +119,7 @@ keeps that target from growing while it is approached.
 - P5 is complete: the checker covers top-level symbols, block scopes, local
   types, initializers/assignments, Bool conditions, arity/arguments/returns,
   tuple/list/field/index types, mutation grants and break/return placement. S
-  checks, the 42 rejection cases retain exact diagnostics, and invalid programs
+  checks, the 40 rejection cases retain exact diagnostics, and invalid programs
   do not emit artifacts.
 - P6 is in progress: the TS runtime covers checked Int64 arithmetic, code-point
   text, list copies, faults and exit; the compiler now accepts typed scalar
@@ -132,7 +132,9 @@ keeps that target from growing while it is approached.
   value positions. Checked `inputArgs`/`inputAll`/`reportError`/`exit` and
   code-point `textLength`/`textAt`/`textSlice` calls lower to self-contained TS
   helpers in expressions, Unit statements, functions, loops and value `if`
-  branches. The C path rejects function syntax, tuple or list values, list
+  branches. Dynamic Int `/`, `%`, `:/` and `:%` lower to checked TS and C
+  helpers that preserve zero-divisor and signed-minimum faults. The C path
+  rejects function syntax, tuple or list values, list
   traversal, value `if` and the new input/diagnostic/text builtins with clear
   status-2 diagnostics. TS/C output is emitted directly; no separate IR
   deliverable is planned. The full emitter, Node I/O adapter and T-from-S gate

@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **217** interpreter test groups and **9** editor grammar groups; the fast lane
+- **220** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -94,7 +94,8 @@ recursion/`self`, and `return`) now emit runnable TS; the C path rejects
 function syntax with a clear status-2 diagnostic. Checked `inputArgs`,
 `inputAll`, `reportError`, `exit`, `textLength`, `textAt` and `textSlice` calls
 also emit self-contained TS in expressions and statement positions; C rejects
-them clearly. Dynamic division, dynamic String concatenation,
+them clearly. Dynamic Int `/`, `%`, `:/` and `:%` now lower to checked
+TS and C helpers; dynamic String concatenation,
 `break`/`continue`, collections beyond `List<T>`, `match`, runtime input outside
 these helpers and checked dynamic C overflow remain open.
 
@@ -495,7 +496,7 @@ behavior and produces a runnable C2 from S.
       and fix it; record any normalized fallback before accepting it.
 - [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter; C
       compiles the TS-emitter source to a C-hosted TS emitter.
-- [ ] T and C pass all 50 program and 42 rejection cases with exact streams and
+- [ ] T and C pass all 52 program and 40 rejection cases with exact streams and
       status.
 - [ ] No T/C runtime dependency on stage 0, the Lite compiler or a hidden host.
 - [ ] Clean-checkout rebuild produces the same artifact hashes.
@@ -680,7 +681,7 @@ The point is reached only when all of these are true:
 4. T and C are compilers: they read Lite source, check it and emit artifacts.
 5. T compiles S to T2; C compiles S to C2.
 6. `T2 == T` and `C2 == C` byte for byte.
-7. T and C pass the 50 program and 42 rejection cases with exact streams/status.
+7. T and C pass the 52 program and 40 rejection cases with exact streams/status.
 8. T and C compile each other's emitter source as a cross-build.
 9. No stage-1+ runtime dependency on stage 0 or the Lite compiler.
 10. A clean checkout reproduces the artifacts and hashes.

@@ -73,3 +73,23 @@ floorDivCode := fn(left: String, right: String): String {
 floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
 }
+
+/** Emits a checked truncating BigInt division call. */
+intDivideCode := fn(left: String, right: String): String {
+    "lite$divideInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt remainder call. */
+intRemainderCode := fn(left: String, right: String): String {
+    "lite$remainderInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt floor-division call. */
+intFloorDivideCode := fn(left: String, right: String): String {
+    "lite$floorDivideInt(" + left + ", " + right + ")"
+}
+
+/** Emits a checked BigInt floor-modulo call. */
+intFloorModuloCode := fn(left: String, right: String): String {
+    "lite$floorModuloInt(" + left + ", " + right + ")"
+}

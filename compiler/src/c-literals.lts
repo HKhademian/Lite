@@ -77,3 +77,23 @@ floorDivCode := fn(left: String, right: String): String {
 floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? " + right + " : 0))"
 }
+
+/** Emits a checked int64_t truncating division call. */
+intDivideCode := fn(left: String, right: String): String {
+    "lite_divide_int(" + left + ", " + right + ")"
+}
+
+/** Emits a checked int64_t remainder call. */
+intRemainderCode := fn(left: String, right: String): String {
+    "lite_remainder_int(" + left + ", " + right + ")"
+}
+
+/** Emits a checked int64_t floor-division call. */
+intFloorDivideCode := fn(left: String, right: String): String {
+    "lite_floor_divide_int(" + left + ", " + right + ")"
+}
+
+/** Emits a checked int64_t floor-modulo call. */
+intFloorModuloCode := fn(left: String, right: String): String {
+    "lite_floor_modulo_int(" + left + ", " + right + ")"
+}
