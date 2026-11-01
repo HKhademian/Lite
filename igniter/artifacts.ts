@@ -17,8 +17,8 @@ export type ArtifactRun = Readonly<{
   stderr: Buffer;
 }>;
 
-/** Fixed stdin for one artifact execution. */
-export type ArtifactOptions = Readonly<{ stdin?: string | Uint8Array }>;
+/** Fixed stdin and script arguments for one artifact execution. */
+export type ArtifactOptions = Readonly<{ stdin?: string | Uint8Array; args?: readonly string[] }>;
 
 /** Encodes fixed stdin without changing bytes. */
 function inputBytes(input: string | Uint8Array | undefined): Buffer {
@@ -64,7 +64,8 @@ export function runTsArtifact(source: string, options: ArtifactOptions = {}): Ar
         stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
       };
     }
-    const result = spawnSync(process.execPath, [runner], { input: inputBytes(options.stdin), timeout: 10000 });
+    const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])],
+      { input: inputBytes(options.stdin), timeout: 10000 });
     if (result.error !== undefined) throw result.error;
     return {
       phase: 'run', status: result.status, signal: result.signal,

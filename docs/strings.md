@@ -90,6 +90,14 @@ String indexing/character/slicing policy. The detailed FVP text-profile proposal
 remains deferred; [INV-016 evidence](../investigations/INV-016-igniter-text-operations.md)
 records exact coverage and limitations.
 
+The restricted compiler's TS path now accepts the same three helpers as checked
+calls and emits self-contained code-point helpers: `textLength` returns an Int,
+`textAt` a one-code-point String and `textSlice` a half-open String, with the
+same zero-based positions and terminal `BoundPanic` bounds faults as the
+igniter. The C path rejects them clearly for now. This changes no language
+policy: graphemes, normalization, generic String indexing and native
+representation remain open.
+
 ## Related concepts and references
 
 - [Lexical structure](lexical-structure.md)

@@ -129,10 +129,14 @@ keeps that target from growing while it is approached.
   types, literals, checked indexing, `loop sequence as item` traversal and
   `push_back`/`pop_back` mutation with copies in the TS path. Total value `if`
   expressions with same-kind branches lower to TS conditional expressions in
-  value positions. The C path rejects function syntax, tuple or list values,
-  list traversal and value `if` with clear status-2 diagnostics. TS/C output is
-  emitted directly; no separate IR deliverable is planned. The full emitter,
-  Node I/O adapter and T-from-S gate remain.
+  value positions. Checked `inputArgs`/`inputAll`/`reportError`/`exit` and
+  code-point `textLength`/`textAt`/`textSlice` calls lower to self-contained TS
+  helpers in expressions, Unit statements, functions, loops and value `if`
+  branches. The C path rejects function syntax, tuple or list values, list
+  traversal, value `if` and the new input/diagnostic/text builtins with clear
+  status-2 diagnostics. TS/C output is emitted directly; no separate IR
+  deliverable is planned. The full emitter, Node I/O adapter and T-from-S gate
+  remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS

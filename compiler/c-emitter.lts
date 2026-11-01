@@ -1495,6 +1495,36 @@ copiedValueCode := fn(kind: String, code: String): String {
     if isListKind(kind) { listCopyCode(code) } else { code }
 }
 
+/** True for the zero-argument or checked I/O and text builtins this compiler admits. */
+isAdmittedBuiltin := fn(name: String): Bool {
+    name == "inputArgs" or name == "inputAll" or name == "reportError" or name == "exit" or
+    name == "textLength" or name == "textAt" or name == "textSlice"
+}
+
+/** Number of positional arguments one admitted builtin requires. */
+builtinArity := fn(name: String): Int {
+    if name == "inputArgs" or name == "inputAll" { 0 }
+    else if name == "textAt" { 2 }
+    else if name == "textSlice" { 3 }
+    else { 1 }
+}
+
+/** Required kind of argument `index` for one admitted builtin. */
+builtinParameterKind := fn(name: String, index: Int): String {
+    if name == "reportError" or name == "textLength" { "String" }
+    else if name == "textAt" or name == "textSlice" {
+        if index == 0 { "String" } else { "Int" }
+    } else { "Int" }
+}
+
+/** Result kind of one admitted builtin. */
+builtinResultKind := fn(name: String): String {
+    if name == "inputArgs" { "List<String>" }
+    else if name == "inputAll" or name == "textAt" or name == "textSlice" { "String" }
+    else if name == "textLength" { "Int" }
+    else { "Unit" }
+}
+
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
 parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := skipTrivia(source, open + 1, prefix);
@@ -1793,6 +1823,52 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
+            } else if isAdmittedBuiltin(name) {
+                if afterName >= textLength(source) or textAt(source, afterName) =!= "(" {
+                    failAt(source, nameStart, prefix, name + " must be called");
+                }
+                var builtinCursor := skipTrivia(source, afterName + 1, prefix);
+                builtinArityCount := builtinArity(name);
+                builtinCodes: mut List<String> = [];
+                var builtinCount := 0;
+                if builtinArityCount == 0 {
+                    if builtinCursor < textLength(source) and textAt(source, builtinCursor) =!= ")" {
+                        failAt(source, nameStart, prefix, name + " expects no arguments");
+                    }
+                } else {
+                    if builtinCursor < textLength(source) and textAt(source, builtinCursor) =!= ")" {
+                        loop true {
+                            if builtinCount >= builtinArityCount {
+                                suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
+                                failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) +
+                                    suffix + ", got more");
+                            }
+                            builtinExpected := builtinParameterKind(name, builtinCount);
+                            builtinStart := builtinCursor;
+                            builtinValue := self(source, builtinCursor, prefix, locals, functions, params, currentName, builtinExpected, 0);
+                            if builtinValue.kind =!= builtinExpected {
+                                failAt(source, builtinStart, prefix, "argument " + decimalText(builtinCount + 1) + " of " +
+                                    name + " must be " + displayKind(builtinExpected) + ", got " + displayKind(builtinValue.kind));
+                            }
+                            push_back(mut builtinCodes, builtinValue.code);
+                            builtinCount = builtinCount + 1;
+                            builtinCursor = skipTrivia(source, builtinValue.next, prefix);
+                            if builtinCursor < textLength(source) and textAt(source, builtinCursor) == "," {
+                                builtinCursor = skipTrivia(source, builtinCursor + 1, prefix);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+                builtinCursor = expectSymbol(source, builtinCursor, ")", prefix);
+                if builtinCount =!= builtinArityCount {
+                    suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
+                    failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) + suffix +
+                        ", got " + decimalText(builtinCount));
+                }
+                left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
+                    intValue = 0, textValue = "", constant = false, next = builtinCursor);
             } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "push_back");
                 var cursor := skipTrivia(source, grant.next, prefix);
@@ -2289,6 +2365,17 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = 0, textValue = ""));
             continue;
         }
+        if (name == "reportError" or name == "exit") and position < size and textAt(source, position) == "(" {
+            parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
+            position = skipTrivia(source, parsed.next, prefix);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after " + name);
+            }
+            position = skipTrivia(source, position + 1, prefix);
+            push_back(mut items, (kind = "Call", name = "", runtime = "", code = parsed.code,
+                intValue = 0, textValue = ""));
+            continue;
+        }
         if name == "report" {
             if position >= size or textAt(source, position) =!= "(" {
                 failAt(source, position, prefix, "expected ( after report");
@@ -2677,11 +2764,29 @@ cCall := fn(kind: String, code: String): String {
     }
 }
 
+/** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
+unsupportedBuiltinCode := fn(code: String): String {
+    if codeUsesTextCall(code, "lite$inputArgs(") or codeUsesTextCall(code, "lite$inputAll(") {
+        "C backend does not support input builtins yet"
+    } else if codeUsesTextCall(code, "lite$reportError(") or codeUsesTextCall(code, "lite$exit(") {
+        "C backend does not support reportError or exit yet"
+    } else if codeUsesTextCall(code, "lite$textLength(") or codeUsesTextCall(code, "lite$textAt(") or
+        codeUsesTextCall(code, "lite$textSlice(") {
+        "C backend does not support text builtins yet"
+    } else {
+        ""
+    }
+}
+
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items): Unit {
     loop items as item {
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
+        }
+        unsupported := unsupportedBuiltinCode(item.code);
+        if unsupported =!= "" {
+            fail("", unsupported);
         }
         if item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
             fail("", "C backend does not support tuple values yet");

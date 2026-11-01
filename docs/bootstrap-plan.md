@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **213** interpreter test groups and **9** editor grammar groups; the fast lane
+- **217** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -91,9 +91,12 @@ Boolean/unconditional loops with runtime TS/C lowering. This is separate from
 L/S and does not complete a bootstrap phase. Top-level scalar
 functions (Int/String/Bool/Unit parameters/results, positional calls,
 recursion/`self`, and `return`) now emit runnable TS; the C path rejects
-function syntax with a clear status-2 diagnostic. Dynamic division, dynamic
-String concatenation, `break`/`continue`, collections, `match`, runtime input
-and checked dynamic C overflow remain open.
+function syntax with a clear status-2 diagnostic. Checked `inputArgs`,
+`inputAll`, `reportError`, `exit`, `textLength`, `textAt` and `textSlice` calls
+also emit self-contained TS in expressions and statement positions; C rejects
+them clearly. Dynamic division, dynamic String concatenation,
+`break`/`continue`, collections beyond `List<T>`, `match`, runtime input outside
+these helpers and checked dynamic C overflow remain open.
 
 ## Bootstrap parity loop
 
@@ -424,6 +427,11 @@ Emit target text while parsing/checking, following the existing restricted
 compiler's streaming/direct model. The flat item stream is an internal interface,
 not a checked-in IR or a prerequisite. Introduce a richer instruction stream only
 if direct emission becomes unmaintainable.
+
+**T11/T12 verification policy.** During the T11/T12 critical path, each atomic
+slice verifies `npm --prefix igniter run check`, `./lite test --fast`, and focused
+TS tests only. Do not run the full gate, native C, or C parity per slice; those
+are deferred to the P6 gate where full regression and C validation run together.
 
 - [x] TS runtime support: checked Int64 arithmetic, code-point text, list copy
       semantics, diagnostics and exit. The Node I/O adapter remains with the

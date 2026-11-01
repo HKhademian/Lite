@@ -1550,6 +1550,105 @@ test('restricted compiler diagnoses invalid value if expressions and rejects the
   });
 });
 
+test('restricted compiler compiles text builtins with code-point semantics and bounds faults', () => {
+  const source = 'report(textLength("a🙂é"), textAt("a🙂é", 1), textSlice("a🙂é", 1, 3));\n';
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('3 🙂 🙂é\n'), stderr: Buffer.alloc(0),
+  });
+  for (const [bad, pattern] of [
+    ['report(textAt("a", 9));\n', /BoundPanic: textAt index outside text/],
+    ['report(textAt("a", -1));\n', /BoundPanic: textAt index outside text/],
+    ['report(textSlice("abc", 2, 1));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+    ['report(textSlice("abc", 0, 4));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+  ] as const) {
+    const bounds = runCompiler(tsManifestPath, bad);
+    assert.equal(bounds.code, 0, bounds.errors);
+    const boundsRun = runTsArtifact(bounds.output);
+    assert.equal(boundsRun.phase, 'run');
+    assert.notEqual(boundsRun.status, 0);
+    assert.match(boundsRun.stderr.toString(), pattern);
+  }
+});
+
+test('restricted compiler compiles input, diagnostic and exit builtins in value and statement positions', () => {
+  const argsSource = [
+    'label := fn (n: Int): String { if n == 0 { "zero" } else { textAt("abc", n) } }',
+    'names := inputArgs();',
+    'loop names as name { report(textLength(name)); }',
+    'report(if textLength("xy") == 2 { "two" } else { "other" });',
+    'report(label(1), label(0), names[1]);',
+  ].join('\n');
+  const args = runCompiler(tsManifestPath, argsSource);
+  assert.equal(args.code, 0, args.errors);
+  assert.deepEqual(runTsArtifact(args.output, { args: ['ab', 'c'] }), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('2\n1\ntwo\nb zero c\n'), stderr: Buffer.alloc(0),
+  });
+
+  const whole = runCompiler(tsManifestPath, 'report(inputAll());\n');
+  assert.equal(whole.code, 0, whole.errors);
+  assert.deepEqual(runTsArtifact(whole.output, { stdin: 'one\ntwo\n' }), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('one\ntwo\n\n'), stderr: Buffer.alloc(0),
+  });
+  assert.deepEqual(runTsArtifact(whole.output, { stdin: '' }), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('\n'), stderr: Buffer.alloc(0),
+  });
+
+  const diagnostic = runCompiler(tsManifestPath,
+    'report("before");\nreportError("warn");\nexit(3);\n');
+  assert.equal(diagnostic.code, 0, diagnostic.errors);
+  assert.deepEqual(runTsArtifact(diagnostic.output), {
+    phase: 'run', status: 3, signal: null,
+    stdout: Buffer.from('before\n'), stderr: Buffer.from('warn\n'),
+  });
+  const clean = runCompiler(tsManifestPath, 'report("ok");\nexit(0);\n');
+  assert.equal(clean.code, 0, clean.errors);
+  assert.deepEqual(runTsArtifact(clean.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('ok\n'), stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler diagnoses I/O and text builtin arity and argument mismatches', () => {
+  for (const [bad, errors] of [
+    ['report(inputArgs(1));\n', '1:8: inputArgs expects no arguments\n'],
+    ['report(inputAll("p"));\n', '1:8: inputAll expects no arguments\n'],
+    ['reportError();\n', '1:1: reportError expects 1 argument, got 0\n'],
+    ['reportError(1);\n', '1:13: argument 1 of reportError must be String, got Int\n'],
+    ['reportError("x", "y");\n', '1:1: reportError expects 1 argument, got more\n'],
+    ['exit();\n', '1:1: exit expects 1 argument, got 0\n'],
+    ['exit("x");\n', '1:6: argument 1 of exit must be Int, got String\n'],
+    ['report(textLength());\n', '1:8: textLength expects 1 argument, got 0\n'],
+    ['report(textLength(1));\n', '1:19: argument 1 of textLength must be String, got Int\n'],
+    ['report(textAt("a"));\n', '1:8: textAt expects 2 arguments, got 1\n'],
+    ['report(textAt("a", "b"));\n', '1:20: argument 2 of textAt must be Int, got String\n'],
+    ['report(textSlice("a", 0));\n', '1:8: textSlice expects 3 arguments, got 2\n'],
+    ['report(inputArgs);\n', '1:8: inputArgs must be called\n'],
+    ['report(exit(1));\n', '1:8: report does not accept a Unit value\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
+test('restricted C compiler rejects input, diagnostic and text builtins clearly', () => {
+  for (const [bad, message] of [
+    ['report(inputAll());\n', 'C backend does not support input builtins yet\n'],
+    ['report(inputArgs()[0]);\n', 'C backend does not support input builtins yet\n'],
+    ['reportError("x");\n', 'C backend does not support reportError or exit yet\n'],
+    ['exit(2);\n', 'C backend does not support reportError or exit yet\n'],
+    ['report(textLength("abc"));\n', 'C backend does not support text builtins yet\n'],
+    ['report(textAt("abc", 0));\n', 'C backend does not support text builtins yet\n'],
+    ['report(textSlice("abc", 0, 1));\n', 'C backend does not support text builtins yet\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors: message }, bad);
+  }
+});
+
 test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
   assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), {
     code: 0, output: readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8'), errors: '',

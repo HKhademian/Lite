@@ -1491,6 +1491,36 @@ copiedValueCode := fn(kind: String, code: String): String {
     if isListKind(kind) { listCopyCode(code) } else { code }
 }
 
+/** True for the zero-argument or checked I/O and text builtins this compiler admits. */
+isAdmittedBuiltin := fn(name: String): Bool {
+    name == "inputArgs" or name == "inputAll" or name == "reportError" or name == "exit" or
+    name == "textLength" or name == "textAt" or name == "textSlice"
+}
+
+/** Number of positional arguments one admitted builtin requires. */
+builtinArity := fn(name: String): Int {
+    if name == "inputArgs" or name == "inputAll" { 0 }
+    else if name == "textAt" { 2 }
+    else if name == "textSlice" { 3 }
+    else { 1 }
+}
+
+/** Required kind of argument `index` for one admitted builtin. */
+builtinParameterKind := fn(name: String, index: Int): String {
+    if name == "reportError" or name == "textLength" { "String" }
+    else if name == "textAt" or name == "textSlice" {
+        if index == 0 { "String" } else { "Int" }
+    } else { "Int" }
+}
+
+/** Result kind of one admitted builtin. */
+builtinResultKind := fn(name: String): String {
+    if name == "inputArgs" { "List<String>" }
+    else if name == "inputAll" or name == "textAt" or name == "textSlice" { "String" }
+    else if name == "textLength" { "Int" }
+    else { "Unit" }
+}
+
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
 parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := skipTrivia(source, open + 1, prefix);
@@ -1789,6 +1819,52 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
+            } else if isAdmittedBuiltin(name) {
+                if afterName >= textLength(source) or textAt(source, afterName) =!= "(" {
+                    failAt(source, nameStart, prefix, name + " must be called");
+                }
+                var builtinCursor := skipTrivia(source, afterName + 1, prefix);
+                builtinArityCount := builtinArity(name);
+                builtinCodes: mut List<String> = [];
+                var builtinCount := 0;
+                if builtinArityCount == 0 {
+                    if builtinCursor < textLength(source) and textAt(source, builtinCursor) =!= ")" {
+                        failAt(source, nameStart, prefix, name + " expects no arguments");
+                    }
+                } else {
+                    if builtinCursor < textLength(source) and textAt(source, builtinCursor) =!= ")" {
+                        loop true {
+                            if builtinCount >= builtinArityCount {
+                                suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
+                                failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) +
+                                    suffix + ", got more");
+                            }
+                            builtinExpected := builtinParameterKind(name, builtinCount);
+                            builtinStart := builtinCursor;
+                            builtinValue := self(source, builtinCursor, prefix, locals, functions, params, currentName, builtinExpected, 0);
+                            if builtinValue.kind =!= builtinExpected {
+                                failAt(source, builtinStart, prefix, "argument " + decimalText(builtinCount + 1) + " of " +
+                                    name + " must be " + displayKind(builtinExpected) + ", got " + displayKind(builtinValue.kind));
+                            }
+                            push_back(mut builtinCodes, builtinValue.code);
+                            builtinCount = builtinCount + 1;
+                            builtinCursor = skipTrivia(source, builtinValue.next, prefix);
+                            if builtinCursor < textLength(source) and textAt(source, builtinCursor) == "," {
+                                builtinCursor = skipTrivia(source, builtinCursor + 1, prefix);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+                builtinCursor = expectSymbol(source, builtinCursor, ")", prefix);
+                if builtinCount =!= builtinArityCount {
+                    suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
+                    failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) + suffix +
+                        ", got " + decimalText(builtinCount));
+                }
+                left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
+                    intValue = 0, textValue = "", constant = false, next = builtinCursor);
             } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "push_back");
                 var cursor := skipTrivia(source, grant.next, prefix);
@@ -2285,6 +2361,17 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = 0, textValue = ""));
             continue;
         }
+        if (name == "reportError" or name == "exit") and position < size and textAt(source, position) == "(" {
+            parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
+            position = skipTrivia(source, parsed.next, prefix);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after " + name);
+            }
+            position = skipTrivia(source, position + 1, prefix);
+            push_back(mut items, (kind = "Call", name = "", runtime = "", code = parsed.code,
+                intValue = 0, textValue = ""));
+            continue;
+        }
         if name == "report" {
             if position >= size or textAt(source, position) =!= "(" {
                 failAt(source, position, prefix, "expected ( after report");
@@ -2762,6 +2849,86 @@ usesListPop := fn(items: Items): Bool {
     false
 }
 
+/** True when any emitted item calls the named `lite$` helper outside quoted String literal text. */
+usesBuiltin := fn(items: Items, name: String): Bool {
+    loop items as item {
+        if codeUsesTextCall(item.code, "lite$" + name + "(") { return true; }
+    }
+    false
+}
+
+/** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
+emitBuiltinHelpers := fn(items: Items): Unit {
+    if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or
+        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") {
+        report("declare const process: {");
+        report("    argv: string[];");
+        report("    exit(code: number): never;");
+        report("    getBuiltinModule(name: \"node:fs\"): {");
+        report("        readFileSync(fd: number, encoding: \"utf8\"): string;");
+        report("        writeSync(fd: number, text: string): number;");
+        report("    };");
+        report("};");
+        report("");
+    }
+    if usesBuiltin(items, "inputArgs") {
+        report("function lite$inputArgs(): string[] {");
+        report("    return process.argv.slice(2);");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "inputAll") {
+        report("function lite$inputAll(): string {");
+        report("    return process.getBuiltinModule(\"node:fs\").readFileSync(0, \"utf8\");");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "reportError") {
+        report("function lite$reportError(text: string): void {");
+        report("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "exit") {
+        report("function lite$exit(status: bigint): void {");
+        report("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
+        report("    process.exit(Number(status));");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "textLength") {
+        report("function lite$textLength(text: string): bigint {");
+        report("    return BigInt(Array.from(text).length);");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "textAt") {
+        report("function lite$textAt(text: string, position: bigint): string {");
+        report("    const points = Array.from(text);");
+        report("    if (position < 0n || position >= BigInt(points.length)) {");
+        report("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        report("    }");
+        report("    const value = points[Number(position)];");
+        report("    if (value === undefined) {");
+        report("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        report("    }");
+        report("    return value;");
+        report("}");
+        report("");
+    }
+    if usesBuiltin(items, "textSlice") {
+        report("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
+        report("    const points = Array.from(text);");
+        report("    if (start < 0n || end < start || end > BigInt(points.length)) {");
+        report("        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");");
+        report("    }");
+        report("    return points.slice(Number(start), Number(end)).join(\"\");");
+        report("}");
+        report("");
+    }
+    return;
+}
+
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
     report("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
@@ -2791,10 +2958,16 @@ emitListPopHelper := fn(): Unit {
 
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
+    hasExit := usesBuiltin(items, "exit");
+    if hasExit {
+        report("let lite_out = \"\";");
+        report("");
+    }
+    emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
     report("export function main(): string {");
-    report("    let lite_out = \"\";");
+    if not hasExit { report("    let lite_out = \"\";"); }
     var indent := "    ";
     var line := "";
     var count := 0;

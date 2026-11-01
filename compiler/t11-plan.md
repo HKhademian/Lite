@@ -2,8 +2,10 @@
 
 Status: **active, 2026-11-01**. Target order is T00 → T11 → T12 only. C/P7 waits.
 
-Each slice is one atomic commit: implement, verify with `./lite test --fast` plus
-focused tests, then the full gate before recording the gate.
+Each slice is one atomic commit. During T11/T12, verify with
+`npm --prefix igniter run check`, `./lite test --fast`, and focused TS tests only.
+Do not run the full gate, native C, or C parity per slice; full regression and C
+validation run at the P6 gate.
 
 ## Ordered slices
 
@@ -16,7 +18,7 @@ focused tests, then the full gate before recording the gate.
 6b. ~~Loop `seq as item` traversal over lists~~ — TS done (read-only element local); C rejects traversal clearly. `break`/`continue` and list mutation remain deferred.
 6c. ~~List mutation grants and `push_back`/`pop_back` end operations~~ — TS done, including copy semantics; C rejects lists clearly.
 7. ~~Value `if` expressions in the compiler emitter~~ — TS done (total, same-kind value branches); C rejects value `if` clearly.
-8a. I/O builtins: `inputArgs`, `inputAll`, `reportError`, `exit`, `textLength`, `textAt`, `textSlice`, with TS emission.
+8a. ~~I/O builtins: `inputArgs`, `inputAll`, `reportError`, `exit`, `textLength`, `textAt`, `textSlice`, with TS emission~~ — TS done; C rejects clearly.
 8b. Generated compiler entry contract: read stdin/args, write stdout/stderr and exit status while preserving the existing `main(): string` corpus contract.
 9. Dynamic Int division/remainder (`/ % :/ :%`).
 10. Dynamic String concatenation.
