@@ -323,6 +323,14 @@ focused cases are rejected before emission. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 
+## Direct TS/C emission, no separate IR, 2026-11-01
+
+The deliverable for P6/P7 is runnable TS and C compiler artifacts, not an IR. The
+compiler emits target text directly while parsing/checking, matching the existing
+restricted compiler and bootstrap default B3. A flat internal item/instruction
+stream may be used if it simplifies both backends, but it is not a separate
+persisted artifact or a prerequisite.
+
 ## TS runtime groundwork, 2026-11-01
 
 P6 starts with [`compiler/runtime/ts/runtime.ts`](../compiler/runtime/ts/runtime.ts):

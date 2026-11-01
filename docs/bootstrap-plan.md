@@ -411,6 +411,12 @@ tests in 228.6 s; the fast lane passes 190 with five heavy/native skips in 11.7 
 
 **Goal:** produce a runnable TypeScript compiler T from S.
 
+**Direct emission, no separate IR deliverable.** TS and C are the deliverables.
+Emit target text while parsing/checking, following the existing restricted
+compiler's streaming/direct model. The flat item stream is an internal interface,
+not a checked-in IR or a prerequisite. Introduce a richer instruction stream only
+if direct emission becomes unmaintainable.
+
 - [x] TS runtime support: checked Int64 arithmetic, code-point text, list copy
       semantics, diagnostics and exit. The Node I/O adapter remains with the
       generated entry.
