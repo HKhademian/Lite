@@ -126,14 +126,13 @@ keeps that target from growing while it is approached.
   locals, nested/doc/raw comments, transparent scalar and flat named-tuple type
   aliases, flat named-tuple construction and field reads, top-level functions
   with positional calls, recursion/`self` and `return`, and growable `List<T>`
-  types, literals and checked indexing in the TS path. `loop sequence as item`
-  traversal over lists lowers to a TS `for...of` loop with a read-only element
-  local. The C path rejects function syntax, tuple or list values and list
-  traversal with clear status-2 diagnostics. List copies at
-  declaration/argument/return are deferred until list mutation
-  (slice 6c) makes sharing observable. TS/C output is emitted directly; no
-  separate IR deliverable is planned. The full emitter, Node I/O adapter and
-  T-from-S gate remain.
+  types, literals, checked indexing, `loop sequence as item` traversal and
+  `push_back`/`pop_back` mutation with copies in the TS path. Total value `if`
+  expressions with same-kind branches lower to TS conditional expressions in
+  value positions. The C path rejects function syntax, tuple or list values,
+  list traversal and value `if` with clear status-2 diagnostics. TS/C output is
+  emitted directly; no separate IR deliverable is planned. The full emitter,
+  Node I/O adapter and T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS

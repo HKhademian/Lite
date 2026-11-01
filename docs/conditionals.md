@@ -11,6 +11,11 @@ assignments (no write on no match, including grouped values). A value-required
 position still needs a final `else`. The explicit `else { ? }` reservation
 branch, condition/binding correlation, defaults for else-if chains, branch-result
 unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
+The restricted bootstrap compiler separately accepts total, same-kind value
+`if`/`else if`/`else` expressions in initializers, assignments, arguments,
+returns and function-tail positions, emitting TS conditional expressions; the C
+path rejects value `if` clearly. Partial value conditionals, branch unions,
+`then` and `finally` remain unimplemented there.
 
 Lowering selected 2026-11-01: a partial declaration initializer selects the
 branch value or `zero(T)` and stores once; it is not required to materialize a

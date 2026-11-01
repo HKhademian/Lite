@@ -735,6 +735,11 @@ codeUsesListPop := fn(code: String): Bool {
     codeUsesTextCall(code, "lite$listPopBack(")
 }
 
+/** True when emitted target code contains a value-if conditional expression outside quoted String literal text. */
+codeUsesValueIf := fn(code: String): Bool {
+    codeUsesTextCall(code, "Boolean(")
+}
+
 /** Returns the scalar kind of tuple field `label` in canonical `kind`, or empty text when the field is absent. */
 tupleFieldKind := fn(kind: String, label: String): String {
     size := textLength(kind);
@@ -1664,6 +1669,77 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 left = boolParsed(notCode(operand.code), false, false, operand.next);
             }
+        } else if name == "if" {
+            var cursor := skipTrivia(source, next, prefix);
+            conditionStart := cursor;
+            condition := self(source, cursor, prefix, locals, functions, params, currentName, "", 0);
+            if condition.kind =!= "Bool" {
+                failAt(source, conditionStart, prefix, "if condition must be Bool");
+            }
+            conditionCode := if condition.constant {
+                boolLiteralCode(condition.intValue =!= 0)
+            } else {
+                condition.code
+            };
+            cursor = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
+            branchStart := skipTrivia(source, cursor + 1, prefix);
+            first := self(source, branchStart, prefix, locals, functions, params, currentName, expected, 0);
+            cursor = expectSymbol(source, skipTrivia(source, first.next, prefix), "}", prefix);
+            conditionCodes: mut List<String> = [];
+            branchCodes: mut List<String> = [];
+            push_back(mut conditionCodes, conditionCode);
+            push_back(mut branchCodes, first.code);
+            var resultKind := first.kind;
+            var branchCount := 1;
+            loop true {
+                afterBranch := skipTrivia(source, cursor, prefix);
+                if not wordAt(source, afterBranch, "else") {
+                    failAt(source, afterBranch, prefix, "value if requires a final else");
+                }
+                afterElse := skipTrivia(source, afterBranch + 4, prefix);
+                if wordAt(source, afterElse, "if") {
+                    elseConditionStart := skipTrivia(source, afterElse + 2, prefix);
+                    elseCondition := self(source, elseConditionStart, prefix, locals, functions, params, currentName, "", 0);
+                    if elseCondition.kind =!= "Bool" {
+                        failAt(source, elseConditionStart, prefix, "if condition must be Bool");
+                    }
+                    elseConditionCode := if elseCondition.constant {
+                        boolLiteralCode(elseCondition.intValue =!= 0)
+                    } else {
+                        elseCondition.code
+                    };
+                    open := expectSymbol(source, skipTrivia(source, elseCondition.next, prefix), "{", prefix);
+                    elseBranchStart := skipTrivia(source, open + 1, prefix);
+                    branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    if branch.kind =!= resultKind {
+                        failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                            displayKind(resultKind) + " and " + displayKind(branch.kind));
+                    }
+                    cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
+                    push_back(mut conditionCodes, elseConditionCode);
+                    push_back(mut branchCodes, branch.code);
+                    branchCount = branchCount + 1;
+                } else {
+                    open := expectSymbol(source, afterElse, "{", prefix);
+                    elseBranchStart := skipTrivia(source, open + 1, prefix);
+                    branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
+                    if branch.kind =!= resultKind {
+                        failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                            displayKind(resultKind) + " and " + displayKind(branch.kind));
+                    }
+                    cursor = expectSymbol(source, skipTrivia(source, branch.next, prefix), "}", prefix);
+                    push_back(mut branchCodes, branch.code);
+                    branchCount = branchCount + 1;
+                    break;
+                }
+            }
+            var code := branchCodes[branchCount - 1];
+            var index := branchCount - 2;
+            loop index >= 0 {
+                code = "(Boolean(" + conditionCodes[index] + ") ? " + branchCodes[index] + " : " + code + ")";
+                index = index - 1;
+            }
+            left = (kind = resultKind, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
             if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
             afterName := skipTrivia(source, next, prefix);
@@ -1932,6 +2008,112 @@ itemTextPayload := fn(parsed: Parsed): String {
     if isListKind(parsed.kind) { parsed.kind } else { parsed.textValue }
 }
 
+/** Returns the position after the braced block starting at `open`, or -1 when it never closes. Strings and comments are skipped. */
+scanBraceEnd := fn(source: String, open: Int, prefix: String): Int {
+    size := textLength(source);
+    var cursor := open;
+    var depth := 0;
+    loop cursor < size {
+        ch := textAt(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == "}" {
+            depth = depth - 1;
+            cursor = cursor + 1;
+            if depth == 0 { return cursor; }
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    -1
+}
+
+/** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
+scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
+    size := textLength(source);
+    var cursor := start;
+    var depth := 0;
+    loop cursor < size {
+        ch := textAt(source, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if startsWithAt(source, cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+        } else if ch == "{" and depth == 0 {
+            return cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    -1
+}
+
+/** True when the braced body from `open` to `close` is a nonempty single expression: no semicolon and no statement keyword first. */
+valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bool {
+    var cursor := skipTrivia(source, open + 1, prefix);
+    if cursor >= close { return false; }
+    if isNameStart(textAt(source, cursor)) {
+        word := textSlice(source, cursor, skipName(source, cursor));
+        if word == "return" or word == "report" or word == "var" or word == "loop" or
+            word == "break" or word == "continue" or word == "else" or word == "fn" {
+            return false;
+        }
+    }
+    var scan := cursor;
+    loop scan < close {
+        ch := textAt(source, scan);
+        if ch == "\"" {
+            scan = skipAliasString(source, scan);
+        } else if startsWithAt(source, scan, "/*") {
+            scan = skipComment(source, scan, prefix);
+        } else if ch == ";" {
+            return false;
+        } else {
+            scan = scan + 1;
+        }
+    }
+    true
+}
+
+/** Returns the position after one complete value-if chain starting at `position`, or -1 when it lacks a final else or has statement-shaped branches. */
+scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
+    size := textLength(source);
+    var cursor := skipTrivia(source, position, prefix);
+    if not wordAt(source, cursor, "if") { return -1; }
+    cursor = skipTrivia(source, cursor + 2, prefix);
+    loop true {
+        open := scanConditionOpen(source, cursor, prefix);
+        if open < 0 { return -1; }
+        end := scanBraceEnd(source, open, prefix);
+        if end < 0 { return -1; }
+        if not valueIfBranchAt(source, open, end - 1, prefix) { return -1; }
+        after := skipTrivia(source, end, prefix);
+        if not wordAt(source, after, "else") { return -1; }
+        afterElse := skipTrivia(source, after + 4, prefix);
+        if wordAt(source, afterElse, "if") {
+            cursor = skipTrivia(source, afterElse + 2, prefix);
+        } else {
+            if afterElse >= size or textAt(source, afterElse) =!= "{" { return -1; }
+            finalEnd := scanBraceEnd(source, afterElse, prefix);
+            if finalEnd < 0 { return -1; }
+            if not valueIfBranchAt(source, afterElse, finalEnd - 1, prefix) { return -1; }
+            return finalEnd;
+        }
+    }
+    -1
+}
+
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
@@ -2138,6 +2320,29 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if name == "if" {
+            if currentName =!= "" and blockCount > 0 and blocks[blockCount - 1] == "function" {
+                valueEnd := scanValueIfEnd(source, nameStart, prefix);
+                if valueEnd >= 0 {
+                    afterChain := skipTrivia(source, valueEnd, prefix);
+                    if afterChain < size and textAt(source, afterChain) == "}" {
+                        tail := parseExpressionAs(source, nameStart, prefix, locals, functions, functionParams, currentName, currentResult);
+                        if currentResult == "Unit" {
+                            push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
+                                intValue = 0, textValue = ""));
+                        } else {
+                            if tail.kind =!= currentResult {
+                                failAt(source, nameStart, prefix, "cannot return " + displayKind(tail.kind) + " from function " +
+                                    currentName + " returning " + displayKind(currentResult));
+                            }
+                            push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, tail.code),
+                                intValue = 0, textValue = ""));
+                        }
+                        currentReturned = true;
+                        position = afterChain;
+                        continue;
+                    }
+                }
+            }
             conditionStart := position;
             condition := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
             if condition.kind =!= "Bool" {

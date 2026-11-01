@@ -1497,6 +1497,59 @@ test('restricted compiler diagnoses scalar function arity, argument and return m
   }
 });
 
+test('restricted compiler compiles value if expressions in every value position', () => {
+  const source = [
+    'pickInt := fn (flag: Bool): Int { if flag { 10 } else { 20 } }',
+    'pickText := fn (flag: Bool): String { if flag { "yes" } else { "no" } }',
+    'pickBool := fn (flag: Bool): Bool { if flag { true } else { false } }',
+    'classify := fn (n: Int): String { if n < 0 { "negative" } else if n == 0 { "zero" } else { "positive" } }',
+    'nested := fn (a: Bool, b: Bool): Int { if a { if b { 1 } else { 2 } } else { 3 } }',
+    'early := fn (flag: Bool): Int { return if flag { 1 } else { 2 }; }',
+    'x := if 1 < 2 { 41 } else { 0 };',
+    'y: Int = if false { 1 } else { 2 };',
+    'var z := 0;',
+    'z = if true { 7 } else { 8 };',
+    'report(x, y, z, pickInt(true), pickInt(false));',
+    'report(pickText(true), pickText(false), pickBool(true), pickBool(false));',
+    'report(classify(-1), classify(0), classify(5));',
+    'report(nested(true, true), nested(true, false), nested(false, false));',
+    'report(early(true), early(false), pickBool(if true { true } else { false }));',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('41 2 7 10 20\nyes no true false\nnegative zero positive\n1 2 3\n1 2 true\n'),
+    stderr: Buffer.alloc(0),
+  });
+  assert.equal(ts.output, runCompiler(tsManifestPath, source).output);
+});
+
+test('restricted compiler diagnoses invalid value if expressions and rejects them in C', () => {
+  for (const [bad, errors] of [
+    ['x := if 1 { 2 } else { 3 };\n', '1:9: if condition must be Bool\n'],
+    ['x := if true { 2 };\n', '1:19: value if requires a final else\n'],
+    ['x := if true { 2 } else { "a" };\n',
+      '1:27: value if branches must have the same kind, got Int and String\n'],
+    ['x := if true { 1 } else if 1 { 2 } else { 3 };\n', '1:28: if condition must be Bool\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  assert.deepEqual(runCompiler(cManifestPath, 'x := if true { 1 } else { 2 };\nreport(x);\n'), {
+    code: 2, output: '', errors: 'C backend does not support value if expressions yet\n',
+  });
+  assert.deepEqual(runCompiler(cManifestPath, 'if true { report(1); } else { report(2); }\n'), {
+    code: 0, output: '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n' +
+      'int main(void) {\n    int status = 0;\n    if (true) {\n' +
+      '        if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
+      '        if (printf("\\n") < 0) { status = 1; }\n' +
+      '    } else {\n' +
+      '        if (printf("%" PRId64, (int64_t)(INT64_C(2))) < 0) { status = 1; }\n' +
+      '        if (printf("\\n") < 0) { status = 1; }\n' +
+      '    }\n    return status;\n}\n', errors: '',
+  });
+});
+
 test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
   assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), {
     code: 0, output: readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8'), errors: '',

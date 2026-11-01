@@ -32,6 +32,9 @@ emitProgram := fn(items: Items): Unit {
         if codeUsesListIndex(item.code) or codeUsesListPop(item.code) {
             fail("", "C backend does not support list values yet");
         }
+        if codeUsesValueIf(item.code) {
+            fail("", "C backend does not support value if expressions yet");
+        }
     }
     report("#include <stdio.h>");
     report("#include <inttypes.h>");
