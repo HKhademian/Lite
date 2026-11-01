@@ -43,6 +43,17 @@ L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/` remains a P6/P7 placeholder.
 
+Self-hosting runs outlast the ten-second cap in
+[`../igniter/artifacts.ts`](../igniter/artifacts.ts), so the ladder uses
+[`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs). It applies the same
+strict artifact typecheck and `main()` adapter, then runs the artifact with fixed
+stdin and no timeout:
+
+```sh
+node compiler/scripts/run-ts-artifact.mjs \
+  --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
+```
+
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the
 compiler slice first. The remaining stage-0 versus generated gap is tracked in
@@ -75,6 +86,7 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
+| [`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
 
 The backend source is split by role and assembled by manifest order. The
 compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened
