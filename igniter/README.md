@@ -115,6 +115,12 @@ full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
 expanded TS S, the C emitter, the lexer sources and all 92 compiler cases. No
 parser or emitter behavior is claimed yet.
 
+P4 has started with the parser core and type grammar in
+[`../compiler/src/parser.lts`](../compiler/src/parser.lts): scalar names, `Unit`,
+`List<T>` and flat named tuples, plus `Name := type ...;` aliases, with exact
+fixtures under [`../compiler/tests/parser/`](../compiler/tests/parser/).
+Declaration, expression, statement and function-body parsing remain in progress.
+
 **Stage 0 is feature-frozen during bootstrap** (bootstrap defaults B8/B11). Do
 not add new igniter syntax, builtins, host helpers or CLI behavior while the
 Lite implementation and generated compilers lag. New capability is Lite-first:
@@ -717,7 +723,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **186 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **187 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files

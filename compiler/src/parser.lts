@@ -1,0 +1,138 @@
+/* Lite-written parser core. Starts with the type grammar; declaration/body slices follow. */
+
+importFlatAll "../../lib/core/int.lts";
+importFlatAll "../../lib/core/text.lts";
+importFlatAll "../../lib/core/source.lts";
+importFlatAll "../../lib/core/diag.lts";
+importFlatAll "../../lib/core/format.lts";
+importFlatAll "lexer.lts";
+
+/** One flat parse node: kind, name, detail text and source position. */
+Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
+
+/** Parse nodes in source order. */
+Nodes := type List<Node>;
+
+/** Reports one token-positioned parser diagnostic and exits 2. */
+parseFail := fn(token: Token, prefix: String, message: String): Unit {
+    fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
+}
+
+/** Number of tokens, including the final EOF token. */
+tokenCount := fn(tokens: Tokens): Int {
+    var count := 0;
+    loop tokens as token {
+        if token.kind == "EOF" { return count + 1; }
+        count = count + 1;
+    }
+    count
+}
+
+/** Returns the token at `index`; the caller keeps `index` inside the counted list. */
+tokenAt := fn(tokens: Tokens, index: Int): Token {
+    tokens[index]
+}
+
+/** True when the token is the exact symbol `text`. */
+isSymbol := fn(token: Token, text: String): Bool {
+    token.kind == "Symbol" and token.text == text
+}
+
+/** Consumes the exact symbol or reports a parser diagnostic. */
+expectSymbol := fn(tokens: Tokens, index: Int, text: String, prefix: String): Int {
+    token := tokenAt(tokens, index);
+    if not isSymbol(token, text) {
+        parseFail(token, prefix, "expected " + text);
+    }
+    index + 1
+}
+
+/** Parses one type: a name, `List<T>` or a flat tuple with optional labels. */
+parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: String) {
+    token := tokenAt(tokens, index);
+    if token.kind == "Name" {
+        after := tokenAt(tokens, index + 1);
+        if isSymbol(after, "<") {
+            if token.text =!= "List" {
+                parseFail(token, prefix, "unsupported generic type " + token.text);
+            }
+            inner := self(tokens, index + 2, prefix);
+            closed := expectSymbol(tokens, inner.next, ">", prefix);
+            return (next = closed, text = "List<" + inner.text + ">");
+        }
+        return (next = index + 1, text = token.text);
+    }
+    if isSymbol(token, "(") {
+        var cursor := index + 1;
+        var text := "(";
+        var first := true;
+        loop true {
+            if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+            var label := "";
+            if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), ":") {
+                label = tokenAt(tokens, cursor).text + ": ";
+                cursor = cursor + 2;
+            }
+            component := self(tokens, cursor, prefix);
+            if not first { text = text + ", "; }
+            text = text + label + component.text;
+            first = false;
+            cursor = component.next;
+            if isSymbol(tokenAt(tokens, cursor), ",") {
+                cursor = cursor + 1;
+            } else {
+                break;
+            }
+        }
+        closed := expectSymbol(tokens, cursor, ")", prefix);
+        return (next = closed, text = text + ")");
+    }
+    parseFail(token, prefix, "expected a type");
+    (next = index, text = "")
+}
+
+/** Parses one `Name := type Type;` declaration into scalar node fields. */
+parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+    token := tokenAt(tokens, index);
+    if token.kind =!= "Name" {
+        parseFail(token, prefix, "expected a type alias name");
+    }
+    assigned := expectSymbol(tokens, index + 1, ":=", prefix);
+    typeWord := tokenAt(tokens, assigned);
+    if typeWord.kind =!= "Keyword" or typeWord.text =!= "type" {
+        parseFail(typeWord, prefix, "expected type after :=");
+    }
+    parsed := parseType(tokens, assigned + 1, prefix);
+    ended := expectSymbol(tokens, parsed.next, ";", prefix);
+    (next = ended, name = token.text, detail = parsed.text,
+        offset = token.offset, line = token.line, column = token.column)
+}
+
+/** Parses a source made only of type alias declarations, ending at EOF. */
+parseTypeDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
+    count := tokenCount(tokens);
+    nodes: mut List<Node> = [];
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == "EOF" { break; }
+        parsed := parseTypeAlias(tokens, cursor, prefix);
+        push_back(mut nodes, (kind = "TypeAlias", name = parsed.name, detail = parsed.detail,
+            offset = parsed.offset, line = parsed.line, column = parsed.column));
+        cursor = parsed.next;
+    }
+    nodes
+}
+
+/** Formats one parse node as `kind|name|detail|line:column|offset`. */
+dumpNode := fn(node: Node): String {
+    node.kind + "|" + node.name + "|" + node.detail + "|" + decimalText(node.line) + ":" +
+        decimalText(node.column) + "|" + decimalText(node.offset)
+}
+
+/** Reports parsed nodes in source order, one per line. */
+dumpNodes := fn(nodes: Nodes): Unit {
+    loop nodes as node {
+        report(dumpNode(node));
+    }
+}

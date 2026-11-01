@@ -54,8 +54,8 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **186** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 13–14 seconds and skips the full-S lexer sweep.
+- **187** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 14 seconds and skips the full-S lexer sweep.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
@@ -75,7 +75,7 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P4 — Parser, not started.** P3 was completed on 2026-11-01;
+**Current gate: P4 — Parser, in progress.** P3 was completed on 2026-11-01;
 update this line when a gate is completed and use the phase checklists as the
 source of truth.
 
@@ -341,8 +341,10 @@ make the lexer complete.
 
 **Goal:** parse S completely.
 
-- [ ] Types: scalar names, `Unit`, flat named tuples, `List<T>` of supported
-      elements; aliases.
+- [x] Types: scalar names, `Unit`, flat named tuples, `List<T>` of supported
+      elements; aliases. Implemented by `parseType`/`parseTypeAlias` in
+      [`compiler/src/parser.lts`](../compiler/src/parser.lts) with fixtures under
+      [`compiler/tests/parser/`](../compiler/tests/parser/).
 - [ ] Declarations: `:=`, `var`, typed `: Type`, `: mut List<T>`, type aliases,
       functions with annotations.
 - [ ] Expressions: precedence, unary, calls, tuple construction/fields, index,
@@ -361,6 +363,10 @@ make the lexer complete.
 
 **Gate:** S parses; all supported compiler cases parse; negative fixtures reject
 exactly; no declaration is silently skipped.
+
+**P4 in progress:** the parser core and type grammar are landed. Declaration,
+expression, statement and function-body slices remain, followed by the manifest
+order change and the full S parse gate.
 
 **Do not:** require a recursive AST. A flat item/instruction stream is acceptable
 under B3. Do not add records/enums/`match` to make the parser easier.

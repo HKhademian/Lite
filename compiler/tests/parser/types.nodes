@@ -1,0 +1,6 @@
+TypeAlias|Pair|(left: Int, right: Int)|1:1|0
+TypeAlias|Items|List<Pair>|2:1|38
+TypeAlias|Line|(line: Int, column: Int)|3:1|64
+TypeAlias|Scalar|Int|4:1|103
+TypeAlias|Plain|String|5:1|123
+TypeAlias|NoValue|Unit|6:1|145

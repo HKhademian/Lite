@@ -1,0 +1,6 @@
+Pair := type (left: Int, right: Int);
+Items := type List<Pair>;
+Line := type (line: Int, column: Int);
+Scalar := type Int;
+Plain := type String;
+NoValue := type Unit;
