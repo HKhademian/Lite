@@ -15,6 +15,24 @@ SYMBOL_KIND_FUNCTION := fn(): String { "function" }
 /** Canonical symbol kind for a value declaration. */
 SYMBOL_KIND_VALUE := fn(): String { "value" }
 
+/** True for a built-in type name accepted by the bootstrap subset. */
+isBuiltinType := fn(name: String): Bool {
+    name == "Int" or name == "String" or name == "Bool" or name == "Unit" or name == "List"
+}
+
+/** True when a read-only text list contains `target`. */
+hasText := fn(values: List<String>, target: String): Bool {
+    loop values as value {
+        if value == target { return true; }
+    }
+    false
+}
+
+/** Builds a token-shaped source position for a symbol diagnostic. */
+symbolToken := fn(symbol: Symbol): Token {
+    (kind = symbol.kind, text = symbol.name, offset = symbol.offset, line = symbol.line, column = symbol.column)
+}
+
 /** Reports one token-positioned checker diagnostic and exits 2. */
 checkFail := fn(token: Token, prefix: String, message: String): Unit {
     fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
@@ -73,12 +91,17 @@ parseFunctionSymbol := fn(tokens: Tokens, index: Int, prefix: String): (next: In
     var cursor := expectSymbol(tokens, afterName + 1, "(", prefix);
     var detail := "(";
     var parameterCount := 0;
+    parameterNames: mut List<String> = [];
     loop true {
         if isSymbol(tokenAt(tokens, cursor), ")") { break; }
         parameter := tokenAt(tokens, cursor);
         if parameter.kind =!= TOKEN_KIND_NAME() {
             checkFail(parameter, prefix, "expected a parameter name");
         }
+        if hasText(parameterNames, parameter.text) {
+            checkFail(parameter, prefix, "duplicate parameter " + parameter.text);
+        }
+        push_back(mut parameterNames, parameter.text);
         colon := expectSymbol(tokens, cursor + 1, ":", prefix);
         parameterType := parseType(tokens, colon, prefix);
         if parameterCount > 0 { detail = detail + ", "; }
@@ -137,6 +160,67 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
             if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
         }
     }
+    symbols
+}
+
+/** Validates every type name inside one type or signature text. */
+validateTypeText := fn(symbols: Symbols, text: String, depth: Int, symbol: Symbol, prefix: String): Unit {
+    if depth > 16 {
+        checkFail(symbolToken(symbol), prefix, "recursive type alias " + symbol.name);
+    }
+    tokens := tokenize(text, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() { break; }
+        if token.kind == TOKEN_KIND_NAME() {
+            next := tokenAt(tokens, cursor + 1);
+            if isSymbol(next, ":") {
+                cursor = cursor + 1;
+            } else if not isBuiltinType(token.text) {
+                index := findSymbol(symbols, token.text);
+                if index < 0 {
+                    checkFail(symbolToken(symbol), prefix, "unknown type " + token.text);
+                }
+                alias := symbols[index];
+                if alias.kind =!= SYMBOL_KIND_TYPE() {
+                    checkFail(symbolToken(symbol), prefix, "name " + token.text + " is not a type");
+                }
+                validateTypeText(symbols, alias.detail, depth + 1, alias, prefix);
+            }
+        }
+        cursor = cursor + 1;
+    }
+}
+
+/** Validates the annotation of one value declaration, if it has one. */
+validateValueSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Unit {
+    var text := symbol.detail;
+    if startsWithAt(text, 0, "var ") { text = textSlice(text, 4, textLength(text)); }
+    if startsWithAt(text, 0, "mut ") { text = textSlice(text, 4, textLength(text)); }
+    if startsWithAt(text, 0, ":= ") { return; }
+    split := indexOfText(text, " = ", 0);
+    if split >= 0 { text = textSlice(text, 0, split); }
+    if text == "" { return; }
+    validateTypeText(symbols, text, 0, symbol, prefix);
+}
+
+/** Validates collected symbols' type annotations and signatures. */
+validateSymbols := fn(symbols: Symbols, prefix: String): Unit {
+    loop symbols as symbol {
+        if symbol.kind == SYMBOL_KIND_TYPE() or symbol.kind == SYMBOL_KIND_FUNCTION() {
+            validateTypeText(symbols, symbol.detail, 0, symbol, prefix);
+        } else {
+            validateValueSymbol(symbols, symbol, prefix);
+        }
+    }
+}
+
+/** Collects and validates one source's top-level symbols. */
+checkSource := fn(tokens: Tokens, prefix: String): Symbols {
+    symbols := collectSymbols(tokens, prefix);
+    validateSymbols(symbols, prefix);
     symbols
 }
 

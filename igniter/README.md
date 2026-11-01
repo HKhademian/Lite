@@ -126,10 +126,11 @@ declarations are rejected by name. Fixtures live under
 
 P5 has started with the checker foundation in
 [`../compiler/src/check.lts`](../compiler/src/check.lts). It collects top-level
-type aliases, function signatures and value declarations and rejects duplicate
-names, with fixtures under [`../compiler/tests/checker/`](../compiler/tests/checker/).
-Type resolution, scopes, expression/statement checking, arity/return checks and
-exact 42-case rejection parity remain.
+type aliases, function signatures and value declarations; rejects duplicate names
+and parameters; and validates type names, annotation references and alias cycles.
+Fixtures live under [`../compiler/tests/checker/`](../compiler/tests/checker/).
+Scopes, expression/statement checking, arity/return checks and exact 42-case
+rejection parity remain.
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.

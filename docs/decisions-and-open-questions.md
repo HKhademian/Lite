@@ -314,10 +314,11 @@ single-expression blocks. Current artifacts and diagnostics are unchanged. See
 
 P5 starts with [`compiler/src/check.lts`](../compiler/src/check.lts). It collects
 top-level type aliases, function signatures and value declarations in source
-order and rejects duplicate top-level names with positioned diagnostics. Fixtures
-live under [`compiler/tests/checker/`](../compiler/tests/checker/). The full
-scope stack, resolved type compatibility, statement/expression checks, arity and
-return-path checks, and exact 42-case rejection parity remain open. Current
+order; rejects duplicate top-level names and parameters; and validates type names,
+annotation references and alias cycles with positioned diagnostics. Fixtures live
+under [`compiler/tests/checker/`](../compiler/tests/checker/). The full scope
+stack, type compatibility, statement/expression checks, arity and return-path
+checks, and exact 42-case rejection parity remain open. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 

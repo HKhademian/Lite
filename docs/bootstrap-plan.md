@@ -393,11 +393,12 @@ reproduce.
 an artifact.
 
 **P5 in progress:** the Lite checker foundation in
-[`compiler/src/check.lts`](../compiler/src/check.lts) collects top-level symbols
-and rejects duplicate names, with fixtures under
-[`compiler/tests/checker/`](../compiler/tests/checker/). Type resolution, scopes,
-expressions, statements, full signature checking and exact rejection parity
-remain.
+[`compiler/src/check.lts`](../compiler/src/check.lts) collects top-level symbols,
+rejects duplicate names and duplicate parameters, validates type names and alias
+cycles, and checks annotation references, with fixtures under
+[`compiler/tests/checker/`](../compiler/tests/checker/). Scopes, expressions,
+statements, arity/argument/result checks, return paths and exact rejection
+parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.

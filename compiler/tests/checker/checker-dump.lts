@@ -20,4 +20,4 @@ if argCount > 1 {
     exit(2);
 }
 tokens := tokenize(inputAll(), prefix);
-dumpSymbols(collectSymbols(tokens, prefix));
+dumpSymbols(checkSource(tokens, prefix));

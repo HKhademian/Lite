@@ -312,6 +312,9 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
   for (const [bad, errors] of [
     ['x := 1;\nx := 2;\n', '2:1: duplicate top-level name x\n'],
     ['f := fn(a: Int): Int { a }\nf := fn(): Int { 1 }\n', '2:1: duplicate top-level name f\n'],
+    ['x: Missing = 1;\n', '1:1: unknown type Missing\n'],
+    ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
+    ['f := fn(a: Int, a: Int): Int { a }\n', '1:17: duplicate parameter a\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
