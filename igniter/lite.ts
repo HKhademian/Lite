@@ -67,7 +67,7 @@ type Raw = Readonly<{ at: Position }> & (
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; writable: boolean; input: Raw }
-  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw | undefined }
+  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw | undefined; reserved: boolean }
   | { kind: 'typeAlias'; name: string; target: RawType }
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'destructure'; names: readonly Token[]; input: Raw }
@@ -357,7 +357,7 @@ function tokenize(text: string): readonly Token[] {
       if (operator !== undefined) {
         advance(operator.length);
         tokens.push({ kind: 'symbol', text: operator, at: start });
-      } else if ('+-*/%=();,{}<>:.[]'.includes(ch)) {
+      } else if ('+-*/%=();,{}<>:.[]?'.includes(ch)) {
         advance();
         tokens.push({ kind: 'symbol', text: ch, at: start });
       } else { source(`unsupported token ${JSON.stringify(ch)}`, start); }
@@ -455,8 +455,13 @@ class Parser {
     this.expect(':');
     const writable = this.accept('mut');
     const annotation = this.rawType();
-    const input = this.accept('=') ? this.expression() : undefined;
-    return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input, at: name.at };
+    let input: Raw | undefined;
+    let reserved = false;
+    if (this.accept('=')) {
+      if (this.isSymbol('?')) { this.take(); reserved = true; }
+      else input = this.expression();
+    }
+    return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input, reserved, at: name.at };
   }
   tupleEntry(): Readonly<{ label: string | undefined; input: Raw }> {
     if (this.accept('=')) {
@@ -773,9 +778,25 @@ function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
 type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
-type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined };
+type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined; reserved: Set<number>; initialized: Set<number> };
+function markInitialized(binding: Binding, state: CheckState): void {
+  state.initialized.add(binding.slot);
+}
+/** Joins definite-initialization facts over the paths that still reach the continuation. */
+function joinInitialized(paths: readonly ReadonlySet<number>[]): Set<number> {
+  const first = paths[0];
+  if (first === undefined) throw new Error('igniter invariant: no completing initialization path');
+  const joined = new Set(first);
+  for (const path of paths.slice(1)) {
+    for (const slot of [...joined]) if (!path.has(slot)) joined.delete(slot);
+  }
+  return joined;
+}
 function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
   if (state.activeGrant === binding.slot) typeError('overlapping list access during mut argument preparation is not supported yet', at);
+  if (!state.initialized.has(binding.slot)) {
+    typeError(`${binding.name} is reserved storage; assign a whole value before reading it`, at);
+  }
   if (binding.owner !== (state.current?.id ?? 0) && (typeof binding.type === 'string' || binding.type.kind !== 'Function')) {
     typeError(`surrounding runtime data capture (${binding.name}) is not supported yet; pass it as an argument`, at);
   }
@@ -790,6 +811,7 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
   const parameters = signature.parameters.map(parameter => {
     const binding: Binding = { ...parameter, mutable: false, writable: false, slot: state.nextSlot++, owner: id };
     local.set(parameter.name, { kind: 'value', binding });
+    markInitialized(binding, state);
     return binding;
   });
   state.current = { id, signature };
@@ -910,15 +932,20 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       const fallback = raw.arms.findIndex(arm => arm.condition === undefined);
       if (fallback < 0) typeError('subjectless match requires a final _ fallback', at);
       if (fallback !== raw.arms.length - 1) typeError('the subjectless match _ fallback must be last', at);
+      const entry = new Set(state.initialized);
+      const paths: Set<number>[] = [];
       const arms: Readonly<{ condition: Expr | undefined; body: Expr }>[] = [];
       for (const arm of raw.arms) {
+        state.initialized = new Set(entry);
         const condition = arm.condition === undefined ? undefined : checkExpression(arm.condition, names, state);
         if (condition !== undefined && condition.type !== 'Bool') {
           typeError('match condition must be Bool; there is no implicit truthiness', condition.at);
         }
         const body = checkExpression(arm.body, names, state, use === 'discard' ? 'discard' : 'value');
+        if (body.type !== 'Never') paths.push(new Set(state.initialized));
         arms.push({ condition, body });
       }
+      state.initialized = paths.length === 0 ? entry : joinInitialized(paths);
       const candidates = arms.map(arm => arm.body.type).filter(type => type !== 'Never');
       const type = candidates.length === 0 ? 'Never' : candidates[0]!;
       for (const candidate of candidates.slice(1)) {
@@ -934,8 +961,17 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if (raw.otherwise === undefined && use === 'value') {
         typeError('partial conditional values and guarded initializers/assignments are not supported yet; add else', at);
       }
+      const entry = new Set(state.initialized);
       const body = checkExpression(raw.body, names, state, use);
+      const bodyPath = new Set(state.initialized);
+      state.initialized = new Set(entry);
       const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use);
+      const otherwisePath = new Set(state.initialized);
+      const paths: Set<number>[] = [];
+      if (body.type !== 'Never') paths.push(bodyPath);
+      if (otherwise === undefined) paths.push(entry);
+      else if (otherwise.type !== 'Never') paths.push(otherwisePath);
+      state.initialized = paths.length === 0 ? entry : joinInitialized(paths);
       if (otherwise !== undefined && use === 'value' && !fits(otherwise.type, body.type) && !fits(body.type, otherwise.type)) {
         typeError('conditional branch-result unions are not supported yet; use the same result type in each branch', at);
       }
@@ -947,6 +983,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if (use !== 'discard') typeError('value-producing loops are not supported yet; use loop as an action', at);
       // Transfers from a source expression are outside this bounded body-exit implementation.
       const enclosingDepth = state.loopDepth;
+      const entry = new Set(state.initialized);
       let condition: Expr | undefined;
       state.loopDepth = 0;
       try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
@@ -957,11 +994,12 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if (raw.item !== undefined && array === undefined) typeError('named receivers for non-sequence loops are not supported yet', raw.item.at);
       const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
         : { name: raw.item.text, type: array.element, mutable: false, writable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
+      if (item !== undefined) markInitialized(item, state);
       const bodyNames = item === undefined ? names : new Map(names).set(item.name, { kind: 'value', binding: item });
       state.loopDepth++;
       let body: Expr;
       try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
-      finally { state.loopDepth--; }
+      finally { state.loopDepth--; state.initialized = entry; }
       if (array !== undefined && condition !== undefined) return { kind: 'sequenceLoop', input: condition, item, body, type: 'Unit', at };
       return { kind: 'loop', condition, body, type: 'Unit', at };
     }
@@ -1168,9 +1206,26 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
     const own: Binding | undefined = ownSignature !== undefined && item.kind === 'declare'
       ? { name: item.name, mutable: item.mutable, writable: item.writable, slot: state.nextSlot++, type: ownSignature, owner: state.current?.id ?? 0 }
       : undefined;
+    if (own !== undefined) markInitialized(own, state);
     const bodyNames = own !== undefined && !names.has(own.name)
       ? new Map(names).set(own.name, { kind: 'value', binding: own })
       : names;
+    // A reserved declaration supplies storage without a payload; only a later whole-value write initializes it.
+    if (item.kind === 'typedDeclare' && item.reserved) {
+      if (KEYWORDS.has(item.name) || item.name === 'self') source('keyword/self binding names are not supported by this igniter', item.at);
+      const destination = resolveType(item.annotation, bodyNames);
+      if (typeof destination !== 'string' && destination.kind === 'List') {
+        typeError('reserved storage for List and function values is not supported yet', item.at);
+      }
+      const binding: Binding = { name: item.name, mutable: item.mutable, writable: item.writable,
+        slot: state.nextSlot++, type: destination, owner: state.current?.id ?? 0 };
+      names.set(item.name, { kind: 'value', binding });
+      state.reserved.add(binding.slot);
+      // Keep the declaration frame's slot present for the later first whole-value write.
+      items.push({ kind: 'store', binding, input: { kind: 'literal', value: UNIT, type: 'Unit', at: item.at }, declare: true });
+      type = 'Unit';
+      continue;
+    }
     let input: Expr;
     if (item.kind === 'typedDeclare') {
       const destination = resolveType(item.annotation, bodyNames);
@@ -1198,6 +1253,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
           if (type === undefined) throw new Error('igniter invariant: missing pattern component type');
           const binding: Binding = { name: name.text, mutable: false, writable: false, slot: state.nextSlot++, type, owner: state.current?.id ?? 0 };
           names.set(name.text, { kind: 'value', binding });
+          markInitialized(binding, state);
           return binding;
         });
         items.push({ kind: 'destructure', bindings, input });
@@ -1231,6 +1287,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         const binding: Binding = own ?? { name: item.name, mutable: item.mutable,
           writable: item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, { kind: 'value', binding });
+        markInitialized(binding, state);
         items.push({ kind: 'store', binding, input, declare: true });
         type = 'Unit';
         break;
@@ -1242,8 +1299,14 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         const binding = entry.binding;
         if (state.activeGrant === binding.slot) typeError('replacement of a list during its mut argument preparation is not supported yet', item.at);
         if (binding.owner !== (state.current?.id ?? 0)) typeError('replacement of surrounding runtime bindings is not supported yet', item.at);
-        if (!binding.mutable) typeError(`${item.name} is fixed; replacement requires var`, item.at);
+        const firstWrite = state.reserved.has(binding.slot) && !state.initialized.has(binding.slot);
+        if (!firstWrite && !binding.mutable) {
+          typeError(state.reserved.has(binding.slot)
+            ? `${item.name} already has its initialized value; replacement requires var`
+            : `${item.name} is fixed; replacement requires var`, item.at);
+        }
         requireCompatible(input, binding.type, `cannot replace ${typeName(binding.type)} with ${typeName(input.type)}`, item.at);
+        markInitialized(binding, state);
         items.push({ kind: 'store', binding, input, declare: false });
         type = 'Unit';
         break;
@@ -1257,7 +1320,8 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
 
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
-  return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined, activeGrant: undefined }, 'discard');
+  return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined, activeGrant: undefined,
+    reserved: new Set(), initialized: new Set() }, 'discard');
 }
 
 class Input {

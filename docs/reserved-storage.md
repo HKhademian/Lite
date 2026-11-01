@@ -1,6 +1,14 @@
 # Reserved storage without initialization
 
-Status: **value: Type = ? and whole-value first initialization with = selected, 2026-10-19; not implementation-ready**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, partial/callee construction, allocation failure, ownership, and cleanup remain undecided.
+Status: **value: Type = ? and whole-value first initialization with = selected, 2026-10-19; scalar/tuple/fixed-array locals implemented in the igniter, 2026-11-01; broader storage, ownership and partial-construction rules remain open**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, partial/callee construction, allocation failure, ownership, and cleanup remain undecided.
+
+Implementation checkpoint, 2026-11-01: the igniter accepts `name: Type = ?` on
+scalar, flat-tuple and fixed-array typed locals. Reading before the first
+whole-value `=` is a type error; that first write initializes the binding
+without `var`, later replacement requires `var`, and definite initialization is
+joined across `if` and subjectless `match` paths. A loop body does not establish
+initialization after the loop. Reserved List storage, partial/field
+construction, stack/heap placement and cleanup remain unimplemented.
 
 ## Selected initialization marker
 

@@ -266,6 +266,16 @@
         "docs/zero-initialization.md",
         "docs/declarations-and-assignment.md"
       ]
+    },
+    {
+      "id": "init.reserved",
+      "summary": "Reserved storage and first whole-value initialization.",
+      "case": "features/init-reserved.json",
+      "status": "verified",
+      "docs": [
+        "docs/reserved-storage.md",
+        "docs/first-initialization.md"
+      ]
     }
   ]
 }

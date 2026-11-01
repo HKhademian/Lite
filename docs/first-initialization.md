@@ -1,6 +1,14 @@
 # First initialization and definite initialization
 
-Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19; conditional `else { ? }` reservation and branch-correlated initialization selected 2026-10-25**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
+Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19; conditional `else { ? }` reservation and branch-correlated initialization selected 2026-10-25; scalar/tuple/fixed-array locals implemented in the igniter, 2026-11-01**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
+
+Implementation checkpoint, 2026-11-01: the igniter implements `x: Type = ?` for
+scalar, flat-tuple and fixed-array locals. Reads before the first whole-value `=`
+are rejected, the first write is permitted without `var`, later replacement
+requires `var`, and definite initialization is joined across `if` and
+subjectless `match` paths. Loop bodies do not establish initialization after the
+loop. Conditional `else { ? }` reservation, field/element construction and
+initialization through callees remain unimplemented.
 
 The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? when normalization leaves several distinct union members. Bare omission is rejected, not implicit reservation. Other ordinary typed locals retain their selected omitted-initializer policy. Explicitly reserved union storage reuses the no-read-before-initialization rules below.
 

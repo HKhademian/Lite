@@ -1,0 +1,22 @@
+{
+  "id": "init.reserved",
+  "kind": "feature",
+  "source": {
+    "file": "init-reserved.lts",
+    "hash": "sha256:17bd0c392b187fc7042805ac7ea976938d3b0d9af586aa2c6c8e8e74954749ae"
+  },
+  "features": [
+    "init.reserved"
+  ],
+  "guideline": "Checks reserved storage and the first whole-value write for scalar, tuple and fixed-array locals.",
+  "cases": [
+    {
+      "name": "first-write",
+      "stdout": {
+        "text": "5 1 x 3 4\n",
+        "hash": "sha256:0d5fa681e9b0fdff31e2000bc3881d46795f2888caa35d7387468c56ef3f8f88"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 84 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 85 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 29 registered, 29 cases/);
+    assert.match(covered.stdout, /features: 30 registered, 30 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1238,6 +1238,30 @@ test('typed scalar, tuple and fixed-array declarations initialize or zero-initia
   fault('x: Int = "a";', 'TypeError');
   fault('l: List<Int>;', 'TypeError');
   fault('x: [Int; 2] = [1];', 'TypeError');
+});
+test('reserved storage initializes once and rejects reads before its first whole-value write', () => {
+  assert.equal(run('x: Int = ?; x = 74; report(x);').output, '74\n');
+  assert.equal(run('var y: Int = ?; y = 1; y = 2; report(y);').output, '2\n');
+  assert.equal(run('pair: (:Int, :String) = ?; pair = (1, "a"); report(pair.0, pair.1);').output, '1 a\n');
+  assert.equal(run('values: [Int; 2] = ?; values = [3, 4]; report(values[0], values[1]);').output, '3 4\n');
+  assert.equal(run('x: Int = ?; { x = 5; } report(x);').output, '5\n');
+  assert.equal(run('loop { x: Int = ?; x = 1; report(x); break }').output, '1\n');
+  assert.equal(run('pick := fn(): Int { var n: Int = ?; n = 3; n } report(pick());').output, '3\n');
+  fault('x: Int = ?; report(x);', 'TypeError');
+  fault('x: Int = ?; y := x;', 'TypeError');
+  fault('x: Int = ?; x += 1;', 'TypeError');
+  fault('x: Int = ?; x = 1; x = 2;', 'TypeError');
+  fault('x: Int = ?; x = "a";', 'TypeError');
+  fault('x: List<Int> = ?;', 'TypeError');
+  fault('x := ?;', 'SourceError');
+});
+test('reserved storage requires initialization on every path that reaches a read', () => {
+  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { x = 2 } report(x);').output, '1\n');
+  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { exit(0) } report(x);').output, '1\n');
+  assert.equal(run('x: Int = ?; match { 1 < 2 { x = 1 } _ { x = 2 } } report(x);').output, '1\n');
+  fault('x: Int = ?; if 1 < 2 { x = 1 } report(x);', 'TypeError');
+  fault('x: Int = ?; loop { x = 1; break } report(x);', 'TypeError');
+  fault('x: Int = ?; match { 1 < 2 { x = 1 } _ { report("no"); } } report(x);', 'TypeError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

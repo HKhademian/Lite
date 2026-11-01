@@ -6,7 +6,9 @@ Implementation checkpoint, 2026-11-01: the igniter supports omitted
 initializers on typed locals for Int, Float, String, Bool, Unit, flat tuples and
 fixed arrays. `name: Type = value` also works for those scalar/tuple/array
 declarations. Zero initialization of List and function values remains
-unsupported and reports a type error.
+unsupported and reports a type error. Reserved `name: Type = ?` storage with
+first whole-value initialization is implemented for the same scalar/tuple/array
+locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
@@ -110,7 +112,7 @@ Name uses its declared default Guest; stats explicitly zeroes its fields and byp
 
 ## Separate explicit uninitialized storage
 
-Value: Type = ? requests storage without zeroing or default construction. It is a distinct state containing unspecified bytes, not the type's initialized zero value, and still needs the separate definite-initialization rules before value use. The old reserve() operation remains unselected. See [reserved storage](reserved-storage.md).
+Value: Type = ? requests storage without zeroing or default construction. It is a distinct state containing unspecified bytes, not the type's initialized zero value, and still needs the separate definite-initialization rules before value use. The igniter now enforces those rules for whole-value scalar/tuple/fixed-array locals; partial construction and ownership remain open. The old reserve() operation remains unselected. See [reserved storage](reserved-storage.md) and [first initialization](first-initialization.md).
 
 ## Result and error boundaries
 
