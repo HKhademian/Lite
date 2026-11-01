@@ -1294,25 +1294,22 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if left.kind == "Int" {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
-            boolParsed(boolLiteralCode(value), value, true, right.next)
-        } else {
-            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+            return boolParsed(boolLiteralCode(value), value, true, right.next);
         }
-    } else {
-        if operator =!= "==" and operator =!= "=!=" {
-            failAt(source, at, prefix, "operator " + operator + " requires Int operands");
-        }
-        if left.constant and right.constant {
-            value := if left.kind == "String" {
-                compareTexts(operator, left.textValue, right.textValue)
-            } else {
-                compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
-            };
-            boolParsed(boolLiteralCode(value), value, true, right.next)
-        } else {
-            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
-        }
+        return boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next);
     }
+    if operator =!= "==" and operator =!= "=!=" {
+        failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+    }
+    if left.constant and right.constant {
+        value := if left.kind == "String" {
+            compareTexts(operator, left.textValue, right.textValue)
+        } else {
+            compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
+        };
+        return boolParsed(boolLiteralCode(value), value, true, right.next);
+    }
+    boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
 }
 
 /** Parses a signed decimal literal, allowing whitespace after the sign. Returns target code, checked value and next position; exits 2 on malformed or out-of-range input. */
