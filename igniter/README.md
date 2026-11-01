@@ -581,12 +581,13 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.33**, tag **igniter-v0.1.0-alpha.33**, adds mixed
-`Int`/`Float` arithmetic and comparisons: the integer operand converts to the
-floating operand's width, so `1.2 + kg` is `Float` and `Int8 + Float32` is
-`Float32`. Large `Int64` values can lose precision through that conversion;
-assignments, arguments and returns still require a lossless widening.
-Previous checkpoints stay fixed:
+Version **0.1.0-alpha.34**, tag **igniter-v0.1.0-alpha.34**, completes loop
+metadata and exits: `.count`/`.item`/positional `.index` in bodies and `then`,
+payload `break`/`continue`, tagged `@name loop` targets with `break @name`,
+`continue @name`, `return @name`, and `@name.value`/`.count`/`.item`/`.index`
+access from nested code. Inner `then` blocks are skipped by targeted exits and
+the target's `then` runs. The strict TypeScript check is clean again after the
+loop-value work. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -649,7 +650,9 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.32**, commit `b05c9ef`: sized integer and floating widths with lossless widening.
 
-- **igniter-v0.1.0-alpha.33**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.33**, commit `b61c524`: mixed Int/Float arithmetic and comparisons.
+
+- **igniter-v0.1.0-alpha.34**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
