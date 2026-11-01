@@ -309,7 +309,10 @@ TypeScript remains an important maintained web target, while C is the selected
 first native target and a maintained library/project export and migration path.
 Possible AssemblyScript/early Wasm support needs its own compatibility checks.
 This target direction is selected; a complete self-hosted compiler snapshot and
-verified compiler-to-compiler rebuild chain do not exist yet.
+verified compiler-to-compiler rebuild chain do not exist yet. The staged
+implementation route, agent gates and definition of done are in the
+[bootstrap and self-hosting plan](bootstrap-plan.md); it records implementation
+defaults without selecting new language, module or std rules.
 
 The selected [bootstrap version-control rule](versioning-and-naming.md#bootstrap-source-continuity)
 requires stable milestone tags tied to exact commits and a recorded map of which

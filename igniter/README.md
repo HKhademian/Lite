@@ -7,6 +7,10 @@ alongside it until the self-hosted path is satisfactory. Preserve this readable 
 bootstrap permanently. TS remains a maintained web target and C the first native/
 export target; full self-hosting and library export are not implemented yet.
 
+The staged compiler-bootstrap path and agent gates are recorded in the
+[bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
+this igniter's supported language or claim a self-hosted result.
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript

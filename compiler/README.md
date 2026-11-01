@@ -5,6 +5,11 @@ example collection and not the igniter: the sources here are Lite programs that
 parse a restricted Lite subset and emit TypeScript or C. The igniter in
 [`../igniter/`](../igniter/) executes them today.
 
+The staged path from this prototype to runnable TS/C bootstrap compilers is the
+[bootstrap and self-hosting plan](../docs/bootstrap-plan.md). It is an
+implementation plan; it does not change the restricted compiler's current
+contract or select new language syntax.
+
 ## Layout
 
 | Path | Role |

@@ -236,7 +236,7 @@ Selected:
 - The formatter preserves meaning, is idempotent, and leaves a malformed or unverified file unchanged while reporting a diagnostic and failure status.
 - Lightweight native execution is a core priority: fast execution/startup, low memory overhead, small runtime support, and small final executables. Ordinary native programs should require neither a VM nor a tracing garbage collector. These are goals, not implementation guarantees; memory model, backend, numeric budgets, and linking mechanisms remain open. Preserve selected copies, safety, and cleanup; see [performance priorities](../memory-and-performance.md#lightweight-native-execution-priority).
 - Salam joins the project reference languages. Simple English is the shared reference human-language presentation. Familiar-language source/teaching and a bridge to English are a [proposal under investigation](../multilingual-source-and-learning.md), beyond accepted Unicode names; no localized syntax or conversion mechanism is selected.
-- The project has a limited experimental interpreter; the broader language is a design draft with no native or self-hosted compiler.
+- The project has a limited experimental interpreter; the broader language is a design draft with no native or self-hosted compiler. The staged implementation route is the [bootstrap and self-hosting plan](../bootstrap-plan.md); it records implementation defaults without changing these selected rules or claiming a self-hosted result.
 
 Open: package/build syntax, runtime/native ABI, complete formatter implementation, and module resolution details.
 
