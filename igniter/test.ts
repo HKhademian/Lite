@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 85 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 86 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 30 registered, 30 cases/);
+    assert.match(covered.stdout, /features: 31 registered, 31 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1811,7 +1811,7 @@ test('invalid tuple shapes, positions and transfers fail before any input or out
   for (const source of ['(a, b) := (1,);', '(a,) := ();',
     'pair := (1, 2); pair.2;', 'pair := (1, 2); pair.9223372036854775807;',
     'f := fn(pair: (:Int, :String)): String { pair.1 } f((1, true));',
-    'pair := (1, 2); report(pair);', 'pair := (1, 2); report(pair == pair);',
+    'pair := (1, 2); report(pair == pair);',
     'pair := (1, 2); pair();', 'textLength((1, 2));',
     'f := fn(): Int { 1 } value := (f,);', 'value := ((1, 2), 3);',
     'f := fn(): (:Int, :(:Int, :Int)) { (1, 2) }']) {
@@ -1921,7 +1921,7 @@ test('report evaluates each argument once left to right and writes the joined li
 });
 test('prompt and report signatures fail before effects without broadening other helpers or tuple spread', () => {
   for (const code of ['inputInt(7);', 'inputInt("a", "b");', 'inputInt(("a",));',
-    'report();', 'report("prefix", (1, 2));', 'report("prefix", missing);',
+    'report();', 'report("prefix", [1, 2]);', 'report("prefix", missing);',
     'inputFloat("prompt");', 'inputLine("prompt");', 'inputWord("prompt");', 'reportError("a", 1);']) {
     let observed = false;
     assert.throws(() => execute(compile(`report("before"); ${code}`), {
@@ -1931,6 +1931,16 @@ test('prompt and report signatures fail before effects without broadening other 
   }
   fault('values := (1, 2); report(...values);', 'SourceError');
   assert.equal(run('report := fn(a: Int, b: Int): Int { a + b } result := report(2, 3);').output, '');
+});
+test('report displays flat tuples source-like with labels and a singleton comma', () => {
+  assert.equal(run('report("a tuple", (), (1,), (1,2), (1, left=2, right=3, 4));').output,
+    'a tuple Unit (1,) (1, 2) (1, left=2, right=3, 4)\n');
+  assert.equal(run('t := (1, 2); report(t);').output, '(1, 2)\n');
+  assert.equal(run('stored := (1, 2); named: (left: Int, right: Int) = stored; report(named);').output,
+    '(left=1, right=2)\n');
+  assert.equal(run('pair := fn(): (:Int, :String) { (7, "x") } report(pair());').output, '(7, x)\n');
+  fault('report([1, 2]);', 'TypeError');
+  fault('reportError((1, 2));', 'TypeError');
 });
 test('numbered prompt/report example runs through the root command with real redirected stdin', () => {
   const example = new URL('../examples/007-prompts-and-report.lts', import.meta.url);
@@ -2046,7 +2056,7 @@ test('invalid labels and unsupported tuple extensions are rejected before effect
     ['token := (kind = "number"); (local = kind) := token;', 'SourceError'],
     ['var token := (kind = "number"); token.kind = "other";', 'SourceError'],
     ['token := (kind = "number"); f := fn(): String { token.kind }', 'TypeError'],
-    ['token := (kind = "number"); report(token);', 'TypeError'],
+    ['token := (kind = "number"); reportError(token);', 'TypeError'],
   ]) {
     if (code === undefined || category === undefined) throw new Error('bad fixture');
     let observed = false;

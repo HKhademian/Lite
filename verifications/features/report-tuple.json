@@ -1,0 +1,22 @@
+{
+  "id": "report.tuple",
+  "kind": "feature",
+  "source": {
+    "file": "report-tuple.lts",
+    "hash": "sha256:35b61838dc5af81f73d9f6eec4fcdc9f669bc4606e93b6e84d224ba8e2f15105"
+  },
+  "features": [
+    "report.tuple"
+  ],
+  "guideline": "Checks source-like report display of Unit, singleton, flat and labeled tuple arguments.",
+  "cases": [
+    {
+      "name": "tuple-display",
+      "stdout": {
+        "text": "a tuple Unit (1,) (1, 2) (1, left=2, right=3, 4)\n(left=1, right=2)\n",
+        "hash": "sha256:386414c166257f6659357a1e214d811bb48918708c00004de3a428698dd6257b"
+      },
+      "exitCode": 0
+    }
+  ]
+}

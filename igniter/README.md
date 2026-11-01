@@ -507,13 +507,17 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   line without LF/CRLF, including a valid empty line or nonempty final EOF line.
   Thus `inputInt()` followed by `inputLine()` can return empty text at a newline.
   EOF without a requested value faults; there is no retry or fabricated value.
-- `report(value, ...)` accepts one or more ordinary scalar/Unit arguments.
-  Evaluate them once left to right, then join their displayed values with one
-  space and append one newline on stdout. An optional first String such as
-  "sum:" is just another value, with no special detection or formatting syntax.
-  Empty strings remain values and still participate in spacing. Embedded
-  newlines are data; the helper always appends its own final newline.
-  Tuple/callable values, report() and report(...tuple) remain unsupported.
+- `report(value, ...)` accepts one or more ordinary scalar/Unit arguments and
+  flat fixed tuples. Evaluate them once left to right, then join their displayed
+  values with one space and append one newline on stdout. An optional first
+  String such as "sum:" is just another value, with no special detection or
+  formatting syntax. Empty strings remain values and still participate in
+  spacing. Embedded newlines are data; the helper always appends its own final
+  newline. A tuple is displayed source-like from its static type: `(1,)` for a
+  one-component tuple, `(1, 2)` for plain components, and
+  `(1, left=2, right=3, 4)` with `label=value` for named components. Unit stays
+  `Unit`, so `()` in value position displays as `Unit`. Array/list/callable
+  values, report(), report(...tuple) and reportError(tuple) remain unsupported.
   `reportError(value)` keeps its one-value stderr/report-only behavior, and
   inputFloat/inputLine/inputWord retain their zero-argument forms.
   Strings are shown as text, Unit as `Unit`, floats using Number's conversion.
@@ -604,7 +608,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **169 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **170 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -613,7 +617,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 30 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 31 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

@@ -109,7 +109,7 @@ bytes or artifact inspection rather than program input/output.
 ## Evidence
 
 - Strict `tsc --noEmit` checking passes.
-- All **169 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **170 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass.
 - All 43 program cases pass four-way execution parity; all 34 rejection
   cases pass exact diagnostics through both compilers.

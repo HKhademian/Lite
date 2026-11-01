@@ -1172,12 +1172,15 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         }
       } else if (name === 'report') {
         if (args.length === 0) typeError('report expects at least one value', at);
+        if (args.some(arg => typeof arg.type !== 'string' && arg.type.kind !== 'Tuple')) {
+          typeError('report currently accepts scalar, Unit and flat tuple values only', at);
+        }
       } else if (name === 'exit') {
         if (args.length > 1 || (args[0] !== undefined && args[0].type !== 'Int')) {
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
-      if (args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept aggregate/function values yet; report scalar components', at);
+      if (name !== 'report' && args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept aggregate/function values yet; report scalar components', at);
       return { kind: 'call', name, args, type, at };
     }
     default: return unreachable(raw);
@@ -1364,6 +1367,20 @@ function format(value: Value): string {
     case 'Function': throw new Error('igniter invariant: formatting a checked function');
     default: return unreachable(value);
   }
+}
+/** Displays one report argument; flat tuples use labeled source-like parentheses. */
+function formatReport(value: Value, type: Type): string {
+  if (value.kind !== 'Tuple') return format(value);
+  if (typeof type === 'string' || type.kind !== 'Tuple') {
+    throw new Error('igniter invariant: tuple display without a tuple type');
+  }
+  const parts = value.items.map((item, index) => {
+    const member = type.items[index];
+    if (member === undefined) throw new Error('igniter invariant: tuple display arity mismatch');
+    const text = formatReport(item, member.type);
+    return member.label === undefined ? text : `${member.label}=${text}`;
+  });
+  return parts.length === 1 ? `(${parts[0]},)` : `(${parts.join(', ')})`;
 }
 function arithmetic(op: Operator, left: Value, right: Value, at: Position): Value {
   if (op === '+' && left.kind === 'String' && right.kind === 'String') {
@@ -1637,7 +1654,12 @@ export function execute(program: Program, io: IO): number {
           case 'report': case 'reportError': {
             if (args.length === 0) throw new Error('igniter invariant: missing report argument');
             const writer = expr.name === 'report' ? io.report : io.reportError;
-            writer(args.map(format).join(' ') + '\n'); return UNIT;
+            const text = args.map((value, index) => {
+              const argument = expr.args[index];
+              if (argument === undefined) throw new Error('igniter invariant: missing checked report argument');
+              return formatReport(value, argument.type);
+            }).join(' ');
+            writer(text + '\n'); return UNIT;
           }
           case 'exit': {
             const value = args[0];

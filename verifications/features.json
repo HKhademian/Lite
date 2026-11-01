@@ -201,6 +201,15 @@
       ]
     },
     {
+      "id": "report.tuple",
+      "summary": "Source-like report display of flat tuple values.",
+      "case": "features/report-tuple.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
+    },
+    {
       "id": "int.limits",
       "summary": "Signed 64-bit Int boundaries.",
       "case": "features/int-limits.json",

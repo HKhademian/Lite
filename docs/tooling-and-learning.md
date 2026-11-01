@@ -240,7 +240,7 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 169 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 170 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
@@ -448,20 +448,29 @@ evaluate it once, write its exact text to stdout without an added newline, then
 read the integer. Invalid input or EOF still faults with no retry or repeated
 prompt. This is an explicit output request, including when stdin is redirected.
 
-report accepts one or more ordinary scalar/Unit values. Evaluate each once in
-written order before writing the report; join displayed values with one space
-and append one newline. A first String is an ordinary value, so an optional label
-needs no special recognition. No template placeholders or formatting language are
-selected. Single-value reporting retains its previous behavior.
+report accepts one or more ordinary scalar/Unit values and flat fixed tuples.
+Evaluate each once in written order before writing the report; join displayed
+values with one space and append one newline. A first String is an ordinary
+value, so an optional label needs no special recognition. No template
+placeholders or formatting language are selected. Single-value reporting
+retains its previous behavior.
+
+Selected 2026-11-01: a tuple argument is displayed source-like from its static
+type. A one-component tuple keeps its comma, `(1,)`; longer tuples separate
+components with a comma and one space, `(1, 2)`. A named component is written
+`label=value`, as in `(1, left=2, right=3, 4)`; an unnamed component has no
+label. Unit remains `Unit`, so `()` in value position still displays as `Unit`.
+No quoting, sorting, padding or nested formatting is introduced by this rule.
 
 The user explicitly chooses ordinary multiple arguments only: ...values in the
 request describes the helper's argument count, not source-level tuple call spread.
-report() and tuple/callable reporting stay unsupported. reportError and the other
-input helpers retain their current signatures. This is temporary FVP scaffolding,
-not a general variadic function implementation or a permanent standard-library API.
+report() and call spread stay unsupported. Arrays, lists and callables remain
+unreportable, and reportError keeps its single ordinary-value contract. This is
+temporary FVP scaffolding, not a general variadic function implementation or a
+permanent standard-library API.
 
 The [007 example](../examples/007-prompts-and-report.lts) runs through ./lite run.
-Strict checking and all 69 interpreter test groups pass, including effect order,
+Strict checking and all 170 interpreter test groups pass, including effect order,
 prompt/output failure, invalid input, pre-effect rejection and real CLI output.
 See [INV-004 evidence](../investigations/INV-004-fvp-prompt-and-report-values.md).
 
