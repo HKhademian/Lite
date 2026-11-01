@@ -1213,6 +1213,67 @@ test('restricted compiler diagnoses invalid list types, literals and indexes cle
   }
 });
 
+test('restricted compiler compiles list traversal to runnable TS', () => {
+  const source = [
+    'Ints := type List<Int>;',
+    'Chain := type Ints;',
+    'Pair := type (kind: String, code: Int);',
+    'Pairs := type List<Pair>;',
+    'make := fn (): Chain { [6, 7] }',
+    'pairs := fn (): Pairs { [(kind = "number", code = 12), (kind = "symbol", code = 3)] }',
+    'values: Ints = [10, 20];',
+    'names: List<String> = ["alpha", "beta"];',
+    'loop values as value {',
+    '    report(value);',
+    '}',
+    'loop names as name {',
+    '    report(name);',
+    '}',
+    'loop pairs() as pair {',
+    '    report(pair.kind, pair.code);',
+    '}',
+    'loop make() as value {',
+    '    report(value);',
+    '}',
+    'item: String = "outer";',
+    'loop values as item {',
+    '    report(item);',
+    '    if item == 10 {',
+    '        item: String = "inner";',
+    '        report(item);',
+    '    }',
+    '    report(item);',
+    '}',
+    'report(item);',
+    'loop values as ignored {',
+    '    report("tick");',
+    '}',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('10\n20\nalpha\nbeta\nnumber 12\nsymbol 3\n6\n7\n10\ninner\n10\n20\n20\nouter\ntick\ntick\n'),
+    stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler diagnoses invalid list traversal clearly', () => {
+  for (const [bad, errors] of [
+    ['loop 1 as item { report(item); }\n', '1:6: loop sequence must be a List, got Int\n'],
+    ['loop true as item { report(item); }\n', '1:6: loop sequence must be a List, got Bool\n'],
+    ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
+    ['values: List<Int> = [1];\nloop values as item {\n    item: Int = 2;\n}\n', '3:5: duplicate local item\n'],
+    ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
+    ['values: List<Int> = [1];\nloop values as item {\n    report(item);\n}\nreport(item);\n', '5:8: unknown value item\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  assert.deepEqual(runCompiler(cManifestPath, 'loop [1, 2] as item { report(item); }\n'), {
+    code: 2, output: '', errors: 'C backend does not support list traversal yet\n',
+  });
+});
+
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
   const source = [
     '/* ordinary leading comment',

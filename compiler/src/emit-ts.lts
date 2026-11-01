@@ -167,6 +167,10 @@ emitProgram := fn(items: Items): Unit {
         } else if item.kind == "EndIf" {
             indent = dedent(indent);
             report(indent + "}");
+        } else if item.kind == "LoopSeq" {
+            report(indent + "for (const " + item.runtime + " of " + item.code + ") {");
+            indent = indent + "    ";
+            report(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "Boolean(true)" }
                 else if item.code == "false" { "Boolean(false)" }

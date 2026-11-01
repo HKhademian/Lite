@@ -26,6 +26,9 @@ emitProgram := fn(items: Items): Unit {
         if item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
             fail("", "C backend does not support list values yet");
         }
+        if item.kind == "LoopSeq" {
+            fail("", "C backend does not support list traversal yet");
+        }
         if codeUsesListIndex(item.code) {
             fail("", "C backend does not support list values yet");
         }

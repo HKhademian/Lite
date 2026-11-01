@@ -136,16 +136,20 @@ appear in local, parameter and result annotations. Flat named tuples use
 `(label: Type, ...)` types, `(label = value, ...)` construction and `.label`
 reads with Int/String/Bool components. `List<T>` accepts scalar or flat
 named-tuple elements, `[value, ...]` construction, contextual `[]`, and checked
-`values[index]` reads with an Int index. Unnamed tuples, nested tuples, nested
-lists, destructuring, spread, list reporting/equality, list traversal, list
-mutation and arrays remain rejected. Constant-only expressions
+`values[index]` reads with an Int index. `loop sequence as item { ... }`
+traverses a List value once, binding a read-only item local of the element kind
+that is scoped to the loop body and may shadow an outer name; tuple elements
+support `.label` reads. Unnamed tuples, nested tuples, nested lists,
+destructuring, spread, list reporting/equality, list mutation, list copies and
+arrays remain rejected. Constant-only expressions
 keep their compile-time folding and range/division diagnostics; runtime
 expressions lower to target control flow and a runtime report accumulator for TS
 or direct `printf` calls for C. Dynamic `/ % :/ :%`, dynamic String
 concatenation and `break`/`continue` are rejected with explicit diagnostics, and
 dynamic C integer overflow is not checked. Function syntax, tuple values and list
 values are emitted as runnable TS; the C path rejects them with a clear status-2
-diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper.
+diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;
+list traversal lowers to a TS `for...of` loop and the C path rejects it clearly.
 This slice does not copy a list on declaration, argument passing or return;
 because list mutation is not yet admitted, the shared representation is not
 observable. Slice 6c must add those copies when mutation arrives.

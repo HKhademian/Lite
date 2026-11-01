@@ -126,9 +126,11 @@ keeps that target from growing while it is approached.
   locals, nested/doc/raw comments, transparent scalar and flat named-tuple type
   aliases, flat named-tuple construction and field reads, top-level functions
   with positional calls, recursion/`self` and `return`, and growable `List<T>`
-  types, literals and checked indexing in the TS path. The C path rejects
-  function syntax and tuple or list values with clear status-2 diagnostics.
-  List copies at declaration/argument/return are deferred until list mutation
+  types, literals and checked indexing in the TS path. `loop sequence as item`
+  traversal over lists lowers to a TS `for...of` loop with a read-only element
+  local. The C path rejects function syntax, tuple or list values and list
+  traversal with clear status-2 diagnostics. List copies at
+  declaration/argument/return are deferred until list mutation
   (slice 6c) makes sharing observable. TS/C output is emitted directly; no
   separate IR deliverable is planned. The full emitter, Node I/O adapter and
   T-from-S gate remain.

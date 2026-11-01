@@ -2071,22 +2071,54 @@ parseProgram := fn(source: String, prefix: String): Items {
         }
         if name == "loop" {
             var conditionCode := "";
+            var sequenceCode := "";
+            var itemName := "";
+            var itemKind := "";
             if position < size and textAt(source, position) =!= "{" {
-                conditionStart := position;
-                condition := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
-                if condition.kind =!= "Bool" {
-                    failAt(source, conditionStart, prefix, "loop condition must be Bool");
-                }
-                if condition.constant {
-                    if condition.intValue == 0 { conditionCode = "false"; }
+                parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+                afterParsed := skipTrivia(source, parsed.next, prefix);
+                if wordAt(source, afterParsed, "as") {
+                    if not isListKind(parsed.kind) {
+                        failAt(source, position, prefix, "loop sequence must be a List, got " + displayKind(parsed.kind));
+                    }
+                    itemStart := skipTrivia(source, afterParsed + 2, prefix);
+                    if itemStart >= size or not isNameStart(textAt(source, itemStart)) {
+                        failAt(source, itemStart, prefix, "expected an item name after as");
+                    }
+                    itemEnd := skipName(source, itemStart);
+                    itemName = textSlice(source, itemStart, itemEnd);
+                    if isReservedWord(itemName) { unsupportedFeature(source, itemStart, itemName, prefix); }
+                    if localSameBlock(locals, itemName, depth + 1) {
+                        failAt(source, itemStart, prefix, "duplicate local " + itemName);
+                    }
+                    itemKind = listElementKind(parsed.kind);
+                    sequenceCode = parsed.code;
+                    position = skipTrivia(source, itemEnd, prefix);
                 } else {
-                    conditionCode = condition.code;
+                    if parsed.kind =!= "Bool" {
+                        failAt(source, position, prefix, "loop condition must be Bool");
+                    }
+                    if parsed.constant {
+                        if parsed.intValue == 0 { conditionCode = "false"; }
+                    } else {
+                        conditionCode = parsed.code;
+                    }
+                    position = skipTrivia(source, parsed.next, prefix);
                 }
-                position = skipTrivia(source, condition.next, prefix);
             }
             position = expectSymbol(source, position, "{", prefix);
-            push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
-                intValue = 0, textValue = ""));
+            if itemName =!= "" {
+                runtime := "lite_" + itemName;
+                push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
+                    mutable = false, depth = depth + 1, constant = false, code = runtime,
+                    intValue = 0, textValue = ""));
+                localCount = localCount + 1;
+                push_back(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
+                    intValue = 0, textValue = itemKind));
+            } else {
+                push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                    intValue = 0, textValue = ""));
+            }
             push_back(mut blocks, "loop");
             blockCount = blockCount + 1;
             depth = depth + 1;
@@ -2493,6 +2525,10 @@ emitProgram := fn(items: Items): Unit {
         } else if item.kind == "EndIf" {
             indent = dedent(indent);
             report(indent + "}");
+        } else if item.kind == "LoopSeq" {
+            report(indent + "for (const " + item.runtime + " of " + item.code + ") {");
+            indent = indent + "    ";
+            report(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "Boolean(true)" }
                 else if item.code == "false" { "Boolean(false)" }
