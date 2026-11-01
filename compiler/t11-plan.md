@@ -14,7 +14,7 @@ focused tests, then the full gate before recording the gate.
 5. ~~Flat named tuples: types, construction, fields and function signatures~~ — done (TS; C rejects tuple values clearly). Unnamed/nested tuples remain deferred.
 6a. Growable list types/literals/indexing and TS types (no traversal or mutation yet) — TS done; C rejects list values clearly. Copy-on-declaration/argument/return is deferred with mutation (6c); unobservable until then.
 6b. ~~Loop `seq as item` traversal over lists~~ — TS done (read-only element local); C rejects traversal clearly. `break`/`continue` and list mutation remain deferred.
-6c. List mutation grants and `push`/`pop` end operations.
+6c. ~~List mutation grants and `push_back`/`pop_back` end operations~~ — TS done, including copy semantics; C rejects lists clearly.
 7. Typed collection locals and list mutation grants/end operations.
 8. Value `if` expressions in the compiler emitter.
 9. Dynamic Int division/remainder (`/ % :/ :%`).

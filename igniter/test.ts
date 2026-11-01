@@ -1274,6 +1274,108 @@ test('restricted compiler diagnoses invalid list traversal clearly', () => {
   });
 });
 
+test('restricted compiler compiles list mutation grants, push and pop to runnable TS', () => {
+  const source = [
+    'Ints := type List<Int>;',
+    'Values := type Ints;',
+    'Pair := type (kind: String, code: Int);',
+    'pass := fn (items: List<Int>): List<Int> { items }',
+    'values: mut Values = [1, 2];',
+    'push_back(mut values, 3);',
+    'report(values[0], values[2]);',
+    'report(pop_back(mut values));',
+    'report(values[1]);',
+    'source: List<Int> = [10, 20];',
+    'copy: mut List<Int> = source;',
+    'push_back(mut copy, 9);',
+    'report(source[0], source[1], copy[2]);',
+    'var replaced: mut List<Int> = [4];',
+    'replaced = [7];',
+    'push_back(mut replaced, 8);',
+    'report(replaced[0], replaced[1]);',
+    'origin: mut List<Int> = [5];',
+    'detached: mut List<Int> = pass(origin);',
+    'push_back(mut detached, 6);',
+    'report(origin[0], detached[1]);',
+    'var first: mut List<Int> = [1];',
+    'second: mut List<Int> = [2, 4];',
+    'first = second;',
+    'push_back(mut first, 3);',
+    'report(pop_back(mut second), first[2]);',
+    'stack: mut List<Int> = [1, 2, 3];',
+    'report(pop_back(mut stack), pop_back(mut stack), pop_back(mut stack));',
+    'growing: mut List<Int> = [1];',
+    'loop growing as value {',
+    '    if value == 1 {',
+    '        push_back(mut growing, 2);',
+    '    }',
+    '    report(value);',
+    '}',
+    'report(growing[1]);',
+    'pairs: mut List<Pair> = [(kind = "a", code = 1)];',
+    'push_back(mut pairs, (kind = "b", code = 2));',
+    'pair := pop_back(mut pairs);',
+    'report(pair.kind, pair.code, pairs[0].kind);',
+    'blank: mut List<String>;',
+    'push_back(mut blank, "ok");',
+    'push_back(mut blank, "later");',
+    'report(pop_back(mut blank));',
+    'pop_back(mut blank);',
+    'push_back(mut blank, "again");',
+    'report(blank[0]);',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('1 3\n3\n2\n10 20 9\n7 8\n5 6\n4 3\n3 2 1\n1\n2\nb 2 a\nlater\nagain\n'),
+    stderr: Buffer.alloc(0),
+  });
+
+  const empty = runCompiler(tsManifestPath, 'empty: mut List<Int> = [];\nreport(pop_back(mut empty));\n');
+  assert.equal(empty.code, 0, empty.errors);
+  const emptyRun = runTsArtifact(empty.output);
+  assert.equal(emptyRun.phase, 'run');
+  assert.notEqual(emptyRun.status, 0);
+  assert.match(emptyRun.stderr.toString(), /BoundPanic: pop_back on an empty list/);
+
+  for (const [bad, errors] of [
+    ['values: mut List<Int> = [];\npush_back(mut values, "x");\n',
+      '2:23: push_back element must be Int, got String\n'],
+    ['values: List<Int> = [];\npush_back(mut values, 1);\n',
+      '2:15: cannot mutate list values without mut\n'],
+    ['var values: List<Int> = [];\npush_back(mut values, 1);\n',
+      '2:15: cannot mutate list values without mut\n'],
+    ['values: List<Int> = [];\npush_back(values, 1);\n',
+      '2:11: push_back requires mut list argument\n'],
+    ['x := 1;\npush_back(mut x, 2);\n',
+      '2:15: push_back requires a List value, got Int\n'],
+    ['push_back(mut missing, 1);\n',
+      '1:15: unknown value missing\n'],
+    ['values: mut List<Int> = [];\npush_back(mut values);\n',
+      '2:21: push_back expects a value after the mut list\n'],
+    ['values: mut List<Int> = [];\nreport(pop_back(values));\n',
+      '2:17: pop_back requires mut list argument\n'],
+    ['values: mut Int = 1;\n',
+      '1:9: mut requires a List type, got Int\n'],
+    ['values: mut List<Int> = [];\nreport(push_back(mut values, 1));\n',
+      '2:8: report does not accept a Unit value\n'],
+    ['values: mut List<Int> = [];\nx := push_back(mut values, 1);\n',
+      '2:1: cannot declare a Unit local x\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  for (const bad of [
+    'values: mut List<Int> = [1];\npush_back(mut values, 2);\n',
+    'values: mut List<Int> = [1];\nreport(pop_back(mut values));\n',
+    'values: mut List<Int>;\npush_back(mut values, 2);\n',
+  ]) {
+    assert.deepEqual(runCompiler(cManifestPath, bad), {
+      code: 2, output: '', errors: 'C backend does not support list values yet\n',
+    }, bad);
+  }
+});
+
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
   const source = [
     '/* ordinary leading comment',

@@ -29,7 +29,7 @@ emitProgram := fn(items: Items): Unit {
         if item.kind == "LoopSeq" {
             fail("", "C backend does not support list traversal yet");
         }
-        if codeUsesListIndex(item.code) {
+        if codeUsesListIndex(item.code) or codeUsesListPop(item.code) {
             fail("", "C backend does not support list values yet");
         }
     }

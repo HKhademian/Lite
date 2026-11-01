@@ -29,6 +29,11 @@ boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
+/** Emits one ordinary list value copy as a fresh TypeScript array so later mutation cannot reach the source. */
+listCopyCode := fn(code: String): String {
+    "[...(" + code + ")]"
+}
+
 /** Emits a TypeScript logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"

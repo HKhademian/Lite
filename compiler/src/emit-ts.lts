@@ -95,6 +95,14 @@ usesListIndex := fn(items: Items): Bool {
     false
 }
 
+/** True when any emitted item pops a list element through the checked helper. */
+usesListPop := fn(items: Items): Bool {
+    loop items as item {
+        if codeUsesListPop(item.code) { return true; }
+    }
+    false
+}
+
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
     report("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
@@ -110,9 +118,22 @@ emitListIndexHelper := fn(): Unit {
     report("");
 }
 
+/** Emits the checked list-pop helper used by generated programs that pop a list tail. */
+emitListPopHelper := fn(): Unit {
+    report("function lite$listPopBack<T>(items: T[]): T {");
+    report("    const value = items.pop();");
+    report("    if (value === undefined) {");
+    report("        throw new Error(\"BoundPanic: pop_back on an empty list\");");
+    report("    }");
+    report("    return value;");
+    report("}");
+    report("");
+}
+
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
     if usesListIndex(items) { emitListIndexHelper(); }
+    if usesListPop(items) { emitListPopHelper(); }
     report("export function main(): string {");
     report("    let lite_out = \"\";");
     var indent := "    ";
@@ -168,7 +189,7 @@ emitProgram := fn(items: Items): Unit {
             indent = dedent(indent);
             report(indent + "}");
         } else if item.kind == "LoopSeq" {
-            report(indent + "for (const " + item.runtime + " of " + item.code + ") {");
+            report(indent + "for (const " + item.runtime + " of " + listCopyCode(item.code) + ") {");
             indent = indent + "    ";
             report(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {

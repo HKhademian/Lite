@@ -453,6 +453,11 @@ boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
+/** Emits one ordinary list value copy as a fresh TypeScript array so later mutation cannot reach the source. */
+listCopyCode := fn(code: String): String {
+    "[...(" + code + ")]"
+}
+
 /** Emits a TypeScript logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"
@@ -497,8 +502,8 @@ floorModCode := fn(left: String, right: String): String {
    after it. */
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
-/** One local visible to later statements: source name, hygienic runtime name, value kind, mutability, declaration block depth, constant value and target code. */
-Local := type (name: String, runtime: String, kind: String, mutable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
+/** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value and target code. */
+Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
 /** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, an if/loop/function block marker, a return or a function call statement. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Flat program stream returned by parseProgram and consumed by a backend emitter. */
@@ -692,8 +697,8 @@ listElementKind := fn(kind: String): String {
     textSlice(kind, 5, textLength(kind) - 1)
 }
 
-/** True when emitted target code calls the checked list-index helper outside quoted String literal text. */
-codeUsesListIndex := fn(code: String): Bool {
+/** True when emitted target code calls `needle` outside quoted String literal text. */
+codeUsesTextCall := fn(code: String, needle: String): Bool {
     size := textLength(code);
     var cursor := 0;
     loop cursor < size {
@@ -711,13 +716,23 @@ codeUsesListIndex := fn(code: String): Bool {
                     cursor = cursor + 1;
                 }
             }
-        } else if startsWithAt(code, cursor, "lite$listAt(") {
+        } else if startsWithAt(code, cursor, needle) {
             return true;
         } else {
             cursor = cursor + 1;
         }
     }
     false
+}
+
+/** True when emitted target code calls the checked list-index helper outside quoted String literal text. */
+codeUsesListIndex := fn(code: String): Bool {
+    codeUsesTextCall(code, "lite$listAt(")
+}
+
+/** True when emitted target code calls the checked list-pop helper outside quoted String literal text. */
+codeUsesListPop := fn(code: String): Bool {
+    codeUsesTextCall(code, "lite$listPopBack(")
 }
 
 /** Returns the scalar kind of tuple field `label` in canonical `kind`, or empty text when the field is absent. */
@@ -1466,6 +1481,38 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
     not startsWithAt(source, afterName, "==")
 }
 
+/** Wraps target code in the backend's list-copy hook when `kind` is a List; every other kind is unchanged. */
+copiedValueCode := fn(kind: String, code: String): String {
+    if isListKind(kind) { listCopyCode(code) } else { code }
+}
+
+/** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
+parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
+    var cursor := skipTrivia(source, open + 1, prefix);
+    if not wordAt(source, cursor, "mut") {
+        failAt(source, cursor, prefix, operation + " requires mut list argument");
+    }
+    cursor = skipTrivia(source, cursor + 3, prefix);
+    if cursor >= textLength(source) or not isNameStart(textAt(source, cursor)) {
+        failAt(source, cursor, prefix, "expected a list name after mut");
+    }
+    nameEnd := skipName(source, cursor);
+    listName := textSlice(source, cursor, nameEnd);
+    index := localIndex(locals, listName);
+    if index < 0 {
+        failAt(source, cursor, prefix, "unknown value " + listName);
+        return (runtime = "", kind = "", next = nameEnd);
+    }
+    entry := locals[index];
+    if not isListKind(entry.kind) {
+        failAt(source, cursor, prefix, operation + " requires a List value, got " + displayKind(entry.kind));
+    }
+    if not entry.writable {
+        failAt(source, cursor, prefix, "cannot mutate list " + listName + " without mut");
+    }
+    (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     start := skipTrivia(source, position, prefix);
@@ -1646,7 +1693,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                             failAt(source, cursor, prefix, "argument " + decimalText(argumentCount + 1) + " of " +
                                 calleeName + " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
                         }
-                        push_back(mut argumentCodes, argument.code);
+                        push_back(mut argumentCodes, copiedValueCode(argument.kind, argument.code));
                         argumentCount = argumentCount + 1;
                         cursor = skipTrivia(source, argument.next, prefix);
                         if cursor < textLength(source) and textAt(source, cursor) == "," {
@@ -1666,6 +1713,27 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
+            } else if name == "push_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
+                grant := parseListGrant(source, afterName, prefix, locals, "push_back");
+                var cursor := skipTrivia(source, grant.next, prefix);
+                if cursor >= textLength(source) or textAt(source, cursor) =!= "," {
+                    failAt(source, cursor, prefix, "push_back expects a value after the mut list");
+                }
+                valueStart := skipTrivia(source, cursor + 1, prefix);
+                elementKind := listElementKind(grant.kind);
+                value := self(source, valueStart, prefix, locals, functions, params, currentName, elementKind, 0);
+                if value.kind =!= elementKind {
+                    failAt(source, valueStart, prefix, "push_back element must be " + displayKind(elementKind) +
+                        ", got " + displayKind(value.kind));
+                }
+                close := expectSymbol(source, skipTrivia(source, value.next, prefix), ")", prefix);
+                left = (kind = "Unit", code = grant.runtime + ".push(" + value.code + ")",
+                    intValue = 0, textValue = "", constant = false, next = close);
+            } else if name == "pop_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
+                grant := parseListGrant(source, afterName, prefix, locals, "pop_back");
+                close := expectSymbol(source, skipTrivia(source, grant.next, prefix), ")", prefix);
+                left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ")",
+                    intValue = 0, textValue = "", constant = false, next = close);
             } else {
                 index := localIndex(locals, name);
                 if index < 0 {
@@ -1798,15 +1866,24 @@ sourcePrefix := fn(): String {
     prefix
 }
 
-/** Parses one local type annotation: a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
-parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, next: Int) {
-    typed := parseTypeAt(source, position, prefix, aliases, "local");
-    if typed.kind == "Unit" {
-        start := skipTrivia(source, position, prefix);
-        name := textSlice(source, start, skipName(source, start));
-        failAt(source, start, prefix, "unsupported local type " + name);
+/** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
+parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) {
+    start := skipTrivia(source, position, prefix);
+    var cursor := start;
+    var writable := false;
+    if wordAt(source, cursor, "mut") {
+        writable = true;
+        cursor = skipTrivia(source, cursor + 3, prefix);
     }
-    typed
+    typed := parseTypeAt(source, cursor, prefix, aliases, "local");
+    if typed.kind == "Unit" {
+        name := textSlice(source, cursor, skipName(source, cursor));
+        failAt(source, cursor, prefix, "unsupported local type " + name);
+    }
+    if writable and not isListKind(typed.kind) {
+        failAt(source, start, prefix, "mut requires a List type, got " + displayKind(typed.kind));
+    }
+    (kind = typed.kind, writable = writable, next = typed.next)
 }
 
 /** Builds the zero value for one flat named-tuple kind as a fresh object literal. */
@@ -1939,7 +2016,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                         failAt(source, position, prefix, "cannot return " + displayKind(tail.kind) + " from function " +
                             currentName + " returning " + displayKind(currentResult));
                     }
-                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = tail.code,
+                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, tail.code),
                         intValue = 0, textValue = ""));
                 }
                 currentReturned = true;
@@ -1990,7 +2067,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 failAt(source, position, prefix, "expected ; after return");
             }
             position = skipTrivia(source, position + 1, prefix);
-            push_back(mut items, (kind = "Return", name = "", runtime = "", code = parsed.code,
+            push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
                 intValue = 0, textValue = ""));
             currentReturned = true;
             continue;
@@ -2012,6 +2089,17 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             position = skipTrivia(source, position + 1, prefix);
             push_back(mut items, (kind = "Call", name = callName, runtime = "", code = parsed.code,
+                intValue = 0, textValue = ""));
+            continue;
+        }
+        if (name == "push_back" or name == "pop_back") and position < size and textAt(source, position) == "(" {
+            parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
+            position = skipTrivia(source, parsed.next, prefix);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after " + name);
+            }
+            position = skipTrivia(source, position + 1, prefix);
+            push_back(mut items, (kind = "Call", name = "", runtime = "", code = parsed.code,
                 intValue = 0, textValue = ""));
             continue;
         }
@@ -2110,7 +2198,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             if itemName =!= "" {
                 runtime := "lite_" + itemName;
                 push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
-                    mutable = false, depth = depth + 1, constant = false, code = runtime,
+                    mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = ""));
                 localCount = localCount + 1;
                 push_back(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
@@ -2136,11 +2224,16 @@ parseProgram := fn(source: String, prefix: String): Items {
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
+            var declaredWritable := false;
             if startsWithAt(source, position, ":=") {
                 position = skipTrivia(source, position + 2, prefix);
                 parsed = parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+                if parsed.kind == "Unit" {
+                    failAt(source, localStart, prefix, "cannot declare a Unit local " + localName);
+                }
             } else if position < size and textAt(source, position) == ":" {
                 typed := parseLocalType(source, position + 1, prefix, aliases);
+                declaredWritable = typed.writable;
                 position = skipTrivia(source, typed.next, prefix);
                 if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
                     parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
@@ -2163,11 +2256,11 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             runtime := "lite_" + localName;
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
-                mutable = true, depth = depth, constant = false, code = parsed.code,
+                mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if name == "else" {
@@ -2238,7 +2331,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                     runtime := "lite_" + parameterName;
                     push_back(mut functionParams, entry);
                     push_back(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
-                        mutable = false, depth = 1, constant = false, code = runtime,
+                        mutable = false, writable = false, depth = 1, constant = false, code = runtime,
                         intValue = 0, textValue = ""));
                     localCount = localCount + 1;
                     parameterTotal = parameterTotal + 1;
@@ -2256,6 +2349,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             position = afterDeclare;
             parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+            if parsed.kind == "Unit" {
+                failAt(source, nameStart, prefix, "cannot declare a Unit local " + name);
+            }
             position = skipTrivia(source, parsed.next, prefix);
             if position >= size or textAt(source, position) =!= ";" {
                 failAt(source, position, prefix, "expected ; after local declaration " + name);
@@ -2266,11 +2362,11 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             runtime := "lite_" + name;
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
-                mutable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+                mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if position < size and textAt(source, position) == ":" {
@@ -2293,11 +2389,11 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             runtime := "lite_" + name;
             push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
-                mutable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+                mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
@@ -2320,11 +2416,11 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             position = skipTrivia(source, position + 1, prefix);
             push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
-                mutable = true, depth = entry.depth, constant = false, code = parsed.code,
+                mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = copiedValueCode(entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if currentName =!= "" {
@@ -2340,7 +2436,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                         failAt(source, nameStart, prefix, "cannot return " + displayKind(tail.kind) + " from function " +
                             currentName + " returning " + displayKind(currentResult));
                     }
-                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = tail.code,
+                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, tail.code),
                         intValue = 0, textValue = ""));
                 }
                 currentReturned = true;
@@ -2453,6 +2549,14 @@ usesListIndex := fn(items: Items): Bool {
     false
 }
 
+/** True when any emitted item pops a list element through the checked helper. */
+usesListPop := fn(items: Items): Bool {
+    loop items as item {
+        if codeUsesListPop(item.code) { return true; }
+    }
+    false
+}
+
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
     report("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
@@ -2468,9 +2572,22 @@ emitListIndexHelper := fn(): Unit {
     report("");
 }
 
+/** Emits the checked list-pop helper used by generated programs that pop a list tail. */
+emitListPopHelper := fn(): Unit {
+    report("function lite$listPopBack<T>(items: T[]): T {");
+    report("    const value = items.pop();");
+    report("    if (value === undefined) {");
+    report("        throw new Error(\"BoundPanic: pop_back on an empty list\");");
+    report("    }");
+    report("    return value;");
+    report("}");
+    report("");
+}
+
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
     if usesListIndex(items) { emitListIndexHelper(); }
+    if usesListPop(items) { emitListPopHelper(); }
     report("export function main(): string {");
     report("    let lite_out = \"\";");
     var indent := "    ";
@@ -2526,7 +2643,7 @@ emitProgram := fn(items: Items): Unit {
             indent = dedent(indent);
             report(indent + "}");
         } else if item.kind == "LoopSeq" {
-            report(indent + "for (const " + item.runtime + " of " + item.code + ") {");
+            report(indent + "for (const " + item.runtime + " of " + listCopyCode(item.code) + ") {");
             indent = indent + "    ";
             report(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {

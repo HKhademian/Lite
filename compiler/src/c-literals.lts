@@ -31,6 +31,12 @@ boolLiteralCode := fn(value: Bool): String {
     if value { "true" } else { "false" }
 }
 
+/** Rejects the ordinary list value copy this backend does not implement; list values are unsupported in C. */
+listCopyCode := fn(code: String): String {
+    fail("", "C backend does not support list values yet");
+    code
+}
+
 /** Emits a C logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"
