@@ -767,7 +767,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-capabilities.md](../docs/collection-capabilities.md); [docs/collection-operation-contracts.md](../docs/collection-operation-contracts.md); [docs/collection-function-signatures.md](../docs/collection-function-signatures.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (fourteen-system survey and lattice proposal; no contract selected); contributor: redacted (agent-assisted); note: [INV-057 — collection capability lattice and concept boundaries](INV-057-capability-lattice.md) — records the orthogonal axes, the combinations representation forces, a seven-test split/merge procedure, a six-primitive lattice with derived operations and named bundles, conformance options, and the mapping from twelve storage families. Open: the `[T]` bundle definition, contiguity as a refinement, cost-class spelling, and user conformance syntax.
 
 <a id="inv-058"></a>
 
@@ -779,7 +779,7 @@ questions; check their status and current owning pages before relying on them.
 
 **Start with:** [docs/collection-order-and-traversal.md](../docs/collection-order-and-traversal.md); [docs/set-patterns.md](../docs/set-patterns.md); [docs/collections-and-iterators.md](../docs/collections-and-iterators.md).
 
-**Investigation:** not started; contributor: unassigned; note: none.
+**Investigation:** recorded (storage-family survey, equality/hash/order contracts, shipping recommendation); contributor: redacted (agent-assisted); note: [INV-058 — storage families, equality, hashing, and ordering](INV-058-storage-families-and-equality.md) — records twelve storage families with honest guarantees, the equivalence/hash-consistency/total-order contracts associative containers need, the numeric-key edge cases, an insertion-ordered default for reproducibility, text as a named-unit family, and a proposed shipping table that excludes a linked list and flags the missing inline fixed-capacity cell.
 
 <a id="inv-059"></a>
 

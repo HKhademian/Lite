@@ -70,6 +70,19 @@ Primary sources by area:
 
 This review adds Java, Go, TypeScript, Jai, ReactiveX, Underscore.js, and Lodash as topic-specific sources; it does **not** change the thirteen project reference languages. Jai has no public official specification, so its entries are low-confidence and community-derived. No toolchain was executed and no benchmark was run: this is documentation evidence, not foreign-language verification or a LiteLang implementation claim. The survey does not select a surface, an execution model, a generator form, or a failure policy.
 
+## Collection protocols and storage families, reviewed 2026-11-01
+
+Eleven languages and twelve storage families were checked for two questions: which collection properties are independent capabilities, and what each storage family can honestly promise. The analysis is in [INV-057](../investigations/INV-057-capability-lattice.md) and [INV-058](../investigations/INV-058-storage-families-and-equality.md). Versions: C++ working draft (post-C++23), Rust 1.99.1, Swift 6.x, Kotlin 2.4.x, Java SE 25, C#/.NET 10, Scala 3.10, Python 3.14, TypeScript 7.0.2/ES2026, Go 1.27, Dart 3.13.7.
+
+- **Cost-bearing access.** [Scala performance characteristics](https://docs.scala-lang.org/overviews/collections-2.13/performance-characteristics.html) distinguishes `IndexedSeq` from `LinearSeq` and publishes per-type costs; [Java `RandomAccess`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/RandomAccess.html) is the unenforced marker that exists because [`List.get`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/List.html) may be linear.
+- **Omission over lying.** [.NET `LinkedList<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.linkedlist-1) does not implement `IList<T>`; [Java's does](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/LinkedList.html).
+- **Capability graphs.** [C++ ranges concepts](https://eel.is/c++draft/ranges#concepts), [Swift `Collection`](https://developer.apple.com/documentation/swift/collection), [Python `collections.abc`](https://docs.python.org/3.14/library/collections.abc.html), and [Kotlin collection overview](https://kotlinlang.org/docs/collections-overview.html).
+- **Storage honesty.** [`vector<bool>`](https://en.cppreference.com/w/cpp/container/vector_bool), [`std::deque`](https://en.cppreference.com/w/cpp/container/deque), [Rust `VecDeque`](https://doc.rust-lang.org/std/collections/struct.VecDeque.html), [C# `Span<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.span-1), and [Odin `#soa`](https://odin-lang.org/docs/overview/#soa-data-types).
+- **Order and equality.** [Java `Map`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/Map.html), [Rust `HashMap`](https://doc.rust-lang.org/std/collections/struct.HashMap.html), [Python `dict`](https://docs.python.org/3/library/stdtypes.html#typesmapping), [ECMA-262 keyed collections](https://tc39.es/ecma262/multipage/keyed-collections.html), and [Dart `Map`](https://api.dart.dev/stable/dart-core/Map-class.html).
+- **Derived operations.** [Python ABC mixins](https://docs.python.org/3.14/library/collections.abc.html#collections-abstract-base-classes), [Dart `Iterable`](https://api.dart.dev/stable/dart-core/Iterable-class.html), and [Go `iter`](https://pkg.go.dev/iter).
+
+This review uses only documentation; no toolchain was executed and no complexity claim was measured. It does not select a capability set, a conformance rule, a shipping list, or an equality/order policy.
+
 ## Rust
 
 - [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html): final expressions, unit results, and control-flow boundaries. LiteScript's semicolons deliberately do not suppress a preceding final result.
