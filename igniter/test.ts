@@ -108,10 +108,10 @@ test('compiler applications preserve optional logical source names in their own 
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
       assert.deepEqual(runFile(path, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
       assert.deepEqual(runFile(path, 'report(1 +);', [label]), {
-        code: 2, output: '', errors: label + ': expected an integer or string expression\n',
+        code: 2, output: '', errors: label + ': expected an Int, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: 'expected an integer or string expression\n' });
+    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: 'expected an Int, String or Bool expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(loadSource(path)), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -133,7 +133,7 @@ test('real compiler CLI forwards source-name context without changing emitted by
     assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference))); assert.equal(valid.stderr.length, 0);
     const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
     assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an integer or string expression\n'));
+    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an Int, String or Bool expression\n'));
     const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
     assert.equal(check.error, undefined); assert.equal(check.status, 0);
     assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
@@ -164,7 +164,7 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     writeFileSync(invalidPath, 'report(1 +);\n');
     const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}: expected an integer or string expression\n`));
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}: expected an Int, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
     assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
@@ -549,9 +549,11 @@ test('restricted C compiler emits the readable reference and sequences reports',
   const expected = readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8');
   assert.deepEqual(runFile(cEmitterPath, 'report(42);'), { code: 0, output: expected, errors: '' });
   assert.equal(runFile(cEmitterPath, 'report(42);\nreport(9);').output,
-    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
+    '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(9))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    return status;\n}\n');
 });
 test('Lite-generated native C, TS and igniter programs have identical output bytes and status', async context => {
@@ -634,50 +636,62 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
   assert.equal(runFile(tsEmitterPath, 'report(42);').output, runFile(tsEmitterPath, 'report(42);').output);
   assert.equal(runFile(tsEmitterPath, ' report ( +00042 ) ; ').output, expected);
   assert.equal(runFile(tsEmitterPath, 'report(-000);').output,
-    'export function main(): string {\n    return (0n).toString() + "\\n";\n}\n');
+    'export function main(): string {\n    let lite_out = "";\n    lite_out += (0n).toString() + "\\n";\n    return lite_out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
   const program = 'report(10);\nreport(20);\nreport(-30);\n';
   const tsOutput = runFile(tsEmitterPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
-  assert.equal(tsOutput.output, 'export function main(): string {\n    return (10n).toString() + "\\n" + (20n).toString() + "\\n" + ((-30n)).toString() + "\\n";\n}\n');
+  assert.equal(tsOutput.output, 'export function main(): string {\n    let lite_out = "";\n    lite_out += (10n).toString() + "\\n";\n    lite_out += (20n).toString() + "\\n";\n    lite_out += ((-30n)).toString() + "\\n";\n    return lite_out;\n}\n');
   const cOutput = runFile(cEmitterPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
-  assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n    int status = 0;\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(10))) < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)(INT64_C(20))) < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)((-INT64_C(30)))) < 0) { status = 1; }\n' +
+  assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(10))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)(INT64_C(20))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)((-INT64_C(30)))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    return status;\n}\n');
 });
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
   const program = 'x := 2 * (3 - 4);\nreport(x + 10);\nreport(-x);\n';
   assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
+    '    let lite_out = "";\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
     '    void lite_x;\n' +
-    '    return ((lite_x + 10n)).toString() + "\\n" + ((-lite_x)).toString() + "\\n";\n}\n' });
+    '    lite_out += ((lite_x + 10n)).toString() + "\\n";\n' +
+    '    lite_out += ((-lite_x)).toString() + "\\n";\n' +
+    '    return lite_out;\n}\n' });
   assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
-    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
+    '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    int64_t lite_x = (INT64_C(2) * ((INT64_C(3) - INT64_C(4))));\n' +
     '    (void)lite_x;\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)((lite_x + INT64_C(10)))) < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64 "\\n", (int64_t)((-lite_x))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)((lite_x + INT64_C(10)))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)((-lite_x))) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    return status;\n}\n' });
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
   const program = 's := "a\\"b";\nreport(s);\nreport(1, s, 2);\n';
   assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
+    '    let lite_out = "";\n' +
     '    const lite_s = "a\\"b";\n' +
     '    void lite_s;\n' +
-    '    return lite_s + "\\n" + (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n}\n' });
+    '    lite_out += lite_s + "\\n";\n' +
+    '    lite_out += (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n' +
+    '    return lite_out;\n}\n' });
   assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
-    '#include <stdio.h>\n#include <inttypes.h>\nint main(void) {\n' +
+    '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    const char *lite_s = "a\\"b";\n' +
     '    (void)lite_s;\n' +
-    '    if (printf("%s\\n", lite_s) < 0) { status = 1; }\n' +
+    '    if (printf("%s", lite_s) < 0) { status = 1; }\n' +
+    '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
     '    if (printf(" ") < 0) { status = 1; }\n' +
     '    if (printf("%s", lite_s) < 0) { status = 1; }\n' +
@@ -700,7 +714,7 @@ test('compiler applications reject fixture sources with exact diagnostics before
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
   assert.equal(runFile(tsEmitterPath, 'report(42);\nreport(9);').output,
-    'export function main(): string {\n    return (42n).toString() + "\\n" + (9n).toString() + "\\n";\n}\n');
+    'export function main(): string {\n    let lite_out = "";\n    lite_out += (42n).toString() + "\\n";\n    lite_out += (9n).toString() + "\\n";\n    return lite_out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
   const root = new URL('../', import.meta.url).pathname;

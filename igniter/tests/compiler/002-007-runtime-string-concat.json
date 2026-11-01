@@ -1,0 +1,21 @@
+{
+  "name": "runtime-string-concat",
+  "source": {
+    "file": "002-007-runtime-string-concat.lts",
+    "hash": "sha256:cff65236490c930471ebdf1ed97ad1c3bfae5ad6c6ebd245ae6f8af50e4933aa"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "runtime String concatenation is not supported by this compiler checkpoint yet\n",
+        "hash": "sha256:2e3b8a4b6cf5f6407b24af1ee7516c775955251624eb925d7aa2114e936181a8"
+      },
+      "exitCode": 2
+    }
+  ]
+}

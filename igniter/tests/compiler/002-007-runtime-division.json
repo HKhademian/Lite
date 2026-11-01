@@ -1,0 +1,21 @@
+{
+  "name": "runtime-division",
+  "source": {
+    "file": "002-007-runtime-division.lts",
+    "hash": "sha256:883f20d5a1ae282a688dab70b52fc2c9ba5a036af3811386a8d523f1021a9a97"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "runtime division is not supported by this compiler checkpoint yet\n",
+        "hash": "sha256:147a3bf807228ad156c86803739c8dc5f05d7ba582a51f4e60769831892a1566"
+      },
+      "exitCode": 2
+    }
+  ]
+}

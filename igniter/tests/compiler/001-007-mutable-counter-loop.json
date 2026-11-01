@@ -1,0 +1,21 @@
+{
+  "name": "mutable-counter-loop",
+  "source": {
+    "file": "001-007-mutable-counter-loop.lts",
+    "hash": "sha256:90af41c9db4ada635e884a1b85fc40b27963012c6da0e7a3245b2cb85dc64231"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "10\n",
+        "hash": "sha256:917df3320d778ddbaa5c5c7742bc4046bf803c36ed2b050f30844ed206783469"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

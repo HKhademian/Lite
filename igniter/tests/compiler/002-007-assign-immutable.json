@@ -1,0 +1,21 @@
+{
+  "name": "assign-immutable",
+  "source": {
+    "file": "002-007-assign-immutable.lts",
+    "hash": "sha256:53b3418d26f0aff26671cb29b39d76457880bb6d3fed411d1627dfcf764a056e"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "cannot assign to immutable local x\n",
+        "hash": "sha256:433373d2f78ee8023cb0405b818112bd7154aa025b35b24b57a0736244a36bb6"
+      },
+      "exitCode": 2
+    }
+  ]
+}

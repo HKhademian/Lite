@@ -1,0 +1,21 @@
+{
+  "name": "report-in-loop",
+  "source": {
+    "file": "001-007-report-in-loop.lts",
+    "hash": "sha256:c25e2dbf0c6bfb40e573e4b489b827c272089375309745cf39927a9a9ee85aa6"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "tick 0\ntick 1\ntick 2\n",
+        "hash": "sha256:a6d7965f189d8ebb939cdf46c5ae902eb2d9ec626a0f4b310c8411415f6e0e2e"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

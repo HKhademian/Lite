@@ -1,0 +1,21 @@
+{
+  "name": "string-equality-if",
+  "source": {
+    "file": "001-007-string-equality-if.lts",
+    "hash": "sha256:1218624a716a7f1ad65f6618f053b9267dbc41413cdef65d00599ad0939368ec"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "match\ndifferent\nconstant match\n",
+        "hash": "sha256:6df640408ba87e029095e73f4f2938604f1c3aa01145cb241849c71c61a26774"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

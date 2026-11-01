@@ -1,0 +1,21 @@
+{
+  "name": "nested-if-in-loop",
+  "source": {
+    "file": "001-007-nested-if-in-loop.lts",
+    "hash": "sha256:7b83e41764c75a525eba5729130427d20290fb5e56a4a9d22bb4b2b044123129"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "0 low\n1 low\n2 high\n3 high\n4 high\n",
+        "hash": "sha256:dc58f8784a8ca72df6d344fe0d96337f49409cd67cb00f7c5f993bef29572653"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

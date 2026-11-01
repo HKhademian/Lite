@@ -26,6 +26,42 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Formats a checked Bool value as a C `stdbool.h` literal. */
+boolLiteralCode := fn(value: Bool): String {
+    if value { "true" } else { "false" }
+}
+
+/** Emits a C logical negation around one Bool expression. */
+notCode := fn(value: String): String {
+    "(!(" + value + "))"
+}
+
+/** Emits a C short-circuit `and`/`or` expression around two Bool expressions. */
+logicCode := fn(op: String, left: String, right: String): String {
+    if op == "and" { "((" + left + ") && (" + right + "))" }
+    else { "((" + left + ") || (" + right + "))" }
+}
+
+/** Emits a kind-aware C comparison; String equality uses `strcmp` and not-less/not-more spellings invert the ordering. */
+comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
+    if kind == "String" {
+        if op == "==" { "strcmp(" + left + ", " + right + ") == 0" }
+        else { "strcmp(" + left + ", " + right + ") != 0" }
+    } else {
+        operator := if op == "==" { "==" }
+            else if op == "=!=" { "!=" }
+            else if op == "<" { "<" }
+            else if op == "<!" { ">=" }
+            else if op == "<=" { "<=" }
+            else if op == "<!=" { ">" }
+            else if op == ">" { ">" }
+            else if op == ">!" { "<=" }
+            else if op == ">=" { ">=" }
+            else { "<" };
+        "(" + left + ") " + operator + " (" + right + ")"
+    }
+}
+
 /** Emits an int64_t floor-division expression. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0) && (((" + left + " % " + right + ") < 0) != (" + right + " < 0))) ? 1 : 0))"
@@ -38,60 +74,67 @@ floorModCode := fn(left: String, right: String): String {
 
 importFlatAll "frontend.lts";
 
-/** Builds one checked printf call for an Int or String report value; newline controls the trailing newline in the format. */
-cCall := fn(kind: String, code: String, newline: Bool): String {
+/** Removes one four-space indentation level from `indent`. */
+dedent := fn(indent: String): String {
+    textSlice(indent, 0, textLength(indent) - 4)
+}
+
+/** Builds one checked printf call for an Int, String or Bool report value without a trailing newline. */
+cCall := fn(kind: String, code: String): String {
     if kind == "Int" {
-        if newline {
-            "printf(\"%\" PRId64 \"\\n\", (int64_t)(" + code + "))"
-        } else {
-            "printf(\"%\" PRId64, (int64_t)(" + code + "))"
-        }
+        "printf(\"%\" PRId64, (int64_t)(" + code + "))"
+    } else if kind == "Bool" {
+        "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))"
     } else {
-        if newline {
-            "printf(\"%s\\n\", " + code + ")"
-        } else {
-            "printf(\"%s\", " + code + ")"
-        }
+        "printf(\"%s\", " + code + ")"
     }
 }
 
-/** Emits the C program from the flat item stream. Locals become int64_t or const char readings; report segments become checked printf calls with a shared write-failure status. */
+/** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items): Unit {
     report("#include <stdio.h>");
     report("#include <inttypes.h>");
+    report("#include <stdbool.h>");
+    report("#include <string.h>");
     report("int main(void) {");
     report("    int status = 0;");
-    var firstKind := "";
-    var firstCode := "";
-    var rest := "";
+    var indent := "    ";
     var count := 0;
     loop items as item {
-        if item.kind == "LocalInt" {
-            report("    int64_t " + item.runtime + " = " + item.code + ";");
-            report("    (void)" + item.runtime + ";");
-        } else if item.kind == "LocalString" {
-            report("    const char *" + item.runtime + " = " + item.code + ";");
-            report("    (void)" + item.runtime + ";");
+        if item.kind == "LocalInt" or item.kind == "VarInt" {
+            report(indent + "int64_t " + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "LocalString" or item.kind == "VarString" {
+            report(indent + "const char *" + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "LocalBool" or item.kind == "VarBool" {
+            report(indent + "bool " + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
+            report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "If" {
+            report(indent + "if (" + item.code + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "Else" {
+            indent = dedent(indent);
+            report(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == "EndIf" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "Loop" {
+            condition := if item.code == "" { "true" } else { item.code };
+            report(indent + "while (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "EndLoop" {
+            indent = dedent(indent);
+            report(indent + "}");
         } else if item.kind == "End" {
-            if count == 1 {
-                report("    if (" + cCall(firstKind, firstCode, true) + " < 0) { status = 1; }");
-            } else {
-                var block := "    if (" + cCall(firstKind, firstCode, false) + " < 0) { status = 1; }";
-                block = block + rest + "\n    if (printf(\"\\n\") < 0) { status = 1; }";
-                report(block);
-            }
-            firstKind = "";
-            firstCode = "";
-            rest = "";
+            report(indent + "if (printf(\"\\n\") < 0) { status = 1; }");
             count = 0;
         } else {
-            if count == 0 {
-                firstKind = item.kind;
-                firstCode = item.code;
-            } else {
-                rest = rest + "\n    if (printf(\" \") < 0) { status = 1; }";
-                rest = rest + "\n    if (" + cCall(item.kind, item.code, false) + " < 0) { status = 1; }";
-            }
+            if count > 0 { report(indent + "if (printf(\" \") < 0) { status = 1; }"); }
+            report(indent + "if (" + cCall(item.kind, item.code) + " < 0) { status = 1; }");
             count = count + 1;
         }
     }

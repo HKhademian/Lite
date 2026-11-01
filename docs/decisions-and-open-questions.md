@@ -60,11 +60,25 @@ Access is `./ltc --target ts|c file.lts`, `./litec --target ts|c file.lts`, or
 canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
-formatter is reserved but unimplemented; the verifier and tester have first slices. The 43 program and 35 rejection verification cases are unchanged in
+formatter is reserved but unimplemented; the verifier and tester have first slices. The 50 program and 42 rejection verification cases are unchanged in
 behavior; 175 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
+
+## Compiler control-flow slice, 2026-11-01
+
+The restricted Lite-written compiler's accepted surface now includes Bool
+values, the ten Int comparisons, String/Bool equality, `and`/`or`/`not`,
+mutable `var` locals with whole-value assignment, `if`/`else`, and Boolean or
+unconditional `loop`. Constant-only expressions keep compile-time folding and
+the existing range/division diagnostics; dynamic Int `+ - *` and comparisons are
+lowered to target control flow, with generated TS accumulating report output in
+`main(): string` and C printing directly. Dynamic `/ % :/ :%` and dynamic
+String concatenation are explicit rejections. `break`/`continue`, typed
+declarations, functions, tuples/lists/arrays, `match`, runtime input, and
+checked dynamic C overflow remain outside this slice. The compiler corpus is now
+50 program and 42 rejection cases.
 
 ## String values, multi-value reports and JSON verification fixtures, 2026-10-31
 
@@ -78,7 +92,7 @@ trigraph-prone `?`; String locals are `const`/`const char *` with the existing
 unsupported text forms fail before artifact bytes.
 
 Compiler verification data moved from inline test arrays to one JSON file per
-case under `igniter/tests/compiler/`: 43 program cases and 35 rejection cases.
+case under `igniter/tests/compiler/`: 50 program cases and 42 rejection cases.
 Each case pairs a sibling `.lts` entry source with a JSON model holding a
 `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`; each case has
 optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses

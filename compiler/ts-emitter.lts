@@ -24,6 +24,41 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Formats a checked Bool value as a TypeScript literal. */
+boolLiteralCode := fn(value: Bool): String {
+    if value { "true" } else { "false" }
+}
+
+/** Emits a TypeScript logical negation around one Bool expression. */
+notCode := fn(value: String): String {
+    "(!(" + value + "))"
+}
+
+/** Emits a TypeScript short-circuit `and`/`or` expression around two Bool expressions. */
+logicCode := fn(op: String, left: String, right: String): String {
+    if op == "and" { "((" + left + ") && (" + right + "))" }
+    else { "((" + left + ") || (" + right + "))" }
+}
+
+/** Emits a kind-aware TypeScript comparison; equality uses strict operators and not-less/not-more spellings invert the ordering. Bool comparisons coerce through `Boolean` so literal-type narrowing cannot reject them. */
+comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
+    operator := if op == "==" { "===" }
+        else if op == "=!=" { "!==" }
+        else if op == "<" { "<" }
+        else if op == "<!" { ">=" }
+        else if op == "<=" { "<=" }
+        else if op == "<!=" { ">" }
+        else if op == ">" { ">" }
+        else if op == ">!" { "<=" }
+        else if op == ">=" { ">=" }
+        else { "<" };
+    if kind == "Bool" {
+        "(Boolean(" + left + ") " + operator + " Boolean(" + right + "))"
+    } else {
+        "((" + left + ") " + operator + " (" + right + "))"
+    }
+}
+
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
@@ -36,33 +71,69 @@ floorModCode := fn(left: String, right: String): String {
 
 importFlatAll "frontend.lts";
 
-/** Emits the TS module from the flat item stream. Locals become consts; report segments become a returned concatenated string expression. */
+/** Removes one four-space indentation level from `indent`. */
+dedent := fn(indent: String): String {
+    textSlice(indent, 0, textLength(indent) - 4)
+}
+
+/** Formats one report argument as a TypeScript string expression. */
+reportArgumentCode := fn(item: Item): String {
+    if item.kind == "Int" { "(" + item.code + ").toString()" }
+    else if item.kind == "Bool" { "((" + item.code + ") ? \"true\" : \"false\")" }
+    else { item.code }
+}
+
+/** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
     report("export function main(): string {");
-    var returned := "";
-    var current := "";
+    report("    let lite_out = \"\";");
+    var indent := "    ";
+    var line := "";
     var count := 0;
     loop items as item {
-        if item.kind == "LocalInt" or item.kind == "LocalString" {
-            report("    const " + item.runtime + " = " + item.code + ";");
-            report("    void " + item.runtime + ";");
+        if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" {
+            report(indent + "const " + item.runtime + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" {
+            report(indent + "let " + item.runtime + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
+            report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "If" {
+            condition := if item.code == "true" or item.code == "false" {
+                "Boolean(" + item.code + ")"
+            } else {
+                item.code
+            };
+            report(indent + "if (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "Else" {
+            indent = dedent(indent);
+            report(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == "EndIf" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "Loop" {
+            condition := if item.code == "" { "Boolean(true)" }
+                else if item.code == "false" { "Boolean(false)" }
+                else { item.code };
+            report(indent + "while (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "EndLoop" {
+            indent = dedent(indent);
+            report(indent + "}");
         } else if item.kind == "End" {
-            if returned =!= "" { returned = returned + " + "; }
-            returned = returned + current + " + \"\\n\"";
-            current = "";
+            report(indent + "lite_out += " + line + " + \"\\n\";");
+            line = "";
             count = 0;
         } else {
-            if count > 0 { current = current + " + \" \" + "; }
-            if item.kind == "Int" {
-                current = current + "(" + item.code + ").toString()";
-            } else {
-                current = current + item.code;
-            }
+            if count > 0 { line = line + " + \" \" + "; }
+            line = line + reportArgumentCode(item);
             count = count + 1;
         }
     }
-    if returned == "" { returned = "\"\""; }
-    report("    return " + returned + ";");
+    report("    return lite_out;");
     report("}");
 }
 

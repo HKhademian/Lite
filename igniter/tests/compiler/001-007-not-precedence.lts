@@ -1,0 +1,7 @@
+report(not 1 == 2);
+report(not 1 < 0);
+report(not true == false);
+var flag := true;
+flag = false;
+report(not flag == true);
+report(not flag == false);

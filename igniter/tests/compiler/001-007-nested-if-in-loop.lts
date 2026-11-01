@@ -1,0 +1,9 @@
+var i := 0;
+loop i < 5 {
+    if i < 2 {
+        report(i, "low");
+    } else {
+        report(i, "high");
+    }
+    i = i + 1;
+}

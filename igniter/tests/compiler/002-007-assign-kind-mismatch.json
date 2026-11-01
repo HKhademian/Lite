@@ -1,0 +1,21 @@
+{
+  "name": "assign-kind-mismatch",
+  "source": {
+    "file": "002-007-assign-kind-mismatch.lts",
+    "hash": "sha256:cefb12509564a0841130caacd8f1291ab97203670f70c20d64c1452f8d3564cc"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "cannot assign String to Int local x\n",
+        "hash": "sha256:45ae2c7dbeced9f3611c42621a047fc331b8a07793950b1bd72adfc99835830f"
+      },
+      "exitCode": 2
+    }
+  ]
+}

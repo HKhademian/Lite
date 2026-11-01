@@ -1,0 +1,21 @@
+{
+  "name": "not-precedence",
+  "source": {
+    "file": "001-007-not-precedence.lts",
+    "hash": "sha256:fe54e82e3d6a27b6f1ae2a5cb861eeca62a2a401e5a46f9e56acf5154ac4e152"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "true\ntrue\ntrue\ntrue\nfalse\n",
+        "hash": "sha256:590c56ff014eaf336f127caea23f4526ce1d331c20561b4fa76a928d83a2d653"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

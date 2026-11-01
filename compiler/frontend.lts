@@ -1,13 +1,16 @@
 /* Shared restricted front-end. Not a standalone program: a backend defines
-   intLiteralCode/textLiteralCode and includes this file with importFlatAll. */
-/** One parsed Int or String expression: target `code`, its checked compile-time value, and the next source position. */
-Parsed := type (kind: String, code: String, intValue: Int, textValue: String, next: Int);
-/** An immutable local visible to later expressions: source name, hygienic runtime name, value kind, target code and compile-time value. */
-Local := type (name: String, runtime: String, kind: String, code: String, intValue: Int, textValue: String);
-/** One entry in the flat program stream: an Int/String report argument, an End report boundary, or a LocalInt/LocalString declaration. */
+   intLiteralCode/textLiteralCode/boolLiteralCode/notCode/logicCode/comparisonCode
+   and includes this file with importFlatAll. */
+/** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
+Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+/** One local visible to later statements: source name, hygienic runtime name, value kind, mutability, declaration block depth, constant value and target code. */
+Local := type (name: String, runtime: String, kind: String, mutable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
+/** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, or an if/loop block marker. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Flat program stream returned by parseProgram and consumed by a backend emitter. */
 Items := type List<Item>;
+/** One recognized binary operator spelling and the number of source bytes it occupies. */
+Operator := type (text: String, width: Int);
 
 /** True when `text` is exactly one ASCII decimal digit. */
 isDigit := fn(text: String): Bool {
@@ -76,7 +79,7 @@ isReservedWord := fn(name: String): Bool {
 
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, then exits 2. */
 unsupportedFeature := fn(name: String, prefix: String): Unit {
-    reportError(prefix + "unsupported feature \"" + name + "\": the restricted compiler accepts Int/String expressions, immutable := locals and report(...) only");
+    reportError(prefix + "unsupported feature \"" + name + "\": the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only");
     exit(2);
 }
 
@@ -90,14 +93,33 @@ skipName := fn(source: String, start: Int): Int {
     position
 }
 
+/** True when `text` occurs at `position` and stays inside `source`. */
+startsWithAt := fn(source: String, position: Int, text: String): Bool {
+    width := textLength(text);
+    if position < 0 or position + width > textLength(source) { return false; }
+    textSlice(source, position, position + width) == text
+}
+
+/** True when the whole identifier `word` occurs at `position`, not a longer identifier that merely starts with it. */
+wordAt := fn(source: String, position: Int, word: String): Bool {
+    if not startsWithAt(source, position, word) { return false; }
+    after := position + textLength(word);
+    after >= textLength(source) or not isNameContinue(textAt(source, after))
+}
+
 /** Builds an Int parsed value; `textValue` is empty. */
-intParsed := fn(code: String, value: Int, next: Int): Parsed {
-    (kind = "Int", code = code, intValue = value, textValue = "", next = next)
+intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed {
+    (kind = "Int", code = code, intValue = value, textValue = "", constant = constant, next = next)
 }
 
 /** Builds a String parsed value; `intValue` is zero. */
-textParsed := fn(code: String, value: String, next: Int): Parsed {
-    (kind = "String", code = code, intValue = 0, textValue = value, next = next)
+textParsed := fn(code: String, value: String, constant: Bool, next: Int): Parsed {
+    (kind = "String", code = code, intValue = 0, textValue = value, constant = constant, next = next)
+}
+
+/** Builds a Bool parsed value; `intValue` is 1 for true and 0 for false. */
+boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
+    (kind = "Bool", code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
 }
 
 /* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
@@ -217,14 +239,118 @@ negateInteger := fn(value: Int, prefix: String): Int {
     0 - value
 }
 
-/** Returns the index of `name` in `locals`, or -1 when it is not visible. */
+/** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
 localIndex := fn(locals: List<Local>, name: String): Int {
     var index := 0;
+    var found := -1;
     loop locals as local {
-        if local.name == name { return index; }
+        if local.name == name { found = index; }
         index = index + 1;
     }
-    -1
+    found
+}
+
+/** True when `name` is already declared directly in the block at `depth`, so shadowing an outer block remains allowed. */
+localSameBlock := fn(locals: List<Local>, name: String, depth: Int): Bool {
+    index := localIndex(locals, name);
+    if index < 0 { return false; }
+    locals[index].depth == depth
+}
+
+/** True for the ten comparison spellings accepted by this checkpoint. */
+isComparison := fn(operator: String): Bool {
+    operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
+    operator == "<=" or operator == "<!=" or operator == ">" or operator == ">!" or
+    operator == ">=" or operator == ">!="
+}
+
+/** Precedence level of a recognized binary operator; comparisons bind below arithmetic and logic binds below comparisons. */
+operatorLevel := fn(operator: String): Int {
+    if operator == "or" { 2 }
+    else if operator == "and" { 3 }
+    else if isComparison(operator) { 5 }
+    else if operator == "+" or operator == "-" { 10 }
+    else if operator == "*" or operator == "/" or operator == "%" or operator == ":/" or operator == ":%" { 20 }
+    else { 0 }
+}
+
+/** Reads an operator at `position`, preferring the longest spelling; returns empty text when none starts there. */
+readOperator := fn(source: String, position: Int): Operator {
+    if startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
+    if startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
+    if startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
+    if startsWithAt(source, position, "==") { return (text = "==", width = 2); }
+    if startsWithAt(source, position, "<=") { return (text = "<=", width = 2); }
+    if startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
+    if startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
+    if startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
+    ch := textAt(source, position);
+    if ch == "<" { return (text = "<", width = 1); }
+    if ch == ">" { return (text = ">", width = 1); }
+    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
+    if startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
+    if startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
+    if isNameStart(ch) {
+        after := skipName(source, position);
+        word := textSlice(source, position, after);
+        if word == "and" or word == "or" { return (text = word, width = after - position); }
+    }
+    (text = "", width = 0)
+}
+
+/** Folds one of the ten Int comparisons to a Bool. */
+compareIntegers := fn(operator: String, left: Int, right: Int): Bool {
+    if operator == "==" { left == right }
+    else if operator == "=!=" { left =!= right }
+    else if operator == "<" { left < right }
+    else if operator == "<!" { left >= right }
+    else if operator == "<=" { left <= right }
+    else if operator == "<!=" { left > right }
+    else if operator == ">" { left > right }
+    else if operator == ">!" { left <= right }
+    else if operator == ">=" { left >= right }
+    else { left < right }
+}
+
+/** Folds String equality or inequality. */
+compareTexts := fn(operator: String, left: String, right: String): Bool {
+    if operator == "==" { left == right } else { left =!= right }
+}
+
+/** Folds Bool equality or inequality. */
+compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
+    if operator == "==" { left == right } else { left =!= right }
+}
+
+/** Checks and folds or lowers one comparison expression, then returns its Bool parsed value. */
+compareParsed := fn(operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
+    if left.kind =!= right.kind {
+        reportError(prefix + "cannot compare " + left.kind + " and " + right.kind);
+        exit(2);
+    }
+    if left.kind == "Int" {
+        if left.constant and right.constant {
+            value := compareIntegers(operator, left.intValue, right.intValue);
+            boolParsed(boolLiteralCode(value), value, true, right.next)
+        } else {
+            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+        }
+    } else {
+        if operator =!= "==" and operator =!= "=!=" {
+            reportError(prefix + "operator " + operator + " requires Int operands");
+            exit(2);
+        }
+        if left.constant and right.constant {
+            value := if left.kind == "String" {
+                compareTexts(operator, left.textValue, right.textValue)
+            } else {
+                compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
+            };
+            boolParsed(boolLiteralCode(value), value, true, right.next)
+        } else {
+            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+        }
+    }
 }
 
 /** Parses a signed decimal literal, allowing whitespace after the sign. Returns target code, checked value and next position; exits 2 on malformed or out-of-range input. */
@@ -263,7 +389,7 @@ parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     }
     digits := textSlice(raw, digitStart, textLength(raw));
     code := intLiteralCode(value, negative, digits);
-    intParsed(code, value, cursor)
+    intParsed(code, value, true, cursor)
 }
 
 /** Parses one double-quoted literal with n/t/r/quote/backslash escapes. Returns escaped target code, text value and next position; exits 2 on malformed input. */
@@ -302,22 +428,22 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
             cursor = cursor + 1;
         }
     }
-    textParsed(textLiteralCode(value), value, cursor)
+    textParsed(textLiteralCode(value), value, true, cursor)
 }
 
-/** Precedence-climbing parser for + - * / % :/ :%, parentheses and unary signs. Folds Int arithmetic and String concatenation, and exits 2 on mixed-type or range faults. self(..., 30) parses a unary operand without binary operators. */
+/** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
     start := skipSpaces(source, position);
     if start >= textLength(source) {
-        reportError(prefix + "expected an integer or string expression");
+        reportError(prefix + "expected an Int, String or Bool expression");
         exit(2);
     }
-    var left := intParsed("", 0, start);
+    var left := intParsed("", 0, true, start);
     ch := textAt(source, start);
     if ch == "(" {
         inner := self(source, start + 1, prefix, locals, 0);
         next := expectSymbol(source, skipSpaces(source, inner.next), ")", prefix);
-        left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, next = next);
+        left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next);
     } else if ch == "+" or ch == "-" {
         after := skipSpaces(source, start + 1);
         if after < textLength(source) and isDigit(textAt(source, after)) {
@@ -328,9 +454,13 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 reportError(prefix + "unary " + ch + " requires an Int operand");
                 exit(2);
             }
-            value := if ch == "-" { negateInteger(operand.intValue, prefix) } else { operand.intValue };
             code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
-            left = intParsed(code, value, operand.next);
+            if operand.constant {
+                value := if ch == "-" { negateInteger(operand.intValue, prefix) } else { operand.intValue };
+                left = intParsed(code, value, true, operand.next);
+            } else {
+                left = intParsed(code, 0, false, operand.next);
+            }
         }
     } else if isDigit(ch) {
         left = parseInteger(source, start, prefix);
@@ -340,55 +470,93 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         nameStart := start;
         next := skipName(source, start);
         name := textSlice(source, nameStart, next);
-        if isReservedWord(name) { unsupportedFeature(name, prefix); }
-        index := localIndex(locals, name);
-        if index < 0 {
-            reportError(prefix + "unknown value " + name);
-            exit(2);
+        if name == "true" {
+            left = boolParsed(boolLiteralCode(true), true, true, next);
+        } else if name == "false" {
+            left = boolParsed(boolLiteralCode(false), false, true, next);
+        } else if name == "not" {
+            operand := self(source, next, prefix, locals, 5);
+            if operand.kind =!= "Bool" {
+                reportError(prefix + "not requires a Bool operand");
+                exit(2);
+            }
+            if operand.constant {
+                value := operand.intValue == 0;
+                left = boolParsed(boolLiteralCode(value), value, true, operand.next);
+            } else {
+                left = boolParsed(notCode(operand.code), false, false, operand.next);
+            }
+        } else {
+            if isReservedWord(name) { unsupportedFeature(name, prefix); }
+            index := localIndex(locals, name);
+            if index < 0 {
+                reportError(prefix + "unknown value " + name);
+                exit(2);
+            }
+            entry := locals[index];
+            left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
         }
-        entry := locals[index];
-        left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, next = next);
     } else {
-        reportError(prefix + "expected an integer or string expression");
+        reportError(prefix + "expected an Int, String or Bool expression");
         exit(2);
     }
     loop true {
         operatorPosition := skipSpaces(source, left.next);
         if operatorPosition >= textLength(source) { break; }
-        var operator := textAt(source, operatorPosition);
-        var operatorWidth := 1;
-        if operator == ":" and operatorPosition + 1 < textLength(source) {
-            next := textAt(source, operatorPosition + 1);
-            if next == "/" or next == "%" {
-                operator = operator + next;
-                operatorWidth = 2;
-            }
-        }
-        if operator =!= "+" and operator =!= "-" and operator =!= "*" and operator =!= "/" and
-           operator =!= "%" and operator =!= ":/" and operator =!= ":%" { break; }
-        level := if operator == "+" or operator == "-" { 10 } else { 20 };
+        operator := readOperator(source, operatorPosition);
+        if operator.text == "" { break; }
+        level := operatorLevel(operator.text);
         if level < minimum { break; }
-        right := self(source, operatorPosition + operatorWidth, prefix, locals, level + 1);
-        if operator == "+" and left.kind == "String" and right.kind == "String" {
-            combined := left.textValue + right.textValue;
-            left = textParsed(textLiteralCode(combined), combined, right.next);
+        right := self(source, operatorPosition + operator.width, prefix, locals, level + 1);
+        if operator.text == "and" or operator.text == "or" {
+            if left.kind =!= "Bool" or right.kind =!= "Bool" {
+                reportError(prefix + "operator " + operator.text + " requires Bool operands");
+                exit(2);
+            }
+            if left.constant and right.constant {
+                value := if operator.text == "and" {
+                    left.intValue =!= 0 and right.intValue =!= 0
+                } else {
+                    left.intValue =!= 0 or right.intValue =!= 0
+                };
+                left = boolParsed(boolLiteralCode(value), value, true, right.next);
+            } else {
+                left = boolParsed(logicCode(operator.text, left.code, right.code), false, false, right.next);
+            }
+        } else if isComparison(operator.text) {
+            left = compareParsed(operator.text, left, right, prefix);
         } else if left.kind == "Int" and right.kind == "Int" {
-            folded := if operator == "+" { addIntegers(left.intValue, right.intValue, prefix) }
-                else if operator == "-" { subtractIntegers(left.intValue, right.intValue, prefix) }
-                else if operator == "*" { multiplyIntegers(left.intValue, right.intValue, prefix) }
-                else if operator == "%" { remainderIntegers(left.intValue, right.intValue, prefix) }
-                else if operator == ":/" { floorDivideIntegers(left.intValue, right.intValue, prefix) }
-                else if operator == ":%" { floorModuloIntegers(left.intValue, right.intValue, prefix) }
-                else { divideIntegers(left.intValue, right.intValue, prefix) };
-            code := if operator == ":/" { floorDivCode(left.code, right.code) }
-                else if operator == ":%" { floorModCode(left.code, right.code) }
-                else { "(" + left.code + " " + operator + " " + right.code + ")" };
-            left = intParsed(code, folded, right.next);
-        } else if operator == "+" {
+            if left.constant and right.constant {
+                folded := if operator.text == "+" { addIntegers(left.intValue, right.intValue, prefix) }
+                    else if operator.text == "-" { subtractIntegers(left.intValue, right.intValue, prefix) }
+                    else if operator.text == "*" { multiplyIntegers(left.intValue, right.intValue, prefix) }
+                    else if operator.text == "%" { remainderIntegers(left.intValue, right.intValue, prefix) }
+                    else if operator.text == ":/" { floorDivideIntegers(left.intValue, right.intValue, prefix) }
+                    else if operator.text == ":%" { floorModuloIntegers(left.intValue, right.intValue, prefix) }
+                    else { divideIntegers(left.intValue, right.intValue, prefix) };
+                code := if operator.text == ":/" { floorDivCode(left.code, right.code) }
+                    else if operator.text == ":%" { floorModCode(left.code, right.code) }
+                    else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
+                left = intParsed(code, folded, true, right.next);
+            } else if operator.text == "/" or operator.text == "%" or operator.text == ":/" or operator.text == ":%" {
+                reportError(prefix + "runtime division is not supported by this compiler checkpoint yet");
+                exit(2);
+            } else {
+                left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
+            }
+        } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
+            if left.constant and right.constant {
+                combined := left.textValue + right.textValue;
+                left = textParsed(textLiteralCode(combined), combined, true, right.next);
+            } else {
+                reportError(prefix + "runtime String concatenation is not supported by this compiler checkpoint yet");
+                exit(2);
+            }
+        } else if operator.text == "+" {
             reportError(prefix + "cannot mix Int and String operands");
             exit(2);
         } else {
-            reportError(prefix + "operator " + operator + " requires Int operands");
+            reportError(prefix + "operator " + operator.text + " requires Int operands");
             exit(2);
         }
     }
@@ -415,25 +583,69 @@ sourcePrefix := fn(): String {
     prefix
 }
 
-/** Parses complete source into a flat Items stream while keeping one visible-local list. Exits 2 on unsupported, malformed or faulting source. */
+/** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
     locals: mut List<Local> = [];
     items: mut Items = [];
+    blocks: mut List<String> = [];
+    var localCount := 0;
+    var blockCount := 0;
+    var depth := 0;
     var position := skipSpaces(source, 0);
     if position == size {
-        reportError(prefix + "expected report(integer or string) or an immutable local declaration");
+        reportError(prefix + "expected a statement: report, declaration, assignment, if or loop");
         exit(2);
     }
     loop position < size {
-        nameStart := position;
-        if not isNameStart(textAt(source, position)) {
-            reportError(prefix + "expected report(integer or string) or an immutable local declaration");
+        ch := textAt(source, position);
+        if ch == "}" {
+            if blockCount == 0 {
+                reportError(prefix + "unexpected }");
+                exit(2);
+            }
+            blockKind := blocks[blockCount - 1];
+            after := skipSpaces(source, position + 1);
+            if blockKind == "if" and after < size and wordAt(source, after, "else") {
+                loop localCount > 0 and locals[localCount - 1].depth >= depth {
+                    droppedLocal := pop_back(mut locals);
+                    localCount = localCount - 1;
+                }
+                push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                droppedIf := pop_back(mut blocks);
+                blockCount = blockCount - 1;
+                push_back(mut blocks, "else");
+                blockCount = blockCount + 1;
+                position = skipSpaces(source, after + 4);
+                position = expectSymbol(source, position, "{", prefix);
+                position = skipSpaces(source, position + 1);
+                continue;
+            }
+            loop localCount > 0 and locals[localCount - 1].depth >= depth {
+                droppedLocal := pop_back(mut locals);
+                localCount = localCount - 1;
+            }
+            depth = depth - 1;
+            if blockKind == "loop" {
+                push_back(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            } else {
+                push_back(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            }
+            droppedBlock := pop_back(mut blocks);
+            blockCount = blockCount - 1;
+            position = skipSpaces(source, position + 1);
+            if position < size and textAt(source, position) == ";" {
+                position = skipSpaces(source, position + 1);
+            }
+            continue;
+        }
+        if not isNameStart(ch) {
+            reportError(prefix + "expected a statement: report, declaration, assignment, if or loop");
             exit(2);
         }
+        nameStart := position;
         position = skipName(source, position);
         name := textSlice(source, nameStart, position);
-        if isReservedWord(name) { unsupportedFeature(name, prefix); }
         position = skipSpaces(source, position);
         if name == "report" {
             if position >= size or textAt(source, position) =!= "(" {
@@ -459,11 +671,94 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             push_back(mut items, (kind = "End", name = "", runtime = "", code = "",
                 intValue = 0, textValue = ""));
-        } else {
-            if position + 2 > size or textSlice(source, position, position + 2) =!= ":=" {
-                reportError(prefix + "expected := after local name " + name);
+            continue;
+        }
+        if name == "if" {
+            condition := parseExpression(source, position, prefix, locals);
+            if condition.kind =!= "Bool" {
+                reportError(prefix + "if condition must be Bool");
                 exit(2);
             }
+            conditionCode := if condition.constant {
+                boolLiteralCode(condition.intValue =!= 0)
+            } else {
+                condition.code
+            };
+            position = expectSymbol(source, skipSpaces(source, condition.next), "{", prefix);
+            push_back(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                intValue = 0, textValue = ""));
+            push_back(mut blocks, "if");
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            position = skipSpaces(source, position + 1);
+            continue;
+        }
+        if name == "loop" {
+            var conditionCode := "";
+            if position < size and textAt(source, position) =!= "{" {
+                condition := parseExpression(source, position, prefix, locals);
+                if condition.kind =!= "Bool" {
+                    reportError(prefix + "loop condition must be Bool");
+                    exit(2);
+                }
+                if condition.constant {
+                    if condition.intValue == 0 { conditionCode = "false"; }
+                } else {
+                    conditionCode = condition.code;
+                }
+                position = skipSpaces(source, condition.next);
+            }
+            position = expectSymbol(source, position, "{", prefix);
+            push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                intValue = 0, textValue = ""));
+            push_back(mut blocks, "loop");
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            position = skipSpaces(source, position + 1);
+            continue;
+        }
+        if name == "var" {
+            position = skipSpaces(source, position);
+            if position >= size or not isNameStart(textAt(source, position)) {
+                reportError(prefix + "expected local name after var");
+                exit(2);
+            }
+            localStart := position;
+            position = skipName(source, position);
+            localName := textSlice(source, localStart, position);
+            if isReservedWord(localName) { unsupportedFeature(localName, prefix); }
+            position = skipSpaces(source, position);
+            if not startsWithAt(source, position, ":=") {
+                reportError(prefix + "expected := or = after local name " + localName);
+                exit(2);
+            }
+            position = skipSpaces(source, position + 2);
+            parsed := parseExpression(source, position, prefix, locals);
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                reportError(prefix + "expected ; after local declaration " + localName);
+                exit(2);
+            }
+            position = skipSpaces(source, position + 1);
+            if localSameBlock(locals, localName, depth) {
+                reportError(prefix + "duplicate local " + localName);
+                exit(2);
+            }
+            runtime := "lite_" + localName;
+            push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
+                mutable = true, depth = depth, constant = false, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Var" + parsed.kind, name = localName, runtime = runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        if name == "else" {
+            reportError(prefix + "unexpected else");
+            exit(2);
+        }
+        if isReservedWord(name) { unsupportedFeature(name, prefix); }
+        if startsWithAt(source, position, ":=") {
             position = skipSpaces(source, position + 2);
             parsed := parseExpression(source, position, prefix, locals);
             position = skipSpaces(source, parsed.next);
@@ -472,16 +767,56 @@ parseProgram := fn(source: String, prefix: String): Items {
                 exit(2);
             }
             position = skipSpaces(source, position + 1);
-            if localIndex(locals, name) >= 0 {
+            if localSameBlock(locals, name, depth) {
                 reportError(prefix + "duplicate local " + name);
                 exit(2);
             }
             runtime := "lite_" + name;
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
-                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+                mutable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + parsed.kind, name = name, runtime = runtime,
                 code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
         }
+        if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+            index := localIndex(locals, name);
+            if index < 0 {
+                reportError(prefix + "unknown value " + name);
+                exit(2);
+            }
+            entry := locals[index];
+            if not entry.mutable {
+                reportError(prefix + "cannot assign to immutable local " + name);
+                exit(2);
+            }
+            position = skipSpaces(source, position + 1);
+            parsed := parseExpression(source, position, prefix, locals);
+            if parsed.kind =!= entry.kind {
+                reportError(prefix + "cannot assign " + parsed.kind + " to " + entry.kind + " local " + name);
+                exit(2);
+            }
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                reportError(prefix + "expected ; after assignment to " + name);
+                exit(2);
+            }
+            position = skipSpaces(source, position + 1);
+            push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                mutable = true, depth = entry.depth, constant = false, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Assign" + entry.kind, name = name, runtime = entry.runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        reportError(prefix + "expected := or = after local name " + name);
+        exit(2);
+    }
+    if blockCount > 0 {
+        reportError(prefix + "expected } before end of source");
+        exit(2);
     }
     items
 }

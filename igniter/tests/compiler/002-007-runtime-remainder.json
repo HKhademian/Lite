@@ -1,0 +1,21 @@
+{
+  "name": "runtime-remainder",
+  "source": {
+    "file": "002-007-runtime-remainder.lts",
+    "hash": "sha256:e0047671442d3f89d79d4936b200f4200c58fe593a494fed981631baf6a1f930"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "runtime division is not supported by this compiler checkpoint yet\n",
+        "hash": "sha256:147a3bf807228ad156c86803739c8dc5f05d7ba582a51f4e60769831892a1566"
+      },
+      "exitCode": 2
+    }
+  ]
+}

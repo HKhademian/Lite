@@ -1,0 +1,11 @@
+var word := "lite";
+var other := "other";
+if word == "lite" {
+    report("match");
+}
+if word =!= other {
+    report("different");
+}
+if "alpha" == "alpha" {
+    report("constant match");
+}

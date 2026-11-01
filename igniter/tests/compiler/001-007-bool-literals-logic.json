@@ -1,0 +1,21 @@
+{
+  "name": "bool-literals-logic",
+  "source": {
+    "file": "001-007-bool-literals-logic.lts",
+    "hash": "sha256:4b9aad330a7bcb99c03c627389c5bea5fc7ae2435c705efa230986287af63e89"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "true false true\ntrue\ntrue\ntrue true true\nlogic ok\n",
+        "hash": "sha256:4cb18dfedcb49040cf3502c3f1d7b37f77878881b1815f2a8363f0454d4e286b"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

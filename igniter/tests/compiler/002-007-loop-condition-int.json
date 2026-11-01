@@ -1,0 +1,21 @@
+{
+  "name": "loop-condition-int",
+  "source": {
+    "file": "002-007-loop-condition-int.lts",
+    "hash": "sha256:c94cddf298fe06f856bfd5f540aa4189276ca85e78f0a8dcce2d1dc96ef1eee2"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "loop condition must be Bool\n",
+        "hash": "sha256:d2ab32c2e17748ef862bf3670412f8076cbd86d45da3495580a2d826a070bbf8"
+      },
+      "exitCode": 2
+    }
+  ]
+}

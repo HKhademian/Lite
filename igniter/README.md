@@ -741,7 +741,7 @@ AS/Wasm or compiler self-rebuild claim follows. See
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
 source before emission. Empty source is a compiler rejection (2), not an
-inputLine EOF fault. The shared corpus now has 43 program cases and 34
+inputLine EOF fault. The shared corpus now has 50 program cases and 34
 rejection cases under [tests/compiler](tests/compiler/), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See

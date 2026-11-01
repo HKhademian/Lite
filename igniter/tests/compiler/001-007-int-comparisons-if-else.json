@@ -1,0 +1,21 @@
+{
+  "name": "int-comparisons-if-else",
+  "source": {
+    "file": "001-007-int-comparisons-if-else.lts",
+    "hash": "sha256:46b9f0310c5ab5a56dd8e1fa7e7ef0e52fa4c5f5971508996e9567b13bdf9491"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "true true true true true true true true true true\nlarge\n",
+        "hash": "sha256:a599be539b8e426aa1e749a73a16317bd22bc13cf04be05d5686a90d28e09ed3"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

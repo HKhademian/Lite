@@ -1,0 +1,5 @@
+var i := 0;
+loop i < 3 {
+    report("tick", i);
+    i = i + 1;
+}

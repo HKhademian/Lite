@@ -53,13 +53,15 @@ Related direction:
   currently runs in about 9–10 seconds.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
-- Restricted compiler corpus: **43** program cases and **35** rejection cases
+- Restricted compiler corpus: **50** program cases and **42** rejection cases
   under [`igniter/tests/compiler/`](../igniter/tests/compiler/).
-- Compiler sources: 662 lines across `frontend.lts`, `ts-emitter.lts` and
+- Compiler sources: 1111 lines across `frontend.lts`, `ts-emitter.lts` and
   `c-emitter.lts`.
 - S is valid Lite today: `./lite check compiler/ts-emitter.lts` passes. The
-  compiler itself does not parse S yet; it accepts only Int/String expressions,
-  immutable locals and `report(...)`.
+  compiler itself does not parse S yet; its accepted surface is Int/String/Bool
+  expressions, immutable and mutable locals, `report(...)`, `if`/`else`, and
+  Boolean/unconditional `loop`. Dynamic division and dynamic String
+  concatenation remain explicit rejections.
 - Stage 0 is the only execution path. There is no T, C, T2, C2 or verified
   compiler-to-compiler rebuild chain.
 
@@ -68,6 +70,14 @@ new documents.
 
 **Current gate: P0 — baseline and scaffolding, not started.** Update this line
 when a gate is completed; use the phase checklists as the source of truth.
+
+**Accepted-surface parity track (owner direction, 2026-11-01):** ahead of the
+P0-P9 order, the compiler's accepted surface grew one control-flow slice:
+Bool values/comparisons/logic, mutable locals and assignment, `if`/`else`, and
+Boolean/unconditional loops with runtime TS/C lowering. This is separate from
+L/S and does not complete a bootstrap phase. Dynamic division, dynamic String
+concatenation, `break`/`continue`, functions, collections, `match`, runtime
+input and checked dynamic C overflow remain open.
 
 ## Fixed bootstrap defaults
 
@@ -160,7 +170,7 @@ target layout without changing behavior.
 - [ ] Add a compiler-source README note that S must remain inside L.
 
 **Gate:** the baseline counts and current emitted outputs are recorded; the
-manifest schema and line-map contract are agreed; the current 43/35 path remains
+manifest schema and line-map contract are agreed; the current 50/42 path remains
 green. The bundle path itself is P1's gate.
 
 **Do not:** add a parser, lexer, language feature, module syntax or std code in
@@ -189,7 +199,7 @@ this phase.
 - [ ] Tests for nested bundles, duplicates, cycles, missing files, line mapping,
       source names and output parity.
 
-**Gate:** the bundle path loads and compiles the current S; all 78 compiler cases
+**Gate:** the bundle path loads and compiles the current S; all 92 compiler cases
 pass with byte-identical artifacts and exact diagnostics; the fast lane remains
 under 30 seconds (currently about 9–10 seconds).
 
@@ -226,7 +236,7 @@ Rules:
 - Do not add examples or samples that import these files.
 
 **Gate:** each library has direct tests; the compiler uses L0 without behavior
-change; the 43/35 corpus remains byte-identical.
+change; the 50/42 corpus remains byte-identical.
 
 **Parallel track:** L1 reusable pure libraries may start after L0, but do not gate
 P3–P8. L2 host libraries and L3 tooling libraries wait for separate decisions.
@@ -290,7 +300,7 @@ reproduce.
 - [ ] Diagnostics: source name, position, message, exit 2.
 - [ ] Accept every construct in S; reject unsupported and ill-typed cases.
 
-**Gate:** S checks; all 35 rejection cases match exactly; no invalid program emits
+**Gate:** S checks; all 42 rejection cases match exactly; no invalid program emits
 an artifact.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
@@ -347,7 +357,7 @@ behavior and produces a runnable C2 from S.
       and fix it; record any normalized fallback before accepting it.
 - [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter; C
       compiles the TS-emitter source to a C-hosted TS emitter.
-- [ ] T and C pass all 43 program and 35 rejection cases with exact streams and
+- [ ] T and C pass all 50 program and 42 rejection cases with exact streams and
       status.
 - [ ] No T/C runtime dependency on stage 0, the Lite compiler or a hidden host.
 - [ ] Clean-checkout rebuild produces the same artifact hashes.
@@ -532,7 +542,7 @@ The point is reached only when all of these are true:
 4. T and C are compilers: they read Lite source, check it and emit artifacts.
 5. T compiles S to T2; C compiles S to C2.
 6. `T2 == T` and `C2 == C` byte for byte.
-7. T and C pass the 43 program and 35 rejection cases with exact streams/status.
+7. T and C pass the 50 program and 42 rejection cases with exact streams/status.
 8. T and C compile each other's emitter source as a cross-build.
 9. No stage-1+ runtime dependency on stage 0 or the Lite compiler.
 10. A clean checkout reproduces the artifacts and hashes.

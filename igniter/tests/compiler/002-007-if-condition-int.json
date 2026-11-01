@@ -1,0 +1,21 @@
+{
+  "name": "if-condition-int",
+  "source": {
+    "file": "002-007-if-condition-int.lts",
+    "hash": "sha256:eb5e1fe002441f2d374a5b34f116ab3422fae03f0606c438caa75df87a154e26"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "if condition must be Bool\n",
+        "hash": "sha256:fb80c41bc2bc60b8a996165430555b565b8ae33b7bbda766b907fabb005d8399"
+      },
+      "exitCode": 2
+    }
+  ]
+}

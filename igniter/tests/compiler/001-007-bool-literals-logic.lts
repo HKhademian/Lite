@@ -1,0 +1,9 @@
+var a := true;
+var b := false;
+report(a, b, not b);
+report(a and not b);
+report(a or b);
+report(a == true, b == false, a =!= b);
+if a and not b {
+    report("logic ok");
+}

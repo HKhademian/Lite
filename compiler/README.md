@@ -70,12 +70,20 @@ The component/package is `lite-compiler`; its entry points are `ltc` (short
 command), `litec` (full binary) and `lite compile` (CLI form). Both binaries also
 accept the target as a bare positional word: `./ltc ts program.lts`.
 
-The compiler source is still restricted: Int arithmetic including `%`, `:/` and `:%`, String literals and
-concatenation, `report(...)`, and immutable Int/String locals. It has no runtime
-input, control flow, calls, text indexing, mutable locals, full parser or
-self-rebuild. Reserved features outside that subset are rejected by name, for
-example `unsupported feature "loop": the restricted compiler accepts Int/String
-expressions, immutable := locals and report(...) only`, with status 2. Range faults, division by zero and mixed-type operations are
+The compiler source is still restricted, but the accepted surface now includes
+Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
+assignment), `report(...)`, `if`/`else`, and Boolean or unconditional `loop`.
+Constant-only expressions keep their compile-time folding and range/division
+diagnostics; runtime expressions lower to target control flow and a runtime
+report accumulator for TS or direct `printf` calls for C. Dynamic
+`/ % :/ :%` and dynamic String concatenation are rejected with explicit
+diagnostics, `break`/`continue` are not implemented yet, and dynamic C integer
+overflow is not checked. Functions, tuples/lists/arrays, `match`, runtime
+input, typed declarations and self-rebuild remain outside this slice. Reserved
+features outside the subset are rejected by name with status 2.
+
+The current accepted surface is separate from the small language used to write
+the compiler itself; see the [bootstrap plan](../docs/bootstrap-plan.md). Range faults, division by zero and mixed-type operations are
 compile-time rejections. Generated TS uses BigInt; generated C uses
 `int64_t`/`INT64_C` and `printf` with `PRId64`.
 

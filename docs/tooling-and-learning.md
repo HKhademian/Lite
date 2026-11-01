@@ -232,7 +232,7 @@ They now also admit String literals/escapes, immutable String locals, String `+`
 concatenation and multi-value reports over Int/String values. String expressions
 are closed constants and fold at compile time; emitted TS/C literals escape
 quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
-verification data moved to `igniter/tests/compiler/`: 43 program cases and 34
+verification data moved to `igniter/tests/compiler/`: 50 program cases and 42
 rejection cases, each pairing a sibling `.lts` entry source with a JSON model
 holding a `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`
 (each case has optional `stdin`/`stdout`/`stderr` and required `exitCode`; each
