@@ -150,9 +150,12 @@ expressions lower to target control flow and a runtime report accumulator for TS
 or direct `printf` calls for C. Dynamic `/ % :/ :%` and dynamic String
 concatenation lower to checked helpers; TS emits ordinary left-to-right `+`
 concatenation, while C calls a byte-copying helper whose per-concatenation
-allocations are intentionally leaked by this bootstrap slice. `break`/`continue`
-are rejected with explicit diagnostics, and dynamic C integer overflow is not
-checked. Function syntax, tuple values, list values and total value `if` expressions are
+allocations are intentionally leaked by this bootstrap slice. Bare `break` and
+`continue` inside Boolean and unconditional loops lower directly to target loop
+exits with nearest-loop semantics; list-traversal loops emit the same TS exits
+while the C path still rejects traversal. Payloads, labels and use outside a
+loop are rejected. Dynamic C integer overflow is not checked. Function syntax,
+tuple values, list values and total value `if` expressions are
 emitted as runnable TS; the C path rejects them with a clear status-2
 diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;
 list traversal lowers to a TS `for...of` loop and the C path rejects it clearly.

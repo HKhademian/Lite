@@ -1277,6 +1277,101 @@ test('restricted compiler diagnoses invalid list traversal clearly', () => {
   });
 });
 
+const loopExitCases = [
+  [[
+    'var i := 0;',
+    'var total := 0;',
+    'loop i < 10 {',
+    '    i = i + 1;',
+    '    if i == 3 { continue; }',
+    '    if i == 6 { break; }',
+    '    total = total + i;',
+    '}',
+    'report(total);',
+  ].join('\n'), '12\n'],
+  [[
+    'var n := 0;',
+    'loop {',
+    '    n = n + 1;',
+    '    if n == 2 { continue; }',
+    '    if n == 4 { break; }',
+    '    report(n);',
+    '}',
+    'report(n);',
+  ].join('\n'), '1\n3\n4\n'],
+  [[
+    'var outer := 0;',
+    'var visits := 0;',
+    'loop outer < 2 {',
+    '    outer = outer + 1;',
+    '    var inner := 0;',
+    '    loop true {',
+    '        inner = inner + 1;',
+    '        if inner == 2 { continue; }',
+    '        if inner == 4 { break; }',
+    '        visits = visits + 1;',
+    '    }',
+    '    report(outer, inner);',
+    '    visits = visits + 10;',
+    '}',
+    'report(visits);',
+  ].join('\n'), '1 4\n2 4\n24\n'],
+  [[
+    'values: List<Int> = [1, 2, 3, 4, 5];',
+    'loop values as value {',
+    '    if value == 2 { continue; }',
+    '    if value == 5 { break; }',
+    '    report(value);',
+    '}',
+  ].join('\n'), '1\n3\n4\n'],
+] as const;
+
+test('restricted compiler lowers bare break and continue to runnable TS', () => {
+  for (const [source, stdout] of loopExitCases) {
+    const ts = runCompiler(tsManifestPath, source);
+    assert.equal(ts.code, 0, ts.errors);
+    assert.match(ts.output, /\bbreak;|\bcontinue;/);
+    assert.deepEqual(runTsArtifact(ts.output), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0),
+    });
+  }
+});
+
+test('restricted compiler lowers bare break and continue to runnable C', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') {
+    context.skip('LITE_SKIP_NATIVE=1'); return;
+  }
+  const cc = process.env['CC'] ?? 'cc';
+  const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+    context.skip('C compiler unavailable; loop exit C lowering requires cc or CC'); return;
+  }
+  for (const [source, stdout] of loopExitCases.slice(0, 3)) {
+    const c = runCompiler(cManifestPath, source);
+    assert.equal(c.code, 0, c.errors);
+    assert.match(c.output, /\bbreak;|\bcontinue;/);
+    assert.deepEqual(runCArtifact(c.output), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0),
+    });
+  }
+});
+
+test('restricted compiler diagnoses break and continue outside loops', () => {
+  for (const [bad, errors] of [
+    ['break;\n', '1:1: break outside loop\n'],
+    ['continue;\n', '1:1: continue outside loop\n'],
+    ['if true { break; }\n', '1:11: break outside loop\n'],
+    ['var i := 0;\nloop i < 1 { i = i + 1; }\nbreak;\n', '3:1: break outside loop\n'],
+    ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
+    ['f := fn(): Int { loop true { break; } break; 1 }\nreport(f());\n', '1:39: break outside loop\n'],
+    ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
+    ['loop true { continue @outer; }\n', '1:22: expected ; after continue\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+    assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('restricted compiler compiles list mutation grants, push and pop to runnable TS', () => {
   const source = [
     'Ints := type List<Int>;',

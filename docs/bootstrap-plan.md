@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **222** interpreter test groups and **9** editor grammar groups; the fast lane
+- **225** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -95,9 +95,10 @@ function syntax with a clear status-2 diagnostic. Checked `inputArgs`,
 `inputAll`, `reportError`, `exit`, `textLength`, `textAt` and `textSlice` calls
 also emit self-contained TS in expressions and statement positions; C rejects
 them clearly. Dynamic Int `/`, `%`, `:/` and `:%` now lower to checked
-TS and C helpers; dynamic String concatenation,
-`break`/`continue`, collections beyond `List<T>`, `match`, runtime input outside
-these helpers and checked dynamic C overflow remain open.
+TS and C helpers; dynamic String concatenation and bare nearest-loop
+`break`/`continue` also lower in Boolean, unconditional and list-traversal
+loops. Collections beyond `List<T>`, `match`, runtime input outside these
+helpers and checked dynamic C overflow remain open.
 
 ## Bootstrap parity loop
 

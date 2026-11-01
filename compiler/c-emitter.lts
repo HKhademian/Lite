@@ -533,7 +533,7 @@ intFloorModuloCode := fn(left: String, right: String): String {
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 /** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value and target code. */
 Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
-/** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, an if/loop/function block marker, a return or a function call statement. */
+/** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, an if/loop/function block marker, a break/continue target, a return or a function call statement. */
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Flat program stream returned by parseProgram and consumed by a backend emitter. */
 Items := type List<Item>;
@@ -2225,6 +2225,14 @@ scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
     -1
 }
 
+/** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
+insideLoop := fn(blocks: List<String>): Bool {
+    loop blocks as kind {
+        if kind == "loop" { return true; }
+    }
+    false
+}
+
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
@@ -2363,6 +2371,18 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
                 intValue = 0, textValue = ""));
             currentReturned = true;
+            continue;
+        }
+        if name == "break" or name == "continue" {
+            if not insideLoop(blocks) {
+                failAt(source, nameStart, prefix, name + " outside loop");
+            }
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after " + name);
+            }
+            position = skipTrivia(source, position + 1, prefix);
+            push_back(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
+                code = "", intValue = 0, textValue = ""));
             continue;
         }
         var callableIndex := findFunction(functions, name);
@@ -2961,6 +2981,10 @@ emitProgram := fn(items: Items): Unit {
             report(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
             report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "Break" {
+            report(indent + "break;");
+        } else if item.kind == "Continue" {
+            report(indent + "continue;");
         } else if item.kind == "If" {
             report(indent + "if (" + item.code + ") {");
             indent = indent + "    ";

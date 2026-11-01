@@ -180,6 +180,10 @@ emitProgram := fn(items: Items): Unit {
             report(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
             report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "Break" {
+            report(indent + "break;");
+        } else if item.kind == "Continue" {
+            report(indent + "continue;");
         } else if item.kind == "If" {
             report(indent + "if (" + item.code + ") {");
             indent = indent + "    ";

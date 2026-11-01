@@ -301,6 +301,10 @@ emitProgram := fn(items: Items): Unit {
             } else {
                 report(indent + "return " + item.code + ";");
             }
+        } else if item.kind == "Break" {
+            report(indent + "break;");
+        } else if item.kind == "Continue" {
+            report(indent + "continue;");
         } else if item.kind == "Call" {
             report(indent + item.code + ";");
         } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalTuple" {

@@ -136,7 +136,9 @@ keeps that target from growing while it is approached.
   helpers that preserve zero-divisor and signed-minimum faults. Dynamic String
   concatenation lowers to ordinary left-to-right TS `+` and a checked C
   byte-copy helper whose allocations are intentionally leaked in this
-  bootstrap slice. The C path
+  bootstrap slice. Bare nearest-loop `break`/`continue` lower in Boolean,
+  unconditional and list-traversal loops; C admits the first two and still
+  rejects list traversal. The C path
   rejects function syntax, tuple or list values, list
   traversal, value `if` and the new input/diagnostic/text builtins with clear
   status-2 diagnostics. TS/C output is emitted directly; no separate IR

@@ -10,6 +10,10 @@ loop break/continue. Bodies are scoped and condition reads are repeated before
 entry. Value-producing loops, metadata, iterables, tags, payload exits, header
 transfers and completion/cleanup hooks remain unsupported. This implements a
 bounded effect-only use of the rules below without changing their value contract.
+The [restricted compiler prototype](../compiler/README.md) lowers the same bare
+nearest-loop exits in Boolean and unconditional loops to TS and C, and in
+list-traversal loops to TS; payloads, tags and exits outside a loop are rejected
+there.
 
 The approved **2026-10-31** [fixed-array increment](../igniter/README.md#fixed-arrays-and-traversal)
 adds action traversal of the supported array values, with source-once evaluation,
