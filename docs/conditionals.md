@@ -12,6 +12,15 @@ position still needs a final `else`. The explicit `else { ? }` reservation
 branch, condition/binding correlation, defaults for else-if chains, branch-result
 unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
 
+Lowering selected 2026-11-01: a partial declaration initializer selects the
+branch value or `zero(T)` and stores once; it is not required to materialize a
+zero store followed by a conditional overwrite, because the zero default is a
+semantic value and an unobservable zero store may be elided. A partial
+assignment lowers as one guarded store: evaluate the condition once, then write
+only when it is true. This preserves the value and effect equivalence with
+`x := 0` plus a guarded write, and with `if flag { x = value }` for assignments,
+without fixing a physical double-store shape.
+
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
 Implementation coverage, 2026-10-30: the [experimental igniter](../igniter/README.md#conditions-and-block-values)

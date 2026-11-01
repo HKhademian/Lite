@@ -1391,6 +1391,14 @@ test('partial conditionals give declarations a default and skip false assignment
   assert.equal(run('var x := 3; x = if false { 4 }; report(x);').output, '3\n');
   assert.equal(run('var x := 3; x = if true { 4 }; report(x);').output, '4\n');
   assert.equal(run('var x := 0; x = if true { report("yes"); 2 }; report(x);').output, 'yes\n2\n');
+  assert.equal(run('flag := true; a := if flag { 5 }; var b := 0; if flag { b = 5 } report(a, b);').output, '5 5\n');
+  assert.equal(run('flag := false; a := if flag { 5 }; var b := 0; if flag { b = 5 } report(a, b);').output, '0 0\n');
+  assert.equal(run('var a := 10; var b := 10; flag := false; a = if flag { 7 }; if flag { b = 7 } report(a, b);').output,
+    '10 10\n');
+  assert.equal(run('var a := 10; var b := 10; flag := true; a = if flag { 7 }; if flag { b = 7 } report(a, b);').output,
+    '7 7\n');
+  assert.equal(run('a := if inputInt() > 0 { 5 }; report(a, inputInt());', '7 9').output, '5 9\n');
+  assert.equal(run('var a := 0; a = if inputInt() > 0 { 5 }; report(a, inputInt());', '7 9').output, '5 9\n');
   fault('x := if true { if true { 1 } };', 'TypeError');
   fault('f := fn(): Int { if true { 1 } }', 'TypeError');
   fault('x := if true { exit(0) };', 'TypeError');

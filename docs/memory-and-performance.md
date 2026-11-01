@@ -381,6 +381,8 @@ x = make_user();
 
 Here merely exposing untouched bytes would be invalid. The compiler may still avoid physical zero stores if it can preserve the zero observation through constant folding, replacement of reads, or another equivalent representation.
 
+Selected 2026-11-01: a partial conditional declaration initializer, such as `x := if flag { value }`, treats `zero(T)` as its declaration default. Lowering may select the branch value or the default and store once; it need not materialize the zero store before a conditional overwrite. A partial conditional assignment lowers as one guarded store with the same observable order: evaluate the condition once, then write only on the true path. Both shapes preserve values, effects and required cleanup; only the number/order of unobservable writes is implementation-defined.
+
 Source validity is checked independently of optimization. The universal zero requirement does not make every bare local declaration valid: the selected [multi-member union restriction](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ?, and rejects bare = 0 as a member choice. Zero-dependent contracts for categories with unresolved mappings remain conditional; optimization does not define or bypass those mappings. An explicit uninitialized-storage request has a separate source contract. Backend-elided zeroing does not expose a new readable uninitialized state or choose stack versus heap.
 
 ## Explicit reservation without initialization
