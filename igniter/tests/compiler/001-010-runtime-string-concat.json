@@ -1,0 +1,21 @@
+{
+  "name": "runtime-string-concat",
+  "source": {
+    "file": "001-010-runtime-string-concat.lts",
+    "hash": "sha256:af4839f4a0227af40fd5484729064a2031eaa78e5ffe7a131352b122d0b6d840"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "Hello, Lite!\n",
+        "hash": "sha256:ac0dfdda6372b78225005d53fa6e21c6dead68a39fd63dbb2b183f6112728151"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1436,9 +1436,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 52 program and 40 rejection cases', () => {
-  assert.equal(programFixtures.length, 52);
-  assert.equal(rejectionFixtures.length, 40);
+test('restricted compiler corpus keeps 53 program and 39 rejection cases', () => {
+  assert.equal(programFixtures.length, 53);
+  assert.equal(rejectionFixtures.length, 39);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
@@ -1920,6 +1920,75 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
       phase: 'run', status: 1, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.from(message),
     });
   }
+});
+
+test('restricted compiler lowers dynamic String concatenation with left-to-right TS evaluation', () => {
+  const source = [
+    'join := fn (a: String, b: String): String { return a + b; }',
+    'var prefix := "lit";',
+    'name := "er";',
+    'pair := (left = "tu", right = "ple");',
+    'values := ["li", "st"];',
+    'report(prefix + name);',
+    'report(join("fun", "ction"));',
+    'report(pair.left + pair.right);',
+    'report(values[0] + values[1]);',
+    'report("" + prefix + "" + name);',
+    'report("snow🙂" + "man");',
+    'report("line\\n" + "break");',
+    'report("tab\\t" + "stop");',
+    'report("quote\\"" + "back\\\\slash");',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.equal(ts.output.includes('lite_concat'), false);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('liter\nfunction\ntuple\nlist\nliter\n' +
+      'snow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
+    stderr: Buffer.alloc(0),
+  });
+  const order = runCompiler(tsManifestPath, 'report(textAt("a", 9) + textSlice("a", 0, 9));');
+  assert.equal(order.code, 0, order.errors);
+  const orderRun = runTsArtifact(order.output);
+  assert.equal(orderRun.phase, 'run');
+  assert.notEqual(orderRun.status, 0);
+  assert.match(orderRun.stderr.toString(), /BoundPanic: textAt index outside text/);
+});
+
+test('restricted compiler lowers dynamic String concatenation to runnable C', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') {
+    context.skip('LITE_SKIP_NATIVE=1'); return;
+  }
+  const cc = process.env['CC'] ?? 'cc';
+  const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+    context.skip('C compiler unavailable; dynamic String concatenation C lowering requires cc or CC'); return;
+  }
+  const source = [
+    'var prefix := "lit";',
+    'name := "er";',
+    'report(prefix + name);',
+    'report(prefix + name + "!");',
+    'report("" + prefix + "");',
+    'report("snow🙂" + "man");',
+    'report("line\\n" + "break");',
+    'report("tab\\t" + "stop");',
+    'report("quote\\"" + "back\\\\slash");',
+  ].join('\n');
+  const c = runCompiler(cManifestPath, source);
+  assert.equal(c.code, 0, c.errors);
+  assert.match(c.output, /#include <stdlib\.h>/);
+  assert.match(c.output, /static const char \*lite_concat\(const char \*left, const char \*right\)/);
+  assert.deepEqual(runCArtifact(c.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('liter\nliter!\nlit\nsnow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
+    stderr: Buffer.alloc(0),
+  });
+  const plain = runCompiler(cManifestPath, 's := "a";\nreport(s);\n');
+  assert.equal(plain.code, 0, plain.errors);
+  assert.equal(plain.output.includes('lite_concat'), false);
+  assert.equal(plain.output.includes('#include <stdlib.h>'), false);
 });
 
 test('restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr', () => {

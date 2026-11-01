@@ -461,6 +461,11 @@ listCopyCode := fn(code: String): String {
     code
 }
 
+/** Emits a checked UTF-8 byte concatenation call; the bootstrap C backend intentionally leaks each result. */
+concatCode := fn(left: String, right: String): String {
+    "lite_concat(" + left + ", " + right + ")"
+}
+
 /** Emits a C logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"
@@ -2010,7 +2015,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 combined := left.textValue + right.textValue;
                 left = textParsed(textLiteralCode(combined), combined, true, right.next);
             } else {
-                failAt(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
+                left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
@@ -2818,6 +2823,11 @@ usesIntDivision := fn(items: Items): Bool {
     usesIntHelper(items, "lite_floor_divide_int(") or usesIntHelper(items, "lite_floor_modulo_int(")
 }
 
+/** True when any emitted item concatenates dynamic Strings through the checked helper. */
+usesStringConcat := fn(items: Items): Bool {
+    usesIntHelper(items, "lite_concat(")
+}
+
 /** Emits the checked truncating int64_t division helper. */
 emitIntDivideHelper := fn(): Unit {
     report("static int64_t lite_divide_int(int64_t left, int64_t right) {");
@@ -2885,6 +2895,23 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
     return;
 }
 
+/** Emits the checked UTF-8 byte concatenation helper; each allocated result is intentionally leaked by this bootstrap backend. */
+emitStringConcatHelper := fn(): Unit {
+    report("static const char *lite_concat(const char *left, const char *right) {");
+    report("    const size_t left_length = strlen(left);");
+    report("    const size_t right_length = strlen(right);");
+    report("    char *combined = malloc(left_length + right_length + 1);");
+    report("    if (combined == NULL) {");
+    report("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
+    report("        exit(1);");
+    report("    }");
+    report("    memcpy(combined, left, left_length);");
+    report("    memcpy(combined + left_length, right, right_length + 1);");
+    report("    return combined;");
+    report("}");
+    report("");
+}
+
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items): Unit {
     loop items as item {
@@ -2912,11 +2939,12 @@ emitProgram := fn(items: Items): Unit {
         }
     }
     report("#include <stdio.h>");
-    if usesIntDivision(items) { report("#include <stdlib.h>"); }
+    if usesIntDivision(items) or usesStringConcat(items) { report("#include <stdlib.h>"); }
     report("#include <inttypes.h>");
     report("#include <stdbool.h>");
     report("#include <string.h>");
     emitIntDivisionHelpers(items);
+    if usesStringConcat(items) { emitStringConcatHelper(); }
     report("int main(void) {");
     report("    int status = 0;");
     var indent := "    ";

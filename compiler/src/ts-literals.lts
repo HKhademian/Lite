@@ -34,6 +34,11 @@ listCopyCode := fn(code: String): String {
     "[...(" + code + ")]"
 }
 
+/** Emits an ordinary TypeScript String concatenation whose operands evaluate left to right. */
+concatCode := fn(left: String, right: String): String {
+    "((" + left + ") + (" + right + "))"
+}
+
 /** Emits a TypeScript logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"

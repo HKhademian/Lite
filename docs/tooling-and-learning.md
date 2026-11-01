@@ -229,10 +229,11 @@ rejections, not emitted runtime panic parity. See
 [arithmetic/local evidence](../investigations/INV-061-arithmetic-and-locals-emission.md).
 
 They now also admit String literals/escapes, immutable String locals, String `+`
-concatenation and multi-value reports over Int/String values. String expressions
-are closed constants and fold at compile time; emitted TS/C literals escape
+concatenation and multi-value reports over Int/String values. Constant String
+expressions fold at compile time, while dynamic concatenation lowers to TS `+`
+or a checked C byte-copy helper; emitted TS/C literals escape
 quotes, backslashes, control whitespace and, for C, trigraph-prone `?`. Compiler
-verification data moved to `igniter/tests/compiler/`: 52 program cases and 40
+verification data moved to `igniter/tests/compiler/`: 53 program cases and 39
 rejection cases, each pairing a sibling `.lts` entry source with a JSON model
 holding a `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]`
 (each case has optional `stdin`/`stdout`/`stderr` and required `exitCode`; each
@@ -240,7 +241,7 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 220 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 222 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).

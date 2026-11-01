@@ -37,6 +37,11 @@ listCopyCode := fn(code: String): String {
     code
 }
 
+/** Emits a checked UTF-8 byte concatenation call; the bootstrap C backend intentionally leaks each result. */
+concatCode := fn(left: String, right: String): String {
+    "lite_concat(" + left + ", " + right + ")"
+}
+
 /** Emits a C logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"

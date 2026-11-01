@@ -737,7 +737,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **220 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **222 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -807,7 +807,7 @@ AS/Wasm or compiler self-rebuild claim follows. See
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
 source before emission. Empty source is a compiler rejection (2), not an
-inputLine EOF fault. The shared corpus now has 52 program cases and 40
+inputLine EOF fault. The shared corpus now has 53 program cases and 39
 rejection cases under [tests/compiler](tests/compiler/), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See

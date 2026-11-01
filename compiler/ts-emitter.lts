@@ -458,6 +458,11 @@ listCopyCode := fn(code: String): String {
     "[...(" + code + ")]"
 }
 
+/** Emits an ordinary TypeScript String concatenation whose operands evaluate left to right. */
+concatCode := fn(left: String, right: String): String {
+    "((" + left + ") + (" + right + "))"
+}
+
 /** Emits a TypeScript logical negation around one Bool expression. */
 notCode := fn(value: String): String {
     "(!(" + value + "))"
@@ -2006,7 +2011,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 combined := left.textValue + right.textValue;
                 left = textParsed(textLiteralCode(combined), combined, true, right.next);
             } else {
-                failAt(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
+                left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");

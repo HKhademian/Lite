@@ -98,6 +98,18 @@ igniter. The C path rejects them clearly for now. This changes no language
 policy: graphemes, normalization, generic String indexing and native
 representation remain open.
 
+Implementation increment, **2026-11-01**: the restricted TS/C compiler also
+admits dynamic `prefix + name` concatenation instead of rejecting non-constant
+String operands. Constant-only concatenation continues to fold at compile time.
+The TS path emits ordinary `+` concatenation, so operands evaluate left to
+right. The C path emits a checked `lite_concat` helper that allocates and copies
+the UTF-8 bytes of both operands. That helper intentionally leaks each
+short-lived result in this bootstrap slice; allocation failure reports a
+terminal `MemoryFault` and exits nonzero. Sources without dynamic concatenation
+keep their existing emitted bytes. This records disposable host behavior, not a
+language-wide String ownership or allocation policy; those questions remain
+open below.
+
 ## Related concepts and references
 
 - [Lexical structure](lexical-structure.md)
