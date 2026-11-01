@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 89 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 90 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 34 registered, 34 cases/);
+    assert.match(covered.stdout, /features: 35 registered, 35 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1279,12 +1279,36 @@ test('loops accumulate typed .value and an optional then completion', () => {
   assert.equal(run('loop [1, 2] { report("tick"); } then { report("done"); }').output, 'tick\ntick\ndone\n');
   fault('sum := loop { .value + 1 };', 'TypeError');
   fault('report(.value);', 'TypeError');
-  fault('loop [1] as n { report(.count); }', 'TypeError');
+  assert.equal(run('loop [1, 2] as n { report(.count); }').output, '1\n2\n');
   fault('loop [1] as a { loop [2] as b { .value } }', 'TypeError');
   fault('loop [1] as n { f := fn(): Int { .value }; f() }', 'TypeError');
   fault('x: Int = loop [1] as n { "s" };', 'TypeError');
   fault('x: Int = loop [1] as n { n } then { "s" };', 'TypeError');
-  fault('loop [1] as n { n } then { .item };', 'SourceError');
+  assert.equal(run('x := loop [1, 2] as n { n } then { .item }; report(x);').output, '2\n');
+  assert.equal(run('x := loop inputArgs() as a { 1 } then { .item }; report("[" + x + "]");').output, '[]\n');
+  fault('loop true { report(1); } then { .index };', 'TypeError');
+});
+test('loop metadata, payload exits and tagged targets complete loops', () => {
+  assert.equal(run('loop [10, 20] as n { report(.item, .index, .count); }').output, '10 0 1\n20 1 2\n');
+  assert.equal(run('a := loop [5, 6] as n { n } then { report(.item, .index, .count); .item }; report(a);').output,
+    '6 1 2\n6\n');
+  assert.equal(run('x := loop [1, 2, 3] as n { if n == 2 { break 20 } n } then { .value }; report(x);').output, '20\n');
+  assert.equal(run('y := loop [1, 2, 3] as n { if n == 2 { continue 50 } n } then { .value }; report(y);').output, '3\n');
+  assert.equal(run('x := loop [1, 2] as n { break 5 }; report(x);').output, '5\n');
+  assert.equal(run('z := @outer loop [1, 2] as n { loop [1] as m { if n == 1 { break @outer 9 } } .value + n } then { .value }; report(z);').output, '9\n');
+  assert.equal(run('w := @scan loop [1, 2] as n { loop [1] as m { if n == 1 { continue @scan 7 } } .value + n } then { .value }; report(w);').output, '9\n');
+  assert.equal(run('v := @o loop [1, 2] as n { loop [1] as m { if n == 1 { return @o 42 } } .value + n } then { .value }; report(v);').output, '42\n');
+  assert.equal(run('loop true { report(.item); break; }').output, 'Unit\n');
+  assert.equal(run('x := loop inputArgs() as a { 1 } then { report(.count, .index); .item }; report("[" + x + "]");').output,
+    '0 0\n[]\n');
+  assert.equal(run('x := @scan loop [1, 2] as n { loop [1] { report(@scan.value); } .value + n } then { .value }; report(x);').output,
+    '0\n1\n3\n');
+  fault('loop true { report(1); } then { .index };', 'TypeError');
+  fault('loop { break 3; }', 'TypeError');
+  fault('report(.value);', 'TypeError');
+  fault('loop [1] as a { loop [2] as b { .value } }', 'TypeError');
+  fault('break @missing 1;', 'TypeError');
+  fault('continue @scan.value;', 'SourceError');
 });
 test('numeric widths promote, widen losslessly and range-check', () => {
   assert.equal(run('a: Int8 = 127; b: Int16 = 32767; c: Int32 = 2147483647; report(a, b, c);').output,
@@ -1511,11 +1535,11 @@ test('body locals initialize on every entry; header and outer shadows keep their
 test('loops reject invalid sources, escaping controls, and value/completion forms before effects', () => {
   for (const code of ['loop 1 {}', 'loop "items" {}', 'break;', 'continue;',
     'if false { break; }',
-    'loop false { missing; }', 'loop false { var x := 1; x = true; }']) fault(code, 'TypeError');
+    'loop false { missing; }', 'loop false { var x := 1; x = true; }',
+    'loop { break 3; }', 'loop { continue 3; }']) fault(code, 'TypeError');
   fault('loop { loop ({ break; true }) {} break; }', 'TypeError');
   fault('loop { loop ({ continue; false }) {} break; }', 'TypeError');
-  for (const code of ['loop true report(1);', 'loop { break 3; }', 'loop { continue 3; }',
-    'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
+  for (const code of ['loop true report(1);', 'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
   let output = '';
   assert.throws(() => execute(compile('report(1); loop false { continue; missing; }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},

@@ -13,9 +13,14 @@ destination (typed declaration, assignment, return or function result), from a
 named sequence source's element type when the body reads `.value`, or otherwise
 from the body tail. Reading `.value` in a body with none of those sources is an
 error rather than a guess. Action loops without `then` keep `Unit` and commit
-nothing. `break`/`continue` payloads, tagged loops, targeted exits,
-`return @loop`, `.item`/`.index` in `then`, `.count` in the body, and
-noncontributing conditional body tails remain unimplemented.
+nothing. `.count`, `.item` and, for positional sources, `.index` are readable in
+the body; `then` also sees the last entered item/index and the final count.
+`break value` and `continue value` commit to the nearest loop; `break @tag` and
+`continue @tag` target a tagged enclosing loop; `return @tag` commits and stops
+its target loop, running that loop's `then`. Tagged `@tag.value`, `@tag.count`,
+`@tag.item` and `@tag.index` access an enclosing loop from nested code. A body
+tail that is a partial conditional without `else`, payload exits whose loop
+value type cannot be inferred yet, and conditional tags remain unimplemented.
 
 ## Core rule
 

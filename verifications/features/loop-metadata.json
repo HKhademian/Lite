@@ -1,0 +1,22 @@
+{
+  "id": "loop.metadata",
+  "kind": "feature",
+  "source": {
+    "file": "loop-metadata.lts",
+    "hash": "sha256:819b3b75a3c04bb66a7b4116de38d74ab37855aca6f9b3626d2c886bb8a9bc38"
+  },
+  "features": [
+    "loop.metadata"
+  ],
+  "guideline": "Checks body item/index/count metadata, payload exits and a tagged break to an outer loop.",
+  "cases": [
+    {
+      "name": "metadata-and-targets",
+      "stdout": {
+        "text": "10 0 1\n20 1 2\n20\n20\n",
+        "hash": "sha256:5d75002aba38cbe4c26a1709f0b56769d53f21e94e369cf4b6821ced23db2406"
+      },
+      "exitCode": 0
+    }
+  ]
+}

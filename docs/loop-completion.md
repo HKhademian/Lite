@@ -9,10 +9,12 @@ receiverless `then { ... }` after a loop body. `then` receives the loop's final
 `.value` and `.count` (entered iterations, including skipped entries); its tail
 is the loop result, so `then { .value }`, `then { .count }`, a transformed
 value, and `then { "text" }` work. Without `then`, the result is the final
-`.value`. A statement loop may also carry `then`; its result is discarded. The
-tagged forms (`@name`, `@name.value`), `return @loop`, `break @loop`, payload
-exits, `.item`/`.index` in `then`, and cleanup ordering with `finally` remain
-unimplemented.
+`.value`. A statement loop may also carry `then`; its result is discarded. Tagged loops (`@name loop ...`), `@name.value`/`.count`/`.item`/`.index`,
+payload `break`/`continue`, `break @name`, `continue @name` and
+`return @name` are implemented. `.item`/`.index` in `then` expose the last
+entered entry, or a typed zero item and index 0 after zero entries. Cleanup
+ordering with `finally`, conditional tags, and payload exits whose target value
+type cannot be inferred yet remain unimplemented.
 
 ## Template
 

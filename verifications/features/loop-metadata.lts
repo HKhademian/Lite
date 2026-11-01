@@ -1,0 +1,12 @@
+x := loop [10, 20] as n {
+  report(.item, .index, .count);
+  n
+} then { .value };
+report(x);
+y := @stop loop [1, 2, 3] as n {
+  loop [1] as m {
+    if n == 2 { break @stop 20 }
+  }
+  .value + n
+} then { .value };
+report(y);

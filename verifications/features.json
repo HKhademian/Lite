@@ -66,6 +66,17 @@
       ]
     },
     {
+      "id": "loop.metadata",
+      "summary": "Loop metadata and payload/targeted exits.",
+      "case": "features/loop-metadata.json",
+      "status": "verified",
+      "docs": [
+        "docs/loop-value.md",
+        "docs/loop-completion.md",
+        "docs/control-flow.md"
+      ]
+    },
+    {
       "id": "function.recursion",
       "summary": "Typed functions and own-name recursion.",
       "case": "features/function-recursion.json",
