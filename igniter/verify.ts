@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadSource } from './loader.ts';
+import { loadCompiler } from './bootstrap.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
@@ -544,27 +545,20 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
   }
 }
 
-type CompilerProgram = ReturnType<typeof compile>;
-const compilerPrograms = new Map<string, CompilerProgram>();
+const compilerPrograms = new Map<string, ReturnType<typeof loadCompiler>>();
 
 /** Compiles one compiler application and runs it over the feature source. */
-function compilerEmit(path: string, source: string): string {
-  let program = compilerPrograms.get(path);
-  if (program === undefined) {
-    program = compile(loadSource(path));
-    compilerPrograms.set(path, program);
+function compilerEmit(manifestPath: string, source: string): string {
+  let compiler = compilerPrograms.get(manifestPath);
+  if (compiler === undefined) {
+    compiler = loadCompiler(manifestPath);
+    compilerPrograms.set(manifestPath, compiler);
   }
-  let output = '';
-  let errors = '';
-  let cursor = 0;
-  const code = execute(program, {
-    args: [],
-    read: () => source[cursor++] ?? null,
-    report: value => { output += value; },
-    reportError: value => { errors += value; },
-  });
-  if (code !== 0) throw new Error(`compiler exited ${code}: ${errors.trim()}`);
-  return output;
+  const result = compiler.compile({ text: source });
+  if (result.status !== 0) {
+    throw new Error(`compiler exited ${result.status}: ${result.stderr.toString('utf8').trim()}`);
+  }
+  return result.stdout.toString('utf8');
 }
 
 async function runCompilerTarget(target: Target, source: string,
@@ -573,7 +567,7 @@ async function runCompilerTarget(target: Target, source: string,
     throw new Error('compiler targets do not support stdin or script arguments');
   }
   if (target === 'ts') {
-    const emitted = compilerEmit(resolve(root, 'compiler/ts-emitter.lts'), source);
+    const emitted = compilerEmit(resolve(root, 'compiler/manifests/ts.json'), source);
     const directory = mkdtempSync(join(tmpdir(), 'lite-verify-ts-'));
     try {
       writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
@@ -590,7 +584,7 @@ async function runCompilerTarget(target: Target, source: string,
     } finally { rmSync(directory, { recursive: true, force: true }); }
   }
   if (target === 'c') {
-    const emitted = compilerEmit(resolve(root, 'compiler/c-emitter.lts'), source);
+    const emitted = compilerEmit(resolve(root, 'compiler/manifests/c.json'), source);
     const directory = mkdtempSync(join(tmpdir(), 'lite-verify-c-'));
     try {
       const cPath = join(directory, 'program.c');

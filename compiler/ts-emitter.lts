@@ -1,10 +1,427 @@
-importFlatAll "../lib/core/int.lts";
-importFlatAll "../lib/core/text.lts";
-importFlatAll "../lib/core/source.lts";
-importFlatAll "../lib/core/diag.lts";
-importFlatAll "../lib/core/format.lts";
-importFlatAll "../lib/core/list.lts";
+/* Provisional bootstrap checked-integer support. Not an official standard library. */
 
+/** Returns the smallest signed 64-bit value. */
+intMin := fn(): Int { -9223372036854775808 }
+
+/** Returns the largest signed 64-bit value. */
+intMax := fn(): Int { 9223372036854775807 }
+
+/** Checked signed 64-bit addition; `ok` is false instead of evaluating an overflow. */
+intAdd := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right > 0 and left > intMax() - right { return (value = 0, ok = false); }
+    if right < 0 and left < intMin() - right { return (value = 0, ok = false); }
+    (value = left + right, ok = true)
+}
+
+/** Checked signed 64-bit subtraction; `ok` is false instead of evaluating an overflow. */
+intSubtract := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right < 0 and left > intMax() + right { return (value = 0, ok = false); }
+    if right > 0 and left < intMin() + right { return (value = 0, ok = false); }
+    (value = left - right, ok = true)
+}
+
+/** Checked signed 64-bit multiplication; `ok` is false instead of evaluating an overflow. */
+intMultiply := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if left == 0 or right == 0 { return (value = 0, ok = true); }
+    if left > 0 {
+        if right > 0 {
+            if left > intMax() / right { return (value = 0, ok = false); }
+        } else if right < intMin() / left {
+            return (value = 0, ok = false);
+        }
+    } else if right > 0 {
+        if left < intMin() / right { return (value = 0, ok = false); }
+    } else if right < intMax() / left {
+        return (value = 0, ok = false);
+    }
+    (value = left * right, ok = true)
+}
+
+/** Checked truncating signed division; `ok` is false on zero or the signed-minimum overflow. */
+intDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    (value = left / right, ok = true)
+}
+
+/** Checked truncating signed remainder; `ok` is false on zero or the signed-minimum overflow. */
+intRemainder := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    (value = left % right, ok = true)
+}
+
+/** Checked floor division; `ok` is false on zero or the signed-minimum overflow. */
+intFloorDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    quotient := left / right;
+    if left % right =!= 0 and (left < 0) =!= (right < 0) {
+        (value = quotient - 1, ok = true)
+    } else {
+        (value = quotient, ok = true)
+    }
+}
+
+/** Checked floor modulo; `ok` is false only on a zero divisor. */
+intFloorModulo := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    remainder := left % right;
+    if remainder =!= 0 and (remainder < 0) =!= (right < 0) {
+        (value = remainder + right, ok = true)
+    } else {
+        (value = remainder, ok = true)
+    }
+}
+
+/** Checked unary negation; `ok` is false for the signed minimum. */
+intNegate := fn(value: Int): (value: Int, ok: Bool) {
+    if value == intMin() { return (value = 0, ok = false); }
+    (value = 0 - value, ok = true)
+}
+
+/** Formats one signed 64-bit Int as decimal text. */
+intText := fn(value: Int): String {
+    if value == 0 { return "0"; }
+    if value == intMin() { return "-9223372036854775808"; }
+    if value < 0 { return "-" + intText(0 - value); }
+    var remaining := value;
+    var digits := "";
+    loop remaining > 0 {
+        digit := remaining % 10;
+        digits = textAt("0123456789", digit) + digits;
+        remaining = remaining / 10;
+    }
+    digits
+}
+/* Provisional bootstrap text support. Not an official standard library. */
+
+
+/** True when `text` is exactly one ASCII decimal digit. */
+isDigit := fn(text: String): Bool {
+    or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
+    or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
+}
+
+/** Numeric value of one checked ASCII decimal digit. */
+digitValue := fn(text: String): Int {
+    if text == "0" { return 0; }
+    if text == "1" { return 1; }
+    if text == "2" { return 2; }
+    if text == "3" { return 3; }
+    if text == "4" { return 4; }
+    if text == "5" { return 5; }
+    if text == "6" { return 6; }
+    if text == "7" { return 7; }
+    if text == "8" { return 8; }
+    9
+}
+
+/** True for one ASCII letter, `a`-`z` or `A`-`Z`. */
+isAsciiLetter := fn(ch: String): Bool {
+    letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    size := textLength(letters);
+    var position := 0;
+    loop position < size {
+        if textAt(letters, position) == ch { return true; }
+        position = position + 1;
+    }
+    false
+}
+
+/** True for an ASCII identifier start or underscore accepted by the compiler subset. */
+isNameStart := fn(ch: String): Bool {
+    isAsciiLetter(ch) or ch == "_"
+}
+
+/** True for an identifier continuation character. */
+isNameContinue := fn(ch: String): Bool {
+    isNameStart(ch) or isDigit(ch)
+}
+
+/** Returns the first position at or after `start` that is not Lite whitespace. */
+skipSpaces := fn(source: String, start: Int): Int {
+    size := textLength(source);
+    var position := start;
+    loop position < size and (textAt(source, position) == " " or textAt(source, position) == "\t" or textAt(source, position) == "\r" or textAt(source, position) == "\n") {
+        position = position + 1;
+    }
+    position
+}
+
+/** Returns the position after the identifier run starting at `start`. */
+skipName := fn(source: String, start: Int): Int {
+    size := textLength(source);
+    var position := start;
+    loop position < size and isNameContinue(textAt(source, position)) {
+        position = position + 1;
+    }
+    position
+}
+
+/** True when `text` occurs at `position` and stays inside `source`. */
+startsWithAt := fn(source: String, position: Int, text: String): Bool {
+    width := textLength(text);
+    if position < 0 or position + width > textLength(source) { return false; }
+    textSlice(source, position, position + width) == text
+}
+
+/** True when the whole identifier `word` occurs at `position`, not a longer identifier that merely starts with it. */
+wordAt := fn(source: String, position: Int, word: String): Bool {
+    if not startsWithAt(source, position, word) { return false; }
+    after := position + textLength(word);
+    after >= textLength(source) or not isNameContinue(textAt(source, after))
+}
+
+/** Returns the first index at or after `start` where `needle` occurs, or -1 when absent. */
+indexOfText := fn(source: String, needle: String, start: Int): Int {
+    size := textLength(source);
+    width := textLength(needle);
+    var position := start;
+    if position < 0 or position > size { return -1; }
+    if width == 0 { return position; }
+    loop position + width <= size {
+        if startsWithAt(source, position, needle) { return position; }
+        position = position + 1;
+    }
+    -1
+}
+
+/** Joins text values in list order with `separator` between adjacent values. */
+joinTexts := fn(values: List<String>, separator: String): String {
+    var result := "";
+    var first := true;
+    loop values as value {
+        if first {
+            result = value;
+            first = false;
+        } else {
+            result = result + separator + value;
+        }
+    }
+    result
+}
+
+/** Parses optional-sign decimal Int64 text; `ok` is false for empty, malformed or out-of-range text. */
+textToInt := fn(text: String): (value: Int, ok: Bool) {
+    size := textLength(text);
+    if size == 0 { return (value = 0, ok = false); }
+    var position := 0;
+    var negative := false;
+    if textAt(text, 0) == "-" {
+        negative = true;
+        position = 1;
+    } else if textAt(text, 0) == "+" {
+        position = 1;
+    }
+    if position >= size { return (value = 0, ok = false); }
+    var value := 0;
+    loop position < size {
+        ch := textAt(text, position);
+        if not isDigit(ch) { return (value = 0, ok = false); }
+        digit := digitValue(ch);
+        if negative {
+            if value < (intMin() + digit) / 10 { return (value = 0, ok = false); }
+            value = value * 10 - digit;
+        } else {
+            if value > (intMax() - digit) / 10 { return (value = 0, ok = false); }
+            value = value * 10 + digit;
+        }
+        position = position + 1;
+    }
+    (value = value, ok = true)
+}
+/* Provisional bootstrap source-position support. Not an official standard library. */
+
+/** Clamps one offset into the inclusive range `0..textLength(source)`. */
+clampPosition := fn(source: String, position: Int): Int {
+    size := textLength(source);
+    if position < 0 { return 0; }
+    if position > size { return size; }
+    position
+}
+
+/** One-based line and column of a source offset, clamping at both ends. */
+lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
+    cursor := clampPosition(source, position);
+    var line := 1;
+    var lineStart := 0;
+    var index := 0;
+    loop index < cursor {
+        if textAt(source, index) == "\n" {
+            line = line + 1;
+            lineStart = index + 1;
+        }
+        index = index + 1;
+    }
+    (line = line, column = cursor - lineStart + 1)
+}
+
+/** Number of source lines, counting the empty source as one line. */
+lineCount := fn(source: String): Int {
+    size := textLength(source);
+    var count := 1;
+    var index := 0;
+    loop index < size {
+        if textAt(source, index) == "\n" { count = count + 1; }
+        index = index + 1;
+    }
+    count
+}
+
+/** Offset of the first character on one-based `line`, or text length when absent. */
+lineStartOffset := fn(source: String, line: Int): Int {
+    size := textLength(source);
+    if line <= 1 { return 0; }
+    var current := 2;
+    var index := 0;
+    loop index < size {
+        if textAt(source, index) == "\n" {
+            if current == line { return index + 1; }
+            current = current + 1;
+        }
+        index = index + 1;
+    }
+    size
+}
+
+/** Offset just before the line terminator of one-based `line`. */
+lineEndOffset := fn(source: String, line: Int): Int {
+    size := textLength(source);
+    start := lineStartOffset(source, line);
+    var index := start;
+    loop index < size and textAt(source, index) =!= "\n" {
+        index = index + 1;
+    }
+    index
+}
+/* Provisional bootstrap diagnostic support. Not an official standard library. */
+
+/** Returns the process status used for source, type and unsupported-feature diagnostics. */
+diagnosticExit := fn(): Int { 2 }
+
+/** Category text used by the igniter for source-shape failures. */
+sourceErrorCategory := "SourceError";
+
+/** Category text used by the igniter for type failures. */
+typeErrorCategory := "TypeError";
+
+/** Reports `message`, prefixed by `prefix:` when nonempty, then exits 2. */
+fail := fn(prefix: String, message: String): Unit {
+    if prefix == "" {
+        reportError(message);
+    } else {
+        reportError(prefix + ":" + message);
+    }
+    exit(diagnosticExit());
+}
+
+/** Reports `message` through `fail` unless `condition` is true. */
+expect := fn(prefix: String, condition: Bool, message: String): Unit {
+    if not condition { fail(prefix, message); } else { }
+}
+/* Provisional bootstrap formatting support. Not an official standard library. */
+
+
+/** Formats one signed 64-bit Int as decimal text. */
+decimalText := fn(value: Int): String {
+    intText(value)
+}
+
+/** Left-pads `value` with spaces to at least `width` characters. */
+padLeftText := fn(value: String, width: Int): String {
+    size := textLength(value);
+    var result := value;
+    var index := size;
+    loop index < width {
+        result = " " + result;
+        index = index + 1;
+    }
+    result
+}
+
+/** Right-pads `value` with spaces to at least `width` characters. */
+padRightText := fn(value: String, width: Int): String {
+    size := textLength(value);
+    var result := value;
+    var index := size;
+    loop index < width {
+        result = result + " ";
+        index = index + 1;
+    }
+    result
+}
+
+/** Formats an Int and left-pads it with spaces to at least `width` characters. */
+padLeftInt := fn(value: Int, width: Int): String {
+    padLeftText(intText(value), width)
+}
+
+/** Formats an Int and right-pads it with spaces to at least `width` characters. */
+padRightInt := fn(value: Int, width: Int): String {
+    padRightText(intText(value), width)
+}
+
+/** Joins Int values in list order with `separator` between adjacent values. */
+joinIntTexts := fn(values: List<Int>, separator: String): String {
+    var result := "";
+    var first := true;
+    loop values as value {
+        if first {
+            result = intText(value);
+            first = false;
+        } else {
+            result = result + separator + intText(value);
+        }
+    }
+    result
+}
+/* Provisional bootstrap list-search support. Not an official standard library. */
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfText := fn(values: List<String>, target: String): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsText := fn(values: List<String>, target: String): Bool {
+    listIndexOfText(values, target) >= 0
+}
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfInt := fn(values: List<Int>, target: Int): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsInt := fn(values: List<Int>, target: Int): Bool {
+    listIndexOfInt(values, target) >= 0
+}
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfBool := fn(values: List<Bool>, target: Bool): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
+    listIndexOfBool(values, target) >= 0
+}
 /* TypeScript backend for the temporary Lite compiler. */
 /** Formats a checked Int value as a TypeScript BigInt literal. */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
@@ -75,9 +492,692 @@ floorDivCode := fn(left: String, right: String): String {
 floorModCode := fn(left: String, right: String): String {
     "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
 }
+/* Shared restricted front-end. Not a standalone program: a target manifest
+   places the target literal encoders before this file and the emitter/driver
+   after it. */
+/** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
+Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+/** One local visible to later statements: source name, hygienic runtime name, value kind, mutability, declaration block depth, constant value and target code. */
+Local := type (name: String, runtime: String, kind: String, mutable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
+/** One entry in the flat program stream: a report argument or boundary, a local declaration or assignment, or an if/loop block marker. */
+Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+/** Flat program stream returned by parseProgram and consumed by a backend emitter. */
+Items := type List<Item>;
+/** One recognized binary operator spelling and the number of source bytes it occupies. */
+Operator := type (text: String, width: Int);
 
-importFlatAll "frontend.lts";
+/** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
+failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
+    place := lineColumn(source, position);
+    fail(prefix, decimalText(place.line) + ":" + decimalText(place.column) + ": " + message);
+}
 
+/** Consumes the exact `symbol` at `position`, or reports a source-positioned diagnostic and exits 2. */
+expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int {
+    if position >= textLength(source) or textAt(source, position) =!= symbol {
+        failAt(source, position, prefix, "expected " + symbol);
+    }
+    position + 1
+}
+
+/** True for a Lite keyword that this restricted compiler does not implement. */
+isReservedWord := fn(name: String): Bool {
+    name == "var" or name == "mut" or name == "fn" or name == "loop" or
+    name == "break" or name == "continue" or name == "return" or name == "if" or
+    name == "else" or name == "then" or name == "finally" or name == "match" or
+    name == "import" or name == "using" or name == "record" or name == "type" or
+    name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
+}
+
+/** Returns the documentation path for one reserved Lite feature. */
+featureDoc := fn(name: String): String {
+    if name == "loop" { "docs/loops.md" }
+    else if name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
+        name == "true" or name == "false" { "docs/conditionals.md" }
+    else if name == "var" or name == "mut" { "docs/declarations-and-assignment.md" }
+    else if name == "fn" or name == "return" { "docs/functions.md" }
+    else if name == "match" { "docs/match.md" }
+    else if name == "import" or name == "using" { "docs/modules-and-packages.md" }
+    else if name == "record" or name == "type" { "docs/types-and-inference.md" }
+    else if name == "break" or name == "continue" { "docs/control-flow.md" }
+    else if name == "then" or name == "finally" { "docs/finally.md" }
+    else { "docs/grammar-sketch.md" }
+}
+
+/** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
+unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
+    failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
+        "; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only");
+}
+
+/** Builds an Int parsed value; `textValue` is empty. */
+intParsed := fn(code: String, value: Int, constant: Bool, next: Int): Parsed {
+    (kind = "Int", code = code, intValue = value, textValue = "", constant = constant, next = next)
+}
+
+/** Builds a String parsed value; `intValue` is zero. */
+textParsed := fn(code: String, value: String, constant: Bool, next: Int): Parsed {
+    (kind = "String", code = code, intValue = 0, textValue = value, constant = constant, next = next)
+}
+
+/** Builds a Bool parsed value; `intValue` is 1 for true and 0 for false. */
+boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
+    (kind = "Bool", code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
+}
+
+/* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
+/** Checked signed 64-bit addition; reports at `at` and exits 2 on overflow. */
+addIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intAdd(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
+}
+
+/** Checked signed 64-bit subtraction; reports at `at` and exits 2 on overflow. */
+subtractIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intSubtract(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
+}
+
+/** Checked signed 64-bit multiplication; reports at `at` and exits 2 on overflow. */
+multiplyIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intMultiply(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
+}
+
+/** Truncating signed 64-bit division; reports at `at` and exits 2 on zero or MIN divided by -1. */
+divideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intDivide(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
+    }
+    result.value
+}
+
+/** Checked truncating Int remainder; reports at `at` and exits 2 on zero divisor or signed overflow. */
+remainderIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intRemainder(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "remainder by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
+    }
+    result.value
+}
+
+/** Checked floor division; reports at `at` and exits 2 on zero or signed overflow. */
+floorDivideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intFloorDivide(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
+    }
+    result.value
+}
+
+/** Checked floor modulo; reports at `at` and exits 2 on zero. */
+floorModuloIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
+    result := intFloorModulo(left, right);
+    if not result.ok { failAt(source, at, prefix, "modulo by zero in integer expression"); }
+    result.value
+}
+
+/** Checked unary negation; reports at `at` and exits 2 for the signed minimum. */
+negateInteger := fn(source: String, at: Int, value: Int, prefix: String): Int {
+    result := intNegate(value);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
+}
+
+/** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
+localIndex := fn(locals: List<Local>, name: String): Int {
+    var index := 0;
+    var found := -1;
+    loop locals as local {
+        if local.name == name { found = index; }
+        index = index + 1;
+    }
+    found
+}
+
+/** True when `name` is already declared directly in the block at `depth`, so shadowing an outer block remains allowed. */
+localSameBlock := fn(locals: List<Local>, name: String, depth: Int): Bool {
+    index := localIndex(locals, name);
+    if index < 0 { return false; }
+    locals[index].depth == depth
+}
+
+/** True for the ten comparison spellings accepted by this checkpoint. */
+isComparison := fn(operator: String): Bool {
+    operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
+    operator == "<=" or operator == "<!=" or operator == ">" or operator == ">!" or
+    operator == ">=" or operator == ">!="
+}
+
+/** Precedence level of a recognized binary operator; comparisons bind below arithmetic and logic binds below comparisons. */
+operatorLevel := fn(operator: String): Int {
+    if operator == "or" { 2 }
+    else if operator == "and" { 3 }
+    else if isComparison(operator) { 5 }
+    else if operator == "+" or operator == "-" { 10 }
+    else if operator == "*" or operator == "/" or operator == "%" or operator == ":/" or operator == ":%" { 20 }
+    else { 0 }
+}
+
+/** Reads an operator at `position`, preferring the longest spelling; returns empty text when none starts there. */
+readOperator := fn(source: String, position: Int): Operator {
+    if startsWithAt(source, position, "=!=") { return (text = "=!=", width = 3); }
+    if startsWithAt(source, position, "<!=") { return (text = "<!=", width = 3); }
+    if startsWithAt(source, position, ">!=") { return (text = ">!=", width = 3); }
+    if startsWithAt(source, position, "==") { return (text = "==", width = 2); }
+    if startsWithAt(source, position, "<=") { return (text = "<=", width = 2); }
+    if startsWithAt(source, position, ">=") { return (text = ">=", width = 2); }
+    if startsWithAt(source, position, "<!") { return (text = "<!", width = 2); }
+    if startsWithAt(source, position, ">!") { return (text = ">!", width = 2); }
+    ch := textAt(source, position);
+    if ch == "<" { return (text = "<", width = 1); }
+    if ch == ">" { return (text = ">", width = 1); }
+    if ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" { return (text = ch, width = 1); }
+    if startsWithAt(source, position, ":/") { return (text = ":/", width = 2); }
+    if startsWithAt(source, position, ":%") { return (text = ":%", width = 2); }
+    if isNameStart(ch) {
+        after := skipName(source, position);
+        word := textSlice(source, position, after);
+        if word == "and" or word == "or" { return (text = word, width = after - position); }
+    }
+    (text = "", width = 0)
+}
+
+/** Folds one of the ten Int comparisons to a Bool. */
+compareIntegers := fn(operator: String, left: Int, right: Int): Bool {
+    if operator == "==" { left == right }
+    else if operator == "=!=" { left =!= right }
+    else if operator == "<" { left < right }
+    else if operator == "<!" { left >= right }
+    else if operator == "<=" { left <= right }
+    else if operator == "<!=" { left > right }
+    else if operator == ">" { left > right }
+    else if operator == ">!" { left <= right }
+    else if operator == ">=" { left >= right }
+    else { left < right }
+}
+
+/** Folds String equality or inequality. */
+compareTexts := fn(operator: String, left: String, right: String): Bool {
+    if operator == "==" { left == right } else { left =!= right }
+}
+
+/** Folds Bool equality or inequality. */
+compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
+    if operator == "==" { left == right } else { left =!= right }
+}
+
+/** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
+compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
+    if left.kind =!= right.kind {
+        failAt(source, at, prefix, "cannot compare " + left.kind + " and " + right.kind);
+    }
+    if left.kind == "Int" {
+        if left.constant and right.constant {
+            value := compareIntegers(operator, left.intValue, right.intValue);
+            boolParsed(boolLiteralCode(value), value, true, right.next)
+        } else {
+            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+        }
+    } else {
+        if operator =!= "==" and operator =!= "=!=" {
+            failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+        }
+        if left.constant and right.constant {
+            value := if left.kind == "String" {
+                compareTexts(operator, left.textValue, right.textValue)
+            } else {
+                compareBools(operator, left.intValue =!= 0, right.intValue =!= 0)
+            };
+            boolParsed(boolLiteralCode(value), value, true, right.next)
+        } else {
+            boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
+        }
+    }
+}
+
+/** Parses a signed decimal literal, allowing whitespace after the sign. Returns target code, checked value and next position; exits 2 on malformed or out-of-range input. */
+parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
+    var cursor := position;
+    var negative := false;
+    ch := textAt(source, cursor);
+    if ch == "+" or ch == "-" {
+        negative = ch == "-";
+        cursor = skipSpaces(source, cursor + 1);
+    }
+    start := cursor;
+    var magnitude := 0;
+    loop cursor < textLength(source) and isDigit(textAt(source, cursor)) {
+        digit := digitValue(textAt(source, cursor));
+        if magnitude < (-9223372036854775808 + digit) / 10 {
+            failAt(source, position, prefix, "integer literal outside signed 64-bit range");
+        }
+        magnitude = magnitude * 10 - digit;
+        cursor = cursor + 1;
+    }
+    if start == cursor {
+        failAt(source, position, prefix, "expected a decimal integer literal");
+    }
+    if not negative and magnitude == -9223372036854775808 {
+        failAt(source, position, prefix, "integer literal outside signed 64-bit range");
+    }
+    value := if negative { magnitude } else { 0 - magnitude };
+    raw := textSlice(source, start, cursor);
+    var digitStart := 0;
+    loop digitStart + 1 < textLength(raw) and textAt(raw, digitStart) == "0" {
+        digitStart = digitStart + 1;
+    }
+    digits := textSlice(raw, digitStart, textLength(raw));
+    code := intLiteralCode(value, negative, digits);
+    intParsed(code, value, true, cursor)
+}
+
+/** Parses one double-quoted literal with n/t/r/quote/backslash escapes. Returns escaped target code, text value and next position; exits 2 on malformed input. */
+parseText := fn(source: String, position: Int, prefix: String): Parsed {
+    var cursor := position + 1;
+    var value := "";
+    loop true {
+        if cursor >= textLength(source) {
+            failAt(source, position, prefix, "unterminated string literal");
+        }
+        ch := textAt(source, cursor);
+        if ch == "\"" {
+            cursor = cursor + 1;
+            break;
+        }
+        if ch == "\\" {
+            escapeStart := cursor;
+            cursor = cursor + 1;
+            if cursor >= textLength(source) {
+                failAt(source, escapeStart, prefix, "unterminated string escape");
+            }
+            escaped := textAt(source, cursor);
+            if escaped == "n" { value = value + "\n"; }
+            else if escaped == "t" { value = value + "\t"; }
+            else if escaped == "r" { value = value + "\r"; }
+            else if escaped == "\"" { value = value + "\""; }
+            else if escaped == "\\" { value = value + "\\"; }
+            else {
+                failAt(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
+            }
+            cursor = cursor + 1;
+        } else {
+            value = value + ch;
+            cursor = cursor + 1;
+        }
+    }
+    textParsed(textLiteralCode(value), value, true, cursor)
+}
+
+/** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. self(..., 30) parses a unary operand without binary operators. */
+parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
+    start := skipSpaces(source, position);
+    if start >= textLength(source) {
+        failAt(source, start, prefix, "expected an Int, String or Bool expression");
+    }
+    var left := intParsed("", 0, true, start);
+    ch := textAt(source, start);
+    if ch == "(" {
+        inner := self(source, start + 1, prefix, locals, 0);
+        next := expectSymbol(source, skipSpaces(source, inner.next), ")", prefix);
+        left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next);
+    } else if ch == "+" or ch == "-" {
+        after := skipSpaces(source, start + 1);
+        if after < textLength(source) and isDigit(textAt(source, after)) {
+            left = parseInteger(source, start, prefix);
+        } else {
+            operand := self(source, start + 1, prefix, locals, 30);
+            if operand.kind =!= "Int" {
+                failAt(source, start, prefix, "unary " + ch + " requires an Int operand");
+            }
+            code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
+            if operand.constant {
+                value := if ch == "-" { negateInteger(source, start, operand.intValue, prefix) } else { operand.intValue };
+                left = intParsed(code, value, true, operand.next);
+            } else {
+                left = intParsed(code, 0, false, operand.next);
+            }
+        }
+    } else if isDigit(ch) {
+        left = parseInteger(source, start, prefix);
+    } else if ch == "\"" {
+        left = parseText(source, start, prefix);
+    } else if isNameStart(ch) {
+        nameStart := start;
+        next := skipName(source, start);
+        name := textSlice(source, nameStart, next);
+        if name == "true" {
+            left = boolParsed(boolLiteralCode(true), true, true, next);
+        } else if name == "false" {
+            left = boolParsed(boolLiteralCode(false), false, true, next);
+        } else if name == "not" {
+            operand := self(source, next, prefix, locals, 5);
+            if operand.kind =!= "Bool" {
+                failAt(source, nameStart, prefix, "not requires a Bool operand");
+            }
+            if operand.constant {
+                value := operand.intValue == 0;
+                left = boolParsed(boolLiteralCode(value), value, true, operand.next);
+            } else {
+                left = boolParsed(notCode(operand.code), false, false, operand.next);
+            }
+        } else {
+            if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
+            index := localIndex(locals, name);
+            if index < 0 {
+                failAt(source, nameStart, prefix, "unknown value " + name);
+            }
+            entry := locals[index];
+            left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
+        }
+    } else {
+        failAt(source, start, prefix, "expected an Int, String or Bool expression");
+    }
+    loop true {
+        operatorPosition := skipSpaces(source, left.next);
+        if operatorPosition >= textLength(source) { break; }
+        operator := readOperator(source, operatorPosition);
+        if operator.text == "" { break; }
+        level := operatorLevel(operator.text);
+        if level < minimum { break; }
+        right := self(source, operatorPosition + operator.width, prefix, locals, level + 1);
+        if operator.text == "and" or operator.text == "or" {
+            if left.kind =!= "Bool" or right.kind =!= "Bool" {
+                failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
+            }
+            if left.constant and right.constant {
+                value := if operator.text == "and" {
+                    left.intValue =!= 0 and right.intValue =!= 0
+                } else {
+                    left.intValue =!= 0 or right.intValue =!= 0
+                };
+                left = boolParsed(boolLiteralCode(value), value, true, right.next);
+            } else {
+                left = boolParsed(logicCode(operator.text, left.code, right.code), false, false, right.next);
+            }
+        } else if isComparison(operator.text) {
+            left = compareParsed(source, operatorPosition, operator.text, left, right, prefix);
+        } else if left.kind == "Int" and right.kind == "Int" {
+            if left.constant and right.constant {
+                folded := if operator.text == "+" { addIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else if operator.text == "-" { subtractIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else if operator.text == "*" { multiplyIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else if operator.text == "%" { remainderIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else if operator.text == ":/" { floorDivideIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else if operator.text == ":%" { floorModuloIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
+                    else { divideIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) };
+                code := if operator.text == ":/" { floorDivCode(left.code, right.code) }
+                    else if operator.text == ":%" { floorModCode(left.code, right.code) }
+                    else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
+                left = intParsed(code, folded, true, right.next);
+            } else if operator.text == "/" or operator.text == "%" or operator.text == ":/" or operator.text == ":%" {
+                failAt(source, operatorPosition, prefix, "runtime division is not supported by this compiler checkpoint yet");
+            } else {
+                left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
+            }
+        } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
+            if left.constant and right.constant {
+                combined := left.textValue + right.textValue;
+                left = textParsed(textLiteralCode(combined), combined, true, right.next);
+            } else {
+                failAt(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
+            }
+        } else if operator.text == "+" {
+            failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
+        } else {
+            failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
+        }
+    }
+    left
+}
+
+/** Parses one complete expression at the lowest precedence. */
+parseExpression := fn(source: String, position: Int, prefix: String, locals: List<Local>): Parsed {
+    parseBinary(source, position, prefix, locals, 0)
+}
+
+/** Reads the optional logical source name from inputArgs. Returns the name without a separator, or empty text; exits 2 for more than one argument. */
+sourcePrefix := fn(): String {
+    var prefix := "";
+    var argumentCountValue := 0;
+    loop inputArgs() as argument {
+        if argumentCountValue == 0 { prefix = argument; }
+        argumentCountValue = argumentCountValue + 1;
+    }
+    if argumentCountValue > 1 {
+        reportError("expected at most one logical source name argument");
+        exit(2);
+    }
+    prefix
+}
+
+/** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
+parseProgram := fn(source: String, prefix: String): Items {
+    size := textLength(source);
+    locals: mut List<Local> = [];
+    items: mut Items = [];
+    blocks: mut List<String> = [];
+    var localCount := 0;
+    var blockCount := 0;
+    var depth := 0;
+    var position := skipSpaces(source, 0);
+    if position == size {
+        failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+    }
+    loop position < size {
+        ch := textAt(source, position);
+        if ch == "}" {
+            if blockCount == 0 {
+                failAt(source, position, prefix, "unexpected }");
+            }
+            blockKind := blocks[blockCount - 1];
+            after := skipSpaces(source, position + 1);
+            if blockKind == "if" and after < size and wordAt(source, after, "else") {
+                loop localCount > 0 and locals[localCount - 1].depth >= depth {
+                    droppedLocal := pop_back(mut locals);
+                    localCount = localCount - 1;
+                }
+                push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                droppedIf := pop_back(mut blocks);
+                blockCount = blockCount - 1;
+                push_back(mut blocks, "else");
+                blockCount = blockCount + 1;
+                position = skipSpaces(source, after + 4);
+                position = expectSymbol(source, position, "{", prefix);
+                position = skipSpaces(source, position + 1);
+                continue;
+            }
+            loop localCount > 0 and locals[localCount - 1].depth >= depth {
+                droppedLocal := pop_back(mut locals);
+                localCount = localCount - 1;
+            }
+            depth = depth - 1;
+            if blockKind == "loop" {
+                push_back(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            } else {
+                push_back(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            }
+            droppedBlock := pop_back(mut blocks);
+            blockCount = blockCount - 1;
+            position = skipSpaces(source, position + 1);
+            if position < size and textAt(source, position) == ";" {
+                position = skipSpaces(source, position + 1);
+            }
+            continue;
+        }
+        if not isNameStart(ch) {
+            failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+        }
+        nameStart := position;
+        position = skipName(source, position);
+        name := textSlice(source, nameStart, position);
+        position = skipSpaces(source, position);
+        if name == "report" {
+            if position >= size or textAt(source, position) =!= "(" {
+                failAt(source, position, prefix, "expected ( after report");
+            }
+            position = skipSpaces(source, position + 1);
+            loop true {
+                argument := parseExpression(source, position, prefix, locals);
+                push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
+                    intValue = argument.intValue, textValue = argument.textValue));
+                position = skipSpaces(source, argument.next);
+                if position < size and textAt(source, position) == "," {
+                    position = skipSpaces(source, position + 1);
+                } else {
+                    break;
+                }
+            }
+            position = expectSymbol(source, position, ")", prefix);
+            position = skipSpaces(source, position);
+            if position < size and textAt(source, position) == ";" {
+                position = skipSpaces(source, position + 1);
+            }
+            push_back(mut items, (kind = "End", name = "", runtime = "", code = "",
+                intValue = 0, textValue = ""));
+            continue;
+        }
+        if name == "if" {
+            conditionStart := position;
+            condition := parseExpression(source, position, prefix, locals);
+            if condition.kind =!= "Bool" {
+                failAt(source, conditionStart, prefix, "if condition must be Bool");
+            }
+            conditionCode := if condition.constant {
+                boolLiteralCode(condition.intValue =!= 0)
+            } else {
+                condition.code
+            };
+            position = expectSymbol(source, skipSpaces(source, condition.next), "{", prefix);
+            push_back(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                intValue = 0, textValue = ""));
+            push_back(mut blocks, "if");
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            position = skipSpaces(source, position + 1);
+            continue;
+        }
+        if name == "loop" {
+            var conditionCode := "";
+            if position < size and textAt(source, position) =!= "{" {
+                conditionStart := position;
+                condition := parseExpression(source, position, prefix, locals);
+                if condition.kind =!= "Bool" {
+                    failAt(source, conditionStart, prefix, "loop condition must be Bool");
+                }
+                if condition.constant {
+                    if condition.intValue == 0 { conditionCode = "false"; }
+                } else {
+                    conditionCode = condition.code;
+                }
+                position = skipSpaces(source, condition.next);
+            }
+            position = expectSymbol(source, position, "{", prefix);
+            push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                intValue = 0, textValue = ""));
+            push_back(mut blocks, "loop");
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            position = skipSpaces(source, position + 1);
+            continue;
+        }
+        if name == "var" {
+            position = skipSpaces(source, position);
+            if position >= size or not isNameStart(textAt(source, position)) {
+                failAt(source, position, prefix, "expected local name after var");
+            }
+            localStart := position;
+            position = skipName(source, position);
+            localName := textSlice(source, localStart, position);
+            if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
+            position = skipSpaces(source, position);
+            if not startsWithAt(source, position, ":=") {
+                failAt(source, position, prefix, "expected := or = after local name " + localName);
+            }
+            position = skipSpaces(source, position + 2);
+            parsed := parseExpression(source, position, prefix, locals);
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after local declaration " + localName);
+            }
+            position = skipSpaces(source, position + 1);
+            if localSameBlock(locals, localName, depth) {
+                failAt(source, localStart, prefix, "duplicate local " + localName);
+            }
+            runtime := "lite_" + localName;
+            push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
+                mutable = true, depth = depth, constant = false, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Var" + parsed.kind, name = localName, runtime = runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        if name == "else" {
+            failAt(source, nameStart, prefix, "unexpected else");
+        }
+        if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
+        if startsWithAt(source, position, ":=") {
+            position = skipSpaces(source, position + 2);
+            parsed := parseExpression(source, position, prefix, locals);
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after local declaration " + name);
+            }
+            position = skipSpaces(source, position + 1);
+            if localSameBlock(locals, name, depth) {
+                failAt(source, nameStart, prefix, "duplicate local " + name);
+            }
+            runtime := "lite_" + name;
+            push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
+                mutable = false, depth = depth, constant = parsed.constant, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Local" + parsed.kind, name = name, runtime = runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
+            index := localIndex(locals, name);
+            if index < 0 {
+                failAt(source, nameStart, prefix, "unknown value " + name);
+            }
+            entry := locals[index];
+            if not entry.mutable {
+                failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
+            }
+            position = skipSpaces(source, position + 1);
+            parsed := parseExpression(source, position, prefix, locals);
+            if parsed.kind =!= entry.kind {
+                failAt(source, nameStart, prefix, "cannot assign " + parsed.kind + " to " + entry.kind + " local " + name);
+            }
+            position = skipSpaces(source, parsed.next);
+            if position >= size or textAt(source, position) =!= ";" {
+                failAt(source, position, prefix, "expected ; after assignment to " + name);
+            }
+            position = skipSpaces(source, position + 1);
+            push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                mutable = true, depth = entry.depth, constant = false, code = parsed.code,
+                intValue = parsed.intValue, textValue = parsed.textValue));
+            localCount = localCount + 1;
+            push_back(mut items, (kind = "Assign" + entry.kind, name = name, runtime = entry.runtime,
+                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+            continue;
+        }
+        failAt(source, position, prefix, "expected := or = after local name " + name);
+    }
+    if blockCount > 0 {
+        failAt(source, size, prefix, "expected } before end of source");
+    }
+    items
+}
 /** Removes one four-space indentation level from `indent`. */
 dedent := fn(indent: String): String {
     textSlice(indent, 0, textLength(indent) - 4)
@@ -143,7 +1243,6 @@ emitProgram := fn(items: Items): Unit {
     report("    return lite_out;");
     report("}");
 }
-
 prefix := sourcePrefix();
 source := inputAll();
 emitProgram(parseProgram(source, prefix));

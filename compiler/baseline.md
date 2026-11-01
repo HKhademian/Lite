@@ -4,6 +4,10 @@ Status: **P0 baseline record, 2026-11-01**. This page records the state the
 bootstrap work starts from. It is not a self-hosting claim: stage 0 is still the
 only execution path, and no T, C, T2 or C2 artifact exists.
 
+> P4 later moved the compiler source under `compiler/src/` and split the
+> emitters. The paths and source hashes below are the historical P0 snapshot;
+> artifact hashes for the 50 program cases remain the reference baseline.
+
 Source baseline commit: `b4156bd02226d4e3b58cbc9d3a265a64a18b0284`
 (`igniter-v0.1.0-alpha.38` plus release-history recording). The P0 changes add
 only this record, the manifest contract and empty target directories; they do

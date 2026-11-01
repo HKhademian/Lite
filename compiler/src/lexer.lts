@@ -1,10 +1,5 @@
 /* Lite-written lexer for the bootstrap source subset. Declaration-only. */
 
-importFlatAll "../../lib/core/int.lts";
-importFlatAll "../../lib/core/text.lts";
-importFlatAll "../../lib/core/source.lts";
-importFlatAll "../../lib/core/diag.lts";
-importFlatAll "../../lib/core/format.lts";
 
 /** One lexical token: kind, decoded text, source offset and 1-based line/column. */
 Token := type (kind: String, text: String, offset: Int, line: Int, column: Int);

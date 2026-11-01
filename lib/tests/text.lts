@@ -1,3 +1,4 @@
+importFlatAll "../core/int.lts";
 importFlatAll "../core/text.lts";
 importFlatAll "../core/test.lts";
 

@@ -1,6 +1,5 @@
 /* Provisional bootstrap formatting support. Not an official standard library. */
 
-importFlatAll "int.lts";
 
 /** Formats one signed 64-bit Int as decimal text. */
 decimalText := fn(value: Int): String {

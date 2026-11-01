@@ -96,15 +96,16 @@ strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror`, capturing raw streams and status.
 
 The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
-[c.json](../compiler/manifests/c.json). They currently list the existing
-single-file emitters; the loader expands each `importFlatAll "frontend.lts";`
-with a line map until P4 removes that temporary directive. The direct flat-import
-load and the bundle path produce byte-identical bundle text, artifacts and
-rejection diagnostics for all 92 compiler cases.
+[c.json](../compiler/manifests/c.json). They list the L0 libraries, target
+literal encoders, shared front-end, target emitter and target driver in
+dependency order. `litec` compiles the manifest bundle through
+[`bundle-cli.ts`](bundle-cli.ts); compiler source and `lib/core` contain no
+`importFlatAll` directives. The `compiler/ts-emitter.lts` and
+`compiler/c-emitter.lts` compatibility bundles are generated from the manifests.
 
 P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
 with a token-dump driver at
-[`../compiler/src/lexer-dump.lts`](../compiler/src/lexer-dump.lts). It tokenizes
+[`../compiler/tests/lexer/lexer-dump.lts`](../compiler/tests/lexer/lexer-dump.lts). It tokenizes
 names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
 nested/raw comments; decodes the selected string escapes; checks Int64 magnitude;
 and records offset plus line/column. Operators use longest-match over the
@@ -115,12 +116,13 @@ full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
 expanded TS S, the C emitter, the lexer sources and all 92 compiler cases. No
 parser or emitter behavior is claimed yet.
 
-P4 has started with the parser core, type grammar, declarations, expressions,
-statements and functions in [`../compiler/src/parser.lts`](../compiler/src/parser.lts).
-It parses expanded S, L0, the lexer source and all program cases; value `if`
-branches are currently single-expression blocks. Manifest-order authority,
-removing `importFlatAll` and named negative-fixture diagnostics remain.
-Fixtures live under [`../compiler/tests/parser/`](../compiler/tests/parser/).
+P4 adds the parser core, type grammar, declarations, expressions, statements and
+functions in [`../compiler/src/parser.lts`](../compiler/src/parser.lts). It parses
+expanded S, L0, the lexer source and all program cases; value `if` branches are
+currently single-expression blocks. Manifest-order assembly is authoritative,
+compiler source and `lib/core` no longer use `importFlatAll`, and unsupported
+declarations are rejected by name. Fixtures live under
+[`../compiler/tests/parser/`](../compiler/tests/parser/).
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.
@@ -727,7 +729,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **191 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **193 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -766,9 +768,10 @@ self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithme
 
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
-backends, included through the temporary loader directive
-`importFlatAll "frontend.lts";`. That directive is a source-loader workaround,
-not a language feature: it is resolved by [loader.ts](loader.ts) before checking.
+backends assembled by the ordered manifests. `litec` compiles the manifest
+bundle through [bundle-cli.ts](bundle-cli.ts); no module or import syntax is
+introduced, and compiler source no longer uses the temporary `importFlatAll`
+directive.
 
 Run the compiler with:
 

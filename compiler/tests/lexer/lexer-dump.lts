@@ -1,6 +1,11 @@
 /* Token-dump driver for the Lite-written lexer. Test helper, not a public command. */
 
-importFlatAll "lexer.lts";
+importFlatAll "../../../lib/core/int.lts";
+importFlatAll "../../../lib/core/text.lts";
+importFlatAll "../../../lib/core/source.lts";
+importFlatAll "../../../lib/core/diag.lts";
+importFlatAll "../../../lib/core/format.lts";
+importFlatAll "../../src/lexer.lts";
 
 var prefix := "";
 var argCount := 0;

@@ -1,9 +1,9 @@
 # Compiler source manifests
 
-Status: **P2 implemented, 2026-11-01**. The bundle loader lives in
-[`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver and
-harness live in [`../../igniter/bootstrap.ts`](../../igniter/bootstrap.ts). No
-public `bootstrap` command is exposed.
+Status: **P4 implemented, 2026-11-01**. The bundle loader lives in
+[`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver,
+harness and `litec` bundle entry live under [`../../igniter/`](../../igniter/).
+No public `bootstrap` command is exposed.
 
 A manifest is the ordered assembly description for one bootstrap target. It
 replaces neither Lite source nor a module system: it names the files the loader
@@ -20,24 +20,23 @@ splices into one bundle, in dependency order. The schema is
     "../../lib/core/diag.lts",
     "../../lib/core/format.lts",
     "../../lib/core/list.lts",
-    "../ts-emitter.lts"
+    "../src/ts-literals.lts",
+    "../src/frontend.lts",
+    "../src/emit-ts.lts",
+    "../src/driver-ts.lts"
   ]
 }
 ```
 
-The current manifests list the P2 L0 libraries before the existing single-file
-emitter. `lib/core/test.lts` is test-only and is not part of a compiler bundle.
+The current manifests list the L0 libraries, the target literal encoders, the
+shared front-end, the target emitter and the target driver. `lib/core/test.lts`
+is test-only and is not part of a compiler bundle.
 
-```json
-{ "target": "ts", "files": ["../../lib/core/int.lts", "…", "../ts-emitter.lts"] }
-{ "target": "c", "files": ["../../lib/core/int.lts", "…", "../c-emitter.lts"] }
-```
-
-Each current emitter still carries `importFlatAll "frontend.lts";`, and both
-emitters also import the L0 files at the top. The bundle loader expands those
-directives with a line map and include-once behavior, so the bundle text is the
-same as the direct flat-import load. P4 splits the remaining source and makes the
-manifest order authoritative without the temporary directive.
+No compiler source file or `lib/core` file contains an `importFlatAll`
+directive. The temporary directive remains only in test helpers under
+`compiler/tests/` and `lib/tests/`. The generated `compiler/ts-emitter.lts` and
+`compiler/c-emitter.lts` compatibility bundles are exactly the flattened
+manifest text.
 
 ## Manifest rules
 

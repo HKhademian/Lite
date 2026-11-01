@@ -20,8 +20,9 @@ modules, `finally`, loop metadata or compound operators to S just because the
 igniter supports them. Adding a construct to L is an owner decision, not an
 implementation convenience: the compiler must parse, check and lower it too.
 
-The current files stay in place through P1; P4 makes manifest order
-authoritative and removes `importFlatAll`. The target layout, manifest schema,
+P4 moves the compiler source under `src/` and makes manifest order
+authoritative. Compiler source and `lib/core` no longer use `importFlatAll`; the
+old emitter paths are generated compatibility bundles. The manifest schema,
 line-map contract and current hashes are recorded in:
 
 - [`manifests/README.md`](manifests/README.md) — manifest and line-map
@@ -33,16 +34,14 @@ line-map contract and current hashes are recorded in:
 - [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) —
   emitted-artifact hashes for all 50 program cases.
 
-The P1 bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts)
-loads the current single-file manifests, and
-[`../igniter/bootstrap.ts`](../igniter/bootstrap.ts) compiles and runs them with
-flattened-position diagnostics mapped back to the original files. P2 adds the
-provisional L0 helpers under [`../lib/core/`](../lib/README.md): checked Int,
-text, source positions, diagnostics, formatting and list search. Both manifests
-list those files before the emitter, and the compiler uses them without changing
-the 50/42 artifact and diagnostic baseline. `lib/core/test.lts` and `lib/tests/`
-are test-only. P3 adds the Lite lexer under `src/`; the rest of `src/` and
-`runtime/` remain P4 and P6/P7 placeholders.
+The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
+the ordered manifests, and [`../igniter/bootstrap.ts`](../igniter/bootstrap.ts)
+compiles and runs them with flattened-position diagnostics mapped back to the
+original files. `litec` uses
+[`../igniter/bundle-cli.ts`](../igniter/bundle-cli.ts). P2 adds the provisional
+L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
+positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
+P4 the parser under `src/`; `runtime/` remains a P6/P7 placeholder.
 
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the
@@ -57,25 +56,27 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
 | [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer: tokens, positions, comments, strings and Int bounds |
-| [`src/lexer-dump.lts`](src/lexer-dump.lts) | Token-dump test helper for the lexer |
-| [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions; manifest order and value-branch breadth remain |
-| [`src/parser-dump.lts`](src/parser-dump.lts) | Type-declaration dump test helper |
-| [`src/parser-decl-dump.lts`](src/parser-decl-dump.lts) | Declaration/expression dump test helper |
-| [`src/parser-program-dump.lts`](src/parser-program-dump.lts) | Full-program parse dump test helper |
-| [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures and exact expected token dumps |
-| [`tests/parser/`](tests/parser/) | Focused parser fixtures and exact expected parse dumps |
-| `src/` | Target directory for the remaining split bootstrap sources (P4) |
-| `runtime/` | Target directory for target runtimes (P6/P7; empty) |
-| [`frontend.lts`](frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
-| [`ts-emitter.lts`](ts-emitter.lts) | TypeScript literal encoding, report formatting and program emission |
-| [`c-emitter.lts`](c-emitter.lts) | C literal encoding, `printf` report formatting and program emission |
+| [`src/frontend.lts`](src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
+| [`src/ts-literals.lts`](src/ts-literals.lts) | TypeScript literal encoding |
+| [`src/emit-ts.lts`](src/emit-ts.lts) | TypeScript report formatting and program emission |
+| [`src/driver-ts.lts`](src/driver-ts.lts) | TypeScript driver entry |
+| [`src/c-literals.lts`](src/c-literals.lts) | C literal encoding |
+| [`src/emit-c.lts`](src/emit-c.lts) | C `printf` report formatting and program emission |
+| [`src/driver-c.lts`](src/driver-c.lts) | C driver entry |
+| [`src/lexer.lts`](src/lexer.lts) | Lite-written lexer |
+| [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
+| [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
+| [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
+| [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
+| [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
 | [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `report(42);` |
 | [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 
-The backends contain no duplicated parser. They define only the target-specific
-literal encoders and `emitProgram`, then include the shared front-end.
+The backend source is split by role and assembled by manifest order. The
+compatibility `ts-emitter.lts` and `c-emitter.lts` files are generated flattened
+bundles, not hand-edited sources.
 
 ## Documentation style
 
@@ -85,25 +86,24 @@ comment describing its contract, checked-value meaning, and failure behavior
 executable contract remains the verification cases under
 [`../igniter/tests/compiler/`](../igniter/tests/compiler/).
 
-## Temporary `importFlatAll`
+## Manifest assembly
 
-The front-end is included with:
+Compiler source is multi-file but has no `import`/`export` syntax. The ordered
+manifests in [`manifests/`](manifests/README.md) list the files for each target;
+the loader splices them into one flattened bundle with a line map. Dependency
+order is semantic because Lite has no forward function lookup: literal encoders
+come before the shared front-end, and the front-end comes before the emitter and
+driver.
 
-```text
-importFlatAll "frontend.lts";
-```
+`litec` compiles through
+[`../igniter/bundle-cli.ts`](../igniter/bundle-cli.ts), which loads the manifest
+bundle and runs the target driver. The old `ts-emitter.lts` and `c-emitter.lts`
+paths are generated compatibility bundles that match the manifest output; edit
+`src/` and regenerate them, do not edit the bundles.
 
-This is a **temporary source-loader workaround**, not a language feature:
-
-- A top-level line `importFlatAll "path";` is replaced by the UTF-8 source of
-  that file, resolved relative to the importing file.
-- Imported declarations share one flat namespace.
-- Each file is included at most once per load; cycles are rejected.
-- Imported files are expected to be declaration-only. Do not put executable
-  top-level statements in a flat-imported file.
-- The loader is implemented in [`../igniter/loader.ts`](../igniter/loader.ts)
-  and used by `./lite run`, `./lite run --check`, `litec`, and the test helpers.
-  It is not part of the permanent module/import design.
+The temporary `importFlatAll` loader directive remains only in test helpers
+under `compiler/tests/` and `lib/tests/`; compiler source and `lib/core` do not
+use it. It is not part of the permanent module/import design.
 
 ## Run the compiler
 

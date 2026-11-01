@@ -1,11 +1,5 @@
 /* Lite-written parser core. Starts with the type grammar; declaration/body slices follow. */
 
-importFlatAll "../../lib/core/int.lts";
-importFlatAll "../../lib/core/text.lts";
-importFlatAll "../../lib/core/source.lts";
-importFlatAll "../../lib/core/diag.lts";
-importFlatAll "../../lib/core/format.lts";
-importFlatAll "lexer.lts";
 
 /** One flat parse node: kind, name, detail text and source position. */
 Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
@@ -388,6 +382,11 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
         }
         if isSymbol(token, "}") {
             parseFail(token, prefix, "unexpected }");
+        }
+        if token.kind == TOKEN_KIND_KEYWORD() and
+            (token.text == "match" or token.text == "record" or token.text == "import" or
+                token.text == "using" or token.text == "then" or token.text == "finally") {
+            parseFail(token, prefix, "unsupported feature \"" + token.text + "\"");
         }
         var itemText := "";
         if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {

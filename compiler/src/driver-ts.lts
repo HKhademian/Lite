@@ -1,0 +1,3 @@
+prefix := sourcePrefix();
+source := inputAll();
+emitProgram(parseProgram(source, prefix));

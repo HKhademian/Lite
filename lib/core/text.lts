@@ -1,6 +1,5 @@
 /* Provisional bootstrap text support. Not an official standard library. */
 
-importFlatAll "int.lts";
 
 /** True when `text` is exactly one ASCII decimal digit. */
 isDigit := fn(text: String): Bool {

@@ -1,6 +1,6 @@
-/* Shared restricted front-end. Not a standalone program: a backend defines
-   intLiteralCode/textLiteralCode/boolLiteralCode/notCode/logicCode/comparisonCode
-   and includes this file with importFlatAll. */
+/* Shared restricted front-end. Not a standalone program: a target manifest
+   places the target literal encoders before this file and the emitter/driver
+   after it. */
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 /** One local visible to later statements: source name, hygienic runtime name, value kind, mutability, declaration block depth, constant value and target code. */

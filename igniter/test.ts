@@ -11,10 +11,25 @@ import { loadBundle, loadManifest, loadSource } from './loader.ts';
 import { benchmark, hashBytes, loadCompiler, nondeterminismReasons, runBundle, runText } from './bootstrap.ts';
 import { runCArtifact, runTsArtifact } from './artifacts.ts';
 
-const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
-const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
-const lexerDumpPath = new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname;
-const parserProgramDumpPath = new URL('../compiler/src/parser-program-dump.lts', import.meta.url).pathname;
+const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url).pathname;
+const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).pathname;
+const lexerDumpPath = new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname;
+const parserProgramDumpPath = new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname;
+
+const compilerInstances = new Map<string, ReturnType<typeof loadCompiler>>();
+function compilerFor(manifestPath: string): ReturnType<typeof loadCompiler> {
+  let compiler = compilerInstances.get(manifestPath);
+  if (compiler === undefined) {
+    compiler = loadCompiler(manifestPath);
+    compilerInstances.set(manifestPath, compiler);
+  }
+  return compiler;
+}
+function runCompiler(manifestPath: string, source: string, name?: string): { code: number; output: string; errors: string } {
+  const input = name === undefined ? { text: source } : { text: source, name };
+  const result = compilerFor(manifestPath).compile(input);
+  return { code: result.status, output: result.stdout.toString('utf8'), errors: result.stderr.toString('utf8') };
+}
 
 /** Executes inline Lite source with captured reports and scripted stdin. */
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
@@ -196,7 +211,7 @@ test('Lite lexer rejects malformed lexical input with positioned diagnostics', (
 });
 
 test('Lite parser parses declarations and expression forms', () => {
-  const parserDeclDumpPath = new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname;
+  const parserDeclDumpPath = new URL('../compiler/tests/parser/parser-decl-dump.lts', import.meta.url).pathname;
   const source = readFileSync(new URL('../compiler/tests/parser/declarations.lts', import.meta.url), 'utf8');
   const expected = readFileSync(new URL('../compiler/tests/parser/declarations.nodes', import.meta.url), 'utf8');
   assert.deepEqual(runFile(parserDeclDumpPath, source), { code: 0, output: expected, errors: '' });
@@ -262,23 +277,35 @@ test('Lite parser parses the assembled compiler S and lexer source', context => 
     });
     return { code, output, errors };
   };
-  const bootstrap = runParser(loadSource(tsEmitterPath));
+  const bootstrap = runParser(loadBundle(tsManifestPath).text);
   assert.equal(bootstrap.code, 0, bootstrap.errors);
   assert.equal(bootstrap.errors, '');
   assert.match(bootstrap.output, /^Program\|\|/);
-  const lexer = runParser(loadSource(new URL('../compiler/src/lexer.lts', import.meta.url).pathname));
+  const lexer = runParser(loadSource(lexerDumpPath));
   assert.equal(lexer.code, 0, lexer.errors);
   assert.equal(lexer.errors, '');
-  const cBody = readFileSync(cEmitterPath, 'utf8').split('\n')
-    .filter(line => !/^\s*importFlatAll\s+"/.test(line)).join('\n');
+  const cBody = ['c-literals.lts', 'emit-c.lts', 'driver-c.lts']
+    .map(file => readFileSync(new URL(`../compiler/src/${file}`, import.meta.url), 'utf8'))
+    .join('\n');
   const c = runParser(cBody);
   assert.equal(c.code, 0, c.errors);
   assert.equal(c.errors, '');
   assert.match(c.output, /^Program\|\|/);
 });
 
+test('Lite parser rejects unsupported constructs by name', () => {
+  for (const [source, errors] of [
+    ['match x { _ => 1 }', '1:1: unsupported feature "match"\n'],
+    ['record Foo {}', '1:1: unsupported feature "record"\n'],
+    ['import x;', '1:1: unsupported feature "import"\n'],
+    ['finally { }', '1:1: unsupported feature "finally"\n'],
+  ] as const) {
+    assert.deepEqual(runFile(parserProgramDumpPath, source), { code: 2, output: '', errors }, source);
+  }
+});
+
 test('Lite parser parses type aliases and rejects malformed types', () => {
-  const parserDumpPath = new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname;
+  const parserDumpPath = new URL('../compiler/tests/parser/parser-dump.lts', import.meta.url).pathname;
   const source = readFileSync(new URL('../compiler/tests/parser/types.lts', import.meta.url), 'utf8');
   const expected = readFileSync(new URL('../compiler/tests/parser/types.nodes', import.meta.url), 'utf8');
   assert.deepEqual(runFile(parserDumpPath, source), { code: 0, output: expected, errors: '' });
@@ -295,9 +322,7 @@ test('Lite parser parses type aliases and rejects malformed types', () => {
 test('compiler, L0 and lexer declarations carry doc comments', () => {
   const lib = new URL('../lib/core/', import.meta.url);
   const src = new URL('../compiler/src/', import.meta.url);
-  const paths = [new URL('../compiler/frontend.lts', import.meta.url),
-    new URL('../compiler/ts-emitter.lts', import.meta.url),
-    new URL('../compiler/c-emitter.lts', import.meta.url),
+  const paths = [
     ...readdirSync(lib).filter(file => file.endsWith('.lts')).sort()
       .map(file => new URL(file, lib)),
     ...readdirSync(src).filter(file => file.endsWith('.lts')).sort()
@@ -325,17 +350,17 @@ test('compiler, L0 and lexer declarations carry doc comments', () => {
   }
 });
 test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
-  for (const path of [tsEmitterPath, cEmitterPath]) {
-    const expected = runFile(path, 'report(42);').output;
+  for (const manifest of [tsManifestPath, cManifestPath]) {
+    const expected = runCompiler(manifest, 'report(42);').output;
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
-      assert.deepEqual(runFile(path, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
-      assert.deepEqual(runFile(path, 'report(1 +);', [label]), {
+      assert.deepEqual(runCompiler(manifest, 'report(42);', label), { code: 0, output: expected, errors: '' });
+      assert.deepEqual(runCompiler(manifest, 'report(1 +);', label), {
         code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:11: expected an Int, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: '1:11: expected an Int, String or Bool expression\n' });
+    assert.deepEqual(runCompiler(manifest, 'report(1 +);'), { code: 2, output: '', errors: '1:11: expected an Int, String or Bool expression\n' });
     let reads = 0; let errors = '';
-    const code = execute(compile(loadSource(path)), {
+    const code = execute(compile(loadBundle(manifest).text), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
       report: () => { throw new Error('unexpected artifact'); }, reportError: text => { errors += text; },
     });
@@ -343,23 +368,24 @@ test('compiler applications preserve optional logical source names in their own 
     assert.equal(errors, 'expected at most one logical source name argument\n');
   }
 });
-test('real compiler CLI forwards source-name context without changing emitted bytes or check-only behavior', () => {
+test('real compiler CLI forwards source-name context without changing emitted bytes', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  const label = 'path with spaces/سلام".lts';
-  for (const [name, reference] of [['ts-emitter.lts', 'report-42.ts'],
-    ['c-emitter.lts', 'report-42.c']] as const) {
-    const path = join(root, 'compiler', name);
-    const valid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(42);', env, timeout: 5000 });
-    assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
-    assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference))); assert.equal(valid.stderr.length, 0);
-    const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
-    assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(label + ':1:11: expected an Int, String or Bool expression\n'));
-    const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
-    assert.equal(check.error, undefined); assert.equal(check.status, 0);
-    assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
-  }
+  const directory = mkdtempSync(join(tmpdir(), 'litec-label-'));
+  try {
+    const sourcePath = join(directory, 'label with spaces.lts');
+    for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
+      writeFileSync(sourcePath, 'report(42);');
+      const valid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
+      assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference)));
+      assert.equal(valid.stderr.length, 0);
+      writeFileSync(sourcePath, 'report(1 +);');
+      const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
+      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:11: expected an Int, String or Bool expression\n`));
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('litec, ltc, lite compile and lite check expose the compiler sources directly', () => {
@@ -746,29 +772,48 @@ test('compiler verification cases are well-formed and cover both categories', ()
   assert.equal(new Set(compilerFixtures.map(fixture => `${fixture.file}/${fixture.caseName}`)).size, compilerFixtures.length);
 });
 
+test('generated compatibility emitter bundles match the manifests', () => {
+  assert.equal(readFileSync(new URL('../compiler/ts-emitter.lts', import.meta.url), 'utf8'),
+    loadBundle(tsManifestPath).text);
+  assert.equal(readFileSync(new URL('../compiler/c-emitter.lts', import.meta.url), 'utf8'),
+    loadBundle(cManifestPath).text);
+});
+
 test('bundle compilers reproduce every compiler case with exact artifacts and diagnostics', () => {
-  const root = new URL('../', import.meta.url).pathname;
-  const tsManifest = join(root, 'compiler/manifests/ts.json');
-  const cManifest = join(root, 'compiler/manifests/c.json');
-  const tsCompiler = loadCompiler(tsManifest);
-  const cCompiler = loadCompiler(cManifest);
-  assert.equal(tsCompiler.bundle.text, loadSource(tsEmitterPath));
-  assert.equal(cCompiler.bundle.text, loadSource(cEmitterPath));
+  const tsCompiler = compilerFor(tsManifestPath);
+  const cCompiler = compilerFor(cManifestPath);
   assert.equal(tsCompiler.bundle.lineMap.length, tsCompiler.bundle.text.split('\n').length - 1);
   assert.equal(cCompiler.bundle.lineMap.length, cCompiler.bundle.text.split('\n').length - 1);
-  for (const [target, compiler, direct] of [
-    ['ts', tsCompiler, tsEmitterPath], ['c', cCompiler, cEmitterPath],
-  ] as const) {
+  const baselineValue: unknown = JSON.parse(readFileSync(
+    new URL('../compiler/generated/baseline-artifacts.json', import.meta.url), 'utf8'));
+  if (typeof baselineValue !== 'object' || baselineValue === null || Array.isArray(baselineValue)) {
+    throw new Error('invalid baseline artifacts');
+  }
+  const rows = (baselineValue as Record<string, unknown>)['artifacts'];
+  if (!Array.isArray(rows)) throw new Error('invalid baseline artifacts list');
+  const hashes = new Map<string, Readonly<Record<string, string>>>();
+  for (const row of rows) {
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) continue;
+    const record = row as Record<string, unknown>;
+    const name = record['name'];
+    const ts = record['ts'];
+    const c = record['c'];
+    if (typeof name === 'string' && typeof ts === 'string' && typeof c === 'string') {
+      hashes.set(name, { ts, c });
+    }
+  }
+  for (const [target, compiler] of [['ts', tsCompiler], ['c', cCompiler]] as const) {
     for (const fixture of compilerFixtures) {
-      const expected = runFile(direct, fixture.source);
       const actual = compiler.compile({ text: fixture.source });
-      assert.equal(actual.status, expected.code, `${target}: ${fixture.name}/${fixture.caseName}`);
-      assert.deepEqual(actual.stdout, Buffer.from(expected.output), `${target}: ${fixture.name}/${fixture.caseName}`);
-      assert.deepEqual(actual.stderr, Buffer.from(expected.errors), `${target}: ${fixture.name}/${fixture.caseName}`);
       if (fixture.category === 'rejected') {
-        assert.equal(actual.status, fixture.exitCode);
-        assert.deepEqual(actual.stdout, fixture.stdout);
-        assert.deepEqual(actual.stderr, fixture.stderr);
+        assert.equal(actual.status, fixture.exitCode, `${target}: ${fixture.name}/${fixture.caseName}`);
+        assert.deepEqual(actual.stdout, fixture.stdout, `${target}: ${fixture.name}/${fixture.caseName}`);
+        assert.deepEqual(actual.stderr, fixture.stderr, `${target}: ${fixture.name}/${fixture.caseName}`);
+      } else {
+        assert.equal(actual.status, 0, `${target}: ${fixture.name}/${fixture.caseName}`);
+        assert.deepEqual(actual.stderr, Buffer.alloc(0), `${target}: ${fixture.name}/${fixture.caseName}`);
+        assert.equal(hashes.get(fixture.name)?.[target], `sha256:${hashBytes(actual.stdout)}`,
+          `${target}: ${fixture.name}/${fixture.caseName}`);
       }
     }
   }
@@ -799,18 +844,21 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
     });
     return { code, output, errors };
   };
-  const bootstrap = runLexer(loadSource(tsEmitterPath));
+  const bootstrap = runLexer(loadBundle(tsManifestPath).text);
   assert.equal(bootstrap.code, 0, bootstrap.errors);
   assert.equal(bootstrap.errors, '');
   assert.match(bootstrap.output, /^Name@\d+:\d+:\d+ /);
   assert.match(bootstrap.output, /EOF@\d+:\d+:\d+ \n$/);
-  for (const path of [cEmitterPath,
+  for (const path of [
+    new URL('../compiler/src/c-literals.lts', import.meta.url).pathname,
+    new URL('../compiler/src/emit-c.lts', import.meta.url).pathname,
+    new URL('../compiler/src/driver-c.lts', import.meta.url).pathname,
     new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
-    new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname,
     new URL('../compiler/src/parser.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser-program-dump.lts', import.meta.url).pathname]) {
+    new URL('../compiler/tests/parser/parser-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/tests/parser/parser-decl-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname]) {
     const result = runLexer(readFileSync(path, 'utf8'));
     assert.equal(result.code, 0, `${path}: ${result.errors}`);
     assert.equal(result.errors, '', path);
@@ -885,30 +933,31 @@ test('bundle artifacts are deterministic and leak no timestamps or host paths', 
 });
 
 
-test('whole-source TS and C emitters reject later statements and decoding failures before artifact output', () => {
+test('whole-source TS and C compilers reject later statements and decoding failures before artifact output', () => {
   const root = new URL('../', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  for (const name of ['ts-emitter.lts', 'c-emitter.lts']) {
-    const path = join(root, 'compiler', name);
-    for (const input of ['', 'report(42);\nunsupported();\n', 'report(42);\nprocess.exit(7);\n']) {
-      const rejected = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
-      assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
-      assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
+  const directory = mkdtempSync(join(tmpdir(), 'litec-reject-'));
+  try {
+    const sourcePath = join(directory, 'source.lts');
+    for (const target of ['ts', 'c'] as const) {
+      for (const input of ['', 'report(42);\nunsupported();\n', 'report(42);\nprocess.exit(7);\n']) {
+        writeFileSync(sourcePath, input);
+        const rejected = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+        assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
+        assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
+      }
+      writeFileSync(sourcePath, Buffer.concat([Buffer.from('report(42);\n'), Buffer.from([0xff])]));
+      const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
+      assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
     }
-    const invalidBytes = Buffer.concat([Buffer.from('report(42);\n'), Buffer.from([0xff])]);
-    const invalid = spawnSync(join(root, 'lite'), ['run', path], { input: invalidBytes, env, timeout: 5000 });
-    assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
-    assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
-    const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { env, timeout: 5000 });
-    assert.equal(check.error, undefined); assert.equal(check.status, 0);
-    assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
-  }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('restricted C compiler emits the readable reference and sequences reports', () => {
   const expected = readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8');
-  assert.deepEqual(runFile(cEmitterPath, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runFile(cEmitterPath, 'report(42);\nreport(9);').output,
+  assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(cManifestPath, 'report(42);\nreport(9);').output,
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64, (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
     '    if (printf("\\n") < 0) { status = 1; }\n' +
@@ -940,8 +989,8 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       const stdinPath = join(directory, `stdin-${index}.bin`);
       writeFileSync(sourcePath, fixture.source);
       writeFileSync(stdinPath, fixture.stdin);
-      for (const [compiler, path] of [[cEmitterPath, cPath], [tsEmitterPath, tsPath]] as const) {
-        const emitted = runFile(compiler, fixture.source);
+      for (const [manifest, path] of [[cManifestPath, cPath], [tsManifestPath, tsPath]] as const) {
+        const emitted = runCompiler(manifest, fixture.source);
         assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
         writeFileSync(path, emitted.output);
       }
@@ -992,18 +1041,18 @@ test('quoted closing delimiters remain values in calls, tuple entries and array/
 });
 test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
   const expected = readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url), 'utf8');
-  assert.deepEqual(runFile(tsEmitterPath, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runFile(tsEmitterPath, 'report(42);').output, runFile(tsEmitterPath, 'report(42);').output);
-  assert.equal(runFile(tsEmitterPath, ' report ( +00042 ) ; ').output, expected);
-  assert.equal(runFile(tsEmitterPath, 'report(-000);').output,
+  assert.deepEqual(runCompiler(tsManifestPath, 'report(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(tsManifestPath, 'report(42);').output, runCompiler(tsManifestPath, 'report(42);').output);
+  assert.equal(runCompiler(tsManifestPath, ' report ( +00042 ) ; ').output, expected);
+  assert.equal(runCompiler(tsManifestPath, 'report(-000);').output,
     'export function main(): string {\n    let lite_out = "";\n    lite_out += (0n).toString() + "\\n";\n    return lite_out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
   const program = 'report(10);\nreport(20);\nreport(-30);\n';
-  const tsOutput = runFile(tsEmitterPath, program);
+  const tsOutput = runCompiler(tsManifestPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
   assert.equal(tsOutput.output, 'export function main(): string {\n    let lite_out = "";\n    lite_out += (10n).toString() + "\\n";\n    lite_out += (20n).toString() + "\\n";\n    lite_out += ((-30n)).toString() + "\\n";\n    return lite_out;\n}\n');
-  const cOutput = runFile(cEmitterPath, program);
+  const cOutput = runCompiler(cManifestPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
   assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64, (int64_t)(INT64_C(10))) < 0) { status = 1; }\n' +
@@ -1016,7 +1065,7 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
 });
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
   const program = 'x := 2 * (3 - 4);\nreport(x + 10);\nreport(-x);\n';
-  assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
+  assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
     '    let lite_out = "";\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
@@ -1024,7 +1073,7 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
     '    lite_out += ((lite_x + 10n)).toString() + "\\n";\n' +
     '    lite_out += ((-lite_x)).toString() + "\\n";\n' +
     '    return lite_out;\n}\n' });
-  assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
+  assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    int64_t lite_x = (INT64_C(2) * ((INT64_C(3) - INT64_C(4))));\n' +
@@ -1037,7 +1086,7 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
   const program = 's := "a\\"b";\nreport(s);\nreport(1, s, 2);\n';
-  assert.deepEqual(runFile(tsEmitterPath, program), { code: 0, errors: '', output:
+  assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
     'export function main(): string {\n' +
     '    let lite_out = "";\n' +
     '    const lite_s = "a\\"b";\n' +
@@ -1045,7 +1094,7 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    lite_out += lite_s + "\\n";\n' +
     '    lite_out += (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n' +
     '    return lite_out;\n}\n' });
-  assert.deepEqual(runFile(cEmitterPath, program), { code: 0, errors: '', output:
+  assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
     '    int status = 0;\n' +
     '    const char *lite_s = "a\\"b";\n' +
@@ -1061,11 +1110,11 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    return status;\n}\n' });
 });
 test('compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output', () => {
-  for (const [name, path] of [['ts-emitter.lts', tsEmitterPath], ['c-emitter.lts', cEmitterPath]] as const) {
+  for (const [name, manifest] of [['ts', tsManifestPath], ['c', cManifestPath]] as const) {
     for (const fixture of rejectionFixtures) {
       assert.notEqual(fixture.exitCode, 0, fixture.name);
       assert.equal(fixture.stdout.length, 0, fixture.name);
-      const result = runFile(path, fixture.source);
+      const result = runCompiler(manifest, fixture.source);
       assert.equal(result.code, fixture.exitCode, `${name}: ${fixture.name}`);
       assert.deepEqual(Buffer.from(result.output, 'utf8'), fixture.stdout, `${name}: ${fixture.name}`);
       assert.deepEqual(Buffer.from(result.errors, 'utf8'), fixture.stderr, `${name}: ${fixture.name}`);
@@ -1073,18 +1122,18 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   }
   // Focused location checks: the reserved word starts at column 6, and a missing
   // expression on line 2 reports the offending semicolon rather than the file start.
-  for (const path of [tsEmitterPath, cEmitterPath]) {
-    assert.deepEqual(runFile(path, 'x := loop { 1 };'), {
+  for (const manifest of [tsManifestPath, cManifestPath]) {
+    assert.deepEqual(runCompiler(manifest, 'x := loop { 1 };'), {
       code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
         'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n',
     });
-    assert.deepEqual(runFile(path, 'x := 1;\ny := ;\n'), {
+    assert.deepEqual(runCompiler(manifest, 'x := 1;\ny := ;\n'), {
       code: 2, output: '', errors: '2:6: expected an Int, String or Bool expression\n',
     });
   }
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
-  assert.equal(runFile(tsEmitterPath, 'report(42);\nreport(9);').output,
+  assert.equal(runCompiler(tsManifestPath, 'report(42);\nreport(9);').output,
     'export function main(): string {\n    let lite_out = "";\n    lite_out += (42n).toString() + "\\n";\n    lite_out += (9n).toString() + "\\n";\n    return lite_out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
@@ -1097,7 +1146,7 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
       const sourcePath = join(directory, `input-${index}.lts`);
       const corePath = join(directory, `program-${index}.ts`);
       writeFileSync(sourcePath, fixture.source);
-      const emitted = runFile(tsEmitterPath, fixture.source);
+      const emitted = runCompiler(tsManifestPath, fixture.source);
       assert.equal(emitted.code, 0, fixture.name); assert.equal(emitted.errors, '', fixture.name);
       writeFileSync(corePath, emitted.output); corePaths.push(corePath);
       const expectedOutput = fixture.stdout.toString('utf8');

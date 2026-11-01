@@ -7,6 +7,9 @@
     "../../lib/core/diag.lts",
     "../../lib/core/format.lts",
     "../../lib/core/list.lts",
-    "../c-emitter.lts"
+    "../src/c-literals.lts",
+    "../src/frontend.lts",
+    "../src/emit-c.lts",
+    "../src/driver-c.lts"
   ]
 }

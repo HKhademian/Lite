@@ -293,6 +293,23 @@ reasons; the other cases tokenize. The fast lane skips this full-S sweep
 (`LITE_SKIP_HEAVY=1`). No parser or emitter behavior is claimed. See
 [P3](bootstrap-plan.md#p3--lexer).
 
+## Manifest-order compiler source, 2026-11-01
+
+P4 splits the compiler into ordered source files under `compiler/src/`: shared
+`frontend.lts`, target `*-literals.lts`, `emit-*.lts` and `driver-*.lts`, plus
+the Lite lexer and parser. The TS/C manifests list L0 libraries, literal
+encoders, front-end, emitter and driver in dependency order. `litec` compiles the
+manifest bundle through `igniter/bundle-cli.ts`; compiler source and `lib/core`
+contain no `importFlatAll` directives. The old `compiler/ts-emitter.lts` and
+`compiler/c-emitter.lts` paths are generated compatibility bundles matching the
+manifest text. The temporary loader directive remains only in test helpers under
+`compiler/tests/` and `lib/tests/`.
+
+The parser now parses expanded S, L0, the lexer and all program cases, and
+rejects unsupported declarations by name. Value-`if` branches are currently
+single-expression blocks. Current artifacts and diagnostics are unchanged. See
+[P4](bootstrap-plan.md#p4--parser).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

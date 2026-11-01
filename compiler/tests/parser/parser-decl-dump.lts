@@ -1,6 +1,12 @@
 /* Declaration parser dump. Test helper, not a public command. */
 
-importFlatAll "parser.lts";
+importFlatAll "../../../lib/core/int.lts";
+importFlatAll "../../../lib/core/text.lts";
+importFlatAll "../../../lib/core/source.lts";
+importFlatAll "../../../lib/core/diag.lts";
+importFlatAll "../../../lib/core/format.lts";
+importFlatAll "../../src/lexer.lts";
+importFlatAll "../../src/parser.lts";
 
 var prefix := "";
 var argCount := 0;

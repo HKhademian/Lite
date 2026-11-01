@@ -1,0 +1,65 @@
+/** Removes one four-space indentation level from `indent`. */
+dedent := fn(indent: String): String {
+    textSlice(indent, 0, textLength(indent) - 4)
+}
+
+/** Formats one report argument as a TypeScript string expression. */
+reportArgumentCode := fn(item: Item): String {
+    if item.kind == "Int" { "(" + item.code + ").toString()" }
+    else if item.kind == "Bool" { "((" + item.code + ") ? \"true\" : \"false\")" }
+    else { item.code }
+}
+
+/** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
+emitProgram := fn(items: Items): Unit {
+    report("export function main(): string {");
+    report("    let lite_out = \"\";");
+    var indent := "    ";
+    var line := "";
+    var count := 0;
+    loop items as item {
+        if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" {
+            report(indent + "const " + item.runtime + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" {
+            report(indent + "let " + item.runtime + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
+            report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "If" {
+            condition := if item.code == "true" or item.code == "false" {
+                "Boolean(" + item.code + ")"
+            } else {
+                item.code
+            };
+            report(indent + "if (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "Else" {
+            indent = dedent(indent);
+            report(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == "EndIf" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "Loop" {
+            condition := if item.code == "" { "Boolean(true)" }
+                else if item.code == "false" { "Boolean(false)" }
+                else { item.code };
+            report(indent + "while (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "EndLoop" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "End" {
+            report(indent + "lite_out += " + line + " + \"\\n\";");
+            line = "";
+            count = 0;
+        } else {
+            if count > 0 { line = line + " + \" \" + "; }
+            line = line + reportArgumentCode(item);
+            count = count + 1;
+        }
+    }
+    report("    return lite_out;");
+    report("}");
+}

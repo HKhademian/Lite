@@ -43,4 +43,4 @@ source=$1
 case "$source" in *.lts) ;; *) printf '%s\n' 'litec: source must be a .lts file' >&2; exit 2 ;; esac
 [ -f "$source" ] || { printf '%s\n' "litec: cannot read $source" >&2; exit 2; }
 
-exec "$lite_dir/lite" run "$lite_dir/compiler/$target-emitter.lts" -- "$source" < "$source"
+exec node "$lite_dir/igniter/bundle-cli.ts" "$target" "$source"

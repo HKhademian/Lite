@@ -1,0 +1,67 @@
+/** Removes one four-space indentation level from `indent`. */
+dedent := fn(indent: String): String {
+    textSlice(indent, 0, textLength(indent) - 4)
+}
+
+/** Builds one checked printf call for an Int, String or Bool report value without a trailing newline. */
+cCall := fn(kind: String, code: String): String {
+    if kind == "Int" {
+        "printf(\"%\" PRId64, (int64_t)(" + code + "))"
+    } else if kind == "Bool" {
+        "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))"
+    } else {
+        "printf(\"%s\", " + code + ")"
+    }
+}
+
+/** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
+emitProgram := fn(items: Items): Unit {
+    report("#include <stdio.h>");
+    report("#include <inttypes.h>");
+    report("#include <stdbool.h>");
+    report("#include <string.h>");
+    report("int main(void) {");
+    report("    int status = 0;");
+    var indent := "    ";
+    var count := 0;
+    loop items as item {
+        if item.kind == "LocalInt" or item.kind == "VarInt" {
+            report(indent + "int64_t " + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "LocalString" or item.kind == "VarString" {
+            report(indent + "const char *" + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "LocalBool" or item.kind == "VarBool" {
+            report(indent + "bool " + item.runtime + " = " + item.code + ";");
+            report(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
+            report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "If" {
+            report(indent + "if (" + item.code + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "Else" {
+            indent = dedent(indent);
+            report(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == "EndIf" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "Loop" {
+            condition := if item.code == "" { "true" } else { item.code };
+            report(indent + "while (" + condition + ") {");
+            indent = indent + "    ";
+        } else if item.kind == "EndLoop" {
+            indent = dedent(indent);
+            report(indent + "}");
+        } else if item.kind == "End" {
+            report(indent + "if (printf(\"\\n\") < 0) { status = 1; }");
+            count = 0;
+        } else {
+            if count > 0 { report(indent + "if (printf(\" \") < 0) { status = 1; }"); }
+            report(indent + "if (" + cCall(item.kind, item.code) + " < 0) { status = 1; }");
+            count = count + 1;
+        }
+    }
+    report("    return status;");
+    report("}");
+}

@@ -1,0 +1,70 @@
+/* TypeScript backend for the temporary Lite compiler. */
+/** Formats a checked Int value as a TypeScript BigInt literal. */
+intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
+    if value == 0 { "0n" }
+    else if negative { "(-" + digits + "n)" }
+    else { digits + "n" }
+}
+
+/** Escapes a String as a readable TypeScript double-quoted literal. */
+textLiteralCode := fn(value: String): String {
+    size := textLength(value);
+    var encoded := "\"";
+    var position := 0;
+    loop position < size {
+        ch := textAt(value, position);
+        if ch == "\\" { encoded = encoded + "\\\\"; }
+        else if ch == "\"" { encoded = encoded + "\\\""; }
+        else if ch == "\n" { encoded = encoded + "\\n"; }
+        else if ch == "\r" { encoded = encoded + "\\r"; }
+        else if ch == "\t" { encoded = encoded + "\\t"; }
+        else { encoded = encoded + ch; }
+        position = position + 1;
+    }
+    encoded + "\""
+}
+
+/** Formats a checked Bool value as a TypeScript literal. */
+boolLiteralCode := fn(value: Bool): String {
+    if value { "true" } else { "false" }
+}
+
+/** Emits a TypeScript logical negation around one Bool expression. */
+notCode := fn(value: String): String {
+    "(!(" + value + "))"
+}
+
+/** Emits a TypeScript short-circuit `and`/`or` expression around two Bool expressions. */
+logicCode := fn(op: String, left: String, right: String): String {
+    if op == "and" { "((" + left + ") && (" + right + "))" }
+    else { "((" + left + ") || (" + right + "))" }
+}
+
+/** Emits a kind-aware TypeScript comparison; equality uses strict operators and not-less/not-more spellings invert the ordering. Bool comparisons coerce through `Boolean` so literal-type narrowing cannot reject them. */
+comparisonCode := fn(op: String, kind: String, left: String, right: String): String {
+    operator := if op == "==" { "===" }
+        else if op == "=!=" { "!==" }
+        else if op == "<" { "<" }
+        else if op == "<!" { ">=" }
+        else if op == "<=" { "<=" }
+        else if op == "<!=" { ">" }
+        else if op == ">" { ">" }
+        else if op == ">!" { "<=" }
+        else if op == ">=" { ">=" }
+        else { "<" };
+    if kind == "Bool" {
+        "(Boolean(" + left + ") " + operator + " Boolean(" + right + "))"
+    } else {
+        "((" + left + ") " + operator + " (" + right + "))"
+    }
+}
+
+/** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
+floorDivCode := fn(left: String, right: String): String {
+    "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
+}
+
+/** Emits a BigInt floor-modulo expression. */
+floorModCode := fn(left: String, right: String): String {
+    "(" + left + " % " + right + " + ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? " + right + " : 0n))"
+}

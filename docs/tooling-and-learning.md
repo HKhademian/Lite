@@ -240,7 +240,7 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 191 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 193 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
@@ -259,14 +259,16 @@ cases are cached. `./lite test --fast` runs unit/interpreter/verification withou
 native C; `./lite test` or `./lite test --full` runs the full local gate with
 cached native builds. See the [verification guide](../verifications/README.md).
 
-The two emitter sources moved out of `examples/` into
-[`compiler/`](../compiler/README.md); they are compiler implementation, not
-runnable language examples. The shared front-end is included by each backend
-with the temporary loader directive `importFlatAll "frontend.lts";`
-(implemented in [`igniter/loader.ts`](../igniter/loader.ts), not a language
-feature). Access is `./litec --target ts|c file.lts`, `./lite compile ...`, or
-the short `./ltc` command. This removes the duplicated parser/checker while keeping
-separate target backends.
+The compiler implementation now lives in
+[`compiler/`](../compiler/README.md), not in runnable examples. Its source is
+split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
+target literal encoders, shared front-end, target emitter and target driver.
+`litec` compiles the manifest bundle through
+[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts); there is no module/import
+syntax, and compiler source no longer uses `importFlatAll`. Access is
+`./litec --target ts|c file.lts`, `./lite compile ...`, or the short `./ltc`
+command. This removes the duplicated parser/checker while keeping separate
+target backends.
 
 ## Refreshing artifacts after a language change
 

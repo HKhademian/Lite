@@ -1,6 +1,5 @@
 /* Provisional bootstrap test assertions. Not an official standard library. */
 
-importFlatAll "int.lts";
 
 /** Reports `FAIL name` and exits 2 unless `condition` is true. */
 check := fn(name: String, condition: Bool): Unit {

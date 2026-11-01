@@ -54,16 +54,16 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **191** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 17 seconds and skips the full-S lexer/parser sweeps.
+- **193** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 11 seconds and skips the full-S lexer/parser sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
   under [`igniter/tests/compiler/`](../igniter/tests/compiler/).
-- Compiler sources: **989** lines across `frontend.lts`, `ts-emitter.lts` and
-  `c-emitter.lts`, plus **467** lines of L0 helpers under `lib/core/`. Exact
-  P0 hashes are recorded in [`compiler/baseline.md`](../compiler/baseline.md);
-  P2 artifact hashes are unchanged.
+- Compiler sources: **1882** lines under `compiler/src/` plus **464** lines of
+  L0 helpers under `lib/core/`. Exact P0 hashes are recorded in
+  [`compiler/baseline.md`](../compiler/baseline.md); P2 artifact hashes are
+  unchanged.
 - S is valid Lite today: `./lite check compiler/ts-emitter.lts` passes. The
   compiler itself does not parse S yet; its accepted surface is Int/String/Bool
   expressions, immutable and mutable locals, `report(...)`, `if`/`else`, and
@@ -75,7 +75,7 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P4 — Parser, in progress.** P3 was completed on 2026-11-01;
+**Current gate: P5 — Checker, not started.** P4 was completed on 2026-11-01;
 update this line when a gate is completed and use the phase checklists as the
 source of truth.
 
@@ -354,21 +354,21 @@ make the lexer complete.
 - [x] Statements: action `if`, loops (`loop cond`, `loop true`, `loop seq as`),
       `break`, `return`, blocks, `report`/`reportError`/`exit` calls.
 - [x] Functions: parameter/result signatures, calls, recursion and `self`.
-- [ ] Keep the backend literal encoders ordered before the frontend in the
-      manifest; the current no-forward-reference rule makes order semantic.
-- [ ] Make manifest order authoritative in S and remove `importFlatAll` from the
-      compiler source. If that cannot be done without a language change, stop and
-      record the blocker; do not invent import/export syntax. The target is a
-      flattened bundle that the compiler parses directly.
-- [ ] Negative fixtures: unsupported constructs are rejected by name before any
+- [x] Keep the backend literal encoders ordered before the frontend in the
+      manifest; the no-forward-reference rule makes order semantic.
+- [x] Make manifest order authoritative in S and remove `importFlatAll` from the
+      compiler source. `litec` compiles the manifest bundle through
+      [`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts); the old emitter paths
+      are generated compatibility bundles.
+- [x] Negative fixtures: unsupported constructs are rejected by name before any
       emission.
 
-**Gate:** S parses; all supported compiler cases parse; negative fixtures reject
-exactly; no declaration is silently skipped.
-
-**P4 in progress:** the parser now parses expanded S, L0, the lexer and all
-supported program cases. Manifest-order authority, removing `importFlatAll` and
-named negative-fixture diagnostics remain before the P4 gate.
+**Gate passed 2026-11-01:** expanded S, L0, the lexer and every supported
+program case parse; unsupported declarations are rejected by name; compiler
+source and `lib/core` contain no `importFlatAll`; manifest order is authoritative
+and the current artifacts and diagnostics are unchanged. `./lite test` passes
+all 193 tests in 150.6 s; the fast lane passes 189 with four heavy/native skips
+in 10.9 s.
 
 **Do not:** require a recursive AST. A flat item/instruction stream is acceptable
 under B3. Do not add records/enums/`match` to make the parser easier.
