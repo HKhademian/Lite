@@ -127,7 +127,7 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 
 The compiler source is still restricted, but the accepted surface now includes
 Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
-assignment), `report(...)`, `if`/`else`, Boolean or unconditional `loop`,
+assignment), `report(...)`, action `if`/`else if`/`else`, Boolean or unconditional `loop`,
 transparent top-level type aliases (`Name := type Type;`), top-level
 functions with Int/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
 results, positional calls, recursion/`self` and `return`. Aliases resolve to

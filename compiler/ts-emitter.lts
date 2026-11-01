@@ -2235,6 +2235,17 @@ scanValueIfEnd := fn(source: String, position: Int, prefix: String): Int {
     -1
 }
 
+/** Returns the entries of `locals` declared below `depth`, preserving order, so current-block bindings are dropped even when an outer assignment was recorded after them. */
+visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
+    kept: mut List<Local> = [];
+    loop locals as entry {
+        if entry.depth < depth {
+            push_back(mut kept, entry);
+        }
+    }
+    kept
+}
+
 /** True when `blocks` contains an enclosing loop body, so a bare break or continue has a nearest loop to target. */
 insideLoop := fn(blocks: List<String>): Bool {
     loop blocks as kind {
@@ -2247,12 +2258,11 @@ insideLoop := fn(blocks: List<String>): Bool {
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
     aliases := collectAliases(source, prefix);
-    locals: mut List<Local> = [];
+    var locals: mut List<Local> = [];
     items: mut Items = [];
     blocks: mut List<String> = [];
     functions: mut List<FunctionInfo> = [];
     functionParams: mut List<String> = [];
-    var localCount := 0;
     var blockCount := 0;
     var depth := 0;
     var parameterTotal := 0;
@@ -2273,24 +2283,36 @@ parseProgram := fn(source: String, prefix: String): Items {
             blockKind := blocks[blockCount - 1];
             after := skipTrivia(source, position + 1, prefix);
             if blockKind == "if" and after < size and wordAt(source, after, "else") {
-                loop localCount > 0 and locals[localCount - 1].depth >= depth {
-                    droppedLocal := pop_back(mut locals);
-                    localCount = localCount - 1;
-                }
-                push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                locals = visibleLocals(locals, depth);
+                afterElse := skipTrivia(source, after + 4, prefix);
                 droppedIf := pop_back(mut blocks);
                 blockCount = blockCount - 1;
-                push_back(mut blocks, "else");
-                blockCount = blockCount + 1;
-                position = skipTrivia(source, after + 4, prefix);
-                position = expectSymbol(source, position, "{", prefix);
+                if wordAt(source, afterElse, "if") {
+                    conditionStart := skipTrivia(source, afterElse + 2, prefix);
+                    condition := parseExpression(source, conditionStart, prefix, locals, functions, functionParams, currentName);
+                    if condition.kind =!= "Bool" {
+                        failAt(source, conditionStart, prefix, "else if condition must be Bool");
+                    }
+                    conditionCode := if condition.constant {
+                        boolLiteralCode(condition.intValue =!= 0)
+                    } else {
+                        condition.code
+                    };
+                    position = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
+                    push_back(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                        intValue = 0, textValue = ""));
+                    push_back(mut blocks, "if");
+                    blockCount = blockCount + 1;
+                } else {
+                    push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    push_back(mut blocks, "else");
+                    blockCount = blockCount + 1;
+                    position = expectSymbol(source, afterElse, "{", prefix);
+                }
                 position = skipTrivia(source, position + 1, prefix);
                 continue;
             }
-            loop localCount > 0 and locals[localCount - 1].depth >= depth {
-                droppedLocal := pop_back(mut locals);
-                localCount = localCount - 1;
-            }
+            locals = visibleLocals(locals, depth);
             depth = depth - 1;
             if blockKind == "function" {
                 if currentResult =!= "Unit" and not currentReturned {
@@ -2558,7 +2580,6 @@ parseProgram := fn(source: String, prefix: String): Items {
                 push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = ""));
-                localCount = localCount + 1;
                 push_back(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
                     intValue = 0, textValue = itemKind));
             } else {
@@ -2616,7 +2637,6 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            localCount = localCount + 1;
             push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
                 code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
@@ -2691,7 +2711,6 @@ parseProgram := fn(source: String, prefix: String): Items {
                     push_back(mut locals, (name = parameterName, runtime = runtime, kind = parameterKind,
                         mutable = false, writable = false, depth = 1, constant = false, code = runtime,
                         intValue = 0, textValue = ""));
-                    localCount = localCount + 1;
                     parameterTotal = parameterTotal + 1;
                     entryStart = entryEnd + 1;
                     entryIndex = entryIndex + 1;
@@ -2722,7 +2741,6 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
                 code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
@@ -2749,7 +2767,6 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
                 mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
                 code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
@@ -2776,7 +2793,6 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            localCount = localCount + 1;
             push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
                 code = copiedValueCode(entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
@@ -3146,6 +3162,15 @@ emitProgram := fn(items: Items): Unit {
         } else if item.kind == "Else" {
             indent = dedent(indent);
             report(indent + "} else {");
+            indent = indent + "    ";
+        } else if item.kind == "ElseIf" {
+            indent = dedent(indent);
+            condition := if item.code == "true" or item.code == "false" {
+                "Boolean(" + item.code + ")"
+            } else {
+                item.code
+            };
+            report(indent + "} else if (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndIf" {
             indent = dedent(indent);

@@ -191,6 +191,10 @@ emitProgram := fn(items: Items): Unit {
             indent = dedent(indent);
             report(indent + "} else {");
             indent = indent + "    ";
+        } else if item.kind == "ElseIf" {
+            indent = dedent(indent);
+            report(indent + "} else if (" + item.code + ") {");
+            indent = indent + "    ";
         } else if item.kind == "EndIf" {
             indent = dedent(indent);
             report(indent + "}");

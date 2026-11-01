@@ -132,7 +132,9 @@ keeps that target from growing while it is approached.
   value positions. Checked `inputArgs`/`inputAll`/`reportError`/`exit` and
   code-point `textLength`/`textAt`/`textSlice` calls lower to self-contained TS
   helpers in expressions, Unit statements, functions, loops and value `if`
-  branches. Dynamic Int `/`, `%`, `:/` and `:%` lower to checked TS and C
+  branches. Action `if` chains admit any number of `else if` arms with Bool
+  conditions and an optional final `else`, lowering to TS/C `else if` emission.
+  Dynamic Int `/`, `%`, `:/` and `:%` lower to checked TS and C
   helpers that preserve zero-divisor and signed-minimum faults. Dynamic String
   concatenation lowers to ordinary left-to-right TS `+` and a checked C
   byte-copy helper whose allocations are intentionally leaked in this

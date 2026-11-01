@@ -1736,6 +1736,144 @@ test('restricted compiler diagnoses invalid value if expressions and rejects the
   });
 });
 
+test('restricted compiler compiles action else-if chains to runnable TS', () => {
+  const source = [
+    'classify := fn (n: Int): String {',
+    '    if n < 0 {',
+    '        return "negative";',
+    '    } else if n == 0 {',
+    '        return "zero";',
+    '    } else if n < 10 {',
+    '        return "small";',
+    '    } else {',
+    '        return "large";',
+    '    }',
+    '}',
+    'noFinal := fn (n: Int): String {',
+    '    if n < 0 { return "negative"; }',
+    '    else if n == 0 { return "zero"; }',
+    '    return "positive";',
+    '}',
+    'nested := fn (a: Int, b: Bool): String {',
+    '    if a < 0 {',
+    '        if b { return "negative-flagged"; }',
+    '        else if a < -10 { return "very-negative"; }',
+    '        else { return "negative"; }',
+    '    } else if b {',
+    '        return "flagged";',
+    '    } else {',
+    '        return "plain";',
+    '    }',
+    '}',
+    'loopReport := fn (limit: Int): Unit {',
+    '    var index := 0;',
+    '    loop index < limit {',
+    '        if index == 0 {',
+    '            report("loop-zero", index);',
+    '        } else if index == 1 {',
+    '            report("loop-one", index);',
+    '        } else if index == 2 {',
+    '            report("loop-two", index);',
+    '        } else {',
+    '            report("loop-many", index);',
+    '        }',
+    '        index = index + 1;',
+    '    }',
+    '}',
+    'x := 2;',
+    'report(classify(-1), classify(0), classify(5), classify(50));',
+    'report(noFinal(-1), noFinal(0), noFinal(5));',
+    'report(nested(-1, true), nested(-20, false), nested(-5, false), nested(1, true), nested(1, false));',
+    'report("before");',
+    'if x == 1 { report("one"); }',
+    'else if x == 2 { report("two-first"); report("two-second"); }',
+    'else if x == 3 { report("three"); }',
+    'else { report("other"); }',
+    'report("after");',
+    'loopReport(4);',
+    'var total := 0;',
+    'if true { armLocal := 1; total = total + armLocal; }',
+    'else if false { armLocal := 2; total = total + armLocal; }',
+    'else { armLocal := 3; total = total + armLocal; }',
+    'report(total, x);',
+    'report("end");',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.match(ts.output, /^    \} else if \(/m);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('negative zero small large\nnegative zero positive\n' +
+      'negative-flagged very-negative negative flagged plain\n' +
+      'before\ntwo-first\ntwo-second\nafter\n' +
+      'loop-zero 0\nloop-one 1\nloop-two 2\nloop-many 3\n1 2\nend\n'),
+    stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler compiles action else-if chains to runnable C', async context => {
+  const source = [
+    'var index := 0;',
+    'loop index < 3 {',
+    '    if index == 0 { report("zero", index); }',
+    '    else if index == 1 { report("one", index); }',
+    '    else if index == 2 { report("two", index); }',
+    '    else { report("many", index); }',
+    '    index = index + 1;',
+    '}',
+    'var x := 2;',
+    'if x == 1 { report("one"); }',
+    'else if x == 2 {',
+    '    if index == 3 {',
+    '        report("nested", x);',
+    '    } else if index == 4 {',
+    '        report("nested-four", x);',
+    '    } else {',
+    '        report("nested-other", x);',
+    '    }',
+    '} else { report("other"); }',
+    'if x == 1 { report("skip"); }',
+    'else if x == 2 { report("two-arm"); }',
+    'if x == 1 { report("a"); }',
+    'else if x == 3 { report("b"); }',
+    'report("done");',
+  ].join('\n');
+  const c = runCompiler(cManifestPath, source);
+  assert.equal(c.code, 0, c.errors);
+  assert.match(c.output, /^    \} else if \(/m);
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cc = process.env['CC'] ?? 'cc';
+    const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+    if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+      context.skip('C compiler unavailable; action else-if C parity requires cc or CC'); return;
+    }
+    assert.deepEqual(runCArtifact(c.output), {
+      phase: 'run', status: 0, signal: null,
+      stdout: Buffer.from('zero 0\none 1\ntwo 2\nnested 2\ntwo-arm\ndone\n'), stderr: Buffer.alloc(0),
+    });
+  }
+});
+
+test('restricted compiler diagnoses invalid action else-if chains', () => {
+  for (const [bad, errors] of [
+    ['if true { report(1); } else if 1 { report(2); }\n', '1:32: else if condition must be Bool\n'],
+    ['if true { report(1); } else if true report(2);\n', '1:37: expected {\n'],
+    ['if true { report(1); } else if { report(2); }\n',
+      '1:32: expected an Int, String or Bool expression\n'],
+    ['if true { report(1); } else { report(2); } else { report(3); }\n', '1:44: unexpected else\n'],
+    ['else if true { report(1); }\n', '1:1: unexpected else\n'],
+    ['if true { hidden := 1; } else if hidden == 1 { report(2); }\n', '1:34: unknown value hidden\n'],
+    ['if true { report(1); } else if false { report(hidden); }\n', '1:47: unknown value hidden\n'],
+    ['var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { report(2); }\n',
+      '2:59: unknown value hidden\n'],
+    ['var total := 0;\nif true { hidden := 1; total = total + hidden; }\nreport(hidden);\n',
+      '3:8: unknown value hidden\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+    assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('restricted compiler compiles text builtins with code-point semantics and bounds faults', () => {
   const source = 'report(textLength("a🙂é"), textAt("a🙂é", 1), textSlice("a🙂é", 1, 3));\n';
   const ts = runCompiler(tsManifestPath, source);

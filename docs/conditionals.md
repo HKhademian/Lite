@@ -14,8 +14,11 @@ unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
 The restricted bootstrap compiler separately accepts total, same-kind value
 `if`/`else if`/`else` expressions in initializers, assignments, arguments,
 returns and function-tail positions, emitting TS conditional expressions; the C
-path rejects value `if` clearly. Partial value conditionals, branch unions,
-`then` and `finally` remain unimplemented there.
+path rejects value `if` clearly. In action position it accepts an optional-final
+`else` with any number of `else if` arms whose conditions are `Bool` and whose
+bodies are action blocks, emitting TS and C `else if` chains with nearest-scope
+locals. Partial value conditionals, branch unions, `then` and `finally` remain
+unimplemented there.
 
 Lowering selected 2026-11-01: a partial declaration initializer selects the
 branch value or `zero(T)` and stores once; it is not required to materialize a

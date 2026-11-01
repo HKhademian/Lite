@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **228** interpreter test groups and **9** editor grammar groups; the fast lane
+- **231** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -542,8 +542,8 @@ Allowed in S now:
 - Expressions: names, positional calls, tuple construction, field access, index
   reads, parentheses, unary minus, `+ - * / % :/ :%`, comparisons,
   `and`/`or`/`not`, value `if`/`else if`/`else`.
-- Statements: action `if`, loops, `break`, `return`, blocks, `report`,
-  `reportError`, `exit`.
+- Statements: action `if`/`else if`/`else`, loops, `break`, `return`, blocks,
+  `report`, `reportError`, `exit`.
 - Functions: typed parameters/results, calls, recursion, `self`.
 - Builtins used by S: `inputArgs`, `inputAll`, `report`, `reportError`, `exit`,
   `textLength`, `textAt`, `textSlice`, `push_back`.
