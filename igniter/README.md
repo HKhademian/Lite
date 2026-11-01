@@ -585,13 +585,14 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.34**, tag **igniter-v0.1.0-alpha.34**, completes loop
-metadata and exits: `.count`/`.item`/positional `.index` in bodies and `then`,
-payload `break`/`continue`, tagged `@name loop` targets with `break @name`,
-`continue @name`, `return @name`, and `@name.value`/`.count`/`.item`/`.index`
-access from nested code. Inner `then` blocks are skipped by targeted exits and
-the target's `then` runs. The strict TypeScript check is clean again after the
-loop-value work. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.35**, tag **igniter-v0.1.0-alpha.35**, adds
+construct-level `finally { ... }` on `if` and `loop` (after an optional
+`then`): cleanup runs after `then` on normal completion and when the construct
+is left by `return`, a targeted `break`/`continue`, a fault, or `exit`, without
+replacing the construct result. Inner cleanup runs before a targeted exit
+reaches an outer loop. A faulting cleanup currently replaces a pending exit;
+the selected primary/secondary retention remains deferred. Previous
+checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -656,7 +657,9 @@ loop-value work. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.33**, commit `b61c524`: mixed Int/Float arithmetic and comparisons.
 
-- **igniter-v0.1.0-alpha.34**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.34**, commit `5a6c69e`: loop metadata and targeted exits.
+
+- **igniter-v0.1.0-alpha.35**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
