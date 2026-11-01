@@ -13,11 +13,50 @@ decision and is not assumed here.
 - **TS igniter / stage 0** — the preserved TypeScript implementation in
   [`../igniter/`](../igniter/README.md). It executes S.
 - **S** — the Lite-written compiler source assembled from a manifest.
+- **T00** — the stage-0 TS igniter.
 - **T / C** — the TS and C compilers produced by stage 0 from S.
 - **T2 / C2** — the artifacts T/C produce when they compile S again.
 
 The parity loop compares stage 0 running S with T/C compiling the same Lite
 source. At the fixed point, T/C replace stage 0 for the bootstrap surface.
+
+## Bootstrap ladder
+
+Owner notation, 2026-11-01. `CompileTS(X, lite)` means "run compiler X on the
+Lite compiler source S and emit TS"; `CompileC(X, lite)` means the same with C
+emission. Every comparison below is byte-for-byte artifact equality.
+
+```text
+TS chain:
+T00 = stage-0 TS igniter
+T11 = CompileTS(T00, lite)
+T12 = CompileTS(T11, lite)
+T13 = CompileTS(T12, lite)
+TS fixed point: T11 == T12 == T13
+
+C and cross-host chain:
+C01 = CompileC(T00, lite)
+C21 = CompileC(C01, lite)
+T21 = CompileTS(C01, lite)
+C22 = CompileC(C21, lite)
+T22 = CompileTS(C21, lite)
+C23 = CompileC(C22, lite)
+T23 = CompileTS(C22, lite)
+```
+
+The owner's `T1 == T2 == T3` shorthand maps to the defined
+`T11 == T12 == T13` nodes.
+
+Completion requires all of:
+
+- C fixed point: `C01 == C21 == C22 == C23`
+- TS-from-C fixed point: `T11 == T21 == T22 == T23`
+- Every ladder node typechecks/runs and the 92-case corpus has exact streams
+  and status.
+
+The seed equalities `C01 == C21` and `T11 == T21` are the stage-0 versus
+generated-compiler row. Treat them as required unless the owner records a
+different completion rule before claiming the ladder is finished.
 
 ## Rule
 
@@ -59,7 +98,8 @@ keeps that target from growing while it is approached.
   imports them without changing the 50/42 artifact and diagnostic baseline.
 - Stage 0 is feature-frozen. P2-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
-- T and C do not exist yet, so there is no stage-0-versus-generated row.
+- T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are
+  blocked on the P7 C emitter. No ladder node has been produced yet.
 - The P0 artifact hashes in
   [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) are
   the reference for the 50 program cases.

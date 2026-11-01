@@ -259,12 +259,12 @@ stdout, stderr and emitted artifact bytes, record the first difference, close it
 and repeat. The endpoint is `T2 == T`, `C2 == C` and exact corpus parity, at
 which point T/C are the igniter for the bootstrap surface.
 
-The operational loop and difference log are in
-[bootstrap parity](../compiler/parity.md). This selects a work method, not a new
-language feature: S stays inside L. Stage 0 is feature-frozen during bootstrap:
-new capability is Lite-first, and igniter-only features are debt rather than
-progress. Full replacement of the TS igniter for features outside L remains a
-separate owner decision.
+The operational loop, difference log and explicit T11-T13 / C01-C23 / T21-T23
+ladder are in [bootstrap parity](../compiler/parity.md). This selects a work
+method, not a new language feature: S stays inside L. Stage 0 is feature-frozen
+during bootstrap: new capability is Lite-first, and igniter-only features are
+debt rather than progress. Full replacement of the TS igniter for features
+outside L remains a separate owner decision.
 
 ## Provisional L0 bootstrap libraries, 2026-11-01
 

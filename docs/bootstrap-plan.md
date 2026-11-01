@@ -47,6 +47,10 @@ Related direction:
 | **Fixed point** | T2 is byte-identical to T and C2 is byte-identical to C, with the same source and toolchain. |
 | **Self-host point** | S compiles to T/C; T/C compile S; the fixed point and corpus gates pass; no stage-0 dependency remains at runtime. |
 
+The explicit T11-T13, C01/C21-C23 and T21-T23 ladder and its completion
+equalities are recorded in
+[`compiler/parity.md`](../compiler/parity.md#bootstrap-ladder).
+
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
@@ -427,6 +431,12 @@ behavior and produces a runnable C2 from S.
 **Goal:** prove the bootstrap chain.
 
 - [ ] T compiles S to T2; C compiles S to C2.
+- [ ] Record every node and artifact hash in the
+      [bootstrap ladder](../compiler/parity.md#bootstrap-ladder): `T11`, `T12`,
+      `T13`, `C01`, `C21`, `C22`, `C23`, `T21`, `T22`, `T23`.
+- [ ] `T11 == T12 == T13` byte for byte.
+- [ ] `C01 == C21 == C22 == C23` byte for byte.
+- [ ] `T11 == T21 == T22 == T23` byte for byte.
 - [ ] `T2 == T` and `C2 == C` byte for byte. If not, identify the nondeterminism
       and fix it; record any normalized fallback before accepting it.
 - [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter; C
