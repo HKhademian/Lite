@@ -124,17 +124,13 @@ compiler source and `lib/core` no longer use `importFlatAll`, and unsupported
 declarations are rejected by name. Fixtures live under
 [`../compiler/tests/parser/`](../compiler/tests/parser/).
 
-P5 has started with the checker foundation in
-[`../compiler/src/check.lts`](../compiler/src/check.lts). It collects top-level
-type aliases, function signatures and value declarations; rejects duplicate names
-and parameters; and validates type names, annotation references and alias cycles.
+P5 adds the Lite checker in [`../compiler/src/check.lts`](../compiler/src/check.lts).
+It collects symbols, validates type names and aliases, checks block scopes,
+local and assignment types, Bool conditions, arity/arguments/returns,
+tuple/list/field/index types, mutation grants and break/return placement.
 Fixtures live under [`../compiler/tests/checker/`](../compiler/tests/checker/).
-Block scopes, shadowing, local mutability, unknown assignments, simple local
-types, initializer/assignment type checks, Bool conditions, direct-call arity,
-simple argument/return types, break/return placement, tuple/list/field/index
-types and list mutation grants are checked. Full expression typing,
-initialization, return-path completeness and exact 42-case rejection parity
-remain.
+Expanded S checks, the restricted 42-case corpus keeps exact diagnostics, and
+invalid focused fixtures are rejected before emission.
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.

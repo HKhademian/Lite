@@ -64,7 +64,7 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`src/driver-c.lts`](src/driver-c.lts) | C driver entry |
 | [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer |
 | [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
-| [`src/check.lts`](src/check.lts) | P5 checker foundation: top-level symbols, signatures and duplicate rejection |
+| [`src/check.lts`](src/check.lts) | P5 checker: symbols, scopes, types, arity, conditions and mutation grants |
 | [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
 | [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
 | [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |

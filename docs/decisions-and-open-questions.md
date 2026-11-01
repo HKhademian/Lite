@@ -312,16 +312,14 @@ single-expression blocks. Current artifacts and diagnostics are unchanged. See
 
 ## Lite checker foundation, 2026-11-01
 
-P5 starts with [`compiler/src/check.lts`](../compiler/src/check.lts). It collects
-top-level type aliases, function signatures and value declarations in source
-order; rejects duplicate top-level names and parameters; and validates type names,
-annotation references and alias cycles with positioned diagnostics. Fixtures live
-under [`compiler/tests/checker/`](../compiler/tests/checker/). Block scopes, shadowing, duplicate locals,
-assignment mutability, unknown-local rejection, direct-call arity, simple local
-type inference, initializer/assignment type checks, Bool conditions, simple
-argument/return types, break/return placement, tuple/list/field/index types and
-list mutation grants are checked. Full expression typing, initialization,
-return-path completeness and exact 42-case rejection parity remain open. Current
+P5 completes the Lite checker in [`compiler/src/check.lts`](../compiler/src/check.lts).
+It collects source-order symbols and signatures; validates type names, aliases and
+cycles; and checks scopes, local/assignment/initializer types, Bool conditions,
+arity, arguments, returns, tuple/list/field/index types, mutation grants and
+break/return placement. Fixtures live under
+[`compiler/tests/checker/`](../compiler/tests/checker/). Expanded S checks, the
+50 program and 42 rejection cases keep exact artifacts/diagnostics, and invalid
+focused cases are rejected before emission. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 

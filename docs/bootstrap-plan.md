@@ -75,9 +75,9 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P5 — Checker, in progress.** P4 was completed on 2026-11-01;
-update this line when a gate is completed and use the phase checklists as the
-source of truth.
+**Current gate: P6 — TS emitter and runtime, not started.** P5 was completed on
+2026-11-01; update this line when a gate is completed and use the phase
+checklists as the source of truth.
 
 **Accepted-surface parity track (owner direction, 2026-11-01):** ahead of the
 P0-P9 order, the compiler's accepted surface grew one control-flow slice:
@@ -382,31 +382,27 @@ reproduce.
       declarations with duplicate-name rejection.
 - [x] Block scopes and local bindings: parameters, declarations, shadowing,
       duplicate locals, assignment mutability, unknown-local rejection, simple
-      local type inference and assignment/initializer type checks. Full
-      initialization and expression typing remain.
-- [x] Function signature collection, direct-call arity and simple scalar argument
-      type checks. Return-path completeness remains.
+      local type inference and assignment/initializer type checks.
+- [x] Zero/default initialization for typed declarations. Reserved `= ?`
+      storage is not used by S and is not part of this checkpoint.
+- [x] Function signature collection, direct-call arity, simple argument/result
+      type checks and return placement.
 - [x] Tuple label/field types, list element types, list-literal types and index
-      element types for simple normalized expressions and aliases.
+      element types for normalized expressions and aliases.
 - [x] Bool conditions for action `if` and `loop`; list mutation grants for
       `push`/`pop` end operations.
 - [x] `break`/`continue` outside-loop rejection and `return` outside-function or
-      mismatched scalar return checks. Return-path completeness remains.
-- [x] Diagnostics: source name, position, message, exit 2 for collected symbols.
-- [ ] Accept every construct in S; reject unsupported and ill-typed cases.
+      mismatched return checks.
+- [x] Diagnostics: source name, position, message, exit 2.
+- [x] Accept every construct in S and reject the focused unsupported/ill-typed
+      cases; the restricted 42-case compiler corpus retains exact diagnostics.
 
-**Gate:** S checks; all 42 rejection cases match exactly; no invalid program emits
-an artifact.
-
-**P5 in progress:** the Lite checker foundation in
-[`compiler/src/check.lts`](../compiler/src/check.lts) collects top-level symbols,
-rejects duplicate names and parameters, validates type names, annotations and
-alias cycles, and checks block scopes, shadowing, local mutability and unknown
-assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
-Direct calls are arity- and argument-checked, returns are checked against result
-types, break/return placement is checked, and simple tuple/list/field/index types
-and list mutation grants are checked. Full expression typing, initialization,
-return-path completeness and exact rejection parity remain.
+**Gate passed 2026-11-01:** [`compiler/src/check.lts`](../compiler/src/check.lts)
+accepts expanded S and rejects focused ill-typed fixtures for scopes, types,
+arity, arguments, returns, conditions, tuple/list/index forms and mutation
+grants. All 50 program and 42 rejection cases retain their exact artifacts and
+diagnostics; no invalid program emits an artifact. `./lite test` passes all 195
+tests in 228.6 s; the fast lane passes 190 with five heavy/native skips in 11.7 s.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.
