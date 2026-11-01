@@ -1671,6 +1671,38 @@ test('restricted compiler completes scalar functions from tail expressions', () 
   });
 });
 
+test('restricted compiler completes function tails from Bool literals and calls', () => {
+  const source = [
+    'isZero := fn (x: Int): Bool { if x == 0 { return true; } false }',
+    'flag := fn (x: Int): Bool { isZero(x) }',
+    'report(flag(0), flag(1));',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('true false\n'), stderr: Buffer.alloc(0),
+  });
+  assert.deepEqual(runCompiler(tsManifestPath, 'bad := fn (): Bool { "text" }\n'), {
+    code: 2, output: '', errors: '1:22: cannot return String from function bad returning Bool\n',
+  });
+});
+
+test('restricted compiler allows top-level declarations between functions', () => {
+  const source = [
+    'one := fn (): Int { 1 }',
+    'label := "n";',
+    'two := fn (): String { label + label }',
+    'report(one(), two());',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('1 nn\n'), stderr: Buffer.alloc(0),
+  });
+});
+
 test('restricted compiler diagnoses scalar function arity, argument and return mismatches', () => {
   const prefix = 'f := fn (x: Int): Int { return x; }\n';
   for (const [bad, errors] of [
