@@ -14,6 +14,7 @@ import { runCArtifact, runTsArtifact } from './artifacts.ts';
 const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
 const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
 const lexerDumpPath = new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname;
+const parserProgramDumpPath = new URL('../compiler/src/parser-program-dump.lts', import.meta.url).pathname;
 
 /** Executes inline Lite source with captured reports and scripted stdin. */
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
@@ -201,11 +202,79 @@ test('Lite parser parses declarations and expression forms', () => {
   assert.deepEqual(runFile(parserDeclDumpPath, source), { code: 0, output: expected, errors: '' });
   for (const [bad, errors] of [
     ['x := ;', '1:6: expected an expression\n'],
-    ['x := if true { 1 } else { 2 };', '1:6: if value expressions are not parsed yet\n'],
     ['x := a.;', '1:8: expected a field name after .\n'],
   ] as const) {
     assert.deepEqual(runFile(parserDeclDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
+});
+
+test('Lite parser parses functions, loops and statements', () => {
+  const source = readFileSync(new URL('../compiler/tests/parser/program.lts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../compiler/tests/parser/program.nodes', import.meta.url), 'utf8');
+  assert.deepEqual(runFile(parserProgramDumpPath, source), { code: 0, output: expected, errors: '' });
+});
+
+test('Lite parser parses L0 libraries and every program case', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const program = compile(loadSource(parserProgramDumpPath));
+  const runParser = (input: string): { code: number; output: string; errors: string } => {
+    const chars = Array.from(input);
+    let cursor = 0;
+    let output = '';
+    let errors = '';
+    const code = execute(program, {
+      args: [],
+      read: () => chars[cursor++] ?? null,
+      report: text => { output += text; },
+      reportError: text => { errors += text; },
+    });
+    return { code, output, errors };
+  };
+  for (const path of ['lib/core/int.lts', 'lib/core/text.lts', 'lib/core/source.lts',
+    'lib/core/format.lts', 'lib/core/diag.lts', 'lib/core/list.lts', 'lib/core/test.lts']) {
+    const result = runParser(loadSource(join(root, path)));
+    assert.equal(result.code, 0, `${path}: ${result.errors}`);
+    assert.equal(result.errors, '', path);
+    assert.match(result.output, /^Program\|\|/);
+  }
+  for (const fixture of programFixtures) {
+    const result = runParser(fixture.source);
+    assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
+    assert.equal(result.errors, '', fixture.name);
+  }
+});
+
+test('Lite parser parses the assembled compiler S and lexer source', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') {
+    context.skip('LITE_SKIP_HEAVY=1'); return;
+  }
+  const program = compile(loadSource(parserProgramDumpPath));
+  const runParser = (input: string): { code: number; output: string; errors: string } => {
+    const chars = Array.from(input);
+    let cursor = 0;
+    let output = '';
+    let errors = '';
+    const code = execute(program, {
+      args: [],
+      read: () => chars[cursor++] ?? null,
+      report: text => { output += text; },
+      reportError: text => { errors += text; },
+    });
+    return { code, output, errors };
+  };
+  const bootstrap = runParser(loadSource(tsEmitterPath));
+  assert.equal(bootstrap.code, 0, bootstrap.errors);
+  assert.equal(bootstrap.errors, '');
+  assert.match(bootstrap.output, /^Program\|\|/);
+  const lexer = runParser(loadSource(new URL('../compiler/src/lexer.lts', import.meta.url).pathname));
+  assert.equal(lexer.code, 0, lexer.errors);
+  assert.equal(lexer.errors, '');
+  const cBody = readFileSync(cEmitterPath, 'utf8').split('\n')
+    .filter(line => !/^\s*importFlatAll\s+"/.test(line)).join('\n');
+  const c = runParser(cBody);
+  assert.equal(c.code, 0, c.errors);
+  assert.equal(c.errors, '');
+  assert.match(c.output, /^Program\|\|/);
 });
 
 test('Lite parser parses type aliases and rejects malformed types', () => {
@@ -740,7 +809,8 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
     new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname,
     new URL('../compiler/src/parser.lts', import.meta.url).pathname,
     new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname]) {
+    new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/src/parser-program-dump.lts', import.meta.url).pathname]) {
     const result = runLexer(readFileSync(path, 'utf8'));
     assert.equal(result.code, 0, `${path}: ${result.errors}`);
     assert.equal(result.errors, '', path);

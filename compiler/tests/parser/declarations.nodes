@@ -16,3 +16,5 @@ Declaration|p|:= (1)|15:1|285
 Declaration|q|Int|16:1|296
 Declaration|r|mut List<Int> = []|17:1|304
 Declaration|s|Int = ?|18:1|327
+Declaration|v|:= if true { 1 } else { 2 }|19:1|339
+Declaration|w|:= if true { 1 } else if false { 2 } else { 3 }|20:1|370

@@ -58,9 +58,10 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
 | [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer: tokens, positions, comments, strings and Int bounds |
 | [`src/lexer-dump.lts`](src/lexer-dump.lts) | Token-dump test helper for the lexer |
-| [`src/parser.lts`](src/parser.lts) | P4 parser core, types, declarations and expression forms; `if` value, statements and bodies in progress |
+| [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions; manifest order and value-branch breadth remain |
 | [`src/parser-dump.lts`](src/parser-dump.lts) | Type-declaration dump test helper |
 | [`src/parser-decl-dump.lts`](src/parser-decl-dump.lts) | Declaration/expression dump test helper |
+| [`src/parser-program-dump.lts`](src/parser-program-dump.lts) | Full-program parse dump test helper |
 | [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures and exact expected token dumps |
 | [`tests/parser/`](tests/parser/) | Focused parser fixtures and exact expected parse dumps |
 | `src/` | Target directory for the remaining split bootstrap sources (P4) |

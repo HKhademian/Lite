@@ -1,0 +1,17 @@
+sumTo := fn(n: Int): Int {
+    var total := 0;
+    var index := 1;
+    loop index <= n {
+        total = total + index;
+        index = index + 1;
+    }
+    total
+}
+
+choose := fn(flag: Bool): Int {
+    if flag { return 1; } else { return 0; }
+}
+
+main := fn(): Unit {
+    if sumTo(3) >= 6 { report("ok"); } else { reportError("bad"); }
+}

@@ -54,8 +54,8 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **188** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 14 seconds and skips the full-S lexer sweep.
+- **191** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 17 seconds and skips the full-S lexer/parser sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
@@ -349,10 +349,11 @@ make the lexer complete.
       Function annotations remain with the Functions bullet.
 - [x] Expressions: precedence, unary, calls, tuple construction/fields, index,
       list literals.
-- [ ] `if` with final `else` as a value.
-- [ ] Statements: action `if`, loops (`loop cond`, `loop true`, `loop seq as`),
+- [x] `if` with final `else` as a value. Value branches are currently parsed as
+      single expressions.
+- [x] Statements: action `if`, loops (`loop cond`, `loop true`, `loop seq as`),
       `break`, `return`, blocks, `report`/`reportError`/`exit` calls.
-- [ ] Functions: parameter/result signatures, calls, recursion and `self`.
+- [x] Functions: parameter/result signatures, calls, recursion and `self`.
 - [ ] Keep the backend literal encoders ordered before the frontend in the
       manifest; the current no-forward-reference rule makes order semantic.
 - [ ] Make manifest order authoritative in S and remove `importFlatAll` from the
@@ -365,9 +366,9 @@ make the lexer complete.
 **Gate:** S parses; all supported compiler cases parse; negative fixtures reject
 exactly; no declaration is silently skipped.
 
-**P4 in progress:** the parser core, type grammar, declarations and expression
-forms are landed. `if` value expressions, statements, functions/bodies and the
-manifest order change remain before the full S parse gate.
+**P4 in progress:** the parser now parses expanded S, L0, the lexer and all
+supported program cases. Manifest-order authority, removing `importFlatAll` and
+named negative-fixture diagnostics remain before the P4 gate.
 
 **Do not:** require a recursive AST. A flat item/instruction stream is acceptable
 under B3. Do not add records/enums/`match` to make the parser easier.

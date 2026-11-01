@@ -99,9 +99,9 @@ keeps that target from growing while it is approached.
 - P3 adds the Lite lexer under `compiler/src/`; it tokenizes expanded S, the C
   emitter, the lexer sources and every compiler case. No parser or emitter
   behavior changed.
-- P4 is in progress: the parser core, type grammar, declarations and expression
-  forms are in `compiler/src/parser.lts`; `if` value expressions, statements and
-  function bodies remain before the full-S parse gate.
+- P4 is in progress: the parser parses expanded S, L0, the lexer and all program
+  cases. Manifest-order authority, removing `importFlatAll` and named negative
+  diagnostics remain before the full-S parse gate.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are
