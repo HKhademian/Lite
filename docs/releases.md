@@ -2,7 +2,7 @@
 
 Current components:
 
-- Igniter: **0.1.0-alpha.28**
+- Igniter: **0.1.0-alpha.29**
 - VS Code extension: **0.1.1**
 - Verification corpus: 31 features, 19 examples, 20 samples, 70 scenarios, 86 target executions
 - Tests: 170 interpreter groups and 9 editor grammar groups
@@ -42,6 +42,7 @@ version. Detailed milestone prose remains in the
 | `igniter-v0.1.0-alpha.26` | 2026-11-01 | `2edf486` | Subjectless Boolean match with required fallback and same-type value arms |
 | `igniter-v0.1.0-alpha.27` | 2026-11-01 | `549cbd2` | Typed scalar/tuple/fixed-array locals and omitted zero initialization |
 | `igniter-v0.1.0-alpha.28` | 2026-11-01 | `977318a` | Reserved storage and whole-value first initialization for scalar/tuple/fixed-array locals |
+| `igniter-v0.1.0-alpha.29` | 2026-11-01 | `ee00ac9` | Source-like report display for flat tuple values |
 
 ## Current tag conventions
 
