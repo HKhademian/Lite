@@ -7,7 +7,7 @@ Symbol := type (kind: String, name: String, detail: String, offset: Int, line: I
 Symbols := type List<Symbol>;
 
 /** One local binding: name, reassignment mutability, block depth and origin kind. */
-Local := type (name: String, typeText: String, mutable: Bool, depth: Int, kind: String);
+Local := type (name: String, typeText: String, mutable: Bool, writable: Bool, depth: Int, kind: String);
 
 /** Local bindings in declaration order, removed when their block closes. */
 Locals := type List<Local>;
@@ -453,6 +453,11 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
     symbols
 }
 
+/** True for the four builtin list end operations. */
+isListEndOperation := fn(name: String): Bool {
+    name == "push_back" or name == "push_front" or name == "pop_back" or name == "pop_front"
+}
+
 /** Checks block-local declarations, parameter scopes and statement assignments. */
 checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
     count := tokenCount(tokens);
@@ -523,7 +528,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 colon := expectSymbol(tokens, parameterCursor + 1, ":", prefix);
                 parameterType := parseType(tokens, colon, prefix);
                 push_back(mut locals, (name = parameter.text, typeText = parameterType.text,
-                    mutable = false, depth = depth + 1, kind = "parameter"));
+                    mutable = false, writable = false, depth = depth + 1, kind = "parameter"));
                 localCount = localCount + 1;
                 parameterCursor = parameterType.next;
                 if isSymbol(tokenAt(tokens, parameterCursor), ",") {
@@ -590,7 +595,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 sourceType := simpleType(symbols, locals, source.text);
                 itemType := listElementType(sourceType);
                 push_back(mut locals, (name = itemToken.text, typeText = itemType, mutable = false,
-                    depth = depth + 1, kind = "loop item"));
+                    writable = false, depth = depth + 1, kind = "loop item"));
                 localCount = localCount + 1;
                 cursor = source.next + 2;
                 pendingLoop = true;
@@ -604,6 +609,26 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
             }
             continue;
         }
+        if token.kind == TOKEN_KIND_NAME() and isListEndOperation(token.text) and
+            isSymbol(tokenAt(tokens, cursor + 1), "(") {
+            firstArgument := tokenAt(tokens, cursor + 2);
+            if firstArgument.kind =!= TOKEN_KIND_KEYWORD() or firstArgument.text =!= "mut" {
+                checkFail(token, prefix, token.text + " requires mut list argument");
+            }
+            listToken := tokenAt(tokens, cursor + 3);
+            if listToken.kind =!= TOKEN_KIND_NAME() {
+                checkFail(listToken, prefix, "expected a list name after mut");
+            }
+            index := findLocal(locals, listToken.text);
+            if index < 0 {
+                checkFail(listToken, prefix, "unknown local " + listToken.text);
+            }
+            if not locals[index].writable {
+                checkFail(listToken, prefix, "cannot mutate list " + listToken.text + " without mut");
+            }
+            cursor = cursor + 4;
+            continue;
+        }
         if (token.kind == TOKEN_KIND_KEYWORD() and token.text == "var") or
             (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
                 isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
@@ -613,6 +638,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 checkFail(nameToken, prefix, "duplicate local " + declaration.name);
             }
             mutable := startsWithAt(declaration.detail, 0, "var ");
+            var writable := false;
             var work := declaration.detail;
             if mutable { work = textSlice(work, 4, textLength(work)); }
             var typeText := "";
@@ -621,7 +647,10 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 initText = textSlice(work, 3, textLength(work));
                 typeText = simpleType(symbols, locals, initText);
             } else {
-                if startsWithAt(work, 0, "mut ") { work = textSlice(work, 4, textLength(work)); }
+                if startsWithAt(work, 0, "mut ") {
+                    writable = true;
+                    work = textSlice(work, 4, textLength(work));
+                }
                 split := indexOfText(work, " = ", 0);
                 if split >= 0 {
                     typeText = textSlice(work, 0, split);
@@ -637,7 +666,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 }
             }
             push_back(mut locals, (name = declaration.name, typeText = typeText, mutable = mutable,
-                depth = depth, kind = "local"));
+                writable = writable, depth = depth, kind = "local"));
             localCount = localCount + 1;
             cursor = declaration.next;
             continue;

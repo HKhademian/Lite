@@ -131,9 +131,10 @@ and parameters; and validates type names, annotation references and alias cycles
 Fixtures live under [`../compiler/tests/checker/`](../compiler/tests/checker/).
 Block scopes, shadowing, local mutability, unknown assignments, simple local
 types, initializer/assignment type checks, Bool conditions, direct-call arity,
-simple argument/return types, break/return placement, and tuple/list/field/index
-types are checked. Full expression typing, initialization, return-path
-completeness and exact 42-case rejection parity remain.
+simple argument/return types, break/return placement, tuple/list/field/index
+types and list mutation grants are checked. Full expression typing,
+initialization, return-path completeness and exact 42-case rejection parity
+remain.
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.

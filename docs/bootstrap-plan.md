@@ -388,7 +388,8 @@ reproduce.
       type checks. Return-path completeness remains.
 - [x] Tuple label/field types, list element types, list-literal types and index
       element types for simple normalized expressions and aliases.
-- [x] Bool conditions for action `if` and `loop`. List mutation grants remain.
+- [x] Bool conditions for action `if` and `loop`; list mutation grants for
+      `push`/`pop` end operations.
 - [x] `break`/`continue` outside-loop rejection and `return` outside-function or
       mismatched scalar return checks. Return-path completeness remains.
 - [x] Diagnostics: source name, position, message, exit 2 for collected symbols.
@@ -404,8 +405,8 @@ alias cycles, and checks block scopes, shadowing, local mutability and unknown
 assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
 Direct calls are arity- and argument-checked, returns are checked against result
 types, break/return placement is checked, and simple tuple/list/field/index types
-are inferred. Full expression typing, initialization, return-path completeness,
-list mutation grants and exact rejection parity remain.
+and list mutation grants are checked. Full expression typing, initialization,
+return-path completeness and exact rejection parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.

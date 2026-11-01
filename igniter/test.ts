@@ -336,6 +336,10 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     ['values: List<Int> = [1, 2]; x: String = values[0];\n',
       '1:29: cannot initialize String with Int\n'],
     ['values: List<Int> = ["bad"];\n', '1:1: cannot initialize List<Int> with List<String>\n'],
+    ['values: List<Int> = []; push_back(mut values, 1);\n',
+      '1:39: cannot mutate list values without mut\n'],
+    ['values: mut List<Int> = []; push_back(values, 1);\n',
+      '1:29: push_back requires mut list argument\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -355,6 +359,7 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'values: List<Int> = [1, 2]; x: Int = values[0];\n',
     'values: List<String> = ["ok", "yes"];\n',
     'values: List<Int> = [];\n',
+    'values: mut List<Int> = []; push_back(mut values, 1);\n',
   ]) {
     const result = runFile(checkerDumpPath, good);
     assert.equal(result.code, 0, good);

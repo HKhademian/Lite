@@ -319,9 +319,9 @@ annotation references and alias cycles with positioned diagnostics. Fixtures liv
 under [`compiler/tests/checker/`](../compiler/tests/checker/). Block scopes, shadowing, duplicate locals,
 assignment mutability, unknown-local rejection, direct-call arity, simple local
 type inference, initializer/assignment type checks, Bool conditions, simple
-argument/return types, break/return placement, and tuple/list/field/index types
-are checked. Full expression typing, initialization, return-path completeness
-and exact 42-case rejection parity remain open. Current
+argument/return types, break/return placement, tuple/list/field/index types and
+list mutation grants are checked. Full expression typing, initialization,
+return-path completeness and exact 42-case rejection parity remain open. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 

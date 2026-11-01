@@ -107,9 +107,9 @@ keeps that target from growing while it is approached.
   annotations and alias cycles; and checks block scopes, shadowing, local
   mutability, unknown assignments, simple local types, initializer/assignment
   type checks, Bool conditions, direct-call arity, simple argument/return types,
-  break/return placement, and tuple/list/field/index types. Full expression
-  typing, initialization, return-path completeness and exact rejection parity
-  remain.
+  break/return placement, tuple/list/field/index types and list mutation grants.
+  Full expression typing, initialization, return-path completeness and exact
+  rejection parity remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are
