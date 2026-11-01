@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "if condition must be Bool\n",
-        "hash": "sha256:fb80c41bc2bc60b8a996165430555b565b8ae33b7bbda766b907fabb005d8399"
+        "text": "1:4: if condition must be Bool\n",
+        "hash": "sha256:8008210145f089205963df56b0096678bff098d0ec8036716850f37261386bfa"
       },
       "exitCode": 2
     }

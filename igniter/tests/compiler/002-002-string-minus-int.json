@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "operator - requires Int operands\n",
-        "hash": "sha256:91d50791cc882e488a9b0f17733c782fa39b618ce88212739deb8141e3383c64"
+        "text": "1:15: operator - requires Int operands\n",
+        "hash": "sha256:5a893d3e5afef3938eb68d5f73eef4163b39d08a84af4f6c2dd88bb67eff2184"
       },
       "exitCode": 2
     }

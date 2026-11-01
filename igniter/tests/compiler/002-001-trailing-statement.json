@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "expected := or = after local name process\n",
-        "hash": "sha256:dedeaa3fab4a7ee3073ee56134d68612dd0f6cba4952e5d0cc73f09538b16053"
+        "text": "1:20: expected := or = after local name process\n",
+        "hash": "sha256:ad4765c1d754014b917a6284cda9a117c9fcdea901fc7e7452975940d98f72d3"
       },
       "exitCode": 2
     }

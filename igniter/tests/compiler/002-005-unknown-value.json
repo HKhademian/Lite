@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "unknown value unknown\n",
-        "hash": "sha256:3a3d64b92cf4a8817cfa69fa62aa25e84451a9555dc257bc127ccedf5655d49c"
+        "text": "1:8: unknown value unknown\n",
+        "hash": "sha256:ffd95a3aa170d390faa1dfb487ea7a60d02c9f1b74060d82f27e07dfcef63ac8"
       },
       "exitCode": 2
     }

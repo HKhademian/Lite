@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "expected an Int, String or Bool expression\n",
-        "hash": "sha256:6a1598048389a695815ccc497d4b4f0165dec6ef9e92909e446559fda745fa4e"
+        "text": "1:10: expected an Int, String or Bool expression\n",
+        "hash": "sha256:cc3e24b99aba8b7aea6ef44274237eea76a9acdac4b9e94c141078b981ca5bce"
       },
       "exitCode": 2
     }

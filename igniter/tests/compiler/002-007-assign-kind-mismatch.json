@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "cannot assign String to Int local x\n",
-        "hash": "sha256:45ae2c7dbeced9f3611c42621a047fc331b8a07793950b1bd72adfc99835830f"
+        "text": "2:1: cannot assign String to Int local x\n",
+        "hash": "sha256:e436395a652448dd297e7d846d69f423a3edf28381012ce952948d04a2ecfdce"
       },
       "exitCode": 2
     }

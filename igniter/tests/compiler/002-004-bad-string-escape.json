@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "unsupported string escape \\q\n",
-        "hash": "sha256:3c28f43058b368221ffd0c83c1bfc75260ea38830026b221adfa151bd566b18a"
+        "text": "1:13: unsupported string escape \\q\n",
+        "hash": "sha256:1fc62576e8e523e597b660f2d625c0029db6973e94756dbd1660431533e55397"
       },
       "exitCode": 2
     }

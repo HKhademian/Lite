@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "loop condition must be Bool\n",
-        "hash": "sha256:d2ab32c2e17748ef862bf3670412f8076cbd86d45da3495580a2d826a070bbf8"
+        "text": "1:6: loop condition must be Bool\n",
+        "hash": "sha256:6ac5e49878029547f55126cfe57e2bd4d4a7571f973d6ca2c1633fd766733058"
       },
       "exitCode": 2
     }

@@ -77,8 +77,10 @@ lowered to target control flow, with generated TS accumulating report output in
 `main(): string` and C printing directly. Dynamic `/ % :/ :%` and dynamic
 String concatenation are explicit rejections. `break`/`continue`, typed
 declarations, functions, tuples/lists/arrays, `match`, runtime input, and
-checked dynamic C overflow remain outside this slice. The compiler corpus is now
-50 program and 42 rejection cases.
+checked dynamic C overflow remain outside this slice. Diagnostics are
+source-positioned (`name:line:column: message`, 1-based source characters) and
+unsupported reserved features name their documentation page. The compiler
+corpus is now 50 program and 42 rejection cases.
 
 ## String values, multi-value reports and JSON verification fixtures, 2026-10-31
 

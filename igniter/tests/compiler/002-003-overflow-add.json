@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "integer expression outside signed 64-bit range\n",
-        "hash": "sha256:6fd4cd2563bb2f098250590e82ca059610c5ad918701187a8ee67d9dc7408b6d"
+        "text": "1:28: integer expression outside signed 64-bit range\n",
+        "hash": "sha256:3702eb841b82461e043e48922127211399ab75b77d591eb3e9d76af4dca83fd0"
       },
       "exitCode": 2
     }

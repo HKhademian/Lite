@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "integer literal outside signed 64-bit range\n",
-        "hash": "sha256:cfe43c054fb8813d2b2900ea8524c00f0895590c30847db7dcf63c8976eaed10"
+        "text": "1:8: integer literal outside signed 64-bit range\n",
+        "hash": "sha256:251c07461b25dbc2647924ad889b1499d1c6d8b070ea4294d678a0b80266ce98"
       },
       "exitCode": 2
     }

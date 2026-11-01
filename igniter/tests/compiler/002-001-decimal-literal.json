@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "expected )\n",
-        "hash": "sha256:b7b8bdd3ef6f96e501a563bc2c093135e5de8be2bd52a2d64a8253abf36a3efe"
+        "text": "1:9: expected )\n",
+        "hash": "sha256:c0300ea2edeaf526122441942212b4a6df0b01c9029991e226010c32ef7b71a1"
       },
       "exitCode": 2
     }

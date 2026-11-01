@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "unterminated string literal\n",
-        "hash": "sha256:541de207a83a44ede63db814c576dfe2c9733a7195edddf98172547e99f8b462"
+        "text": "1:8: unterminated string literal\n",
+        "hash": "sha256:334dfb4f9b2d0cf0602bad6c62b92aa90d4e6c505c0a95c8ced8004d38779d3f"
       },
       "exitCode": 2
     }

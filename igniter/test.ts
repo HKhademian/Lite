@@ -108,10 +108,10 @@ test('compiler applications preserve optional logical source names in their own 
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
       assert.deepEqual(runFile(path, 'report(42);', [label]), { code: 0, output: expected, errors: '' });
       assert.deepEqual(runFile(path, 'report(1 +);', [label]), {
-        code: 2, output: '', errors: label + ': expected an Int, String or Bool expression\n',
+        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:11: expected an Int, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: 'expected an Int, String or Bool expression\n' });
+    assert.deepEqual(runFile(path, 'report(1 +);'), { code: 2, output: '', errors: '1:11: expected an Int, String or Bool expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(loadSource(path)), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -133,7 +133,7 @@ test('real compiler CLI forwards source-name context without changing emitted by
     assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference))); assert.equal(valid.stderr.length, 0);
     const invalid = spawnSync(join(root, 'lite'), ['run', path, '--', label], { input: 'report(1 +);', env, timeout: 5000 });
     assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(label + ': expected an Int, String or Bool expression\n'));
+    assert.deepEqual(invalid.stderr, Buffer.from(label + ':1:11: expected an Int, String or Bool expression\n'));
     const check = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', label], { env, timeout: 5000 });
     assert.equal(check.error, undefined); assert.equal(check.status, 0);
     assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
@@ -164,7 +164,7 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     writeFileSync(invalidPath, 'report(1 +);\n');
     const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}: expected an Int, String or Bool expression\n`));
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:11: expected an Int, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
     assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
@@ -700,7 +700,7 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    return status;\n}\n' });
 });
-test('compiler applications reject fixture sources with exact diagnostics before artifact output', () => {
+test('compiler applications reject fixture sources with exact diagnostics, positions and docs before artifact output', () => {
   for (const [name, path] of [['ts-emitter.lts', tsEmitterPath], ['c-emitter.lts', cEmitterPath]] as const) {
     for (const fixture of rejectionFixtures) {
       assert.notEqual(fixture.exitCode, 0, fixture.name);
@@ -710,6 +710,17 @@ test('compiler applications reject fixture sources with exact diagnostics before
       assert.deepEqual(Buffer.from(result.output, 'utf8'), fixture.stdout, `${name}: ${fixture.name}`);
       assert.deepEqual(Buffer.from(result.errors, 'utf8'), fixture.stderr, `${name}: ${fixture.name}`);
     }
+  }
+  // Focused location checks: the reserved word starts at column 6, and a missing
+  // expression on line 2 reports the offending semicolon rather than the file start.
+  for (const path of [tsEmitterPath, cEmitterPath]) {
+    assert.deepEqual(runFile(path, 'x := loop { 1 };'), {
+      code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
+        'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n',
+    });
+    assert.deepEqual(runFile(path, 'x := 1;\ny := ;\n'), {
+      code: 2, output: '', errors: '2:6: expected an Int, String or Bool expression\n',
+    });
   }
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {

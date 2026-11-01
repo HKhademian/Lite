@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "runtime String concatenation is not supported by this compiler checkpoint yet\n",
-        "hash": "sha256:2e3b8a4b6cf5f6407b24af1ee7516c775955251624eb925d7aa2114e936181a8"
+        "text": "2:10: runtime String concatenation is not supported by this compiler checkpoint yet\n",
+        "hash": "sha256:06577c7c149c03f32c7a79f2b689bc50a5573206c383312800db0b979df4d97c"
       },
       "exitCode": 2
     }

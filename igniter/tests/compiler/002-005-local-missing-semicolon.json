@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "expected ; after local declaration x\n",
-        "hash": "sha256:728ce3ec038c093561fb6d9df966a97a56a4f837f85b707303921cc24ad3db0a"
+        "text": "2:1: expected ; after local declaration x\n",
+        "hash": "sha256:ee4c2eb84a4e0042c1eb08a3e608fd685a20848560799a1e1da309b88b8b696a"
       },
       "exitCode": 2
     }

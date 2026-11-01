@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "runtime division is not supported by this compiler checkpoint yet\n",
-        "hash": "sha256:147a3bf807228ad156c86803739c8dc5f05d7ba582a51f4e60769831892a1566"
+        "text": "2:10: runtime division is not supported by this compiler checkpoint yet\n",
+        "hash": "sha256:ecf18288e742f9bedc365ffb9890753e9c40aa14497857459174749bbf4663f0"
       },
       "exitCode": 2
     }

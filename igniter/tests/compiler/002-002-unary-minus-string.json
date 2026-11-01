@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "unary - requires an Int operand\n",
-        "hash": "sha256:71222731a13a1bbe0c03c4267bb699331ac28046e6cf39861b8d78b0fec9d820"
+        "text": "1:8: unary - requires an Int operand\n",
+        "hash": "sha256:9f096cb7346c96d002d27b3d071792cdd476c7f5b4f4b4d52352610b58adf7b3"
       },
       "exitCode": 2
     }

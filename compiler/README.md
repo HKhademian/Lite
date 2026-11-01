@@ -82,6 +82,19 @@ overflow is not checked. Functions, tuples/lists/arrays, `match`, runtime
 input, typed declarations and self-rebuild remain outside this slice. Reserved
 features outside the subset are rejected by name with status 2.
 
+Diagnostics are source-positioned as `name:line:column: message` (or
+`line:column: message` when no logical source name is supplied). Columns are
+1-based source characters, computed from immutable offsets. Unsupported
+reserved features name the feature, point to its documentation, and repeat the
+accepted subset, for example:
+
+```text
+verifications/features/loop-metadata.lts:1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only
+```
+
+The frontend still scans offsets directly; a separate reusable token stream is
+future lexer work, not part of this checkpoint.
+
 The current accepted surface is separate from the small language used to write
 the compiler itself; see the [bootstrap plan](../docs/bootstrap-plan.md). Range faults, division by zero and mixed-type operations are
 compile-time rejections. Generated TS uses BigInt; generated C uses

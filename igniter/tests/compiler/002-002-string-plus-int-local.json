@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "cannot mix Int and String operands\n",
-        "hash": "sha256:ee8b627eb27bb5fd9208281e65117b47cb660ca6be4c299a265c1972220d557f"
+        "text": "1:13: cannot mix Int and String operands\n",
+        "hash": "sha256:944de6875f586cb028e0f2e9d97f3ba1651b7288adb4394565665c85e8d70ccc"
       },
       "exitCode": 2
     }

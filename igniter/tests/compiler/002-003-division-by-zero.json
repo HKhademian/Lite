@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "file": "002-003-division-by-zero.stderr",
-        "hash": "sha256:e496dc9995b4e08562d2aaf75d374674d90d1a5abda761d0a2cfda54a41b54ff"
+        "text": "1:10: division by zero in integer expression\n",
+        "hash": "sha256:775758fbe80ed19ddaee5a9a70d22cd99c6d0c5da972fec9f5c1e7fcb5996bc0"
       },
       "exitCode": 2
     }
