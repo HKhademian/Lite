@@ -102,6 +102,79 @@ functionResultType := fn(symbol: Symbol): String {
     parsed.text
 }
 
+/** Returns one function symbol's parameter types in order. */
+functionParamTypes := fn(symbol: Symbol): List<String> {
+    tokens := tokenize(symbol.detail, "");
+    count := tokenCount(tokens);
+    types: mut List<String> = [];
+    var cursor := 0;
+    loop cursor < count {
+        if isSymbol(tokenAt(tokens, cursor), "(") { break; }
+        cursor = cursor + 1;
+    }
+    cursor = cursor + 1;
+    loop cursor < count {
+        if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+        colon := expectSymbol(tokens, cursor + 1, ":", "");
+        parameterType := parseType(tokens, colon, "");
+        push_back(mut types, parameterType.text);
+        cursor = parameterType.next;
+        if isSymbol(tokenAt(tokens, cursor), ",") {
+            cursor = cursor + 1;
+        } else {
+            break;
+        }
+    }
+    types
+}
+
+/** Finds one binary/prefix operator at the first parenthesis depth of normalized text. */
+topLevelOperator := fn(text: String): String {
+    tokens := tokenize(text, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    var depth := 0;
+    var found := "";
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if isSymbol(token, "(") {
+            depth = depth + 1;
+        } else if isSymbol(token, ")") {
+            depth = depth - 1;
+        } else if depth == 1 {
+            if (token.kind == TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or" or token.text == "not")) or
+                (token.kind == TOKEN_KIND_SYMBOL() and (token.text == "+" or token.text == "-" or token.text == "*" or
+                    token.text == "/" or token.text == "%" or token.text == ":/" or token.text == ":%" or
+                    token.text == "**" or token.text == "==" or token.text == "=!=" or token.text == "<" or
+                    token.text == "<!" or token.text == "<=" or token.text == "<!=" or token.text == ">" or
+                    token.text == ">!" or token.text == ">=" or token.text == ">!=")) {
+                found = token.text;
+            }
+        }
+        cursor = cursor + 1;
+    }
+    found
+}
+
+/** Returns the first literal/name type token inside normalized text, or empty. */
+firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
+    tokens := tokenize(text, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_STRING() { return "String"; }
+        if token.kind == TOKEN_KIND_INT() { return "Int"; }
+        if token.kind == TOKEN_KIND_BOOL() { return "Bool"; }
+        if token.kind == TOKEN_KIND_NAME() {
+            index := findLocal(locals, token.text);
+            if index >= 0 { return locals[index].typeText; }
+        }
+        cursor = cursor + 1;
+    }
+    ""
+}
+
 /** Infers a simple scalar/call/name type from normalized expression text, or empty when unknown. */
 simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     size := textLength(text);
@@ -113,14 +186,23 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") { return "Int"; }
     if startsWithAt(text, 0, "not ") { return "Bool"; }
     if startsWithAt(text, 0, "(") {
-        if indexOfText(text, " == ", 0) >= 0 or indexOfText(text, " =!= ", 0) >= 0 or
-            indexOfText(text, " < ", 0) >= 0 or indexOfText(text, " <= ", 0) >= 0 or
-            indexOfText(text, " > ", 0) >= 0 or indexOfText(text, " >= ", 0) >= 0 or
-            indexOfText(text, " <! ", 0) >= 0 or indexOfText(text, " >! ", 0) >= 0 or
-            indexOfText(text, " <!= ", 0) >= 0 or indexOfText(text, " >!= ", 0) >= 0 or
-            indexOfText(text, " and ", 0) >= 0 or indexOfText(text, " or ", 0) >= 0 {
+        operator := topLevelOperator(text);
+        if operator == "and" or operator == "or" or operator == "not" or
+            operator == "==" or operator == "=!=" or operator == "<" or operator == "<!" or
+            operator == "<=" or operator == "<!=" or operator == ">" or operator == ">!" or
+            operator == ">=" or operator == ">!=" {
             return "Bool";
         }
+        if operator == "+" {
+            if firstOperandType(symbols, locals, text) == "String" { return "String"; }
+            return "Int";
+        }
+        if operator == "-" or operator == "*" or operator == "/" or operator == "%" or
+            operator == ":/" or operator == ":%" or operator == "**" {
+            return "Int";
+        }
+        if indexOfText(text, ",", 0) >= 0 { return ""; }
+        if size >= 2 { return simpleType(symbols, locals, textSlice(text, 1, size - 1)); }
         return "";
     }
     if isNameStart(first) {
@@ -135,7 +217,6 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             }
             if name == "inputAll" or name == "textAt" or name == "textSlice" { return "String"; }
             if name == "textLength" { return "Int"; }
-            if name == "true" or name == "false" { return "Bool"; }
         }
     }
     ""
@@ -275,14 +356,36 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
     var parens := 0;
     var brackets := 0;
     var cursor := 0;
+    var functionResult := "";
+    var functionBodyDepth := -1;
+    var pendingLoop := false;
+    var loopDepth := 0;
+    loopBodies: mut List<Int> = [];
     loop cursor < count {
         token := tokenAt(tokens, cursor);
         if token.kind == TOKEN_KIND_EOF() { break; }
-        if isSymbol(token, "{") { depth = depth + 1; cursor = cursor + 1; continue; }
+        if isSymbol(token, "{") {
+            if pendingLoop {
+                push_back(mut loopBodies, depth + 1);
+                loopDepth = loopDepth + 1;
+                pendingLoop = false;
+            }
+            depth = depth + 1;
+            cursor = cursor + 1;
+            continue;
+        }
         if isSymbol(token, "}") {
+            if loopDepth > 0 and loopBodies[loopDepth - 1] == depth {
+                pop_back(mut loopBodies);
+                loopDepth = loopDepth - 1;
+            }
             loop localCount > 0 and locals[localCount - 1].depth >= depth {
                 pop_back(mut locals);
                 localCount = localCount - 1;
+            }
+            if functionBodyDepth == depth {
+                functionResult = "";
+                functionBodyDepth = -1;
             }
             depth = depth - 1;
             cursor = cursor + 1;
@@ -326,7 +429,40 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
             parameterCursor = expectSymbol(tokens, parameterCursor, ")", prefix);
             resultColon := expectSymbol(tokens, parameterCursor, ":", prefix);
             resultType := parseType(tokens, resultColon, prefix);
+            functionResult = resultType.text;
+            functionBodyDepth = depth + 1;
             cursor = resultType.next;
+            continue;
+        }
+        if token.kind == TOKEN_KIND_KEYWORD() and token.text == "return" {
+            if functionBodyDepth < 0 {
+                checkFail(token, prefix, "return outside function");
+            }
+            afterReturn := cursor + 1;
+            if isSymbol(tokenAt(tokens, afterReturn), ";") or isSymbol(tokenAt(tokens, afterReturn), "}") or
+                tokenAt(tokens, afterReturn).kind == TOKEN_KIND_EOF() {
+                if functionResult =!= "" and functionResult =!= "Unit" {
+                    checkFail(token, prefix, "return requires a value");
+                }
+                cursor = afterReturn;
+            } else {
+                value := parseExpression(tokens, afterReturn, prefix, 0);
+                inferred := simpleType(symbols, locals, value.text);
+                if isScalarType(functionResult) and isScalarType(inferred) and functionResult =!= inferred {
+                    checkFail(token, prefix, "cannot return " + inferred + " from function returning " + functionResult);
+                }
+                cursor = value.next;
+            }
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            continue;
+        }
+        if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
+            if loopDepth == 0 {
+                checkFail(token, prefix, token.text + " outside loop");
+            }
+            cursor = cursor + 1;
+            if isSymbol(tokenAt(tokens, cursor), "@") { cursor = cursor + 2; }
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
             continue;
         }
         if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
@@ -351,12 +487,14 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                     depth = depth + 1, kind = "loop item"));
                 localCount = localCount + 1;
                 cursor = source.next + 2;
+                pendingLoop = true;
             } else {
                 conditionType := simpleType(symbols, locals, source.text);
                 if isScalarType(conditionType) and conditionType =!= "Bool" {
                     checkFail(token, prefix, "loop condition must be Bool");
                 }
                 cursor = source.next;
+                pendingLoop = true;
             }
             continue;
         }
@@ -533,6 +671,7 @@ callArity := fn(tokens: Tokens, openIndex: Int, prefix: String): Int {
 checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
     count := tokenCount(tokens);
     var cursor := 0;
+    emptyLocals: List<Local> = [];
     loop cursor < count {
         token := tokenAt(tokens, cursor);
         if token.kind == TOKEN_KIND_EOF() { break; }
@@ -544,6 +683,31 @@ checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
                 if expected =!= actual {
                     checkFail(token, prefix, "function " + token.text + " expects " + decimalText(expected) +
                         " arguments, got " + decimalText(actual));
+                }
+                parameterTypes := functionParamTypes(symbols[index]);
+                var argumentCursor := cursor + 2;
+                var argumentIndex := 0;
+                loop argumentIndex < expected {
+                    if tokenAt(tokens, argumentCursor).kind == TOKEN_KIND_KEYWORD() and
+                        tokenAt(tokens, argumentCursor).text == "mut" {
+                        argumentCursor = argumentCursor + 1;
+                    }
+                    if tokenAt(tokens, argumentCursor).kind == TOKEN_KIND_NAME() and
+                        isSymbol(tokenAt(tokens, argumentCursor + 1), "=") {
+                        argumentCursor = argumentCursor + 2;
+                    }
+                    argument := parseExpression(tokens, argumentCursor, prefix, 0);
+                    inferred := simpleType(symbols, emptyLocals, argument.text);
+                    expectedType := parameterTypes[argumentIndex];
+                    if isScalarType(expectedType) and isScalarType(inferred) and expectedType =!= inferred {
+                        checkFail(token, prefix, "argument " + decimalText(argumentIndex + 1) + " of " + token.text +
+                            " expects " + expectedType + ", got " + inferred);
+                    }
+                    argumentCursor = argument.next;
+                    argumentIndex = argumentIndex + 1;
+                    if argumentIndex < expected and isSymbol(tokenAt(tokens, argumentCursor), ",") {
+                        argumentCursor = argumentCursor + 1;
+                    }
                 }
             }
         }

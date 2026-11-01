@@ -326,6 +326,11 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
       '1:30: cannot assign String to Int local x\n'],
     ['f := fn(): Int { if 1 { 2 } else { 3 } }\n', '1:18: if condition must be Bool\n'],
     ['f := fn(): Int { loop 1 { return 2; } 3 }\n', '1:18: loop condition must be Bool\n'],
+    ['f := fn(a: Int): Int { a } g := fn(): Int { f("bad") }\n',
+      '1:45: argument 1 of f expects Int, got String\n'],
+    ['f := fn(): Int { return; }\n', '1:18: return requires a value\n'],
+    ['f := fn(): Int { break; 1 }\n', '1:18: break outside loop\n'],
+    ['f := fn(): String { return 1; }\n', '1:21: cannot return Int from function returning String\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -337,6 +342,10 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'f := fn(): Int { 1 }\ng := fn(): Int { f() }\n',
     'values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { report(value); } 1 }\n',
     'x: Int = 42;\n',
+    'f := fn(a: Int): Int { a }\ng := fn(): Int { f(1) }\n',
+    'f := fn(a: String): Int { 1 }\ng := fn(): Int { f("ok") }\n',
+    'f := fn(): Int { loop true { break; } 1 }\n',
+    'f := fn(): Unit { return; }\n',
   ]) {
     const result = runFile(checkerDumpPath, good);
     assert.equal(result.code, 0, good);
