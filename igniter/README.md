@@ -589,15 +589,13 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.37**, tag **igniter-v0.1.0-alpha.37**, grows the
-restricted compiler's accepted surface with a control-flow slice: Bool
-values/comparisons/logic, mutable locals and assignment, `if`/`else`, and
-Boolean/unconditional `loop`, with runtime TS/C lowering. Generated TS keeps
-`main(): string` and accumulates report output at runtime; C prints directly.
-Dynamic division and dynamic String concatenation are explicit rejections;
-`break`/`continue`, functions, collections, `match`, runtime input and checked
-dynamic C overflow remain outside this slice. The corpus is now 50 program and
-42 rejection cases. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.38**, tag **igniter-v0.1.0-alpha.38**, positions
+restricted-compiler diagnostics at `name:line:column` (1-based source
+characters, from immutable offsets) and points unsupported reserved features at
+their documentation page. Every rejection fixture was regenerated, and focused
+tests pin the `loop` token location and a missing-expression location. No
+language or emitted-artifact behavior changed. Previous checkpoints stay
+fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -668,7 +666,9 @@ dynamic C overflow remain outside this slice. The corpus is now 50 program and
 
 - **igniter-v0.1.0-alpha.36**, commit `8da2f93`: named unsupported-feature diagnostics in the restricted compiler.
 
-- **igniter-v0.1.0-alpha.37**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.37**, commit `64c471f`: restricted compiler control-flow slice.
+
+- **igniter-v0.1.0-alpha.38**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
