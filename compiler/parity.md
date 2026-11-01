@@ -148,7 +148,9 @@ keeps that target from growing while it is approached.
   code-point `textLength`/`textAt`/`textSlice` calls lower to self-contained TS
   helpers in expressions, Unit statements, functions, loops and value `if`
   branches. Action `if` chains admit any number of `else if` arms with Bool
-  conditions and an optional final `else`, lowering to TS/C `else if` emission.
+  conditions and an optional final `else`, lowering to TS/C `else if` emission. A
+  function-tail `if` whose branches hold statements now returns each branch's
+  tail expression, which S relies on.
   Dynamic Int `/`, `%`, `:/` and `:%` lower to checked TS and C
   helpers that preserve zero-divisor and signed-minimum faults. Dynamic String
   concatenation lowers to ordinary left-to-right TS `+` and a checked C
@@ -181,4 +183,5 @@ Useful internal tools:
 
 | Date | Target | Source | First difference | Class | Resolution |
 |---|---|---|---|---|---|
+| 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | open; no S site depends on it, fix with the P6 artifact-hash refresh |
 | — | — | — | No generated compiler yet | — | — |
