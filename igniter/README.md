@@ -589,12 +589,15 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.36**, tag **igniter-v0.1.0-alpha.36**, corrects the
-restricted Lite-written compiler's diagnostics: reserved Lite features outside
-its subset (`loop`, `if`, `fn`, `match`, `var`, `true`, and the rest) are now
-rejected by name with the accepted subset instead of being misreported as
-`unknown value`. The diagnostic still exits 2 and applies to both TS and C
-targets; the 35th rejection fixture covers it. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.37**, tag **igniter-v0.1.0-alpha.37**, grows the
+restricted compiler's accepted surface with a control-flow slice: Bool
+values/comparisons/logic, mutable locals and assignment, `if`/`else`, and
+Boolean/unconditional `loop`, with runtime TS/C lowering. Generated TS keeps
+`main(): string` and accumulates report output at runtime; C prints directly.
+Dynamic division and dynamic String concatenation are explicit rejections;
+`break`/`continue`, functions, collections, `match`, runtime input and checked
+dynamic C overflow remain outside this slice. The corpus is now 50 program and
+42 rejection cases. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -663,7 +666,9 @@ targets; the 35th rejection fixture covers it. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.35**, commit `2cf4813`: construct-level `finally` cleanup.
 
-- **igniter-v0.1.0-alpha.36**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.36**, commit `8da2f93`: named unsupported-feature diagnostics in the restricted compiler.
+
+- **igniter-v0.1.0-alpha.37**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
