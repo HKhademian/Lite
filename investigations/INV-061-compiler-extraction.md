@@ -94,7 +94,7 @@ keeps `run` and `--check`, adds `check`, `docs` and `help`, and delegates
 
 - All **175 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
-- The 43 program and 34 rejection cases under
+- The 43 program and 35 rejection cases under
   [`igniter/tests/compiler/`](../igniter/tests/compiler/) are unchanged in
   expected behavior. Program cases still pass four-way parity across the
   igniter, emitted TS, translated JS and native C; rejection cases still match

@@ -65,6 +65,21 @@ isNameContinue := fn(ch: String): Bool {
     isNameStart(ch) or isDigit(ch)
 }
 
+/** True for a Lite keyword that this restricted compiler does not implement. */
+isReservedWord := fn(name: String): Bool {
+    name == "var" or name == "mut" or name == "fn" or name == "loop" or
+    name == "break" or name == "continue" or name == "return" or name == "if" or
+    name == "else" or name == "then" or name == "finally" or name == "match" or
+    name == "import" or name == "using" or name == "record" or name == "type" or
+    name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
+}
+
+/** Reports a reserved Lite feature this compiler checkpoint cannot translate, then exits 2. */
+unsupportedFeature := fn(name: String, prefix: String): Unit {
+    reportError(prefix + "unsupported feature \"" + name + "\": the restricted compiler accepts Int/String expressions, immutable := locals and report(...) only");
+    exit(2);
+}
+
 /** Returns the position after the identifier run starting at `start`. */
 skipName := fn(source: String, start: Int): Int {
     size := textLength(source);
@@ -325,6 +340,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         nameStart := start;
         next := skipName(source, start);
         name := textSlice(source, nameStart, next);
+        if isReservedWord(name) { unsupportedFeature(name, prefix); }
         index := localIndex(locals, name);
         if index < 0 {
             reportError(prefix + "unknown value " + name);
@@ -417,6 +433,7 @@ parseProgram := fn(source: String, prefix: String): Items {
         }
         position = skipName(source, position);
         name := textSlice(source, nameStart, position);
+        if isReservedWord(name) { unsupportedFeature(name, prefix); }
         position = skipSpaces(source, position);
         if name == "report" {
             if position >= size or textAt(source, position) =!= "(" {

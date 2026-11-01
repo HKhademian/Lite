@@ -91,7 +91,7 @@ the source path, optional `stdin`, required `stdout`/`stderr` streams, and
 Filenames follow `NNN-MMM-title-subtitle.json`: category
 `001` is program verification, category `002` is compiler rejection, and the
 subcategory groups literals, arithmetic, locals, strings, multi-value reports,
-hygiene or fault classes. There are **43 program cases** and **34 rejection
+hygiene or fault classes. There are **43 program cases** and **35 rejection
 cases**.
 
 - Program cases compile with both emitters, then compare the direct igniter,
@@ -111,7 +111,7 @@ bytes or artifact inspection rather than program input/output.
 - Strict `tsc --noEmit` checking passes.
 - All **175 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass.
-- All 43 program cases pass four-way execution parity; all 34 rejection
+- All 43 program cases pass four-way execution parity; all 35 rejection
   cases pass exact diagnostics through both compilers.
 - Native C builds with `cc -std=c11 -Wall -Wextra -Werror`; the run here used
   Apple clang 21.0.0 targeting arm64-apple-darwin27.0.0.

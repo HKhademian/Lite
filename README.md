@@ -18,7 +18,7 @@ TypeScript and C backends. Run it with `./ltc --target ts file.lts` (short),
 `./litec` (full binary), or `./lite compile` (CLI). It supports
 arithmetic/String `report(...)` expressions, multi-value reports, and immutable
 Int/String locals. Forty-one program cases have identical output bytes/status
-across the igniter, TS and native C paths, and 34 rejection cases check exact
+across the igniter, TS and native C paths, and 35 rejection cases check exact
 compiler diagnostics. Each case pairs a sibling `.lts` entry source with a JSON
 model under [igniter/tests/compiler](igniter/tests/compiler/). These restricted
 prototypes are not a full/self-hosted compiler.

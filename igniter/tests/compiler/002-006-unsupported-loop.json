@@ -1,0 +1,21 @@
+{
+  "name": "unsupported-loop",
+  "source": {
+    "file": "002-006-unsupported-loop.lts",
+    "hash": "sha256:1db6f65b8aacfd573ac5c3e6c78c109501560528fe90509026846229019d7804"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "text": "unsupported feature \"loop\": the restricted compiler accepts Int/String expressions, immutable := locals and report(...) only\n",
+        "hash": "sha256:2e049f9fb6d35187a3b1229728ae69409481b5341e6e93c1dd6ed3d2908c04bf"
+      },
+      "exitCode": 2
+    }
+  ]
+}

@@ -68,7 +68,9 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 The compiler source is still restricted: Int arithmetic including `%`, `:/` and `:%`, String literals and
 concatenation, `report(...)`, and immutable Int/String locals. It has no runtime
 input, control flow, calls, text indexing, mutable locals, full parser or
-self-rebuild. Range faults, division by zero and mixed-type operations are
+self-rebuild. Reserved features outside that subset are rejected by name, for
+example `unsupported feature "loop": the restricted compiler accepts Int/String
+expressions, immutable := locals and report(...) only`, with status 2. Range faults, division by zero and mixed-type operations are
 compile-time rejections. Generated TS uses BigInt; generated C uses
 `int64_t`/`INT64_C` and `printf` with `PRId64`.
 
