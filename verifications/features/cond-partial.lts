@@ -1,0 +1,10 @@
+flag := false;
+x := if flag { 5 };
+report(x);
+label := if flag { "yes" };
+report("[" + label + "]");
+var count := 10;
+count = if flag { 7 };
+report(count);
+count = if not flag { 3 };
+report(count);

@@ -1,0 +1,22 @@
+{
+  "id": "cond.partial",
+  "kind": "feature",
+  "source": {
+    "file": "cond-partial.lts",
+    "hash": "sha256:8671676d0b7e2447f00fc815fe8279ec7d96327addb6f76cd6f82cc9642cea56"
+  },
+  "features": [
+    "cond.partial"
+  ],
+  "guideline": "Checks declaration defaults and no-write assignment for no-else conditionals.",
+  "cases": [
+    {
+      "name": "defaults-and-no-write",
+      "stdout": {
+        "text": "0\n[]\n10\n3\n",
+        "hash": "sha256:b23111dd56674efbfee8f155f19d7a0a2879c64e43821f8d89f70d4a33d615aa"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -103,7 +103,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'call'; name: Builtin; args: readonly Expr[] }
 );
 type Item =
-  | Readonly<{ kind: 'store'; binding: Binding; input: Expr; declare: boolean }>
+  | Readonly<{ kind: 'store'; binding: Binding; input: Expr; declare: boolean; condition: Expr | undefined }>
   | Readonly<{ kind: 'destructure'; bindings: readonly Binding[]; input: Expr }>
   | Readonly<{ kind: 'expression'; input: Expr }>;
 type Block = Readonly<{ items: readonly Item[]; type: Type }>;
@@ -778,9 +778,10 @@ function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
 type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
-type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined; reserved: Set<number>; initialized: Set<number> };
+type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined; reserved: Set<number>; initialized: Set<number>; maybeInitialized: Set<number> };
 function markInitialized(binding: Binding, state: CheckState): void {
   state.initialized.add(binding.slot);
+  state.maybeInitialized.add(binding.slot);
 }
 /** Joins definite-initialization facts over the paths that still reach the continuation. */
 function joinInitialized(paths: readonly ReadonlySet<number>[]): Set<number> {
@@ -791,6 +792,12 @@ function joinInitialized(paths: readonly ReadonlySet<number>[]): Set<number> {
     for (const slot of [...joined]) if (!path.has(slot)) joined.delete(slot);
   }
   return joined;
+}
+/** Unions may-initialization facts over the paths that still reach the continuation. */
+function unionInitialized(paths: readonly ReadonlySet<number>[]): Set<number> {
+  const union = new Set<number>();
+  for (const path of paths) for (const slot of path) union.add(slot);
+  return union;
 }
 function readBinding(binding: Binding, state: CheckState, at: Position): Expr {
   if (state.activeGrant === binding.slot) typeError('overlapping list access during mut argument preparation is not supported yet', at);
@@ -933,19 +940,26 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if (fallback < 0) typeError('subjectless match requires a final _ fallback', at);
       if (fallback !== raw.arms.length - 1) typeError('the subjectless match _ fallback must be last', at);
       const entry = new Set(state.initialized);
+      const entryMaybe = new Set(state.maybeInitialized);
       const paths: Set<number>[] = [];
+      const maybePaths: Set<number>[] = [];
       const arms: Readonly<{ condition: Expr | undefined; body: Expr }>[] = [];
       for (const arm of raw.arms) {
         state.initialized = new Set(entry);
+        state.maybeInitialized = new Set(entryMaybe);
         const condition = arm.condition === undefined ? undefined : checkExpression(arm.condition, names, state);
         if (condition !== undefined && condition.type !== 'Bool') {
           typeError('match condition must be Bool; there is no implicit truthiness', condition.at);
         }
         const body = checkExpression(arm.body, names, state, use === 'discard' ? 'discard' : 'value');
-        if (body.type !== 'Never') paths.push(new Set(state.initialized));
+        if (body.type !== 'Never') {
+          paths.push(new Set(state.initialized));
+          maybePaths.push(new Set(state.maybeInitialized));
+        }
         arms.push({ condition, body });
       }
       state.initialized = paths.length === 0 ? entry : joinInitialized(paths);
+      state.maybeInitialized = maybePaths.length === 0 ? entryMaybe : unionInitialized(maybePaths);
       const candidates = arms.map(arm => arm.body.type).filter(type => type !== 'Never');
       const type = candidates.length === 0 ? 'Never' : candidates[0]!;
       for (const candidate of candidates.slice(1)) {
@@ -959,19 +973,25 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       const condition = checkExpression(raw.condition, names, state);
       if (condition.type !== 'Bool') typeError('if condition must be Bool; there is no implicit truthiness', condition.at);
       if (raw.otherwise === undefined && use === 'value') {
-        typeError('partial conditional values and guarded initializers/assignments are not supported yet; add else', at);
+        typeError('a partial conditional is not a value here; add a final else', at);
       }
       const entry = new Set(state.initialized);
+      const entryMaybe = new Set(state.maybeInitialized);
       const body = checkExpression(raw.body, names, state, use);
       const bodyPath = new Set(state.initialized);
+      const bodyMaybe = new Set(state.maybeInitialized);
       state.initialized = new Set(entry);
+      state.maybeInitialized = new Set(entryMaybe);
       const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use);
       const otherwisePath = new Set(state.initialized);
+      const otherwiseMaybe = new Set(state.maybeInitialized);
       const paths: Set<number>[] = [];
-      if (body.type !== 'Never') paths.push(bodyPath);
-      if (otherwise === undefined) paths.push(entry);
-      else if (otherwise.type !== 'Never') paths.push(otherwisePath);
+      const maybePaths: Set<number>[] = [];
+      if (body.type !== 'Never') { paths.push(bodyPath); maybePaths.push(bodyMaybe); }
+      if (otherwise === undefined) { paths.push(entry); maybePaths.push(entryMaybe); }
+      else if (otherwise.type !== 'Never') { paths.push(otherwisePath); maybePaths.push(otherwiseMaybe); }
       state.initialized = paths.length === 0 ? entry : joinInitialized(paths);
+      state.maybeInitialized = maybePaths.length === 0 ? entryMaybe : unionInitialized(maybePaths);
       if (otherwise !== undefined && use === 'value' && !fits(otherwise.type, body.type) && !fits(body.type, otherwise.type)) {
         typeError('conditional branch-result unions are not supported yet; use the same result type in each branch', at);
       }
@@ -984,6 +1004,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       // Transfers from a source expression are outside this bounded body-exit implementation.
       const enclosingDepth = state.loopDepth;
       const entry = new Set(state.initialized);
+      const entryMaybe = new Set(state.maybeInitialized);
       let condition: Expr | undefined;
       state.loopDepth = 0;
       try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
@@ -999,7 +1020,11 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       state.loopDepth++;
       let body: Expr;
       try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
-      finally { state.loopDepth--; state.initialized = entry; }
+      finally {
+        state.loopDepth--;
+        state.maybeInitialized = unionInitialized([entryMaybe, state.maybeInitialized]);
+        state.initialized = entry;
+      }
       if (array !== undefined && condition !== undefined) return { kind: 'sequenceLoop', input: condition, item, body, type: 'Unit', at };
       return { kind: 'loop', condition, body, type: 'Unit', at };
     }
@@ -1187,6 +1212,26 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
   }
 }
 
+/** Finds a grouped or direct no-`else` conditional used as a guarded initializer/value. */
+function partialConditional(raw: Raw): Extract<Raw, { kind: 'if' }> | undefined {
+  let input = raw;
+  while (input.kind === 'grouped') input = input.input;
+  return input.kind === 'if' && input.otherwise === undefined ? input : undefined;
+}
+function checkPartialCondition(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState): Expr {
+  const condition = checkExpression(raw, names, state);
+  if (condition.type !== 'Bool') typeError('if condition must be Bool; there is no implicit truthiness', condition.at);
+  return condition;
+}
+/** A partial declaration initializer keeps zero(expected or branch type) on the no-match path. */
+function checkPartialConditional(raw: Extract<Raw, { kind: 'if' }>, names: ReadonlyMap<string, ScopeEntry>,
+  state: CheckState, expected: DataType): Expr {
+  const condition = checkPartialCondition(raw.condition, names, state);
+  const body = checkExpression(raw.body, names, state, 'value');
+  const type = body.type === 'Never' ? expected : body.type;
+  return { kind: 'if', condition, body, otherwise: zeroExpr(type, raw.at), type, at: raw.at };
+}
+
 function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use): Block {
   const names = new Map(outer);
   const items: Item[] = [];
@@ -1225,15 +1270,20 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
       names.set(item.name, { kind: 'value', binding });
       state.reserved.add(binding.slot);
       // Keep the declaration frame's slot present for the later first whole-value write.
-      items.push({ kind: 'store', binding, input: { kind: 'literal', value: UNIT, type: 'Unit', at: item.at }, declare: true });
+      items.push({ kind: 'store', binding, input: { kind: 'literal', value: UNIT, type: 'Unit', at: item.at }, declare: true, condition: undefined });
       type = 'Unit';
       continue;
     }
     let input: Expr;
+    let assignmentGuard: Expr | undefined;
+    const partial = item.input !== undefined && (item.kind === 'declare' || item.kind === 'typedDeclare' || item.kind === 'assign')
+      ? partialConditional(item.input) : undefined;
     if (item.kind === 'typedDeclare') {
       const destination = resolveType(item.annotation, bodyNames);
       if (item.writable && (typeof destination === 'string' || destination.kind !== 'List')) typeError('held-data mut declarations currently support lists only', item.at);
-      if (item.input === undefined) {
+      if (partial !== undefined) {
+        input = checkPartialConditional(partial, bodyNames, state, destination);
+      } else if (item.input === undefined) {
         input = zeroExpr(destination, item.at);
       } else if (typeof destination !== 'string' && destination.kind === 'List' && item.input.kind === 'array') {
         const element = destination.element;
@@ -1241,6 +1291,16 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
         input = { kind: 'list', items: entries, type: destination, at: item.input.at };
       } else input = checkExpression(item.input, bodyNames, state, 'value');
+    } else if (partial !== undefined) {
+      const condition = checkPartialCondition(partial.condition, bodyNames, state);
+      const body = checkExpression(partial.body, bodyNames, state, 'value');
+      if (item.kind === 'assign') {
+        assignmentGuard = condition;
+        input = body;
+      } else {
+        if (body.type === 'Never') typeError('a partial conditional declaration needs a normally completing value branch; add else', item.at);
+        input = { kind: 'if', condition, body, otherwise: zeroExpr(body.type, item.at), type: body.type, at: item.at };
+      }
     } else input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
     exits ||= input.type === 'Never';
     switch (item.kind) {
@@ -1291,7 +1351,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
           writable: item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, { kind: 'value', binding });
         markInitialized(binding, state);
-        items.push({ kind: 'store', binding, input, declare: true });
+        items.push({ kind: 'store', binding, input, declare: true, condition: undefined });
         type = 'Unit';
         break;
       }
@@ -1302,15 +1362,18 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         const binding = entry.binding;
         if (state.activeGrant === binding.slot) typeError('replacement of a list during its mut argument preparation is not supported yet', item.at);
         if (binding.owner !== (state.current?.id ?? 0)) typeError('replacement of surrounding runtime bindings is not supported yet', item.at);
-        const firstWrite = state.reserved.has(binding.slot) && !state.initialized.has(binding.slot);
+        const guarded = assignmentGuard !== undefined;
+        const firstWrite = state.reserved.has(binding.slot)
+          && !state.initialized.has(binding.slot) && !state.maybeInitialized.has(binding.slot);
         if (!firstWrite && !binding.mutable) {
           typeError(state.reserved.has(binding.slot)
             ? `${item.name} already has its initialized value; replacement requires var`
             : `${item.name} is fixed; replacement requires var`, item.at);
         }
         requireCompatible(input, binding.type, `cannot replace ${typeName(binding.type)} with ${typeName(input.type)}`, item.at);
-        markInitialized(binding, state);
-        items.push({ kind: 'store', binding, input, declare: false });
+        if (guarded) state.maybeInitialized.add(binding.slot);
+        else markInitialized(binding, state);
+        items.push({ kind: 'store', binding, input, declare: false, condition: assignmentGuard });
         type = 'Unit';
         break;
       }
@@ -1324,7 +1387,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
   return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined, activeGrant: undefined,
-    reserved: new Set(), initialized: new Set() }, 'discard');
+    reserved: new Set(), initialized: new Set(), maybeInitialized: new Set() }, 'discard');
 }
 
 class Input {
@@ -1704,6 +1767,7 @@ export function execute(program: Program, io: IO): number {
     let result: Value = UNIT;
     for (const item of items) {
       if (item.kind === 'store') {
+        if (item.condition !== undefined && !boolean(evaluate(item.condition, frame, self))) continue;
         const value = evaluate(item.input, frame, self);
         const target = item.declare ? frame : findFrame(frame, item.binding.slot);
         target.values.set(item.binding.slot, value);

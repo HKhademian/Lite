@@ -20,6 +20,15 @@
       ]
     },
     {
+      "id": "cond.partial",
+      "summary": "Partial conditional declaration defaults and no-write assignments.",
+      "case": "features/cond-partial.json",
+      "status": "verified",
+      "docs": [
+        "docs/conditionals.md"
+      ]
+    },
+    {
       "id": "loop.conditional",
       "summary": "Conditional action loops with mutable state.",
       "case": "features/loop-conditional.json",

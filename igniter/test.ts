@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 86 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 87 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 31 registered, 31 cases/);
+    assert.match(covered.stdout, /features: 32 registered, 32 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1260,6 +1260,8 @@ test('reserved storage requires initialization on every path that reaches a read
   assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { exit(0) } report(x);').output, '1\n');
   assert.equal(run('x: Int = ?; match { 1 < 2 { x = 1 } _ { x = 2 } } report(x);').output, '1\n');
   fault('x: Int = ?; if 1 < 2 { x = 1 } report(x);', 'TypeError');
+  fault('x: Int = ?; if 1 < 2 { x = 1 } x = 2;', 'TypeError');
+  fault('x: Int = ?; loop { x = 1; break } x = 2;', 'TypeError');
   fault('x: Int = ?; loop { x = 1; break } report(x);', 'TypeError');
   fault('x: Int = ?; match { 1 < 2 { x = 1 } _ { report("no"); } } report(x);', 'TypeError');
 });
@@ -1371,7 +1373,7 @@ test('blocks and branches have lexical scope, scalar results, and Unit declarati
 test('truthiness, branch unions, partial value conditionals and malformed branches are rejected', () => {
   for (const code of ['if 1 { report(1); }', 'if "yes" {}', 'report(1 and true);', 'report(not 1);',
     'report(true + 1);', 'x := if true { 1 } else { "one" };', 'report(if true { 1 });',
-    'var x := 3; x = if false { 4 };', 'x := if false { 4 };']) fault(code, 'TypeError');
+    'x := if true { "a" } else { 1 };']) fault(code, 'TypeError');
   for (const code of ['if true report(1);', 'if true {} else report(2);', 'if true {',
     'if true {}; else {}', 'var true := 1;']) fault(code, 'SourceError');
   let output = '';
@@ -1379,6 +1381,20 @@ test('truthiness, branch unions, partial value conditionals and malformed branch
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), LiteFault);
   assert.equal(output, '');
+});
+test('partial conditionals give declarations a default and skip false assignment writes', () => {
+  assert.equal(run('x := if false { 5 }; report(x);').output, '0\n');
+  assert.equal(run('x := if 1 < 2 { 5 }; report(x);').output, '5\n');
+  assert.equal(run('x: Int = if false { 5 }; report(x);').output, '0\n');
+  assert.equal(run('x: String = if false { "a" }; report("[" + x + "]");').output, '[]\n');
+  assert.equal(run('i := if false { inputInt() }; report(i);', '9').output, '0\n');
+  assert.equal(run('var x := 3; x = if false { 4 }; report(x);').output, '3\n');
+  assert.equal(run('var x := 3; x = if true { 4 }; report(x);').output, '4\n');
+  assert.equal(run('var x := 0; x = if true { report("yes"); 2 }; report(x);').output, 'yes\n2\n');
+  fault('x := if true { if true { 1 } };', 'TypeError');
+  fault('f := fn(): Int { if true { 1 } }', 'TypeError');
+  fault('x := if true { exit(0) };', 'TypeError');
+  fault('x: Int = if true { "a" };', 'TypeError');
 });
 test('short-circuit logic preserves operand order and Bool-only conditions', () => {
   assert.equal(run('report(false and inputInt() > 0); report(true or inputInt() > 0); report(inputInt());', '9').output,

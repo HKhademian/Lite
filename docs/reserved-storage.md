@@ -7,8 +7,12 @@ scalar, flat-tuple and fixed-array typed locals. Reading before the first
 whole-value `=` is a type error; that first write initializes the binding
 without `var`, later replacement requires `var`, and definite initialization is
 joined across `if` and subjectless `match` paths. A loop body does not establish
-initialization after the loop. Reserved List storage, partial/field
-construction, stack/heap placement and cleanup remain unimplemented.
+initialization after the loop. A guarded first write (`x = if flag { value }`)
+does not establish definite initialization and blocks a later unguarded first
+write, because that later write would be a replacement on the guarded path.
+Branch correlation for `else { ? }` reservations remains unimplemented.
+Reserved List storage, partial/field construction, stack/heap placement and
+cleanup remain unimplemented.
 
 ## Selected initialization marker
 

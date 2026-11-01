@@ -110,11 +110,17 @@ operator. Branch-local names stay local; permitted outer var replacement persist
 
 Complete conditional expressions require matching result types in all branches
 for now. A conditional used only as an action may omit else: its false path
-contributes no value and executes no branch. Partial conditional initializers/
-assignments, branch-result unions, pattern guards, `then`, and `finally` are
-explicitly rejected. This implementation boundary does not change the wider
-language's selected guarded-update/union rules. Keyword binding names are not
-supported by the igniter; its permanent reserved-name profile remains open.
+contributes no value and executes no branch. A declaration initializer may also
+omit else: the declaration keeps its normal default (`zero(T)`) on the false
+path, so `x := if flag { 5 }` is 5 or 0. An assignment may omit else: the false
+path performs no write and the target keeps its current value, including when
+the conditional is grouped. In any value-required position (call argument,
+return, arithmetic operand, function body, nested expression), a final `else`
+is required. Branch-result unions, the explicit `else { ? }` reservation branch,
+pattern guards, `then`, and `finally` remain rejected. This implementation
+boundary does not change the wider language's selected guarded-update/union
+rules. Keyword binding names are not supported by the igniter; its permanent
+reserved-name profile remains open.
 
 ### Action loops
 
@@ -609,7 +615,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **170 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **171 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -618,7 +624,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 31 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 32 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

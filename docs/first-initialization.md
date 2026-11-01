@@ -7,8 +7,11 @@ scalar, flat-tuple and fixed-array locals. Reads before the first whole-value `=
 are rejected, the first write is permitted without `var`, later replacement
 requires `var`, and definite initialization is joined across `if` and
 subjectless `match` paths. Loop bodies do not establish initialization after the
-loop. Conditional `else { ? }` reservation, field/element construction and
-initialization through callees remain unimplemented.
+loop. A guarded write such as `x = if flag { value }` records may-initialization
+but not definite initialization, so a later unguarded first write is rejected as
+a possible replacement. Conditional `else { ? }` reservation and its branch
+correlation, field/element construction and initialization through callees
+remain unimplemented.
 
 The selected [union-local declaration rule](union-initialization-policy.md#bare-local-declarations) requires an initialized expression or explicit = ? when normalization leaves several distinct union members. Bare omission is rejected, not implicit reservation. Other ordinary typed locals retain their selected omitted-initializer policy. Explicitly reserved union storage reuses the no-read-before-initialization rules below.
 

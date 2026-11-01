@@ -4,6 +4,14 @@ Status: **mandatory braces, unified actions/values, existing-name type tests, an
 
 Normative page: this page owns conditional result construction, no-match/guarded-update behavior, `?` branches, and `then`. Tag naming/access and its lifecycle are in [tags and contexts](tags-and-contexts.md); condition grammar is in the [grammar sketch](grammar-sketch.md); pattern-chain binding is in [condition chains](condition-chains.md). See the [normative page map](normative-pages.md).
 
+Implementation checkpoint, 2026-11-01: the igniter implements partial
+conditionals for direct declaration initializers (the declaration keeps
+`zero(T)` on no match, for example `x := if flag { 5 }` is 5 or 0) and for
+assignments (no write on no match, including grouped values). A value-required
+position still needs a final `else`. The explicit `else { ? }` reservation
+branch, condition/binding correlation, defaults for else-if chains, branch-result
+unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
+
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
 Implementation coverage, 2026-10-30: the [experimental igniter](../igniter/README.md#conditions-and-block-values)
