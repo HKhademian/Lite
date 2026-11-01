@@ -2,7 +2,9 @@
 export type Position = Readonly<{ line: number; column: number }>;
 type Token = Readonly<{ kind: 'id' | 'number' | 'string' | 'symbol' | 'eof'; text: string; at: Position }>;
 type Operator = '+' | '-' | '*' | '/' | '%' | ':/' | ':%' | '**';
-type ScalarType = 'Int' | 'Float' | 'String' | 'Bool' | 'Unit';
+type IntegerType = 'Int' | 'Int8' | 'Int16' | 'Int32';
+type FloatType = 'Float' | 'Float32';
+type ScalarType = IntegerType | FloatType | 'String' | 'Bool' | 'Unit';
 type TupleMember = Readonly<{ label: string | undefined; type: ScalarType }>;
 type TupleType = Readonly<{ kind: 'Tuple'; items: readonly TupleMember[] }>;
 type ElementType = ScalarType | TupleType;
@@ -96,6 +98,7 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'loop'; condition: Expr | undefined; body: Expr; then: Expr | undefined; seed: Expr; valueSlot: number; countSlot: number; commit: boolean }
   | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr; then: Expr | undefined; seed: Expr; valueSlot: number; countSlot: number; commit: boolean }
   | { kind: 'metadata'; name: 'value' | 'count'; slot: number }
+  | { kind: 'toFloat'; input: Expr }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; code: FunctionCode }
   | { kind: 'return'; input: Expr }
@@ -152,9 +155,45 @@ function source(message: string, at: Position): never { throw new LiteFault('Sou
 function typeError(message: string, at: Position): never { throw new LiteFault('TypeError', message, at); }
 function scalarType(name: string, at: Position): ScalarType {
   switch (name) {
-    case 'Int': case 'Float': case 'String': case 'Bool': case 'Unit': return name;
-    default: return typeError('function annotations currently require Int, Float, String, Bool, or Unit', at);
+    case 'Int': case 'Int8': case 'Int16': case 'Int32': case 'Int64': return name === 'Int64' ? 'Int' : name;
+    case 'Float': case 'Float32': case 'Float64': case 'Double': return name === 'Float64' || name === 'Double' ? 'Float' : name;
+    case 'String': case 'Bool': case 'Unit': return name;
+    default: return typeError('function annotations currently require a numeric width, String, Bool, or Unit', at);
   }
+}
+function isIntegerType(type: Type): type is IntegerType {
+  return type === 'Int' || type === 'Int8' || type === 'Int16' || type === 'Int32';
+}
+function isFloatType(type: Type): type is FloatType {
+  return type === 'Float' || type === 'Float32';
+}
+function isNumericType(type: Type): type is IntegerType | FloatType {
+  return isIntegerType(type) || isFloatType(type);
+}
+/** Ranks increase with width inside one numeric family. */
+function numericRank(type: IntegerType | FloatType): number {
+  switch (type) {
+    case 'Int8': case 'Float32': return 1;
+    case 'Int16': return 2;
+    case 'Int32': return 3;
+    case 'Int': case 'Float': return 4;
+  }
+}
+/** Promotion stays inside one family; cross-family mixing returns undefined. */
+function promoteNumeric(left: Type, right: Type): IntegerType | FloatType | undefined {
+  if (isIntegerType(left) && isIntegerType(right)) return numericRank(left) >= numericRank(right) ? left : right;
+  if (isFloatType(left) && isFloatType(right)) return numericRank(left) >= numericRank(right) ? left : right;
+  return undefined;
+}
+/** Numeric widening is lossless inside one family and from the narrow integer types into floats. */
+function widens(actual: Type, expected: Type): boolean {
+  if (isIntegerType(actual) && isIntegerType(expected)) return numericRank(actual) <= numericRank(expected);
+  if (isFloatType(actual) && isFloatType(expected)) return numericRank(actual) <= numericRank(expected);
+  if (isIntegerType(actual) && isFloatType(expected)) {
+    return expected === 'Float32' ? actual === 'Int8' || actual === 'Int16'
+      : actual === 'Int8' || actual === 'Int16' || actual === 'Int32';
+  }
+  return false;
 }
 function sameType(left: Type, right: Type): boolean {
   if (typeof left === 'string' || typeof right === 'string') return left === right;
@@ -173,7 +212,7 @@ function sameType(left: Type, right: Type): boolean {
       return other !== undefined && parameter.name === other.name && sameType(parameter.type, other.type);
     });
 }
-function fits(actual: Type, expected: Type): boolean { return actual === 'Never' || sameType(actual, expected); }
+function fits(actual: Type, expected: Type): boolean { return actual === 'Never' || sameType(actual, expected) || widens(actual, expected); }
 function typeName(type: Type): string {
   if (typeof type === 'string') return type;
   if (type.kind === 'Array') return `[${typeName(type.element)}; ${type.length}]`;
@@ -260,6 +299,58 @@ function floating(value: number, at: Position, literal = false): Extract<Value, 
     throw new LiteFault(literal ? 'SourceError' : 'ArithmeticPanic', 'non-finite floating value', at);
   }
   return { kind: 'Float', value };
+}
+function intBounds(type: IntegerType): readonly [bigint, bigint] {
+  switch (type) {
+    case 'Int8': return [-128n, 127n];
+    case 'Int16': return [-32768n, 32767n];
+    case 'Int32': return [-(1n << 31n), (1n << 31n) - 1n];
+    case 'Int': return [MIN, MAX];
+  }
+}
+/** Checks an arithmetic integer result against the result type's width. */
+function integerAt(value: bigint, type: IntegerType, at: Position): Extract<Value, { kind: 'Int' }> {
+  const [low, high] = intBounds(type);
+  if (value < low || value > high) {
+    throw new LiteFault('ArithmeticPanic', `integer outside ${type} range`, at);
+  }
+  return { kind: 'Int', value };
+}
+/** Rounds a floating result to its type's precision and rejects non-finite values. */
+function floatingAt(value: number, type: FloatType, at: Position): Extract<Value, { kind: 'Float' }> {
+  return floating(type === 'Float32' ? Math.fround(value) : value, at);
+}
+/** Converts a losslessly widening Int value to a Float destination at runtime. */
+function coerceForStorage(input: Expr, expected: Type): Expr {
+  if (isIntegerType(input.type) && isFloatType(expected)) {
+    return { kind: 'toFloat', input, type: expected, at: input.at };
+  }
+  return input;
+}
+/** Types a numeric literal at the expected width when the storage context supplies one. */
+function literalExpr(value: Extract<Value, { kind: 'Int' | 'Float' }>, expected: DataType | undefined, at: Position): Expr {
+  if (value.kind === 'Int') {
+    if (expected !== undefined && isFloatType(expected)) {
+      const number = Number(value.value);
+      const rounded = expected === 'Float32' ? Math.fround(number) : number;
+      if (!Number.isFinite(rounded) || BigInt(rounded) !== value.value) {
+        throw new LiteFault('SourceError', `integer literal is not exactly representable in ${expected}`, at);
+      }
+      return { kind: 'literal', value: { kind: 'Float', value: rounded }, type: expected, at };
+    }
+    const type: IntegerType = expected !== undefined && isIntegerType(expected) ? expected : 'Int';
+    const [low, high] = intBounds(type);
+    if (value.value < low || value.value > high) {
+      throw new LiteFault('SourceError', `integer literal outside ${type} range`, at);
+    }
+    return { kind: 'literal', value, type, at };
+  }
+  if (expected === 'Float32') {
+    const rounded = Math.fround(value.value);
+    if (!Number.isFinite(rounded)) throw new LiteFault('SourceError', 'floating literal outside Float32 range', at);
+    return { kind: 'literal', value: { kind: 'Float', value: rounded }, type: 'Float32', at };
+  }
+  return { kind: 'literal', value, type: 'Float', at };
 }
 function builtin(name: string): Builtin | undefined {
   switch (name) {
@@ -847,13 +938,14 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
     state.loopContext = enclosingLoopContext;
   }
   requireCompatible(body, signature.result, `function body produces ${typeName(body.type)}; expected ${typeName(signature.result)}`, raw.body.at);
+  body = coerceForStorage(body, signature.result);
   return { kind: 'function', code: { parameters, body }, type: signature, at: raw.at };
 }
 function zeroExpr(type: DataType, at: Position): Expr {
   if (typeof type === 'string') {
     switch (type) {
-      case 'Int': return { kind: 'literal', value: { kind: 'Int', value: 0n }, type, at };
-      case 'Float': return { kind: 'literal', value: { kind: 'Float', value: 0 }, type, at };
+      case 'Int': case 'Int8': case 'Int16': case 'Int32': return { kind: 'literal', value: { kind: 'Int', value: 0n }, type, at };
+      case 'Float': case 'Float32': return { kind: 'literal', value: { kind: 'Float', value: 0 }, type, at };
       case 'String': return { kind: 'literal', value: { kind: 'String', value: '' }, type, at };
       case 'Bool': return { kind: 'literal', value: { kind: 'Bool', value: false }, type, at };
       case 'Unit': return { kind: 'literal', value: UNIT, type, at };
@@ -875,10 +967,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
   switch (raw.kind) {
     case 'grouped': return checkExpression(raw.input, names, state, use, expected);
     case 'grant': return typeError('mut arguments currently require a direct named list target in a sequence end operation', at);
-    case 'number': {
-      const value = numericLiteral(raw.text, at);
-      return { kind: 'literal', value, type: value.kind, at };
-    }
+    case 'number': return literalExpr(numericLiteral(raw.text, at), expected, at);
     case 'string': return { kind: 'literal', value: { kind: 'String', value: raw.text }, type: 'String', at };
     case 'bool': return { kind: 'literal', value: { kind: 'Bool', value: raw.value }, type: 'Bool', at };
     case 'boolLeader': {
@@ -889,7 +978,8 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
     case 'unit': return { kind: 'literal', value: UNIT, type: 'Unit', at };
     case 'array': {
       if (raw.items.length === 0) typeError('empty array construction and element-type inference are not supported yet', at);
-      const items = raw.items.map(item => checkExpression(item, names, state));
+      const expectedElement = expected !== undefined && typeof expected !== 'string' && expected.kind === 'Array' ? expected.element : undefined;
+      const items = raw.items.map(item => checkExpression(item, names, state, 'value', expectedElement));
       const first = items[0];
       if (first === undefined) throw new Error('igniter invariant: missing nonempty array element');
       if (!isElement(first.type)) typeError('array elements must be scalars or flat scalar tuples in this igniter', first.at);
@@ -914,7 +1004,9 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         if (labels.has(item.label)) source(`duplicate tuple label ${item.label}`, at);
         labels.add(item.label);
       }
-      const items = raw.items.map(item => checkExpression(item.input, names, state));
+      const expectedItems = expected !== undefined && typeof expected !== 'string' && expected.kind === 'Tuple' &&
+        expected.items.length === raw.items.length ? expected.items : undefined;
+      const items = raw.items.map((item, index) => checkExpression(item.input, names, state, 'value', expectedItems?.[index]?.type));
       const types = items.map((item, index) => {
         if (!isScalar(item.type)) typeError('only scalar components in flat fixed tuples are supported yet', item.at);
         return { label: raw.items[index]?.label, type: item.type };
@@ -948,7 +1040,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       const input = raw.input === undefined ? { kind: 'literal', value: UNIT, type: 'Unit', at } satisfies Expr
         : checkExpression(raw.input, names, state, 'value', state.current.signature.result);
       requireCompatible(input, state.current.signature.result, `return produces ${typeName(input.type)}; expected ${typeName(state.current.signature.result)}`, at);
-      return { kind: 'return', input, type: 'Never', at };
+      return { kind: 'return', input: coerceForStorage(input, state.current.signature.result), type: 'Never', at };
     }
     case 'block': {
       const block = checkBlock(raw.items, names, state, use, expected);
@@ -1116,15 +1208,14 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
     case 'unary': {
       // Admit -2^63 without first requiring positive 2^63 to fit in Int.
       if (raw.op === '-' && raw.input.kind === 'number') {
-        const value = numericLiteral(`-${raw.input.text}`, at);
-        return { kind: 'literal', value, type: value.kind, at };
+        return literalExpr(numericLiteral(`-${raw.input.text}`, at), expected, at);
       }
       const input = checkExpression(raw.input, names, state);
       if (raw.op === 'not') {
         if (input.type !== 'Bool') typeError('not requires Bool', at);
         return { kind: 'unary', op: raw.op, input, type: 'Bool', at };
       }
-      if (input.type !== 'Int' && input.type !== 'Float') typeError('unary arithmetic requires a number', at);
+      if (!isNumericType(input.type)) typeError('unary arithmetic requires a number', at);
       return { kind: 'unary', op: raw.op, input, type: input.type, at };
     }
     case 'binary': {
@@ -1133,20 +1224,21 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       if (raw.op === '+' && left.type === 'String' && right.type === 'String') {
         return { kind: 'binary', op: raw.op, left, right, type: 'String', at };
       }
-      if ((left.type !== 'Int' && left.type !== 'Float') || (right.type !== 'Int' && right.type !== 'Float')) {
+      if (!isNumericType(left.type) || !isNumericType(right.type)) {
         typeError('arithmetic requires numeric operands', at);
       }
-      if ((raw.op === '%' || raw.op === ':/' || raw.op === ':%') && (left.type !== 'Int' || right.type !== 'Int')) {
-        typeError(`${raw.op} requires Int operands`, at);
+      if ((raw.op === '%' || raw.op === ':/' || raw.op === ':%') && (!isIntegerType(left.type) || !isIntegerType(right.type))) {
+        typeError(`${raw.op} requires integer operands`, at);
       }
       if (raw.op === '**') {
         return { kind: 'binary', op: raw.op, left, right, type: 'Float', at };
       }
-      if (raw.op !== '/' && left.type !== right.type) {
-        typeError('mixed Int/Float arithmetic other than division is not supported yet', at);
+      const promoted = promoteNumeric(left.type, right.type);
+      if (promoted === undefined) {
+        if (raw.op !== '/') typeError('mixed Int/Float arithmetic other than division is not supported yet', at);
+        return { kind: 'binary', op: raw.op, left, right, type: 'Float', at };
       }
-      const type = left.type === 'Float' || right.type === 'Float' ? 'Float' : 'Int';
-      return { kind: 'binary', op: raw.op, left, right, type, at };
+      return { kind: 'binary', op: raw.op, left, right, type: promoted, at };
     }
     case 'logic': {
       const left = checkExpression(raw.left, names, state);
@@ -1162,9 +1254,11 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         if (typeof previous.type !== 'string' || typeof pair.right.type !== 'string') {
           typeError('aggregate/function-value comparisons are not supported yet', pair.right.at);
         }
-        if (!sameType(previous.type, pair.right.type)) typeError('mixed-type comparisons are not supported yet', pair.right.at);
-        if (pair.op !== '==' && pair.op !== '=!=' && previous.type !== 'Int' && previous.type !== 'Float') {
-          typeError('ordered comparisons currently require Int or Float', pair.right.at);
+        if (!sameType(previous.type, pair.right.type) && promoteNumeric(previous.type, pair.right.type) === undefined) {
+          typeError('mixed-type comparisons are not supported yet', pair.right.at);
+        }
+        if (pair.op !== '==' && pair.op !== '=!=' && (!isNumericType(previous.type) || !isNumericType(pair.right.type))) {
+          typeError('ordered comparisons currently require a numeric type', pair.right.at);
         }
         previous = pair.right;
       }
@@ -1185,8 +1279,8 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         }
         if (typeof callee.type === 'string' || callee.type.kind !== 'Function') typeError(`${raw.name} is not callable`, at);
         const signature = callee.type;
-        const args = raw.args.map(arg => checkExpression(arg.input, names, state));
         const slots: (number | undefined)[] = signature.parameters.map(() => undefined);
+        const argumentSlots: (number | undefined)[] = [];
         const labels = new Set<string>();
         for (const [index, entry] of raw.args.entries()) {
           let slot: number;
@@ -1200,16 +1294,23 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
             if (slot === -1) typeError(`unknown argument label ${entry.label}`, entry.input.at);
           }
           slots[slot] = index;
+          argumentSlots[index] = slot;
         }
         const routed = slots.map((index, slot) => {
           if (index === undefined) typeError(`missing required argument ${signature.parameters[slot]?.name}`, at);
           return index;
+        });
+        const args = raw.args.map((entry, index) => {
+          const slot = argumentSlots[index];
+          const parameter = slot === undefined ? undefined : signature.parameters[slot];
+          return checkExpression(entry.input, names, state, 'value', parameter === undefined ? undefined : dataTypeOf(parameter.type));
         });
         for (const [index, parameter] of signature.parameters.entries()) {
           const contribution = routed[index];
           const arg = contribution === undefined ? undefined : args[contribution];
           if (arg === undefined) throw new Error('igniter invariant: missing checked argument');
           requireCompatible(arg, parameter.type, `argument ${parameter.name} must be ${typeName(parameter.type)}`, arg.at);
+          args[contribution] = coerceForStorage(arg, parameter.type);
         }
         return { kind: 'invoke', callee, args, slots: routed, type: signature.result, at };
       }
@@ -1235,6 +1336,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
           if (supplied !== undefined) {
             input = checkExpression(supplied.input, names, state);
             requireCompatible(input, target.type.element, `list element must be ${typeName(target.type.element)}`, input.at);
+            input = coerceForStorage(input, target.type.element);
           }
         } finally { state.activeGrant = undefined; }
         return { kind: 'listEnd', op: operation, target, input, type: push ? 'Unit' : target.type.element, at };
@@ -1272,7 +1374,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
           typeError('report currently accepts scalar, Unit and flat tuple values only', at);
         }
       } else if (name === 'exit') {
-        if (args.length > 1 || (args[0] !== undefined && args[0].type !== 'Int')) {
+        if (args.length > 1 || (args[0] !== undefined && !fits(args[0].type, 'Int'))) {
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
@@ -1404,9 +1506,9 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         input = zeroExpr(destination, item.at);
       } else if (typeof destination !== 'string' && destination.kind === 'List' && item.input.kind === 'array') {
         const element = destination.element;
-        const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
+        const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state, 'value', element));
         for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
-        input = { kind: 'list', items: entries, type: destination, at: item.input.at };
+        input = { kind: 'list', items: entries.map(entry => coerceForStorage(entry, element)), type: destination, at: item.input.at };
       } else input = checkExpression(item.input, bodyNames, state, 'value', destination);
     } else if (partial !== undefined) {
       const condition = checkPartialCondition(partial.condition, bodyNames, state);
@@ -1469,6 +1571,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
             }
           }
         }
+        if (item.kind === 'typedDeclare') input = coerceForStorage(input, declared);
         const binding: Binding = own ?? { name: item.name, mutable: item.mutable,
           writable: item.writable, slot: state.nextSlot++, type: declared, owner: state.current?.id ?? 0 };
         names.set(item.name, { kind: 'value', binding });
@@ -1493,6 +1596,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
             : `${item.name} is fixed; replacement requires var`, item.at);
         }
         requireCompatible(input, binding.type, `cannot replace ${typeName(binding.type)} with ${typeName(input.type)}`, item.at);
+        input = coerceForStorage(input, binding.type);
         if (guarded) state.maybeInitialized.add(binding.slot);
         else markInitialized(binding, state);
         items.push({ kind: 'store', binding, input, declare: false, condition: assignmentGuard });
@@ -1567,32 +1671,34 @@ function formatReport(value: Value, type: Type): string {
   });
   return parts.length === 1 ? `(${parts[0]},)` : `(${parts.join(', ')})`;
 }
-function arithmetic(op: Operator, left: Value, right: Value, at: Position): Value {
+function arithmetic(op: Operator, left: Value, right: Value, at: Position, type: Type): Value {
   if (op === '+' && left.kind === 'String' && right.kind === 'String') {
     return { kind: 'String', value: left.value + right.value };
   }
+  const integerType = isIntegerType(type) ? type : 'Int';
+  const floatType = isFloatType(type) ? type : 'Float';
   if (left.kind === 'Int' && right.kind === 'Int') {
     switch (op) {
-      case '+': return integer(left.value + right.value, at);
-      case '-': return integer(left.value - right.value, at);
-      case '*': return integer(left.value * right.value, at);
+      case '+': return integerAt(left.value + right.value, integerType, at);
+      case '-': return integerAt(left.value - right.value, integerType, at);
+      case '*': return integerAt(left.value * right.value, integerType, at);
       case '/':
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
-        return integer(left.value / right.value, at);
+        return integerAt(left.value / right.value, integerType, at);
       case '%':
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'remainder by zero', at);
-        return integer(left.value % right.value, at);
+        return integerAt(left.value % right.value, integerType, at);
       case ':/': {
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
         let quotient = left.value / right.value;
         if (left.value % right.value !== 0n && (left.value < 0n) !== (right.value < 0n)) quotient -= 1n;
-        return integer(quotient, at);
+        return integerAt(quotient, integerType, at);
       }
       case ':%': {
         if (right.value === 0n) throw new LiteFault('ArithmeticPanic', 'modulo by zero', at);
         let remainder = left.value % right.value;
         if (remainder !== 0n && (remainder < 0n) !== (right.value < 0n)) remainder += right.value;
-        return integer(remainder, at);
+        return integerAt(remainder, integerType, at);
       }
       case '**': return power(left, right, at); // Unreachable after the Float-default type split; kept for exhaustiveness.
       default: return unreachable(op);
@@ -1604,12 +1710,12 @@ function arithmetic(op: Operator, left: Value, right: Value, at: Position): Valu
   const a = Number(left.value);
   const b = Number(right.value);
   switch (op) {
-    case '+': return floating(a + b, at);
-    case '-': return floating(a - b, at);
-    case '*': return floating(a * b, at);
+    case '+': return floatingAt(a + b, floatType, at);
+    case '-': return floatingAt(a - b, floatType, at);
+    case '*': return floatingAt(a * b, floatType, at);
     case '/':
       if (b === 0) throw new LiteFault('ArithmeticPanic', 'division by zero', at);
-      return floating(a / b, at);
+      return floatingAt(a / b, floatType, at);
     case '%': case ':/': case ':%': throw new Error('igniter invariant: remainder/floor requires Int operands');
     case '**': return power(left, right, at);
     default: return unreachable(op);
@@ -1785,6 +1891,11 @@ export function execute(program: Program, io: IO): number {
       }
       case 'loopExit': throw new LoopTransfer(expr.op);
       case 'metadata': return readSlot(frame, expr.slot);
+      case 'toFloat': {
+        const input = evaluateHere(expr.input);
+        if (input.kind !== 'Int' || !isFloatType(expr.type)) throw new Error('igniter invariant: non-Int toFloat input');
+        return floating(expr.type === 'Float32' ? Math.fround(Number(input.value)) : Number(input.value), expr.at);
+      }
       case 'sequenceLoop': {
         const input = evaluateHere(expr.input);
         if (input.kind !== 'Array' && input.kind !== 'List') throw new Error('igniter invariant: non-sequence checked traversal');
@@ -1815,11 +1926,11 @@ export function execute(program: Program, io: IO): number {
         const value = evaluateHere(expr.input);
         if (expr.op === 'not') return { kind: 'Bool', value: !boolean(value) };
         if (expr.op === '+') return value;
-        if (value.kind === 'Int') return integer(-value.value, expr.at);
-        if (value.kind === 'Float') return floating(-value.value, expr.at);
+        if (value.kind === 'Int') return integerAt(-value.value, isIntegerType(expr.type) ? expr.type : 'Int', expr.at);
+        if (value.kind === 'Float') return floatingAt(-value.value, isFloatType(expr.type) ? expr.type : 'Float', expr.at);
         throw new Error('igniter invariant: nonnumeric unary input');
       }
-      case 'binary': return arithmetic(expr.op, evaluateHere(expr.left), evaluateHere(expr.right), expr.at);
+      case 'binary': return arithmetic(expr.op, evaluateHere(expr.left), evaluateHere(expr.right), expr.at, expr.type);
       case 'logic': {
         const left = boolean(evaluateHere(expr.left));
         const value = expr.op === 'and' ? left && boolean(evaluateHere(expr.right)) : left || boolean(evaluateHere(expr.right));

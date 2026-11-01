@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 88 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 89 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 33 registered, 33 cases/);
+    assert.match(covered.stdout, /features: 34 registered, 34 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1285,6 +1285,29 @@ test('loops accumulate typed .value and an optional then completion', () => {
   fault('x: Int = loop [1] as n { "s" };', 'TypeError');
   fault('x: Int = loop [1] as n { n } then { "s" };', 'TypeError');
   fault('loop [1] as n { n } then { .item };', 'SourceError');
+});
+test('numeric widths promote, widen losslessly and range-check', () => {
+  assert.equal(run('a: Int8 = 127; b: Int16 = 32767; c: Int32 = 2147483647; report(a, b, c);').output,
+    '127 32767 2147483647\n');
+  assert.equal(run('i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; report(i, f, d);').output, '5 2.5 3.5\n');
+  assert.equal(run('a: Int8 = 100; b: Int16 = 200; report(a + b);').output, '300\n');
+  assert.equal(run('a: Int8 = 127; y := a + 1; report(y);').output, '128\n');
+  assert.equal(run('a: Float32 = 0.1; report(a);').output, '0.10000000149011612\n');
+  assert.equal(run('b: Float32 = 0.1; c: Float = 1.5; report(b + c);').output, '1.6000000014901161\n');
+  assert.equal(run('a: Int8 = 3; f: Float32 = a; g: Float = a; report(f, g);').output, '3 3\n');
+  assert.equal(run('h: Float32 = 0.5; j: Float = h; report(j);').output, '0.5\n');
+  assert.equal(run('k: Float = 2; report(k);').output, '2\n');
+  assert.equal(run('z8: Int8; zf: Float32; report(z8, zf);').output, '0 0\n');
+  assert.equal(run('f := fn(x: Int8): Float32 { x } report(f(3));').output, '3\n');
+  fault('x: Int8 = 128;', 'SourceError');
+  fault('x: Int16 = 32768;', 'SourceError');
+  fault('x: Int8 = 12345;', 'SourceError');
+  fault('x: Float32 = 16777217;', 'SourceError');
+  fault('i16: Int16 = 5; x: Int8 = i16;', 'TypeError');
+  fault('i64: Int = 5; x: Float = i64;', 'TypeError');
+  fault('i: Int8 = 1; f: Float32 = 0.5; report(i + f);', 'TypeError');
+  fault('a: Int8 = 100; report(a + a);', 'ArithmeticPanic');
+  fault('a: Float32 = 3e38; b: Float32 = 3e38; report(a * b);', 'ArithmeticPanic');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

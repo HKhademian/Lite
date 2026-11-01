@@ -1,0 +1,10 @@
+a: Int8 = 100;
+b: Int16 = 200;
+report(a + b);
+f: Float32 = 0.1;
+report(f);
+g: Float = 2;
+report(g);
+i: Int8 = 3;
+h: Float32 = i;
+report(h);

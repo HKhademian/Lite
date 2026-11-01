@@ -1,0 +1,22 @@
+{
+  "id": "num.widths",
+  "kind": "feature",
+  "source": {
+    "file": "num-widths.lts",
+    "hash": "sha256:63693d70bdfd87b6f0775e602305331ca6eaf2a6e1de538100f4cfcbe27708d8"
+  },
+  "features": [
+    "num.widths"
+  ],
+  "guideline": "Checks Int8/Int16/Int32/Int64 and Float32/Float64 storage, width promotion, Float32 rounding and lossless Int-to-Float widening.",
+  "cases": [
+    {
+      "name": "widths",
+      "stdout": {
+        "text": "300\n0.10000000149011612\n2\n3\n",
+        "hash": "sha256:c5332d32f78be0dbec6cb34a9bec15485a485c38a2000dd6550520be7e9f6e6a"
+      },
+      "exitCode": 0
+    }
+  ]
+}

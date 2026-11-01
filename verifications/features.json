@@ -11,6 +11,15 @@
       ]
     },
     {
+      "id": "num.widths",
+      "summary": "Sized integer and floating widths with promotion and lossless widening.",
+      "case": "features/num-widths.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md"
+      ]
+    },
+    {
       "id": "bool.conditions",
       "summary": "Bool comparisons and conditional selection.",
       "case": "features/bool-conditions.json",

@@ -42,6 +42,26 @@ Requiring a leading zero settles spelling only. Floating-point representation, d
 
 A signed 64-bit default `Int` was suggested, with explicit sized types and an optional arbitrary-precision library; the permanent language-wide representation is not selected. The bounded FVP profile below now selects temporary representations. When a basic arithmetic operation has a defined fault, it uses the typed panic channel rather than returning `Result`. Overflow must not silently wrap, become undefined, or change meaning between build modes. Recover a matching panic locally with target-level `else` and a typed filter; exact category names remain open. See [arithmetic fault boundaries](arithmetic-faults.md).
 
+Implementation checkpoint, 2026-11-01: the igniter accepts the sized integer
+types `Int8`, `Int16`, `Int32`, `Int64` and the floating types `Float32`,
+`Float64`. `Int` is an alias for `Int64`; `Float`, `Float64` and `Double` are
+one 64-bit floating type. Unannotated integer literals remain `Int` (Int64) and
+fractional literals remain `Float` (Float64); they do not become minimal-width.
+A literal constant may initialize a narrow annotated type only when it fits:
+integer literals must be inside that width's range (and exactly representable
+for a floating destination), while a fractional literal stored as `Float32`
+rounds to binary32. Arithmetic promotes to the wider width inside one family;
+`Int` and `Float` remain separate except for the existing division rule.
+Assignments, arguments and returns admit lossless widening only: integer widths
+widen within the integer family, `Float32` widens to `Float`, and
+`Int8`/`Int16` widen to `Float32` while `Int8`/`Int16`/`Int32` widen to
+`Float`. Narrowing, including `Int64` to `Float64` and `Int32` to `Float32`, is
+rejected. Narrow integer arithmetic checks its result width and raises an
+arithmetic panic on overflow; `Float32` rounds each result to binary32 and
+rejects non-finite results. Unsigned widths, explicit narrowing/casts,
+component-wise numeric widening of stored tuples/arrays, and minimal-width
+literal typing remain unimplemented.
+
 ## Temporary FVP numeric profile
 
 Selected **2026-10-30**, for the first experimental interpreter only:

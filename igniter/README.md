@@ -81,7 +81,7 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 ## Supported checkpoint
 
 One file; fixed/inferred `:=` bindings, scalar/tuple/fixed-array typed locals with zero initialization or reserved `= ?` storage and whole-value first initialization, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, typed loop `.value` with optional `then` completion, shadowing and scalar
-copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
+copies; integer/float/text/Bool/Unit and flat fixed-tuple values, with Int8/Int16/Int32/Int64 and Float32/Float64 widths;
 `+ - * / % :/ :% **`, compound `+= -= *= /= %= :/= :%=` updates, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
 parsed and checked before effects, including uncalled function bodies.
@@ -503,9 +503,26 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
 
 ### Numeric, input and reporting helpers
 
-- Int uses exact `bigint` computation with signed 64-bit checks, including minimum
-  divided by -1. Int/Int division truncates toward zero.
-- Float uses binary64 `number`; mixed Int/Float **division** is supported.
+- Numeric types are `Int8`, `Int16`, `Int32`, `Int64`, `Float32` and `Float64`.
+  `Int` is an alias for `Int64`; `Float64` and `Double` are aliases for `Float`.
+  `Int` uses exact `bigint` storage with width checks for its declared type,
+  including minimum divided by -1. Integer division truncates toward zero.
+- Arithmetic promotes to the wider width inside one family: `Int8 + Int16` is
+  `Int16`, `Float32 + Float` is `Float`. `Int` and `Float` remain separate
+  except the existing mixed division rule. Narrow integer results are checked
+  against their width and raise `ArithmeticPanic` on overflow; `Float32`
+  results round to binary32 and reject non-finite values.
+- Unannotated integer literals stay `Int` and fractional literals stay `Float`.
+  A literal constant may initialize a narrow annotated type only when it fits
+  and survives the conversion exactly: `x: Int8 = 127` and `x: Float32 = 2`
+  work, while `x: Int8 = 128` and `x: Float32 = 16777217` are source errors.
+  A fractional literal stored as `Float32` rounds to binary32.
+- Assignments, arguments and returns admit lossless widening only: wider
+  integer widths, `Float32` to `Float`, `Int8`/`Int16` to `Float32`, and
+  `Int8`/`Int16`/`Int32` to `Float`. Narrowing (`Int16` to `Int8`, `Int64` to
+  `Float`, `Int32` to `Float32`) is rejected. Unsigned widths, casts and
+  component-wise widening of stored tuples/arrays are not implemented.
+- `Float` uses binary64 `number`; mixed Int/Float **division** is supported.
   Other mixed arithmetic and mixed-type replacement are rejected for now.
   Int-to-float promotion during division rounds through Number; this is a
   provisional igniter choice, not a permanent conversion contract. Overflow,
@@ -631,7 +648,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **172 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **173 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -640,7 +657,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 33 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 34 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a
