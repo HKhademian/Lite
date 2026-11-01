@@ -2,7 +2,7 @@
 
 Current components:
 
-- Igniter: **0.1.0-alpha.37**
+- Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 36 features, 19 examples, 20 samples, 75 scenarios, 91 target executions
 - Tests: 175 interpreter groups and 9 editor grammar groups
@@ -51,6 +51,7 @@ version. Detailed milestone prose remains in the
 | `igniter-v0.1.0-alpha.35` | 2026-11-01 | `2cf4813` | Construct-level `finally` cleanup |
 | `igniter-v0.1.0-alpha.36` | 2026-11-01 | `8da2f93` | Named unsupported-feature diagnostics in the restricted compiler |
 | `igniter-v0.1.0-alpha.37` | 2026-11-01 | `64c471f` | Restricted compiler control-flow slice: Bool, mutable locals, if/else and loops |
+| `igniter-v0.1.0-alpha.38` | 2026-11-01 | `e5bb678` | Positioned compiler diagnostics and documentation links |
 
 ## Current tag conventions
 

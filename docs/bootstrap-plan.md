@@ -48,7 +48,7 @@ Related direction:
 
 ## Current baseline
 
-- Igniter **0.1.0-alpha.37**, tag `igniter-v0.1.0-alpha.37`.
+- Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
 - **175** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 9–10 seconds.
 - Verification corpus: **36** features, **19** examples, **20** samples,
