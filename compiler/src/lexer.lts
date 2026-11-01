@@ -12,6 +12,29 @@ Token := type (kind: String, text: String, offset: Int, line: Int, column: Int);
 /** Tokens in source order, ending with one EOF token. */
 Tokens := type List<Token>;
 
+/* Token-kind spellings. Lite has no enum and top-level values cannot be
+   captured by functions yet, so these are zero-argument accessors. */
+/** Canonical token kind for ordinary names. */
+TOKEN_KIND_NAME := fn(): String { "Name" }
+
+/** Canonical token kind for keywords other than Bool literals. */
+TOKEN_KIND_KEYWORD := fn(): String { "Keyword" }
+
+/** Canonical token kind for Int literals. */
+TOKEN_KIND_INT := fn(): String { "Int" }
+
+/** Canonical token kind for String literals. */
+TOKEN_KIND_STRING := fn(): String { "String" }
+
+/** Canonical token kind for Bool literals. */
+TOKEN_KIND_BOOL := fn(): String { "Bool" }
+
+/** Canonical token kind for symbols and operators. */
+TOKEN_KIND_SYMBOL := fn(): String { "Symbol" }
+
+/** Canonical token kind for end of source. */
+TOKEN_KIND_EOF := fn(): String { "EOF" }
+
 /** Reports one source-positioned lexer diagnostic and exits 2. */
 lexFail := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := lineColumn(source, position);
@@ -252,7 +275,7 @@ tokenize := fn(source: String, prefix: String): Tokens {
         line = trivia.line;
         lineStart = trivia.lineStart;
         if cursor >= size {
-            push_back(mut tokens, (kind = "EOF", text = "", offset = cursor, line = line, column = cursor - lineStart + 1));
+            push_back(mut tokens, (kind = TOKEN_KIND_EOF(), text = "", offset = cursor, line = line, column = cursor - lineStart + 1));
             break;
         }
         start := cursor;
@@ -265,9 +288,9 @@ tokenize := fn(source: String, prefix: String): Tokens {
         if isNameStart(ch) {
             next = skipName(source, cursor);
             value = textSlice(source, cursor, next);
-            if value == "true" or value == "false" { kind = "Bool"; }
-            else if isKeyword(value) { kind = "Keyword"; }
-            else { kind = "Name"; }
+            if value == "true" or value == "false" { kind = TOKEN_KIND_BOOL(); }
+            else if isKeyword(value) { kind = TOKEN_KIND_KEYWORD(); }
+            else { kind = TOKEN_KIND_NAME(); }
         } else if isDigit(ch) {
             var digitsEnd := cursor;
             loop digitsEnd < size and isDigit(textAt(source, digitsEnd)) { digitsEnd = digitsEnd + 1; }
@@ -276,11 +299,11 @@ tokenize := fn(source: String, prefix: String): Tokens {
             if not negative.ok {
                 lexFail(source, cursor, prefix, "integer literal outside signed 64-bit range");
             }
-            kind = "Int";
+            kind = TOKEN_KIND_INT();
             next = digitsEnd;
         } else if ch == "\"" {
             scanned := scanString(source, cursor, prefix);
-            kind = "String";
+            kind = TOKEN_KIND_STRING();
             value = scanned.text;
             next = scanned.next;
         } else {
@@ -297,7 +320,7 @@ tokenize := fn(source: String, prefix: String): Tokens {
             if startsWithAt(source, cursor, "||") {
                 lexFail(source, cursor, prefix, "unsupported operator ||; use or");
             }
-            kind = "Symbol";
+            kind = TOKEN_KIND_SYMBOL();
             value = symbol;
             next = cursor + textLength(symbol);
         }

@@ -121,6 +121,9 @@ It parses expanded S, L0, the lexer source and all program cases; value `if`
 branches are currently single-expression blocks. Manifest-order authority,
 removing `importFlatAll` and named negative-fixture diagnostics remain.
 Fixtures live under [`../compiler/tests/parser/`](../compiler/tests/parser/).
+Token and parse-node kind tags are centralized as zero-argument accessors
+(`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
+cannot be captured by functions yet.
 
 **Stage 0 is feature-frozen during bootstrap** (bootstrap defaults B8/B11). Do
 not add new igniter syntax, builtins, host helpers or CLI behavior while the

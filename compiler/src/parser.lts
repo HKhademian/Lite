@@ -13,6 +13,17 @@ Node := type (kind: String, name: String, detail: String, offset: Int, line: Int
 /** Parse nodes in source order. */
 Nodes := type List<Node>;
 
+/* Parse-node kind spellings. Zero-argument accessors because Lite has no enum
+   and top-level values cannot be captured by functions yet. */
+/** Canonical node kind for one type alias. */
+NODE_KIND_TYPE_ALIAS := fn(): String { "TypeAlias" }
+
+/** Canonical node kind for one declaration. */
+NODE_KIND_DECLARATION := fn(): String { "Declaration" }
+
+/** Canonical node kind for a complete program. */
+NODE_KIND_PROGRAM := fn(): String { "Program" }
+
 /** Reports one token-positioned parser diagnostic and exits 2. */
 parseFail := fn(token: Token, prefix: String, message: String): Unit {
     fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
@@ -22,7 +33,7 @@ parseFail := fn(token: Token, prefix: String, message: String): Unit {
 tokenCount := fn(tokens: Tokens): Int {
     var count := 0;
     loop tokens as token {
-        if token.kind == "EOF" { return count + 1; }
+        if token.kind == TOKEN_KIND_EOF() { return count + 1; }
         count = count + 1;
     }
     count
@@ -35,7 +46,7 @@ tokenAt := fn(tokens: Tokens, index: Int): Token {
 
 /** True when the token is the exact symbol `text`. */
 isSymbol := fn(token: Token, text: String): Bool {
-    token.kind == "Symbol" and token.text == text
+    token.kind == TOKEN_KIND_SYMBOL() and token.text == text
 }
 
 /** Consumes the exact symbol or reports a parser diagnostic. */
@@ -50,7 +61,7 @@ expectSymbol := fn(tokens: Tokens, index: Int, text: String, prefix: String): In
 /** Parses one type: a name, `List<T>` or a flat tuple with optional labels. */
 parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: String) {
     token := tokenAt(tokens, index);
-    if token.kind == "Name" {
+    if token.kind == TOKEN_KIND_NAME() {
         after := tokenAt(tokens, index + 1);
         if isSymbol(after, "<") {
             if token.text =!= "List" {
@@ -69,7 +80,7 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
         loop true {
             if isSymbol(tokenAt(tokens, cursor), ")") { break; }
             var label := "";
-            if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), ":") {
+            if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":") {
                 label = tokenAt(tokens, cursor).text + ": ";
                 cursor = cursor + 2;
             }
@@ -105,8 +116,8 @@ binaryLevel := fn(text: String): Int {
 
 /** True when a token is a selected binary operator. */
 isBinaryToken := fn(token: Token): Bool {
-    if token.kind == "Keyword" and (token.text == "and" or token.text == "or") { return true; }
-    token.kind == "Symbol" and binaryLevel(token.text) > 0
+    if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") { return true; }
+    token.kind == TOKEN_KIND_SYMBOL() and binaryLevel(token.text) > 0
 }
 
 /**
@@ -119,27 +130,27 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
     var cursor := index;
     var leftText := "";
     var firstLabel := false;
-    if token.kind == "Keyword" and (token.text == "and" or token.text == "or") {
+    if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "and" or token.text == "or") {
         operand := self(tokens, index + 1, prefix, 0);
         return (next = operand.next, text = operand.text);
-    } else if token.kind == "Keyword" and token.text == "not" {
+    } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "not" {
         operand := self(tokens, index + 1, prefix, 5);
         leftText = "(not " + operand.text + ")";
         cursor = operand.next;
-    } else if token.kind == "Symbol" and (token.text == "-" or token.text == "+") {
+    } else if token.kind == TOKEN_KIND_SYMBOL() and (token.text == "-" or token.text == "+") {
         operand := self(tokens, index + 1, prefix, 30);
         leftText = "(" + token.text + operand.text + ")";
         cursor = operand.next;
-    } else if token.kind == "Int" {
+    } else if token.kind == TOKEN_KIND_INT() {
         leftText = token.text;
         cursor = index + 1;
-    } else if token.kind == "String" {
+    } else if token.kind == TOKEN_KIND_STRING() {
         leftText = "\"" + escapedTokenText(token.text) + "\"";
         cursor = index + 1;
-    } else if token.kind == "Bool" {
+    } else if token.kind == TOKEN_KIND_BOOL() {
         leftText = token.text;
         cursor = index + 1;
-    } else if token.kind == "Name" {
+    } else if token.kind == TOKEN_KIND_NAME() {
         leftText = token.text;
         cursor = index + 1;
         if isSymbol(tokenAt(tokens, cursor), "(") {
@@ -149,11 +160,11 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
                 if argCount > 0 { argText = argText + ", "; }
-                if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "mut" {
+                if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
                     argText = argText + "mut ";
                     cursor = cursor + 1;
                 }
-                if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
                     argText = argText + tokenAt(tokens, cursor).text + " = ";
                     cursor = cursor + 2;
                 }
@@ -173,7 +184,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
     } else if isSymbol(token, "(") {
         cursor = index + 1;
         var firstText := "";
-        if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+        if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
             firstText = tokenAt(tokens, cursor).text + " = ";
             firstLabel = true;
             cursor = cursor + 2;
@@ -187,7 +198,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
                 tupleText = tupleText + ", ";
-                if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                if tokenAt(tokens, cursor).kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
                     tupleText = tupleText + tokenAt(tokens, cursor).text + " = ";
                     cursor = cursor + 2;
                 }
@@ -225,7 +236,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         }
         cursor = expectSymbol(tokens, cursor, "]", prefix);
         leftText = listText + "]";
-    } else if token.kind == "Keyword" and token.text == "if" {
+    } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
         condition := self(tokens, index + 1, prefix, 0);
         opening := expectSymbol(tokens, condition.next, "{", prefix);
         branchValue := self(tokens, opening, prefix, 0);
@@ -233,9 +244,9 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         var ifText := "if " + condition.text + " { " + branchValue.text + " }";
         cursor = closing;
         loop true {
-            if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "else" {
+            if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
                 afterElse := cursor + 1;
-                if tokenAt(tokens, afterElse).kind == "Keyword" and tokenAt(tokens, afterElse).text == "if" {
+                if tokenAt(tokens, afterElse).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
                     elseCondition := self(tokens, afterElse + 1, prefix, 0);
                     elseOpening := expectSymbol(tokens, elseCondition.next, "{", prefix);
                     elseValue := self(tokens, elseOpening, prefix, 0);
@@ -263,7 +274,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         current := tokenAt(tokens, cursor);
         if isSymbol(current, ".") {
             member := tokenAt(tokens, cursor + 1);
-            if member.kind == "Name" or member.kind == "Int" {
+            if member.kind == TOKEN_KIND_NAME() or member.kind == TOKEN_KIND_INT() {
                 leftText = leftText + "." + member.text;
                 cursor = cursor + 2;
             } else {
@@ -295,12 +306,12 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
 parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     var cursor := index;
     var isVar := false;
-    if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "var" {
+    if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "var" {
         isVar = true;
         cursor = cursor + 1;
     }
     token := tokenAt(tokens, cursor);
-    if token.kind =!= "Name" {
+    if token.kind =!= TOKEN_KIND_NAME() {
         parseFail(token, prefix, "expected a declaration name");
     }
     name := token.text;
@@ -313,7 +324,7 @@ parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, 
     } else if isSymbol(tokenAt(tokens, cursor), ":") {
         cursor = cursor + 1;
         var mutableType := false;
-        if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "mut" {
+        if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "mut" {
             mutableType = true;
             cursor = cursor + 1;
         }
@@ -348,9 +359,9 @@ parseDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
-        if token.kind == "EOF" { break; }
+        if token.kind == TOKEN_KIND_EOF() { break; }
         parsed := parseDeclaration(tokens, cursor, prefix);
-        push_back(mut nodes, (kind = "Declaration", name = parsed.name, detail = parsed.detail,
+        push_back(mut nodes, (kind = NODE_KIND_DECLARATION(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
         cursor = parsed.next;
     }
@@ -371,7 +382,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             cursor = cursor + 1;
             break;
         }
-        if token.kind == "EOF" {
+        if token.kind == TOKEN_KIND_EOF() {
             if closed { parseFail(token, prefix, "expected } before end of source"); }
             break;
         }
@@ -379,7 +390,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             parseFail(token, prefix, "unexpected }");
         }
         var itemText := "";
-        if token.kind == "Keyword" and token.text == "if" {
+        if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
             condition := parseExpression(tokens, cursor + 1, prefix, 0);
             if not isSymbol(tokenAt(tokens, condition.next), "{") {
                 parseFail(tokenAt(tokens, condition.next), prefix, "expected { after if condition");
@@ -388,9 +399,9 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             var branchText := "if " + condition.text + " " + branch.text;
             cursor = branch.next;
             loop true {
-                if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "else" {
+                if tokenAt(tokens, cursor).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor).text == "else" {
                     afterElse := cursor + 1;
-                    if tokenAt(tokens, afterElse).kind == "Keyword" and tokenAt(tokens, afterElse).text == "if" {
+                    if tokenAt(tokens, afterElse).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, afterElse).text == "if" {
                         elseCondition := parseExpression(tokens, afterElse + 1, prefix, 0);
                         if not isSymbol(tokenAt(tokens, elseCondition.next), "{") {
                             parseFail(tokenAt(tokens, elseCondition.next), prefix, "expected { after else if condition");
@@ -409,11 +420,11 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 }
             }
             itemText = branchText;
-        } else if token.kind == "Keyword" and token.text == "loop" {
+        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
             source := parseExpression(tokens, cursor + 1, prefix, 0);
-            if tokenAt(tokens, source.next).kind == "Name" and tokenAt(tokens, source.next).text == "as" {
+            if tokenAt(tokens, source.next).kind == TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {
                 variable := tokenAt(tokens, source.next + 1);
-                if variable.kind =!= "Name" {
+                if variable.kind =!= TOKEN_KIND_NAME() {
                     parseFail(variable, prefix, "expected a loop item name after as");
                 }
                 bodyBlock := self(tokens, source.next + 2, prefix, true);
@@ -427,20 +438,20 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 itemText = "loop " + source.text + " " + bodyBlock.text;
                 cursor = bodyBlock.next;
             }
-        } else if token.kind == "Keyword" and (token.text == "break" or token.text == "continue") {
+        } else if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
             itemText = token.text;
             cursor = cursor + 1;
             if isSymbol(tokenAt(tokens, cursor), "@") {
                 label := tokenAt(tokens, cursor + 1);
-                if label.kind =!= "Name" { parseFail(label, prefix, "expected a loop label after @"); }
+                if label.kind =!= TOKEN_KIND_NAME() { parseFail(label, prefix, "expected a loop label after @"); }
                 itemText = itemText + " @" + label.text;
                 cursor = cursor + 2;
             }
             if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
-        } else if token.kind == "Keyword" and token.text == "return" {
+        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "return" {
             afterReturn := cursor + 1;
             if isSymbol(tokenAt(tokens, afterReturn), ";") or isSymbol(tokenAt(tokens, afterReturn), "}") or
-                tokenAt(tokens, afterReturn).kind == "EOF" {
+                tokenAt(tokens, afterReturn).kind == TOKEN_KIND_EOF() {
                 itemText = "return";
                 cursor = afterReturn;
             } else {
@@ -449,12 +460,12 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 cursor = value.next;
             }
             if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
-        } else if token.kind == "Symbol" and token.text == "{" {
+        } else if token.kind == TOKEN_KIND_SYMBOL() and token.text == "{" {
             blockText := self(tokens, cursor, prefix, true);
             itemText = blockText.text;
             cursor = blockText.next;
-        } else if token.kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
-            tokenAt(tokens, cursor + 2).kind == "Keyword" and tokenAt(tokens, cursor + 2).text == "fn" {
+        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
             name := token.text;
             var afterName := cursor + 3;
             afterName = expectSymbol(tokens, afterName, "(", prefix);
@@ -463,7 +474,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             loop true {
                 if isSymbol(tokenAt(tokens, afterName), ")") { break; }
                 parameter := tokenAt(tokens, afterName);
-                if parameter.kind =!= "Name" { parseFail(parameter, prefix, "expected a parameter name"); }
+                if parameter.kind =!= TOKEN_KIND_NAME() { parseFail(parameter, prefix, "expected a parameter name"); }
                 colon := expectSymbol(tokens, afterName + 1, ":", prefix);
                 parameterType := parseType(tokens, colon, prefix);
                 if parameterCount > 0 { parameters = parameters + ", "; }
@@ -486,24 +497,24 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             itemText = name + " := fn(" + parameters + "): " + resultType.text + " " + functionBody.text;
             cursor = functionBody.next;
             if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
-        } else if token.kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
-            tokenAt(tokens, cursor + 2).kind == "Keyword" and tokenAt(tokens, cursor + 2).text == "type" {
+        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
             assigned := expectSymbol(tokens, cursor + 1, ":=", prefix);
             typeWord := tokenAt(tokens, assigned);
-            if typeWord.kind =!= "Keyword" or typeWord.text =!= "type" {
+            if typeWord.kind =!= TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
                 parseFail(typeWord, prefix, "expected type after :=");
             }
             aliasType := parseType(tokens, assigned + 1, prefix);
             ended := expectSymbol(tokens, aliasType.next, ";", prefix);
             itemText = token.text + " := type " + aliasType.text;
             cursor = ended;
-        } else if token.kind == "Keyword" and token.text == "var" or
-            (token.kind == "Name" and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
+        } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "var" or
+            (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
                 isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
             declaration := parseDeclaration(tokens, cursor, prefix);
             itemText = declaration.name + " " + declaration.detail;
             cursor = declaration.next;
-        } else if token.kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "=") {
             value := parseExpression(tokens, cursor + 2, prefix, 0);
             itemText = token.text + " = " + value.text;
             cursor = value.next;
@@ -525,19 +536,19 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
 parseProgram := fn(tokens: Tokens, prefix: String): Nodes {
     parsed := parseBlock(tokens, 0, prefix, false);
     nodes: mut List<Node> = [];
-    push_back(mut nodes, (kind = "Program", name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
+    push_back(mut nodes, (kind = NODE_KIND_PROGRAM(), name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
     nodes
 }
 
 /** Parses one `Name := type Type;` declaration into scalar node fields. */
 parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     token := tokenAt(tokens, index);
-    if token.kind =!= "Name" {
+    if token.kind =!= TOKEN_KIND_NAME() {
         parseFail(token, prefix, "expected a type alias name");
     }
     assigned := expectSymbol(tokens, index + 1, ":=", prefix);
     typeWord := tokenAt(tokens, assigned);
-    if typeWord.kind =!= "Keyword" or typeWord.text =!= "type" {
+    if typeWord.kind =!= TOKEN_KIND_KEYWORD() or typeWord.text =!= "type" {
         parseFail(typeWord, prefix, "expected type after :=");
     }
     parsed := parseType(tokens, assigned + 1, prefix);
@@ -553,9 +564,9 @@ parseTypeDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
-        if token.kind == "EOF" { break; }
+        if token.kind == TOKEN_KIND_EOF() { break; }
         parsed := parseTypeAlias(tokens, cursor, prefix);
-        push_back(mut nodes, (kind = "TypeAlias", name = parsed.name, detail = parsed.detail,
+        push_back(mut nodes, (kind = NODE_KIND_TYPE_ALIAS(), name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column));
         cursor = parsed.next;
     }
