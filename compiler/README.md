@@ -70,6 +70,7 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |
 | [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
 | [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
+| [`runtime/ts/runtime.ts`](runtime/ts/runtime.ts) | P6 TS runtime: checked Int64, code-point text, list copies, faults and exit |
 | [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `report(42);` |
 | [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |

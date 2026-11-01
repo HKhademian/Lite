@@ -107,6 +107,9 @@ keeps that target from growing while it is approached.
   tuple/list/field/index types, mutation grants and break/return placement. S
   checks, the 42 rejection cases retain exact diagnostics, and invalid programs
   do not emit artifacts.
+- P6 is in progress: the TS runtime covers checked Int64 arithmetic, code-point
+  text, list copies, faults and exit. The full emitter, Node I/O adapter and
+  T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are

@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **195** interpreter test groups and **9** editor grammar groups; the fast lane
+- **196** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
@@ -75,7 +75,7 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P6 — TS emitter and runtime, not started.** P5 was completed on
+**Current gate: P6 — TS emitter and runtime, in progress.** P5 was completed on
 2026-11-01; update this line when a gate is completed and use the phase
 checklists as the source of truth.
 
@@ -411,8 +411,9 @@ tests in 228.6 s; the fast lane passes 190 with five heavy/native skips in 11.7 
 
 **Goal:** produce a runnable TypeScript compiler T from S.
 
-- [ ] TS runtime support: checked Int64 arithmetic, code-point text, list copy
-      semantics, I/O adapter, diagnostics and exit.
+- [x] TS runtime support: checked Int64 arithmetic, code-point text, list copy
+      semantics, diagnostics and exit. The Node I/O adapter remains with the
+      generated entry.
 - [ ] Lower expressions, statements, functions, loops and value conditionals.
 - [ ] Single-file artifact; strict TypeScript; erasable syntax; Node entry.
 - [ ] Source-name/args/stdin/stdout/stderr/status contract.

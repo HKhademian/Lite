@@ -10,6 +10,11 @@ import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadManifest, loadSource } from './loader.ts';
 import { benchmark, hashBytes, loadCompiler, nondeterminismReasons, runBundle, runText } from './bootstrap.ts';
 import { runCArtifact, runTsArtifact } from './artifacts.ts';
+import {
+  INT_MAX, INT_MIN, checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
+  checkedMultiply, checkedNegate, checkedRemainder, checkedSubtract, intText, listCopy,
+  runMain, textAt, textLength, textSlice, LiteRuntimeFault,
+} from '../compiler/runtime/ts/runtime.ts';
 
 const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url).pathname;
 const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).pathname;
@@ -961,6 +966,45 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
       assert.match(result.errors, expected, fixture.name);
     }
   }
+});
+
+test('TS runtime helpers preserve checked Int64, text and list semantics', () => {
+  assert.equal(checkedAdd(2n, 3n), 5n);
+  assert.equal(checkedSubtract(2n, 3n), -1n);
+  assert.equal(checkedMultiply(-6n, 7n), -42n);
+  assert.equal(checkedDivide(-7n, 2n), -3n);
+  assert.equal(checkedRemainder(-7n, 2n), -1n);
+  assert.equal(checkedFloorDivide(-7n, 2n), -4n);
+  assert.equal(checkedFloorModulo(-7n, 2n), 1n);
+  assert.equal(checkedNegate(42n), -42n);
+  assert.equal(intText(INT_MIN), '-9223372036854775808');
+  assert.throws(() => checkedAdd(INT_MAX, 1n), (error: unknown) =>
+    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
+  assert.throws(() => checkedDivide(1n, 0n), (error: unknown) =>
+    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
+  assert.throws(() => checkedNegate(INT_MIN), (error: unknown) =>
+    error instanceof LiteRuntimeFault && error.category === 'ArithmeticPanic');
+
+  assert.equal(textLength('a🙂'), 2n);
+  assert.equal(textAt('a🙂', 1n), '🙂');
+  assert.equal(textSlice('a🙂b', 1n, 2n), '🙂');
+  assert.throws(() => textAt('a', 9n), (error: unknown) =>
+    error instanceof LiteRuntimeFault && error.category === 'BoundPanic');
+
+  const source = [1, 2];
+  const copy = listCopy(source);
+  copy.push(3);
+  assert.deepEqual(source, [1, 2]);
+  assert.deepEqual(copy, [1, 2, 3]);
+
+  let output = '';
+  let errors = '';
+  assert.equal(runMain(() => 'ok\n', { report: text => { output += text; }, reportError: text => { errors += text; } }), 0);
+  assert.equal(output, 'ok\n');
+  assert.equal(errors, '');
+  assert.equal(runMain(() => { throw new LiteRuntimeFault('BoundPanic', 'bad'); },
+    { report: text => { output += text; }, reportError: text => { errors += text; } }), 1);
+  assert.equal(errors, 'BoundPanic: bad\n');
 });
 
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {

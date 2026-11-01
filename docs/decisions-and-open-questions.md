@@ -323,6 +323,16 @@ focused cases are rejected before emission. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 
+## TS runtime groundwork, 2026-11-01
+
+P6 starts with [`compiler/runtime/ts/runtime.ts`](../compiler/runtime/ts/runtime.ts):
+checked signed 64-bit arithmetic, code-point text length/index/slice, list value
+copies, runtime faults and a `runMain` exit adapter. Direct tests cover overflow,
+zero division, floor division/modulo, Int64 minimum text, Unicode positions,
+copy isolation and fault status. The full TS emitter, Node I/O adapter, corpus
+parity and T-from-S gate remain. See
+[P6](bootstrap-plan.md#p6--ts-emitter-and-runtime).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates
