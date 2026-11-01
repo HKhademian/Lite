@@ -126,6 +126,25 @@ const NUMBER = /^(?:[0-9]+(?:\.[0-9]+)?)(?:[eE][+-]?[0-9]+)?/;
 const INPUT_NUMBER = /^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
 const INPUT_INTEGER = /^[+-]?[0-9]+$/;
 const SPACE = /^[ \t\n\r\f\v]$/;
+/**
+ * One-entry code-point view cache. The compiler source is scanned one character
+ * at a time, so rebuilding `Array.from` for every `textAt` call makes execution
+ * quadratic in source length; strings are immutable, so the previous view is an
+ * exact answer for the same text.
+ */
+let cachedPointText: string | undefined;
+let cachedPointValues: readonly string[] | undefined;
+/** Returns the code-point view of `text`, reusing the previous view for the same text. */
+function textPoints(text: string): readonly string[] {
+  if (cachedPointText === text) {
+    if (cachedPointValues === undefined) throw new Error('igniter invariant: missing text view cache');
+    return cachedPointValues;
+  }
+  const values = Array.from(text);
+  cachedPointText = text;
+  cachedPointValues = values;
+  return values;
+}
 const KEYWORDS = new Set(['var', 'true', 'false', 'if', 'else', 'and', 'or', 'not',
   'fn', 'loop', 'break', 'continue', 'return', 'mut', 'import', 'using', 'record', 'type', 'then', 'finally', 'match']);
 
@@ -2147,7 +2166,7 @@ export function execute(program: Program, io: IO): number {
             const text = args[0];
             if (text?.kind !== 'String') throw new Error('igniter invariant: missing checked text');
             // Temporary explicit code-point view; no generic String indexing or native layout claim.
-            const points = Array.from(text.value);
+            const points = textPoints(text.value);
             const length = BigInt(points.length);
             if (expr.name === 'textLength') return integer(length, expr.at);
             const start = args[1];
