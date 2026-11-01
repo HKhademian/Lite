@@ -107,7 +107,9 @@ with a token-dump driver at
 [`../compiler/src/lexer-dump.lts`](../compiler/src/lexer-dump.lts). It tokenizes
 names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
 nested/raw comments; decodes the selected string escapes; checks Int64 magnitude;
-and records offset plus line/column. Focused fixtures live under
+and records offset plus line/column. Operators use longest-match over the
+selected spellings; incomplete `=!` and the unsupported `&&`/`||` spellings are
+rejected with guidance. Focused fixtures live under
 [`../compiler/tests/lexer/`](../compiler/tests/lexer/). The full-S sweep is a
 full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
 expanded TS S, the C emitter, the lexer sources and all 92 compiler cases. No

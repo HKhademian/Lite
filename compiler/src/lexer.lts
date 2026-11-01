@@ -288,6 +288,15 @@ tokenize := fn(source: String, prefix: String): Tokens {
             if symbol == "" {
                 lexFail(source, cursor, prefix, "unsupported symbol: " + ch);
             }
+            if startsWithAt(source, cursor, "=!") and not startsWithAt(source, cursor, "=!=") {
+                lexFail(source, cursor, prefix, "incomplete operator =!; use =!=");
+            }
+            if startsWithAt(source, cursor, "&&") {
+                lexFail(source, cursor, prefix, "unsupported operator &&; use and");
+            }
+            if startsWithAt(source, cursor, "||") {
+                lexFail(source, cursor, prefix, "unsupported operator ||; use or");
+            }
             kind = "Symbol";
             value = symbol;
             next = cursor + textLength(symbol);

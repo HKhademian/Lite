@@ -186,6 +186,9 @@ test('Lite lexer rejects malformed lexical input with positioned diagnostics', (
     ['/*# unterminated', '1:1: unterminated raw comment\n'],
     ['report(9223372036854775809);', '1:8: integer literal outside signed 64-bit range\n'],
     ['report(🙂);', '1:8: unsupported symbol: 🙂\n'],
+    ['a =! b;', '1:3: incomplete operator =!; use =!=\n'],
+    ['a && b;', '1:3: unsupported operator &&; use and\n'],
+    ['a || b;', '1:3: unsupported operator ||; use or\n'],
   ] as const) {
     assert.deepEqual(runFile(lexerDumpPath, source), { code: 2, output: '', errors }, source);
   }
