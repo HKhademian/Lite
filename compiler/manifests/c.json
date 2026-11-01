@@ -1,0 +1,4 @@
+{
+  "target": "c",
+  "files": ["../c-emitter.lts"]
+}

@@ -49,8 +49,8 @@ Related direction:
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **175** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 9–10 seconds.
+- **182** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 11–12 seconds.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
@@ -69,7 +69,7 @@ Related direction:
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P1 — Igniter tooling, not started.** P0 was completed on
+**Current gate: P2 — L0 shared libraries, not started.** P1 was completed on
 2026-11-01; update this line when a gate is completed and use the phase
 checklists as the source of truth.
 
@@ -192,28 +192,36 @@ this phase.
 
 **Goal:** make stage 0 usable as a repeatable bootstrap driver.
 
-- [ ] **Bundle loader:** ordered manifests, include-once, cycle rejection,
-      relative paths, declaration-only targets, line map. Extend
-      [`igniter/loader.ts`](../igniter/loader.ts) or add a focused module.
-- [ ] **Driver:** compile a bundle for a target; pass the logical source name
+- [x] **Bundle loader:** ordered manifests, include-once, cycle rejection,
+      relative paths, declaration-only targets, line map. Implemented by
+      `loadManifest`/`loadBundle` in
+      [`igniter/loader.ts`](../igniter/loader.ts); contract in
+      [`compiler/manifests/README.md`](../compiler/manifests/README.md).
+- [x] **Driver:** compile a bundle for a target; pass the logical source name
       through `inputArgs`; feed the bundle through `inputAll`; capture
-      stdout/stderr/status. Keep this an internal API or test helper unless a
-      public command is separately selected.
-- [ ] **Library/unit harness:** run a Lite file or bundle with fixed args/stdin;
+      stdout/stderr/status. `loadCompiler` in
+      [`igniter/bootstrap.ts`](../igniter/bootstrap.ts) is internal; no public
+      command was added.
+- [x] **Library/unit harness:** run a Lite file or bundle with fixed args/stdin;
       capture `report`, `reportError` and exit status; compare text and bytes.
-- [ ] **Artifact runner:** write emitted TS/C to temporary files; strict
+      `runText`/`runFile`/`runBundle` in
+      [`igniter/bootstrap.ts`](../igniter/bootstrap.ts).
+- [x] **Artifact runner:** write emitted TS/C to temporary files; strict
       typecheck/run TS; compile/run C with `-std=c11 -Wall -Wextra -Werror`;
       capture raw streams and status.
-- [ ] **Diagnostics mapping:** use the line map for compiler/source diagnostics;
+      [`igniter/artifacts.ts`](../igniter/artifacts.ts).
+- [x] **Diagnostics mapping:** use the line map for compiler/source diagnostics;
       do not report flattened line numbers where original positions are known.
-- [ ] **Determinism and performance guards:** hash outputs, detect timestamps or
+- [x] **Determinism and performance guards:** hash outputs, detect timestamps or
       absolute paths, and benchmark text/list use on the compiler source.
-- [ ] Tests for nested bundles, duplicates, cycles, missing files, line mapping,
+- [x] Tests for nested bundles, duplicates, cycles, missing files, line mapping,
       source names and output parity.
 
-**Gate:** the bundle path loads and compiles the current S; all 92 compiler cases
-pass with byte-identical artifacts and exact diagnostics; the fast lane remains
-under 30 seconds (currently about 9–10 seconds).
+**Gate passed 2026-11-01:** the bundle path loads and stage-0 compiles both
+current S emitters; all 92 compiler cases match the direct flat-import path with
+byte-identical artifacts and exact diagnostics; TS/C bundle text equals the
+direct loader output; `./lite test --fast` passes 180 tests with two native-C
+skips in 11.7 s, and `./lite test` passes all 182 tests in 12.9 s.
 
 **Do not:** add file/process/stdlib builtins, change `litec`'s public contract,
 or add a public `bootstrap` command without an owner decision.

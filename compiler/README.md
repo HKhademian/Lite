@@ -20,27 +20,32 @@ modules, `finally`, loop metadata or compound operators to S just because the
 igniter supports them. Adding a construct to L is an owner decision, not an
 implementation convenience: the compiler must parse, check and lower it too.
 
-The current files stay in place until the P1 bundle path is green. The target
-layout, manifest schema, line-map contract and current hashes are recorded in:
+The current files stay in place through P1; P4 makes manifest order
+authoritative and removes `importFlatAll`. The target layout, manifest schema,
+line-map contract and current hashes are recorded in:
 
-- [`manifests/README.md`](manifests/README.md) — P0 manifest and line-map
-  contract; the loader is P1 work.
+- [`manifests/README.md`](manifests/README.md) — manifest and line-map
+  contract; the P1 loader and driver are implemented.
 - [`baseline.md`](baseline.md) — P0 counts, source hashes, reference artifacts
   and test evidence.
 - [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) —
   emitted-artifact hashes for all 50 program cases.
 
-The empty `src/` and `runtime/` directories are P0 placeholders. No source has
-moved into them yet.
+The P1 bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts)
+loads the current single-file manifests, and
+[`../igniter/bootstrap.ts`](../igniter/bootstrap.ts) compiles and runs them with
+flattened-position diagnostics mapped back to the original files. The
+`src/` and `runtime/` directories remain P4 placeholders; no source has moved
+into them yet.
 
 ## Layout
 
 | Path | Role |
 |---|---|
 | [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
-| [`manifests/`](manifests/README.md) | P0 manifest schema and line-map contract; bundle loader is P1 |
-| `src/` | P0 target directory for split bootstrap sources (empty) |
-| `runtime/` | P0 target directory for target runtimes (empty) |
+| [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
+| `src/` | Target directory for split bootstrap sources (P4; empty) |
+| `runtime/` | Target directory for target runtimes (P6/P7; empty) |
 | [`frontend.lts`](frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
 | [`ts-emitter.lts`](ts-emitter.lts) | TypeScript literal encoding, report formatting and program emission |
 | [`c-emitter.lts`](c-emitter.lts) | C literal encoding, `printf` report formatting and program emission |

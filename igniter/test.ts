@@ -7,7 +7,9 @@ import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
-import { loadSource } from './loader.ts';
+import { loadBundle, loadManifest, loadSource } from './loader.ts';
+import { benchmark, hashBytes, loadCompiler, nondeterminismReasons, runBundle, runText } from './bootstrap.ts';
+import { runCArtifact, runTsArtifact } from './artifacts.ts';
 
 const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
 const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
@@ -74,6 +76,82 @@ test('temporary importFlatAll reports missing files and cycles', () => {
     writeFileSync(join(directory, 'b.lts'), 'importFlatAll "a.lts";\n');
     assert.throws(() => loadSource(join(directory, 'a.lts')), /importFlatAll cycle/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('bundle manifests flatten ordered sources with exact text and line maps', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-'));
+  try {
+    mkdirSync(join(directory, 'nested'));
+    writeFileSync(join(directory, 'base.lts'), 'base := 40;\n');
+    writeFileSync(join(directory, 'nested', 'mid.lts'), 'importFlatAll "../base.lts";\nmid := 2;\n');
+    writeFileSync(join(directory, 'main.lts'),
+      'importFlatAll "nested/mid.lts";\nimportFlatAll "nested/mid.lts";\nreport(base + mid);\n');
+    const manifestPath = join(directory, 'bundle.json');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['main.lts'] }));
+    assert.deepEqual(loadManifest(manifestPath), { target: 'ts', files: ['main.lts'] });
+    const bundle = loadBundle(manifestPath);
+    assert.equal(bundle.target, 'ts');
+    assert.equal(bundle.text, 'base := 40;\nmid := 2;\nreport(base + mid);\n');
+    assert.deepEqual(bundle.lineMap, [
+      { path: 'base.lts', line: 1 },
+      { path: 'nested/mid.lts', line: 2 },
+      { path: 'main.lts', line: 3 },
+    ]);
+    assert.deepEqual(bundle.files, ['main.lts']);
+    assert.deepEqual(runBundle(manifestPath), { status: 0, stdout: Buffer.from('42\n'), stderr: Buffer.alloc(0) });
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('bundle manifests reject duplicates, cycles, missing files and invalid paths', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-fault-'));
+  try {
+    const manifestPath = join(directory, 'bundle.json');
+    writeFileSync(join(directory, 'a.lts'), 'a := 1;\n');
+    writeFileSync(join(directory, 'b.lts'), 'importFlatAll "c.lts";\n');
+    writeFileSync(join(directory, 'c.lts'), 'importFlatAll "b.lts";\n');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts', 'a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /duplicate file/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts', './a.lts'] }));
+    assert.throws(() => loadBundle(manifestPath), /duplicate resolved file/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['b.lts'] }));
+    assert.throws(() => loadBundle(manifestPath), /bundle cycle/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['missing.lts'] }));
+    assert.throws(() => loadBundle(manifestPath), /ENOENT/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'x', files: ['a.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /target must be/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['/absolute.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /absolute path/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a\\b.lts'] }));
+    assert.throws(() => loadManifest(manifestPath), /"\/" separators/);
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['a.lts'], extra: true }));
+    assert.throws(() => loadManifest(manifestPath), /unexpected manifest key/);
+    assert.throws(() => loadManifest(join(directory, 'missing.json')), /ENOENT/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('bundle diagnostics map flattened rows back to original files and lines', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-diagnostic-'));
+  try {
+    writeFileSync(join(directory, 'first.lts'), 'report(1);\n');
+    writeFileSync(join(directory, 'second.lts'), 'report(1 +);\n');
+    const manifestPath = join(directory, 'bundle.json');
+    writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['first.lts', 'second.lts'] }));
+    const bundle = loadBundle(manifestPath);
+    const compiler = loadCompiler(new URL('../compiler/manifests/ts.json', import.meta.url).pathname);
+    const result = compiler.compile({ text: bundle.text, lineMap: bundle.lineMap });
+    assert.equal(result.status, 2);
+    assert.deepEqual(result.stdout, Buffer.alloc(0));
+    assert.equal(result.stderr.toString(), 'second.lts:1:11: expected an Int, String or Bool expression\n');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('internal run harness captures report streams and exit status from fixed inputs', () => {
+  assert.deepEqual(runText('report(inputArgs()[0]); reportError("warn"); exit(7);', {
+    args: ['a b'], stdin: 'unread',
+  }), { status: 7, stdout: Buffer.from('a b\n'), stderr: Buffer.from('warn\n') });
+  assert.deepEqual(runText('report(inputAll());', { stdin: 'one\ntwo\n' }), {
+    status: 0, stdout: Buffer.from('one\ntwo\n\n'), stderr: Buffer.alloc(0),
+  });
 });
 
 test('compiler declarations carry doc comments', () => {
@@ -522,6 +600,87 @@ test('compiler verification cases are well-formed and cover both categories', ()
   assert.ok(programFixtures.length > 0);
   assert.ok(rejectionFixtures.length > 0);
   assert.equal(new Set(compilerFixtures.map(fixture => `${fixture.file}/${fixture.caseName}`)).size, compilerFixtures.length);
+});
+
+test('bundle compilers reproduce every compiler case with exact artifacts and diagnostics', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const tsManifest = join(root, 'compiler/manifests/ts.json');
+  const cManifest = join(root, 'compiler/manifests/c.json');
+  const tsCompiler = loadCompiler(tsManifest);
+  const cCompiler = loadCompiler(cManifest);
+  assert.equal(tsCompiler.bundle.text, loadSource(tsEmitterPath));
+  assert.equal(cCompiler.bundle.text, loadSource(cEmitterPath));
+  assert.equal(tsCompiler.bundle.lineMap.length, tsCompiler.bundle.text.split('\n').length - 1);
+  assert.equal(cCompiler.bundle.lineMap.length, cCompiler.bundle.text.split('\n').length - 1);
+  for (const [target, compiler, direct] of [
+    ['ts', tsCompiler, tsEmitterPath], ['c', cCompiler, cEmitterPath],
+  ] as const) {
+    for (const fixture of compilerFixtures) {
+      const expected = runFile(direct, fixture.source);
+      const actual = compiler.compile({ text: fixture.source });
+      assert.equal(actual.status, expected.code, `${target}: ${fixture.name}/${fixture.caseName}`);
+      assert.deepEqual(actual.stdout, Buffer.from(expected.output), `${target}: ${fixture.name}/${fixture.caseName}`);
+      assert.deepEqual(actual.stderr, Buffer.from(expected.errors), `${target}: ${fixture.name}/${fixture.caseName}`);
+      if (fixture.category === 'rejected') {
+        assert.equal(actual.status, fixture.exitCode);
+        assert.deepEqual(actual.stdout, fixture.stdout);
+        assert.deepEqual(actual.stderr, fixture.stderr);
+      }
+    }
+  }
+  const label = 'named source.lts';
+  assert.deepEqual(tsCompiler.compile({ text: 'report(42);', name: label }), {
+    status: 0, stdout: readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
+  });
+  assert.deepEqual(tsCompiler.compile({ text: 'report(1 +);', name: label }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:11: expected an Int, String or Bool expression\n`),
+  });
+});
+
+test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
+  const root = new URL('../', import.meta.url).pathname;
+  const source = 'x := 2 * 3;\nreport(x);\n';
+  const tsCompiler = loadCompiler(join(root, 'compiler/manifests/ts.json'));
+  const tsArtifact = tsCompiler.compile({ text: source });
+  assert.equal(tsArtifact.status, 0);
+  assert.deepEqual(runTsArtifact(tsArtifact.stdout.toString('utf8')), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from('6\n'), stderr: Buffer.alloc(0),
+  });
+  if (process.env['LITE_SKIP_NATIVE'] === '1') {
+    context.skip('LITE_SKIP_NATIVE=1'); return;
+  }
+  const cc = process.env['CC'] ?? 'cc';
+  const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+    context.skip('C compiler unavailable; artifact runner requires cc or CC'); return;
+  }
+  assert.equal(probe.error, undefined);
+  assert.equal(probe.status, 0, probe.stderr);
+  const cCompiler = loadCompiler(join(root, 'compiler/manifests/c.json'));
+  const cArtifact = cCompiler.compile({ text: source });
+  assert.equal(cArtifact.status, 0);
+  assert.deepEqual(runCArtifact(cArtifact.stdout.toString('utf8')), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from('6\n'), stderr: Buffer.alloc(0),
+  });
+});
+
+test('bundle artifacts are deterministic and leak no timestamps or host paths', context => {
+  const root = new URL('../', import.meta.url).pathname;
+  const manifest = join(root, 'compiler/manifests/ts.json');
+  const compiler = loadCompiler(manifest);
+  const source = 'x := 1;\nreport(x + 1);\n';
+  const first = compiler.compile({ text: source });
+  const second = compiler.compile({ text: source });
+  assert.equal(first.status, 0);
+  assert.equal(hashBytes(first.stdout), hashBytes(second.stdout));
+  assert.equal(hashBytes(first.stderr), hashBytes(second.stderr));
+  assert.deepEqual(nondeterminismReasons(first.stdout.toString('utf8'), [root, tmpdir(), process.cwd()]), []);
+  const measured = benchmark(() => loadCompiler(manifest), 2);
+  context.diagnostic(`compiler bundle load+compile best: ${measured.bestMs.toFixed(1)} ms`);
+  assert.ok(measured.bestMs < 10000, `compiler bundle load+compile took ${measured.bestMs.toFixed(1)} ms`);
+  for (const value of measured.values) {
+    assert.equal(value.bundle.lineMap.length, value.bundle.text.split('\n').length - 1);
+  }
 });
 
 

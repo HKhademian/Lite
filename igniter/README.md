@@ -82,6 +82,26 @@ access, exact optional properties, unused checks, and erasable syntax only.
 The implementation uses tagged unions, exhaustive switches, `unknown` catches,
 and no explicit `any`, non-null assertions, or unchecked type casts.
 
+## Bootstrap bundle tooling
+
+P1 adds internal bundle tooling for the [bootstrap plan](../docs/bootstrap-plan.md);
+it is not a public CLI command and does not add Lite syntax. [`loader.ts`](loader.ts)
+now also exports `loadManifest` and `loadBundle`: ordered relative manifests,
+strict UTF-8, include-once and cycle rejection, directive expansion, and a
+flattened-line map back to each original path and 1-based line. [`bootstrap.ts`](bootstrap.ts)
+loads and compiles a target manifest once, runs it with fixed args/stdin, maps
+compiler diagnostics from flattened rows back to original files, and provides
+sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
+strict-typechecks and runs emitted TS, and compiles/runs emitted C with
+`-std=c11 -Wall -Wextra -Werror`, capturing raw streams and status.
+
+The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
+[c.json](../compiler/manifests/c.json). They currently list the existing
+single-file emitters; the loader expands each `importFlatAll "frontend.lts";`
+with a line map until P4 removes that temporary directive. The direct flat-import
+load and the bundle path produce byte-identical bundle text, artifacts and
+rejection diagnostics for all 92 compiler cases.
+
 ## Supported checkpoint
 
 One file; fixed/inferred `:=` bindings, scalar/tuple/fixed-array typed locals with zero initialization or reserved `= ?` storage and whole-value first initialization, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, typed loop `.value` with optional `then` completion, shadowing and scalar
@@ -677,7 +697,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **175 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **182 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -746,7 +766,7 @@ AS/Wasm or compiler self-rebuild claim follows. See
 Both backends use inputAll() without prompts, accepting multi-line
 spaces/tabs/CR/LF around admitted statements and rejecting later unsupported
 source before emission. Empty source is a compiler rejection (2), not an
-inputLine EOF fault. The shared corpus now has 50 program cases and 34
+inputLine EOF fault. The shared corpus now has 50 program cases and 42
 rejection cases under [tests/compiler](tests/compiler/), with exact raw
 bytes/status across emitted TS, translated JS, native C and the igniter for the
 program cases. See

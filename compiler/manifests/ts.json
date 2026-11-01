@@ -1,0 +1,4 @@
+{
+  "target": "ts",
+  "files": ["../ts-emitter.lts"]
+}

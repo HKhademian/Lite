@@ -1,7 +1,9 @@
 # Compiler source manifests
 
-Status: **P0 contract, 2026-11-01**. The bundle loader and driver that consume
-these manifests are P1 work and are not implemented yet.
+Status: **P1 implemented, 2026-11-01**. The bundle loader lives in
+[`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver and
+harness live in [`../../igniter/bootstrap.ts`](../../igniter/bootstrap.ts). No
+public `bootstrap` command is exposed.
 
 A manifest is the ordered assembly description for one bootstrap target. It
 replaces neither Lite source nor a module system: it names the files the loader
@@ -21,9 +23,19 @@ splices into one bundle, in dependency order. The schema is
 }
 ```
 
-The file names above illustrate the P0 layout. They do not exist yet: the
-current `frontend.lts`, `ts-emitter.lts` and `c-emitter.lts` stay in place until
-P1 makes the bundle path green.
+The file names above illustrate the target layout. They do not exist yet; P4
+splits the current files and makes the manifest order authoritative. The current
+P1 manifests list one source each:
+
+```json
+{ "target": "ts", "files": ["../ts-emitter.lts"] }
+{ "target": "c", "files": ["../c-emitter.lts"] }
+```
+
+Each current source still carries `importFlatAll "frontend.lts";`. The bundle
+loader expands that directive with a line map and include-once behavior, so the
+bundle text is the same as the direct flat-import load. P4 removes the directive
+and lists every file explicitly.
 
 ## Manifest rules
 
