@@ -123,7 +123,7 @@ keeps that target from growing while it is approached.
   do not emit artifacts.
 - P6 is in progress: the TS runtime covers checked Int64 arithmetic, code-point
   text, list copies, faults and exit; the compiler now accepts typed scalar
-  locals. TS/C output is emitted directly; no separate IR deliverable is
+  locals and nested/doc/raw comments. TS/C output is emitted directly; no separate IR deliverable is
   planned. The full emitter, Node I/O adapter and T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.

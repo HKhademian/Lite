@@ -8,7 +8,7 @@ focused tests, then the full gate before recording the gate.
 ## Ordered slices
 
 1. ~~Typed scalar locals~~ — done.
-2. Comments in compiler source scanning: nested/raw comments and doc comments.
+2. ~~Comments in compiler source scanning~~ — done.
 3. User-defined functions: scalar parameters/results, calls, recursion, `self`, `return`, TS/C emission.
 4. Transparent type aliases in the compiler.
 5. Flat named/unnamed tuples: types, construction, fields and function signatures.

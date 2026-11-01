@@ -1036,6 +1036,63 @@ test('restricted compiler accepts typed scalar locals without changing existing 
   }
 });
 
+test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
+  const source = [
+    '/* ordinary leading comment',
+    '   /* nested existing comment: report(999); */',
+    '   /*# embedded raw: /* not a nested opener " ( { #*/',
+    '   "unterminated string and unmatched ( {',
+    '*/',
+    '/** documentation comment: report(888); */',
+    'x := 10/* separator */+ 2;',
+    'y := x /* between tokens */',
+    '    * 3;',
+    '/*# raw: /* never closed',
+    '    */ stray ordinary closer',
+    '    "unfinished string and unmatched ( {',
+    '#*/',
+    'z := y + 1;',
+    '/*## longer fence: the text may contain #*/ without ending the comment. ##*/',
+    'report(x, y, z);',
+  ].join('\n');
+  const baseline = run(source);
+  assert.deepEqual(baseline, { code: 0, output: '12 36 37\n', errors: '' });
+  const withoutComments = 'x := 10 + 2;\ny := x * 3;\nz := y + 1;\nreport(x, y, z);\n';
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.equal(ts.output, runCompiler(tsManifestPath, withoutComments).output);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from(baseline.output), stderr: Buffer.alloc(0),
+  });
+  for (const manifest of [tsManifestPath, cManifestPath]) {
+    assert.deepEqual(runCompiler(manifest, 'report(1/*x*/2);'), {
+      code: 2, output: '', errors: '1:14: expected )\n',
+    });
+    assert.deepEqual(runCompiler(manifest, 'report(1);\n/* outer /* inner */\n'), {
+      code: 2, output: '', errors: '2:1: unterminated comment\n',
+    });
+    assert.deepEqual(runCompiler(manifest, 'report(1);\n/*# raw */\n'), {
+      code: 2, output: '', errors: '2:1: unterminated raw comment\n',
+    });
+    assert.deepEqual(runCompiler(manifest, '/*## raw #*/'), {
+      code: 2, output: '', errors: '1:1: unterminated raw comment\n',
+    });
+  }
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cc = process.env['CC'] ?? 'cc';
+    const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+    if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+      context.skip('C compiler unavailable; comment C parity requires cc or CC'); return;
+    }
+    const c = runCompiler(cManifestPath, source);
+    assert.equal(c.code, 0, c.errors);
+    assert.equal(c.output, runCompiler(cManifestPath, withoutComments).output);
+    assert.deepEqual(runCArtifact(c.output), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from(baseline.output), stderr: Buffer.alloc(0),
+    });
+  }
+});
+
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
   const source = 'x := 2 * 3;\nreport(x);\n';
