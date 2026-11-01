@@ -1036,6 +1036,80 @@ test('restricted compiler accepts typed scalar locals without changing existing 
   }
 });
 
+test('restricted compiler resolves transparent scalar aliases', async context => {
+  const source = [
+    'Count := type Int;',
+    'Alias := type Count;',
+    'Forward := type Later;',
+    'Later := type Int;',
+    'Word := type String;',
+    'Flag := type Bool;',
+    'Nothing := type Unit;',
+    'add := fn (a: Alias, b: Count): Alias { a + b }',
+    'echo := fn (text: Word): Word { text }',
+    'noop := fn (): Nothing { return; }',
+    'x: Alias = 2;',
+    'var y: Count = 40;',
+    'y = y + 1;',
+    's: Word = "ok";',
+    'b: Flag = true;',
+    'z: Forward = 3;',
+    'report(x, y, s, b, add(x, y), echo(s), z);',
+    'noop();',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('2 41 ok true 43 ok 3\n'), stderr: Buffer.alloc(0),
+  });
+
+  const cSource = [
+    'Count := type Int;',
+    'Alias := type Count;',
+    'Forward := type Later;',
+    'Later := type Int;',
+    'Word := type String;',
+    'Flag := type Bool;',
+    'x: Alias = 2;',
+    'var y: Count = 40;',
+    'y = y + 1;',
+    's: Word = "ok";',
+    'b: Flag = true;',
+    'z: Forward = 3;',
+    'report(x, y, s, b, z);',
+  ].join('\n');
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const cc = process.env['CC'] ?? 'cc';
+    const probe = spawnSync(cc, ['--version'], { encoding: 'utf8', timeout: 10000 });
+    if (probe.error !== undefined && 'code' in probe.error && probe.error.code === 'ENOENT') {
+      context.skip('C compiler unavailable; alias C parity requires cc or CC'); return;
+    }
+    const c = runCompiler(cManifestPath, cSource);
+    assert.equal(c.code, 0, c.errors);
+    assert.deepEqual(runCArtifact(c.output), {
+      phase: 'run', status: 0, signal: null,
+      stdout: Buffer.from('2 41 ok true 3\n'), stderr: Buffer.alloc(0),
+    });
+  }
+
+  for (const [bad, errors] of [
+    ['A := type Int;\nA := type String;\n', '2:1: duplicate type alias A\n'],
+    ['A := type Missing;\n', '1:11: unknown type alias Missing\n'],
+    ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
+    ['A := type A;\n', '1:1: recursive type alias A\n'],
+    ['A := type List<Int>;\n',
+      '1:11: unsupported type alias List; only Int, String, Bool, Unit and scalar aliases are supported\n'],
+    ['A := type (a: Int);\n',
+      '1:11: unsupported type alias target; only Int, String, Bool, Unit and scalar aliases are supported\n'],
+    ['A := type Float;\n',
+      '1:11: unsupported type alias Float; only Int, String, Bool, Unit and scalar aliases are supported\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+    assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
   const source = [
     '/* ordinary leading comment',

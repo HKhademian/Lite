@@ -127,11 +127,14 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 
 The compiler source is still restricted, but the accepted surface now includes
 Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
-assignment), `report(...)`, `if`/`else`, Boolean or unconditional `loop`, and
-top-level scalar functions with Int/String/Bool/Unit parameters and results,
-positional calls, recursion/`self` and `return`. Constant-only expressions keep
-their compile-time folding and range/division diagnostics; runtime expressions
-lower to target control flow and a runtime report accumulator for TS or direct
+assignment), `report(...)`, `if`/`else`, Boolean or unconditional `loop`,
+transparent top-level scalar aliases (`Name := type Type;`), and top-level scalar
+functions with Int/String/Bool/Unit parameters and results, positional calls,
+recursion/`self` and `return`. Aliases resolve to Int/String/Bool/Unit or another
+scalar alias and may appear in local, parameter and result annotations; tuple,
+list and other targets are rejected. Constant-only expressions keep their
+compile-time folding and range/division diagnostics; runtime expressions lower
+to target control flow and a runtime report accumulator for TS or direct
 `printf` calls for C. Dynamic `/ % :/ :%`, dynamic String concatenation and
 `break`/`continue` are rejected with explicit diagnostics, and dynamic C integer
 overflow is not checked. Function syntax is emitted as runnable TS; the C path
