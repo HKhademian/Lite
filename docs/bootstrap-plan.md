@@ -54,8 +54,8 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **193** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 11 seconds and skips the full-S lexer/parser sweeps.
+- **195** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
@@ -75,7 +75,7 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P5 — Checker, not started.** P4 was completed on 2026-11-01;
+**Current gate: P5 — Checker, in progress.** P4 was completed on 2026-11-01;
 update this line when a gate is completed and use the phase checklists as the
 source of truth.
 
@@ -378,16 +378,26 @@ under B3. Do not add records/enums/`match` to make the parser easier.
 **Goal:** check S with the same acceptance and diagnostics the compiler must
 reproduce.
 
-- [ ] Scope stack and symbols: name, type, mutability, initialization.
-- [ ] Function signatures, arity, argument/result types, return paths.
+- [x] Top-level symbol collection: type aliases, function signatures and value
+      declarations with duplicate-name rejection. Full scope stack, resolved
+      types, mutability and initialization remain.
+- [x] Function signature collection. Arity, argument/result checking and return
+      paths remain.
 - [ ] Tuple shape/labels, list element types, index element types.
 - [ ] Bool conditions; assignment/mutability; list mutation grants.
 - [ ] `break`/`return` placement; unreachable code not required.
-- [ ] Diagnostics: source name, position, message, exit 2.
+- [x] Diagnostics: source name, position, message, exit 2 for collected symbols.
 - [ ] Accept every construct in S; reject unsupported and ill-typed cases.
 
 **Gate:** S checks; all 42 rejection cases match exactly; no invalid program emits
 an artifact.
+
+**P5 in progress:** the Lite checker foundation in
+[`compiler/src/check.lts`](../compiler/src/check.lts) collects top-level symbols
+and rejects duplicate names, with fixtures under
+[`compiler/tests/checker/`](../compiler/tests/checker/). Type resolution, scopes,
+expressions, statements, full signature checking and exact rejection parity
+remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.

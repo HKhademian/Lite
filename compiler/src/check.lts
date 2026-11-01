@@ -1,0 +1,154 @@
+/* Lite-written checker foundation. Starts with top-level symbols and duplicates. */
+
+/** One top-level symbol: kind, name, detail text and source position. */
+Symbol := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
+
+/** Top-level symbols in source order. */
+Symbols := type List<Symbol>;
+
+/** Canonical symbol kind for a type alias. */
+SYMBOL_KIND_TYPE := fn(): String { "type" }
+
+/** Canonical symbol kind for a function. */
+SYMBOL_KIND_FUNCTION := fn(): String { "function" }
+
+/** Canonical symbol kind for a value declaration. */
+SYMBOL_KIND_VALUE := fn(): String { "value" }
+
+/** Reports one token-positioned checker diagnostic and exits 2. */
+checkFail := fn(token: Token, prefix: String, message: String): Unit {
+    fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
+}
+
+/** Returns the index of the first top-level symbol named `name`, or -1. */
+findSymbol := fn(symbols: Symbols, name: String): Int {
+    var index := 0;
+    loop symbols as symbol {
+        if symbol.name == name { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** Skips one balanced `{ ... }` sequence and returns the position after it. */
+skipBraces := fn(tokens: Tokens, index: Int, prefix: String): Int {
+    var cursor := expectSymbol(tokens, index, "{", prefix);
+    var depth := 1;
+    loop true {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() {
+            checkFail(token, prefix, "unterminated block");
+        }
+        if isSymbol(token, "{") {
+            depth = depth + 1;
+        } else if isSymbol(token, "}") {
+            depth = depth - 1;
+            if depth == 0 { return cursor + 1; }
+        }
+        cursor = cursor + 1;
+    }
+    cursor
+}
+
+/** Adds one symbol, rejecting a duplicate top-level name. */
+addSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Symbols {
+    if findSymbol(symbols, symbol.name) >= 0 {
+        checkFail((kind = symbol.kind, text = symbol.name, offset = symbol.offset,
+            line = symbol.line, column = symbol.column), prefix, "duplicate top-level name " + symbol.name);
+    }
+    result: mut List<Symbol> = [];
+    loop symbols as item { push_back(mut result, item); }
+    push_back(mut result, symbol);
+    result
+}
+
+/** Parses one function signature and skips its body into scalar symbol fields. */
+parseFunctionSymbol := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+    nameToken := tokenAt(tokens, index);
+    afterName := expectSymbol(tokens, index + 1, ":=", prefix);
+    functionWord := tokenAt(tokens, afterName);
+    if functionWord.kind =!= TOKEN_KIND_KEYWORD() or functionWord.text =!= "fn" {
+        checkFail(functionWord, prefix, "expected fn after :=");
+    }
+    var cursor := expectSymbol(tokens, afterName + 1, "(", prefix);
+    var detail := "(";
+    var parameterCount := 0;
+    loop true {
+        if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+        parameter := tokenAt(tokens, cursor);
+        if parameter.kind =!= TOKEN_KIND_NAME() {
+            checkFail(parameter, prefix, "expected a parameter name");
+        }
+        colon := expectSymbol(tokens, cursor + 1, ":", prefix);
+        parameterType := parseType(tokens, colon, prefix);
+        if parameterCount > 0 { detail = detail + ", "; }
+        detail = detail + parameter.text + ": " + parameterType.text;
+        parameterCount = parameterCount + 1;
+        cursor = parameterType.next;
+        if isSymbol(tokenAt(tokens, cursor), ",") {
+            cursor = cursor + 1;
+        } else {
+            break;
+        }
+    }
+    cursor = expectSymbol(tokens, cursor, ")", prefix);
+    resultColon := expectSymbol(tokens, cursor, ":", prefix);
+    resultType := parseType(tokens, resultColon, prefix);
+    detail = detail + "): " + resultType.text;
+    var afterBody := skipBraces(tokens, resultType.next, prefix);
+    if isSymbol(tokenAt(tokens, afterBody), ";") { afterBody = afterBody + 1; }
+    (next = afterBody, name = nameToken.text, detail = detail,
+        offset = nameToken.offset, line = nameToken.line, column = nameToken.column)
+}
+
+/** Collects top-level type, function and value symbols with duplicate rejection. */
+collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
+    count := tokenCount(tokens);
+    var symbols: mut List<Symbol> = [];
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() { break; }
+        if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
+            afterName := expectSymbol(tokens, cursor + 1, ":=", prefix);
+            parsedType := parseType(tokens, afterName + 1, prefix);
+            ended := expectSymbol(tokens, parsedType.next, ";", prefix);
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_TYPE(), name = token.text, detail = parsedType.text,
+                offset = token.offset, line = token.line, column = token.column), prefix);
+            cursor = ended;
+        } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
+            tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
+            parsed := parseFunctionSymbol(tokens, cursor, prefix);
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_FUNCTION(), name = parsed.name, detail = parsed.detail,
+                offset = parsed.offset, line = parsed.line, column = parsed.column), prefix);
+            cursor = parsed.next;
+        } else if (token.kind == TOKEN_KIND_KEYWORD() and token.text == "var") or
+            (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
+                isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
+            declaration := parseDeclaration(tokens, cursor, prefix);
+            nameToken := tokenAt(tokens, cursor + (if token.kind == TOKEN_KIND_KEYWORD() { 1 } else { 0 }));
+            symbols = addSymbol(symbols, (kind = SYMBOL_KIND_VALUE(), name = declaration.name, detail = declaration.detail,
+                offset = nameToken.offset, line = nameToken.line, column = nameToken.column), prefix);
+            cursor = declaration.next;
+        } else {
+            expression := parseExpression(tokens, cursor, prefix, 0);
+            cursor = expression.next;
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+        }
+    }
+    symbols
+}
+
+/** Formats one symbol as `kind|name|detail|line:column|offset`. */
+dumpSymbol := fn(symbol: Symbol): String {
+    symbol.kind + "|" + symbol.name + "|" + symbol.detail + "|" + decimalText(symbol.line) + ":" +
+        decimalText(symbol.column) + "|" + decimalText(symbol.offset)
+}
+
+/** Reports collected symbols in source order, one per line. */
+dumpSymbols := fn(symbols: Symbols): Unit {
+    loop symbols as symbol {
+        report(dumpSymbol(symbol));
+    }
+}

@@ -55,7 +55,6 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
 | [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
-| [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer: tokens, positions, comments, strings and Int bounds |
 | [`src/frontend.lts`](src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
 | [`src/ts-literals.lts`](src/ts-literals.lts) | TypeScript literal encoding |
 | [`src/emit-ts.lts`](src/emit-ts.lts) | TypeScript report formatting and program emission |
@@ -63,10 +62,12 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`src/c-literals.lts`](src/c-literals.lts) | C literal encoding |
 | [`src/emit-c.lts`](src/emit-c.lts) | C `printf` report formatting and program emission |
 | [`src/driver-c.lts`](src/driver-c.lts) | C driver entry |
-| [`src/lexer.lts`](src/lexer.lts) | Lite-written lexer |
+| [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer |
 | [`src/parser.lts`](src/parser.lts) | P4 parser: types, declarations, expressions, statements and functions |
+| [`src/check.lts`](src/check.lts) | P5 checker foundation: top-level symbols, signatures and duplicate rejection |
 | [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures, dump driver and expected tokens |
 | [`tests/parser/`](tests/parser/) | Focused parser fixtures, dump drivers and expected nodes |
+| [`tests/checker/`](tests/checker/) | Checker fixtures, dump driver and expected symbols |
 | [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
 | [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
 | [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `report(42);` |

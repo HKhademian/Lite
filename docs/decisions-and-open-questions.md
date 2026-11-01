@@ -310,6 +310,17 @@ rejects unsupported declarations by name. Value-`if` branches are currently
 single-expression blocks. Current artifacts and diagnostics are unchanged. See
 [P4](bootstrap-plan.md#p4--parser).
 
+## Lite checker foundation, 2026-11-01
+
+P5 starts with [`compiler/src/check.lts`](../compiler/src/check.lts). It collects
+top-level type aliases, function signatures and value declarations in source
+order and rejects duplicate top-level names with positioned diagnostics. Fixtures
+live under [`compiler/tests/checker/`](../compiler/tests/checker/). The full
+scope stack, resolved type compatibility, statement/expression checks, arity and
+return-path checks, and exact 42-case rejection parity remain open. Current
+artifacts and diagnostics are unchanged. See
+[P5](bootstrap-plan.md#p5--checker).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

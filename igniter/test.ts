@@ -15,6 +15,7 @@ const tsManifestPath = new URL('../compiler/manifests/ts.json', import.meta.url)
 const cManifestPath = new URL('../compiler/manifests/c.json', import.meta.url).pathname;
 const lexerDumpPath = new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname;
 const parserProgramDumpPath = new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname;
+const checkerDumpPath = new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname;
 
 const compilerInstances = new Map<string, ReturnType<typeof loadCompiler>>();
 function compilerFor(manifestPath: string): ReturnType<typeof loadCompiler> {
@@ -302,6 +303,29 @@ test('Lite parser rejects unsupported constructs by name', () => {
   ] as const) {
     assert.deepEqual(runFile(parserProgramDumpPath, source), { code: 2, output: '', errors }, source);
   }
+});
+
+test('Lite checker collects top-level symbols and rejects duplicates', () => {
+  const source = readFileSync(new URL('../compiler/tests/checker/symbols.lts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../compiler/tests/checker/symbols.symbols', import.meta.url), 'utf8');
+  assert.deepEqual(runFile(checkerDumpPath, source), { code: 0, output: expected, errors: '' });
+  for (const [bad, errors] of [
+    ['x := 1;\nx := 2;\n', '2:1: duplicate top-level name x\n'],
+    ['f := fn(a: Int): Int { a }\nf := fn(): Int { 1 }\n', '2:1: duplicate top-level name f\n'],
+  ] as const) {
+    assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
+test('Lite checker collects symbols from the assembled S', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') {
+    context.skip('LITE_SKIP_HEAVY=1'); return;
+  }
+  const result = runFile(checkerDumpPath, loadBundle(tsManifestPath).text);
+  assert.equal(result.code, 0, result.errors);
+  assert.equal(result.errors, '');
+  assert.match(result.output, /^function\|intMin\|/);
+  assert.match(result.output, /\nvalue\|source\|/);
 });
 
 test('Lite parser parses type aliases and rejects malformed types', () => {
@@ -856,9 +880,11 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
     new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
     new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname,
     new URL('../compiler/src/parser.lts', import.meta.url).pathname,
+    new URL('../compiler/src/check.lts', import.meta.url).pathname,
     new URL('../compiler/tests/parser/parser-dump.lts', import.meta.url).pathname,
     new URL('../compiler/tests/parser/parser-decl-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname]) {
+    new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname]) {
     const result = runLexer(readFileSync(path, 'utf8'));
     assert.equal(result.code, 0, `${path}: ${result.errors}`);
     assert.equal(result.errors, '', path);

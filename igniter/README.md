@@ -123,6 +123,13 @@ currently single-expression blocks. Manifest-order assembly is authoritative,
 compiler source and `lib/core` no longer use `importFlatAll`, and unsupported
 declarations are rejected by name. Fixtures live under
 [`../compiler/tests/parser/`](../compiler/tests/parser/).
+
+P5 has started with the checker foundation in
+[`../compiler/src/check.lts`](../compiler/src/check.lts). It collects top-level
+type aliases, function signatures and value declarations and rejects duplicate
+names, with fixtures under [`../compiler/tests/checker/`](../compiler/tests/checker/).
+Type resolution, scopes, expression/statement checking, arity/return checks and
+exact 42-case rejection parity remain.
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.
@@ -729,7 +736,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **193 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **195 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files

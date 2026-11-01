@@ -1,0 +1,7 @@
+Pair := type (left: Int, right: Int);
+Items := type List<Pair>;
+add := fn(a: Int, b: Int): Int { a + b }
+choose := fn(flag: Bool): Int { if flag { 1 } else { 0 } }
+count := 1;
+var total: Int = 0;
+values: mut List<Int> = [];
