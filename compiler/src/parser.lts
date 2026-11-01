@@ -91,6 +91,242 @@ parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: S
     (next = index, text = "")
 }
 
+/** Precedence for one binary word or symbol, or 0 when it is not binary. */
+binaryLevel := fn(text: String): Int {
+    if text == "or" { 2 }
+    else if text == "and" { 3 }
+    else if text == "==" or text == "=!=" or text == "<" or text == "<!" or text == "<=" or
+        text == "<!=" or text == ">" or text == ">!" or text == ">=" or text == ">!=" { 5 }
+    else if text == "+" or text == "-" { 10 }
+    else if text == "*" or text == "/" or text == "%" or text == ":/" or text == ":%" { 20 }
+    else if text == "**" { 25 }
+    else { 0 }
+}
+
+/** True when a token is a selected binary operator. */
+isBinaryToken := fn(token: Token): Bool {
+    if token.kind == "Keyword" and (token.text == "and" or token.text == "or") { return true; }
+    token.kind == "Symbol" and binaryLevel(token.text) > 0
+}
+
+/**
+ * Parses one expression and returns a fully parenthesized normalized text.
+ * `if` value expressions are the next slice; this function reports them
+ * explicitly instead of guessing a block boundary.
+ */
+parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int): (next: Int, text: String) {
+    token := tokenAt(tokens, index);
+    var cursor := index;
+    var leftText := "";
+    var firstLabel := false;
+    if token.kind == "Keyword" and token.text == "not" {
+        operand := self(tokens, index + 1, prefix, 5);
+        leftText = "(not " + operand.text + ")";
+        cursor = operand.next;
+    } else if token.kind == "Symbol" and (token.text == "-" or token.text == "+") {
+        operand := self(tokens, index + 1, prefix, 30);
+        leftText = "(" + token.text + operand.text + ")";
+        cursor = operand.next;
+    } else if token.kind == "Int" {
+        leftText = token.text;
+        cursor = index + 1;
+    } else if token.kind == "String" {
+        leftText = "\"" + escapedTokenText(token.text) + "\"";
+        cursor = index + 1;
+    } else if token.kind == "Bool" {
+        leftText = token.text;
+        cursor = index + 1;
+    } else if token.kind == "Name" {
+        leftText = token.text;
+        cursor = index + 1;
+        if isSymbol(tokenAt(tokens, cursor), "(") {
+            var argText := "";
+            var argCount := 0;
+            cursor = cursor + 1;
+            loop true {
+                if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+                if argCount > 0 { argText = argText + ", "; }
+                if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "mut" {
+                    argText = argText + "mut ";
+                    cursor = cursor + 1;
+                }
+                if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                    argText = argText + tokenAt(tokens, cursor).text + " = ";
+                    cursor = cursor + 2;
+                }
+                arg := self(tokens, cursor, prefix, 0);
+                argText = argText + arg.text;
+                cursor = arg.next;
+                argCount = argCount + 1;
+                if isSymbol(tokenAt(tokens, cursor), ",") {
+                    cursor = cursor + 1;
+                } else {
+                    break;
+                }
+            }
+            cursor = expectSymbol(tokens, cursor, ")", prefix);
+            leftText = leftText + "(" + argText + ")";
+        }
+    } else if isSymbol(token, "(") {
+        cursor = index + 1;
+        var firstText := "";
+        if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+            firstText = tokenAt(tokens, cursor).text + " = ";
+            firstLabel = true;
+            cursor = cursor + 2;
+        }
+        first := self(tokens, cursor, prefix, 0);
+        firstText = firstText + first.text;
+        cursor = first.next;
+        if firstLabel or isSymbol(tokenAt(tokens, cursor), ",") {
+            var tupleText := "(" + firstText;
+            if isSymbol(tokenAt(tokens, cursor), ",") { cursor = cursor + 1; }
+            loop true {
+                if isSymbol(tokenAt(tokens, cursor), ")") { break; }
+                tupleText = tupleText + ", ";
+                if tokenAt(tokens, cursor).kind == "Name" and isSymbol(tokenAt(tokens, cursor + 1), "=") {
+                    tupleText = tupleText + tokenAt(tokens, cursor).text + " = ";
+                    cursor = cursor + 2;
+                }
+                component := self(tokens, cursor, prefix, 0);
+                tupleText = tupleText + component.text;
+                cursor = component.next;
+                if isSymbol(tokenAt(tokens, cursor), ",") {
+                    cursor = cursor + 1;
+                } else {
+                    break;
+                }
+            }
+            cursor = expectSymbol(tokens, cursor, ")", prefix);
+            leftText = tupleText + ")";
+        } else {
+            cursor = expectSymbol(tokens, cursor, ")", prefix);
+            leftText = "(" + firstText + ")";
+        }
+    } else if isSymbol(token, "[") {
+        cursor = index + 1;
+        var listText := "[";
+        var itemCount := 0;
+        loop true {
+            if isSymbol(tokenAt(tokens, cursor), "]") { break; }
+            if itemCount > 0 { listText = listText + ", "; }
+            item := self(tokens, cursor, prefix, 0);
+            listText = listText + item.text;
+            cursor = item.next;
+            itemCount = itemCount + 1;
+            if isSymbol(tokenAt(tokens, cursor), ",") {
+                cursor = cursor + 1;
+            } else {
+                break;
+            }
+        }
+        cursor = expectSymbol(tokens, cursor, "]", prefix);
+        leftText = listText + "]";
+    } else if token.kind == "Keyword" and token.text == "if" {
+        parseFail(token, prefix, "if value expressions are not parsed yet");
+        return (next = index, text = "");
+    } else {
+        parseFail(token, prefix, "expected an expression");
+        return (next = index, text = "");
+    }
+    loop true {
+        current := tokenAt(tokens, cursor);
+        if isSymbol(current, ".") {
+            member := tokenAt(tokens, cursor + 1);
+            if member.kind == "Name" or member.kind == "Int" {
+                leftText = leftText + "." + member.text;
+                cursor = cursor + 2;
+            } else {
+                parseFail(member, prefix, "expected a field name after .");
+            }
+        } else if isSymbol(current, "[") {
+            indexExpr := self(tokens, cursor + 1, prefix, 0);
+            closed := expectSymbol(tokens, indexExpr.next, "]", prefix);
+            leftText = leftText + "[" + indexExpr.text + "]";
+            cursor = closed;
+        } else {
+            break;
+        }
+    }
+    loop true {
+        operator := tokenAt(tokens, cursor);
+        if not isBinaryToken(operator) { break; }
+        level := binaryLevel(operator.text);
+        if level < minimum { break; }
+        rightMinimum := if operator.text == "**" { level } else { level + 1 };
+        right := self(tokens, cursor + 1, prefix, rightMinimum);
+        leftText = "(" + leftText + " " + operator.text + " " + right.text + ")";
+        cursor = right.next;
+    }
+    (next = cursor, text = leftText)
+}
+
+/** Parses one declaration into scalar node fields. */
+parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+    var cursor := index;
+    var isVar := false;
+    if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "var" {
+        isVar = true;
+        cursor = cursor + 1;
+    }
+    token := tokenAt(tokens, cursor);
+    if token.kind =!= "Name" {
+        parseFail(token, prefix, "expected a declaration name");
+    }
+    name := token.text;
+    cursor = cursor + 1;
+    var detail := "";
+    if isSymbol(tokenAt(tokens, cursor), ":=") {
+        expression := parseExpression(tokens, cursor + 1, prefix, 0);
+        detail = (if isVar { "var " } else { "" }) + ":= " + expression.text;
+        cursor = expression.next;
+    } else if isSymbol(tokenAt(tokens, cursor), ":") {
+        cursor = cursor + 1;
+        var mutableType := false;
+        if tokenAt(tokens, cursor).kind == "Keyword" and tokenAt(tokens, cursor).text == "mut" {
+            mutableType = true;
+            cursor = cursor + 1;
+        }
+        parsedType := parseType(tokens, cursor, prefix);
+        detail = (if isVar { "var " } else { "" }) +
+            (if mutableType { "mut " } else { "" }) + parsedType.text;
+        cursor = parsedType.next;
+        if isSymbol(tokenAt(tokens, cursor), "=") {
+            if isSymbol(tokenAt(tokens, cursor + 1), "?") {
+                detail = detail + " = ?";
+                cursor = cursor + 2;
+            } else {
+                expression := parseExpression(tokens, cursor + 1, prefix, 0);
+                detail = detail + " = " + expression.text;
+                cursor = expression.next;
+            }
+        } else if isSymbol(tokenAt(tokens, cursor), "?") {
+            detail = detail + " = ?";
+            cursor = cursor + 1;
+        }
+    } else {
+        parseFail(tokenAt(tokens, cursor), prefix, "expected := or : after declaration name");
+    }
+    ended := expectSymbol(tokens, cursor, ";", prefix);
+    (next = ended, name = name, detail = detail, offset = token.offset, line = token.line, column = token.column)
+}
+
+/** Parses a source made only of declarations, ending at EOF. */
+parseDeclarations := fn(tokens: Tokens, prefix: String): Nodes {
+    count := tokenCount(tokens);
+    nodes: mut List<Node> = [];
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == "EOF" { break; }
+        parsed := parseDeclaration(tokens, cursor, prefix);
+        push_back(mut nodes, (kind = "Declaration", name = parsed.name, detail = parsed.detail,
+            offset = parsed.offset, line = parsed.line, column = parsed.column));
+        cursor = parsed.next;
+    }
+    nodes
+}
+
 /** Parses one `Name := type Type;` declaration into scalar node fields. */
 parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     token := tokenAt(tokens, index);

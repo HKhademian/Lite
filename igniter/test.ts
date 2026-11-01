@@ -194,6 +194,20 @@ test('Lite lexer rejects malformed lexical input with positioned diagnostics', (
   }
 });
 
+test('Lite parser parses declarations and expression forms', () => {
+  const parserDeclDumpPath = new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname;
+  const source = readFileSync(new URL('../compiler/tests/parser/declarations.lts', import.meta.url), 'utf8');
+  const expected = readFileSync(new URL('../compiler/tests/parser/declarations.nodes', import.meta.url), 'utf8');
+  assert.deepEqual(runFile(parserDeclDumpPath, source), { code: 0, output: expected, errors: '' });
+  for (const [bad, errors] of [
+    ['x := ;', '1:6: expected an expression\n'],
+    ['x := if true { 1 } else { 2 };', '1:6: if value expressions are not parsed yet\n'],
+    ['x := a.;', '1:8: expected a field name after .\n'],
+  ] as const) {
+    assert.deepEqual(runFile(parserDeclDumpPath, bad), { code: 2, output: '', errors }, bad);
+  }
+});
+
 test('Lite parser parses type aliases and rejects malformed types', () => {
   const parserDumpPath = new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname;
   const source = readFileSync(new URL('../compiler/tests/parser/types.lts', import.meta.url), 'utf8');
@@ -725,7 +739,8 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
     new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
     new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname,
     new URL('../compiler/src/parser.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname]) {
+    new URL('../compiler/src/parser-dump.lts', import.meta.url).pathname,
+    new URL('../compiler/src/parser-decl-dump.lts', import.meta.url).pathname]) {
     const result = runLexer(readFileSync(path, 'utf8'));
     assert.equal(result.code, 0, `${path}: ${result.errors}`);
     assert.equal(result.errors, '', path);

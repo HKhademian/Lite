@@ -1,0 +1,18 @@
+a := 1 + 2 * 3;
+b := (1 + 2) * 3;
+c := not true or false;
+d := textLength("abc");
+e := pair.left;
+f := values[0];
+g := (1, 2);
+h := [1, 2, 3];
+i := add(1, mul(2, 3));
+j: Int = 42;
+var k := 0;
+m: List<Int> = [1, 2];
+n := push_back(mut m, 3);
+o := (kind = "Int", code = "x", count = 1);
+p := (1,);
+q: Int;
+r: mut List<Int> = [];
+s: Int = ?;
