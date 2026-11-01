@@ -2,7 +2,7 @@
 
 Current components:
 
-- Igniter: **0.1.0-alpha.33**
+- Igniter: **0.1.0-alpha.34**
 - VS Code extension: **0.1.1**
 - Verification corpus: 35 features, 19 examples, 20 samples, 74 scenarios, 90 target executions
 - Tests: 174 interpreter groups and 9 editor grammar groups
@@ -47,6 +47,7 @@ version. Detailed milestone prose remains in the
 | `igniter-v0.1.0-alpha.31` | 2026-11-01 | `e00574d` | Typed loop `.value` accumulation and `then` completion |
 | `igniter-v0.1.0-alpha.32` | 2026-11-01 | `14c701a` | Sized integer and floating widths with promotion and lossless widening |
 | `igniter-v0.1.0-alpha.33` | 2026-11-01 | `b61c524` | Mixed Int/Float arithmetic and comparisons |
+| `igniter-v0.1.0-alpha.34` | 2026-11-01 | `5a6c69e` | Loop metadata, payload exits and tagged targets |
 
 ## Current tag conventions
 
