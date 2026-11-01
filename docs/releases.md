@@ -2,7 +2,7 @@
 
 Current components:
 
-- Igniter: **0.1.0-alpha.31**
+- Igniter: **0.1.0-alpha.32**
 - VS Code extension: **0.1.1**
 - Verification corpus: 34 features, 19 examples, 20 samples, 73 scenarios, 89 target executions
 - Tests: 173 interpreter groups and 9 editor grammar groups
@@ -45,6 +45,7 @@ version. Detailed milestone prose remains in the
 | `igniter-v0.1.0-alpha.29` | 2026-11-01 | `ee00ac9` | Source-like report display for flat tuple values |
 | `igniter-v0.1.0-alpha.30` | 2026-11-01 | `8e03e71` | Partial conditional declaration defaults and no-write assignments |
 | `igniter-v0.1.0-alpha.31` | 2026-11-01 | `e00574d` | Typed loop `.value` accumulation and `then` completion |
+| `igniter-v0.1.0-alpha.32` | 2026-11-01 | `14c701a` | Sized integer and floating widths with promotion and lossless widening |
 
 ## Current tag conventions
 
