@@ -1758,13 +1758,16 @@ test('restricted compiler completes statement-shaped if branches as function res
     '}',
     'bump := fn (x: Int): Int { if x > 0 { y := x; y + 1 } else { 0 } }',
     'grade := fn (n: Int): String { if n > 90 { "a" } else if n > 80 { "b" } else { "c" } }',
+    'negate := fn (x: Bool): Bool { not x }',
+    'guard := fn (a: Bool, b: Bool): Bool { if a { not b } else { false } }',
     'report(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
+    'report(negate(true), negate(false), guard(true, false), guard(false, false));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
     phase: 'run', status: 0, signal: null,
-    stdout: Buffer.from('neg 0 10 0 5 a b c\n'), stderr: Buffer.alloc(0),
+    stdout: Buffer.from('neg 0 10 0 5 a b c\nfalse true true false\n'), stderr: Buffer.alloc(0),
   });
   // A branch without a value is not a Lite diagnostic here; the strict artifact
   // typecheck rejects the emitted function that can fall through.

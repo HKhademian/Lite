@@ -2353,7 +2353,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if currentName =!= "" and (isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-" or
-            wordAt(source, position, "and") or wordAt(source, position, "or")) {
+            wordAt(source, position, "and") or wordAt(source, position, "or") or wordAt(source, position, "not")) {
             tail := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
             if afterTail < size and textAt(source, afterTail) == "}" and atValueTail(blocks, blockCount) {
