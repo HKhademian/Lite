@@ -18,6 +18,7 @@ Related direction:
 - [Bootstrap source continuity](versioning-and-naming.md#bootstrap-source-continuity)
 - [INV-061.06 target and safety direction](../investigations/INV-061-first-compiler-output.md)
 - [Compiler prototype](../compiler/README.md)
+- [Bootstrap parity ledger](../compiler/parity.md)
 - [Igniter](../igniter/README.md)
 - [Verification guide](../verifications/README.md)
 - [Modules and packages](modules-and-packages.md) (open design)
@@ -81,6 +82,36 @@ L/S and does not complete a bootstrap phase. Dynamic division, dynamic String
 concatenation, `break`/`continue`, functions, collections, `match`, runtime
 input and checked dynamic C overflow remain open.
 
+## Bootstrap parity loop
+
+Owner direction, 2026-11-01: the TS igniter and the generated compilers must
+become the same compiler for the bootstrap surface, not merely similar programs.
+The route is a burndown, not a single final check:
+
+1. Run stage 0 and the generated target compiler over the same Lite source.
+   Start with the compiler corpus, then S itself.
+2. Compare status, stdout and stderr byte for byte. For emitted TS/C, hash and
+   diff the artifacts.
+3. Classify the first difference: a missing T/C feature, a stage-0 feature S
+   depends on but T/C lack, or nondeterminism.
+4. Add the smallest compiler slice that removes that difference and rerun.
+5. Record the remaining differences in
+   [`compiler/parity.md`](../compiler/parity.md).
+6. Stop when `T2 == T`, `C2 == C` and the corpus matches. At that point T/C are
+   the igniter for the bootstrap surface.
+
+This loop does not widen S or L by itself. If matching requires a new name,
+value form, statement, module rule or host API, stop at the owner decision.
+Full replacement of the TS igniter for features outside L is a larger scope and
+is recorded as a separate decision, not assumed here.
+
+**Stage 0 is feature-frozen during bootstrap.** Do not add igniter-only syntax,
+builtins, host helpers or CLI behavior while S/T/C lag. New capability is
+Lite-first: design it in L/S, add its compiler slice and tests, and give stage 0
+only the minimal execution support needed to run S. Otherwise each igniter
+feature makes the generated alternative a harder, moving target. The parity
+ledger records both output differences and the remaining feature gap.
+
 ## Fixed bootstrap defaults
 
 These are implementation defaults, not selected language decisions. Changing one
@@ -96,9 +127,10 @@ requires the project owner's explicit selection and an update to this page and t
 | **B5** | **TS first, C second**; both are required at the fixed-point gate. | TS iterates faster; C is the longer runtime/memory pole. |
 | **B6** | Fixed point means **byte-identical** `T2 == T` and `C2 == C`. Behavioral parity with a normalized diff is a fallback only after the cause is understood and recorded. | Makes nondeterminism visible. |
 | **B7** | No official std, module/import, CLI or ABI decision is made by this plan. | Keeps bootstrap scaffolding replaceable. |
-| **B8** | No new igniter language feature is required to execute S. Add one only through an owner decision and a recorded plan change. | Prevents scope creep into the compiler's own grammar. |
+| **B8** | **Stage 0 feature freeze for bootstrap:** do not add a new igniter language feature, builtin, host API or CLI behavior. If one is genuinely required, stop; the owner decision must add the same slice to L/S and its compiler plan. | Prevents the generated compiler from chasing a moving TS target. |
 | **B9** | S may use only **L**. Adding a construct to S expands the compiler's required parser/checker/emitter surface. | The compiler must compile its own source at the gate. |
 | **B10** | Bootstrap artifacts are **single-file** per target (or one source plus one documented runtime file); no target-level package system. | Keeps the build chain auditable. |
+| **B11** | Stage 0, L/S and T/C are kept in **lockstep feature parity**. Igniter-only capability is debt, not progress; closing the gap is part of the bootstrap. | Keeps a Lite implementation reachable instead of chasing an ever-growing TS igniter. |
 
 ## Agent workflow rules
 
@@ -106,9 +138,11 @@ requires the project owner's explicit selection and an update to this page and t
    evidence is recorded, even when the next task looks independent.
 2. **Keep the fast lane green.** Run `./lite test --fast` after every change.
    Run the full gate before recording completion.
-3. **No new language surface in this plan.** Do not add syntax, builtins,
-   standard modules, host APIs or CLI commands. If a task cannot be done without
-   one, stop at the decision point.
+3. **No new language surface in this plan; stage 0 is feature-frozen.** Do not
+   add syntax, builtins, standard modules, host APIs or CLI commands. New
+   capability is Lite-first: design it in L/S, add its compiler slice, and give
+   stage 0 only the minimal execution support needed to run S. If a task cannot
+   be done without new surface, stop at the decision point.
 4. **S stays inside L.** Do not use `match`, records, enums, unions, Float,
    arrays, closures, `mut` parameters, modules, `finally`, loop metadata or
    compound operators in S just because the igniter supports them.
@@ -135,6 +169,11 @@ requires the project owner's explicit selection and an update to this page and t
 13. **Respect file ownership.** One active agent per phase or file set. Parallel
     work must not edit the same manifest or compiler file; merge/rebase before
     running a gate.
+14. **Commit atomically.** One phase or one behavior change per commit,
+    including its tests and the docs it makes stale. Keep every commit green;
+    do not mix unrelated work, version bumps or release tags. Release tagging
+    stays a separate gate action under rule 10 and the
+    [versioning policy](versioning-and-naming.md#9-release-and-tagging).
 
 ## Phase map
 
@@ -338,6 +377,9 @@ an artifact.
 - [ ] Deterministic output; no timestamps, paths, PIDs or hash-order iteration.
 - [ ] Corpus: T compiles the program cases; run the emitted TS and compare bytes
       and status with the igniter; rejection diagnostics match.
+- [ ] Parity burndown: run stage 0 and T over the same source, record the first
+      difference in [`parity.md`](../compiler/parity.md), close it, and rerun
+      before moving to the next source.
 - [ ] T compiles S; T2 runs.
 
 **Gate:** T typechecks, runs, compiles every program case with exact behavior and
@@ -363,6 +405,9 @@ explicitly assigned the independent C runtime work.
       behavior on the corpus.
 - [ ] Corpus: compile the program cases, run, compare bytes and status with the
       igniter; rejection diagnostics match.
+- [ ] Parity burndown: run stage 0 and C over the same source, record the first
+      difference in [`parity.md`](../compiler/parity.md), close it, and rerun
+      before moving to the next source.
 - [ ] C compiles S; C2 runs.
 
 **Gate:** C compiles cleanly, runs, compiles every program case with exact
@@ -587,6 +632,7 @@ The point is reached only when all of these are true:
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
 | D13 | Compiler release tag stream and artifact check-in policy | **stop and ask** |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
+| D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
 
 ## Risks and mitigations
 
@@ -597,7 +643,8 @@ The point is reached only when all of these are true:
 | Source positions shift through bundles | Line map in P0/P1; diagnostic mapping tests |
 | Generated code drifts from igniter semantics | Shared conformance corpus; raw stream/status parity; reject unsupported features |
 | Performance degrades on S | Measure text/list use; keep the fast lane under 30 s; optimize only after the gate |
-| Scope creep into std/CLI/language | Freeze B1–B10; stop at decision points; no unselected syntax |
+| Scope creep into std/CLI/language | Freeze B1–B11; stop at decision points; no unselected syntax |
+| Igniter feature growth outpaces S/T | Stage 0 feature freeze (B8/B11); Lite-first changes; feature-gap table in `compiler/parity.md` |
 | Nondeterministic artifacts | No timestamps/paths/PIDs; stable ordering; hashes; fixed-point gate |
 | Toolchain drift | Pin Node/TypeScript/C flags; record versions and hashes in P9 |
 | Stale docs/counters | Update at every gate; use the artifact-refresh checklist for language changes |

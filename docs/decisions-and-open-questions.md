@@ -250,6 +250,22 @@ or proof of browser/AS/Wasm execution. See
 [target/safety direction](../investigations/INV-061-first-compiler-output.md) and
 [implementation evidence](../investigations/INV-061-ts-emission-and-parity.md).
 
+## Stage-0 parity burndown, 2026-11-01
+
+Owner direction: the TS igniter and the generated compilers must converge into
+the same compiler for the bootstrap surface. The route is a burndown: run stage
+0 and the generated target compiler over the same Lite source, compare status,
+stdout, stderr and emitted artifact bytes, record the first difference, close it,
+and repeat. The endpoint is `T2 == T`, `C2 == C` and exact corpus parity, at
+which point T/C are the igniter for the bootstrap surface.
+
+The operational loop and difference log are in
+[bootstrap parity](../compiler/parity.md). This selects a work method, not a new
+language feature: S stays inside L. Stage 0 is feature-frozen during bootstrap:
+new capability is Lite-first, and igniter-only features are debt rather than
+progress. Full replacement of the TS igniter for features outside L remains a
+separate owner decision.
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

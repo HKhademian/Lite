@@ -250,6 +250,14 @@ Rules:
 - Never move or reuse a release tag. A yanked release remains visible and is marked yanked.
 - Pre-release tags include the pre-release suffix, for example `lite-v0.3.0-rc.1` and `lang-v1.0.0-rc.1`.
 
+### Atomic commits
+
+Keep every commit one reviewable change: source, tests and the documentation it
+makes stale belong together. Do not combine unrelated fixes, separate phases,
+version bumps or tag operations. A commit must be green on its own. Version
+bumps and tags are release actions separate from feature work, and a published
+tag is never moved or reused.
+
 ## 10. Change classification
 
 | Change | Language | Compiler | Runtime | CLI |

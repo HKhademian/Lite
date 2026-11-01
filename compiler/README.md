@@ -28,6 +28,8 @@ line-map contract and current hashes are recorded in:
   contract; the P1 loader and driver are implemented.
 - [`baseline.md`](baseline.md) — P0 counts, source hashes, reference artifacts
   and test evidence.
+- [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
+  current TS/C parity target and difference log.
 - [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) —
   emitted-artifact hashes for all 50 program cases.
 
@@ -38,11 +40,17 @@ flattened-position diagnostics mapped back to the original files. The
 `src/` and `runtime/` directories remain P4 placeholders; no source has moved
 into them yet.
 
+Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
+features to make compiler work easier; new capability belongs in L/S and the
+compiler slice first. The remaining stage-0 versus generated gap is tracked in
+[`parity.md`](parity.md).
+
 ## Layout
 
 | Path | Role |
 |---|---|
 | [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
+| [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
 | `src/` | Target directory for split bootstrap sources (P4; empty) |
 | `runtime/` | Target directory for target runtimes (P6/P7; empty) |

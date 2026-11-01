@@ -102,6 +102,13 @@ with a line map until P4 removes that temporary directive. The direct flat-impor
 load and the bundle path produce byte-identical bundle text, artifacts and
 rejection diagnostics for all 92 compiler cases.
 
+**Stage 0 is feature-frozen during bootstrap** (bootstrap defaults B8/B11). Do
+not add new igniter syntax, builtins, host helpers or CLI behavior while the
+Lite implementation and generated compilers lag. New capability is Lite-first:
+design it in L/S, add its compiler slice and tests, then give stage 0 only the
+minimal execution support needed to run S. Otherwise the generated alternative
+becomes a moving target that is progressively harder to reach.
+
 ## Supported checkpoint
 
 One file; fixed/inferred `:=` bindings, scalar/tuple/fixed-array typed locals with zero initialization or reserved `= ?` storage and whole-value first initialization, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, typed loop `.value` with optional `then` completion, shadowing and scalar
