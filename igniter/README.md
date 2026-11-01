@@ -63,7 +63,7 @@ npm --prefix igniter run check
 Run tests through the CLI:
 
 ```sh
-./lite test --fast   # no native C lane
+./lite test --fast   # no native C lane or full-S lexer sweep
 ./lite test          # full local gate; cached native builds
 ```
 
@@ -101,6 +101,17 @@ single-file emitters; the loader expands each `importFlatAll "frontend.lts";`
 with a line map until P4 removes that temporary directive. The direct flat-import
 load and the bundle path produce byte-identical bundle text, artifacts and
 rejection diagnostics for all 92 compiler cases.
+
+P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](../compiler/src/lexer.lts)
+with a token-dump driver at
+[`../compiler/src/lexer-dump.lts`](../compiler/src/lexer-dump.lts). It tokenizes
+names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
+nested/raw comments; decodes the selected string escapes; checks Int64 magnitude;
+and records offset plus line/column. Focused fixtures live under
+[`../compiler/tests/lexer/`](../compiler/tests/lexer/). The full-S sweep is a
+full-gate test (`LITE_SKIP_HEAVY=1` skips it in the fast lane); it tokenizes the
+expanded TS S, the C emitter, the lexer sources and all 92 compiler cases. No
+parser or emitter behavior is claimed yet.
 
 **Stage 0 is feature-frozen during bootstrap** (bootstrap defaults B8/B11). Do
 not add new igniter syntax, builtins, host helpers or CLI behavior while the
@@ -704,7 +715,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **183 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **186 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files

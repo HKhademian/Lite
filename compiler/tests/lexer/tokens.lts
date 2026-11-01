@@ -1,0 +1,9 @@
+/* ordinary /* nested */ comment */
+/*## raw /* #*/ still ##*/
+name := 42;
+flag := true;
+text := "a\n\"b";
+pair := (name, flag);
+name = name + 1;
+report(pair.1);
+if flag and name >= 40 { report(text); }

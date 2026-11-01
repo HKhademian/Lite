@@ -54,8 +54,8 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **183** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 13–14 seconds.
+- **186** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 13–14 seconds and skips the full-S lexer sweep.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
@@ -75,7 +75,7 @@ equalities are recorded in
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P3 — Lexer, not started.** P2 was completed on 2026-11-01;
+**Current gate: P4 — Parser, not started.** P3 was completed on 2026-11-01;
 update this line when a gate is completed and use the phase checklists as the
 source of truth.
 
@@ -317,16 +317,22 @@ P3–P8. L2 host libraries and L3 tooling libraries wait for separate decisions.
 
 **Goal:** tokenize S and the compiler corpus.
 
-- [ ] Token kinds: name, keyword, Int, String, Bool, symbol, EOF.
-- [ ] Whitespace, comments (block, doc, nested/raw), semicolons.
-- [ ] String escapes, Int64 range, multi-character operators (`:=`, `=!=`,
+- [x] Token kinds: name, keyword, Int, String, Bool, symbol, EOF.
+- [x] Whitespace, comments (block, doc, nested/raw), semicolons.
+- [x] String escapes, Int64 range, multi-character operators (`:=`, `=!=`,
       `:/`, `:%`, comparisons, `**` only if L later admits it).
-- [ ] Positions: offset plus line/column; do not lose the source location.
-- [ ] Token-dump test helper and fixtures; include every construct in S.
-- [ ] Reject malformed/unsupported tokens before emission.
+- [x] Positions: offset plus line/column; do not lose the source location.
+- [x] Token-dump test helper and fixtures; include every construct in S.
+- [x] Reject malformed/unsupported tokens before emission.
 
-**Gate:** the lexer tokenizes all of S and every compiler case; malformed cases
-produce the expected diagnostics; no parser or emitter behavior is claimed yet.
+**Gate passed 2026-11-01:** [`compiler/src/lexer.lts`](../compiler/src/lexer.lts)
+tokenizes the expanded TS S, every compiler case, the C emitter, and the lexer
+sources. Five rejection fixtures fail lexically for the expected reasons:
+injected unterminated string, below-minimum and too-large Int literals, a bad
+string escape, and an unterminated string. Focused fixtures cover symbols,
+comments, strings, Int bounds and exact token dumps. No parser or emitter
+behavior changed. `./lite test` passes all 186 tests in 65.3 s; the fast lane
+passes 183 with three skips in 13.2 s.
 
 **Do not:** add Float, arrays, `match`, records, enums or modules to L just to
 make the lexer complete.
@@ -598,7 +604,7 @@ Use the existing visible commands:
 
 | Command | Use |
 |---|---|
-| `./lite test --fast` | Fast local gate; target under 30 s; skips native C |
+| `./lite test --fast` | Fast local gate; target under 30 s; skips native C and the full-S lexer sweep |
 | `./lite test` / `./lite test --full` | Full local gate, including native C |
 | `./lite verify --all` | All feature/example/sample scenarios and targets |
 | `./lite check file.lts` | Source check |

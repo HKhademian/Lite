@@ -41,8 +41,8 @@ provisional L0 helpers under [`../lib/core/`](../lib/README.md): checked Int,
 text, source positions, diagnostics, formatting and list search. Both manifests
 list those files before the emitter, and the compiler uses them without changing
 the 50/42 artifact and diagnostic baseline. `lib/core/test.lts` and `lib/tests/`
-are test-only. The `src/` and `runtime/` directories remain P4 placeholders; no
-source has moved into them yet.
+are test-only. P3 adds the Lite lexer under `src/`; the rest of `src/` and
+`runtime/` remain P4 and P6/P7 placeholders.
 
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the
@@ -56,7 +56,10 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
 | [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
-| `src/` | Target directory for split bootstrap sources (P4; empty) |
+| [`src/lexer.lts`](src/lexer.lts) | P3 Lite-written lexer: tokens, positions, comments, strings and Int bounds |
+| [`src/lexer-dump.lts`](src/lexer-dump.lts) | Token-dump test helper for the lexer |
+| [`tests/lexer/`](tests/lexer/) | Focused lexer fixtures and exact expected token dumps |
+| `src/` | Target directory for the remaining split bootstrap sources (P4) |
 | `runtime/` | Target directory for target runtimes (P6/P7; empty) |
 | [`frontend.lts`](frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
 | [`ts-emitter.lts`](ts-emitter.lts) | TypeScript literal encoding, report formatting and program emission |

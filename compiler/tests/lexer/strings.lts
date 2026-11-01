@@ -1,0 +1,4 @@
+plain := "text";
+escaped := "n\nt\tq\"b\\";
+multi := "line1
+line2";

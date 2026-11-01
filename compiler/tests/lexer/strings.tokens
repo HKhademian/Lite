@@ -1,0 +1,13 @@
+Name@1:1:0 plain
+Symbol@1:7:6 :=
+String@1:10:9 text
+Symbol@1:16:15 ;
+Name@2:1:17 escaped
+Symbol@2:9:25 :=
+String@2:12:28 n\nt\tq"b\\
+Symbol@2:26:42 ;
+Name@3:1:44 multi
+Symbol@3:7:50 :=
+String@3:10:53 line1\nline2
+Symbol@4:7:66 ;
+EOF@5:1:68 

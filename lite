@@ -70,7 +70,7 @@ case "${1-}" in
         fi
         cd "$lite_dir/igniter" || exit 1
         if [ "$test_mode" = fast ]; then
-            LITE_SKIP_NATIVE=1 exec node --test test.ts
+            LITE_SKIP_NATIVE=1 LITE_SKIP_HEAVY=1 exec node --test test.ts
         else
             exec node --test test.ts
         fi

@@ -1,0 +1,17 @@
+Name@1:1:0 zero
+Symbol@1:6:5 :=
+Int@1:9:8 0
+Symbol@1:10:9 ;
+Name@2:1:11 small
+Symbol@2:7:17 :=
+Int@2:10:20 42
+Symbol@2:12:22 ;
+Name@3:1:24 max
+Symbol@3:5:28 :=
+Int@3:8:31 9223372036854775807
+Symbol@3:27:50 ;
+Name@4:1:52 minMagnitude
+Symbol@4:14:65 :=
+Int@4:17:68 9223372036854775808
+Symbol@4:36:87 ;
+EOF@5:1:89 

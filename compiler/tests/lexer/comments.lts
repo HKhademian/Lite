@@ -1,0 +1,4 @@
+/* outer /* inner */ still outer */
+/*# raw /* not a close */ #*/
+/*## longer fence with #*/ inside ##*/
+after := 1;

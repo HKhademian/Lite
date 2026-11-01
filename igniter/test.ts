@@ -13,6 +13,7 @@ import { runCArtifact, runTsArtifact } from './artifacts.ts';
 
 const tsEmitterPath = new URL('../compiler/ts-emitter.lts', import.meta.url).pathname;
 const cEmitterPath = new URL('../compiler/c-emitter.lts', import.meta.url).pathname;
+const lexerDumpPath = new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname;
 
 /** Executes inline Lite source with captured reports and scripted stdin. */
 function run(source: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
@@ -169,13 +170,37 @@ test('L0 shared libraries have direct bootstrap tests', () => {
   });
 });
 
-test('compiler and L0 declarations carry doc comments', () => {
+test('Lite lexer tokenizes lexical fixtures exactly', () => {
+  for (const name of ['tokens', 'symbols', 'comments', 'strings', 'int']) {
+    const source = readFileSync(new URL(`../compiler/tests/lexer/${name}.lts`, import.meta.url), 'utf8');
+    const expected = readFileSync(new URL(`../compiler/tests/lexer/${name}.tokens`, import.meta.url), 'utf8');
+    assert.deepEqual(runFile(lexerDumpPath, source), { code: 0, output: expected, errors: '' }, name);
+  }
+});
+
+test('Lite lexer rejects malformed lexical input with positioned diagnostics', () => {
+  for (const [source, errors] of [
+    ['report("bad \\q");', '1:13: unsupported string escape \\q\n'],
+    ['report("unterminated);', '1:8: unterminated string literal\n'],
+    ['/* unterminated', '1:1: unterminated comment\n'],
+    ['/*# unterminated', '1:1: unterminated raw comment\n'],
+    ['report(9223372036854775809);', '1:8: integer literal outside signed 64-bit range\n'],
+    ['report(🙂);', '1:8: unsupported symbol: 🙂\n'],
+  ] as const) {
+    assert.deepEqual(runFile(lexerDumpPath, source), { code: 2, output: '', errors }, source);
+  }
+});
+
+test('compiler, L0 and lexer declarations carry doc comments', () => {
   const lib = new URL('../lib/core/', import.meta.url);
+  const src = new URL('../compiler/src/', import.meta.url);
   const paths = [new URL('../compiler/frontend.lts', import.meta.url),
     new URL('../compiler/ts-emitter.lts', import.meta.url),
     new URL('../compiler/c-emitter.lts', import.meta.url),
     ...readdirSync(lib).filter(file => file.endsWith('.lts')).sort()
-      .map(file => new URL(file, lib))];
+      .map(file => new URL(file, lib)),
+    ...readdirSync(src).filter(file => file.endsWith('.lts')).sort()
+      .map(file => new URL(file, src))];
   for (const path of paths) {
     const lines = readFileSync(path, 'utf8').split('\n');
     for (const [index, line] of lines.entries()) {
@@ -653,6 +678,59 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
   assert.deepEqual(tsCompiler.compile({ text: 'report(1 +);', name: label }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:11: expected an Int, String or Bool expression\n`),
   });
+});
+
+test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
+  if (process.env['LITE_SKIP_HEAVY'] === '1') {
+    context.skip('LITE_SKIP_HEAVY=1'); return;
+  }
+  const program = compile(loadSource(lexerDumpPath));
+  const runLexer = (input: string): { code: number; output: string; errors: string } => {
+    const chars = Array.from(input);
+    let cursor = 0;
+    let output = '';
+    let errors = '';
+    const code = execute(program, {
+      args: [],
+      read: () => chars[cursor++] ?? null,
+      report: text => { output += text; },
+      reportError: text => { errors += text; },
+    });
+    return { code, output, errors };
+  };
+  const bootstrap = runLexer(loadSource(tsEmitterPath));
+  assert.equal(bootstrap.code, 0, bootstrap.errors);
+  assert.equal(bootstrap.errors, '');
+  assert.match(bootstrap.output, /^Name@\d+:\d+:\d+ /);
+  assert.match(bootstrap.output, /EOF@\d+:\d+:\d+ \n$/);
+  for (const path of [cEmitterPath,
+    new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
+    new URL('../compiler/src/lexer-dump.lts', import.meta.url).pathname]) {
+    const result = runLexer(readFileSync(path, 'utf8'));
+    assert.equal(result.code, 0, `${path}: ${result.errors}`);
+    assert.equal(result.errors, '', path);
+    assert.match(result.output, /EOF@/, path);
+  }
+  const lexicalFailures = new Map<string, RegExp>([
+    ['injected-source', /unterminated string literal/],
+    ['literal-below-min', /integer literal outside signed 64-bit range/],
+    ['literal-too-large', /integer literal outside signed 64-bit range/],
+    ['bad-string-escape', /unsupported string escape/],
+    ['unterminated-string', /unterminated string literal/],
+  ]);
+  for (const fixture of compilerFixtures) {
+    const result = runLexer(fixture.source);
+    const expected = lexicalFailures.get(fixture.name);
+    if (expected === undefined) {
+      assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
+      assert.equal(result.errors, '', fixture.name);
+      assert.match(result.output, /EOF@/, fixture.name);
+    } else {
+      assert.equal(result.code, 2, fixture.name);
+      assert.equal(result.output, '', fixture.name);
+      assert.match(result.errors, expected, fixture.name);
+    }
+  }
 });
 
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {

@@ -278,6 +278,21 @@ compiler adopts them without changing the 50 program / 42 rejection baseline.
 [the library README](../lib/README.md) and
 [P2](bootstrap-plan.md#p2--l0-shared-libraries).
 
+## Lite-written lexer checkpoint, 2026-11-01
+
+P3 adds [`compiler/src/lexer.lts`](../compiler/src/lexer.lts) and the
+token-dump helper [`compiler/src/lexer-dump.lts`](../compiler/src/lexer-dump.lts).
+It emits name, keyword, Int, String, Bool, symbol and EOF tokens with offset,
+line and column; skips nested and raw comments; decodes the selected string
+escapes; and rejects Int magnitudes above the signed-minimum magnitude. Focused
+fixtures live under [`compiler/tests/lexer/`](../compiler/tests/lexer/).
+
+The full gate tokenizes the expanded TS S, the C emitter, the lexer sources and
+all 92 compiler cases. Five rejection fixtures fail lexically for their expected
+reasons; the other cases tokenize. The fast lane skips this full-S sweep
+(`LITE_SKIP_HEAVY=1`). No parser or emitter behavior is claimed. See
+[P3](bootstrap-plan.md#p3--lexer).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

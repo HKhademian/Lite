@@ -96,7 +96,10 @@ keeps that target from growing while it is approached.
   byte-identical artifacts and exact diagnostics for all 92 compiler cases.
 - P2 L0 helpers exist under `lib/core/` with direct Lite tests. The compiler
   imports them without changing the 50/42 artifact and diagnostic baseline.
-- Stage 0 is feature-frozen. P2-P8 add Lite compiler features, not igniter
+- P3 adds the Lite lexer under `compiler/src/`; it tokenizes expanded S, the C
+  emitter, the lexer sources and every compiler case. No parser or emitter
+  behavior changed.
+- Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11-T13 are blocked on the P6 TS emitter; C01 and C21-C23 are
   blocked on the P7 C emitter. No ladder node has been produced yet.
