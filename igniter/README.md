@@ -577,14 +577,11 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.32**, tag **igniter-v0.1.0-alpha.32**, adds the sized
-numeric types `Int8`/`Int16`/`Int32`/`Int64` and `Float32`/`Float64` (`Int` =
-`Int64`; `Float64`/`Double` aliases of `Float`). Unannotated literals stay
-Int64/Float64 while fitting literal constants may initialize narrow types;
-arithmetic promotes to the wider width within a family; assignments, arguments
-and returns admit the selected lossless widenings, including Int8/Int16 to
-Float32 and Int32 to Float. Narrow arithmetic checks its width and Float32
-rounds results; narrowing, unsigned widths and casts remain unsupported.
+Version **0.1.0-alpha.33**, tag **igniter-v0.1.0-alpha.33**, adds mixed
+`Int`/`Float` arithmetic and comparisons: the integer operand converts to the
+floating operand's width, so `1.2 + kg` is `Float` and `Int8 + Float32` is
+`Float32`. Large `Int64` values can lose precision through that conversion;
+assignments, arguments and returns still require a lossless widening.
 Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
@@ -646,7 +643,9 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.31**, commit `e00574d`: typed loop `.value` and `then` completion.
 
-- **igniter-v0.1.0-alpha.32**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.32**, commit `b05c9ef`: sized integer and floating widths with lossless widening.
+
+- **igniter-v0.1.0-alpha.33**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
