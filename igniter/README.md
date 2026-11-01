@@ -575,12 +575,15 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.31**, tag **igniter-v0.1.0-alpha.31**, implements typed
-loop `.value` and one receiverless `then`: zero-initialized value, body-tail
-commits, plain `continue`/bare `break` preservation, final `.value` without
-`then`, and `then` with `.value`/`.count` and a transformed result. Action loops
-without `then` remain `Unit`; tags, payload exits and `.item`/`.index` remain
-unsupported. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.32**, tag **igniter-v0.1.0-alpha.32**, adds the sized
+numeric types `Int8`/`Int16`/`Int32`/`Int64` and `Float32`/`Float64` (`Int` =
+`Int64`; `Float64`/`Double` aliases of `Float`). Unannotated literals stay
+Int64/Float64 while fitting literal constants may initialize narrow types;
+arithmetic promotes to the wider width within a family; assignments, arguments
+and returns admit the selected lossless widenings, including Int8/Int16 to
+Float32 and Int32 to Float. Narrow arithmetic checks its width and Float32
+rounds results; narrowing, unsigned widths and casts remain unsupported.
+Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -639,7 +642,9 @@ unsupported. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.30**, commit `8e03e71`: partial conditional declaration defaults and no-write assignments.
 
-- **igniter-v0.1.0-alpha.31**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.31**, commit `e00574d`: typed loop `.value` and `then` completion.
+
+- **igniter-v0.1.0-alpha.32**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
