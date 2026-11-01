@@ -105,7 +105,8 @@ keeps that target from growing while it is approached.
 - P5 is in progress: the checker collects top-level types, function signatures
   and values; rejects duplicate names/parameters; validates type names,
   annotations and alias cycles; and checks block scopes, shadowing, local
-  mutability, unknown assignments and direct-call arity. Expression typing,
+  mutability, unknown assignments, simple local types, initializer/assignment
+  type checks, Bool conditions and direct-call arity. Full expression typing,
   initialization, argument/return checks and exact rejection parity remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.

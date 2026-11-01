@@ -317,9 +317,10 @@ top-level type aliases, function signatures and value declarations in source
 order; rejects duplicate top-level names and parameters; and validates type names,
 annotation references and alias cycles with positioned diagnostics. Fixtures live
 under [`compiler/tests/checker/`](../compiler/tests/checker/). Block scopes, shadowing, duplicate locals,
-assignment mutability, unknown-local rejection and direct-call arity are checked.
-Full type compatibility, initialization, expression typing, argument/return type
-checks and exact 42-case rejection parity remain open. Current
+assignment mutability, unknown-local rejection, direct-call arity, simple local
+type inference, initializer/assignment type checks and Bool conditions are
+checked. Full expression typing, initialization, argument/return type checks and
+exact 42-case rejection parity remain open. Current
 artifacts and diagnostics are unchanged. See
 [P5](bootstrap-plan.md#p5--checker).
 

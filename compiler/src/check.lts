@@ -7,7 +7,7 @@ Symbol := type (kind: String, name: String, detail: String, offset: Int, line: I
 Symbols := type List<Symbol>;
 
 /** One local binding: name, reassignment mutability, block depth and origin kind. */
-Local := type (name: String, mutable: Bool, depth: Int, kind: String);
+Local := type (name: String, typeText: String, mutable: Bool, depth: Int, kind: String);
 
 /** Local bindings in declaration order, removed when their block closes. */
 Locals := type List<Local>;
@@ -34,14 +34,39 @@ hasText := fn(values: List<String>, target: String): Bool {
     false
 }
 
-/** Builds a token-shaped source position for a symbol diagnostic. */
-symbolToken := fn(symbol: Symbol): Token {
-    (kind = symbol.kind, text = symbol.name, offset = symbol.offset, line = symbol.line, column = symbol.column)
+/** Returns the newest local with `name`, or -1. */
+findLocal := fn(locals: Locals, name: String): Int {
+    var index := 0;
+    var found := -1;
+    loop locals as local {
+        if local.name == name { found = index; }
+        index = index + 1;
+    }
+    found
 }
 
-/** Reports one token-positioned checker diagnostic and exits 2. */
-checkFail := fn(token: Token, prefix: String, message: String): Unit {
-    fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
+/** Returns the index of a local with `name` directly in `depth`, or -1. */
+findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
+    var index := 0;
+    loop locals as local {
+        if local.name == name and local.depth == depth { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True for the four built-in scalar type names. */
+isScalarType := fn(typeText: String): Bool {
+    typeText == "Int" or typeText == "String" or typeText == "Bool" or typeText == "Unit"
+}
+
+/** Returns `List<T>`'s element type, or empty text when the type is not a list. */
+listElementType := fn(typeText: String): String {
+    size := textLength(typeText);
+    if size > 5 and startsWithAt(typeText, 0, "List<") and textAt(typeText, size - 1) == ">" {
+        return textSlice(typeText, 5, size - 1);
+    }
+    ""
 }
 
 /** Returns the index of the first top-level symbol named `name`, or -1. */
@@ -52,6 +77,78 @@ findSymbol := fn(symbols: Symbols, name: String): Int {
         index = index + 1;
     }
     -1
+}
+
+/** Parses one function symbol's result type text. */
+functionResultType := fn(symbol: Symbol): String {
+    tokens := tokenize(symbol.detail, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    var depth := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if isSymbol(token, "(") { depth = depth + 1; }
+        else if isSymbol(token, ")") {
+            depth = depth - 1;
+            if depth == 0 {
+                cursor = cursor + 1;
+                break;
+            }
+        }
+        cursor = cursor + 1;
+    }
+    if not isSymbol(tokenAt(tokens, cursor), ":") { return ""; }
+    parsed := parseType(tokens, cursor + 1, "");
+    parsed.text
+}
+
+/** Infers a simple scalar/call/name type from normalized expression text, or empty when unknown. */
+simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
+    size := textLength(text);
+    if size == 0 { return ""; }
+    if text == "true" or text == "false" { return "Bool"; }
+    if startsWithAt(text, 0, "\"") { return "String"; }
+    first := textAt(text, 0);
+    if isDigit(first) { return "Int"; }
+    if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") { return "Int"; }
+    if startsWithAt(text, 0, "not ") { return "Bool"; }
+    if startsWithAt(text, 0, "(") {
+        if indexOfText(text, " == ", 0) >= 0 or indexOfText(text, " =!= ", 0) >= 0 or
+            indexOfText(text, " < ", 0) >= 0 or indexOfText(text, " <= ", 0) >= 0 or
+            indexOfText(text, " > ", 0) >= 0 or indexOfText(text, " >= ", 0) >= 0 or
+            indexOfText(text, " <! ", 0) >= 0 or indexOfText(text, " >! ", 0) >= 0 or
+            indexOfText(text, " <!= ", 0) >= 0 or indexOfText(text, " >!= ", 0) >= 0 or
+            indexOfText(text, " and ", 0) >= 0 or indexOfText(text, " or ", 0) >= 0 {
+            return "Bool";
+        }
+        return "";
+    }
+    if isNameStart(first) {
+        index := findLocal(locals, text);
+        if index >= 0 { return locals[index].typeText; }
+        call := indexOfText(text, "(", 0);
+        if call > 0 {
+            name := textSlice(text, 0, call);
+            functionIndex := findSymbol(symbols, name);
+            if functionIndex >= 0 and symbols[functionIndex].kind == SYMBOL_KIND_FUNCTION() {
+                return functionResultType(symbols[functionIndex]);
+            }
+            if name == "inputAll" or name == "textAt" or name == "textSlice" { return "String"; }
+            if name == "textLength" { return "Int"; }
+            if name == "true" or name == "false" { return "Bool"; }
+        }
+    }
+    ""
+}
+
+/** Builds a token-shaped source position for a symbol diagnostic. */
+symbolToken := fn(symbol: Symbol): Token {
+    (kind = symbol.kind, text = symbol.name, offset = symbol.offset, line = symbol.line, column = symbol.column)
+}
+
+/** Reports one token-positioned checker diagnostic and exits 2. */
+checkFail := fn(token: Token, prefix: String, message: String): Unit {
+    fail(prefix, decimalText(token.line) + ":" + decimalText(token.column) + ": " + message);
 }
 
 /** Skips one balanced `{ ... }` sequence and returns the position after it. */
@@ -169,29 +266,8 @@ collectSymbols := fn(tokens: Tokens, prefix: String): Symbols {
     symbols
 }
 
-/** Returns the newest local with `name`, or -1. */
-findLocal := fn(locals: Locals, name: String): Int {
-    var index := 0;
-    var found := -1;
-    loop locals as local {
-        if local.name == name { found = index; }
-        index = index + 1;
-    }
-    found
-}
-
-/** Returns the index of a local with `name` directly in `depth`, or -1. */
-findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
-    var index := 0;
-    loop locals as local {
-        if local.name == name and local.depth == depth { return index; }
-        index = index + 1;
-    }
-    -1
-}
-
 /** Checks block-local declarations, parameter scopes and statement assignments. */
-checkLocals := fn(tokens: Tokens, prefix: String): Unit {
+checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
     count := tokenCount(tokens);
     locals: mut List<Local> = [];
     var localCount := 0;
@@ -235,10 +311,11 @@ checkLocals := fn(tokens: Tokens, prefix: String): Unit {
                 if findLocalAtDepth(locals, parameter.text, depth + 1) >= 0 {
                     checkFail(parameter, prefix, "duplicate parameter " + parameter.text);
                 }
-                push_back(mut locals, (name = parameter.text, mutable = false, depth = depth + 1, kind = "parameter"));
-                localCount = localCount + 1;
                 colon := expectSymbol(tokens, parameterCursor + 1, ":", prefix);
                 parameterType := parseType(tokens, colon, prefix);
+                push_back(mut locals, (name = parameter.text, typeText = parameterType.text,
+                    mutable = false, depth = depth + 1, kind = "parameter"));
+                localCount = localCount + 1;
                 parameterCursor = parameterType.next;
                 if isSymbol(tokenAt(tokens, parameterCursor), ",") {
                     parameterCursor = parameterCursor + 1;
@@ -252,6 +329,37 @@ checkLocals := fn(tokens: Tokens, prefix: String): Unit {
             cursor = resultType.next;
             continue;
         }
+        if token.kind == TOKEN_KIND_KEYWORD() and token.text == "if" {
+            condition := parseExpression(tokens, cursor + 1, prefix, 0);
+            conditionType := simpleType(symbols, locals, condition.text);
+            if isScalarType(conditionType) and conditionType =!= "Bool" {
+                checkFail(token, prefix, "if condition must be Bool");
+            }
+            cursor = condition.next;
+            continue;
+        }
+        if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
+            source := parseExpression(tokens, cursor + 1, prefix, 0);
+            if tokenAt(tokens, source.next).kind == TOKEN_KIND_NAME() and tokenAt(tokens, source.next).text == "as" {
+                itemToken := tokenAt(tokens, source.next + 1);
+                if itemToken.kind =!= TOKEN_KIND_NAME() {
+                    checkFail(itemToken, prefix, "expected a loop item name after as");
+                }
+                sourceType := simpleType(symbols, locals, source.text);
+                itemType := listElementType(sourceType);
+                push_back(mut locals, (name = itemToken.text, typeText = itemType, mutable = false,
+                    depth = depth + 1, kind = "loop item"));
+                localCount = localCount + 1;
+                cursor = source.next + 2;
+            } else {
+                conditionType := simpleType(symbols, locals, source.text);
+                if isScalarType(conditionType) and conditionType =!= "Bool" {
+                    checkFail(token, prefix, "loop condition must be Bool");
+                }
+                cursor = source.next;
+            }
+            continue;
+        }
         if (token.kind == TOKEN_KIND_KEYWORD() and token.text == "var") or
             (token.kind == TOKEN_KIND_NAME() and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
                 isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
@@ -260,7 +368,31 @@ checkLocals := fn(tokens: Tokens, prefix: String): Unit {
             if findLocalAtDepth(locals, declaration.name, depth) >= 0 {
                 checkFail(nameToken, prefix, "duplicate local " + declaration.name);
             }
-            push_back(mut locals, (name = declaration.name, mutable = startsWithAt(declaration.detail, 0, "var "),
+            mutable := startsWithAt(declaration.detail, 0, "var ");
+            var work := declaration.detail;
+            if mutable { work = textSlice(work, 4, textLength(work)); }
+            var typeText := "";
+            var initText := "";
+            if startsWithAt(work, 0, ":= ") {
+                initText = textSlice(work, 3, textLength(work));
+                typeText = simpleType(symbols, locals, initText);
+            } else {
+                if startsWithAt(work, 0, "mut ") { work = textSlice(work, 4, textLength(work)); }
+                split := indexOfText(work, " = ", 0);
+                if split >= 0 {
+                    typeText = textSlice(work, 0, split);
+                    initText = textSlice(work, split + 3, textLength(work));
+                } else {
+                    typeText = work;
+                }
+                if initText =!= "" and initText =!= "?" {
+                    inferred := simpleType(symbols, locals, initText);
+                    if isScalarType(typeText) and isScalarType(inferred) and typeText =!= inferred {
+                        checkFail(nameToken, prefix, "cannot initialize " + typeText + " with " + inferred);
+                    }
+                }
+            }
+            push_back(mut locals, (name = declaration.name, typeText = typeText, mutable = mutable,
                 depth = depth, kind = "local"));
             localCount = localCount + 1;
             cursor = declaration.next;
@@ -275,7 +407,14 @@ checkLocals := fn(tokens: Tokens, prefix: String): Unit {
             if not locals[index].mutable {
                 checkFail(token, prefix, "cannot assign to immutable local " + token.text);
             }
-            cursor = cursor + 2;
+            value := parseExpression(tokens, cursor + 2, prefix, 0);
+            inferred := simpleType(symbols, locals, value.text);
+            localType := locals[index].typeText;
+            if isScalarType(localType) and isScalarType(inferred) and localType =!= inferred {
+                checkFail(token, prefix, "cannot assign " + inferred + " to " + localType + " local " + token.text);
+            }
+            cursor = value.next;
+            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
             continue;
         }
         cursor = cursor + 1;
@@ -416,7 +555,7 @@ checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
 checkSource := fn(tokens: Tokens, prefix: String): Symbols {
     symbols := collectSymbols(tokens, prefix);
     validateSymbols(symbols, prefix);
-    checkLocals(tokens, prefix);
+    checkLocals(tokens, prefix, symbols);
     checkCalls(tokens, symbols, prefix);
     symbols
 }

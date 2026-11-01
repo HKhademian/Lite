@@ -129,9 +129,10 @@ P5 has started with the checker foundation in
 type aliases, function signatures and value declarations; rejects duplicate names
 and parameters; and validates type names, annotation references and alias cycles.
 Fixtures live under [`../compiler/tests/checker/`](../compiler/tests/checker/).
-Block scopes, shadowing, local mutability, unknown assignments and direct-call
-arity are checked. Expression typing, initialization, argument/return type
-checks and exact 42-case rejection parity remain.
+Block scopes, shadowing, local mutability, unknown assignments, simple local
+types, initializer/assignment type checks, Bool conditions and direct-call arity
+are checked. Full expression typing, initialization, argument/return checks and
+exact 42-case rejection parity remain.
 Token and parse-node kind tags are centralized as zero-argument accessors
 (`TOKEN_KIND_*`, `NODE_KIND_*`) because Lite has no enum and top-level values
 cannot be captured by functions yet.

@@ -381,12 +381,13 @@ reproduce.
 - [x] Top-level symbol collection: type aliases, function signatures and value
       declarations with duplicate-name rejection.
 - [x] Block scopes and local bindings: parameters, declarations, shadowing,
-      duplicate locals, assignment mutability and unknown-local rejection.
-      Initialization tracking and local type checking remain.
+      duplicate locals, assignment mutability, unknown-local rejection, simple
+      local type inference and assignment/initializer type checks. Full
+      initialization and expression typing remain.
 - [x] Function signature collection and direct-call arity checks. Argument/result
       type checking and return paths remain.
 - [ ] Tuple shape/labels, list element types, index element types.
-- [ ] Bool conditions and list mutation grants.
+- [x] Bool conditions for action `if` and `loop`. List mutation grants remain.
 - [ ] `break`/`return` placement; unreachable code not required.
 - [x] Diagnostics: source name, position, message, exit 2 for collected symbols.
 - [ ] Accept every construct in S; reject unsupported and ill-typed cases.
@@ -399,9 +400,10 @@ an artifact.
 rejects duplicate names and parameters, validates type names, annotations and
 alias cycles, and checks block scopes, shadowing, local mutability and unknown
 assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
-Direct calls to known top-level functions are arity-checked. Expression typing,
-initialization tracking, argument/return type checks, list/tuple contracts and
-exact rejection parity remain.
+Direct calls to known top-level functions are arity-checked. Simple local types,
+initializer/assignment type checks and Bool conditions are checked. Full
+expression typing, initialization, argument/return checks, list/tuple contracts
+and exact rejection parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.
