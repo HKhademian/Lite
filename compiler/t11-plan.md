@@ -15,8 +15,9 @@ focused tests, then the full gate before recording the gate.
 6a. Growable list types/literals/indexing and TS types (no traversal or mutation yet) — TS done; C rejects list values clearly. Copy-on-declaration/argument/return is deferred with mutation (6c); unobservable until then.
 6b. ~~Loop `seq as item` traversal over lists~~ — TS done (read-only element local); C rejects traversal clearly. `break`/`continue` and list mutation remain deferred.
 6c. ~~List mutation grants and `push_back`/`pop_back` end operations~~ — TS done, including copy semantics; C rejects lists clearly.
-7. Typed collection locals and list mutation grants/end operations.
-8. ~~Value `if` expressions in the compiler emitter~~ — TS done (total, same-kind value branches); C rejects value `if` clearly.
+7. ~~Value `if` expressions in the compiler emitter~~ — TS done (total, same-kind value branches); C rejects value `if` clearly.
+8a. I/O builtins: `inputArgs`, `inputAll`, `reportError`, `exit`, `textLength`, `textAt`, `textSlice`, with TS emission.
+8b. Generated compiler entry contract: read stdin/args, write stdout/stderr and exit status while preserving the existing `main(): string` corpus contract.
 9. Dynamic Int division/remainder (`/ % :/ :%`).
 10. Dynamic String concatenation.
 11. `break`/`continue` lowering in compiler loops.
