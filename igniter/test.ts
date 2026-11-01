@@ -154,10 +154,28 @@ test('internal run harness captures report streams and exit status from fixed in
   });
 });
 
-test('compiler declarations carry doc comments', () => {
+test('L0 shared libraries have direct bootstrap tests', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  for (const name of ['int', 'text', 'source', 'format', 'diag', 'list']) {
+    assert.deepEqual(runFile(join(root, 'lib/tests', `${name}.lts`)), {
+      code: 0, output: `${name}: ok\n`, errors: '',
+    }, name);
+  }
+  assert.deepEqual(runFile(join(root, 'lib/tests/diag-fail.lts')), {
+    code: 2, output: '', errors: 'name:message\n',
+  });
+  assert.deepEqual(runFile(join(root, 'lib/tests/test-fail.lts')), {
+    code: 2, output: '', errors: 'FAIL bad\n',
+  });
+});
+
+test('compiler and L0 declarations carry doc comments', () => {
+  const lib = new URL('../lib/core/', import.meta.url);
   const paths = [new URL('../compiler/frontend.lts', import.meta.url),
     new URL('../compiler/ts-emitter.lts', import.meta.url),
-    new URL('../compiler/c-emitter.lts', import.meta.url)];
+    new URL('../compiler/c-emitter.lts', import.meta.url),
+    ...readdirSync(lib).filter(file => file.endsWith('.lts')).sort()
+      .map(file => new URL(file, lib))];
   for (const path of paths) {
     const lines = readFileSync(path, 'utf8').split('\n');
     for (const [index, line] of lines.entries()) {

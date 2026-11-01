@@ -1,0 +1,46 @@
+/* Provisional bootstrap list-search support. Not an official standard library. */
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfText := fn(values: List<String>, target: String): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsText := fn(values: List<String>, target: String): Bool {
+    listIndexOfText(values, target) >= 0
+}
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfInt := fn(values: List<Int>, target: Int): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsInt := fn(values: List<Int>, target: Int): Bool {
+    listIndexOfInt(values, target) >= 0
+}
+
+/** Returns the index of `target` in `values`, or -1 when absent. */
+listIndexOfBool := fn(values: List<Bool>, target: Bool): Int {
+    var index := 0;
+    loop values as value {
+        if value == target { return index; }
+        index = index + 1;
+    }
+    -1
+}
+
+/** True when `values` contains `target`. */
+listContainsBool := fn(values: List<Bool>, target: Bool): Bool {
+    listIndexOfBool(values, target) >= 0
+}

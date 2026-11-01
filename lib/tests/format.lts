@@ -1,0 +1,19 @@
+importFlatAll "../core/format.lts";
+importFlatAll "../core/test.lts";
+
+checkText("decimal zero", "0", decimalText(0));
+checkText("decimal negative", "-42", decimalText(-42));
+checkText("decimal minimum", "-9223372036854775808", decimalText(intMin()));
+checkText("pad left text", "  7", padLeftText("7", 3));
+checkText("pad right text", "7  ", padRightText("7", 3));
+checkText("pad left no-op", "long", padLeftText("long", 2));
+checkText("pad right no-op", "long", padRightText("long", 2));
+checkText("pad left int", "  -42", padLeftInt(-42, 5));
+checkText("pad right int", "7  ", padRightInt(7, 3));
+
+values: List<Int> = [1, 2, 3];
+checkText("join ints", "1, 2, 3", joinIntTexts(values, ", "));
+empty: List<Int> = [];
+checkText("join ints empty", "", joinIntTexts(empty, ", "));
+
+done("format");

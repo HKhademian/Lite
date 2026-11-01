@@ -1,4 +1,12 @@
 {
   "target": "c",
-  "files": ["../c-emitter.lts"]
+  "files": [
+    "../../lib/core/int.lts",
+    "../../lib/core/text.lts",
+    "../../lib/core/source.lts",
+    "../../lib/core/diag.lts",
+    "../../lib/core/format.lts",
+    "../../lib/core/list.lts",
+    "../c-emitter.lts"
+  ]
 }

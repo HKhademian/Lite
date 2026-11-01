@@ -1,0 +1,41 @@
+/* Provisional bootstrap test assertions. Not an official standard library. */
+
+importFlatAll "int.lts";
+
+/** Reports `FAIL name` and exits 2 unless `condition` is true. */
+check := fn(name: String, condition: Bool): Unit {
+    if not condition {
+        reportError("FAIL " + name);
+        exit(2);
+    } else { }
+}
+
+/** Checks one Int value and reports expected/actual text on failure. */
+checkInt := fn(name: String, expected: Int, actual: Int): Unit {
+    if expected =!= actual {
+        reportError("FAIL " + name + ": expected " + intText(expected) + ", got " + intText(actual));
+        exit(2);
+    } else { }
+}
+
+/** Checks one String value and reports expected/actual text on failure. */
+checkText := fn(name: String, expected: String, actual: String): Unit {
+    if expected =!= actual {
+        reportError("FAIL " + name + ": expected \"" + expected + "\", got \"" + actual + "\"");
+        exit(2);
+    } else { }
+}
+
+/** Checks one Bool value and reports expected/actual text on failure. */
+checkBool := fn(name: String, expected: Bool, actual: Bool): Unit {
+    if expected =!= actual {
+        reportError("FAIL " + name + ": expected " + (if expected { "true" } else { "false" }) +
+            ", got " + (if actual { "true" } else { "false" }));
+        exit(2);
+    } else { }
+}
+
+/** Reports a successful test entry as `name: ok`. */
+done := fn(name: String): Unit {
+    report(name + ": ok");
+}

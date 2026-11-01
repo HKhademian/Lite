@@ -1,0 +1,6 @@
+importFlatAll "../core/diag.lts";
+importFlatAll "../core/test.lts";
+
+expect("diag", true, "true condition must not fail");
+expect("diag", 1 < 2, "comparison condition must not fail");
+done("diag");

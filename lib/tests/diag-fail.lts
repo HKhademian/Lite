@@ -1,0 +1,4 @@
+importFlatAll "../core/diag.lts";
+
+fail("name", "message");
+report("unreachable");

@@ -1,4 +1,12 @@
 {
   "target": "ts",
-  "files": ["../ts-emitter.lts"]
+  "files": [
+    "../../lib/core/int.lts",
+    "../../lib/core/text.lts",
+    "../../lib/core/source.lts",
+    "../../lib/core/diag.lts",
+    "../../lib/core/format.lts",
+    "../../lib/core/list.lts",
+    "../ts-emitter.lts"
+  ]
 }

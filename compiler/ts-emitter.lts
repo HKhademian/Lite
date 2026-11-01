@@ -1,3 +1,10 @@
+importFlatAll "../lib/core/int.lts";
+importFlatAll "../lib/core/text.lts";
+importFlatAll "../lib/core/source.lts";
+importFlatAll "../lib/core/diag.lts";
+importFlatAll "../lib/core/format.lts";
+importFlatAll "../lib/core/list.lts";
+
 /* TypeScript backend for the temporary Lite compiler. */
 /** Formats a checked Int value as a TypeScript BigInt literal. */
 intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {

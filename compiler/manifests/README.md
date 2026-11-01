@@ -1,6 +1,6 @@
 # Compiler source manifests
 
-Status: **P1 implemented, 2026-11-01**. The bundle loader lives in
+Status: **P2 implemented, 2026-11-01**. The bundle loader lives in
 [`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver and
 harness live in [`../../igniter/bootstrap.ts`](../../igniter/bootstrap.ts). No
 public `bootstrap` command is exposed.
@@ -14,28 +14,30 @@ splices into one bundle, in dependency order. The schema is
 {
   "target": "ts",
   "files": [
+    "../../lib/core/int.lts",
     "../../lib/core/text.lts",
-    "../src/ts-literals.lts",
-    "../src/frontend.lts",
-    "../src/emit-ts.lts",
-    "../src/driver-ts.lts"
+    "../../lib/core/source.lts",
+    "../../lib/core/diag.lts",
+    "../../lib/core/format.lts",
+    "../../lib/core/list.lts",
+    "../ts-emitter.lts"
   ]
 }
 ```
 
-The file names above illustrate the target layout. They do not exist yet; P4
-splits the current files and makes the manifest order authoritative. The current
-P1 manifests list one source each:
+The current manifests list the P2 L0 libraries before the existing single-file
+emitter. `lib/core/test.lts` is test-only and is not part of a compiler bundle.
 
 ```json
-{ "target": "ts", "files": ["../ts-emitter.lts"] }
-{ "target": "c", "files": ["../c-emitter.lts"] }
+{ "target": "ts", "files": ["../../lib/core/int.lts", "…", "../ts-emitter.lts"] }
+{ "target": "c", "files": ["../../lib/core/int.lts", "…", "../c-emitter.lts"] }
 ```
 
-Each current source still carries `importFlatAll "frontend.lts";`. The bundle
-loader expands that directive with a line map and include-once behavior, so the
-bundle text is the same as the direct flat-import load. P4 removes the directive
-and lists every file explicitly.
+Each current emitter still carries `importFlatAll "frontend.lts";`, and both
+emitters also import the L0 files at the top. The bundle loader expands those
+directives with a line map and include-once behavior, so the bundle text is the
+same as the direct flat-import load. P4 splits the remaining source and makes the
+manifest order authoritative without the temporary directive.
 
 ## Manifest rules
 

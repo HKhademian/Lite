@@ -1,0 +1,46 @@
+importFlatAll "../core/test.lts";
+
+sum := intAdd(2, 3);
+checkInt("int add", 5, sum.value);
+checkBool("int add ok", true, sum.ok);
+
+overflow := intAdd(intMax(), 1);
+checkBool("int add overflow", false, overflow.ok);
+
+underflow := intSubtract(intMin(), 1);
+checkBool("int subtract underflow", false, underflow.ok);
+
+difference := intSubtract(7, 9);
+checkInt("int subtract", -2, difference.value);
+
+product := intMultiply(-6, 7);
+checkInt("int multiply", -42, product.value);
+minimumProduct := intMultiply(intMin(), -1);
+checkBool("int multiply min overflow", false, minimumProduct.ok);
+
+quotient := intDivide(-7, 2);
+checkInt("int divide", -3, quotient.value);
+checkBool("int divide zero", false, intDivide(1, 0).ok);
+checkBool("int divide min", false, intDivide(intMin(), -1).ok);
+
+remainder := intRemainder(-7, 2);
+checkInt("int remainder", -1, remainder.value);
+checkBool("int remainder zero", false, intRemainder(1, 0).ok);
+
+floor := intFloorDivide(-7, 2);
+checkInt("int floor divide", -4, floor.value);
+modulo := intFloorModulo(-7, 2);
+checkInt("int floor modulo", 1, modulo.value);
+checkBool("int floor modulo zero", false, intFloorModulo(1, 0).ok);
+
+negated := intNegate(42);
+checkInt("int negate", -42, negated.value);
+checkBool("int negate min", false, intNegate(intMin()).ok);
+
+checkText("int text zero", "0", intText(0));
+checkText("int text positive", "42", intText(42));
+checkText("int text negative", "-42", intText(-42));
+checkText("int text max", "9223372036854775807", intText(intMax()));
+checkText("int text min", "-9223372036854775808", intText(intMin()));
+
+done("int");

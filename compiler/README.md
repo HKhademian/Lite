@@ -36,9 +36,13 @@ line-map contract and current hashes are recorded in:
 The P1 bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts)
 loads the current single-file manifests, and
 [`../igniter/bootstrap.ts`](../igniter/bootstrap.ts) compiles and runs them with
-flattened-position diagnostics mapped back to the original files. The
-`src/` and `runtime/` directories remain P4 placeholders; no source has moved
-into them yet.
+flattened-position diagnostics mapped back to the original files. P2 adds the
+provisional L0 helpers under [`../lib/core/`](../lib/README.md): checked Int,
+text, source positions, diagnostics, formatting and list search. Both manifests
+list those files before the emitter, and the compiler uses them without changing
+the 50/42 artifact and diagnostic baseline. `lib/core/test.lts` and `lib/tests/`
+are test-only. The `src/` and `runtime/` directories remain P4 placeholders; no
+source has moved into them yet.
 
 Stage 0 is feature-frozen during bootstrap (B8/B11). Do not add igniter-only
 features to make compiler work easier; new capability belongs in L/S and the

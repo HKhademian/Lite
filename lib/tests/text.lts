@@ -1,0 +1,45 @@
+importFlatAll "../core/text.lts";
+importFlatAll "../core/test.lts";
+
+checkBool("digit 7", true, isDigit("7"));
+checkBool("digit a", false, isDigit("a"));
+checkInt("digit value", 9, digitValue("9"));
+checkBool("ascii letter", true, isAsciiLetter("Z"));
+checkBool("ascii non-letter", false, isAsciiLetter("_"));
+checkBool("name start underscore", true, isNameStart("_"));
+checkBool("name start digit", false, isNameStart("1"));
+checkBool("name continue digit", true, isNameContinue("9"));
+
+checkInt("skip spaces", 3, skipSpaces(" \t\nx", 0));
+checkInt("skip name", 4, skipName("abc9 ", 0));
+checkBool("starts with", true, startsWithAt("hello", 1, "ell"));
+checkBool("starts beyond", false, startsWithAt("hi", 1, "ello"));
+checkBool("word boundary", true, wordAt("foo bar", 4, "bar"));
+checkBool("word not boundary", false, wordAt("foobar", 0, "foo"));
+
+checkInt("index of", 4, indexOfText("abcabc", "bc", 2));
+checkInt("index absent", -1, indexOfText("abc", "z", 0));
+checkInt("index empty", 2, indexOfText("abc", "", 2));
+
+values: List<String> = ["a", "b", "c"];
+checkText("join texts", "a,b,c", joinTexts(values, ","));
+empty: List<String> = [];
+checkText("join empty", "", joinTexts(empty, ","));
+
+parsed := textToInt("42");
+checkInt("text to int", 42, parsed.value);
+checkBool("text to int ok", true, parsed.ok);
+plusParsed := textToInt("+7");
+checkInt("text to int plus", 7, plusParsed.value);
+minParsed := textToInt("-9223372036854775808");
+checkBool("text to int min", true, minParsed.ok);
+maxOverflow := textToInt("9223372036854775808");
+checkBool("text to int max overflow", false, maxOverflow.ok);
+malformed := textToInt("12x");
+checkBool("text to int malformed", false, malformed.ok);
+emptyParsed := textToInt("");
+checkBool("text to int empty", false, emptyParsed.ok);
+signOnly := textToInt("-");
+checkBool("text to int sign only", false, signOnly.ok);
+
+done("text");

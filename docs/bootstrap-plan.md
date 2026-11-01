@@ -50,15 +50,16 @@ Related direction:
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **182** interpreter test groups and **9** editor grammar groups; the fast lane
-  currently runs in about 11–12 seconds.
+- **183** interpreter test groups and **9** editor grammar groups; the fast lane
+  currently runs in about 13–14 seconds.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.
 - Restricted compiler corpus: **50** program cases and **42** rejection cases
   under [`igniter/tests/compiler/`](../igniter/tests/compiler/).
-- Compiler sources: 1119 lines across `frontend.lts`, `ts-emitter.lts` and
-  `c-emitter.lts`. Exact hashes and emitted-artifact baselines are recorded in
-  [`compiler/baseline.md`](../compiler/baseline.md).
+- Compiler sources: **989** lines across `frontend.lts`, `ts-emitter.lts` and
+  `c-emitter.lts`, plus **467** lines of L0 helpers under `lib/core/`. Exact
+  P0 hashes are recorded in [`compiler/baseline.md`](../compiler/baseline.md);
+  P2 artifact hashes are unchanged.
 - S is valid Lite today: `./lite check compiler/ts-emitter.lts` passes. The
   compiler itself does not parse S yet; its accepted surface is Int/String/Bool
   expressions, immutable and mutable locals, `report(...)`, `if`/`else`, and
@@ -70,9 +71,9 @@ Related direction:
 Update these counts only when they actually change. Do not copy stale counts into
 new documents.
 
-**Current gate: P2 — L0 shared libraries, not started.** P1 was completed on
-2026-11-01; update this line when a gate is completed and use the phase
-checklists as the source of truth.
+**Current gate: P3 — Lexer, not started.** P2 was completed on 2026-11-01;
+update this line when a gate is completed and use the phase checklists as the
+source of truth.
 
 **Accepted-surface parity track (owner direction, 2026-11-01):** ahead of the
 P0-P9 order, the compiler's accepted surface grew one control-flow slice:
@@ -270,10 +271,12 @@ or add a public `bootstrap` command without an owner decision.
 **Goal:** give compiler code a small, reusable support layer without making an
 official std decision.
 
-Create declaration-only Lite files under `lib/core/` (provisional names) and list
-them before the compiler sources in each manifest. Add `lib/README.md` stating
-that the tree is provisional bootstrap support, not `lite-stdlib`, with no stable
-public API.
+- [x] Create declaration-only Lite files under `lib/core/` (provisional names)
+      and list the compiler-used files before the compiler sources in each
+      manifest. `lib/core/test.lts` is test-only and is not bundled into a
+      compiler.
+- [x] Add `lib/README.md` stating that the tree is provisional bootstrap support,
+      not `lite-stdlib`, with no stable public API.
 
 | File | Capabilities | Consumers |
 |---|---|---|
@@ -294,8 +297,14 @@ Rules:
 - Names and APIs are provisional and may change with the compiler.
 - Do not add examples or samples that import these files.
 
-**Gate:** each library has direct tests; the compiler uses L0 without behavior
-change; the 50/42 corpus remains byte-identical.
+- [x] Each library has direct tests under `lib/tests/`.
+- [x] The compiler uses L0 without behavior change; the 50/42 corpus remains
+      byte-identical.
+
+**Gate passed 2026-11-01:** each L0 file has a direct Lite test entry; the
+compiler imports the L0 helpers through both manifests and the direct
+flat-import path; all 50 program and 42 rejection cases retain their exact
+artifacts and diagnostics.
 
 **Parallel track:** L1 reusable pure libraries may start after L0, but do not gate
 P3–P8. L2 host libraries and L3 tooling libraries wait for separate decisions.

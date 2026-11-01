@@ -1,0 +1,96 @@
+/* Provisional bootstrap checked-integer support. Not an official standard library. */
+
+/** Returns the smallest signed 64-bit value. */
+intMin := fn(): Int { -9223372036854775808 }
+
+/** Returns the largest signed 64-bit value. */
+intMax := fn(): Int { 9223372036854775807 }
+
+/** Checked signed 64-bit addition; `ok` is false instead of evaluating an overflow. */
+intAdd := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right > 0 and left > intMax() - right { return (value = 0, ok = false); }
+    if right < 0 and left < intMin() - right { return (value = 0, ok = false); }
+    (value = left + right, ok = true)
+}
+
+/** Checked signed 64-bit subtraction; `ok` is false instead of evaluating an overflow. */
+intSubtract := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right < 0 and left > intMax() + right { return (value = 0, ok = false); }
+    if right > 0 and left < intMin() + right { return (value = 0, ok = false); }
+    (value = left - right, ok = true)
+}
+
+/** Checked signed 64-bit multiplication; `ok` is false instead of evaluating an overflow. */
+intMultiply := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if left == 0 or right == 0 { return (value = 0, ok = true); }
+    if left > 0 {
+        if right > 0 {
+            if left > intMax() / right { return (value = 0, ok = false); }
+        } else if right < intMin() / left {
+            return (value = 0, ok = false);
+        }
+    } else if right > 0 {
+        if left < intMin() / right { return (value = 0, ok = false); }
+    } else if right < intMax() / left {
+        return (value = 0, ok = false);
+    }
+    (value = left * right, ok = true)
+}
+
+/** Checked truncating signed division; `ok` is false on zero or the signed-minimum overflow. */
+intDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    (value = left / right, ok = true)
+}
+
+/** Checked truncating signed remainder; `ok` is false on zero or the signed-minimum overflow. */
+intRemainder := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    (value = left % right, ok = true)
+}
+
+/** Checked floor division; `ok` is false on zero or the signed-minimum overflow. */
+intFloorDivide := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin() and right == -1 { return (value = 0, ok = false); }
+    quotient := left / right;
+    if left % right =!= 0 and (left < 0) =!= (right < 0) {
+        (value = quotient - 1, ok = true)
+    } else {
+        (value = quotient, ok = true)
+    }
+}
+
+/** Checked floor modulo; `ok` is false only on a zero divisor. */
+intFloorModulo := fn(left: Int, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    remainder := left % right;
+    if remainder =!= 0 and (remainder < 0) =!= (right < 0) {
+        (value = remainder + right, ok = true)
+    } else {
+        (value = remainder, ok = true)
+    }
+}
+
+/** Checked unary negation; `ok` is false for the signed minimum. */
+intNegate := fn(value: Int): (value: Int, ok: Bool) {
+    if value == intMin() { return (value = 0, ok = false); }
+    (value = 0 - value, ok = true)
+}
+
+/** Formats one signed 64-bit Int as decimal text. */
+intText := fn(value: Int): String {
+    if value == 0 { return "0"; }
+    if value == intMin() { return "-9223372036854775808"; }
+    if value < 0 { return "-" + intText(0 - value); }
+    var remaining := value;
+    var digits := "";
+    loop remaining > 0 {
+        digit := remaining % 10;
+        digits = textAt("0123456789", digit) + digits;
+        remaining = remaining / 10;
+    }
+    digits
+}

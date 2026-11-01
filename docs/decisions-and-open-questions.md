@@ -266,6 +266,18 @@ new capability is Lite-first, and igniter-only features are debt rather than
 progress. Full replacement of the TS igniter for features outside L remains a
 separate owner decision.
 
+## Provisional L0 bootstrap libraries, 2026-11-01
+
+P2 creates declaration-only helpers under `lib/core/` for checked Int64
+arithmetic, text, source positions, diagnostics, formatting, list search and
+Lite test assertions. They are provisional bootstrap support, not `lite-stdlib`:
+no stable API, no example/sample imports and no design-specification status. The
+TS/C manifests list the compiler-used files before the emitters, and the
+compiler adopts them without changing the 50 program / 42 rejection baseline.
+`lib/core/test.lts` and `lib/tests/` stay test-only. See
+[the library README](../lib/README.md) and
+[P2](bootstrap-plan.md#p2--l0-shared-libraries).
+
 ## Lite-written arithmetic front-end exercise, 2026-10-31
 
 Under automatic selected-scope progression, example 016 now parses and evaluates

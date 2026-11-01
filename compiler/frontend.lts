@@ -12,103 +12,18 @@ Items := type List<Item>;
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := type (text: String, width: Int);
 
-/** True when `text` is exactly one ASCII decimal digit. */
-isDigit := fn(text: String): Bool {
-    or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"
-    or text == "5" or text == "6" or text == "7" or text == "8" or text == "9"
-}
-
-/** Numeric value of one checked ASCII decimal digit. */
-digitValue := fn(text: String): Int {
-    if text == "0" { return 0; }
-    if text == "1" { return 1; }
-    if text == "2" { return 2; }
-    if text == "3" { return 3; }
-    if text == "4" { return 4; }
-    if text == "5" { return 5; }
-    if text == "6" { return 6; }
-    if text == "7" { return 7; }
-    if text == "8" { return 8; }
-    9
-}
-
-/** Returns the first position at or after `start` that is not Lite whitespace. */
-skipSpaces := fn(source: String, start: Int): Int {
-    size := textLength(source);
-    var position := start;
-    loop position < size and (textAt(source, position) == " " or textAt(source, position) == "\t" or textAt(source, position) == "\r" or textAt(source, position) == "\n") {
-        position = position + 1;
-    }
-    position
-}
-
-/** One-based line and column of a source offset, clamping offsets at or below zero and at or beyond EOF. */
-lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
-    size := textLength(source);
-    var cursor := position;
-    if cursor < 0 { cursor = 0; }
-    if cursor > size { cursor = size; }
-    var line := 1;
-    var lineStart := 0;
-    var index := 0;
-    loop index < cursor {
-        if textAt(source, index) == "\n" {
-            line = line + 1;
-            lineStart = index + 1;
-        }
-        index = index + 1;
-    }
-    (line = line, column = cursor - lineStart + 1)
-}
-
-/** Formats a nonnegative Int as decimal text for diagnostic locations. */
-decimalText := fn(value: Int): String {
-    if value == 0 { return "0"; }
-    var remaining := value;
-    var digits := "";
-    loop remaining > 0 {
-        digit := remaining % 10;
-        digits = textAt("0123456789", digit) + digits;
-        remaining = remaining / 10;
-    }
-    digits
-}
-
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
-fail := fn(source: String, position: Int, prefix: String, message: String): Unit {
+failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := lineColumn(source, position);
-    location := decimalText(place.line) + ":" + decimalText(place.column) + ": ";
-    if prefix == "" {
-        reportError(location + message);
-    } else {
-        reportError(prefix + ":" + location + message);
-    }
-    exit(2);
+    fail(prefix, decimalText(place.line) + ":" + decimalText(place.column) + ": " + message);
 }
 
 /** Consumes the exact `symbol` at `position`, or reports a source-positioned diagnostic and exits 2. */
 expectSymbol := fn(source: String, position: Int, symbol: String, prefix: String): Int {
     if position >= textLength(source) or textAt(source, position) =!= symbol {
-        fail(source, position, prefix, "expected " + symbol);
+        failAt(source, position, prefix, "expected " + symbol);
     }
     position + 1
-}
-
-/** True for an ASCII identifier start or underscore accepted by the compiler subset. */
-isNameStart := fn(ch: String): Bool {
-    starts := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-    size := textLength(starts);
-    var position := 0;
-    loop position < size {
-        if textAt(starts, position) == ch { return true; }
-        position = position + 1;
-    }
-    false
-}
-
-/** True for an identifier continuation character. */
-isNameContinue := fn(ch: String): Bool {
-    isNameStart(ch) or isDigit(ch)
 }
 
 /** True for a Lite keyword that this restricted compiler does not implement. */
@@ -137,32 +52,8 @@ featureDoc := fn(name: String): String {
 
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
 unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
-    fail(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
+    failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
         "; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only");
-}
-
-/** Returns the position after the identifier run starting at `start`. */
-skipName := fn(source: String, start: Int): Int {
-    size := textLength(source);
-    var position := start;
-    loop position < size and isNameContinue(textAt(source, position)) {
-        position = position + 1;
-    }
-    position
-}
-
-/** True when `text` occurs at `position` and stays inside `source`. */
-startsWithAt := fn(source: String, position: Int, text: String): Bool {
-    width := textLength(text);
-    if position < 0 or position + width > textLength(source) { return false; }
-    textSlice(source, position, position + width) == text
-}
-
-/** True when the whole identifier `word` occurs at `position`, not a longer identifier that merely starts with it. */
-wordAt := fn(source: String, position: Int, word: String): Bool {
-    if not startsWithAt(source, position, word) { return false; }
-    after := position + textLength(word);
-    after >= textLength(source) or not isNameContinue(textAt(source, after))
 }
 
 /** Builds an Int parsed value; `textValue` is empty. */
@@ -183,102 +74,67 @@ boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
 /* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
 /** Checked signed 64-bit addition; reports at `at` and exits 2 on overflow. */
 addIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right > 0 and left > 9223372036854775807 - right {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    if right < 0 and left < -9223372036854775808 - right {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    left + right
+    result := intAdd(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
 }
 
 /** Checked signed 64-bit subtraction; reports at `at` and exits 2 on overflow. */
 subtractIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right < 0 and left > 9223372036854775807 + right {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    if right > 0 and left < -9223372036854775808 + right {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    left - right
+    result := intSubtract(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
 }
 
 /** Checked signed 64-bit multiplication; reports at `at` and exits 2 on overflow. */
 multiplyIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if left == 0 or right == 0 { return 0; }
-    if left > 0 {
-        if right > 0 {
-            if left > 9223372036854775807 / right {
-                fail(source, at, prefix, "integer expression outside signed 64-bit range");
-            }
-        } else {
-            if right < -9223372036854775808 / left {
-                fail(source, at, prefix, "integer expression outside signed 64-bit range");
-            }
-        }
-    } else {
-        if right > 0 {
-            if left < -9223372036854775808 / right {
-                fail(source, at, prefix, "integer expression outside signed 64-bit range");
-            }
-        } else {
-            if right < 9223372036854775807 / left {
-                fail(source, at, prefix, "integer expression outside signed 64-bit range");
-            }
-        }
-    }
-    left * right
+    result := intMultiply(left, right);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
 }
 
 /** Truncating signed 64-bit division; reports at `at` and exits 2 on zero or MIN divided by -1. */
 divideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right == 0 {
-        fail(source, at, prefix, "division by zero in integer expression");
+    result := intDivide(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
     }
-    if left == -9223372036854775808 and right == -1 {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    left / right
+    result.value
 }
 
 /** Checked truncating Int remainder; reports at `at` and exits 2 on zero divisor or signed overflow. */
 remainderIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right == 0 {
-        fail(source, at, prefix, "remainder by zero in integer expression");
+    result := intRemainder(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "remainder by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
     }
-    if left == -9223372036854775808 and right == -1 {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    left % right
+    result.value
 }
 
 /** Checked floor division; reports at `at` and exits 2 on zero or signed overflow. */
 floorDivideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right == 0 {
-        fail(source, at, prefix, "division by zero in integer expression");
+    result := intFloorDivide(left, right);
+    if not result.ok {
+        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
+        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
     }
-    if left == -9223372036854775808 and right == -1 {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    quotient := left / right;
-    if left % right =!= 0 and (left < 0) =!= (right < 0) { quotient - 1 } else { quotient }
+    result.value
 }
 
 /** Checked floor modulo; reports at `at` and exits 2 on zero. */
 floorModuloIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    if right == 0 {
-        fail(source, at, prefix, "modulo by zero in integer expression");
-    }
-    remainder := left % right;
-    if remainder =!= 0 and (remainder < 0) =!= (right < 0) { remainder + right } else { remainder }
+    result := intFloorModulo(left, right);
+    if not result.ok { failAt(source, at, prefix, "modulo by zero in integer expression"); }
+    result.value
 }
 
 /** Checked unary negation; reports at `at` and exits 2 for the signed minimum. */
 negateInteger := fn(source: String, at: Int, value: Int, prefix: String): Int {
-    if value == -9223372036854775808 {
-        fail(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    0 - value
+    result := intNegate(value);
+    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
+    result.value
 }
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
@@ -367,7 +223,7 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
     if left.kind =!= right.kind {
-        fail(source, at, prefix, "cannot compare " + left.kind + " and " + right.kind);
+        failAt(source, at, prefix, "cannot compare " + left.kind + " and " + right.kind);
     }
     if left.kind == "Int" {
         if left.constant and right.constant {
@@ -378,7 +234,7 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
         }
     } else {
         if operator =!= "==" and operator =!= "=!=" {
-            fail(source, at, prefix, "operator " + operator + " requires Int operands");
+            failAt(source, at, prefix, "operator " + operator + " requires Int operands");
         }
         if left.constant and right.constant {
             value := if left.kind == "String" {
@@ -407,16 +263,16 @@ parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
     loop cursor < textLength(source) and isDigit(textAt(source, cursor)) {
         digit := digitValue(textAt(source, cursor));
         if magnitude < (-9223372036854775808 + digit) / 10 {
-            fail(source, position, prefix, "integer literal outside signed 64-bit range");
+            failAt(source, position, prefix, "integer literal outside signed 64-bit range");
         }
         magnitude = magnitude * 10 - digit;
         cursor = cursor + 1;
     }
     if start == cursor {
-        fail(source, position, prefix, "expected a decimal integer literal");
+        failAt(source, position, prefix, "expected a decimal integer literal");
     }
     if not negative and magnitude == -9223372036854775808 {
-        fail(source, position, prefix, "integer literal outside signed 64-bit range");
+        failAt(source, position, prefix, "integer literal outside signed 64-bit range");
     }
     value := if negative { magnitude } else { 0 - magnitude };
     raw := textSlice(source, start, cursor);
@@ -435,7 +291,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
     var value := "";
     loop true {
         if cursor >= textLength(source) {
-            fail(source, position, prefix, "unterminated string literal");
+            failAt(source, position, prefix, "unterminated string literal");
         }
         ch := textAt(source, cursor);
         if ch == "\"" {
@@ -446,7 +302,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
             escapeStart := cursor;
             cursor = cursor + 1;
             if cursor >= textLength(source) {
-                fail(source, escapeStart, prefix, "unterminated string escape");
+                failAt(source, escapeStart, prefix, "unterminated string escape");
             }
             escaped := textAt(source, cursor);
             if escaped == "n" { value = value + "\n"; }
@@ -455,7 +311,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
             else if escaped == "\"" { value = value + "\""; }
             else if escaped == "\\" { value = value + "\\"; }
             else {
-                fail(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
+                failAt(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
             }
             cursor = cursor + 1;
         } else {
@@ -470,7 +326,7 @@ parseText := fn(source: String, position: Int, prefix: String): Parsed {
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, minimum: Int): Parsed {
     start := skipSpaces(source, position);
     if start >= textLength(source) {
-        fail(source, start, prefix, "expected an Int, String or Bool expression");
+        failAt(source, start, prefix, "expected an Int, String or Bool expression");
     }
     var left := intParsed("", 0, true, start);
     ch := textAt(source, start);
@@ -485,7 +341,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         } else {
             operand := self(source, start + 1, prefix, locals, 30);
             if operand.kind =!= "Int" {
-                fail(source, start, prefix, "unary " + ch + " requires an Int operand");
+                failAt(source, start, prefix, "unary " + ch + " requires an Int operand");
             }
             code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
             if operand.constant {
@@ -510,7 +366,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         } else if name == "not" {
             operand := self(source, next, prefix, locals, 5);
             if operand.kind =!= "Bool" {
-                fail(source, nameStart, prefix, "not requires a Bool operand");
+                failAt(source, nameStart, prefix, "not requires a Bool operand");
             }
             if operand.constant {
                 value := operand.intValue == 0;
@@ -522,13 +378,13 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
             index := localIndex(locals, name);
             if index < 0 {
-                fail(source, nameStart, prefix, "unknown value " + name);
+                failAt(source, nameStart, prefix, "unknown value " + name);
             }
             entry := locals[index];
             left = (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = entry.textValue, constant = entry.constant, next = next);
         }
     } else {
-        fail(source, start, prefix, "expected an Int, String or Bool expression");
+        failAt(source, start, prefix, "expected an Int, String or Bool expression");
     }
     loop true {
         operatorPosition := skipSpaces(source, left.next);
@@ -540,7 +396,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         right := self(source, operatorPosition + operator.width, prefix, locals, level + 1);
         if operator.text == "and" or operator.text == "or" {
             if left.kind =!= "Bool" or right.kind =!= "Bool" {
-                fail(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
+                failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
             }
             if left.constant and right.constant {
                 value := if operator.text == "and" {
@@ -568,7 +424,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                 left = intParsed(code, folded, true, right.next);
             } else if operator.text == "/" or operator.text == "%" or operator.text == ":/" or operator.text == ":%" {
-                fail(source, operatorPosition, prefix, "runtime division is not supported by this compiler checkpoint yet");
+                failAt(source, operatorPosition, prefix, "runtime division is not supported by this compiler checkpoint yet");
             } else {
                 left = intParsed("(" + left.code + " " + operator.text + " " + right.code + ")", 0, false, right.next);
             }
@@ -577,12 +433,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 combined := left.textValue + right.textValue;
                 left = textParsed(textLiteralCode(combined), combined, true, right.next);
             } else {
-                fail(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
+                failAt(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
             }
         } else if operator.text == "+" {
-            fail(source, operatorPosition, prefix, "cannot mix Int and String operands");
+            failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
         } else {
-            fail(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
+            failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
         }
     }
     left
@@ -619,13 +475,13 @@ parseProgram := fn(source: String, prefix: String): Items {
     var depth := 0;
     var position := skipSpaces(source, 0);
     if position == size {
-        fail(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+        failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
     }
     loop position < size {
         ch := textAt(source, position);
         if ch == "}" {
             if blockCount == 0 {
-                fail(source, position, prefix, "unexpected }");
+                failAt(source, position, prefix, "unexpected }");
             }
             blockKind := blocks[blockCount - 1];
             after := skipSpaces(source, position + 1);
@@ -663,7 +519,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if not isNameStart(ch) {
-            fail(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+            failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
         }
         nameStart := position;
         position = skipName(source, position);
@@ -671,7 +527,7 @@ parseProgram := fn(source: String, prefix: String): Items {
         position = skipSpaces(source, position);
         if name == "report" {
             if position >= size or textAt(source, position) =!= "(" {
-                fail(source, position, prefix, "expected ( after report");
+                failAt(source, position, prefix, "expected ( after report");
             }
             position = skipSpaces(source, position + 1);
             loop true {
@@ -698,7 +554,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             conditionStart := position;
             condition := parseExpression(source, position, prefix, locals);
             if condition.kind =!= "Bool" {
-                fail(source, conditionStart, prefix, "if condition must be Bool");
+                failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
             conditionCode := if condition.constant {
                 boolLiteralCode(condition.intValue =!= 0)
@@ -720,7 +576,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 conditionStart := position;
                 condition := parseExpression(source, position, prefix, locals);
                 if condition.kind =!= "Bool" {
-                    fail(source, conditionStart, prefix, "loop condition must be Bool");
+                    failAt(source, conditionStart, prefix, "loop condition must be Bool");
                 }
                 if condition.constant {
                     if condition.intValue == 0 { conditionCode = "false"; }
@@ -741,7 +597,7 @@ parseProgram := fn(source: String, prefix: String): Items {
         if name == "var" {
             position = skipSpaces(source, position);
             if position >= size or not isNameStart(textAt(source, position)) {
-                fail(source, position, prefix, "expected local name after var");
+                failAt(source, position, prefix, "expected local name after var");
             }
             localStart := position;
             position = skipName(source, position);
@@ -749,17 +605,17 @@ parseProgram := fn(source: String, prefix: String): Items {
             if isReservedWord(localName) { unsupportedFeature(source, localStart, localName, prefix); }
             position = skipSpaces(source, position);
             if not startsWithAt(source, position, ":=") {
-                fail(source, position, prefix, "expected := or = after local name " + localName);
+                failAt(source, position, prefix, "expected := or = after local name " + localName);
             }
             position = skipSpaces(source, position + 2);
             parsed := parseExpression(source, position, prefix, locals);
             position = skipSpaces(source, parsed.next);
             if position >= size or textAt(source, position) =!= ";" {
-                fail(source, position, prefix, "expected ; after local declaration " + localName);
+                failAt(source, position, prefix, "expected ; after local declaration " + localName);
             }
             position = skipSpaces(source, position + 1);
             if localSameBlock(locals, localName, depth) {
-                fail(source, localStart, prefix, "duplicate local " + localName);
+                failAt(source, localStart, prefix, "duplicate local " + localName);
             }
             runtime := "lite_" + localName;
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
@@ -771,7 +627,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if name == "else" {
-            fail(source, nameStart, prefix, "unexpected else");
+            failAt(source, nameStart, prefix, "unexpected else");
         }
         if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
         if startsWithAt(source, position, ":=") {
@@ -779,11 +635,11 @@ parseProgram := fn(source: String, prefix: String): Items {
             parsed := parseExpression(source, position, prefix, locals);
             position = skipSpaces(source, parsed.next);
             if position >= size or textAt(source, position) =!= ";" {
-                fail(source, position, prefix, "expected ; after local declaration " + name);
+                failAt(source, position, prefix, "expected ; after local declaration " + name);
             }
             position = skipSpaces(source, position + 1);
             if localSameBlock(locals, name, depth) {
-                fail(source, nameStart, prefix, "duplicate local " + name);
+                failAt(source, nameStart, prefix, "duplicate local " + name);
             }
             runtime := "lite_" + name;
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
@@ -797,20 +653,20 @@ parseProgram := fn(source: String, prefix: String): Items {
         if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
             index := localIndex(locals, name);
             if index < 0 {
-                fail(source, nameStart, prefix, "unknown value " + name);
+                failAt(source, nameStart, prefix, "unknown value " + name);
             }
             entry := locals[index];
             if not entry.mutable {
-                fail(source, nameStart, prefix, "cannot assign to immutable local " + name);
+                failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
             position = skipSpaces(source, position + 1);
             parsed := parseExpression(source, position, prefix, locals);
             if parsed.kind =!= entry.kind {
-                fail(source, nameStart, prefix, "cannot assign " + parsed.kind + " to " + entry.kind + " local " + name);
+                failAt(source, nameStart, prefix, "cannot assign " + parsed.kind + " to " + entry.kind + " local " + name);
             }
             position = skipSpaces(source, parsed.next);
             if position >= size or textAt(source, position) =!= ";" {
-                fail(source, position, prefix, "expected ; after assignment to " + name);
+                failAt(source, position, prefix, "expected ; after assignment to " + name);
             }
             position = skipSpaces(source, position + 1);
             push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
@@ -821,10 +677,10 @@ parseProgram := fn(source: String, prefix: String): Items {
                 code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
             continue;
         }
-        fail(source, position, prefix, "expected := or = after local name " + name);
+        failAt(source, position, prefix, "expected := or = after local name " + name);
     }
     if blockCount > 0 {
-        fail(source, size, prefix, "expected } before end of source");
+        failAt(source, size, prefix, "expected } before end of source");
     }
     items
 }

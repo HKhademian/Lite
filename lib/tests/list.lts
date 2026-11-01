@@ -1,0 +1,19 @@
+importFlatAll "../core/list.lts";
+importFlatAll "../core/test.lts";
+
+texts: List<String> = ["a", "b", "c"];
+checkInt("list index text", 1, listIndexOfText(texts, "b"));
+checkInt("list index text absent", -1, listIndexOfText(texts, "z"));
+checkBool("list contains text", true, listContainsText(texts, "c"));
+checkBool("list lacks text", false, listContainsText(texts, "z"));
+
+ints: List<Int> = [3, 5, 8];
+checkInt("list index int", 2, listIndexOfInt(ints, 8));
+checkBool("list contains int", true, listContainsInt(ints, 5));
+checkBool("list lacks int", false, listContainsInt(ints, 4));
+
+flags: List<Bool> = [false, true];
+checkInt("list index bool", 1, listIndexOfBool(flags, true));
+checkBool("list contains bool", true, listContainsBool(flags, false));
+
+done("list");

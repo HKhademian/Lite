@@ -1,0 +1,64 @@
+/* Provisional bootstrap source-position support. Not an official standard library. */
+
+/** Clamps one offset into the inclusive range `0..textLength(source)`. */
+clampPosition := fn(source: String, position: Int): Int {
+    size := textLength(source);
+    if position < 0 { return 0; }
+    if position > size { return size; }
+    position
+}
+
+/** One-based line and column of a source offset, clamping at both ends. */
+lineColumn := fn(source: String, position: Int): (line: Int, column: Int) {
+    cursor := clampPosition(source, position);
+    var line := 1;
+    var lineStart := 0;
+    var index := 0;
+    loop index < cursor {
+        if textAt(source, index) == "\n" {
+            line = line + 1;
+            lineStart = index + 1;
+        }
+        index = index + 1;
+    }
+    (line = line, column = cursor - lineStart + 1)
+}
+
+/** Number of source lines, counting the empty source as one line. */
+lineCount := fn(source: String): Int {
+    size := textLength(source);
+    var count := 1;
+    var index := 0;
+    loop index < size {
+        if textAt(source, index) == "\n" { count = count + 1; }
+        index = index + 1;
+    }
+    count
+}
+
+/** Offset of the first character on one-based `line`, or text length when absent. */
+lineStartOffset := fn(source: String, line: Int): Int {
+    size := textLength(source);
+    if line <= 1 { return 0; }
+    var current := 2;
+    var index := 0;
+    loop index < size {
+        if textAt(source, index) == "\n" {
+            if current == line { return index + 1; }
+            current = current + 1;
+        }
+        index = index + 1;
+    }
+    size
+}
+
+/** Offset just before the line terminator of one-based `line`. */
+lineEndOffset := fn(source: String, line: Int): Int {
+    size := textLength(source);
+    start := lineStartOffset(source, line);
+    var index := start;
+    loop index < size and textAt(source, index) =!= "\n" {
+        index = index + 1;
+    }
+    index
+}

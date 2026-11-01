@@ -1,0 +1,22 @@
+importFlatAll "../core/source.lts";
+importFlatAll "../core/test.lts";
+
+place := lineColumn("ab\ncd", 3);
+checkInt("line column line", 2, place.line);
+checkInt("line column column", 1, place.column);
+
+clamped := lineColumn("ab\ncd", 100);
+checkInt("line column clamped line", 2, clamped.line);
+checkInt("line column clamped column", 3, clamped.column);
+
+checkInt("line count empty", 1, lineCount(""));
+checkInt("line count two", 2, lineCount("a\nb"));
+checkInt("line count trailing", 2, lineCount("a\n"));
+
+checkInt("line start second", 3, lineStartOffset("ab\ncd", 2));
+checkInt("line end first", 2, lineEndOffset("ab\ncd", 1));
+checkInt("line end last", 5, lineEndOffset("ab\ncd", 2));
+checkInt("clamp below", 0, clampPosition("abc", -2));
+checkInt("clamp above", 3, clampPosition("abc", 9));
+
+done("source");

@@ -1,0 +1,4 @@
+importFlatAll "../core/test.lts";
+
+check("bad", false);
+report("unreachable");

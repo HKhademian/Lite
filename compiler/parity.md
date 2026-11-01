@@ -55,6 +55,8 @@ keeps that target from growing while it is approached.
 
 - P1 bundle tooling is green: direct flat-import and bundle paths produce
   byte-identical artifacts and exact diagnostics for all 92 compiler cases.
+- P2 L0 helpers exist under `lib/core/` with direct Lite tests. The compiler
+  imports them without changing the 50/42 artifact and diagnostic baseline.
 - Stage 0 is feature-frozen. P2-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T and C do not exist yet, so there is no stage-0-versus-generated row.

@@ -1,0 +1,25 @@
+/* Provisional bootstrap diagnostic support. Not an official standard library. */
+
+/** Returns the process status used for source, type and unsupported-feature diagnostics. */
+diagnosticExit := fn(): Int { 2 }
+
+/** Category text used by the igniter for source-shape failures. */
+sourceErrorCategory := "SourceError";
+
+/** Category text used by the igniter for type failures. */
+typeErrorCategory := "TypeError";
+
+/** Reports `message`, prefixed by `prefix:` when nonempty, then exits 2. */
+fail := fn(prefix: String, message: String): Unit {
+    if prefix == "" {
+        reportError(message);
+    } else {
+        reportError(prefix + ":" + message);
+    }
+    exit(diagnosticExit());
+}
+
+/** Reports `message` through `fail` unless `condition` is true. */
+expect := fn(prefix: String, condition: Bool, message: String): Unit {
+    if not condition { fail(prefix, message); } else { }
+}
