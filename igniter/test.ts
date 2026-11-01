@@ -1098,12 +1098,12 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     ['A := type Missing;\n', '1:11: unknown type alias Missing\n'],
     ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
     ['A := type A;\n', '1:1: recursive type alias A\n'],
-    ['A := type List<Int>;\n',
-      '1:11: unsupported type alias List; only Int, String, Bool, Unit, flat named tuples and aliases are supported\n'],
+    ['A := type List<>;\n',
+      '1:11: expected a list element type\n'],
     ['A := type ();\n',
       '1:11: tuple type needs at least one field\n'],
     ['A := type Float;\n',
-      '1:11: unsupported type alias Float; only Int, String, Bool, Unit, flat named tuples and aliases are supported\n'],
+      '1:11: unsupported type alias Float; only Int, String, Bool, Unit, List<T>, flat named tuples and aliases are supported\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1152,6 +1152,65 @@ test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
   assert.deepEqual(runCompiler(cManifestPath, tupleSource), {
     code: 2, output: '', errors: 'C backend does not support tuple values yet\n',
   });
+});
+
+test('restricted compiler compiles growable lists, literals and indexing to runnable TS', async () => {
+  const source = [
+    'Ints := type List<Int>;',
+    'Chain := type Ints;',
+    'Count := type Int;',
+    'Counts := type List<Count>;',
+    'Words := type List<String>;',
+    'Pair := type (kind: String, code: String);',
+    'Pairs := type List<Pair>;',
+    'first := fn (values: Ints): Int { values[0] }',
+    'make := fn (): Chain { [6, 7] }',
+    'none := fn (): List<Int> { [] }',
+    'copy := fn (words: Words): Words { words }',
+    'count := fn (values: List<Int>): Int { 0 }',
+    'values: List<Int> = [10, 20, 30];',
+    'names: List<String> = ["alpha", "beta"];',
+    'empty: List<Int> = [];',
+    'pairs: Pairs = [(kind = "number", code = "12"), (kind = "symbol", code = "+")];',
+    'more: Chain = [7];',
+    'counts: Counts = [8, 9];',
+    'var editable: List<Int> = [1];',
+    'editable = [];',
+    'report(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));',
+    'report([4, 5][1], count(empty), count(none()), counts[1]);',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('20 alpha 7 symbol 12 7 beta 0\n5 0 0 9\n'), stderr: Buffer.alloc(0),
+  });
+
+  const bounds = runCompiler(tsManifestPath, 'values: List<Int> = [1];\nreport(values[1]);\n');
+  assert.equal(bounds.code, 0, bounds.errors);
+  const boundsRun = runTsArtifact(bounds.output);
+  assert.equal(boundsRun.phase, 'run');
+  assert.notEqual(boundsRun.status, 0);
+  assert.match(boundsRun.stderr.toString(), /BoundPanic: list index outside its extent/);
+});
+
+test('restricted compiler diagnoses invalid list types, literals and indexes clearly', () => {
+  for (const [bad, errors] of [
+    ['values: List<Int> = ["bad"];\n', '1:22: list element 1 must be Int, got String\n'],
+    ['x := 1;\nreport(x[0]);\n', '2:9: indexing requires a list value\n'],
+    ['values: List<Int> = [1];\nreport(values["x"]);\n', '2:15: list index must be Int, got String\n'],
+    ['values: List<Int> = [1];\nother: List<String> = values;\n', '2:1: cannot initialize List<String> with List<Int>\n'],
+    ['values := [];\n', '1:11: empty list literal requires a List element type\n'],
+    ['values: List<List<Int>> = [];\n', '1:14: nested list types are not supported\n'],
+    ['values: List<Int> = [1];\nreport(values);\n', '2:8: report does not accept a list value\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  for (const bad of ['values: List<Int> = [1];\nreport(1);\n', 'report([1][0]);\n']) {
+    assert.deepEqual(runCompiler(cManifestPath, bad), {
+      code: 2, output: '', errors: 'C backend does not support list values yet\n',
+    }, bad);
+  }
 });
 
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {

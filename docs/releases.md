@@ -5,7 +5,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 36 features, 19 examples, 20 samples, 75 scenarios, 91 target executions
-- Tests: 206 interpreter groups and 9 editor grammar groups
+- Tests: 208 interpreter groups and 9 editor grammar groups
 
 The igniter tags are annotated and pinned to the source commit that produced
 each milestone. Do not move or delete a published tag; corrections get a new

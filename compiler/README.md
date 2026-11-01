@@ -128,20 +128,27 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 The compiler source is still restricted, but the accepted surface now includes
 Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
 assignment), `report(...)`, `if`/`else`, Boolean or unconditional `loop`,
-transparent top-level type aliases (`Name := type Type;`), and top-level
-functions with Int/String/Bool/Unit or flat named-tuple parameters and results,
-positional calls, recursion/`self` and `return`. Aliases resolve to
-Int/String/Bool/Unit, a flat named tuple, or another alias and may appear in
-local, parameter and result annotations. Flat named tuples use `(label: Type,
-...)` types, `(label = value, ...)` construction and `.label` reads with
-Int/String/Bool components; unnamed tuples, nested tuples, destructuring,
-spread, mutation, lists and arrays remain rejected. Constant-only expressions
+transparent top-level type aliases (`Name := type Type;`), top-level
+functions with Int/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
+results, positional calls, recursion/`self` and `return`. Aliases resolve to
+Int/String/Bool/Unit, a flat named tuple, `List<T>`, or another alias and may
+appear in local, parameter and result annotations. Flat named tuples use
+`(label: Type, ...)` types, `(label = value, ...)` construction and `.label`
+reads with Int/String/Bool components. `List<T>` accepts scalar or flat
+named-tuple elements, `[value, ...]` construction, contextual `[]`, and checked
+`values[index]` reads with an Int index. Unnamed tuples, nested tuples, nested
+lists, destructuring, spread, list reporting/equality, list traversal, list
+mutation and arrays remain rejected. Constant-only expressions
 keep their compile-time folding and range/division diagnostics; runtime
 expressions lower to target control flow and a runtime report accumulator for TS
 or direct `printf` calls for C. Dynamic `/ % :/ :%`, dynamic String
 concatenation and `break`/`continue` are rejected with explicit diagnostics, and
-dynamic C integer overflow is not checked. Function syntax and tuple values are
-emitted as runnable TS; the C path rejects them with a clear status-2 diagnostic.
+dynamic C integer overflow is not checked. Function syntax, tuple values and list
+values are emitted as runnable TS; the C path rejects them with a clear status-2
+diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper.
+This slice does not copy a list on declaration, argument passing or return;
+because list mutation is not yet admitted, the shared representation is not
+observable. Slice 6c must add those copies when mutation arrives.
 `match`, runtime input and self-rebuild remain outside this slice. Reserved
 features outside the subset are rejected by name with status 2.
 

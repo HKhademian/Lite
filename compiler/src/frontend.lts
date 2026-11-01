@@ -150,7 +150,7 @@ findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
     -1
 }
 
-/** True for type-constructor names that later slices will admit, not scalar or flat named-tuple aliases yet. */
+/** True for type-constructor names that later slices will admit, not scalar, flat named-tuple or List aliases yet. */
 isUnsupportedAliasTarget := fn(name: String): Bool {
     name == "List" or name == "Float" or name == "Double" or name == "Array" or
     name == "Option" or name == "Result" or name == "record" or name == "fn"
@@ -159,7 +159,7 @@ isUnsupportedAliasTarget := fn(name: String): Bool {
 /** Reports one unsupported transparent-alias target, naming a known type constructor when possible. */
 unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, target: String): Unit {
     failAt(source, position, prefix, "unsupported type alias " + target +
-        "; only Int, String, Bool, Unit, flat named tuples and aliases are supported");
+        "; only Int, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
 }
 
 /** Returns the index of the first top-level alias named `name`, or -1 when absent. */
@@ -187,6 +187,45 @@ isTupleKind := fn(kind: String): Bool {
     textLength(kind) > 0 and textAt(kind, 0) == "("
 }
 
+/** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
+isListKind := fn(kind: String): Bool {
+    textLength(kind) > 5 and startsWithAt(kind, 0, "List<") and textAt(kind, textLength(kind) - 1) == ">"
+}
+
+/** Returns the canonical element kind from `List<ElementKind>`. */
+listElementKind := fn(kind: String): String {
+    if not isListKind(kind) { return ""; }
+    textSlice(kind, 5, textLength(kind) - 1)
+}
+
+/** True when emitted target code calls the checked list-index helper outside quoted String literal text. */
+codeUsesListIndex := fn(code: String): Bool {
+    size := textLength(code);
+    var cursor := 0;
+    loop cursor < size {
+        ch := textAt(code, cursor);
+        if ch == "\"" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                escaped := textAt(code, cursor);
+                if escaped == "\\" {
+                    cursor = cursor + 2;
+                } else if escaped == "\"" {
+                    cursor = cursor + 1;
+                    break;
+                } else {
+                    cursor = cursor + 1;
+                }
+            }
+        } else if startsWithAt(code, cursor, "lite$listAt(") {
+            return true;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    false
+}
+
 /** Returns the scalar kind of tuple field `label` in canonical `kind`, or empty text when the field is absent. */
 tupleFieldKind := fn(kind: String, label: String): String {
     size := textLength(kind);
@@ -205,8 +244,9 @@ tupleFieldKind := fn(kind: String, label: String): String {
     ""
 }
 
-/** Renders one canonical kind for diagnostics, adding spaces inside flat named tuples. */
+/** Renders one canonical kind for diagnostics, adding spaces inside flat named tuples and lists. */
 displayKind := fn(kind: String): String {
+    if isListKind(kind) { return "List<" + displayKind(listElementKind(kind)) + ">"; }
     if not isTupleKind(kind) { return kind; }
     size := textLength(kind);
     var cursor := 1;
@@ -271,6 +311,9 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
             if isTupleKind(componentKind) {
                 failAt(source, position, prefix, "nested tuple types are not supported");
             }
+            if isListKind(componentKind) {
+                failAt(source, position, prefix, "list types inside tuples are not supported");
+            }
             if componentKind == "Unit" {
                 failAt(source, position, prefix, "unsupported tuple component type Unit");
             }
@@ -294,6 +337,44 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
     after := skipName(text, cursor);
     name := textSlice(text, cursor, after);
     afterTrivia := skipTrivia(text, after, prefix);
+    if name == "List" and afterTrivia < size and textAt(text, afterTrivia) == "<" {
+        innerStart := skipTrivia(text, afterTrivia + 1, prefix);
+        if innerStart >= size or textAt(text, innerStart) == ">" {
+            failAt(source, position, prefix, "expected a list element type");
+        }
+        var scan := innerStart;
+        var depth := 0;
+        var close := -1;
+        loop scan < size {
+            ch := textAt(text, scan);
+            if ch == "<" {
+                depth = depth + 1;
+            } else if ch == ">" {
+                if depth == 0 {
+                    close = scan;
+                    break;
+                }
+                depth = depth - 1;
+            }
+            scan = scan + 1;
+        }
+        if close < 0 {
+            failAt(source, position, prefix, "expected > in list type");
+        }
+        innerText := textSlice(text, innerStart, close);
+        innerKind := resolveTypeText(source, position, prefix, aliases, innerText, seen);
+        if isListKind(innerKind) {
+            failAt(source, position, prefix, "nested list types are not supported");
+        }
+        if innerKind == "Unit" {
+            failAt(source, position, prefix, "unsupported list element type Unit");
+        }
+        afterList := skipTrivia(text, close + 1, prefix);
+        if afterList < size {
+            failAt(source, position, prefix, "unexpected text after list type");
+        }
+        return "List<" + innerKind + ">";
+    }
     if afterTrivia < size {
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
@@ -378,6 +459,9 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         if isTupleKind(componentKind) {
             failAt(source, componentStart, prefix, "nested tuple types are not supported");
         }
+        if isListKind(componentKind) {
+            failAt(source, componentStart, prefix, "list types inside tuples are not supported");
+        }
         if componentKind == "Unit" {
             failAt(source, componentStart, prefix, "unsupported tuple component type Unit");
         }
@@ -395,7 +479,7 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
     (kind = kindText + ")", next = cursor)
 }
 
-/** Parses one source-level type: a scalar name, a transparent alias or a flat named tuple. */
+/** Parses one source-level type: a scalar name, a transparent alias, a flat named tuple or `List<T>`. */
 parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String): (kind: String, next: Int) {
     start := skipTrivia(source, position, prefix);
     if start < textLength(source) and textAt(source, start) == "(" {
@@ -403,7 +487,23 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
     }
     after := skipName(source, start);
     name := textSlice(source, start, after);
-    if name == "Int" or name == "String" or name == "Bool" or name == "Unit" {
+    afterName := skipTrivia(source, after, prefix);
+    if name == "List" and afterName < textLength(source) and textAt(source, afterName) == "<" {
+        innerStart := skipTrivia(source, afterName + 1, prefix);
+        if innerStart >= textLength(source) or textAt(source, innerStart) == ">" {
+            failAt(source, innerStart, prefix, "expected a list element type");
+        }
+        inner := parseTypeAt(source, innerStart, prefix, aliases, context);
+        if isListKind(inner.kind) {
+            failAt(source, innerStart, prefix, "nested list types are not supported");
+        }
+        if inner.kind == "Unit" {
+            failAt(source, innerStart, prefix, "unsupported list element type Unit");
+        }
+        var close := skipTrivia(source, inner.next, prefix);
+        close = expectSymbol(source, close, ">", prefix);
+        (kind = "List<" + inner.kind + ">", next = close)
+    } else if name == "Int" or name == "String" or name == "Bool" or name == "Unit" {
         (kind = name, next = after)
     } else if findAlias(aliases, name) >= 0 {
         seen: mut List<String> = [];
@@ -648,6 +748,9 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if isTupleKind(left.kind) {
         failAt(source, at, prefix, "cannot compare tuple values");
     }
+    if isListKind(left.kind) {
+        failAt(source, at, prefix, "cannot compare list values");
+    }
     if left.kind == "Int" {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
@@ -762,7 +865,7 @@ skipAliasString := fn(source: String, position: Int): Int {
     size
 }
 
-/** Reads one raw alias target type from `position`, capturing a parenthesized tuple type through its matching `)` or a single name. */
+/** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
 collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: String, next: Int) {
     size := textLength(source);
     start := skipTrivia(source, position, prefix);
@@ -791,7 +894,31 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
         (text = textSlice(source, start, size), next = size)
     } else {
         after := skipName(source, start);
-        (text = textSlice(source, start, after), next = after)
+        afterName := skipTrivia(source, after, prefix);
+        if afterName < size and textAt(source, afterName) == "<" {
+            var cursor := afterName;
+            var depth := 0;
+            loop cursor < size {
+                ch := textAt(source, cursor);
+                if startsWithAt(source, cursor, "/*") {
+                    cursor = skipComment(source, cursor, prefix);
+                } else if ch == "<" {
+                    depth = depth + 1;
+                    cursor = cursor + 1;
+                } else if ch == ">" {
+                    depth = depth - 1;
+                    cursor = cursor + 1;
+                    if depth == 0 {
+                        return (text = textSlice(source, start, cursor), next = cursor);
+                    }
+                } else {
+                    cursor = cursor + 1;
+                }
+            }
+            (text = textSlice(source, start, size), next = size)
+        } else {
+            (text = textSlice(source, start, after), next = after)
+        }
     }
 }
 
@@ -845,8 +972,8 @@ looksLikeTupleEntry := fn(source: String, position: Int, prefix: String): Bool {
     not startsWithAt(source, afterName, "==")
 }
 
-/** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple values, field access, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. self(..., 30) parses a unary operand without binary operators. */
-parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, minimum: Int): Parsed {
+/** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
+parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     start := skipTrivia(source, position, prefix);
     if start >= textLength(source) {
         failAt(source, start, prefix, "expected an Int, String or Bool expression");
@@ -877,9 +1004,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     failAt(source, cursor, prefix, "expected = after tuple field " + label);
                 }
                 cursor = skipTrivia(source, cursor + 1, prefix);
-                value := self(source, cursor, prefix, locals, functions, params, currentName, 0);
+                value := self(source, cursor, prefix, locals, functions, params, currentName, "", 0);
                 if isTupleKind(value.kind) {
                     failAt(source, cursor, prefix, "nested tuple values are not supported");
+                }
+                if isListKind(value.kind) {
+                    failAt(source, cursor, prefix, "list values inside tuples are not supported");
                 }
                 if value.kind == "Unit" {
                     failAt(source, cursor, prefix, "tuple field " + label + " cannot be Unit");
@@ -909,7 +1039,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
             left = (kind = kindText + ")", code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
-            inner := self(source, start + 1, prefix, locals, functions, params, currentName, 0);
+            inner := self(source, start + 1, prefix, locals, functions, params, currentName, expected, 0);
             next := expectSymbol(source, skipTrivia(source, inner.next, prefix), ")", prefix);
             left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next);
         }
@@ -918,7 +1048,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         if after < textLength(source) and isDigit(textAt(source, after)) {
             left = parseInteger(source, start, prefix);
         } else {
-            operand := self(source, start + 1, prefix, locals, functions, params, currentName, 30);
+            operand := self(source, start + 1, prefix, locals, functions, params, currentName, "", 30);
             if operand.kind =!= "Int" {
                 failAt(source, start, prefix, "unary " + ch + " requires an Int operand");
             }
@@ -934,6 +1064,46 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         left = parseInteger(source, start, prefix);
     } else if ch == "\"" {
         left = parseText(source, start, prefix);
+    } else if ch == "[" {
+        var cursor := skipTrivia(source, start + 1, prefix);
+        var elementKind := "";
+        if isListKind(expected) { elementKind = listElementKind(expected); }
+        elementCodes: mut List<String> = [];
+        var count := 0;
+        loop true {
+            if cursor >= textLength(source) {
+                failAt(source, cursor, prefix, "expected ] in list literal");
+            }
+            if textAt(source, cursor) == "]" { break; }
+            elementStart := cursor;
+            element := self(source, cursor, prefix, locals, functions, params, currentName, elementKind, 0);
+            if element.kind == "Unit" {
+                failAt(source, elementStart, prefix, "list element " + decimalText(count + 1) + " cannot be Unit");
+            }
+            if isListKind(element.kind) {
+                failAt(source, elementStart, prefix, "nested list types are not supported");
+            }
+            if elementKind == "" {
+                elementKind = element.kind;
+            } else if element.kind =!= elementKind {
+                failAt(source, elementStart, prefix, "list element " + decimalText(count + 1) + " must be " +
+                    displayKind(elementKind) + ", got " + displayKind(element.kind));
+            }
+            push_back(mut elementCodes, element.code);
+            count = count + 1;
+            cursor = skipTrivia(source, element.next, prefix);
+            if cursor < textLength(source) and textAt(source, cursor) == "," {
+                cursor = skipTrivia(source, cursor + 1, prefix);
+            } else {
+                break;
+            }
+        }
+        cursor = expectSymbol(source, cursor, "]", prefix);
+        if count == 0 and elementKind == "" {
+            failAt(source, start, prefix, "empty list literal requires a List element type");
+        }
+        left = (kind = "List<" + elementKind + ">", code = "[" + joinTexts(elementCodes, ", ") + "]",
+            intValue = 0, textValue = "", constant = false, next = cursor);
     } else if isNameStart(ch) {
         nameStart := start;
         next := skipName(source, start);
@@ -943,7 +1113,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         } else if name == "false" {
             left = boolParsed(boolLiteralCode(false), false, true, next);
         } else if name == "not" {
-            operand := self(source, next, prefix, locals, functions, params, currentName, 5);
+            operand := self(source, next, prefix, locals, functions, params, currentName, "", 5);
             if operand.kind =!= "Bool" {
                 failAt(source, nameStart, prefix, "not requires a Bool operand");
             }
@@ -976,8 +1146,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                             suffix := if info.count == 1 { " argument" } else { " arguments" };
                             failAt(source, nameStart, prefix, "function " + calleeName + " expects " + decimalText(info.count) + suffix + ", got more");
                         }
-                        argument := self(source, cursor, prefix, locals, functions, params, currentName, 0);
                         expected := paramKindOf(params[info.first + argumentCount]);
+                        argument := self(source, cursor, prefix, locals, functions, params, currentName, expected, 0);
                         if argument.kind =!= expected {
                             failAt(source, cursor, prefix, "argument " + decimalText(argumentCount + 1) + " of " +
                                 calleeName + " must be " + displayKind(expected) + ", got " + displayKind(argument.kind));
@@ -1015,22 +1185,39 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         failAt(source, start, prefix, "expected an Int, String or Bool expression");
     }
     loop true {
-        dotPosition := skipTrivia(source, left.next, prefix);
-        if dotPosition >= textLength(source) or textAt(source, dotPosition) =!= "." { break; }
-        labelStart := skipTrivia(source, dotPosition + 1, prefix);
-        if labelStart >= textLength(source) or not isNameStart(textAt(source, labelStart)) {
+        postPosition := skipTrivia(source, left.next, prefix);
+        if postPosition < textLength(source) and textAt(source, postPosition) == "." {
+            labelStart := skipTrivia(source, postPosition + 1, prefix);
+            if labelStart >= textLength(source) or not isNameStart(textAt(source, labelStart)) {
+                break;
+            }
+            if not isTupleKind(left.kind) {
+                failAt(source, postPosition, prefix, "field access requires a tuple value");
+            }
+            labelEnd := skipName(source, labelStart);
+            label := textSlice(source, labelStart, labelEnd);
+            fieldKind := tupleFieldKind(left.kind, label);
+            if fieldKind == "" {
+                failAt(source, labelStart, prefix, "tuple has no field " + label);
+            }
+            left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
+        } else if postPosition < textLength(source) and textAt(source, postPosition) == "[" {
+            if not isListKind(left.kind) {
+                failAt(source, postPosition, prefix, "indexing requires a list value");
+            }
+            indexStart := skipTrivia(source, postPosition + 1, prefix);
+            index := self(source, indexStart, prefix, locals, functions, params, currentName, "", 0);
+            if index.kind =!= "Int" {
+                failAt(source, indexStart, prefix, "list index must be Int, got " + displayKind(index.kind));
+            }
+            close := skipTrivia(source, index.next, prefix);
+            next := expectSymbol(source, close, "]", prefix);
+            left = (kind = listElementKind(left.kind),
+                code = "lite$listAt((" + left.code + "), " + index.code + ")",
+                intValue = 0, textValue = "", constant = false, next = next);
+        } else {
             break;
         }
-        if not isTupleKind(left.kind) {
-            failAt(source, dotPosition, prefix, "field access requires a tuple value");
-        }
-        labelEnd := skipName(source, labelStart);
-        label := textSlice(source, labelStart, labelEnd);
-        fieldKind := tupleFieldKind(left.kind, label);
-        if fieldKind == "" {
-            failAt(source, labelStart, prefix, "tuple has no field " + label);
-        }
-        left = (kind = fieldKind, code = "(" + left.code + ")." + label, intValue = 0, textValue = "", constant = false, next = labelEnd);
     }
     loop true {
         operatorPosition := skipTrivia(source, left.next, prefix);
@@ -1039,7 +1226,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         if operator.text == "" { break; }
         level := operatorLevel(operator.text);
         if level < minimum { break; }
-        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, level + 1);
+        right := self(source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, "", level + 1);
         if operator.text == "and" or operator.text == "or" {
             if left.kind =!= "Bool" or right.kind =!= "Bool" {
                 failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Bool operands");
@@ -1081,6 +1268,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 failAt(source, operatorPosition, prefix, "runtime String concatenation is not supported by this compiler checkpoint yet");
             }
+        } else if isListKind(left.kind) or isListKind(right.kind) {
+            failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {
             failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
         } else {
@@ -1090,9 +1279,14 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
     left
 }
 
-/** Parses one complete expression at the lowest precedence. */
+/** Parses one complete expression at the lowest precedence with an optional contextual kind for empty list literals. */
+parseExpressionAs := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String): Parsed {
+    parseBinary(source, position, prefix, locals, functions, params, currentName, expected, 0)
+}
+
+/** Parses one complete expression at the lowest precedence without a contextual kind. */
 parseExpression := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String): Parsed {
-    parseBinary(source, position, prefix, locals, functions, params, currentName, 0)
+    parseBinary(source, position, prefix, locals, functions, params, currentName, "", 0)
 }
 
 /** Reads the optional logical source name from inputArgs. Returns the name without a separator, or empty text; exits 2 for more than one argument. */
@@ -1146,17 +1340,25 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
     (kind = kind, code = code + " }", intValue = 0, textValue = "", constant = false, next = next)
 }
 
-/** Builds the zero value for one supported local type, including a fresh flat named-tuple object. */
+/** Builds the zero value for one supported local type, including a fresh flat named-tuple object and an empty list. */
 zeroParsed := fn(kind: String, next: Int): Parsed {
     if isTupleKind(kind) { tupleZeroParsed(kind, next) }
+    else if isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
     else if kind == "Int" { intParsed(intLiteralCode(0, false, "0"), 0, true, next) }
     else if kind == "String" { textParsed(textLiteralCode(""), "", true, next) }
     else { boolParsed(boolLiteralCode(false), false, true, next) }
 }
 
-/** Collapses a tuple kind to the `Tuple` item suffix while leaving scalar item kinds unchanged. */
+/** Collapses a tuple or list kind to its `Tuple`/`List` item suffix while leaving scalar item kinds unchanged. */
 storageKind := fn(kind: String): String {
-    if isTupleKind(kind) { "Tuple" } else { kind }
+    if isListKind(kind) { "List" }
+    else if isTupleKind(kind) { "Tuple" }
+    else { kind }
+}
+
+/** Returns the text payload stored with one local item: the canonical List kind for List items, otherwise the parsed literal text. */
+itemTextPayload := fn(parsed: Parsed): String {
+    if isListKind(parsed.kind) { parsed.kind } else { parsed.textValue }
 }
 
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
@@ -1230,8 +1432,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             continue;
         }
-        if currentName =!= "" and (isDigit(ch) or ch == "\"" or ch == "(" or ch == "+" or ch == "-") {
-            tail := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+        if currentName =!= "" and (isDigit(ch) or ch == "\"" or ch == "(" or ch == "[" or ch == "+" or ch == "-") {
+            tail := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
             if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
                 blocks[blockCount - 1] == "function" {
@@ -1284,7 +1486,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             if currentResult == "Unit" {
                 failAt(source, nameStart, prefix, "function " + currentName + " returns Unit and cannot return a value");
             }
-            parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+            parsed := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, currentResult);
             if parsed.kind =!= currentResult {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
                     currentName + " returning " + displayKind(currentResult));
@@ -1331,6 +1533,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                 }
                 if isTupleKind(argument.kind) {
                     failAt(source, position, prefix, "report does not accept a tuple value");
+                }
+                if isListKind(argument.kind) {
+                    failAt(source, position, prefix, "report does not accept a list value");
                 }
                 push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
                     intValue = argument.intValue, textValue = argument.textValue));
@@ -1412,7 +1617,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 typed := parseLocalType(source, position + 1, prefix, aliases);
                 position = skipTrivia(source, typed.next, prefix);
                 if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
-                    parsed = parseExpression(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName);
+                    parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                     if parsed.kind =!= typed.kind {
                         failAt(source, localStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
@@ -1436,7 +1641,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if name == "else" {
@@ -1464,15 +1669,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             if aliasEntry.target == "" {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
             }
-            targetEnd := skipName(source, targetStart);
-            targetName := textSlice(source, targetStart, targetEnd);
-            if isTupleKind(aliasEntry.target) {
-                seenAliases: mut List<String> = [];
-                resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
-            } else if targetName =!= "Int" and targetName =!= "String" and targetName =!= "Bool" and targetName =!= "Unit" {
-                seenAliases: mut List<String> = [];
-                resolveAliasKind(source, targetStart, prefix, aliases, targetName, seenAliases);
-            }
+            seenAliases: mut List<String> = [];
+            resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
             afterTarget := skipTrivia(source, aliasEntry.end, prefix);
             if afterTarget < size and textAt(source, afterTarget) =!= ";" {
                 unsupportedAliasTarget(source, aliasEntry.at, prefix, "target");
@@ -1546,7 +1744,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if position < size and textAt(source, position) == ":" {
@@ -1554,7 +1752,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(typed.kind, position);
             if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
-                parsed = parseExpression(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName);
+                parsed = parseExpressionAs(source, skipTrivia(source, position + 1, prefix), prefix, locals, functions, functionParams, currentName, typed.kind);
                 if parsed.kind =!= typed.kind {
                     failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                 }
@@ -1573,7 +1771,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if position < size and textAt(source, position) == "=" and not startsWithAt(source, position, "==") {
@@ -1586,7 +1784,7 @@ parseProgram := fn(source: String, prefix: String): Items {
                 failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
             position = skipTrivia(source, position + 1, prefix);
-            parsed := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
+            parsed := parseExpressionAs(source, position, prefix, locals, functions, functionParams, currentName, entry.kind);
             if parsed.kind =!= entry.kind {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
@@ -1600,11 +1798,11 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = parsed.intValue, textValue = parsed.textValue));
             localCount = localCount + 1;
             push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = parsed.code, intValue = parsed.intValue, textValue = parsed.textValue));
+                code = parsed.code, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
             continue;
         }
         if currentName =!= "" {
-            tail := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
+            tail := parseExpressionAs(source, nameStart, prefix, locals, functions, functionParams, currentName, currentResult);
             afterTail := skipTrivia(source, tail.next, prefix);
             if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
                 blocks[blockCount - 1] == "function" {

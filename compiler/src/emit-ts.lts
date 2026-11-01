@@ -36,9 +36,10 @@ tsTupleType := fn(kind: String): String {
     result + " }"
 }
 
-/** Maps a restricted Lite scalar or flat named-tuple kind to its TypeScript type. */
+/** Maps a restricted Lite scalar, flat named-tuple or List kind to its TypeScript type. */
 tsFunctionType := fn(kind: String): String {
-    if isTupleKind(kind) { tsTupleType(kind) }
+    if isListKind(kind) { tsFunctionType(listElementKind(kind)) + "[]" }
+    else if isTupleKind(kind) { tsTupleType(kind) }
     else { tsScalarType(kind) }
 }
 
@@ -86,8 +87,32 @@ reportArgumentCode := fn(item: Item): String {
     else { item.code }
 }
 
+/** True when any emitted item reads a list element through the checked helper. */
+usesListIndex := fn(items: Items): Bool {
+    loop items as item {
+        if codeUsesListIndex(item.code) { return true; }
+    }
+    false
+}
+
+/** Emits the checked list-index helper used by generated programs that read list elements. */
+emitListIndexHelper := fn(): Unit {
+    report("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
+    report("    if (index < 0n || index >= BigInt(items.length)) {");
+    report("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    report("    }");
+    report("    const value = items[Number(index)];");
+    report("    if (value === undefined) {");
+    report("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    report("    }");
+    report("    return value;");
+    report("}");
+    report("");
+}
+
 /** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
 emitProgram := fn(items: Items): Unit {
+    if usesListIndex(items) { emitListIndexHelper(); }
     report("export function main(): string {");
     report("    let lite_out = \"\";");
     var indent := "    ";
@@ -114,10 +139,18 @@ emitProgram := fn(items: Items): Unit {
         } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalTuple" {
             report(indent + "const " + item.runtime + " = " + item.code + ";");
             report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "LocalList" {
+            report(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarTuple" {
             report(indent + "let " + item.runtime + " = " + item.code + ";");
             report(indent + "void " + item.runtime + ";");
+        } else if item.kind == "VarList" {
+            report(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            report(indent + "void " + item.runtime + ";");
         } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignTuple" {
+            report(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "AssignList" {
             report(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "If" {
             condition := if item.code == "true" or item.code == "false" {

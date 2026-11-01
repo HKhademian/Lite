@@ -12,7 +12,7 @@ focused tests, then the full gate before recording the gate.
 3. ~~User-defined functions: scalar parameters/results, calls, recursion, `self`, `return`, TS/C emission~~ — TS done; C rejects clearly.
 4. ~~Transparent type aliases in the compiler~~ — done (scalar aliases only).
 5. ~~Flat named tuples: types, construction, fields and function signatures~~ — done (TS; C rejects tuple values clearly). Unnamed/nested tuples remain deferred.
-6a. Growable list types/literals/indexing and TS types (no traversal or mutation yet).
+6a. Growable list types/literals/indexing and TS types (no traversal or mutation yet) — TS done; C rejects list values clearly. Copy-on-declaration/argument/return is deferred with mutation (6c); unobservable until then.
 6b. Loop `seq as item` traversal over lists.
 6c. List mutation grants and `push`/`pop` end operations.
 7. Typed collection locals and list mutation grants/end operations.
