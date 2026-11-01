@@ -61,6 +61,21 @@ T11/T12 acceptance:
 - [ ] T12 runs and records its hash.
 - [ ] `T12 == T11` byte for byte, or the first difference is recorded here.
 
+TS ladder commands:
+
+```sh
+# S is the ordered TS manifest bundle.
+node --input-type=module -e 'import {loadBundle} from "./igniter/loader.ts"; process.stdout.write(loadBundle("compiler/manifests/ts.json").text);' > /tmp/S.lts
+# T11 = stage 0 compiling S.
+./litec ts /tmp/S.lts > /tmp/T11.ts
+# T12 = T11 compiling S; the runner typechecks T11 strictly first.
+node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
+shasum -a 256 /tmp/S.lts /tmp/T11.ts /tmp/T12.ts
+```
+
+Slow-stage-0 compiles take minutes, so `compiler/scripts/run-ts-artifact.mjs`
+keeps the artifact contract while dropping the harness's ten-second cap.
+
 Completion requires all of:
 
 - C fixed point: `C01 == C21 == C22 == C23`
