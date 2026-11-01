@@ -319,6 +319,8 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     ['f := fn(a: Int): Int { a = 2; a }\n', '1:24: cannot assign to immutable local a\n'],
     ['f := fn(): Int { y = 2; 1 }\n', '1:18: unknown local y\n'],
     ['f := fn(): Int { if true { x := 1; } x = 2; 1 }\n', '1:38: unknown local x\n'],
+    ['f := fn(a: Int, b: Int): Int { a + b }\ng := fn(): Int { f(1) }\n',
+      '2:18: function f expects 2 arguments, got 1\n'],
   ] as const) {
     assert.deepEqual(runFile(checkerDumpPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -326,6 +328,8 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'f := fn(): Int { var x := 1; x = 2; x }\n',
     'f := fn(x: Int): Int { var y := x; y = y + 1; y }\n',
     'f := fn(value: Int): (value: Int, ok: Bool) { (value = value, ok = true) }\n',
+    'f := fn(a: Int, b: Int): Int { a + b }\ng := fn(): Int { f(1, 2) }\n',
+    'f := fn(): Int { 1 }\ng := fn(): Int { f() }\n',
   ]) {
     const result = runFile(checkerDumpPath, good);
     assert.equal(result.code, 0, good);

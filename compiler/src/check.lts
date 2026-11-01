@@ -336,11 +336,88 @@ validateSymbols := fn(symbols: Symbols, prefix: String): Unit {
     }
 }
 
-/** Collects and validates one source's top-level symbols. */
+/** Number of parameters in one function symbol's detail text. */
+functionArity := fn(symbol: Symbol): Int {
+    tokens := tokenize(symbol.detail, "");
+    count := tokenCount(tokens);
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if isSymbol(token, "(") { break; }
+        cursor = cursor + 1;
+    }
+    cursor = cursor + 1;
+    if isSymbol(tokenAt(tokens, cursor), ")") { return 0; }
+    var depth := 0;
+    var arguments := 1;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if isSymbol(token, "(") or isSymbol(token, "[") or isSymbol(token, "{") {
+            depth = depth + 1;
+        } else if isSymbol(token, ")") or isSymbol(token, "]") or isSymbol(token, "}") {
+            if depth == 0 and isSymbol(token, ")") { return arguments; }
+            depth = depth - 1;
+        } else if isSymbol(token, ",") and depth == 0 {
+            arguments = arguments + 1;
+        }
+        cursor = cursor + 1;
+    }
+    arguments
+}
+
+/** Counts one call's top-level arguments starting at its opening parenthesis. */
+callArity := fn(tokens: Tokens, openIndex: Int, prefix: String): Int {
+    count := tokenCount(tokens);
+    var cursor := openIndex + 1;
+    if isSymbol(tokenAt(tokens, cursor), ")") { return 0; }
+    var depth := 0;
+    var arguments := 1;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() {
+            checkFail(token, prefix, "unterminated call");
+        }
+        if isSymbol(token, "(") or isSymbol(token, "[") or isSymbol(token, "{") {
+            depth = depth + 1;
+        } else if isSymbol(token, ")") or isSymbol(token, "]") or isSymbol(token, "}") {
+            if depth == 0 and isSymbol(token, ")") { return arguments; }
+            depth = depth - 1;
+        } else if isSymbol(token, ",") and depth == 0 {
+            arguments = arguments + 1;
+        }
+        cursor = cursor + 1;
+    }
+    arguments
+}
+
+/** Checks direct calls to known top-level functions for matching arity. */
+checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
+    count := tokenCount(tokens);
+    var cursor := 0;
+    loop cursor < count {
+        token := tokenAt(tokens, cursor);
+        if token.kind == TOKEN_KIND_EOF() { break; }
+        if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), "(") {
+            index := findSymbol(symbols, token.text);
+            if index >= 0 and symbols[index].kind == SYMBOL_KIND_FUNCTION() {
+                expected := functionArity(symbols[index]);
+                actual := callArity(tokens, cursor + 1, prefix);
+                if expected =!= actual {
+                    checkFail(token, prefix, "function " + token.text + " expects " + decimalText(expected) +
+                        " arguments, got " + decimalText(actual));
+                }
+            }
+        }
+        cursor = cursor + 1;
+    }
+}
+
+/** Collects, validates and checks one source. */
 checkSource := fn(tokens: Tokens, prefix: String): Symbols {
     symbols := collectSymbols(tokens, prefix);
     validateSymbols(symbols, prefix);
     checkLocals(tokens, prefix);
+    checkCalls(tokens, symbols, prefix);
     symbols
 }
 

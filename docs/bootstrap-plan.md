@@ -383,8 +383,8 @@ reproduce.
 - [x] Block scopes and local bindings: parameters, declarations, shadowing,
       duplicate locals, assignment mutability and unknown-local rejection.
       Initialization tracking and local type checking remain.
-- [x] Function signature collection. Arity, argument/result checking and return
-      paths remain.
+- [x] Function signature collection and direct-call arity checks. Argument/result
+      type checking and return paths remain.
 - [ ] Tuple shape/labels, list element types, index element types.
 - [ ] Bool conditions and list mutation grants.
 - [ ] `break`/`return` placement; unreachable code not required.
@@ -399,8 +399,9 @@ an artifact.
 rejects duplicate names and parameters, validates type names, annotations and
 alias cycles, and checks block scopes, shadowing, local mutability and unknown
 assignments. Fixtures live under [`compiler/tests/checker/`](../compiler/tests/checker/).
-Expression typing, initialization tracking, arity/return checks, list/tuple
-contracts and exact rejection parity remain.
+Direct calls to known top-level functions are arity-checked. Expression typing,
+initialization tracking, argument/return type checks, list/tuple contracts and
+exact rejection parity remain.
 
 **Do not:** add union inference, records, enums, pattern matching, recovery or
 `Result` to make checking easier.
