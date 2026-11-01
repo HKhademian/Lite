@@ -537,10 +537,9 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.26**, tag **igniter-v0.1.0-alpha.26**, implements the
-subjectless Boolean `match` form: first-true arm selection, a required final `_`
-fallback, action/value arms, and the current same-result-type limitation.
-Previous checkpoints stay fixed:
+Version **0.1.0-alpha.27**, tag **igniter-v0.1.0-alpha.27**, adds typed
+scalar/tuple/fixed-array locals and omitted zero initialization. Previous
+checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -589,7 +588,9 @@ Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.25**, commit `3eebdde`: restricted TS/C floor division and floor modulo lowering.
 
-- **igniter-v0.1.0-alpha.26**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.26**, commit `2edf486`: subjectless Boolean match with required fallback.
+
+- **igniter-v0.1.0-alpha.27**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
