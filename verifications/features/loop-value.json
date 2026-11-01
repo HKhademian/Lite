@@ -1,0 +1,22 @@
+{
+  "id": "loop.value",
+  "kind": "feature",
+  "source": {
+    "file": "loop-value.lts",
+    "hash": "sha256:61cc8f4a6d2aa6dd25a984ba85480bd5dac6edd5929793b5cdf7dff7d2ba9dc5"
+  },
+  "features": [
+    "loop.value"
+  ],
+  "guideline": "Checks typed .value commits, zero defaults, and then completion with .count and a transformed result.",
+  "cases": [
+    {
+      "name": "value-and-then",
+      "stdout": {
+        "text": "6\n3\n12\ndone\n0\n",
+        "hash": "sha256:cd5d653216eafc726dff69897259cda3ac9f37d837529b102e9b53c7d198d6b9"
+      },
+      "exitCode": 0
+    }
+  ]
+}

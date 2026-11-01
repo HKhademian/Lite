@@ -80,7 +80,7 @@ and no explicit `any`, non-null assertions, or unchecked type casts.
 
 ## Supported checkpoint
 
-One file; fixed/inferred `:=` bindings, scalar/tuple/fixed-array typed locals with zero initialization or reserved `= ?` storage and whole-value first initialization, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, shadowing and scalar
+One file; fixed/inferred `:=` bindings, scalar/tuple/fixed-array typed locals with zero initialization or reserved `= ?` storage and whole-value first initialization, `var`/replacement, inferred `mut`/`var mut` list declarations, subjectless Boolean `match`, typed loop `.value` with optional `then` completion, shadowing and scalar
 copies; integer/float/text/Bool/Unit and flat fixed-tuple values;
 `+ - * / % :/ :% **`, compound `+= -= *= /= %= :/= :%=` updates, unary signs and parentheses;
 temporary helper calls and the typed user functions below. The whole file is
@@ -134,13 +134,24 @@ Bodies have lexical scope and initialize their locals on each entry. Permitted
 outer var writes persist; body shadows do not retarget the header's bindings.
 The whole source, including untaken loop bodies, is checked before any I/O.
 
-Only action-position loops are implemented. Fixed-array traversal is described
-below. Value-producing loop expressions, metadata/accumulators, general iterables/
-ranges, tags, payload break/continue, source/header
-break/continue targeting an enclosing loop, and then/finally remain unsupported.
-The body tail still evaluates for its effects, but no loop value can be observed
-in this subset. This does not replace the wider language's selected loop-result
-and completion semantics with an always-Unit language rule.
+Value-producing loops are implemented for the same two sources: an optional
+`as` item and a body whose tail commits `.value`. `.value` starts at `zero(T)`
+and `.count` records entered iterations. A normally completing body tail commits
+the next `.value`; plain `continue` and bare `break` preserve the committed
+value. Without `then`, the loop result is the final `.value`; one optional
+`then { ... }` receives the final `.value` and `.count` and its tail is the
+result, which may transform `T` into another type. A statement loop without
+`then` stays `Unit` and commits nothing, so action-only bodies remain
+action-only. `T` comes from an expected destination (typed declaration,
+assignment, return, or function result), from a named sequence element type when
+the body reads `.value`, or otherwise from the body tail; a `.value` read with
+none of those sources is rejected rather than guessed.
+
+Tags and `@name.value`, `break`/`continue` payloads, targeted exits,
+`return @loop`, `.item`/`.index` in `then`, `.count` in bodies, header/source
+transfers, general iterables/ranges, and `finally` remain unsupported. A
+partial-conditional body tail with no committed value is also deferred; give it
+an `else` in this checkpoint.
 
 ### Typed user functions
 
@@ -618,7 +629,7 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **171 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
+All **172 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
 workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
@@ -627,7 +638,7 @@ remain unchanged. This is not proof of the full
 
 Project-level feature and artifact verification is `./lite verify`, backed by
 [verify.ts](verify.ts) and [verifications/](../verifications/README.md). The
-first slice has 32 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
+first slice has 33 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `.cache/` directory.
 `./lite test --fast` skips the native C lane; `./lite test` / `./lite test --full`
 include it. The full suite is designed to stay under the 30s local budget with a

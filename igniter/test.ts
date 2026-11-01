@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 87 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 88 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 32 registered, 32 cases/);
+    assert.match(covered.stdout, /features: 33 registered, 33 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1265,6 +1265,27 @@ test('reserved storage requires initialization on every path that reaches a read
   fault('x: Int = ?; loop { x = 1; break } report(x);', 'TypeError');
   fault('x: Int = ?; match { 1 < 2 { x = 1 } _ { report("no"); } } report(x);', 'TypeError');
 });
+test('loops accumulate typed .value and an optional then completion', () => {
+  assert.equal(run('sum := loop [1, 2, 3] as n { .value + n }; report(sum);').output, '6\n');
+  assert.equal(run('last := loop [1, 2, 3] as n { n * 2 }; report(last);').output, '6\n');
+  assert.equal(run('skipped := loop [1, 2, 3] as n { if n == 2 { continue; } .value + n }; report(skipped);').output, '4\n');
+  assert.equal(run('stopped := loop [1, 2, 3] as n { if n == 2 { break; } .value + n }; report(stopped);').output, '1\n');
+  assert.equal(run('empty := loop inputArgs() as a { 1 }; report(empty);').output, '0\n');
+  assert.equal(run('loop [1, 2] as n { n } then { report(.count); report(.value); } report("after");').output,
+    '2\n2\nafter\n');
+  assert.equal(run('counted := loop [1, 2, 3] as n { n } then { .count }; report(counted);').output, '3\n');
+  assert.equal(run('label := loop [1, 2, 3] as n { n } then { "done" }; report(label);').output, 'done\n');
+  assert.equal(run('x := loop [1] as n { report(n); }; report(x);').output, '1\nUnit\n');
+  assert.equal(run('loop [1, 2] { report("tick"); } then { report("done"); }').output, 'tick\ntick\ndone\n');
+  fault('sum := loop { .value + 1 };', 'TypeError');
+  fault('report(.value);', 'TypeError');
+  fault('loop [1] as n { report(.count); }', 'TypeError');
+  fault('loop [1] as a { loop [2] as b { .value } }', 'TypeError');
+  fault('loop [1] as n { f := fn(): Int { .value }; f() }', 'TypeError');
+  fault('x: Int = loop [1] as n { "s" };', 'TypeError');
+  fault('x: Int = loop [1] as n { n } then { "s" };', 'TypeError');
+  fault('loop [1] as n { n } then { .item };', 'SourceError');
+});
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',
     'report(9223372036854775807 * 2);', 'var x := -9223372036854775808; report(-x);',
@@ -1464,12 +1485,12 @@ test('body locals initialize on every entry; header and outer shadows keep their
 });
 test('loops reject invalid sources, escaping controls, and value/completion forms before effects', () => {
   for (const code of ['loop 1 {}', 'loop "items" {}', 'break;', 'continue;',
-    'if false { break; }', 'x := loop false {};', 'report(loop false {});',
+    'if false { break; }',
     'loop false { missing; }', 'loop false { var x := 1; x = true; }']) fault(code, 'TypeError');
   fault('loop { loop ({ break; true }) {} break; }', 'TypeError');
   fault('loop { loop ({ continue; false }) {} break; }', 'TypeError');
   for (const code of ['loop true report(1);', 'loop { break 3; }', 'loop { continue 3; }',
-    'loop false {} then {}', 'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
+    'loop false {} finally {}', 'var break := 1;']) fault(code, 'SourceError');
   let output = '';
   assert.throws(() => execute(compile('report(1); loop false { continue; missing; }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
@@ -2144,7 +2165,6 @@ test('unnamed array traversal introduces no implicit variable and receiver shado
   assert.equal(run('values := [3, 4]; loop values as values { report(values); } report(values[0]);').output, '3\n4\n3\n');
   fault('loop [1] { report(it); }', 'TypeError');
   fault('loop true as value { break; }', 'TypeError');
-  fault('result := loop [1] as value {};', 'TypeError');
 });
 test('traversal retains the evaluated array value when its original variable is replaced', () => {
   assert.equal(run(`var values := [1, 2, 3];

@@ -240,7 +240,7 @@ stream uses `text`/`bytes`/`file` plus `hash`). Filenames follow
 `NNN-MMM-title-subtitle.json`
 (category 001 program, 002 rejection). Program cases pass four-way parity and
 rejection cases pass exact diagnostics through both compilers. Strict checking
-and 171 groups pass. Text operations/indexing, NUL handling, runtime input and
+and 172 groups pass. Text operations/indexing, NUL handling, runtime input and
 self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).

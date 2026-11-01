@@ -1,0 +1,8 @@
+sum := loop [1, 2, 3] as n { .value + n };
+report(sum);
+counted := loop [2, 4, 6] as n { .value + n } then { report(.count); .value };
+report(counted);
+label := loop [1] as n { n } then { "done" };
+report(label);
+empty := loop inputArgs() as a { 1 };
+report(empty);

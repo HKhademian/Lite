@@ -4,6 +4,16 @@ Status: **one receiverless then block using loop metadata selected; .value typed
 
 Normative page for `then`, targeted exits, and the completion result. `.value` type/commits are in [loop value](loop-value.md); loop forms are in [loops](loops.md); inference is in [loop type inference](loop-type-inference.md).
 
+Implementation checkpoint, 2026-11-01: the igniter implements one optional
+receiverless `then { ... }` after a loop body. `then` receives the loop's final
+`.value` and `.count` (entered iterations, including skipped entries); its tail
+is the loop result, so `then { .value }`, `then { .count }`, a transformed
+value, and `then { "text" }` work. Without `then`, the result is the final
+`.value`. A statement loop may also carry `then`; its result is discarded. The
+tagged forms (`@name`, `@name.value`), `return @loop`, `break @loop`, payload
+exits, `.item`/`.index` in `then`, and cleanup ordering with `finally` remain
+unimplemented.
+
 ## Template
 
 ```text

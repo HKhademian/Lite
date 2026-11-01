@@ -59,7 +59,7 @@ type Raw = Readonly<{ at: Position }> & (
   | { kind: 'block'; items: readonly RawItem[] }
   | { kind: 'if'; condition: Raw; body: Raw; otherwise: Raw | undefined }
   | { kind: 'match'; arms: readonly Readonly<{ condition: Raw | undefined; body: Raw }>[] }
-  | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw }
+  | { kind: 'loop'; condition: Raw | undefined; item: Token | undefined; body: Raw; then: Raw | undefined }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; parameters: readonly Readonly<{ name: string; type: RawType }>[]; result: RawType; body: Raw }
   | { kind: 'return'; input: Raw | undefined }
@@ -93,8 +93,9 @@ type Expr = Readonly<{ at: Position; type: Type }> & (
   | { kind: 'block'; block: Block }
   | { kind: 'if'; condition: Expr; body: Expr; otherwise: Expr | undefined }
   | { kind: 'match'; arms: readonly Readonly<{ condition: Expr | undefined; body: Expr }>[] }
-  | { kind: 'loop'; condition: Expr | undefined; body: Expr }
-  | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr }
+  | { kind: 'loop'; condition: Expr | undefined; body: Expr; then: Expr | undefined; seed: Expr; valueSlot: number; countSlot: number; commit: boolean }
+  | { kind: 'sequenceLoop'; input: Expr; item: Binding | undefined; body: Expr; then: Expr | undefined; seed: Expr; valueSlot: number; countSlot: number; commit: boolean }
+  | { kind: 'metadata'; name: 'value' | 'count'; slot: number }
   | { kind: 'loopExit'; op: 'break' | 'continue' }
   | { kind: 'function'; code: FunctionCode }
   | { kind: 'return'; input: Expr }
@@ -643,6 +644,13 @@ class Parser {
   }
   atom(): Raw {
     const token = this.take();
+    if (token.kind === 'symbol' && token.text === '.') {
+      const name = this.label();
+      if (name.text !== 'value' && name.text !== 'count') {
+        source(`leading-dot loop metadata .${name.text} is not supported; use .value or .count`, name.at);
+      }
+      return { kind: 'metadata', name: name.text, at: token.at };
+    }
     if (token.kind === 'symbol' && (token.text === '+' || token.text === '-')) {
       return { kind: 'unary', op: token.text, input: this.prefix(), at: token.at };
     }
@@ -714,7 +722,9 @@ class Parser {
         const condition = next.kind === 'symbol' && next.text === '{' ? undefined : this.expression();
         const item = this.accept('as') ? this.label() : undefined;
         if (this.peek().kind !== 'symbol' || this.peek().text !== '{') source('loop requires a braced body', this.peek().at);
-        return { kind: 'loop', condition, item, body: this.prefix(), at: token.at };
+        const body = this.prefix();
+        const then = this.accept('then') ? this.prefix() : undefined;
+        return { kind: 'loop', condition, item, body, then, at: token.at };
       }
       if (token.text === 'if') {
         const condition = this.expression();
@@ -778,7 +788,8 @@ function numericLiteral(text: string, at: Position): Extract<Value, { kind: 'Int
   return /[.eE]/.test(text) ? floating(Number(text), at, true) : integer(BigInt(text), at, true);
 }
 type FunctionContext = Readonly<{ id: number; signature: FunctionType }>;
-type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined; reserved: Set<number>; initialized: Set<number>; maybeInitialized: Set<number> };
+type LoopMeta = Readonly<{ valueType: DataType | undefined; valueSlot: number; countSlot: number; phase: 'body' | 'then' }>;
+type CheckState = { nextSlot: number; nextFunction: number; loopDepth: number; current: FunctionContext | undefined; activeGrant: number | undefined; reserved: Set<number>; initialized: Set<number>; maybeInitialized: Set<number>; loopContext: number; loopMeta: LoopMeta | undefined };
 function markInitialized(binding: Binding, state: CheckState): void {
   state.initialized.add(binding.slot);
   state.maybeInitialized.add(binding.slot);
@@ -821,11 +832,20 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
     markInitialized(binding, state);
     return binding;
   });
+  const enclosingMeta = state.loopMeta;
+  const enclosingLoopContext = state.loopContext;
   state.current = { id, signature };
   state.loopDepth = 0;
+  state.loopMeta = undefined;
+  state.loopContext = 0;
   let body: Expr;
-  try { body = checkExpression(raw.body, local, state); }
-  finally { state.current = enclosing; state.loopDepth = depth; }
+  try { body = checkExpression(raw.body, local, state, 'value', signature.result); }
+  finally {
+    state.current = enclosing;
+    state.loopDepth = depth;
+    state.loopMeta = enclosingMeta;
+    state.loopContext = enclosingLoopContext;
+  }
   requireCompatible(body, signature.result, `function body produces ${typeName(body.type)}; expected ${typeName(signature.result)}`, raw.body.at);
   return { kind: 'function', code: { parameters, body }, type: signature, at: raw.at };
 }
@@ -850,10 +870,10 @@ function zeroExpr(type: DataType, at: Position): Expr {
   typeError('zero initialization of List and function values is not supported yet', at);
 }
 
-function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use = 'value'): Expr {
+function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use = 'value', expected?: DataType): Expr {
   const at = raw.at;
   switch (raw.kind) {
-    case 'grouped': return checkExpression(raw.input, names, state, use);
+    case 'grouped': return checkExpression(raw.input, names, state, use, expected);
     case 'grant': return typeError('mut arguments currently require a direct named list target in a sequence end operation', at);
     case 'number': {
       const value = numericLiteral(raw.text, at);
@@ -926,12 +946,12 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
     case 'return': {
       if (state.current === undefined) typeError('return requires an enclosing function', at);
       const input = raw.input === undefined ? { kind: 'literal', value: UNIT, type: 'Unit', at } satisfies Expr
-        : checkExpression(raw.input, names, state);
+        : checkExpression(raw.input, names, state, 'value', state.current.signature.result);
       requireCompatible(input, state.current.signature.result, `return produces ${typeName(input.type)}; expected ${typeName(state.current.signature.result)}`, at);
       return { kind: 'return', input, type: 'Never', at };
     }
     case 'block': {
-      const block = checkBlock(raw.items, names, state, use);
+      const block = checkBlock(raw.items, names, state, use, expected);
       return { kind: 'block', block, type: block.type, at };
     }
     case 'match': {
@@ -951,7 +971,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         if (condition !== undefined && condition.type !== 'Bool') {
           typeError('match condition must be Bool; there is no implicit truthiness', condition.at);
         }
-        const body = checkExpression(arm.body, names, state, use === 'discard' ? 'discard' : 'value');
+        const body = checkExpression(arm.body, names, state, use === 'discard' ? 'discard' : 'value', use === 'discard' ? undefined : expected);
         if (body.type !== 'Never') {
           paths.push(new Set(state.initialized));
           maybePaths.push(new Set(state.maybeInitialized));
@@ -977,12 +997,12 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
       }
       const entry = new Set(state.initialized);
       const entryMaybe = new Set(state.maybeInitialized);
-      const body = checkExpression(raw.body, names, state, use);
+      const body = checkExpression(raw.body, names, state, use, use === 'discard' ? undefined : expected);
       const bodyPath = new Set(state.initialized);
       const bodyMaybe = new Set(state.maybeInitialized);
       state.initialized = new Set(entry);
       state.maybeInitialized = new Set(entryMaybe);
-      const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use);
+      const otherwise = raw.otherwise === undefined ? undefined : checkExpression(raw.otherwise, names, state, use, use === 'discard' ? undefined : expected);
       const otherwisePath = new Set(state.initialized);
       const otherwiseMaybe = new Set(state.maybeInitialized);
       const paths: Set<number>[] = [];
@@ -1000,38 +1020,89 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         type: body.type === 'Never' && otherwise?.type === 'Never' ? 'Never' : use === 'discard' ? 'Unit' : type, at };
     }
     case 'loop': {
-      if (use !== 'discard') typeError('value-producing loops are not supported yet; use loop as an action', at);
       // Transfers from a source expression are outside this bounded body-exit implementation.
       const enclosingDepth = state.loopDepth;
       const entry = new Set(state.initialized);
       const entryMaybe = new Set(state.maybeInitialized);
-      let condition: Expr | undefined;
-      state.loopDepth = 0;
-      try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
-      finally { state.loopDepth = enclosingDepth; }
-      const array = condition !== undefined && typeof condition.type !== 'string' &&
-        (condition.type.kind === 'Array' || condition.type.kind === 'List') ? condition.type : undefined;
-      if (condition !== undefined && condition.type !== 'Bool' && array === undefined) typeError('loop source must be Bool or a supported array/list', condition.at);
-      if (raw.item !== undefined && array === undefined) typeError('named receivers for non-sequence loops are not supported yet', raw.item.at);
-      const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
-        : { name: raw.item.text, type: array.element, mutable: false, writable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
-      if (item !== undefined) markInitialized(item, state);
-      const bodyNames = item === undefined ? names : new Map(names).set(item.name, { kind: 'value', binding: item });
-      state.loopDepth++;
-      let body: Expr;
-      try { body = checkExpression(raw.body, bodyNames, state, 'discard'); }
-      finally {
-        state.loopDepth--;
-        state.maybeInitialized = unionInitialized([entryMaybe, state.maybeInitialized]);
-        state.initialized = entry;
+      const savedMeta = state.loopMeta;
+      state.loopContext++;
+      try {
+        let condition: Expr | undefined;
+        state.loopDepth = 0;
+        try { condition = raw.condition === undefined ? undefined : checkExpression(raw.condition, names, state); }
+        finally { state.loopDepth = enclosingDepth; }
+        const array = condition !== undefined && typeof condition.type !== 'string' &&
+          (condition.type.kind === 'Array' || condition.type.kind === 'List') ? condition.type : undefined;
+        if (condition !== undefined && condition.type !== 'Bool' && array === undefined) typeError('loop source must be Bool or a supported array/list', condition.at);
+        if (raw.item !== undefined && array === undefined) typeError('named receivers for non-sequence loops are not supported yet', raw.item.at);
+        const item: Binding | undefined = raw.item === undefined || array === undefined ? undefined
+          : { name: raw.item.text, type: array.element, mutable: false, writable: false, slot: state.nextSlot++, owner: state.current?.id ?? 0 };
+        if (item !== undefined) markInitialized(item, state);
+        const bodyNames = item === undefined ? names : new Map(names).set(item.name, { kind: 'value', binding: item });
+        const valueSlot = state.nextSlot++;
+        const countSlot = state.nextSlot++;
+        const readsValue = containsLoopValue(raw.body);
+        const contributes = use !== 'discard' || raw.then !== undefined;
+        const tentative: DataType | undefined = !contributes ? 'Unit'
+          : raw.then === undefined
+            ? expected ?? (readsValue && array !== undefined ? array.element : undefined)
+            : readsValue && array !== undefined ? array.element : undefined;
+        if (contributes && readsValue && tentative === undefined) {
+          typeError('cannot infer the loop .value type; add a typed destination or use a named sequence source', at);
+        }
+        state.loopMeta = { valueType: tentative, valueSlot, countSlot, phase: 'body' };
+        state.loopDepth++;
+        let body: Expr;
+        try { body = checkExpression(raw.body, bodyNames, state, contributes ? 'value' : 'discard', tentative); }
+        finally {
+          state.loopDepth--;
+          state.loopMeta = savedMeta;
+          state.maybeInitialized = unionInitialized([entryMaybe, state.maybeInitialized]);
+          state.initialized = entry;
+        }
+        const valueType = contributes ? tentative ?? loopValueType(body.type, at) : 'Unit';
+        if (contributes && body.type !== 'Never' && !fits(body.type, valueType)) {
+          typeError(`loop body produces ${typeName(body.type)}; the loop .value type is ${typeName(valueType)}`, body.at);
+        }
+        const seed = zeroExpr(valueType, at);
+        let then: Expr | undefined;
+        if (raw.then !== undefined) {
+          state.loopMeta = { valueType, valueSlot, countSlot, phase: 'then' };
+          try {
+            then = checkExpression(raw.then, names, state, use === 'discard' ? 'discard' : 'value',
+              use === 'discard' ? undefined : expected);
+          } finally { state.loopMeta = savedMeta; }
+        }
+        const type: Type = use === 'discard' ? 'Unit' : then !== undefined ? then.type : valueType;
+        const commit = contributes;
+        if (array !== undefined && condition !== undefined) {
+          return { kind: 'sequenceLoop', input: condition, item, body, then, seed, valueSlot, countSlot, commit, type, at };
+        }
+        return { kind: 'loop', condition, body, then, seed, valueSlot, countSlot, commit, type, at };
+      } finally {
+        state.loopContext--;
       }
-      if (array !== undefined && condition !== undefined) return { kind: 'sequenceLoop', input: condition, item, body, type: 'Unit', at };
-      return { kind: 'loop', condition, body, type: 'Unit', at };
     }
     case 'loopExit':
       if (state.loopDepth === 0) typeError(`${raw.op} requires an enclosing loop`, at);
-      if (use !== 'discard') typeError('loop exits in value expressions and exit payloads are not supported yet', at);
-      return { kind: 'loopExit', op: raw.op, type: 'Unit', at };
+      return { kind: 'loopExit', op: raw.op, type: use === 'discard' ? 'Unit' : 'Never', at };
+    case 'metadata': {
+      if (state.loopContext > 1) {
+        typeError('leading-dot loop metadata is ambiguous inside a nested loop; explicit loop tags are not implemented yet', at);
+      }
+      const meta = state.loopMeta;
+      if (state.loopContext === 0 || meta === undefined) {
+        typeError(`loop metadata .${raw.name} is only readable inside a loop body or then`, at);
+      }
+      if (raw.name === 'count') {
+        if (meta.phase !== 'then') typeError('loop .count is readable in then in this checkpoint', at);
+        return { kind: 'metadata', name: 'count', slot: meta.countSlot, type: 'Int', at };
+      }
+      if (meta.valueType === undefined) {
+        typeError('cannot infer the loop .value type; add a typed destination or use a named sequence source', at);
+      }
+      return { kind: 'metadata', name: 'value', slot: meta.valueSlot, type: meta.valueType, at };
+    }
     case 'name': {
       if (raw.name === 'self') typeError('only self(...) calls are supported; first-class self remains open', at);
       const entry = names.get(raw.name);
@@ -1231,8 +1302,54 @@ function checkPartialConditional(raw: Extract<Raw, { kind: 'if' }>, names: Reado
   const type = body.type === 'Never' ? expected : body.type;
   return { kind: 'if', condition, body, otherwise: zeroExpr(type, raw.at), type, at: raw.at };
 }
+/** The loop .value type is never a function; a body that only exits leaves the Unit default. */
+function dataTypeOf(type: Type): DataType | undefined {
+  if (type === 'Never') return undefined;
+  if (typeof type === 'string') return type;
+  return type.kind === 'Function' ? undefined : type;
+}
+function loopValueType(type: Type, at: Position): DataType {
+  if (type === 'Never') return 'Unit';
+  if (typeof type !== 'string') {
+    if (type.kind === 'Function') typeError('loop values of function type are not supported yet', at);
+    return type;
+  }
+  return type;
+}
+/** Finds a leading-dot .value read in a loop body without descending into nested loops or functions. */
+function containsLoopValue(raw: Raw): boolean {
+  switch (raw.kind) {
+    case 'metadata': return raw.name === 'value';
+    case 'grouped': return containsLoopValue(raw.input);
+    case 'array': return raw.items.some(item => containsLoopValue(item));
+    case 'index': return containsLoopValue(raw.input) || containsLoopValue(raw.index);
+    case 'tuple': return raw.items.some(item => containsLoopValue(item.input));
+    case 'position': return containsLoopValue(raw.input);
+    case 'member': return containsLoopValue(raw.input);
+    case 'boolLeader': return containsLoopValue(raw.input);
+    case 'unary': return containsLoopValue(raw.input);
+    case 'binary': return containsLoopValue(raw.left) || containsLoopValue(raw.right);
+    case 'logic': return containsLoopValue(raw.left) || containsLoopValue(raw.right);
+    case 'compare': return containsLoopValue(raw.first) || raw.rest.some(item => containsLoopValue(item.right));
+    case 'block': return raw.items.some(item => containsLoopValueItem(item));
+    case 'if': return containsLoopValue(raw.condition) || containsLoopValue(raw.body) ||
+      (raw.otherwise !== undefined && containsLoopValue(raw.otherwise));
+    case 'match': return raw.arms.some(arm =>
+      (arm.condition !== undefined && containsLoopValue(arm.condition)) || containsLoopValue(arm.body));
+    case 'return': return raw.input !== undefined && containsLoopValue(raw.input);
+    case 'call': return raw.args.some(item => containsLoopValue(item.input));
+    default: return false;
+  }
+}
+function containsLoopValueItem(item: RawItem): boolean {
+  switch (item.kind) {
+    case 'declare': case 'assign': case 'destructure': case 'expression': return containsLoopValue(item.input);
+    case 'typedDeclare': return item.input !== undefined && containsLoopValue(item.input);
+    case 'typeAlias': return false;
+  }
+}
 
-function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use): Block {
+function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use, expected?: DataType): Block {
   const names = new Map(outer);
   const items: Item[] = [];
   let type: Type = 'Unit';
@@ -1290,7 +1407,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
         for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
         input = { kind: 'list', items: entries, type: destination, at: item.input.at };
-      } else input = checkExpression(item.input, bodyNames, state, 'value');
+      } else input = checkExpression(item.input, bodyNames, state, 'value', destination);
     } else if (partial !== undefined) {
       const condition = checkPartialCondition(partial.condition, bodyNames, state);
       const body = checkExpression(partial.body, bodyNames, state, 'value');
@@ -1301,7 +1418,12 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         if (body.type === 'Never') typeError('a partial conditional declaration needs a normally completing value branch; add else', item.at);
         input = { kind: 'if', condition, body, otherwise: zeroExpr(body.type, item.at), type: body.type, at: item.at };
       }
-    } else input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value');
+    } else if (item.kind === 'assign') {
+      const entry = bodyNames.get(item.name);
+      const target = entry?.kind === 'value' ? dataTypeOf(entry.binding.type) : undefined;
+      input = checkExpression(item.input, bodyNames, state, 'value', target);
+    } else input = checkExpression(item.input, bodyNames, state, item.kind === 'expression' ? context : 'value',
+      item.kind === 'expression' && context === 'value' ? expected : undefined);
     exits ||= input.type === 'Never';
     switch (item.kind) {
       case 'destructure': {
@@ -1387,7 +1509,7 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
 export function compile(text: string): Program {
   const parsed = new Parser(tokenize(text)).parse();
   return checkBlock(parsed, new Map(), { nextSlot: 0, nextFunction: 1, loopDepth: 0, current: undefined, activeGrant: undefined,
-    reserved: new Set(), initialized: new Set(), maybeInitialized: new Set() }, 'discard');
+    reserved: new Set(), initialized: new Set(), maybeInitialized: new Set(), loopContext: 0, loopMeta: undefined }, 'discard');
 }
 
 class Input {
@@ -1554,6 +1676,16 @@ export function execute(program: Program, io: IO): number {
     }
     throw new Error('igniter invariant: uninitialized checked binding');
   };
+  const readSlot = (frame: Frame, slot: number): Value => {
+    const value = findFrame(frame, slot).values.get(slot);
+    if (value === undefined) throw new Error('igniter invariant: uninitialized checked binding');
+    return value;
+  };
+  const bumpCount = (frame: Frame, slot: number): void => {
+    const value = readSlot(frame, slot);
+    if (value.kind !== 'Int') throw new Error('igniter invariant: non-Int loop count');
+    frame.values.set(slot, { kind: 'Int', value: value.value + 1n });
+  };
   const evaluate = (expr: Expr, frame: Frame, self: FunctionValue | undefined): Value => {
     const evaluateHere = (child: Expr): Value => evaluate(child, frame, self);
     switch (expr.kind) {
@@ -1633,30 +1765,46 @@ export function execute(program: Program, io: IO): number {
         if (boolean(evaluateHere(expr.condition))) return evaluateHere(expr.body);
         // This missing branch is permitted only where its contribution is discarded.
         return expr.otherwise === undefined ? UNIT : evaluateHere(expr.otherwise);
-      case 'loop':
-        while (expr.condition === undefined || boolean(evaluateHere(expr.condition))) {
-          try { evaluateHere(expr.body); }
-          catch (error: unknown) {
+      case 'loop': {
+        const meta: Frame = { parent: frame, values: new Map([
+          [expr.valueSlot, evaluate(expr.seed, frame, self)],
+          [expr.countSlot, { kind: 'Int', value: 0n }],
+        ]) };
+        while (expr.condition === undefined || boolean(evaluate(expr.condition, frame, self))) {
+          bumpCount(meta, expr.countSlot);
+          try {
+            const value = evaluate(expr.body, meta, self);
+            if (expr.commit) meta.values.set(expr.valueSlot, value);
+          } catch (error: unknown) {
             if (!(error instanceof LoopTransfer)) throw error;
             if (error.op === 'break') break;
-            // Continue returns to this loop's header, not to the body tail.
+            // Continue returns to this loop's header without committing the body tail.
           }
         }
-        return UNIT; // Only action-position loops are admitted by the checker.
+        return expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
+      }
       case 'loopExit': throw new LoopTransfer(expr.op);
+      case 'metadata': return readSlot(frame, expr.slot);
       case 'sequenceLoop': {
         const input = evaluateHere(expr.input);
         if (input.kind !== 'Array' && input.kind !== 'List') throw new Error('igniter invariant: non-sequence checked traversal');
+        const meta: Frame = { parent: frame, values: new Map([
+          [expr.valueSlot, evaluate(expr.seed, frame, self)],
+          [expr.countSlot, { kind: 'Int', value: 0n }],
+        ]) };
         for (const value of input.items) {
-          const iteration: Frame = { parent: frame, values: new Map() };
+          bumpCount(meta, expr.countSlot);
+          const iteration: Frame = { parent: meta, values: new Map() };
           if (expr.item !== undefined) iteration.values.set(expr.item.slot, value);
-          try { evaluate(expr.body, iteration, self); }
-          catch (error: unknown) {
+          try {
+            const bodyValue = evaluate(expr.body, iteration, self);
+            if (expr.commit) meta.values.set(expr.valueSlot, bodyValue);
+          } catch (error: unknown) {
             if (!(error instanceof LoopTransfer)) throw error;
             if (error.op === 'break') break;
           }
         }
-        return UNIT;
+        return expr.then === undefined ? readSlot(meta, expr.valueSlot) : evaluate(expr.then, meta, self);
       }
       case 'read': {
         const value = findFrame(frame, expr.binding.slot).values.get(expr.binding.slot);

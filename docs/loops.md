@@ -20,6 +20,16 @@ General iterables, metadata, named Boolean/unconditional receivers, loop values
 and completion/cleanup remain unimplemented; no new always-Unit loop contract
 is selected. See [INV-054](../investigations/INV-054-fvp-fixed-arrays.md).
 
+Implementation coverage, 2026-11-01: the igniter now implements typed loop
+`.value` and one receiverless `then`. `.value` starts at `zero(T)`; a normally
+completing body tail commits it, plain continue and bare break preserve it, and
+without `then` the loop result is the final `.value`. `then` receives the final
+`.value` and `.count` and its tail is the result. Action loops without `then`
+remain Unit and commit nothing. Tags, `@name.value`, payload exits, targeted
+return/break, `.item`/`.index` in `then`, `.count` in bodies, and noncontributing
+partial-conditional tails remain unimplemented. See [loop value](loop-value.md)
+and [loop completion](loop-completion.md).
+
 ## Template
 
 ```text

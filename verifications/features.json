@@ -47,6 +47,16 @@
       ]
     },
     {
+      "id": "loop.value",
+      "summary": "Typed loop .value accumulation and then completion.",
+      "case": "features/loop-value.json",
+      "status": "verified",
+      "docs": [
+        "docs/loop-value.md",
+        "docs/loop-completion.md"
+      ]
+    },
+    {
       "id": "function.recursion",
       "summary": "Typed functions and own-name recursion.",
       "case": "features/function-recursion.json",

@@ -28,9 +28,9 @@ one of `file`, `text` or `bytes` plus an optional `hash`. `source.hash` and per-
 external-stream edits from silently keeping stale expectations; samples can use `append`
 observation calls without changing their teaching bodies.
 
-The registry now covers 32 feature cases, all 19 examples, all 20 samples and
-71 scenarios (87 target executions). Eight feature cases run through the
-reference igniter, emitted TS and native C. All pass; 171 interpreter groups and
+The registry now covers 33 feature cases, all 19 examples, all 20 samples and
+72 scenarios (88 target executions). Eight feature cases run through the
+reference igniter, emitted TS and native C. All pass; 172 interpreter groups and
 9 editor groups pass. Coverage is blocking for features, examples and samples.
 Broader compiler targets and showcase transcripts remain open; the GitHub Actions workflow now runs the test, verification and editor gates. See
 [INV-073 evidence](../investigations/INV-073-verification-registry.md) and the
@@ -61,7 +61,7 @@ canonical matrix is recorded in `docs/versioning-and-naming.md`: `ltc`/`litec`/
 `lite-compiler`/`lite compile` name one compiler component; `lite-runner`,
 `lite-checker`, `lite-docs` and `lite-help` map to their CLI commands; linker,
 formatter is reserved but unimplemented; the verifier and tester have first slices. The 43 program and 34 rejection verification cases are unchanged in
-behavior; 171 interpreter groups and 9 editor groups pass. The examples index
+behavior; 172 interpreter groups and 9 editor groups pass. The examples index
 now points to `compiler/` and leaves the 017/018 numbering gap intentional. See
 [INV-061 evidence](../investigations/INV-061-compiler-extraction.md) and the
 [compiler guide](../compiler/README.md).
@@ -86,7 +86,7 @@ optional `stdin`/`stdout`/`stderr` and required `exitCode`, and each stream uses
 Filenames follow `NNN-MMM-title-subtitle.json`, where category `001` is program
 verification and `002` is compiler rejection. Program cases run through the igniter, emitted TS,
 translated JS and native C; rejection cases run through both compilers with
-exact diagnostics. All 171 interpreter groups plus 9 editor groups pass. See
+exact diagnostics. All 172 interpreter groups plus 9 editor groups pass. See
 [INV-061 evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 

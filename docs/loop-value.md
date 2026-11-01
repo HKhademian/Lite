@@ -4,6 +4,19 @@ Status: **typed, universally zero-initialized .value replaces the optional accum
 
 Normative page for `.value` type, initialization, and commit rules. Loop forms are in [loops](loops.md); completion is in [loop completion](loop-completion.md); inference is in [loop type inference](loop-type-inference.md).
 
+Implementation checkpoint, 2026-11-01: the igniter implements a typed `.value`
+for value-producing loops and loops with `then`. It is zero-initialized before
+the first condition check. A normally completing body commits its tail value;
+plain `continue` and bare `break` preserve the committed value. Without `then`,
+the loop result is the final `.value`. Type `T` comes from an expected
+destination (typed declaration, assignment, return or function result), from a
+named sequence source's element type when the body reads `.value`, or otherwise
+from the body tail. Reading `.value` in a body with none of those sources is an
+error rather than a guess. Action loops without `then` keep `Unit` and commit
+nothing. `break`/`continue` payloads, tagged loops, targeted exits,
+`return @loop`, `.item`/`.index` in `then`, `.count` in the body, and
+noncontributing conditional body tails remain unimplemented.
+
 ## Core rule
 
 Every loop owns a .value with a compile-time type T inferred from the body's value-producing paths and any applicable expected type. It is initialized once to T's language-defined all-zero value before the first condition check. All-zero storage must map to a valid T value. This is not an automatically inserted Option<T> or an untyped cell.
