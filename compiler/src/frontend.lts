@@ -517,16 +517,17 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
         }
         var close := skipTrivia(source, inner.next, prefix);
         close = expectSymbol(source, close, ">", prefix);
-        (kind = "List<" + inner.kind + ">", next = close)
-    } else if name == "Int" or name == "String" or name == "Bool" or name == "Unit" {
-        (kind = name, next = after)
-    } else if findAlias(aliases, name) >= 0 {
-        seen: mut List<String> = [];
-        (kind = resolveAliasKind(source, start, prefix, aliases, name, seen), next = after)
-    } else {
-        failAt(source, start, prefix, "unsupported " + context + " type " + name);
-        (kind = "", next = after)
+        return (kind = "List<" + inner.kind + ">", next = close);
     }
+    if name == "Int" or name == "String" or name == "Bool" or name == "Unit" {
+        return (kind = name, next = after);
+    }
+    if findAlias(aliases, name) >= 0 {
+        seen: mut List<String> = [];
+        return (kind = resolveAliasKind(source, start, prefix, aliases, name, seen), next = after);
+    }
+    failAt(source, start, prefix, "unsupported " + context + " type " + name);
+    (kind = "", next = after)
 }
 
 /** Parses one function parameter or result type, including flat named tuples and transparent aliases. */
@@ -1745,7 +1746,6 @@ parseProgram := fn(source: String, prefix: String): Items {
     var currentName := "";
     var currentResult := "";
     var currentReturned := false;
-    var seenStatement := false;
     var position := skipTrivia(source, 0, prefix);
     if position == size {
         failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
@@ -1848,7 +1848,6 @@ parseProgram := fn(source: String, prefix: String): Items {
         }
         definition := blockCount == 0 and startsWithAt(source, position, ":=") and
             (wordAt(source, afterDefinition, "fn") or wordAt(source, afterDefinition, "type"));
-        if blockCount == 0 and not definition { seenStatement = true; }
         if name == "return" {
             if currentName == "" {
                 failAt(source, nameStart, prefix, "return outside a function");
@@ -1906,6 +1905,22 @@ parseProgram := fn(source: String, prefix: String): Items {
         if callableIndex >= 0 and position < size and textAt(source, position) == "(" {
             parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
             position = skipTrivia(source, parsed.next, prefix);
+            if position < size and textAt(source, position) == "}" and currentName =!= "" and
+                blockCount > 0 and blocks[blockCount - 1] == "function" {
+                if currentResult == "Unit" {
+                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
+                        intValue = 0, textValue = ""));
+                } else {
+                    if parsed.kind =!= currentResult {
+                        failAt(source, nameStart, prefix, "cannot return " + parsed.kind + " from function " +
+                            currentName + " returning " + currentResult);
+                    }
+                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = parsed.code,
+                        intValue = 0, textValue = ""));
+                }
+                currentReturned = true;
+                continue;
+            }
             if position >= size or textAt(source, position) =!= ";" {
                 failAt(source, position, prefix, "expected ; after function call");
             }
@@ -2120,6 +2135,23 @@ parseProgram := fn(source: String, prefix: String): Items {
         if name == "else" {
             failAt(source, nameStart, prefix, "unexpected else");
         }
+        if (name == "true" or name == "false") and currentName =!= "" {
+            tail := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
+            afterTail := skipTrivia(source, tail.next, prefix);
+            if afterTail < size and textAt(source, afterTail) == "}" and blockCount > 0 and
+                blocks[blockCount - 1] == "function" {
+                if currentResult =!= "Bool" {
+                    failAt(source, nameStart, prefix, "cannot return Bool from function " +
+                        currentName + " returning " + currentResult);
+                }
+                push_back(mut items, (kind = "Return", name = "", runtime = "", code = tail.code,
+                    intValue = 0, textValue = ""));
+                currentReturned = true;
+                position = afterTail;
+                continue;
+            }
+            failAt(source, nameStart, prefix, "expected ; after expression statement");
+        }
         if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
         if startsWithAt(source, position, ":=") and wordAt(source, afterDefinition, "type") {
             if blockCount =!= 0 or depth =!= 0 {
@@ -2159,9 +2191,6 @@ parseProgram := fn(source: String, prefix: String): Items {
             if wordAt(source, afterDeclare, "fn") {
                 if blockCount =!= 0 or depth =!= 0 {
                     failAt(source, nameStart, prefix, "function definitions are only allowed at top level");
-                }
-                if seenStatement {
-                    failAt(source, nameStart, prefix, "function definitions must precede statements");
                 }
                 if findFunction(functions, name) >= 0 {
                     failAt(source, nameStart, prefix, "duplicate function " + name);
