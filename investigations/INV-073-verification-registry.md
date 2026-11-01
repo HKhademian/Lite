@@ -77,13 +77,13 @@ wiring is a later step.
 
 ## First slice
 
-- **28 feature cases**: Int arithmetic/remainder/limits/floor, Bool/conditionals,
+- **29 feature cases**: Int arithmetic/remainder/limits/floor, Bool/conditionals,
   conditional and sequence loops, recursion, tuples, fixed arrays, mutable
   lists, text helpers/concatenation/escapes, transparent aliases, immutable
   locals, block locals, var assignment, inferred mutability, compound updates,
-  power, subjectless match, inputInt, inputArgs, inputAll, exit, and multi-value reports.
+  power, subjectless match, zero initialization, inputInt, inputArgs, inputAll, exit, and multi-value reports.
 - **All 19 examples** and **all 20 samples** have manifests.
-- **67 scenarios / 83 target executions**; Int arithmetic, remainder, limits,
+- **68 scenarios / 84 target executions**; Int arithmetic, remainder, limits,
   floor division/modulo, String concatenation/escapes, multi-value reports and immutable locals run
   through the reference igniter, emitted TS and native C. Passing results are
   cached; the verifier supports `--all`, affected-only default, `--shard` and
@@ -97,10 +97,10 @@ unchanged. Feature cases remain separate from the sample text.
 
 ## Evidence
 
-- All 83 target executions pass `./lite verify --all`.
-- `./lite verify --coverage` reports 28/28 features, 19/19 examples, 20/20
+- All 84 target executions pass `./lite verify --all`.
+- `./lite verify --coverage` reports 29/29 features, 19/19 examples, 20/20
   samples and 0 showcases.
-- All **166 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
+- All **167 interpreter test groups** pass under Node 26.12.1/TypeScript 7.0.2;
   all 9 editor grammar groups pass; strict `tsc --noEmit` passes.
 - New tests cover the verifier pass, coverage report, filtered run, cache hit and
   shard selection.

@@ -1,0 +1,11 @@
+a: Int;
+b: String;
+c: (:Int, :String);
+d: [Int; 2];
+var n: Int;
+n = 5;
+report(a);
+report(b);
+report(c.0, c.1);
+report(d[0], d[1]);
+report(n);

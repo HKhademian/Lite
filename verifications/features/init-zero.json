@@ -1,0 +1,22 @@
+{
+  "id": "init.zero",
+  "kind": "feature",
+  "source": {
+    "file": "init-zero.lts",
+    "hash": "sha256:77ac2f6d6849b2e3e9d79f6097701a85934a5fdf8f49ca127fe4f2e08f586db5"
+  },
+  "features": [
+    "init.zero"
+  ],
+  "guideline": "Checks omitted typed-local initialization for scalar, tuple and fixed-array types.",
+  "cases": [
+    {
+      "name": "zero-values",
+      "stdout": {
+        "text": "0\n\n0 \n0 0\n5\n",
+        "hash": "sha256:af01b2d8706203fb60fa353d94d9dbd86d73b0afcff7403f1fc7183986c5893f"
+      },
+      "exitCode": 0
+    }
+  ]
+}

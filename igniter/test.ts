@@ -202,10 +202,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 83 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 84 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 28 registered, 28 cases/);
+    assert.match(covered.stdout, /features: 29 registered, 29 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -1229,6 +1229,15 @@ test('subjectless match selects the first true arm and requires a final fallback
   fault('match { 1 { 2 } _ { 3 } }', 'TypeError');
   fault('label := match { true { 1 } _ { "x" } }', 'TypeError');
   fault('match true { _ { 1 } }', 'SourceError');
+});
+test('typed scalar, tuple and fixed-array declarations initialize or zero-initialize', () => {
+  assert.equal(run('a: Int; b: Float; c: String; d: Bool; e: Unit; f: (:Int, :String); g: [Int; 2]; report(a, b, c, d, e, f.0, f.1, g[0], g[1]);').output,
+    '0 0  false Unit 0  0 0\n');
+  assert.equal(run('x: Int = 7; report(x);').output, '7\n');
+  assert.equal(run('var x: Int; x = 5; report(x);').output, '5\n');
+  fault('x: Int = "a";', 'TypeError');
+  fault('l: List<Int>;', 'TypeError');
+  fault('x: [Int; 2] = [1];', 'TypeError');
 });
 test('integer arithmetic cannot silently wrap', () => {
   for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',

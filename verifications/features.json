@@ -256,6 +256,16 @@
       "docs": [
         "docs/match.md"
       ]
+    },
+    {
+      "id": "init.zero",
+      "summary": "Zero initialization for omitted typed locals.",
+      "case": "features/init-zero.json",
+      "status": "verified",
+      "docs": [
+        "docs/zero-initialization.md",
+        "docs/declarations-and-assignment.md"
+      ]
     }
   ]
 }

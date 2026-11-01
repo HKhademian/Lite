@@ -145,11 +145,11 @@ sharded or curated, and caches make unchanged work nearly free.
 
 ## Coverage status
 
-- Features: 28 registered, 27 cases.
+- Features: 29 registered, 27 cases.
 - Examples: 19 of 19 manifest-covered.
 - Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
-- Scenarios: 67 (28 feature + 19 example + 20 sample); 83 target executions
+- Scenarios: 68 (29 feature + 19 example + 20 sample); 84 target executions
   because eight feature cases run through all three targets.
 
 Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any

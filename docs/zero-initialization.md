@@ -2,6 +2,12 @@
 
 Status: **all-zero storage is a valid language-defined value for every type, explicitly selected by the user 2026-10-19; Result zero and zero-result callable behavior selected 2026-10-20**. Unit, Result, callable, record, tuple, and fixed-array mappings are selected; enum, plain-union member selection, reference/access, resource, and constrained-domain mappings remain open. Zero-dependent contracts are conditional until those mappings are defined. Result zero is `.ok(zero(T))` for `T ! E`. A zero-initialized callable returns zero of its declared result type after ordinary argument evaluation, with required cleanup preserved. This replaces the earlier valid-zero eligibility/zeroability restriction.
 
+Implementation checkpoint, 2026-11-01: the igniter supports omitted
+initializers on typed locals for Int, Float, String, Bool, Unit, flat tuples and
+fixed arrays. `name: Type = value` also works for those scalar/tuple/array
+declarations. Zero initialization of List and function values remains
+unsupported and reports a type error.
+
 ## Plain-union construction restriction
 
 Latest selected rule, 2026-10-21: [x: A | B = 0 is rejected](union-initialization-policy.md#selected-rejection-and-explicit-member-choice) when normalization leaves multiple distinct union alternatives. Bare zero cannot select a member. Explicit reservation and an initialized member expression remain available; member-qualified A{0} is proposed syntax for zeroing A, while A{} already expresses declared-default record construction where valid. This restriction qualifies earlier universal source-level zero construction. Local multi-member union declarations require an initialized expression or explicit = ?. Implicit/recursive union-zero sites still need reconciliation; do not use the broad rule below to silently choose a member. Other type categories retain their selected zero contracts.

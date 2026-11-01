@@ -67,7 +67,7 @@ type Raw = Readonly<{ at: Position }> & (
 );
 type RawItem = Readonly<{ at: Position }> & (
   | { kind: 'declare'; name: string; mutable: boolean; writable: boolean; input: Raw }
-  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw }
+  | { kind: 'typedDeclare'; name: string; mutable: boolean; writable: boolean; annotation: RawType; input: Raw | undefined }
   | { kind: 'typeAlias'; name: string; target: RawType }
   | { kind: 'assign'; name: string; input: Raw }
   | { kind: 'destructure'; names: readonly Token[]; input: Raw }
@@ -455,8 +455,8 @@ class Parser {
     this.expect(':');
     const writable = this.accept('mut');
     const annotation = this.rawType();
-    this.expect('=');
-    return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input: this.expression(), at: name.at };
+    const input = this.accept('=') ? this.expression() : undefined;
+    return { kind: 'typedDeclare', name: name.text, mutable, writable, annotation, input, at: name.at };
   }
   tupleEntry(): Readonly<{ label: string | undefined; input: Raw }> {
     if (this.accept('=')) {
@@ -800,6 +800,27 @@ function checkFunction(raw: Extract<Raw, { kind: 'function' }>, names: ReadonlyM
   requireCompatible(body, signature.result, `function body produces ${typeName(body.type)}; expected ${typeName(signature.result)}`, raw.body.at);
   return { kind: 'function', code: { parameters, body }, type: signature, at: raw.at };
 }
+function zeroExpr(type: DataType, at: Position): Expr {
+  if (typeof type === 'string') {
+    switch (type) {
+      case 'Int': return { kind: 'literal', value: { kind: 'Int', value: 0n }, type, at };
+      case 'Float': return { kind: 'literal', value: { kind: 'Float', value: 0 }, type, at };
+      case 'String': return { kind: 'literal', value: { kind: 'String', value: '' }, type, at };
+      case 'Bool': return { kind: 'literal', value: { kind: 'Bool', value: false }, type, at };
+      case 'Unit': return { kind: 'literal', value: UNIT, type, at };
+    }
+  }
+  if (type.kind === 'Array') {
+    const items = Array.from({ length: Number(type.length) }, () => zeroExpr(type.element, at));
+    return { kind: 'array', items, type, at };
+  }
+  if (type.kind === 'Tuple') {
+    const items = type.items.map(member => zeroExpr(member.type, at));
+    return { kind: 'tuple', items, type, at };
+  }
+  typeError('zero initialization of List and function values is not supported yet', at);
+}
+
 function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state: CheckState, use: Use = 'value'): Expr {
   const at = raw.at;
   switch (raw.kind) {
@@ -1153,11 +1174,10 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
     let input: Expr;
     if (item.kind === 'typedDeclare') {
       const destination = resolveType(item.annotation, bodyNames);
-      if (typeof destination === 'string' || (destination.kind !== 'Tuple' && destination.kind !== 'List')) {
-        source('explicit receiving declarations currently support flat tuple or List types only', item.at);
-      }
-      if (item.writable && destination.kind !== 'List') typeError('held-data mut declarations currently support lists only', item.at);
-      if (destination.kind === 'List' && item.input.kind === 'array') {
+      if (item.writable && (typeof destination === 'string' || destination.kind !== 'List')) typeError('held-data mut declarations currently support lists only', item.at);
+      if (item.input === undefined) {
+        input = zeroExpr(destination, item.at);
+      } else if (typeof destination !== 'string' && destination.kind === 'List' && item.input.kind === 'array') {
         const element = destination.element;
         const entries = item.input.items.map(entry => checkExpression(entry, bodyNames, state));
         for (const entry of entries) requireCompatible(entry, element, `list element must be ${typeName(element)}`, entry.at);
@@ -1194,7 +1214,9 @@ function checkBlock(parsed: readonly RawItem[], outer: ReadonlyMap<string, Scope
         if (item.kind === 'typedDeclare') {
           const destination = resolveType(item.annotation, names);
           declared = destination;
-          if (typeof destination !== 'string' && destination.kind === 'List') {
+          if (typeof destination === 'string') {
+            requireCompatible(input, destination, `cannot initialize ${destination} with ${typeName(input.type)}`, input.at);
+          } else if (destination.kind === 'List') {
             requireCompatible(input, destination, 'list initialization requires the same List element contract; construct literals at the typed declaration', input.at);
           } else if (input.type !== 'Never' && !sameType(input.type, declared)) {
             if (freshTuple(input)) typeError('contextual tuple constructor routing is not supported yet at typed declarations; use a stored tuple for positional label conversion', input.at);
