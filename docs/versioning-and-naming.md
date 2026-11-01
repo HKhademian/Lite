@@ -6,16 +6,15 @@ Status: **selected naming and version policy, 2026-10-25; distinct script/module
 
 ### Name origin
 
-**Lite** is **Light** with the silent letters dropped, and the dropped letters are the point: a silent letter costs a reader attention and carries no meaning.
+**Lite** is **Light** taken as a property, not a pun. The name respells nothing and abbreviates nothing; it states what the project is trying to be.
 
-The name is read four ways, and the design is meant to keep all four.
+Lightness, here, means three things at once.
 
-- **Light, not heavy.** Fast native execution, low memory use, small runtime support, and small final executables. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
+- **Speed and runtime weight.** Fast native execution, low memory use, small runtime support, and small final executables. See [lightweight native execution](memory-and-performance.md#lightweight-native-execution-priority).
 - **Low in code junk.** Little ceremony: few repeated annotations, no wrapper construction or defensive padding carried while solving the problem. See [the design goals](principles.md#design-goals).
-- **Light, not dark.** Behavior stays visible. Output and tracing are explicit, contracts are written down, and no mechanism depends on hidden state that a reader must discover elsewhere. See [explicit output and tracing](tooling-and-learning.md#explicit-output-and-tracing).
-- **Bright, clean, pure, naive.** Naive in the engineering sense: understandable one part at a time, with local, predictable meanings and no cleverness that needs a specialist to decode. See [continuity and analogical coherence](continuity-and-analogy.md).
+- **Easy to reason about, read, maintain, learn, teach, and distribute.** Local, predictable meanings, written contracts, and nothing clever that a reader must decode. See [continuity and analogical coherence](continuity-and-analogy.md) and [multilingual source and learning](multilingual-source-and-learning.md).
 
-These are readings of one project name. They introduce no second name for the language or the tools, and "naive" claims simplicity of design, not immaturity of implementation. The canonical names below remain the only official ones.
+**Lite** names the project. **LiteLang** and **LiteScript** are parts of it, not alternative names for it: the language and its programs. The canonical names below remain the only official ones.
 
 | Thing | Prose name | Machine name | Notes |
 |---|---|---|---|

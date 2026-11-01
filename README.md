@@ -1,6 +1,8 @@
 # Lite
 
-Lite is a language-design project for **LiteLang**, a readable, strongly typed language with scripting convenience. LiteLang programs are **LiteScripts**. The project aims to keep ceremony low, make consequential behavior explicit, and let people and programming agents focus on problem solving. Lightness is a core design priority: fast native execution, low memory use, small runtime support, and small final executables. Ordinary native programs should not require a VM or tracing garbage collector; memory-management and backend mechanisms remain open.
+**Lite is light.**
+
+**Lite** is the project. **LiteLang** is its language; a **LiteScript** is one of its programs. Lightness is what the whole thing is meant to be, in every sense the word carries here: fast native execution and low runtime weight, small runtime support and small final executables, and code that is easy to reason about, read, maintain, learn, teach, and distribute. The project keeps ceremony low, makes consequential behavior explicit, and lets people and programming agents focus on problem solving. Ordinary native programs should not require a VM or tracing garbage collector; memory-management and backend mechanisms remain open. See [name origin](docs/versioning-and-naming.md#name-origin).
 
 **Start with the [LiteLang white paper](docs/white-paper.md)** for LiteLang's philosophy, goals, and design criteria.
 
