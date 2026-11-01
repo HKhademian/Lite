@@ -537,9 +537,12 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.27**, tag **igniter-v0.1.0-alpha.27**, adds typed
-scalar/tuple/fixed-array locals and omitted zero initialization. Previous
-checkpoints stay fixed:
+Version **0.1.0-alpha.28**, tag **igniter-v0.1.0-alpha.28**, implements
+reserved `name: Type = ?` storage and whole-value first initialization for
+scalar/tuple/fixed-array locals: reads before the first write are rejected, the
+first write needs no `var`, later replacement does, and `if`/`match` paths join
+while loop bodies do not establish initialization. Previous checkpoints stay
+fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -590,7 +593,9 @@ checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.26**, commit `2edf486`: subjectless Boolean match with required fallback.
 
-- **igniter-v0.1.0-alpha.27**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.27**, commit `549cbd2`: typed scalar/tuple/fixed-array locals and omitted zero initialization.
+
+- **igniter-v0.1.0-alpha.28**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
