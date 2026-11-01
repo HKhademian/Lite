@@ -20,6 +20,9 @@ emitProgram := fn(items: Items): Unit {
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
         }
+        if item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
+            fail("", "C backend does not support tuple values yet");
+        }
     }
     report("#include <stdio.h>");
     report("#include <inttypes.h>");

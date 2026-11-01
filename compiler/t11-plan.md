@@ -11,7 +11,7 @@ focused tests, then the full gate before recording the gate.
 2. ~~Comments in compiler source scanning~~ — done.
 3. ~~User-defined functions: scalar parameters/results, calls, recursion, `self`, `return`, TS/C emission~~ — TS done; C rejects clearly.
 4. ~~Transparent type aliases in the compiler~~ — done (scalar aliases only).
-5. Flat named/unnamed tuples: types, construction, fields and function signatures.
+5. ~~Flat named tuples: types, construction, fields and function signatures~~ — done (TS; C rejects tuple values clearly). Unnamed/nested tuples remain deferred.
 6. Growable lists: `List<T>` types, literals, indexing, copies, traversal `loop seq as`.
 7. Typed collection locals and list mutation grants/end operations.
 8. Value `if` expressions in the compiler emitter.

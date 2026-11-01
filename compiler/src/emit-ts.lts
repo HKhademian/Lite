@@ -4,30 +4,61 @@ dedent := fn(indent: String): String {
 }
 
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
-tsFunctionType := fn(kind: String): String {
+tsScalarType := fn(kind: String): String {
     if kind == "Int" { "bigint" }
     else if kind == "String" { "string" }
     else if kind == "Bool" { "boolean" }
     else { "void" }
 }
 
-/** Formats a comma-separated `name:kind` parameter list as a TypeScript parameter list. */
+/** Formats one canonical flat named-tuple kind as a TypeScript object type. */
+tsTupleType := fn(kind: String): String {
+    size := textLength(kind);
+    var cursor := 1;
+    var result := "{ ";
+    var count := 0;
+    loop cursor < size and textAt(kind, cursor) =!= ")" {
+        nameStart := cursor;
+        cursor = skipName(kind, cursor);
+        label := textSlice(kind, nameStart, cursor);
+        if cursor < size and textAt(kind, cursor) == ":" { cursor = cursor + 1; }
+        typeStart := cursor;
+        cursor = skipName(kind, cursor);
+        fieldKind := textSlice(kind, typeStart, cursor);
+        if count > 0 { result = result + " "; }
+        result = result + label + ": " + tsScalarType(fieldKind);
+        count = count + 1;
+        if cursor < size and textAt(kind, cursor) == "," {
+            result = result + ";";
+            cursor = cursor + 1;
+        }
+    }
+    result + " }"
+}
+
+/** Maps a restricted Lite scalar or flat named-tuple kind to its TypeScript type. */
+tsFunctionType := fn(kind: String): String {
+    if isTupleKind(kind) { tsTupleType(kind) }
+    else { tsScalarType(kind) }
+}
+
+/** Formats a `|`-separated `name=kind` parameter list as a TypeScript parameter list. */
 tsParameterList := fn(encoded: String): String {
     if encoded == "" { return ""; }
     var result := "";
     var start := 0;
     loop true {
-        comma := indexOfText(encoded, ",", start);
+        separator := indexOfText(encoded, "|", start);
         var end := textLength(encoded);
-        if comma >= 0 { end = comma; }
+        if separator >= 0 { end = separator; }
         entry := textSlice(encoded, start, end);
-        colon := indexOfText(entry, ":", 0);
-        parameterName := textSlice(entry, 0, colon);
-        parameterKind := textSlice(entry, colon + 1, textLength(entry));
+        equals := indexOfText(entry, "=", 0);
+        parameterName := textSlice(entry, 0, equals);
+        parameterKind := textSlice(entry, equals + 1, textLength(entry));
         if textLength(result) > 0 { result = result + ", "; }
         result = result + "lite_" + parameterName + ": " + tsFunctionType(parameterKind);
-        if comma < 0 { break; }
-        start = comma + 1;
+        if separator < 0 { break; }
+        start = separator + 1;
     }
     result
 }
@@ -37,14 +68,14 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
     if encoded == "" { return; }
     var start := 0;
     loop true {
-        comma := indexOfText(encoded, ",", start);
+        separator := indexOfText(encoded, "|", start);
         var end := textLength(encoded);
-        if comma >= 0 { end = comma; }
+        if separator >= 0 { end = separator; }
         entry := textSlice(encoded, start, end);
-        colon := indexOfText(entry, ":", 0);
-        report(indent + "void lite_" + textSlice(entry, 0, colon) + ";");
-        if comma < 0 { break; }
-        start = comma + 1;
+        equals := indexOfText(entry, "=", 0);
+        report(indent + "void lite_" + textSlice(entry, 0, equals) + ";");
+        if separator < 0 { break; }
+        start = separator + 1;
     }
 }
 
@@ -80,13 +111,13 @@ emitProgram := fn(items: Items): Unit {
             }
         } else if item.kind == "Call" {
             report(indent + item.code + ";");
-        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" {
+        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalTuple" {
             report(indent + "const " + item.runtime + " = " + item.code + ";");
             report(indent + "void " + item.runtime + ";");
-        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" {
+        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarTuple" {
             report(indent + "let " + item.runtime + " = " + item.code + ";");
             report(indent + "void " + item.runtime + ";");
-        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignTuple" {
             report(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "If" {
             condition := if item.code == "true" or item.code == "false" {

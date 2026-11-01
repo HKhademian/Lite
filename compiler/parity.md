@@ -123,12 +123,12 @@ keeps that target from growing while it is approached.
   do not emit artifacts.
 - P6 is in progress: the TS runtime covers checked Int64 arithmetic, code-point
   text, list copies, faults and exit; the compiler now accepts typed scalar
-  locals, nested/doc/raw comments, transparent scalar type aliases, and
-  top-level scalar functions with positional calls, recursion/`self` and
-  `return` in the TS path. The C path
-  rejects function syntax with a clear status-2 diagnostic. TS/C output is
-  emitted directly; no separate IR deliverable is planned. The full emitter,
-  Node I/O adapter and T-from-S gate remain.
+  locals, nested/doc/raw comments, transparent scalar and flat named-tuple type
+  aliases, flat named-tuple construction and field reads, and top-level
+  functions with positional calls, recursion/`self` and `return` in the TS path.
+  The C path rejects function syntax and tuple values with clear status-2
+  diagnostics. TS/C output is emitted directly; no separate IR deliverable is
+  planned. The full emitter, Node I/O adapter and T-from-S gate remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
 - T00 exists. T11/T12 are the immediate target and are blocked on the full-L TS

@@ -54,7 +54,7 @@ equalities are recorded in
 ## Current baseline
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
-- **204** interpreter test groups and **9** editor grammar groups; the fast lane
+- **206** interpreter test groups and **9** editor grammar groups; the fast lane
   currently runs in about 12 seconds and skips the full-S lexer/parser/checker sweeps.
 - Verification corpus: **36** features, **19** examples, **20** samples,
   **75** scenarios, **91** target executions.

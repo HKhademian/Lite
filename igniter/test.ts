@@ -1099,15 +1099,59 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     ['A := type B;\nB := type A;\n', '2:1: recursive type alias B\n'],
     ['A := type A;\n', '1:1: recursive type alias A\n'],
     ['A := type List<Int>;\n',
-      '1:11: unsupported type alias List; only Int, String, Bool, Unit and scalar aliases are supported\n'],
-    ['A := type (a: Int);\n',
-      '1:11: unsupported type alias target; only Int, String, Bool, Unit and scalar aliases are supported\n'],
+      '1:11: unsupported type alias List; only Int, String, Bool, Unit, flat named tuples and aliases are supported\n'],
+    ['A := type ();\n',
+      '1:11: tuple type needs at least one field\n'],
     ['A := type Float;\n',
-      '1:11: unsupported type alias Float; only Int, String, Bool, Unit and scalar aliases are supported\n'],
+      '1:11: unsupported type alias Float; only Int, String, Bool, Unit, flat named tuples and aliases are supported\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
+});
+
+test('restricted compiler compiles flat named tuples and tuple functions to runnable TS', () => {
+  const source = [
+    'Pair := type (kind: String, code: String);',
+    'Pair2 := type Pair;',
+    'rewrap := fn (value: Pair2): Pair { (kind = value.kind, code = value.code) }',
+    'label := fn (value: (kind: String, code: String)): String { value.kind }',
+    'p: Pair2 = (kind = "number", code = "12");',
+    'q := p;',
+    'var current := p;',
+    'current = (kind = "symbol", code = "+");',
+    'blank: Pair2;',
+    'report(p.kind, p.code, q.kind, current.kind, current.code);',
+    'report(blank.kind);',
+    'report(blank.code);',
+    'report(rewrap(p).kind, rewrap(p).code, label((kind = "call", code = "1")));',
+  ].join('\n');
+  const ts = runCompiler(tsManifestPath, source);
+  assert.equal(ts.code, 0, ts.errors);
+  assert.deepEqual(runTsArtifact(ts.output), {
+    phase: 'run', status: 0, signal: null,
+    stdout: Buffer.from('number 12 number symbol +\n\n\nnumber 12 call\n'), stderr: Buffer.alloc(0),
+  });
+});
+
+test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
+  for (const [bad, errors] of [
+    ['p: (kind: String) = (kind = "a");\nreport(p.nope);\n', '2:10: tuple has no field nope\n'],
+    ['p: (kind: String) = (kind = 1);\n', '1:1: cannot initialize (kind: String) with (kind: Int)\n'],
+    ['p := (kind = 1, kind = 2);\n', '1:17: duplicate tuple field kind\n'],
+    ['p: (kind: String, kind: Int) = (kind = "a", kind = 2);\n', '1:19: duplicate tuple field kind\n'],
+    ['f := fn (x: (kind: String)): String { return x.kind; }\nreport(f((kind = 1)));\n',
+      '2:10: argument 1 of f must be (kind: String), got (kind: Int)\n'],
+    ['f := fn (): (kind: String) { return (kind = 1); }\n',
+      '1:37: cannot return (kind: Int) from function f returning (kind: String)\n'],
+    ['p := (kind = (a = 1));\n', '1:14: nested tuple values are not supported\n'],
+  ] as const) {
+    assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
+  }
+  const tupleSource = 'p: (kind: String) = (kind = "a");\nreport(p.kind);\n';
+  assert.deepEqual(runCompiler(cManifestPath, tupleSource), {
+    code: 2, output: '', errors: 'C backend does not support tuple values yet\n',
+  });
 });
 
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
