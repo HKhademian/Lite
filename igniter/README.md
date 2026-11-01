@@ -547,11 +547,12 @@ as JavaScript. Lite execution uses only this parser/checker/evaluator and the he
 
 ## Bootstrap milestone
 
-Version **0.1.0-alpha.29**, tag **igniter-v0.1.0-alpha.29**, adds source-like
-report display for flat fixed tuples: `(1,)`, `(1, 2)` and
-`(1, left=2, right=3, 4)` with `label=value` components from the static tuple
-type. Unit still displays as `Unit`; array/list/callable reporting and tuple
-call spread stay unsupported. Previous checkpoints stay fixed:
+Version **0.1.0-alpha.30**, tag **igniter-v0.1.0-alpha.30**, implements partial
+conditionals: a declaration initializer without `else` keeps its normal
+`zero(T)` default (`x := if flag { 5 }` is 5 or 0), and an assignment without
+`else` performs no write on the false path. Value-required positions still need
+a final `else`; `else { ? }` reservation and branch-result unions stay
+unsupported. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.1**, commit `8c74537`: initial scalar/input/reporting slice.
 - **igniter-v0.1.0-alpha.2**, commit `e09cf63`: Boolean conditions and scoped blocks.
@@ -606,7 +607,9 @@ call spread stay unsupported. Previous checkpoints stay fixed:
 
 - **igniter-v0.1.0-alpha.28**, commit `977318a`: reserved storage and whole-value first initialization for scalar/tuple/fixed-array locals.
 
-- **igniter-v0.1.0-alpha.29**: current release; see the release summary above.
+- **igniter-v0.1.0-alpha.29**, commit `ee00ac9`: source-like report display for flat tuple values.
+
+- **igniter-v0.1.0-alpha.30**: current release; see the release summary above.
 
 Each tag pins its source commit and lockfile. All run directly on Node; none
 is built by an earlier Lite compiler or can build a Lite-written successor yet.
