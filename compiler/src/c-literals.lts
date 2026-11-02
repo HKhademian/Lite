@@ -28,7 +28,7 @@ textLiteralCode := fn(value: String): String {
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 floatLiteralCode := fn(digits: String, negative: Bool): String {
-    parsed := "strtod(" + textLiteralCode(digits) + ", NULL)";
+    parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -83,6 +83,25 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
             else { "<" };
         "(" + left + ") " + operator + " (" + right + ")"
     }
+}
+
+/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+floatOperandCode := fn(kind: String, code: String): String {
+    if kind == "Int" { "((double)(" + code + "))" } else { code }
+}
+
+/** Emits one numeric comparison using the pair's common family. */
+comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
+    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+    } else { comparisonCode(op, leftKind, left, right) }
+}
+
+/** Sequences operands into binary64 temporaries before the checked operation. */
+floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
+    id := intText(position);
+    "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_op(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + tag + ", " + id + "))"
 }
 
 /** Emits an int64_t floor-division expression. */
@@ -161,11 +180,11 @@ comparisonValueCode := fn(kind: String, code: String): String {
 comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
     first := comparisonTemp(kinds[0], position, 0);
     second := comparisonTemp(kinds[1], position, 1);
-    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonCode(operators[0], kinds[0], first, second);
+    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonPairCode(operators[0], kinds[0], kinds[1], first, second);
     var index := 2;
     loop index <= count {
         name := comparisonTemp(kinds[index], position, index);
-        pair := comparisonCode(operators[index - 1], kinds[index - 1], comparisonTemp(kinds[index - 1], position, index - 1), name);
+        pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], comparisonTemp(kinds[index - 1], position, index - 1), name);
         result = result + " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
         index = index + 1;
     }

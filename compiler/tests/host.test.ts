@@ -1234,8 +1234,8 @@ test('finite Float literals retain binary64 values, display and same-family comp
       assert.match(compiled.stderr.toString(), /^float سلام\.lts:2:[0-9]+: /);
     }
   }
-  // Arithmetic/mixed-family admission is the next slice, distinct from finite values and display.
-  for (const text of ['outputLine(1.5 + 2.5);', 'outputLine(1.5 < 2);']) {
+  // Power remains a separate ordinary-syntax migration slice.
+  for (const text of ['outputLine(1.5 ** 2);', 'outputLine(2 ** 3);']) {
     assert.equal(runText(text).status, 0);
     for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2); assert.equal(compiled.stdout.length, 0); }
   }
@@ -1251,6 +1251,70 @@ test('finite Float literals retain binary64 values, display and same-family comp
   {
     const text = 'outputLine(0.1 < inputFloat("middle? ") < inputFloat("last? "));', stdin = '0.0 bad', expected = runText(text, { stdin });
     assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'middle? false\n');
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
+  }
+  assertExecutions(executions);
+});
+
+test('mixed Float arithmetic and comparisons preserve values, effects and positioned faults on generated targets', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = [
+    'outputLine(1.5 + 2.5, 1.5 - 2.5, 1.5 * 2.5, 1.5 / 2.5);',
+    'outputLine(2 + 0.5, 0.5 + 2, 2 - 0.5, 0.5 - 2, 2 * 0.5, 0.5 * 2, 2 / 0.5, 0.5 / 2);',
+    'var x := 2; var y := 0.25; outputLine(x + y * 2, (x + y) * 2, -(x / y), +y);',
+    'outputLine(-0.0 * 2, 1e-300 * 1e-30, 5e-324 / 2, 5e-324 * 2, 1e308 / 1e308);',
+    'outputLine(9223372036854775807 + 0.0, -9223372036854775808 / 1.0);',
+    'outputLine(2 < 2.5, 2.5 > 2, 2 == 2.0, 2.0 =!= 3, 2 <! 2.0, 2.0 >! 2, 2 <!= 1.0, 1.0 >!= 2);',
+    'outputLine(9007199254740992.0 == 9007199254740993 > 9007199254740992, 9007199254740992 < 9007199254740993 == 9007199254740992.0);',
+    'outputLine(3.5 < 2 < (1.0 / 0.0), 1 < 2.5 < 3, 3 > 2.5 > 1);',
+    'var x := 0.0; var n := 0; loop n < 3 { x = x + 0.5; n = n + 1; } outputLine(x);',
+    'if false { outputLine(1.0 / 0); } loop false { outputLine(1e308 * 2); } outputLine(false and (1.0 / 0 > 1), true or (1e308 * 2 > 1));',
+    'outputLine(1.0 < 2.0, 2.0 == 2.0, 3.0 > 2.0);',
+  ];
+  const tsOnly = [
+    'echo := fn(n: Float): Float { outputLine("call", n); n } outputLine(echo(1.5) + echo(2.5) * echo(3.5));',
+    'i := fn(): Int { outputLine("int"); 2 } f := fn(): Float { outputLine("float"); 0.5 } outputLine(i() / f(), f() - i());',
+    'echo := fn(n: Float): Float { outputLine("call", n); n } outputLine(1 < echo(2.5) < 3, echo(3.5) < 2 < echo(1.5));',
+    'f := fn(n: Int, x: Float): Float { n * x + 0.25 } p := (value = f(2, 0.5)); values: List<Float> = [p.value, f(3, 0.5)]; outputLine(p, values);',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
+  }
+  const faults = [
+    'outputLine(1.0 / 0);', 'outputLine(1 / -0.0);', 'outputLine(0.0 / 0.0);',
+    'outputLine(1e308 + 1e308);', 'outputLine(-1e308 - 1e308);', 'outputLine(1e308 * 2);',
+    'outputLine(1e308 / 1e-308);', 'outputLine((1.0 / 0) + (1e308 * 2));',
+    'outputLine((1e308 * 2) < (1.0 / 0));', 'outputLine(1.0, 1.0 / 0);',
+    'var zero := 0.0; outputLine(1 / zero);',
+  ];
+  for (const source of faults) {
+    const text = 'outputLine("before");\r\n' + source, name = 'mixed-float سلام.lts';
+    const expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    assert.equal(expected.stdout.toString(), 'before\n');
+    assert.match(expected.stderr.toString(), /^mixed-float سلام\.lts:2:\d+: ArithmeticPanic: (division by zero|non-finite floating value)\n$/);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  for (const source of ['outputLine(1.5 % 2);', 'outputLine(1 :/ 2.5);', 'outputLine(1.5 :% 2.5);',
+    'outputLine(1.5 + "x");', 'outputLine(true * 1.5);', 'outputLine(Unit / 1.5);',
+    'outputLine(1.5 < "x");', 'outputLine(1 < 2.5 < true);', 'var x: Int = 1.5 + 2;']) {
+    const text = 'outputLine("before"); ' + source;
+    const expected = runText(text); assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
+  }
+  {
+    const text = 'outputLine(inputInt("int? ") / inputFloat("float? "));', stdin = '3 2.0', expected = runText(text, { stdin });
+    assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'int? float? 1.5\n');
     const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
   }

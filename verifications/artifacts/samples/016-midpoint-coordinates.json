@@ -6,7 +6,7 @@
     "hash": "sha256:c43323875c228186ca72e1e1bd80f47b5e9f78c89f2542f808989fec9dd8307a"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Midpoint of two coordinate pairs.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

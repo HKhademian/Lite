@@ -6,7 +6,7 @@
     "hash": "sha256:5c686ddba60f7ca9e1c54049460a7001841efb2608e73fb93af724295f0f9d54"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Completed percentage and a percentage of the total.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

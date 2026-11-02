@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after finite Float literal/value migration. All 67 older program artifact pairs remain unchanged; decimal/exponent fixtures now compile and execute. Expected expression/type diagnostics include Float. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after mixed Float arithmetic/comparisons. All 69 TS artifact hashes are unchanged. Only the two Float literal C fixtures change, using the discovered literal-parser wrapper to preserve dependencies in comparison-only programs. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
-  "compilerSha256": "554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49",
+  "sourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
+  "compilerSha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
   "programCases": 69,
   "rejectedCases": 24,
   "artifacts": [
@@ -16,7 +16,7 @@
       "name": "decimal-literal",
       "source": "001-001-decimal-literal.lts",
       "ts": "sha256:14b18c54308e375a89fba1e79337e249c8390d5673a0960c9e0908a31c4e3b3f",
-      "c": "sha256:57aac5ec5ac850afb3bd204ca4437f686473013ff81b9993d16ccf4800db1488"
+      "c": "sha256:ab9f3b88d590f575471c51ca1d235ed473b25512c9ff24d9463f28aceef5c1c5"
     },
     {
       "name": "empty-source",
@@ -28,7 +28,7 @@
       "name": "exponent-literal",
       "source": "001-001-exponent-literal.lts",
       "ts": "sha256:02efed2838c6949a25a4e5a2b55ba3ccab2ba7e1ef6e41de08fc983dd8a11c91",
-      "c": "sha256:08e83d4e4a6820b6ac27a305ad46d09827207e373540c931601aa72147941ddc"
+      "c": "sha256:bd0a2470dcb49359c93fb8ede1f75144e74d54c8253a7642003e6fbd7cec527a"
     },
     {
       "name": "output-line-empty-arguments",

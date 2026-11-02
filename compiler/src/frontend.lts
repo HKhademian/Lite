@@ -734,6 +734,12 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
     if left.kind =!= right.kind {
+        if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            codes: List<String> = [left.code, right.code];
+            kinds: List<String> = [left.kind, right.kind];
+            operators: List<String> = [operator];
+            return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
+        }
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
     if isTupleKind(left.kind) {
@@ -742,12 +748,18 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if isListKind(left.kind) {
         failAt(source, at, prefix, "cannot compare list values");
     }
-    if left.kind == "Int" or left.kind == "Float" {
-        if left.kind == "Int" and left.constant and right.constant {
+    if left.kind == "Int" {
+        if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(boolLiteralCode(value), value, true, right.next);
         }
         return boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next);
+    }
+    if left.kind == "Float" {
+        codes: List<String> = [left.code, right.code];
+        kinds: List<String> = [left.kind, right.kind];
+        operators: List<String> = [operator];
+        return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
     }
     if operator =!= "==" and operator =!= "=!=" {
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -1572,8 +1584,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
-        } else if left.kind == "Float" or right.kind == "Float" {
-            failAt(source, operatorPosition, prefix, "operator " + operator.text + " does not yet support Float operands");
+        } else if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
+                failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
+            }
+            code := floatBinaryCode(operator.text, floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {

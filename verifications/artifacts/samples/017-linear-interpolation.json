@@ -6,7 +6,7 @@
     "hash": "sha256:0d24221c1b6a233e0917acf6ee1945afeb9edb67887883b530343a28ea2ef3d7"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Linear interpolation at a fraction.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

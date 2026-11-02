@@ -6,7 +6,7 @@
     "hash": "sha256:55b579f0149981a0b26a88b4477859be485a8b68c65b47cb92c0794354dc6c99"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Approximate circumference and area of a circle.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

@@ -136,6 +136,20 @@ usesIntDivision := fn(calls: String): Bool {
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
+/** True when binary64 operations need finite-result and zero-divisor guards. */
+usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") }
+
+/** Emits the shared Float arithmetic helper without folding operations before execution. */
+emitFloatArithmeticHelpers := fn(calls: String): Unit {
+    if not usesFloatArithmetic(calls) { return; }
+    outputLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
+    outputLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+    outputLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
+    outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+    outputLine("    return value;");
+    outputLine("}");
+}
+
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
     usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls)
@@ -144,7 +158,7 @@ usesBounds := fn(calls: String): Bool {
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     integers := usesIntArithmetic(calls) or usesIntDivision(calls);
-    if not integers and not usesBounds(calls) { return; }
+    if not integers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
     outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
@@ -277,7 +291,7 @@ emitInputHelpers := fn(calls: String): Unit {
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
-        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) {
+        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -446,6 +460,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     if usesListIndex(calls) { emitListIndexHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
     emitIntArithmeticHelpers(calls, source, prefix);
+    emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     outputLine("export function main(lite$write?: (text: string) => void): string {");
     if not hasExit { outputLine("    let lite_out = \"\";"); }

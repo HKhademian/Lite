@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T20:25:24.958Z",
-  "revision": "65642322227b1c9c3df80103e2be35bf76584752",
+  "startedAt": "2026-11-02T20:47:56.086Z",
+  "revision": "4ef631bdbf0d0ab3236395fb1bf340daea396520",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/manifests/c.json\n M compiler/manifests/ts.json\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/frontend.lts\n M compiler/src/lexer.lts\nAM compiler/src/numeric-literals.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/checker/checker-dump.lts\n M compiler/tests/host.test.ts\n M compiler/tests/lexer/lexer-dump.lts\n M compiler/tests/parser/parser-decl-dump.lts\n M compiler/tests/parser/parser-dump.lts\n M compiler/tests/parser/parser-program-dump.lts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/numbers.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nRM igniter/tests/compiler/002-001-decimal-literal.json -> igniter/tests/compiler/001-001-decimal-literal.json\nR  igniter/tests/compiler/002-001-decimal-literal.lts -> igniter/tests/compiler/001-001-decimal-literal.lts\nRM igniter/tests/compiler/002-001-exponent-literal.json -> igniter/tests/compiler/001-001-exponent-literal.json\nR  igniter/tests/compiler/002-001-exponent-literal.lts -> igniter/tests/compiler/001-001-exponent-literal.lts\n M igniter/tests/compiler/002-001-report-missing-expression.json\n M igniter/tests/compiler/002-002-unary-minus-string.json\n M igniter/tests/compiler/002-006-unsupported-loop.json\n?? compiler/reports/2026-11-02-float-literals-ladder.json\n",
-  "compilerSourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
-  "compilerSourceRevision": "97ef6650874198a30f3bc94950a0630fd2440571",
+  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/c-literals.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M verifications/artifacts/samples/004-triangle-area.json\n M verifications/artifacts/samples/005-circle-measurements.json\n M verifications/artifacts/samples/006-temperature-conversion.json\n M verifications/artifacts/samples/007-distance-conversion.json\n M verifications/artifacts/samples/009-average-three-values.json\n M verifications/artifacts/samples/010-percentage-of-total.json\n M verifications/artifacts/samples/014-speed-distance-time.json\n M verifications/artifacts/samples/016-midpoint-coordinates.json\n M verifications/artifacts/samples/017-linear-interpolation.json\n M verifications/features.json\nA  verifications/features/num-float.json\nA  verifications/features/num-float.lts\n?? compiler/reports/2026-11-02-float-arithmetic-ladder.json\n",
+  "compilerSourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
+  "compilerSourceRevision": "Float-arithmetic source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49",
+  "t11Sha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -51,6 +51,57 @@
         "status": 0,
         "signal": null,
         "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 29, 49, 69, 70, 102, 176];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\nfunction lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = ((1n + (2n * ((3n - 4n))))).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((20n / 3n)).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = (((-7n) / 2n)).toString();\n    lite$emit(lite$report2 + \"\\n\");\n    if (Boolean(false)) {\n        const lite$report3 = (lite$divideInt(1n, 0n, 94)).toString();\n        lite$emit(lite$report3 + \"\\n\");\n    }\n    const lite$report4 = ((((false) && ((((lite$divideInt(1n, 0n, 126)) > (0n)))))) ? \"true\" : \"false\") + \" \" + ((((true) || ((((lite$addInt(9223372036854775807n, 1n, 165)) > (0n)))))) ? \"true\" : \"false\");\n    lite$emit(lite$report4 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "num.float",
+      "kind": "feature",
+      "summary": "Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults.",
+      "path": "verifications/features/num-float.lts",
+      "manifest": "verifications/features/num-float.json",
+      "features": [
+        "num.float",
+        "comparison.chains",
+        "loop.conditional"
+      ],
+      "sourceSha256": "76bea55fd03ab089674bd8e3c9a9ce2c8a0bd1c9af7f614b695bdfd98b93d235",
+      "source": "outputLine(2 + 0.5, 5.0 / 2, 0.1 + 0.2);\noutputLine(9007199254740992.0 == 9007199254740993 > 9007199254740992);\noutputLine(3.5 < 2 < (1.0 / 0));\nvar total := 0.0; var n := 0;\nloop n < 3 { total = total + 0.5; n = n + 1; }\noutputLine(total);\n",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "mixed-values-and-lazy-fault",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "2.5 2.5 0.30000000000000004\ntrue\nfalse\n1.5\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "2.5 2.5 0.30000000000000004\ntrue\nfalse\n1.5\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 41, 112, 145, 175, 222, 241];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\nfunction lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (lite$floatOp(Number(2n), Number(\"0.5\"), 0, 13)).toString() + \" \" + (lite$floatOp(Number(\"5.0\"), Number(2n), 3, 24)).toString() + \" \" + (lite$floatOp(Number(\"0.1\"), Number(\"0.2\"), 0, 33)).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((((): boolean => { const lite$compare0: number = Number(\"9007199254740992.0\"); const lite$compare1: bigint = 9007199254740993n; if (!(((lite$compare0) === (Number(lite$compare1))))) return false; const lite$compare2: bigint = 9007199254740992n; return ((lite$compare1) > (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = ((((): boolean => { const lite$compare0: number = Number(\"3.5\"); const lite$compare1: bigint = 2n; if (!(((lite$compare0) < (Number(lite$compare1))))) return false; const lite$compare2: number = (lite$floatOp(Number(\"1.0\"), Number(0n), 3, 138)); return ((Number(lite$compare1)) < (lite$compare2)); })()) ? \"true\" : \"false\");\n    lite$emit(lite$report2 + \"\\n\");\n    let lite_total = Number(\"0.0\");\n    void lite_total;\n    let lite_n = 0n;\n    void lite_n;\n    while (((lite_n) < (3n))) {\n        lite_total = lite$floatOp(lite_total, Number(\"0.5\"), 0, 202);\n        lite_n = lite$addInt(lite_n, 1n, 215);\n    }\n    const lite$report3 = (lite_total).toString();\n    lite$emit(lite$report3 + \"\\n\");\n    return lite_out;\n}\n",
         "stderr": ""
       },
       "artifactTypecheck": {
@@ -2759,7 +2810,7 @@
       "path": "samples/004_triangle_area.lts",
       "manifest": "verifications/artifacts/samples/004-triangle-area.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "7ba3a10853c025da33251f0302d497bd82c3e738c04efafb0ad61bd3aade83b4",
@@ -2767,7 +2818,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -2779,14 +2830,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "7.5\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 61, 139, 140, 153, 168, 169, 224, 225];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_base = Number(\"5.0\");\n    void lite_base;\n    const lite_height = Number(\"3.0\");\n    void lite_height;\n    const lite_area = lite$floatOp((lite$floatOp(lite_base, lite_height, 2, 183)), Number(\"2.0\"), 3, 193);\n    void lite_area;\n    const lite$report0 = (lite_area).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "7:15: operator * does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -2796,7 +2860,7 @@
       "path": "samples/005_circle_measurements.lts",
       "manifest": "verifications/artifacts/samples/005-circle-measurements.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "2fefdf1b916e01fe9c1a3ca84aeb402bc4dbc9b63e7dd0971b026f5a20dfa2e0",
@@ -2804,7 +2868,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -2816,14 +2880,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "25.13272\n50.26544\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 45, 125, 126, 141, 156, 157, 220, 289, 290];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_radius = Number(\"4.0\");\n    void lite_radius;\n    const lite_pi = Number(\"3.14159\");\n    void lite_pi;\n    const lite_circumference = lite$floatOp((lite$floatOp(Number(\"2.0\"), lite_pi, 2, 179)), lite_radius, 2, 185);\n    void lite_circumference;\n    const lite_area = lite$floatOp((lite$floatOp(lite_pi, lite_radius, 2, 232)), lite_radius, 2, 242);\n    void lite_area;\n    const lite$report0 = (lite_circumference).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_area).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "7:23: operator * does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -2833,7 +2910,7 @@
       "path": "samples/006_temperature_conversion.lts",
       "manifest": "verifications/artifacts/samples/006-temperature-conversion.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "e253e8eefd9c18e760123887ae5739e94b0064fed4692c246c25d9e9b4f73990",
@@ -2841,7 +2918,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -2853,14 +2930,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "77\n25\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 65, 123, 124, 141, 215, 216, 247, 335, 336];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_celsius = Number(\"25.0\");\n    void lite_celsius;\n    const lite_fahrenheit = lite$floatOp((lite$floatOp((lite$floatOp(lite_celsius, Number(\"9.0\"), 2, 165)), Number(\"5.0\"), 3, 172)), Number(\"32.0\"), 0, 179);\n    void lite_fahrenheit;\n    const lite_fahrenheit_to_convert = Number(\"77.0\");\n    void lite_fahrenheit_to_convert;\n    const lite_celsius_again = lite$floatOp((lite$floatOp((lite$floatOp(lite_fahrenheit_to_convert, Number(\"32.0\"), 1, 288)), Number(\"5.0\"), 2, 296)), Number(\"9.0\"), 3, 303);\n    void lite_celsius_again;\n    const lite$report0 = (lite_fahrenheit).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_celsius_again).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "5:25: operator * does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -2870,7 +2960,7 @@
       "path": "samples/007_distance_conversion.lts",
       "manifest": "verifications/artifacts/samples/007-distance-conversion.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "135df5cd95d92238974f4644110af1e8e6aed0ba63b5a366ea61c2fb8aec9cf5",
@@ -2878,7 +2968,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -2890,14 +2980,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "0.75\n75000\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 75, 76, 93, 94, 148, 203, 204];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_meters = Number(\"750.0\");\n    void lite_meters;\n    const lite_kilometers = lite$floatOp(lite_meters, Number(\"1000.0\"), 3, 115);\n    void lite_kilometers;\n    const lite_centimeters = lite$floatOp(lite_meters, Number(\"100.0\"), 2, 170);\n    void lite_centimeters;\n    const lite$report0 = (lite_kilometers).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_centimeters).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "5:22: operator / does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -2958,7 +3061,7 @@
       "path": "samples/009_average_three_values.lts",
       "manifest": "verifications/artifacts/samples/009-average-three-values.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "9005bec34c150a5b507ff39144ccaafbffcb912da9c4d2ee7473a99b3fd1a3e9",
@@ -2966,7 +3069,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -2978,14 +3081,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "5.666666666666667\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 76, 77, 95, 114, 132, 133, 186, 253, 254];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_first_day = Number(\"4.0\");\n    void lite_first_day;\n    const lite_second_day = Number(\"5.0\");\n    void lite_second_day;\n    const lite_third_day = Number(\"8.0\");\n    void lite_third_day;\n    const lite_total_hours = lite$floatOp((lite$floatOp(lite_first_day, lite_second_day, 0, 159)), lite_third_day, 0, 173);\n    void lite_total_hours;\n    const lite_average_hours = lite$floatOp(lite_total_hours, Number(\"3.0\"), 3, 215);\n    void lite_average_hours;\n    const lite$report0 = (lite_average_hours).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "7:27: operator + does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -2995,7 +3111,7 @@
       "path": "samples/010_percentage_of_total.lts",
       "manifest": "verifications/artifacts/samples/010-percentage-of-total.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "60aef4f15a1ddffa51881c299d3187e01e3d5cacc361454efaa3cf91e542baf4",
@@ -3003,7 +3119,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -3015,14 +3131,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "37.5\n2\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 55, 119, 120, 137, 151, 152, 215, 216, 233, 290, 291];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_finished = Number(\"3.0\");\n    void lite_finished;\n    const lite_total = Number(\"8.0\");\n    void lite_total;\n    const lite_percent_done = lite$floatOp((lite$floatOp(lite_finished, Number(\"100.0\"), 2, 178)), lite_total, 3, 187);\n    void lite_percent_done;\n    const lite_percent = Number(\"25.0\");\n    void lite_percent;\n    const lite_tasks = lite$floatOp((lite$floatOp(lite_total, lite_percent, 2, 249)), Number(\"100.0\"), 3, 260);\n    void lite_tasks;\n    const lite$report0 = (lite_percent_done).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_tasks).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "7:27: operator * does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -3182,7 +3311,7 @@
       "path": "samples/014_speed_distance_time.lts",
       "manifest": "verifications/artifacts/samples/014-speed-distance-time.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "70126485bce442fa5296f2c50ef4bb797104396ee9aae6b613d019eb0c2f3c08",
@@ -3190,7 +3319,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -3202,14 +3331,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "12.5\n60\n12.5\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 62, 124, 166, 167, 193, 210, 275, 276, 303, 326, 390, 457, 458];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_distance_meters = Number(\"150.0\");\n    void lite_distance_meters;\n    const lite_seconds = Number(\"12.0\");\n    void lite_seconds;\n    const lite_speed = lite$floatOp(lite_distance_meters, lite_seconds, 3, 235);\n    void lite_speed;\n    const lite_meters_per_second = Number(\"12.0\");\n    void lite_meters_per_second;\n    const lite_travel_seconds = Number(\"5.0\");\n    void lite_travel_seconds;\n    const lite_distance = lite$floatOp(lite_meters_per_second, lite_travel_seconds, 2, 356);\n    void lite_distance;\n    const lite_time = lite$floatOp(lite_distance_meters, lite_meters_per_second, 3, 414);\n    void lite_time;\n    const lite$report0 = (lite_speed).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_distance).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = (lite_time).toString();\n    lite$emit(lite$report2 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "7:26: operator / does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -3269,7 +3411,7 @@
       "path": "samples/016_midpoint_coordinates.lts",
       "manifest": "verifications/artifacts/samples/016-midpoint-coordinates.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "8444683f0549bef7f8640f9116684f87b235d82732b423f628ef35cbab270bfb",
@@ -3277,7 +3419,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -3289,14 +3431,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "0.5\n-1.5\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 55, 131, 132, 149, 165, 182, 200, 201, 253, 306, 307];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_first_x = (-Number(\"3.0\"));\n    void lite_first_x;\n    const lite_first_y = Number(\"2.0\");\n    void lite_first_y;\n    const lite_second_x = Number(\"4.0\");\n    void lite_second_x;\n    const lite_second_y = (-Number(\"5.0\"));\n    void lite_second_y;\n    const lite_midpoint_x = lite$floatOp((lite$floatOp(lite_first_x, lite_second_x, 0, 224)), Number(\"2.0\"), 3, 236);\n    void lite_midpoint_x;\n    const lite_midpoint_y = lite$floatOp((lite$floatOp(lite_first_y, lite_second_y, 0, 276)), Number(\"2.0\"), 3, 288);\n    void lite_midpoint_y;\n    const lite$report0 = (lite_midpoint_x).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = (lite_midpoint_y).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "9:24: operator + does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -3306,7 +3461,7 @@
       "path": "samples/017_linear_interpolation.lts",
       "manifest": "verifications/artifacts/samples/017-linear-interpolation.json",
       "features": [
-        "int.arithmetic",
+        "num.float",
         "scope.locals"
       ],
       "sourceSha256": "c4444701f99eacde0ba2094dd860002d7253040f0534621196e40ba56e0209b7",
@@ -3314,7 +3469,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "observed-values",
@@ -3326,14 +3481,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "15\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 75, 135, 136, 151, 164, 182, 183, 210, 261, 262];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_start = Number(\"10.0\");\n    void lite_start;\n    const lite_end = Number(\"30.0\");\n    void lite_end;\n    const lite_fraction = Number(\"0.25\");\n    void lite_fraction;\n    const lite_difference = lite$floatOp(lite_end, lite_start, 1, 201);\n    void lite_difference;\n    const lite_value = lite$floatOp(lite_start, (lite$floatOp(lite_difference, lite_fraction, 2, 239)), 0, 225);\n    void lite_value;\n    const lite$report0 = (lite_value).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "8:19: operator - does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -3498,7 +3666,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -3509,14 +3677,27 @@
             "stdout": "3.5\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "3.5\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0];\nconst lite$intSource = \"\";\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\n\nfunction lite$floatOp(left: number, right: number, op: number, at: number): number {\n    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");\n    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;\n    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");\n    return value;\n}\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (lite$floatOp(Number(\"1.5\"), Number(2n), 0, 15)).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:16: operator + does not yet support Float operands\n"
+        "stderr": ""
       }
     },
     {
@@ -6944,8 +7125,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "41a15f3255c9edef2785e664f7874b03492df98b6440ce12164fdc1f51b0df33",
-      "bytes": 177856,
+      "sourceSha256": "effd1e78384b72df15d038993d391a6604a33b9b956d8bfe065fe4bef8625a63",
+      "bytes": 181384,
       "t00Check": {
         "accepted": true
       },
@@ -6954,7 +7135,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 322110
+        "stdoutBytes": 328300
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6963,12 +7144,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "49ad9085c040d19e5b86240076d21ed1c205a36555749641944ec8e5f974a756"
+      "artifactSha256": "edbf58ab8447438f0fd91cc8a4b2579b6cdf039fe6b52e363eb21197795ba483"
     },
     {
       "path": "compiler/src/c-literals.lts",
-      "sourceSha256": "d08bb820df4d1b7dc55683ddefa9dafbd7d52f20109cb4d9e9661dc4ec7ea36d",
-      "bytes": 7960,
+      "sourceSha256": "63457b88335b6476f1f3ffc3e9a13f44484806bd9534834c752edbeccb602568",
+      "bytes": 9161,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function fail; forward function lookup is not supported yet"
@@ -7007,8 +7188,8 @@
     },
     {
       "path": "compiler/src/emit-c.lts",
-      "sourceSha256": "29c57a367befdac492ef369b647b9c5dba7ef1ec3e98681d8d789fe800a338fe",
-      "bytes": 23082,
+      "sourceSha256": "eafccc7584ae3a0f3bf360af755cf4a024ecf0b065563ff9c2346e29c55a7b0e",
+      "bytes": 24321,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function indexOfText; forward function lookup is not supported yet"
@@ -7017,8 +7198,8 @@
     },
     {
       "path": "compiler/src/emit-ts.lts",
-      "sourceSha256": "400d4cd4cfd001bc2c1d78d398e0e530f65b39ff0693a50976cb8b200e040ae4",
-      "bytes": 28835,
+      "sourceSha256": "dffeeb87ba68a3256900cb803131542a39589df1605d0c2aa6ca5eca35f0536b",
+      "bytes": 29826,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function skipName; forward function lookup is not supported yet"
@@ -7027,8 +7208,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "7a5268f3f43d5904d6ff04d362692617d556edd07fb247ea4ebddccaec897b5e",
-      "bytes": 128336,
+      "sourceSha256": "41414bd524492a75ce6f80322488d5b3552a5421816420ac9f87bd6dc6734c70",
+      "bytes": 129424,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7067,8 +7248,8 @@
     },
     {
       "path": "compiler/src/ts-literals.lts",
-      "sourceSha256": "050fc75674b17775038ec395c0e33343bb046c310a4d691056b617394cec6572",
-      "bytes": 6860,
+      "sourceSha256": "6c054746bbfde60d9c93be2a8deabcd605a2d513272200b9020d4017a7894076",
+      "bytes": 7929,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function intText; forward function lookup is not supported yet"
@@ -7305,8 +7486,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
-      "bytes": 182509,
+      "sourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
+      "bytes": 185657,
       "t00Check": {
         "accepted": true
       },
@@ -9164,6 +9345,11 @@
       "id": "mut.inferred"
     },
     {
+      "path": "verifications/features/num-float.lts",
+      "coverage": "canonical-manifest",
+      "id": "num.float"
+    },
+    {
       "path": "verifications/features/num-power.lts",
       "coverage": "canonical-manifest",
       "id": "num.power"
@@ -9221,8 +9407,8 @@
   ],
   "counts": {
     "feature": {
-      "total": 38,
-      "matches": 24,
+      "total": 39,
+      "matches": 25,
       "rejected": 14,
       "typecheck": 0,
       "mismatch": 0,
@@ -9244,8 +9430,8 @@
     },
     "sample": {
       "total": 20,
-      "matches": 11,
-      "rejected": 9,
+      "matches": 20,
+      "rejected": 0,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9266,8 +9452,8 @@
     },
     "probe": {
       "total": 81,
-      "matches": 38,
-      "rejected": 43,
+      "matches": 39,
+      "rejected": 42,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9286,7 +9472,7 @@
       "accepted": 0,
       "baseline": 0
     },
-    "trackedSourceFiles": 211
+    "trackedSourceFiles": 212
   },
   "seedStrictTypecheck": "passed",
   "testGroups": [
@@ -9528,7 +9714,7 @@
     "type alias example runs and checks through the root launcher",
     "Lite numeric literal phases share Float spelling and finite-range checks"
   ],
-  "finishedAt": "2026-11-02T20:26:21.518Z",
+  "finishedAt": "2026-11-02T20:48:57.179Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9538,6 +9724,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
+  }
 }

@@ -6,7 +6,7 @@
     "hash": "sha256:8f9c664fa7046b247767b56fbbcf0ca681abae336f77eaa84f6c66e7f656aff3"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Triangle area from base and height.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

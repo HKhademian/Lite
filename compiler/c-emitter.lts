@@ -452,7 +452,7 @@ textLiteralCode := fn(value: String): String {
 
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 floatLiteralCode := fn(digits: String, negative: Bool): String {
-    parsed := "strtod(" + textLiteralCode(digits) + ", NULL)";
+    parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -507,6 +507,25 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
             else { "<" };
         "(" + left + ") " + operator + " (" + right + ")"
     }
+}
+
+/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+floatOperandCode := fn(kind: String, code: String): String {
+    if kind == "Int" { "((double)(" + code + "))" } else { code }
+}
+
+/** Emits one numeric comparison using the pair's common family. */
+comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
+    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+    } else { comparisonCode(op, leftKind, left, right) }
+}
+
+/** Sequences operands into binary64 temporaries before the checked operation. */
+floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
+    id := intText(position);
+    "(lt_arg_f_left_" + id + " = " + left + ", lt_arg_f_right_" + id + " = " + right + ", lt_float_op(lt_arg_f_left_" + id + ", lt_arg_f_right_" + id + ", " + tag + ", " + id + "))"
 }
 
 /** Emits an int64_t floor-division expression. */
@@ -585,11 +604,11 @@ comparisonValueCode := fn(kind: String, code: String): String {
 comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: List<String>, count: Int, position: Int): String {
     first := comparisonTemp(kinds[0], position, 0);
     second := comparisonTemp(kinds[1], position, 1);
-    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonCode(operators[0], kinds[0], first, second);
+    var result := "(" + first + " = " + comparisonValueCode(kinds[0], codes[0]) + ", " + second + " = " + comparisonValueCode(kinds[1], codes[1]) + ", " + comparisonPairCode(operators[0], kinds[0], kinds[1], first, second);
     var index := 2;
     loop index <= count {
         name := comparisonTemp(kinds[index], position, index);
-        pair := comparisonCode(operators[index - 1], kinds[index - 1], comparisonTemp(kinds[index - 1], position, index - 1), name);
+        pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], comparisonTemp(kinds[index - 1], position, index - 1), name);
         result = result + " && (" + name + " = " + comparisonValueCode(kinds[index], codes[index]) + ", " + pair + ")";
         index = index + 1;
     }
@@ -1404,6 +1423,12 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
     if left.kind =!= right.kind {
+        if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            codes: List<String> = [left.code, right.code];
+            kinds: List<String> = [left.kind, right.kind];
+            operators: List<String> = [operator];
+            return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
+        }
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
     if isTupleKind(left.kind) {
@@ -1412,12 +1437,18 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if isListKind(left.kind) {
         failAt(source, at, prefix, "cannot compare list values");
     }
-    if left.kind == "Int" or left.kind == "Float" {
-        if left.kind == "Int" and left.constant and right.constant {
+    if left.kind == "Int" {
+        if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(boolLiteralCode(value), value, true, right.next);
         }
         return boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next);
+    }
+    if left.kind == "Float" {
+        codes: List<String> = [left.code, right.code];
+        kinds: List<String> = [left.kind, right.kind];
+        operators: List<String> = [operator];
+        return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
     }
     if operator =!= "==" and operator =!= "=!=" {
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -2242,8 +2273,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
-        } else if left.kind == "Float" or right.kind == "Float" {
-            failAt(source, operatorPosition, prefix, "operator " + operator.text + " does not yet support Float operands");
+        } else if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
+                failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
+            }
+            code := floatBinaryCode(operator.text, floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {
@@ -3144,9 +3179,23 @@ usesIntArithmetic := fn(calls: String): Bool {
         usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(")
 }
 
+/** True when binary64 operations need finite-result and zero-divisor guards. */
+usesFloatArithmetic := fn(calls: String): Bool { usesIntHelper(calls, "lt_float_op(") }
+
+/** Emits checked binary64 operations; caller temporaries preserve left-to-right operand effects. */
+emitFloatArithmeticHelpers := fn(calls: String): Unit {
+    if not usesFloatArithmetic(calls) { return; }
+    outputLine("static double lt_float_op(double left, double right, int op, size_t at) {");
+    outputLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }");
+    outputLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
+    outputLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+    outputLine("    return value;");
+    outputLine("}");
+}
+
 /** Emits portable C11 guards that reject overflow before evaluating a signed operation. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
-    if not usesIntArithmetic(calls) and not usesIntDivision(calls) { return; }
+    if not usesIntArithmetic(calls) and not usesIntDivision(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     outputLine("static const size_t lt_int_lines[] = {" + lineStartCodes(source) + "};");
     outputLine("static const char *lt_int_source = " + textLiteralCode(namePrefix) + ";");
@@ -3200,7 +3249,7 @@ emitArithmeticTemporaries := fn(items: Items): Unit {
             } else if ch == "l" and (startsWithAt(item.code, cursor, "lt_arg_") or startsWithAt(item.code, cursor, "lt_cmp_")) {
                 end := skipName(item.code, cursor);
                 if startsWithAt(item.code, end, " = ") {
-                    tag := if startsWithAt(item.code, cursor, "lt_cmp_") { textAt(item.code, cursor + 7) } else { "i" };
+                    tag := if startsWithAt(item.code, cursor, "lt_cmp_") or startsWithAt(item.code, cursor, "lt_arg_f_") { textAt(item.code, cursor + 7) } else { "i" };
                     typeCode := if tag == "s" { "const char *" } else if tag == "b" { "bool " }
                         else if tag == "f" { "double " } else { "int64_t " };
                     outputLine("    " + typeCode + textSlice(item.code, cursor, end) + ";");
@@ -3395,7 +3444,8 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     calls := targetHelperCalls(items);
     var floatOutput := false;
-    var floatValues := usesIntHelper(calls, "strtod(");
+    floatLiterals := usesIntHelper(calls, "lt_float_literal(");
+    var floatValues := floatLiterals or usesFloatArithmetic(calls);
     loop items as item {
         if item.kind == "Float" { floatOutput = true; }
         if item.kind == "Float" or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
@@ -3428,12 +3478,15 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     outputLine("#include <inttypes.h>");
     outputLine("#include <stdbool.h>");
     outputLine("#include <string.h>");
+    if usesFloatArithmetic(calls) { outputLine("#include <math.h>"); }
     if floatValues {
         outputLine("#include <float.h>");
         outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
     }
+    if floatLiterals { outputLine("static double lt_float_literal(const char *text) { return strtod(text, NULL); }"); }
     if floatOutput { emitFloatOutputHelpers(); }
     emitIntArithmeticHelpers(calls, source, prefix);
+    emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     outputLine("int main(void) {");

@@ -6,7 +6,7 @@
     "hash": "sha256:be3af748cd7c42a3916be6f2284886ce68ec83d51922f153374bc7ea8e41292c"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Average of three daily values.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

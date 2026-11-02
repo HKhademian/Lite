@@ -6,7 +6,7 @@
     "hash": "sha256:8edd2740d7e958194073a8a8875dace6ab23399ba56805c6f778c4076e8df956"
   },
   "features": [
-    "int.arithmetic",
+    "num.float",
     "scope.locals"
   ],
   "description": "Meters converted to kilometers and centimeters.",
@@ -20,5 +20,10 @@
       },
       "exitCode": 0
     }
+  ],
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
   ]
 }

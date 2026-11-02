@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -18,18 +18,18 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 38; 24 matches tested behavior; 14 T11 rejects source.
+- feature: 39; 25 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
-- sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 81; 38 matches tested behavior; 43 T11 rejects source.
+- sample: 20; 20 matches tested behavior.
+- probe: 81; 39 matches tested behavior; 42 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
-- trackedSourceFiles: 211.
+- trackedSourceFiles: 212.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 38 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 92/166 executed source cases match; 74 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 48 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 103/167 executed source cases match; 64 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -45,6 +45,16 @@ Closed original cases:
 - example: example.014-input-history
 - example: example.015-retained-tokens
 - example: example.019-whole-input
+- sample: sample.004-triangle-area
+- sample: sample.005-circle-measurements
+- sample: sample.006-temperature-conversion
+- sample: sample.007-distance-conversion
+- sample: sample.009-average-three-values
+- sample: sample.010-percentage-of-total
+- sample: sample.014-speed-distance-time
+- sample: sample.016-midpoint-coordinates
+- sample: sample.017-linear-interpolation
+- probe: numeric.float
 - probe: numeric.exponent-literal
 - probe: numeric.dynamic-add-overflow
 - probe: numeric.dynamic-subtract-overflow
@@ -76,6 +86,7 @@ Closed original cases:
 ## feature
 
 - **int.arithmetic — matches tested behavior.** Signed Int arithmetic and precedence. Source: `verifications/features/int-arithmetic.lts`.
+- **num.float — matches tested behavior.** Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults. Source: `verifications/features/num-float.lts`.
 - **num.widths — T11 rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `verifications/features/num-widths.lts`.
   First diagnostic: 1:4: unsupported local type Int8
 - **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `verifications/features/bool-conditions.lts`.
@@ -130,8 +141,7 @@ Closed original cases:
 
 ## probe
 
-- **numeric.float — T11 rejects source.** Float literals and mixed Int/Float arithmetic
-  First diagnostic: 1:16: operator + does not yet support Float operands
+- **numeric.float — matches tested behavior.** Float literals and mixed Int/Float arithmetic
 - **numeric.sized-int — T11 rejects source.** Sized Int8/Int16/Int32 storage and widening
   First diagnostic: 1:4: unsupported local type Int8
 - **numeric.int64-alias — T11 rejects source.** Explicit Int64 annotations
@@ -290,29 +300,20 @@ Closed original cases:
 - **sample.001-add-two-numbers — matches tested behavior.** Adds two supplied baskets; the verification appends outputLine(apples). Source: `samples/001_add_two_numbers.lts`.
 - **sample.002-arithmetic-operations — matches tested behavior.** Four integer operations; the verification appends reports for each result. Source: `samples/002_arithmetic_operations.lts`.
 - **sample.003-rectangle-measurements — matches tested behavior.** Rectangle area and perimeter. Source: `samples/003_rectangle_measurements.lts`.
-- **sample.004-triangle-area — T11 rejects source.** Triangle area from base and height. Source: `samples/004_triangle_area.lts`.
-  First diagnostic: 7:15: operator * does not yet support Float operands
-- **sample.005-circle-measurements — T11 rejects source.** Approximate circumference and area of a circle. Source: `samples/005_circle_measurements.lts`.
-  First diagnostic: 7:23: operator * does not yet support Float operands
-- **sample.006-temperature-conversion — T11 rejects source.** Celsius to Fahrenheit and back. Source: `samples/006_temperature_conversion.lts`.
-  First diagnostic: 5:25: operator * does not yet support Float operands
-- **sample.007-distance-conversion — T11 rejects source.** Meters converted to kilometers and centimeters. Source: `samples/007_distance_conversion.lts`.
-  First diagnostic: 5:22: operator / does not yet support Float operands
+- **sample.004-triangle-area — matches tested behavior.** Triangle area from base and height. Source: `samples/004_triangle_area.lts`.
+- **sample.005-circle-measurements — matches tested behavior.** Approximate circumference and area of a circle. Source: `samples/005_circle_measurements.lts`.
+- **sample.006-temperature-conversion — matches tested behavior.** Celsius to Fahrenheit and back. Source: `samples/006_temperature_conversion.lts`.
+- **sample.007-distance-conversion — matches tested behavior.** Meters converted to kilometers and centimeters. Source: `samples/007_distance_conversion.lts`.
 - **sample.008-duration-parts — matches tested behavior.** Split seconds into hours, minutes and seconds. Source: `samples/008_duration_parts.lts`.
-- **sample.009-average-three-values — T11 rejects source.** Average of three daily values. Source: `samples/009_average_three_values.lts`.
-  First diagnostic: 7:27: operator + does not yet support Float operands
-- **sample.010-percentage-of-total — T11 rejects source.** Completed percentage and a percentage of the total. Source: `samples/010_percentage_of_total.lts`.
-  First diagnostic: 7:27: operator * does not yet support Float operands
+- **sample.009-average-three-values — matches tested behavior.** Average of three daily values. Source: `samples/009_average_three_values.lts`.
+- **sample.010-percentage-of-total — matches tested behavior.** Completed percentage and a percentage of the total. Source: `samples/010_percentage_of_total.lts`.
 - **sample.011-discounted-price — matches tested behavior.** Percentage discount rounded to cents. Source: `samples/011_discounted_price.lts`.
 - **sample.012-tax-and-tip — matches tested behavior.** Tax and tip rounded to cents. Source: `samples/012_tax_and_tip.lts`.
 - **sample.013-simple-interest — matches tested behavior.** Simple interest over three years. Source: `samples/013_simple_interest.lts`.
-- **sample.014-speed-distance-time — T11 rejects source.** Speed, distance and time relations. Source: `samples/014_speed_distance_time.lts`.
-  First diagnostic: 7:26: operator / does not yet support Float operands
+- **sample.014-speed-distance-time — matches tested behavior.** Speed, distance and time relations. Source: `samples/014_speed_distance_time.lts`.
 - **sample.015-weighted-average — matches tested behavior.** Weighted average of three scores. Source: `samples/015_weighted_average.lts`.
-- **sample.016-midpoint-coordinates — T11 rejects source.** Midpoint of two coordinate pairs. Source: `samples/016_midpoint_coordinates.lts`.
-  First diagnostic: 9:24: operator + does not yet support Float operands
-- **sample.017-linear-interpolation — T11 rejects source.** Linear interpolation at a fraction. Source: `samples/017_linear_interpolation.lts`.
-  First diagnostic: 8:19: operator - does not yet support Float operands
+- **sample.016-midpoint-coordinates — matches tested behavior.** Midpoint of two coordinate pairs. Source: `samples/016_midpoint_coordinates.lts`.
+- **sample.017-linear-interpolation — matches tested behavior.** Linear interpolation at a fraction. Source: `samples/017_linear_interpolation.lts`.
 - **sample.018-split-bill — matches tested behavior.** Whole-cent bill split with remainder. Source: `samples/018_split_bill.lts`.
 - **sample.019-currency-conversion — matches tested behavior.** Currency conversion rounded to target cents. Source: `samples/019_currency_conversion.lts`.
 - **sample.020-swap-values — matches tested behavior.** Swaps two var bindings through a temporary; verification reports both. Source: `samples/020_swap_values.lts`.

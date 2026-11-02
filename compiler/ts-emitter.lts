@@ -514,6 +514,24 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
     }
 }
 
+/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+floatOperandCode := fn(kind: String, code: String): String {
+    if kind == "Int" { "Number(" + code + ")" } else { code }
+}
+
+/** Emits one numeric comparison using the pair's common family. */
+comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
+    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+    } else { comparisonCode(op, leftKind, left, right) }
+}
+
+/** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
+floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
+    "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + intText(position) + ")"
+}
+
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
@@ -572,7 +590,7 @@ comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: L
         name := "lite$compare" + intText(index);
         result = result + "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
         if index > 0 {
-            pair := comparisonCode(operators[index - 1], kinds[index - 1], "lite$compare" + intText(index - 1), name);
+            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + intText(index - 1), name);
             if index < count { result = result + "if (!(" + pair + ")) return false; "; }
             else { result = result + "return " + pair + "; "; }
         }
@@ -1389,6 +1407,12 @@ compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
     if left.kind =!= right.kind {
+        if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            codes: List<String> = [left.code, right.code];
+            kinds: List<String> = [left.kind, right.kind];
+            operators: List<String> = [operator];
+            return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
+        }
         failAt(source, at, prefix, "cannot compare " + displayKind(left.kind) + " and " + displayKind(right.kind));
     }
     if isTupleKind(left.kind) {
@@ -1397,12 +1421,18 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if isListKind(left.kind) {
         failAt(source, at, prefix, "cannot compare list values");
     }
-    if left.kind == "Int" or left.kind == "Float" {
-        if left.kind == "Int" and left.constant and right.constant {
+    if left.kind == "Int" {
+        if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(boolLiteralCode(value), value, true, right.next);
         }
         return boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next);
+    }
+    if left.kind == "Float" {
+        codes: List<String> = [left.code, right.code];
+        kinds: List<String> = [left.kind, right.kind];
+        operators: List<String> = [operator];
+        return boolParsed(comparisonChainCode(codes, kinds, operators, 1, at), false, false, right.next);
     }
     if operator =!= "==" and operator =!= "=!=" {
         failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -2227,8 +2257,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
-        } else if left.kind == "Float" or right.kind == "Float" {
-            failAt(source, operatorPosition, prefix, "operator " + operator.text + " does not yet support Float operands");
+        } else if (left.kind == "Int" or left.kind == "Float") and (right.kind == "Int" or right.kind == "Float") {
+            if operator.text =!= "+" and operator.text =!= "-" and operator.text =!= "*" and operator.text =!= "/" {
+                failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
+            }
+            code := floatBinaryCode(operator.text, floatOperandCode(left.kind, left.code), floatOperandCode(right.kind, right.code), operatorPosition);
+            left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = right.next);
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {
@@ -3214,6 +3248,20 @@ usesIntDivision := fn(calls: String): Bool {
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
+/** True when binary64 operations need finite-result and zero-divisor guards. */
+usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") }
+
+/** Emits the shared Float arithmetic helper without folding operations before execution. */
+emitFloatArithmeticHelpers := fn(calls: String): Unit {
+    if not usesFloatArithmetic(calls) { return; }
+    outputLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
+    outputLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+    outputLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
+    outputLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+    outputLine("    return value;");
+    outputLine("}");
+}
+
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
     usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesListIndex(calls) or usesListPop(calls)
@@ -3222,7 +3270,7 @@ usesBounds := fn(calls: String): Bool {
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
 emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
     integers := usesIntArithmetic(calls) or usesIntDivision(calls);
-    if not integers and not usesBounds(calls) { return; }
+    if not integers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
     outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
@@ -3355,7 +3403,7 @@ emitInputHelpers := fn(calls: String): Unit {
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
 emitBuiltinHelpers := fn(calls: String): Unit {
     if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
-        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) {
+        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -3524,6 +3572,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     if usesListIndex(calls) { emitListIndexHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
     emitIntArithmeticHelpers(calls, source, prefix);
+    emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     outputLine("export function main(lite$write?: (text: string) => void): string {");
     if not hasExit { outputLine("    let lite_out = \"\";"); }

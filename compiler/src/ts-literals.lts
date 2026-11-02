@@ -90,6 +90,24 @@ comparisonCode := fn(op: String, kind: String, left: String, right: String): Str
     }
 }
 
+/** Converts an Int operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+floatOperandCode := fn(kind: String, code: String): String {
+    if kind == "Int" { "Number(" + code + ")" } else { code }
+}
+
+/** Emits one numeric comparison using the pair's common family. */
+comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
+    if leftKind =!= rightKind and (leftKind == "Float" or rightKind == "Float") {
+        comparisonCode(op, "Float", floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
+    } else { comparisonCode(op, leftKind, left, right) }
+}
+
+/** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
+floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    tag := if op == "+" { "0" } else if op == "-" { "1" } else if op == "*" { "2" } else { "3" };
+    "lite$floatOp(" + left + ", " + right + ", " + tag + ", " + intText(position) + ")"
+}
+
 /** Emits a BigInt floor-division expression without evaluating operands more than once in source semantics. */
 floorDivCode := fn(left: String, right: String): String {
     "(" + left + " / " + right + " - ((((" + left + " % " + right + ") != 0n) && (((" + left + " % " + right + ") < 0n) != (" + right + " < 0n))) ? 1n : 0n))"
@@ -148,7 +166,7 @@ comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: L
         name := "lite$compare" + intText(index);
         result = result + "const " + name + ": " + tsScalarType(kinds[index]) + " = " + codes[index] + "; ";
         if index > 0 {
-            pair := comparisonCode(operators[index - 1], kinds[index - 1], "lite$compare" + intText(index - 1), name);
+            pair := comparisonPairCode(operators[index - 1], kinds[index - 1], kinds[index], "lite$compare" + intText(index - 1), name);
             if index < count { result = result + "if (!(" + pair + ")) return false; "; }
             else { result = result + "return " + pair + "; "; }
         }

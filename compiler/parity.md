@@ -1174,3 +1174,48 @@ identical S 693.5 → 705.5 ms, constants 133.1 → 127.1 ms, dead-output input
 166.1 ms, constants 218.7 → 218.1 ms, dead-output input 45.5 → 45.2 ms.
 All measured output bytes match. Next: existing T00 mixed Float arithmetic
 needed by the remaining sample programs.
+
+## Mixed Float arithmetic and comparisons
+
+This slice ports existing finite binary64 `+`, `-`, `*` and `/`, including mixed
+Int/Float operands. Each mixed operand converts at the operation; Int-only
+arithmetic stays checked Int64. Floating division rejects either sign of zero,
+and non-finite results raise positioned ArithmeticPanic diagnostics only when
+executed. Underflow to a finite value or zero remains allowed. Float remainder
+and floor operators still reject. Numeric widths, contextual conversions and
+power are separate ports; this does not select future division/storage semantics.
+
+Mixed comparisons convert each adjacent pair independently. Original Int values
+remain available for later Int-only pairs in a chain, preserving exact comparison
+above 2^53. TS expression scopes and typed C comma-expression temporaries evaluate
+operands once, left to right, and retain lazy later chain operands. Float
+arithmetic reuses the existing source-position table and fault reporting.
+
+The canonical [num.float case](../verifications/features/num-float.json) runs on
+T00 and both generated targets. Nine previously rejected lesson manifests now
+also select TS/C explicitly. Focused host coverage includes eleven TS/C programs,
+four TS function/aggregate programs, eleven fault sources on both targets, nine
+rejected sources and a prompted mixed-input scenario. Six optimized native
+programs check values, conversion, skipped faults and competing faults under
+address/undefined-behavior sanitizers. C functions/aggregates/input still reject
+explicitly; native compiler self-hosting remains pending.
+
+C literal parsing now uses a discovered `lt_float_literal` wrapper, ensuring its
+stdlib dependency even when a Float appears only inside a Bool comparison. This
+keeps the existing helper scan's fast rejection path for integer-only code.
+Int comparisons likewise keep their ordinary path ahead of Float-specific work.
+The [generated-only ladder](reports/2026-11-02-float-arithmetic-ladder.json)
+records the source/builder identities, fixed point and validation results; the
+paired performance record retains measurements rather than assuming a speedup.
+
+Final validation: 274/274 full tests pass without skips (149.7 s); fast
+262 pass/12 expected skips (103.9 s). Strict host/seeds, both 93-case
+corpora, 121 verifier executions, 39-feature coverage and nine editor groups pass.
+Inventory: 103/167 match, 64 remain; 48 original failures closed, no regressions.
+All 20 implemented lessons pass generated TS. All 69 existing TS fixture hashes
+and 67 C hashes stay unchanged; only two C Float-literal artifacts acquire the
+parser wrapper. The [paired performance report](reports/2026-11-02-float-arithmetic-performance.json)
+records mixed medians: TS outputs 67.2 → 70.1 ms, identical S 721.2 → 728.1 ms,
+constants 144.7 → 129.9 ms and dead-output input 46.5 → 44.2 ms; C-emitter
+outputs 87.9 → 89.6 ms, divisions 191.5 → 183.2 ms, constants 244.5 → 246.3 ms
+and dead-output input 49.6 → 48.8 ms. Every measured output stream matches.

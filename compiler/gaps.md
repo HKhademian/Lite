@@ -16,13 +16,13 @@ Lite by default for run/check, verification, tests and compilation. Continue
 broader correctness and advanced edge coverage on that default; retain T00 as
 an explicit reference until final conformance/native/retirement gates pass.
 The [core syntax and default-workflow gates](transition-plan.md#implementation-order)
-define this earlier cutover. Neither all 74 measured failures nor native C11
+define this earlier cutover. Neither every measured failure nor native C11
 self-hosting must be closed before switching defaults.
 
 ## Immediate migration priorities
 
-1. Mixed Float arithmetic/comparisons, then remaining ordinary numeric syntax.
-   This is the first blocker for nine implemented samples.
+1. Power and remaining ordinary numeric annotations. Mixed Float arithmetic
+   now admits the nine previously blocked lesson programs; see its recorded gate.
 2. Missing ordinary binding/storage, tuple/array/List, call/function and
    block/conditional/loop/match/cleanup forms. Use the existing examples and
    focused syntax-family cases to decide the next dependency, rather than
@@ -44,22 +44,23 @@ Basic validation and normal runtime behavior remain part of each syntax port.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `554f6e1c…`. All inputs compile/check against the current reference, both
+seed `99b18ccf…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
-- Canonical features: 24/38 match; 14 rejected.
+- Canonical features: 25/39 match; 14 rejected.
 - Examples: 11/19 match; 8 rejected.
-- Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 38/81 match; 43 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 211 tracked Lite sources are accounted for;
+- Implemented samples: 20/20 match; none rejected.
+- Isolated boundary probes: 39/81 match; 42 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 212 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 92/166 match, 74 still fail. Compared with the
-  original inventory, 38 previously failing cases now match and none regress.
+- Total executed source cases: 103/167 match, 64 still fail. Compared with the
+  original inventory, 48 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe, chain feature and two
-  completion probes account for five additional matching cases. The completion
-  probes separately expose corrected unreachable tails and return-through-loop
+  completion probes and the Float feature account for six additional matching
+  cases. The completion probes separately expose corrected unreachable tails
+  and return-through-loop
   artifact checking; they are additions to the original inventory.
 
 These counts describe measured programs. Several failing cases share one cause;
@@ -131,9 +132,11 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Float literals and values:** shared finite decimal/exponent scanning,
   unary signs, same-family comparisons, scalar copies and round-trip display on
   TS/C. Broader arithmetic and numeric-width conversions remain separate.
-- [ ] **Float arithmetic:** existing mixed operations/comparisons, finite-result
-  faults and power. Unselected contextual division/storage semantics are not a
-  migration dependency.
+- [x] **Mixed Float arithmetic/comparisons:** binary64 operations, pairwise
+  Int conversions, single evaluation, skipped faults and finite-result checks.
+- [ ] **Power:** existing right-associative exponentiation and ordinary operand
+  forms. Unselected contextual division/storage semantics are not a migration
+  dependency.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
@@ -394,3 +397,21 @@ general speedup claim. See the [literal/value ledger](parity.md#float-literals-a
 Next: port existing mixed Float arithmetic used by the remaining sample
 programs, then continue the generated run/check and native migration dependencies.
 Independent issue cleanup stays outside the active path.
+
+Mixed Float arithmetic/comparison migration: all 20 implemented sample manifests
+now run on generated TS; the nine affected lessons additionally verify on C.
+Inventory improves to 103/167 matching cases, with 64 remaining, 48 original
+failures closed and no observed regressions. All 274 full tests pass with
+zero skips (149.7 s); fast passes 262 with 12 expected skips
+(103.9 s). Strict host/seeds, both 93-case corpora, 121 verifier
+executions, coverage of 39 registered features, nine editor groups and six
+native sanitizer cases pass. Three generated generations match. All 69 TS
+fixture artifacts and 67 of 69 C artifacts remain unchanged; the two C Float
+literal fixtures acquire the discovered parser wrapper. Paired compiler timings
+are mixed, with no general speedup claimed. See the
+[mixed Float ledger](parity.md#mixed-float-arithmetic-and-comparisons),
+[ladder](reports/2026-11-02-float-arithmetic-ladder.json) and
+[performance record](reports/2026-11-02-float-arithmetic-performance.json).
+Next: power and common numeric annotations, then the ordinary syntax blockers
+for the eight remaining examples and generated default workflows. Advanced edge
+coverage and native self-hosting remain later gates.

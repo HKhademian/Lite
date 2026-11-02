@@ -11,6 +11,16 @@
       ]
     },
     {
+      "id": "num.float",
+      "summary": "Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults.",
+      "case": "features/num-float.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md",
+        "docs/operators.md"
+      ]
+    },
+    {
       "id": "num.widths",
       "summary": "Sized integer and floating widths with promotion and lossless widening.",
       "case": "features/num-widths.json",

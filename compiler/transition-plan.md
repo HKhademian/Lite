@@ -49,6 +49,17 @@ reference until the final Lite implementations and retirement gates pass.
 
 ## Done
 
+- 2026-11-02: existing mixed Float arithmetic/comparisons now run on generated
+  TS/C, with finite-result and zero-divisor faults, pairwise comparison
+  conversions and lazy operand sequencing. All 20 implemented samples pass
+  generated TS; nine affected lessons now select TS/C verification explicitly.
+  Inventory: 103/167 match, 64 remaining; 48 original failures closed, none
+  regress. All 274 full tests, both corpora, strict checks, 121 verifier runs,
+  coverage, nine editor groups and six native sanitizer cases pass. The
+  [ladder](reports/2026-11-02-float-arithmetic-ladder.json) records the generated
+  fixed point; paired timings are mixed. Next: power and ordinary numeric
+  annotations, followed by remaining core syntax and the early default cutover.
+
 - 2026-11-02: constant arithmetic attempts return checked results; an invalid
   result lowers to the existing runtime helper instead of failing compilation.
   Dead branches, false loops, short-circuit operands and unused function bodies
@@ -266,9 +277,9 @@ independent correctness investigations. Keep source acceptance distinct from the
 subset used to write the compiler. Prioritize:
 
 - Numeric expressions: Int/Float arithmetic and comparisons, precedence, power,
-  and common numeric annotations. Mixed Float arithmetic comes next: it blocks
-  nine existing lesson programs. Exhaustive width/promotion/rounding matrices
-  follow the default switch.
+  and common numeric annotations. Mixed Float arithmetic now runs all nine
+  previously blocked lesson programs; power and ordinary annotations follow.
+  Exhaustive width/promotion/rounding matrices follow the default switch.
 - Bindings and storage: inference, annotations, aliases, lexical scope, mutability,
   compound updates, zero initialization and reserved storage's first assignment.
 - Data: tuple shapes, fields and destructuring; fixed arrays and List operations,
