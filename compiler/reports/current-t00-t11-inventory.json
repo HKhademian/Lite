@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/compiler/002-001-bare-name.json\n M igniter/tests/compiler/002-001-call-statement.json\n M igniter/tests/compiler/002-001-injected-source.json\n M igniter/tests/compiler/002-001-trailing-statement.json\n?? compiler/reports/2026-11-02-expression-items-ladder.json\n",
   "compilerSourceSha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
-  "compilerSourceRevision": "Expression-item source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "3d698bed07e0ffb3124db445b7535ae06246ab1e",
   "node": "v24.16.0",
   "t11Sha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
   "rows": [
@@ -9424,5 +9424,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
 }
