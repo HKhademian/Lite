@@ -1,6 +1,6 @@
 # Bootstrap parity ledger
 
-Status: **active, 2026-11-01**. This ledger drives the owner direction that the
+Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
@@ -18,7 +18,8 @@ audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
 
 Interpreter run/check and the interpreter regression tests still use
 T00. The C emitter is now a TS-hosted compiler built by T11; its exact source,
-artifact and builder hashes are in `bootstrap/c-seed.ts`. Native C01/C11 and T13
+artifact and builder hashes are in `bootstrap/c-seed.ts`. The text-cache seed
+refresh below records T11 == T12 == T13 for its source snapshot. Native C01/C11
 remain unrecorded. These host transition slices do
 not complete feature parity or authorize deleting T00 before its replacements pass.
 
@@ -81,7 +82,7 @@ T11/T12 acceptance, recorded 2026-11-02:
 - [x] T11 compiles all 92 corpus cases exactly like stage 0: 53 program outputs
   and 39 rejection streams/status byte for byte.
 
-TS ladder record, 2026-11-02:
+Original TS ladder record, 2026-11-02 (historical source before the text cache):
 
 | Node | Bytes | SHA-256 |
 |---|---:|---|
@@ -93,8 +94,9 @@ T11 was originally produced by `./litec ts` from S while that launcher used T00.
 Historical reproduction now uses `node igniter/bundle-cli.ts ts S.lts` explicitly.
 T12 was produced by T11 running on the
 same S after a strict artifact typecheck. Both artifacts ran the probe source and
-their emitted TS matched stage 0 byte for byte. T13 is the next TS node; it is
-expected to equal T11/T12 but is not recorded yet.
+their emitted TS matched stage 0 byte for byte. T13 was not recorded for this
+original source snapshot. The refreshed source below has its own complete
+three-node TS equality record.
 
 Regenerate and re-check the ladder with one command:
 
@@ -137,6 +139,34 @@ Completion requires all of:
 The seed equalities `C01 == C21` and `T11 == T21` are the stage-0 versus
 generated-compiler row. Treat them as required unless the owner records a
 different completion rule before claiming the ladder is finished.
+
+## Text-cache seed refresh
+
+Recorded 2026-11-02, source based on `6c6b55b4d23a54b95697cabac7484b5aa70dec97`.
+This is a new source snapshot, not a relabeling of the original ladder above.
+The generated text helpers now share at most eight immutable code-point views
+instead of rebuilding a whole-source array at every character read.
+
+- S: 156236 bytes, SHA-256
+  `17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f`.
+- T11 = T00 at the base revision executing this S on itself.
+- T12 = T11 compiling this S; T13 = T12 compiling this S.
+- All three are byte-identical, 245146 bytes, SHA-256
+  `56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c`.
+- Each generated artifact passes strict TypeScript checking. The current TS and
+  TS-hosted C seeds each match T00+S on all 92 corpus inputs, including exact
+  rejection streams and status. The verifier passes all 91 executions. The full
+  regression gate passes all 242 tests with zero skips (564 s); all 9 editor
+  grammar groups also pass. These full-suite timings include the T00 sweeps.
+- The unchanged C source is 149119 bytes, SHA-256 `413044da…`; compiling it with
+  this T11 produces the 233939-byte TS-hosted C seed, SHA-256 `57b3a3fe…`.
+  This is not native C11 or a native fixed point.
+
+[Ladder identities](reports/2026-11-02-text-cache-ladder.json) preserve the full
+hashes and commands. [Seven-sample benchmark and raw data](../benchmark/reports/2026-11-02-text-cache.md)
+record a 668 ms self-compilation median and a 23.91× process-time improvement
+for 1,000 report statements with exact emitted-output equality. Old self-build
+timeouts remain censored; no whole-source speedup ratio is inferred.
 
 ## Rule
 
@@ -224,8 +254,8 @@ freeze prevents the target from growing while it is approached.
   remain.
 - Stage 0 is feature-frozen. P3-P8 add Lite compiler features, not igniter
   features; any new capability is a Lite-first owner decision.
-- T00 exists. T11 and T12 are recorded and byte-identical; the TS fixed point is
-  reached for the bootstrap surface. T13 and the C ladder are the next nodes.
+- T00 exists. The refreshed T11, T12 and T13 are recorded and byte-identical for
+  the bootstrap surface. The native C ladder remains pending.
 - The P0 artifact hashes in
   [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) are
   the reference for the 50 program cases.

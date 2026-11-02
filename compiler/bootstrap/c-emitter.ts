@@ -26,12 +26,29 @@ function lite$exit(status: bigint): void {
     process.exit(Number(status));
 }
 
+const lite$textCache = new Map<string, readonly string[]>();
+function lite$textPoints(text: string): readonly string[] {
+    const found = lite$textCache.get(text);
+    if (found !== undefined) {
+        lite$textCache.delete(text);
+        lite$textCache.set(text, found);
+        return found;
+    }
+    const points = Array.from(text);
+    lite$textCache.set(text, points);
+    if (lite$textCache.size > 8) {
+        const oldest = lite$textCache.keys().next();
+        if (oldest.done !== true) lite$textCache.delete(oldest.value);
+    }
+    return points;
+}
+
 function lite$textLength(text: string): bigint {
-    return BigInt(Array.from(text).length);
+    return BigInt(lite$textPoints(text).length);
 }
 
 function lite$textAt(text: string, position: bigint): string {
-    const points = Array.from(text);
+    const points = lite$textPoints(text);
     if (position < 0n || position >= BigInt(points.length)) {
         throw new Error("BoundPanic: textAt index outside text");
     }
@@ -43,7 +60,7 @@ function lite$textAt(text: string, position: bigint): string {
 }
 
 function lite$textSlice(text: string, start: bigint, end: bigint): string {
-    const points = Array.from(text);
+    const points = lite$textPoints(text);
     if (start < 0n || end < start || end > BigInt(points.length)) {
         throw new Error("BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)");
     }

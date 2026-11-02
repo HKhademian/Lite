@@ -26,12 +26,29 @@ function lite$exit(status: bigint): void {
     process.exit(Number(status));
 }
 
+const lite$textCache = new Map<string, readonly string[]>();
+function lite$textPoints(text: string): readonly string[] {
+    const found = lite$textCache.get(text);
+    if (found !== undefined) {
+        lite$textCache.delete(text);
+        lite$textCache.set(text, found);
+        return found;
+    }
+    const points = Array.from(text);
+    lite$textCache.set(text, points);
+    if (lite$textCache.size > 8) {
+        const oldest = lite$textCache.keys().next();
+        if (oldest.done !== true) lite$textCache.delete(oldest.value);
+    }
+    return points;
+}
+
 function lite$textLength(text: string): bigint {
-    return BigInt(Array.from(text).length);
+    return BigInt(lite$textPoints(text).length);
 }
 
 function lite$textAt(text: string, position: bigint): string {
-    const points = Array.from(text);
+    const points = lite$textPoints(text);
     if (position < 0n || position >= BigInt(points.length)) {
         throw new Error("BoundPanic: textAt index outside text");
     }
@@ -43,7 +60,7 @@ function lite$textAt(text: string, position: bigint): string {
 }
 
 function lite$textSlice(text: string, start: bigint, end: bigint): string {
-    const points = Array.from(text);
+    const points = lite$textPoints(text);
     if (start < 0n || end < start || end > BigInt(points.length)) {
         throw new Error("BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)");
     }
@@ -3892,15 +3909,34 @@ export function main(): string {
             lite_out += "}" + "\n";
             lite_out += "" + "\n";
         }
+        if (((((liteFn_usesBuiltin([...(lite_items)], "textLength")) || (liteFn_usesBuiltin([...(lite_items)], "textAt")))) || (liteFn_usesBuiltin([...(lite_items)], "textSlice")))) {
+            lite_out += "const lite$textCache = new Map<string, readonly string[]>();" + "\n";
+            lite_out += "function lite$textPoints(text: string): readonly string[] {" + "\n";
+            lite_out += "    const found = lite$textCache.get(text);" + "\n";
+            lite_out += "    if (found !== undefined) {" + "\n";
+            lite_out += "        lite$textCache.delete(text);" + "\n";
+            lite_out += "        lite$textCache.set(text, found);" + "\n";
+            lite_out += "        return found;" + "\n";
+            lite_out += "    }" + "\n";
+            lite_out += "    const points = Array.from(text);" + "\n";
+            lite_out += "    lite$textCache.set(text, points);" + "\n";
+            lite_out += "    if (lite$textCache.size > 8) {" + "\n";
+            lite_out += "        const oldest = lite$textCache.keys().next();" + "\n";
+            lite_out += "        if (oldest.done !== true) lite$textCache.delete(oldest.value);" + "\n";
+            lite_out += "    }" + "\n";
+            lite_out += "    return points;" + "\n";
+            lite_out += "}" + "\n";
+            lite_out += "" + "\n";
+        }
         if (liteFn_usesBuiltin([...(lite_items)], "textLength")) {
             lite_out += "function lite$textLength(text: string): bigint {" + "\n";
-            lite_out += "    return BigInt(Array.from(text).length);" + "\n";
+            lite_out += "    return BigInt(lite$textPoints(text).length);" + "\n";
             lite_out += "}" + "\n";
             lite_out += "" + "\n";
         }
         if (liteFn_usesBuiltin([...(lite_items)], "textAt")) {
             lite_out += "function lite$textAt(text: string, position: bigint): string {" + "\n";
-            lite_out += "    const points = Array.from(text);" + "\n";
+            lite_out += "    const points = lite$textPoints(text);" + "\n";
             lite_out += "    if (position < 0n || position >= BigInt(points.length)) {" + "\n";
             lite_out += "        throw new Error(\"BoundPanic: textAt index outside text\");" + "\n";
             lite_out += "    }" + "\n";
@@ -3914,7 +3950,7 @@ export function main(): string {
         }
         if (liteFn_usesBuiltin([...(lite_items)], "textSlice")) {
             lite_out += "function lite$textSlice(text: string, start: bigint, end: bigint): string {" + "\n";
-            lite_out += "    const points = Array.from(text);" + "\n";
+            lite_out += "    const points = lite$textPoints(text);" + "\n";
             lite_out += "    if (start < 0n || end < start || end > BigInt(points.length)) {" + "\n";
             lite_out += "        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");" + "\n";
             lite_out += "    }" + "\n";

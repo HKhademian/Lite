@@ -3,7 +3,13 @@
 Measured compiler performance, raw samples, provenance and reports live here.
 `challenges/benchmark/` is the separate algorithm challenge dataset.
 
-Latest run: [2026-11-02 report](reports/2026-11-02-compiler-performance.md),
+Text-cache optimization: [before/after report](reports/2026-11-02-text-cache.md)
+and [raw samples](reports/2026-11-02-text-cache.json). The measured 1,000-statement
+workload improves from 3489 to 146 ms; current self-compilation is 668 ms median.
+Reproduce with `node benchmark/text-cache.mjs --before /path/to/old/T11.ts`.
+The report records exact artifact/source identities and its censored old self-build.
+
+Original four-compiler availability and timing audit: [2026-11-02 report](reports/2026-11-02-compiler-performance.md),
 [raw samples](reports/2026-11-02-compiler-performance.json), and
 [interactive summary](reports/2026-11-02-compiler-performance.canvas.tsx).
 

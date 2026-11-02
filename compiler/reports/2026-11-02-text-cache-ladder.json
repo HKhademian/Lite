@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-02",
+  "sourceBaseRevision": "6c6b55b4d23a54b95697cabac7484b5aa70dec97",
+  "sourceSnapshot": "source and seeds committed together; exact bytes identified by SHA-256",
+  "sourceManifest": "compiler/manifests/ts.json",
+  "source": {
+    "bytes": 156236,
+    "sha256": "17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f"
+  },
+  "t00BuilderRevision": "6c6b55b4d23a54b95697cabac7484b5aa70dec97",
+  "generations": [
+    {
+      "node": "T11",
+      "builder": "T00 executing S",
+      "bytes": 245146,
+      "sha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    },
+    {
+      "node": "T12",
+      "builder": "T11 compiling S",
+      "bytes": 245146,
+      "sha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    },
+    {
+      "node": "T13",
+      "builder": "T12 compiling S",
+      "bytes": 245146,
+      "sha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    }
+  ],
+  "byteIdentical": true,
+  "cEmitter": {
+    "sourceManifest": "compiler/manifests/c.json",
+    "sourceSha256": "413044da0f81b912e4029632218512c77b179f82a3701ff0931fbc1cc707acc6",
+    "builderSha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+    "bytes": 233939,
+    "sha256": "57b3a3fef360bac07d856f289d204c45f4c885910bad76a8dba193572b5256e2",
+    "native": false
+  },
+  "reproductionCommands": [
+    "node --input-type=module -e 'import {loadBundle} from \"./igniter/loader.ts\"; process.stdout.write(loadBundle(\"compiler/manifests/ts.json\").text);' > /tmp/S.lts",
+    "node igniter/bundle-cli.ts ts /tmp/S.lts > /tmp/T11.ts",
+    "node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts",
+    "node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T12.ts --source /tmp/S.lts --out /tmp/T13.ts",
+    "node igniter/node_modules/typescript/bin/tsc -p compiler/bootstrap/tsconfig.json"
+  ],
+  "validation": {
+    "tsCorpus": {
+      "cases": 92,
+      "mismatches": 0
+    },
+    "cCorpus": {
+      "cases": 92,
+      "mismatches": 0
+    },
+    "verifierExecutions": 91,
+    "fullSuite": {
+      "tests": 242,
+      "passed": 242,
+      "skipped": 0,
+      "durationMs": 563715.527917
+    },
+    "fastSuite": {
+      "tests": 242,
+      "passed": 233,
+      "skipped": 9
+    },
+    "editorGrammarGroups": 9
+  }
+}

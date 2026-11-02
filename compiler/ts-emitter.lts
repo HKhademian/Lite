@@ -3026,15 +3026,34 @@ emitBuiltinHelpers := fn(items: Items): Unit {
         report("}");
         report("");
     }
+    if usesBuiltin(items, "textLength") or usesBuiltin(items, "textAt") or usesBuiltin(items, "textSlice") {
+        report("const lite$textCache = new Map<string, readonly string[]>();");
+        report("function lite$textPoints(text: string): readonly string[] {");
+        report("    const found = lite$textCache.get(text);");
+        report("    if (found !== undefined) {");
+        report("        lite$textCache.delete(text);");
+        report("        lite$textCache.set(text, found);");
+        report("        return found;");
+        report("    }");
+        report("    const points = Array.from(text);");
+        report("    lite$textCache.set(text, points);");
+        report("    if (lite$textCache.size > 8) {");
+        report("        const oldest = lite$textCache.keys().next();");
+        report("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
+        report("    }");
+        report("    return points;");
+        report("}");
+        report("");
+    }
     if usesBuiltin(items, "textLength") {
         report("function lite$textLength(text: string): bigint {");
-        report("    return BigInt(Array.from(text).length);");
+        report("    return BigInt(lite$textPoints(text).length);");
         report("}");
         report("");
     }
     if usesBuiltin(items, "textAt") {
         report("function lite$textAt(text: string, position: bigint): string {");
-        report("    const points = Array.from(text);");
+        report("    const points = lite$textPoints(text);");
         report("    if (position < 0n || position >= BigInt(points.length)) {");
         report("        throw new Error(\"BoundPanic: textAt index outside text\");");
         report("    }");
@@ -3048,7 +3067,7 @@ emitBuiltinHelpers := fn(items: Items): Unit {
     }
     if usesBuiltin(items, "textSlice") {
         report("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
-        report("    const points = Array.from(text);");
+        report("    const points = lite$textPoints(text);");
         report("    if (start < 0n || end < start || end > BigInt(points.length)) {");
         report("        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");");
         report("    }");

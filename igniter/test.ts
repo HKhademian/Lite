@@ -1966,6 +1966,24 @@ test('restricted compiler compiles text builtins with code-point semantics and b
   }
 });
 
+test('generated text helpers preserve Unicode values after many distinct cached inputs', () => {
+  const text = 'A🙂éسلام';
+  const probes = Array.from({ length: 32 }, (_, index) => `report(textLength("text-${index}🙂"));`);
+  const source = [
+    `original := "${text}";`,
+    'report(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+    ...probes,
+    'report(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+  ].join('\n');
+  const expected = run(source);
+  assert.equal(expected.code, 0);
+  const generated = runCompiler(tsManifestPath, source);
+  assert.equal(generated.code, 0, generated.errors);
+  assert.deepEqual(runTsArtifact(generated.output), {
+    phase: 'run', status: 0, signal: null, stdout: Buffer.from(expected.output), stderr: Buffer.alloc(0),
+  });
+});
+
 test('restricted compiler compiles input, diagnostic and exit builtins in value and statement positions', () => {
   const argsSource = [
     'label := fn (n: Int): String { if n == 0 { "zero" } else { textAt("abc", n) } }',

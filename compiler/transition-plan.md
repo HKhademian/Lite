@@ -36,6 +36,17 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: generated text helpers share a bounded cache of eight immutable
+  code-point views, eliminating repeated whole-source copies during scanning.
+  The [benchmark](../benchmark/reports/2026-11-02-text-cache.md) records 23.91×
+  faster process time for 1,000 statements (3489 → 146 ms), exact emitted bytes
+  and a 668 ms median self-build. New S (`17e53ce5…`) produces three byte-identical
+  strictly checked TS generations (`56d99755…`); the TS-hosted C emitter is
+  refreshed (`57b3a3fe…`) from unchanged C source. Unicode/cache-eviction probes,
+  strict checks, fast suite (233 pass/9 expected skips), both 92-case corpus
+  comparisons, all 91 verifier executions, all 242 full-suite tests (zero skips,
+  564 s) and all 9 editor grammar groups pass. Native C and full feature
+  parity remain pending. Historical timing/hash records are preserved.
 - 2026-11-02: default verification now selects consumers after compiler host,
   seed, source, manifest, runtime and core-library changes. A real CLI test
   supplies changed-file listings without modifying Git state and verifies all
@@ -70,8 +81,9 @@ features may be ported; new syntax, builtins and semantics still require approva
   (53 programs/39 rejections) and 9 editor grammar groups passed. Four focused
   host tests also passed after the final rebuild-diagnostic mapping adjustment;
   a native follow-up passed 235 with only the 3 full-S sweeps skipped.
-- T11/T12 are recorded byte-identical; the current compiler corpus is 53 program
-  and 39 rejection cases. T13 and native C fixed points are not recorded.
+- The original T11/T12 snapshot was recorded byte-identical; the compiler corpus
+  is 53 program and 39 rejection cases. The subsequent text-cache refresh above
+  records T13 as well. Native C fixed points are not recorded.
 - The performance report and raw samples are under `benchmark/reports/`, saved
   separately from the TS migration. Preserve their recorded source revision and
   historical raw measurements when updating the benchmark runner.
@@ -141,14 +153,15 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 243216 bytes, SHA-256
-  `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39`.
-- Current S is 155219 bytes, SHA-256
-  `827f90152433e65d2134f6e6df294d2c544b4bd665b879e9a3bd55d1eac343b8`.
-- Compiler revision: `dc0028d7713f93d844d56a180bc6e6e42f92f68f`; actual host Node
-  v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
-- TS self-compilation is slow; the benchmark's two 60 s timeouts are censored
-  observations, not successful build durations or a new fixed-point validation.
+- The current seed is 245146 bytes, SHA-256
+  `56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c`.
+- Current S is 156236 bytes, SHA-256
+  `17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f`.
+- Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
+  actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
+- Original TS self-compilation was slow; the original benchmark's two 60 s
+  timeouts remain censored observations. The refreshed source has a recorded
+  three-generation equality and a 668 ms successful self-build median.
 
 ## Overall acceptance
 

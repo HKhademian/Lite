@@ -15,8 +15,12 @@ export are not implemented yet.
 
 The staged compiler-bootstrap path and agent gates are recorded in the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
-this igniter's supported language. The recorded T11/T12 fixed point covers the
-bootstrap subset, not all existing T00 features or the C ladder.
+this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
+the bootstrap subset; full existing T00 feature parity and the native C ladder
+remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
+records 668 ms median self-compilation after eliminating repeated whole-source
+code-point copies. The current test suite has 235 interpreter groups and 7
+compiler-host groups, with 9 separate editor grammar groups.
 
 ## Run
 
@@ -744,8 +748,9 @@ There is no Python implementation to preserve: the earlier Python proposal was
 replaced before implementation. Preserve this TS seed once tagged; add concrete
 builder/source version links when a real next-stage compiler exists.
 
-All **234 test groups** pass under Node 26.12.1/TypeScript 7.0.2 in this
-workspace, and all 9 editor grammar groups pass. The tests exercise the real CLI
+At the alpha.38 checkpoint, all **234 test groups** passed under Node
+26.12.1/TypeScript 7.0.2 in this workspace, along with all 9 editor grammar groups.
+The tests exercise the real CLI
 and evaluator, including overflow and negative programs. All 20 lessons
 have focused checked outcomes through `verifications/` manifests; lesson files
 remain unchanged. This is not proof of the full

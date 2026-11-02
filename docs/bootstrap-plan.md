@@ -61,7 +61,13 @@ emitter is TS-hosted, built by T11, and is not the future native C11 compiler.
 Changed S is rebuilt by T11 and strictly checked before
 use; artifact/source identities prevent stale or corrupt compiler selection.
 Run/check and interpreter regressions still depend on T00. Feature
-parity, the native C ladder, T13 and eventual T00 removal remain pending.
+parity, the native C ladder and eventual T00 removal remain pending. The
+[text-cache seed refresh](../compiler/parity.md#text-cache-seed-refresh) records
+T11 == T12 == T13 for its exact source snapshot. Generated text scanning reuses
+bounded code-point views; the current self-build median is 668 ms in the
+[before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
+strict checking. Current tests include 235 interpreter groups, 7 compiler-host
+groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 
 ## Historical P0 baseline, 2026-11-01
 
@@ -506,13 +512,14 @@ behavior and produces a runnable C2 from S.
 - [ ] Record every node and artifact hash in the
       [bootstrap ladder](../compiler/parity.md#bootstrap-ladder): `T11`, `T12`,
       `T13`, `C01`, `C21`, `C22`, `C23`, `T21`, `T22`, `T23`.
-- [ ] `T11 == T12 == T13` byte for byte.
+- [x] `T11 == T12 == T13` byte for byte for the 2026-11-02 text-cache source
+      snapshot; exact identities are recorded in the parity ledger.
 - [ ] `C01 == C21 == C22 == C23` byte for byte.
 - [ ] `T11 == T21 == T22 == T23` byte for byte.
 - [ ] `T2 == T` and `C2 == C` byte for byte. If not, identify the nondeterminism
       and fix it; record any normalized fallback before accepting it.
 - [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter
-      (recorded 2026-11-02, artifact `b5459cc7…`); the native C compiler must
+      (refreshed 2026-11-02, artifact `57b3a3fe…`); the native C compiler must
       still compile the TS-emitter source to a C-hosted TS emitter.
 - [ ] T and C pass all 53 program and 39 rejection cases with exact streams and
       status.

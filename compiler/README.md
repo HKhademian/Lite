@@ -20,8 +20,10 @@ source. Unchanged S uses the seed directly. Changed S is compiled by T11 and
 strictly typechecked before publication under a source/builder-keyed
 `.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
 explicitly; there is no silent T00 fallback. `node compiler/scripts/build.mjs`
-selects or rebuilds both target compilers and prints their provenance. Rebuilding
-full S can take minutes. Language implementation belongs in `src/` and `lib/core/`,
+selects or rebuilds both target compilers and prints their provenance. The
+[text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) reduces
+current full-source self-compilation to a 668 ms median on the recorded machine,
+excluding strict checking. Language implementation belongs in `src/` and `lib/core/`,
 not in the generated seed or host glue.
 
 The staged path from this prototype to runnable TS/C bootstrap compilers is the
@@ -63,8 +65,8 @@ L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
 
-Self-hosting runs outlast the ten-second cap in
-[`../igniter/artifacts.ts`](../igniter/artifacts.ts), so the ladder uses
+Historical self-hosting runs outlasted the ten-second cap in
+[`../igniter/artifacts.ts`](../igniter/artifacts.ts). The ladder uses
 [`scripts/run-ts-artifact.mjs`](scripts/run-ts-artifact.mjs). It applies the same
 strict artifact typecheck and `main()` adapter, then runs the artifact with fixed
 stdin and no timeout:
