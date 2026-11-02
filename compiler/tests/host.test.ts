@@ -850,3 +850,61 @@ test('nonempty calls admit one trailing comma without adding a value or weakenin
   }
   assertExecutions(executions);
 });
+
+test('statement scopes isolate locals and preserve outer values while shadow initializers run', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = ['{}', '{}; { outputLine(1,); }', '{ x := 3; outputLine(x); } outputLine(4);',
+    'x := 10; { x := 20; outputLine(x); } outputLine(x);',
+    'var x := 7; if true { x := x; outputLine(x); } outputLine(x);',
+    'var x := 7; { x := x + 1; outputLine(x); } outputLine(x);',
+    'var x := 7; { var x := x + 1; x = x + 2; outputLine(x); } outputLine(x);',
+    'var x := 0; { x = 3; y := 1; } { x = 4; } outputLine(x);',
+    'var x := 0; { var x := x + 1; { x := x + 1; outputLine(x); } outputLine(x); } outputLine(x);',
+    'var value := "outer"; { value := value + "!"; outputLine(value); } outputLine(value);',
+    'var flag := true; { flag := not flag; outputLine(flag); } outputLine(flag);',
+    'var maximum := 9223372036854775807; { value := maximum - 1; outputLine(value); }',
+    'var n := 0; loop { { n = n + 1; break } } outputLine(n);',
+    'var n := 0; loop n < 3 { { n = n + 1; continue } } outputLine(n);',
+    'var flag := false; var x := 7; if flag { { x := x + 1; outputLine(x); } } else { { x := x + 2; outputLine(x); } } outputLine(x);',
+    'lt_local_0 := 17; var value := 1; { value := value + lt_local_0; outputLine(value); } outputLine(lt_local_0);',
+    'var x: Int = 3; { x: Int = x; outputLine(x); } outputLine(x);',
+    '{ x := 1; outputLine(x); } { x := 2; outputLine(x); }',
+    'inputInt := 7; { inputInt := inputInt + 1; outputLine(inputInt); } outputLine(inputInt);',
+    'var x := 7; { x: Bool = true; outputLine(x); } outputLine(x);'];
+  const tsOnly = ['f := fn(n: Int): Int { { n := n + 1; outputLine(n); } return n; } outputLine(f(3));',
+    'f := fn(): Int { { return 7; } } outputLine(f());',
+    'values: List<Int> = [1, 2]; loop values as values { outputLine(values); } outputLine(values);',
+    'values: mut List<Int> = [1, 2]; { values := pop_back(mut values); outputLine(values); } outputLine(values);',
+    'pair := (n = 1, label = "x"); { pair := (n = pair.n + 1, label = pair.label); outputLine(pair.n, pair.label); } outputLine(pair.n);',
+    'first := fn(values: List<Int>): Int { { values := values[0]; outputLine(values); } values[1] } items: List<Int> = [1, 2]; outputLine(first(items));'];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  const invalid = ['outputLine("before"); { x := 1; } outputLine(x);',
+    'var x := 1; { y := x; { outputLine(y); } } outputLine(y);', '{', '}', '{} else {}',
+    '{ break; }', '{ continue; }', 'x := 1; { x = 2; }', 'var x := 7; { x: Bool = x; }'];
+  for (const text of invalid) {
+    assert.equal(runText(text).status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0);
+    }
+  }
+  const faults = ['var zero := 0; outputLine("before");\r\n{ outputLine("prefix", 1 / zero); }',
+    'var value := 9223372036854775807; outputLine("before");\r\n{ value := value + 1; outputLine(value); }',
+    'values: List<Int> = [1]; outputLine("before");\r\n{ values := values[2]; outputLine(values); }'];
+  for (const text of faults) {
+    const name = 'scope سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    const targets = text.startsWith('values') ? ['ts'] as const : ['ts', 'c'] as const;
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  assertExecutions(executions);
+});

@@ -496,6 +496,9 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "AssignList" {
             outputLine(indent + item.runtime + " = " + item.code + ";");
+        } else if item.kind == "Scope" {
+            outputLine(indent + "{");
+            indent = indent + "    ";
         } else if item.kind == "If" {
             condition := if item.code == "true" or item.code == "false" {
                 "Boolean(" + item.code + ")"
@@ -517,7 +520,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             };
             outputLine(indent + "} else if (" + condition + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndIf" {
+        } else if item.kind == "EndIf" or item.kind == "EndScope" {
             indent = dedent(indent);
             outputLine(indent + "}");
         } else if item.kind == "LoopSeq" {

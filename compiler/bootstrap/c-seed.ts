@@ -1,16 +1,16 @@
-/** Verified generated trailing-comma seed; exact identities follow. */
+/** Verified generated statement-scope seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "7d9aed5e81347c209b40b8b662f9dac0ee62e0f24d77a8a9c721c536091aa90e",
-  "sourceBytes": 163270,
-  "artifactSha256": "b138205634c2edfa347f0d719edcbbcf27b78477af8ecedf75079f1e3a765f5d",
-  "artifactBytes": 294046,
-  "builderSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
+  "sourceSha256": "0caab3b7f4e511e20f6af0c5537f68723b88e85605fd4360dd2de821aeb6efc6",
+  "sourceBytes": 163753,
+  "artifactSha256": "2b571ebf0bd3bc46e314728be7e3c5e70a8cf80f590339fdf1a9c67c74500e8a",
+  "artifactBytes": 294860,
+  "builderSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "33e45bc87aa7b1ce58646a00429da8d25d6880ae",
-  "artifactRevision": "33e45bc87aa7b1ce58646a00429da8d25d6880ae",
-  "builderRevision": "33e45bc87aa7b1ce58646a00429da8d25d6880ae",
+  "sourceRevision": "Statement-scope source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Statement-scope artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current statement-scope TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

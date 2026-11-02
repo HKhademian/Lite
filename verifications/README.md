@@ -158,7 +158,7 @@ sharded or curated, and caches make unchanged work nearly free.
 - Examples: 19 of 19 manifest-covered.
 - Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
-- Scenarios: 78 (39 feature + 19 example + 20 sample); 98 target executions.
+- Scenarios: 78 (39 feature + 19 example + 20 sample); 100 target executions.
   Eight original feature cases use all three targets; the new temporary I/O
   feature supplies two scenarios on T00 and generated TS.
 

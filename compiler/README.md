@@ -142,6 +142,13 @@ See the [trailing-comma ledger](parity.md#trailing-call-commas) for generated bo
 focused combinations and paired timing evidence.
 
 
+Generated TS/C now support statement scopes and preserve outer values while
+shadowed initializers run. The canonical scope feature executes on all three
+targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
+remain identical. See the [scope ledger](parity.md#statement-scopes) for focused combinations,
+generated fixed-point evidence, native sanitizer cases and paired timing data.
+
+
 ## Layout
 
 | Path | Role |

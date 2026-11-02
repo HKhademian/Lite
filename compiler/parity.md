@@ -898,3 +898,54 @@ the controlled paired measurement. Strict host/seeds, both 93-case corpora,
 TS/C source and generated seed hashes remain those of the trailing-comma slice;
 both default compiler selections verify successfully. The measured language
 inventory stays at 85/164 matching cases with 79 remaining.
+
+## Statement scopes
+
+Standalone lexical blocks now lower to explicit TS/C braces, using the existing
+iterative block stack and local visibility filtering. Outer updates survive;
+inner bindings disappear at the closing brace. Nested break/continue still
+find their enclosing loop. This increment admits statement scopes over existing
+forms; value-producing block expressions remain a separate gap.
+
+The same change repairs shadowed initializers in existing if/loop scopes. A
+single lookup now checks the current duplicate-admission rule and chooses a
+fresh `lt_local_NAME_OFFSET` runtime identifier when an outer binding exists.
+Initializers keep their resolved outer identifiers, avoiding TS self-reference
+and C uninitialized reads. Traversal receivers use the same hygiene rule.
+Names without a previous binding retain their emitted spelling. Same-block
+redeclarations and broader callable/type namespaces remain separate work.
+
+Coverage includes twenty TS/C programs, six TS function/aggregate programs,
+nine rejected sources and five exact fault executions. Cases combine nesting,
+mutation, prior-value reads, type changes, outer assignments, loop exits,
+parameters, traversal receivers, List mutation and named tuple copies. Six strict
+native UBSan programs compare exact status and streams. The canonical scope.locals
+feature now executes on all three targets; verifier coverage rises to 100 target
+executions across the same 78 scenarios. Both 93-case corpora pass, and all 66
+older program artifact pairs remain identical.
+
+The [generated-only ladder](reports/2026-11-02-statement-scopes-ladder.json)
+starts with the previous seed and records three identical final TS generations.
+The transitional compiler differs from the final seed because its first output
+uses the older runtime naming rule. Every generation is strictly checked, and
+the fixed point is byte-for-byte. The C emitter is still TS-hosted; native C
+compiler self-hosting remains pending.
+
+Five paired compiler-phase medians stay steady: TS outputs 64.1 → 63.2 ms,
+identical S 690.9 → 692.6 ms, constant expressions 132.8 → 131.8 ms;
+C-emitter outputs 82.8 → 81.3 ms, divisions 173.0 → 173.3 ms, constant
+expressions 216.9 → 218.3 ms. Ordinary measured program bytes match. The
+self-source outputs intentionally differ by hygienic identifiers and match the
+strict transitional/final ladder hashes exactly. The [raw report](reports/2026-11-02-statement-scopes-performance.json)
+records those distinctions without a general speedup claim.
+
+All 265 full tests pass with zero skips in 94.1 s; fast passes 253 with
+12 expected skips in 65.5 s. Strict host/seeds, coverage and nine editor groups
+also pass. Gate durations are validation observations, separate from paired
+compiler-phase measurements above.
+
+Inventory: 87/164 match, 77 remain; 35 original failures closed, no regressions,
+210 tracked Lite sources, no load errors. The existing static-function lookup
+flaw after ordinary value shadowing is now explicitly retained in the queue.
+The supplementary-character column discrepancy stays in the final diagnostic
+audit while functional T00 dependencies are removed.

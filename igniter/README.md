@@ -110,6 +110,13 @@ Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
 See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
 
+
+Generated TS/C now support statement scopes and preserve outer values while
+shadowed initializers run. The canonical scope feature executes on all three
+targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
+remain identical. See the [scope ledger](../compiler/parity.md#statement-scopes) for focused combinations,
+generated fixed-point evidence, native sanitizer cases and paired timing data.
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript

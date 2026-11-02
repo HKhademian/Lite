@@ -17,8 +17,8 @@ Current components:
 
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
-- Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 98 target executions
-- Tests: 236 interpreter groups, 24 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 100 target executions
+- Tests: 236 interpreter groups, 25 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -172,6 +172,13 @@ comma-only lists, doubled commas and arity/type errors still reject before effec
 Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
 See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
+
+
+Generated TS/C now support statement scopes and preserve outer values while
+shadowed initializers run. The canonical scope feature executes on all three
+targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
+remain identical. See the [scope ledger](../compiler/parity.md#statement-scopes) for focused combinations,
+generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 
 ## Current tag conventions

@@ -271,6 +271,9 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             outputLine(indent + "break;");
         } else if item.kind == "Continue" {
             outputLine(indent + "continue;");
+        } else if item.kind == "Scope" {
+            outputLine(indent + "{");
+            indent = indent + "    ";
         } else if item.kind == "If" {
             outputLine(indent + "if (" + item.code + ") {");
             indent = indent + "    ";
@@ -282,7 +285,7 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             indent = dedent(indent);
             outputLine(indent + "} else if (" + item.code + ") {");
             indent = indent + "    ";
-        } else if item.kind == "EndIf" {
+        } else if item.kind == "EndIf" or item.kind == "EndScope" {
             indent = dedent(indent);
             outputLine(indent + "}");
         } else if item.kind == "Loop" {

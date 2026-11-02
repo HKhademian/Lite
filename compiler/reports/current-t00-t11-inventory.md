@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -18,22 +18,23 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 38; 23 matches tested behavior; 15 T11 rejects source.
+- feature: 38; 24 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 32 matches tested behavior; 47 T11 rejects source.
+- probe: 79; 33 matches tested behavior; 46 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 33 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 85/164 executed source cases match; 79 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 35 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 87/164 executed source cases match; 77 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
 
+- feature: scope.locals
 - feature: io.input
 - example: example.001-double-sum
 - example: example.002-decisions
@@ -58,6 +59,7 @@ Closed original cases:
 - probe: function.report-order
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
+- probe: scope.standalone-block
 - probe: text.adjacent-literals
 - probe: call.trailing-comma
 - probe: syntax.final-semicolon
@@ -93,8 +95,7 @@ Closed original cases:
   First diagnostic: 3:11: expected := or = after local name push_front
 - **text.helpers — matches tested behavior.** Temporary code-point text helpers. Source: `verifications/features/text-helpers.lts`.
 - **alias.transparent — matches tested behavior.** Transparent type aliases. Source: `verifications/features/alias-transparent.lts`.
-- **scope.locals — T11 rejects source.** Lexical local scope and shadowing. Source: `verifications/features/scope-locals.lts`.
-  First diagnostic: 2:1: expected a statement: output/outputLine, declaration, assignment, if or loop
+- **scope.locals — matches tested behavior.** Lexical local scope and shadowing. Source: `verifications/features/scope-locals.lts`.
 - **scope.assignment — matches tested behavior.** Mutable var replacement. Source: `verifications/features/scope-assignment.lts`.
 - **io.input — matches tested behavior.** Prompted integer input. Source: `verifications/features/io-input.lts`.
 - **io.arguments — matches tested behavior.** Ordered script arguments. Source: `verifications/features/io-arguments.lts`.
@@ -232,8 +233,7 @@ Closed original cases:
 - **alias.shadowing — matches tested behavior.** One lexical namespace: a later value hides an alias
 - **tuple.named-positional-read — T11 rejects source.** Positional reads from named tuple values
   First diagnostic: 1:42: expected )
-- **scope.standalone-block — T11 rejects source.** Standalone lexical blocks
-  First diagnostic: 1:1: expected a statement: output/outputLine, declaration, assignment, if or loop
+- **scope.standalone-block — matches tested behavior.** Standalone lexical blocks
 - **function.immutable-copy — T11 rejects source.** Copying an immutable function into another binding
   First diagnostic: 1:41: function f must be called
 - **function.builtin-shadow — matches tested behavior.** Lexical shadowing of a temporary builtin by a function

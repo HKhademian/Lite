@@ -4,6 +4,12 @@ Status: **established direction; source-file body selected 2026-10-28**.
 
 ## Purpose and template
 
+Generated compiler coverage, 2026-11-02: TS/C support statement scopes over
+their admitted values, retaining outer updates and fresh shadowed bindings.
+Generated TS also covers List/named-tuple values and scalar-function scopes.
+Value-producing block expressions, same-block redeclarations and broader
+callable/type namespace behavior remain in the [transition queue](../compiler/gaps.md).
+
 An executable block groups items, introduces lexical scope, and produces its final item's result when execution reaches the end.
 
 ```text

@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T17:12:15.713Z",
-  "revision": "ffe27eca92049c31d98e5e4e64d05602cbeb58e9",
+  "startedAt": "2026-11-02T18:08:09.506Z",
+  "revision": "9e16826508a0bfa1bfcbef61429853fc2a3220a6",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M igniter/test.ts\nR  igniter/tests/compiler/002-001-report-missing-argument.json -> igniter/tests/compiler/001-001-report-missing-argument.json\nR  igniter/tests/compiler/002-001-report-missing-argument.lts -> igniter/tests/compiler/001-001-report-missing-argument.lts\n?? compiler/reports/2026-11-02-trailing-commas-ladder.json\n",
-  "compilerSourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
-  "compilerSourceRevision": "33e45bc87aa7b1ce58646a00429da8d25d6880ae",
+  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/test.ts\n M verifications/README.md\n M verifications/features/scope-locals.json\n?? compiler/reports/2026-11-02-statement-scopes-ladder.json\n",
+  "compilerSourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
+  "compilerSourceRevision": "Statement-scope source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
+  "t11Sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -718,7 +718,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "block-shadowing",
@@ -730,14 +730,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "20\n10\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_x = 10n;\n    void lite_x;\n    {\n        const lt_local_x_15 = 20n;\n        void lt_local_x_15;\n        const lite$report0 = (lt_local_x_15).toString();\n        lite$emit(lite$report0 + \"\\n\");\n    }\n    const lite$report1 = (lite_x).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "2:1: expected a statement: output/outputLine, declaration, assignment, if or loop\n"
+        "stderr": ""
       }
     },
     {
@@ -5765,7 +5778,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -5776,14 +5789,27 @@
             "stdout": "3\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "3\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    {\n        const lite_x = 3n;\n        void lite_x;\n        const lite$report0 = (lite_x).toString();\n        lite$emit(lite$report0 + \"\\n\");\n    }\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:1: expected a statement: output/outputLine, declaration, assignment, if or loop\n"
+        "stderr": ""
       }
     },
     {
@@ -6789,8 +6815,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "7d9aed5e81347c209b40b8b662f9dac0ee62e0f24d77a8a9c721c536091aa90e",
-      "bytes": 163270,
+      "sourceSha256": "0caab3b7f4e511e20f6af0c5537f68723b88e85605fd4360dd2de821aeb6efc6",
+      "bytes": 163753,
       "t00Check": {
         "accepted": true
       },
@@ -6799,7 +6825,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 294092
+        "stdoutBytes": 294906
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6808,7 +6834,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "19443f284040d85dfb1c21354dccc254b507eb07cf70100a40ec736b02b4d548"
+      "artifactSha256": "57fe23818f6a6f5030dbc65046b4fb5036dc0c7434e0e769d5d0fe0ae4006597"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6852,8 +6878,8 @@
     },
     {
       "path": "compiler/src/emit-c.lts",
-      "sourceSha256": "a76ae496abb7672f5f0e1fbf183bde4bda6045c3db6f7cd159d41fbaf8cd8295",
-      "bytes": 16466,
+      "sourceSha256": "875cc462714c38db8135319dea7102a711274099357950620c526042c0b48f47",
+      "bytes": 16610,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function indexOfText; forward function lookup is not supported yet"
@@ -6862,8 +6888,8 @@
     },
     {
       "path": "compiler/src/emit-ts.lts",
-      "sourceSha256": "034967d7d0955fd504f56e5493987e7b313eb420ef7c64f37075cf05b563e9a4",
-      "bytes": 28453,
+      "sourceSha256": "b78c2b429430972bfb163718c776d5d61186d9a91b0b3517e50ab558ec4e4e8b",
+      "bytes": 28597,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function skipName; forward function lookup is not supported yet"
@@ -6872,8 +6898,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "84bbfd6b3cde44782bc46ade6e8c77632887fdb6d37458b7ce3055d4364c034e",
-      "bytes": 124971,
+      "sourceSha256": "aa249c583b001ad08abbcb64727f5e0402054276d33d751adcc18043bc789b99",
+      "bytes": 125310,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7140,8 +7166,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
-      "bytes": 174150,
+      "sourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
+      "bytes": 174633,
       "t00Check": {
         "accepted": true
       },
@@ -9057,8 +9083,8 @@
   "counts": {
     "feature": {
       "total": 38,
-      "matches": 23,
-      "rejected": 15,
+      "matches": 24,
+      "rejected": 14,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9101,8 +9127,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 32,
-      "rejected": 47,
+      "matches": 33,
+      "rejected": 46,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9362,7 +9388,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T17:13:05.750Z",
+  "finishedAt": "2026-11-02T18:09:02.495Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9372,6 +9398,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
+  }
 }

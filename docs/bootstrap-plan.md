@@ -77,7 +77,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 24 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 25 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -88,7 +88,7 @@ renames S's report calls to outputLine, adds output without a newline, and ports
 the four prompted input helpers to generated TS. This explicit owner decision
 updates the temporary helper contract; it does not add general optional/variadic
 function grammar. Current corpus: 66 programs/27 rejections; verification:
-38 features, 78 scenarios, 98 target executions. The generated-only spelling
+38 features, 78 scenarios, 100 target executions. The generated-only spelling
 adapter and that snapshot's fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
 
 The subsequent [checked Int64 refresh](../compiler/parity.md#checked-int64-arithmetic)
@@ -166,6 +166,13 @@ comma-only lists, doubled commas and arity/type errors still reject before effec
 Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
 See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
 focused combinations and paired timing evidence.
+
+
+Generated TS/C now support statement scopes and preserve outer values while
+shadowed initializers run. The canonical scope feature executes on all three
+targets, yielding 100 verifier executions. All 66 earlier program artifact pairs
+remain identical. See the [scope ledger](../compiler/parity.md#statement-scopes) for focused combinations,
+generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 ## Historical P0 baseline, 2026-11-01
 

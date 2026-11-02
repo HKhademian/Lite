@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "bf9d7bf85cee86936a2402cfec89717c5b093afa",
+  "node": "v24.16.0",
+  "previousSeedSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
+  "transitionalArtifactSha256": "f597f53c31ea48b4694508534b8f24f427dc5964cde9c67e61d2b09bdb3dd64a",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
+    "bytes": 174633
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+      "bytes": 318489,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+      "bytes": 318489,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+      "bytes": 318489,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "0caab3b7f4e511e20f6af0c5537f68723b88e85605fd4360dd2de821aeb6efc6",
+    "sourceBytes": 163753,
+    "artifactSha256": "2b571ebf0bd3bc46e314728be7e3c5e70a8cf80f590339fdf1a9c67c74500e8a",
+    "artifactBytes": 294860,
+    "builderSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "scalarScopePrograms": 20,
+    "tsFunctionAggregateScopePrograms": 6,
+    "rejectionSources": 9,
+    "exactRuntimeFaultExecutions": 5,
+    "fullSuite": {
+      "tests": 265,
+      "passed": 265,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 94086.238417
+    },
+    "fastSuite": {
+      "tests": 265,
+      "passed": 253,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 65536.440375
+    },
+    "hostGroups": 25,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 66,
+      "rejections": 27,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 66,
+      "rejections": 27,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 100,
+    "registeredFeatures": 38,
+    "coverage": true,
+    "existingCorpusArtifactPairsUnchanged": 66,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "var x := 7; if true { x := x; outputLine(x); } outputLine(x);",
+        "var x := 7; { var x := x + 1; x = x + 2; outputLine(x); } outputLine(x);",
+        "var value := \"outer\"; { value := value + \"!\"; outputLine(value); } outputLine(value);",
+        "var x := 0; { var x := x + 1; { x: Bool = true; outputLine(x); } outputLine(x); } outputLine(x);",
+        "var n := 0; loop n < 3 { { n = n + 1; continue } } { var n := n + 1; loop { { outputLine(n); break } } } outputLine(n);",
+        "var value := 9223372036854775807; outputLine(\"before\");\r\n{ value := value + 1; outputLine(value); }"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true
+    },
+    "inventory": {
+      "matches": 87,
+      "total": 164,
+      "remaining": 77,
+      "originalFailuresClosed": 35,
+      "regressions": 0,
+      "trackedLiteFiles": 210,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-statement-scopes-performance.json",
+    "knownLimits": "Statement scopes over admitted forms. Value block expressions, same-block redeclarations, static-function/value namespace shadowing, broader types/control/data, native C and run/check migration remain pending; supplementary-character column audit is deferred."
+  },
+  "reproductionCommands": [
+    "git show bf9d7bf85cee86936a2402cfec89717c5b093afa:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

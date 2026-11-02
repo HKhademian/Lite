@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after trailing-comma support. Existing 65 program artifact pairs remain unchanged; the trailing-comma fixture now compiles. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after statement scopes and hygienic shadowed bindings. All 66 older program artifact pairs are unchanged; historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
-  "compilerSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
+  "sourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
+  "compilerSha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
   "programCases": 66,
   "rejectedCases": 27,
   "artifacts": [
