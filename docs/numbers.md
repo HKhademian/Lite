@@ -49,8 +49,10 @@ one 64-bit floating type. Unannotated integer literals remain `Int` (Int64) and
 fractional literals remain `Float` (Float64); they do not become minimal-width.
 The Lite-generated TS/C targets also recognize these three 64-bit synonyms in
 their admitted annotations, aliases and aggregate/function contracts. This
-normalizes type names; integer-literal initialization of Float storage and narrow
-numeric widths remain separate generated-compiler migration work. See the
+normalizes type names. The generated TS frontend also admits exactly representable
+integer literals in its supported Float storage/call/result contexts; established
+Int64 values and Int-only binary results do not acquire storage widening. Narrow
+numeric widths remain separate migration work. See the
 [numeric-synonym ledger](../compiler/parity.md#numeric-type-synonyms).
 A literal constant may initialize a narrow annotated type only when it fits:
 integer literals must be inside that width's range (and exactly representable

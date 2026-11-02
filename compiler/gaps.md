@@ -21,48 +21,44 @@ self-hosting must be closed before switching defaults.
 
 ## Immediate migration priorities
 
-1. Exactly representable integer literals in Float storage/call/result contexts,
-   then remaining ordinary data/call/control syntax. The common 64-bit numeric
-   type names, mixed Float arithmetic and power checkpoint are ported; all 20
-   implemented lessons now run on generated Lite.
-2. Missing ordinary binding/storage, tuple/array/List, call/function and
-   block/conditional/loop/match/cleanup forms. Use the existing examples and
-   focused syntax-family cases to decide the next dependency, rather than
-   launching independent edge-case hunts.
-3. Switch default run/check, verification and regression consumers to Lite once
-   the core baseline passes. Both compile targets already use Lite. Keep T00
-   only on explicit reference/audit paths; no automatic fallback.
-4. Continue deferred conformance and native C work on the Lite default, then
-   retire T00 after the final gates. Known gaps remain visible throughout.
+Latest owner direction: switch to the Lite-written TS compiler as quickly as
+possible, keep its generated self-build/fixed point, remove public run, and
+execute compiled artifacts. C output/native work is post migration and does not
+block TS default use or T00 retirement. This supersedes the older native-first
+retirement ordering.
 
-For the early cutover, require the 19 example, 20 implemented sample and eight
-library-test manifests plus focused cases for the important syntax families
-listed in the transition plan. This does not require every boundary probe.
-Advanced numeric-width/rounding matrices, Unicode column compatibility and
-exhaustive tagged-control-flow/cleanup combinations follow the default switch.
-Basic validation and normal runtime behavior remain part of each syntax port.
+1. Switch public compile/check and ordinary verification/test consumers to
+   generated TS artifacts; remove public run. Retain T00 only as an explicit
+   reference while the remaining TS ports land.
+2. Port the missing ordinary binding/storage, tuple/array/List, call/function and
+   block/conditional/loop/match/cleanup forms. All 20 implemented lessons and
+   eight library tests already run on generated Lite; eight examples remain.
+3. Make every supported feature compile and execute from a TS artifact, then
+   remove active T00 dependencies and complete the clean-checkout audit.
+4. Resume C output and native self-hosting after the TS migration. Advanced
+   correctness/edge matrices remain separate from the urgent compiler switch.
 
 ## Measured checkpoint
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `0900d0ed…`. All inputs compile/check against the current reference, both
+seed `77cacbac…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
-- Canonical features: 27/40 match; 13 rejected.
+- Canonical features: 28/41 match; 13 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 20/20 match; none rejected.
-- Isolated boundary probes: 42/82 match; 40 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 213 tracked Lite sources are accounted for;
+- Isolated boundary probes: 45/84 match; 39 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 214 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 108/169 match, 61 still fail. Compared with the
+- Total executed source cases: 112/172 match, 60 still fail. Compared with the
   original inventory, 52 previously failing cases now match and none regress.
-  Temporary I/O, the retained function-tail probe, the chain feature, two
-  completion probes and the Float/numeric-alias features add seven matching
-  cases beyond the original inventory. The newly retained Float integer-literal
-  context adds one failing case. These additions explain denominator changes.
+  New canonical cases and isolated probes explain denominator changes. The
+  Float integer-literal probe now passes; two new braced-value boundary probes
+  preserve corrected old behavior. Original-case progress is unchanged at 52
+  closures because these three probes were added after the original inventory.
 
 
 These counts describe measured programs. Several failing cases share one cause;
@@ -142,10 +138,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   unselected contextual division/storage semantics are not migration dependencies.
 - [x] **64-bit numeric synonyms:** Int64=Int and Float64=Double=Float across
   admitted scalar, alias, tuple, List and function contracts.
-- [ ] **Float literal contexts (next core port):** exactly representable Int
-  literals in Float storage/call/result contexts. The new retained probe rejects
-  on T11 while T00 prints 2. Ordinary integer variables still require the
-  selected lossless storage-admission rules.
+- [x] **Float literal contexts:** exactly representable integer literals in
+  admitted Float storage/call/result and aggregate contexts. Established Int
+  values and Int-only binary results retain their types; brace boundaries and
+  actual function tails preserve the context.
 - [ ] **Numeric widths:** narrow types, promotion, lossless widening, checked
   narrow results and Float32 rounding; exhaustive matrices follow the cutover.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
@@ -458,3 +454,16 @@ See the [numeric-synonym ledger](parity.md#numeric-type-synonyms),
 [paired timing report](reports/2026-11-02-numeric-aliases-performance.json).
 Next: the retained Float integer-literal context, then remaining ordinary
 data/call/control syntax and the early Lite-default workflow cutover.
+
+Float context migration: the scalar/aggregate/contextual literal forms and
+related braced-value boundaries now execute on generated TS artifacts. The
+TS-focused full suite passes 271 tests with nine native-only skips (126.3 s);
+fast passes 268 with 12 expected skips (129.5 s). Strict checks, three matching
+self-builds, the 93-case TS corpus, 41-feature coverage and nine editor groups
+pass. All 69 earlier fixture artifact pairs remain unchanged. See the
+[Float-context ledger](parity.md#float-literal-contexts-and-braced-values),
+[ladder](reports/2026-11-02-float-contexts-ladder.json) and
+[TS timings](reports/2026-11-02-float-contexts-performance.json).
+Owner update: remove public run, compile then execute TS artifacts, and defer
+C output/native gates until after TS migration. Next is the public workflow
+cutover and the remaining ordinary TS syntax; C is not a retirement blocker.

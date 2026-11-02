@@ -341,6 +341,42 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     ""
 }
 
+/** Recognizes the normalized direct/grouped Int literal forms that can enter a scalar Float context without widening an established value. */
+exactFloatLiteral := fn(text: String): Bool {
+    tokens := tokenize(text, "");
+    var first := 0;
+    var last := tokenCount(tokens) - 2;
+    loop first < last and isSymbol(tokenAt(tokens, first), "(") and isSymbol(tokenAt(tokens, last), ")") {
+        var depth := 0;
+        var cursor := first;
+        loop cursor <= last {
+            if isSymbol(tokenAt(tokens, cursor), "(") { depth = depth + 1; }
+            else if isSymbol(tokenAt(tokens, cursor), ")") {
+                depth = depth - 1;
+                if depth == 0 { break; }
+            }
+            cursor = cursor + 1;
+        }
+        if cursor =!= last { break; }
+        first = first + 1;
+        last = last - 1;
+    }
+    negative := isSymbol(tokenAt(tokens, first), "-");
+    if negative { first = first + 1; }
+    if first =!= last or tokenAt(tokens, first).kind =!= TOKEN_KIND_INT() { return false; }
+    scanned := scanNumericLiteral(tokenAt(tokens, first).text, 0);
+    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return false; }
+    value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
+    intExactlyFloat(value)
+}
+
+/** Infers a scalar expression with the checkpoint's exact integer-literal Float context; ordinary values and binary results retain their types. */
+contextualSimpleType := fn(symbols: Symbols, locals: Locals, text: String, expected: String): String {
+    actual := simpleType(symbols, locals, text);
+    if actual == "Int" and resolveAliasName(symbols, expected, 0) == "Float" and exactFloatLiteral(text) { return "Float"; }
+    actual
+}
+
 /** Builds a token-shaped source position for a symbol diagnostic. */
 symbolToken := fn(symbol: Symbol): Token {
     (kind = symbol.kind, text = symbol.name, offset = symbol.offset, line = symbol.line, column = symbol.column)
@@ -589,7 +625,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 cursor = afterReturn;
             } else {
                 value := parseExpression(tokens, afterReturn, prefix, 0);
-                inferred := simpleType(symbols, locals, value.text);
+                inferred := contextualSimpleType(symbols, locals, value.text, functionResult);
                 if not typesCompatible(symbols, functionResult, inferred) {
                     checkFail(token, prefix, "cannot return " + inferred + " from function returning " + functionResult);
                 }
@@ -692,7 +728,7 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                     typeText = work;
                 }
                 if initText =!= "" and initText =!= "?" {
-                    inferred := simpleType(symbols, locals, initText);
+                    inferred := contextualSimpleType(symbols, locals, initText, typeText);
                     if not typesCompatible(symbols, typeText, inferred) {
                         checkFail(nameToken, prefix, "cannot initialize " + typeText + " with " + inferred);
                     }
@@ -719,8 +755,8 @@ checkLocals := fn(tokens: Tokens, prefix: String, symbols: Symbols): Unit {
                 checkFail(token, prefix, "cannot assign to immutable local " + token.text);
             }
             value := parseExpression(tokens, cursor + 2, prefix, 0);
-            inferred := simpleType(symbols, locals, value.text);
             localType := locals[index].typeText;
+            inferred := contextualSimpleType(symbols, locals, value.text, localType);
             if not typesCompatible(symbols, localType, inferred) {
                 checkFail(token, prefix, "cannot assign " + inferred + " to " + localType + " local " + token.text);
             }
@@ -870,8 +906,8 @@ checkCalls := fn(tokens: Tokens, symbols: Symbols, prefix: String): Unit {
                         argumentCursor = argumentCursor + 2;
                     }
                     argument := parseExpression(tokens, argumentCursor, prefix, 0);
-                    inferred := simpleType(symbols, emptyLocals, argument.text);
                     expectedType := parameterTypes[argumentIndex];
+                    inferred := contextualSimpleType(symbols, emptyLocals, argument.text, expectedType);
                     if not typesCompatible(symbols, expectedType, inferred) {
                         checkFail(token, prefix, "argument " + decimalText(argumentIndex + 1) + " of " + token.text +
                             " expects " + expectedType + ", got " + inferred);

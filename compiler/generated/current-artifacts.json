@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after Int64/Float64/Double type-synonym normalization. All 69 earlier TS/C artifact pairs remain unchanged. Numeric alias support has canonical and focused target coverage; Float integer-literal contexts remain a separately tracked core migration gap. Historical checkpoints stay preserved.",
+  "note": "Current exact artifacts after Float literal-context and braced-value boundary migration. All 69 prior TS/C artifact pairs remain unchanged. New cases execute as generated TS artifacts. C output/native gates are deferred by the owner until after the TS migration; already generated C evidence remains historical.",
   "recorded": "2026-11-02",
-  "sourceSha256": "944a4e8da33c36df699c6e779727a0b699ab9bcfdbdfd65f0e0e789f1f24dd02",
-  "compilerSha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
+  "sourceSha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+  "compilerSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
   "programCases": 69,
   "rejectedCases": 24,
   "artifacts": [

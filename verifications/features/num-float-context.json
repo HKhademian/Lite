@@ -1,0 +1,29 @@
+{
+  "id": "num.float-context",
+  "kind": "feature",
+  "source": {
+    "file": "num-float-context.lts",
+    "hash": "sha256:eefb79cb174287744d8bbeb3d2697f398f30528b99e301fd8c4b461f538fb8c2"
+  },
+  "features": [
+    "num.float-context",
+    "num.aliases",
+    "num.float"
+  ],
+  "guideline": "Checks exactly representable integer literals in Float declarations and assignments, grouped literals and signed Int64 boundaries without general Int-to-Float storage widening.",
+  "targets": [
+    "igniter",
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "exact-literal-storage",
+      "stdout": {
+        "text": "-4 9007199254740994 -9223372036854776000\n8 4\n",
+        "hash": "sha256:7b28678b94639d288291beaeeb38f7560c7142a37c7e19ee8d4bcab79a898dc5"
+      },
+      "exitCode": 0
+    }
+  ]
+}

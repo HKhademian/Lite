@@ -574,10 +574,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 126 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 129 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 40 registered, 40 cases/);
+    assert.match(covered.stdout, /features: 41 registered, 41 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -4334,6 +4334,20 @@ test('Lite numeric alias phases normalize built-in synonyms across annotations a
   });
   withGeneratedDriver(checkerDumpPath, generated => {
     for (const text of ['x: Int64 = "x";', 'x: Double = false;', 'f := fn(): Int64 { return 0.5; }']) {
+      const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 2, text); assert.deepEqual(generated(text), expected);
+    }
+  });
+});
+
+test('Lite checker admits exact scalar integer literals in Float contexts without widening values', () => {
+  withGeneratedDriver(checkerDumpPath, generated => {
+    for (const text of ['f: Float = 2; d: Double = -3; g: Float64 = ((4));',
+      'var f: Float = 2; f = -4;', 'f := fn(): Float { return (-2); } outputLine(f());',
+      'f := fn(n: Float): Float { return n; } outputLine(f(2));', 'f: Float = -9223372036854775808;']) {
+      const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 0, text + expected.errors); assert.deepEqual(generated(text), expected);
+    }
+    for (const text of ['f: Float = 9007199254740993;', 'i := 2; f: Float = i;', 'f: Float = 2 + 3;',
+      'f: Float = +2;', 'f: Float = -(2);', 'f := fn(): Float { return 9007199254740993; }']) {
       const expected = runFile(checkerDumpPath, text); assert.equal(expected.code, 2, text); assert.deepEqual(generated(text), expected);
     }
   });

@@ -1315,3 +1315,56 @@ records close/mixed medians: TS output 63.9 → 64.9 ms, identical S 704.6 →
 C-emitter output 85.0 → 82.8 ms, divisions 163.5 → 167.8 ms, constants
 211.4 → 209.2 ms and dead-output input 44.0 → 44.3 ms. All measured output
 bytes match; no general speedup is claimed.
+
+## Float literal contexts and braced values
+
+The generated TS frontend now admits exactly representable Int64 literals into
+Float declarations, assignments, calls and results, including admitted grouping,
+direct negative literals and typed tuple/List constructors. Established Int
+values and Int-only binary results retain their types. Integer exactness uses
+at most ten divisions by two and never negates Int64.MIN. The scalar checker
+phase shares that exactness predicate; its aggregate contextual inference remains
+less complete than the production frontend.
+
+Expected types apply to a complete value, so `(2) + 3` stays Int arithmetic and
+`(9007199254740993) + 0.5` retains the permitted mixed arithmetic conversion.
+Group lookahead and actual Float function-tail detection keep contexts away from
+binary operands and discarded statements. Ordinary dead statements after return
+do not become results, preserving the earlier owner-selected completion rule;
+T00 still applies its Float result context to one such dead literal.
+
+Related probes established two existing braced-value bugs in the previous seed:
+the parser could skip the first branch character, and a binary operator could
+attach across a directly closed braced item. Branch parsing now starts immediately
+after its consumed opening brace, and the closing brace ends that expression.
+An author can group a braced value to combine it with an operator. These fixes
+preserve the existing statement-boundary rule rather than selecting new syntax.
+
+Coverage includes ten shared scalar programs, fourteen generated TS
+function/aggregate/conditional programs, twenty rejected sources, six exact
+positioned fault executions and an explicit dead-statement completion case.
+The scalar checker compares five admitted/six rejected sources between reference
+and generated drivers. The canonical
+[num.float-context case](../verifications/features/num-float-context.json) and
+two retained boundary probes supplement the previously failing literal probe.
+The [ladder](reports/2026-11-02-float-contexts-ladder.json) records pre-fix evidence,
+three matching generated self-builds and the exact validation scope.
+
+Owner update during this slice: migration is now TS-first and artifact-based;
+C output/native work follows T00 retirement. The C snapshot and native cases
+already obtained before that update are retained as evidence, not retirement
+gates. Subsequent work removes the public run command and migrates production
+check/verification/test consumers to generated TS artifacts.
+
+Validation: 280 full-suite groups, 271 passed and nine native-only skips in
+126.3 s; fast 268 passed/12 expected skips in 129.5 s. All TS source sweeps,
+strict host/seeds, three generated self-builds, the 93-case TS corpus, coverage
+and nine editor groups pass. Current inventory: 112/172 matching, 60 remaining,
+52 original failures closed and no observed regressions. The literal probe and
+new canonical/boundary cases account for the progress and denominator change.
+
+The [TS paired timing record](reports/2026-11-02-float-contexts-performance.json)
+shows mixed medians: output 66.0 → 62.9 ms, identical S 745.8 → 767.4 ms,
+constants 131.6 → 135.5 ms and dead-output input 44.5 → 44.6 ms. Every measured
+output stream matches. C timing/output/native gates are deferred under the
+latest owner direction; earlier C snapshot evidence is retained.

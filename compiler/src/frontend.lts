@@ -713,6 +713,14 @@ readOperator := fn(source: String, position: Int): Operator {
     (text = "", width = 0)
 }
 
+/** True when a parsed atom is followed by a binary operator belonging to this precedence-climbing invocation. */
+binaryFollows := fn(source: String, next: Int, prefix: String, minimum: Int): Bool {
+    cursor := skipTrivia(source, next, prefix);
+    if cursor >= textLength(source) { return false; }
+    operator := readOperator(source, cursor);
+    operator.text =!= "" and operatorLevel(operator.text) >= minimum
+}
+
 /** Peeks only for a following comparison; the one-character filter avoids a full operator scan for ordinary delimiters and logic. */
 comparisonOperatorAt := fn(source: String, position: Int): Operator {
     if position >= textLength(source) { return (text = "", width = 0); }
@@ -829,6 +837,15 @@ parseNumber := fn(source: String, position: Int, prefix: String): Parsed {
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
     code := intLiteralCode(value, negative, textSlice(source, digitStart, cursor));
     intParsed(code, value, true, cursor)
+}
+
+/** Admits an exact integer literal into a Float context only when the atom is the complete expression, preserving ordinary binary operand typing. */
+floatContextNumber := fn(source: String, start: Int, prefix: String, parsed: Parsed, minimum: Int): Parsed {
+    if parsed.kind =!= "Int" or binaryFollows(source, parsed.next, prefix, minimum) { return parsed; }
+    if not intExactlyFloat(parsed.intValue) {
+        failAt(source, start, prefix, "integer literal is not exactly representable in Float");
+    }
+    (kind = "Float", code = floatOperandCode("Int", parsed.code), intValue = 0, textValue = "", constant = false, next = parsed.next)
 }
 
 /** Joins adjacent double-quoted literal tokens across trivia in one scan and encodes the complete value once. Escapes and malformed later tokens retain their own source positions. */
@@ -1107,6 +1124,25 @@ parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Loc
     (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
 }
 
+/** Finds the end of a grouped atom without interpreting its values; strings and comments cannot close the group. */
+scanParenEnd := fn(source: String, open: Int, prefix: String): Int {
+    var cursor := open;
+    var depth := 0;
+    size := textLength(source);
+    loop cursor < size {
+        ch := textAt(source, cursor);
+        if ch == "\"" { cursor = skipAliasString(source, cursor); }
+        else if startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if ch == "(" { depth = depth + 1; cursor = cursor + 1; }
+        else if ch == ")" {
+            depth = depth - 1;
+            cursor = cursor + 1;
+            if depth == 0 { return cursor; }
+        } else { cursor = cursor + 1; }
+    }
+    -1
+}
+
 /** Precedence-climbing parser for arithmetic, comparisons, `and`/`or`, parentheses, named tuple and list values, field access, indexing, calls, unary signs and `not`. Folds constants, lowers dynamic Int arithmetic, and exits 2 on mixed types, unsupported dynamic operations or range faults. `expected` supplies a contextual kind for empty list literals. self(..., 30) parses a unary operand without binary operators. */
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
@@ -1152,7 +1188,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     failAt(source, cursor, prefix, "expected = after tuple field " + label);
                 }
                 cursor = skipTrivia(source, cursor + 1, prefix);
-                value := self(source, cursor, prefix, locals, functions, params, currentName, "", 0);
+                fieldExpected := if isTupleKind(expected) { tupleFieldKind(expected, label) } else { "" };
+                value := self(source, cursor, prefix, locals, functions, params, currentName, fieldExpected, 0);
                 if isTupleKind(value.kind) {
                     failAt(source, cursor, prefix, "nested tuple values are not supported");
                 }
@@ -1187,7 +1224,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
             left = (kind = kindText + ")", code = codeText + " }", intValue = 0, textValue = "", constant = false, next = cursor);
         } else {
-            inner := self(source, start + 1, prefix, locals, functions, params, currentName, expected, 0);
+            var groupedExpected := expected;
+            if expected == "Float" {
+                groupEnd := scanParenEnd(source, start, prefix);
+                if groupEnd >= 0 and binaryFollows(source, groupEnd, prefix, minimum) { groupedExpected = ""; }
+            }
+            inner := self(source, start + 1, prefix, locals, functions, params, currentName, groupedExpected, 0);
             next := expectSymbol(source, skipTrivia(source, inner.next, prefix), ")", prefix);
             left = (kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next);
         }
@@ -1195,6 +1237,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         after := skipTrivia(source, start + 1, prefix);
         if after < textLength(source) and isDigit(textAt(source, after)) {
             left = parseNumber(source, start, prefix);
+            if expected == "Float" and ch == "-" { left = floatContextNumber(source, start, prefix, left, minimum); }
         } else {
             operand := self(source, start + 1, prefix, locals, functions, params, currentName, "", 30);
             if operand.kind =!= "Int" and operand.kind =!= "Float" {
@@ -1214,6 +1257,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         }
     } else if isDigit(ch) {
         left = parseNumber(source, start, prefix);
+        if expected == "Float" { left = floatContextNumber(source, start, prefix, left, minimum); }
     } else if ch == "\"" {
         left = parseText(source, start, prefix);
     } else if ch == "[" {
@@ -1290,7 +1334,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                 condition.code
             };
             cursor = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
-            branchStart := skipTrivia(source, cursor + 1, prefix);
+            branchStart := skipTrivia(source, cursor, prefix);
             first := self(source, branchStart, prefix, locals, functions, params, currentName, expected, 0);
             cursor = expectSymbol(source, skipTrivia(source, first.next, prefix), "}", prefix);
             conditionCodes: mut List<String> = [];
@@ -1317,7 +1361,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                         elseCondition.code
                     };
                     open := expectSymbol(source, skipTrivia(source, elseCondition.next, prefix), "{", prefix);
-                    elseBranchStart := skipTrivia(source, open + 1, prefix);
+                    elseBranchStart := skipTrivia(source, open, prefix);
                     branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
@@ -1329,7 +1373,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     branchCount = branchCount + 1;
                 } else {
                     open := expectSymbol(source, afterElse, "{", prefix);
-                    elseBranchStart := skipTrivia(source, open + 1, prefix);
+                    elseBranchStart := skipTrivia(source, open, prefix);
                     branch := self(source, elseBranchStart, prefix, locals, functions, params, currentName, expected, 0);
                     if branch.kind =!= resultKind {
                         failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
@@ -1522,6 +1566,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         }
     }
     loop true {
+        if left.next > 0 and textAt(source, left.next - 1) == "}" { break; }
         operatorPosition := skipTrivia(source, left.next, prefix);
         if operatorPosition >= textLength(source) { break; }
         operator := readOperator(source, operatorPosition);
@@ -1876,9 +1921,37 @@ skipItemSeparators := fn(source: String, position: Int, prefix: String): Int {
     next
 }
 
+/** Locates an ordinary item's separator or enclosing close for contextual tail typing, without interpreting values. */
+scanExpressionItemEnd := fn(source: String, start: Int, prefix: String): Int {
+    var cursor := start;
+    var depth := 0;
+    size := textLength(source);
+    loop cursor < size {
+        ch := textAt(source, cursor);
+        if ch == "\"" { cursor = skipAliasString(source, cursor); }
+        else if startsWithAt(source, cursor, "/*") { cursor = skipComment(source, cursor, prefix); }
+        else if depth == 0 and (ch == ";" or ch == "}") { return cursor; }
+        else {
+            if ch == "(" or ch == "[" or ch == "{" { depth = depth + 1; }
+            else if ch == ")" or ch == "]" or ch == "}" { depth = depth - 1; }
+            cursor = cursor + 1;
+        }
+    }
+    cursor
+}
+
 /** Parses an expression item once, retaining its evaluation and checking a function's final result across trailing separators. */
 parseExpressionItem := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, currentResult: String, valueTail: Bool): (next: Int, returned: Bool, code: String, valueKind: String) {
-    parsed := parseExpressionAs(source, position, prefix, locals, functions, params, currentName, currentResult);
+    var expected := currentResult;
+    if currentResult == "Float" {
+        expected = "";
+        if valueTail {
+            end := scanExpressionItemEnd(source, position, prefix);
+            next := skipItemSeparators(source, end, prefix);
+            if next < textLength(source) and textAt(source, next) == "}" { expected = "Float"; }
+        }
+    }
+    parsed := parseExpressionAs(source, position, prefix, locals, functions, params, currentName, expected);
     ended := consumeStatementEnd(source, parsed.next, prefix);
     if ended < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after expression statement"); }
     next := skipItemSeparators(source, ended, prefix);

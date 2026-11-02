@@ -1,0 +1,215 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "4046edd4acdf28c1264b83c9ec0906a112ca212a",
+  "node": "v24.16.0",
+  "previousSeedSha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
+  "transitionalArtifactSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "214cfa39400929ca9e45d5e5f67a4102ec35d0276b109e8ebcc2405490ec7a5e",
+    "bytes": 192587
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "bytes": 351426,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "bytes": 351426,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+      "bytes": 351426,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "d13def5c7eb856678f99496ab125d821c7ebac1d39847590ff8f8c418d551381",
+    "sourceBytes": 188416,
+    "artifactSha256": "a21878480102273fc16c1e392b8e89db8588391ff4866ef95f10ea5400fdcc7c",
+    "artifactBytes": 341133,
+    "builderSha256": "77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "sharedScalarSources": 10,
+    "tsFunctionAggregateConditionalSources": 14,
+    "rejectedSources": 20,
+    "faultSources": 3,
+    "exactFaultExecutionsBeforeCDeferral": 6,
+    "selectedDeadStatementCase": 1,
+    "focusedGroups": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 12921.832541
+    },
+    "phaseGroups": {
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 2101.014958
+    },
+    "scalarCheckerSources": {
+      "valid": 5,
+      "rejected": 6
+    },
+    "fastSuite": {
+      "tests": 280,
+      "passed": 268,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 129500.037083
+    },
+    "fullTsSuite": {
+      "tests": 280,
+      "passed": 271,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 126255.664584
+    },
+    "hostGroups": 36,
+    "interpreterGroups": 240,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 69,
+      "rejections": 24,
+      "mismatches": 0,
+      "first": []
+    },
+    "registeredFeatures": 41,
+    "coverage": true,
+    "canonicalExecutionsBeforeCDeferral": {
+      "count": 3,
+      "targets": [
+        "igniter",
+        "ts",
+        "c"
+      ]
+    },
+    "existingCorpusArtifactPairsUnchanged": 69,
+    "nativeSanitizersBeforeDeferral": {
+      "cases": 6,
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined,address",
+        "-fno-sanitize-recover=all"
+      ],
+      "linkFlags": [
+        "-lm"
+      ],
+      "sources": [
+        "f: Float = 2; d: Double = -3; low: Float = -9223372036854775808; outputLine(f, d, low);",
+        "f: Float = 9007199254740994; outputLine(f);",
+        "f: Float = (9007199254740993) + 0.5; outputLine(f);",
+        "var f: Float = 2; loop f < 5 { f = f + 1; } outputLine(f);",
+        "outputLine(\"before\"); var f: Float = 2; outputLine(f / 0);",
+        "outputLine(\"before\"); var f: Float = 2; outputLine(f * 1e308);"
+      ],
+      "exactStatusAndStreams": true
+    },
+    "preFixEvidence": {
+      "previousArtifactSha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
+      "rows": [
+        {
+          "source": "f: Float = 2; outputLine(f);",
+          "sourceSha256": "cf8e0ae312dafee289e25afb0257825997d221d8f78523c25e3c44f6be51f84c",
+          "reference": {
+            "status": 0,
+            "stdout": "2\n",
+            "stderr": ""
+          },
+          "previous": {
+            "compileStatus": 2,
+            "diagnostic": "1:1: cannot initialize Float with Int\n",
+            "execution": null
+          }
+        },
+        {
+          "source": "outputLine(if true{12}else{34});",
+          "sourceSha256": "a607ea85cd178dafc67a0f65883bd28b4e12dcb58f3138cac51a2014a39a4d6d",
+          "reference": {
+            "status": 0,
+            "stdout": "12\n",
+            "stderr": ""
+          },
+          "previous": {
+            "compileStatus": 0,
+            "diagnostic": "",
+            "execution": {
+              "phase": "run",
+              "status": 0,
+              "stdout": "2\n",
+              "stderr": ""
+            }
+          }
+        },
+        {
+          "source": "x := if true { 1 } else { 2 } +3; outputLine(x);",
+          "sourceSha256": "5d8d7cb1f0b2a887f7427def71ee8f443871252f1924f5b6095072d43d7dc76e",
+          "reference": {
+            "status": 0,
+            "stdout": "1\n",
+            "stderr": ""
+          },
+          "previous": {
+            "compileStatus": 0,
+            "diagnostic": "",
+            "execution": {
+              "phase": "run",
+              "status": 0,
+              "stdout": "4\n",
+              "stderr": ""
+            }
+          }
+        }
+      ]
+    },
+    "inventory": {
+      "matches": 112,
+      "total": 172,
+      "remaining": 60,
+      "originalFailuresClosed": 52,
+      "regressions": 0,
+      "trackedLiteFiles": 214,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-float-contexts-performance.json",
+    "scope": "Production Float literal contexts and related braced-value boundaries implemented in Lite; generated TS artifacts and self-host fixed points are migration gates.",
+    "ownerScopeUpdate": "Remove the public run command; compile programs and execute artifacts. Keep TS self-hosting; defer C output/native gates until after TS migration and T00 retirement. Existing C evidence obtained before the update is historical, not an active blocker.",
+    "referenceException": "The previously selected completion rule retains well-typed ordinary dead statements without making them function results. T00 still supplies Float result context to a dead integer literal; generated Lite retains its Int statement type.",
+    "knownLimits": "Remaining ordinary data/call/control forms still block eight examples. The standalone checker phase remains a foundation with incomplete aggregate contexts. Numeric width matrices and advanced edge audits follow the compiler switch; C output/native work is post migration."
+  },
+  "reproductionCommands": [
+    "git show 4046edd4acdf28c1264b83c9ec0906a112ca212a:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ],
+  "tsOnlyGateCommand": "LITE_SKIP_NATIVE=1 ./lite test --full"
+}

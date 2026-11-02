@@ -30,6 +30,15 @@
       ]
     },
     {
+      "id": "num.float-context",
+      "summary": "Exactly representable integer literals in admitted Float storage, call and result contexts.",
+      "case": "features/num-float-context.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md"
+      ]
+    },
+    {
       "id": "num.widths",
       "summary": "Sized integer and floating widths with promotion and lossless widening.",
       "case": "features/num-widths.json",

@@ -1444,3 +1444,74 @@ test('Int64, Float64 and Double normalize across admitted numeric annotations an
   }
   assertExecutions(executions);
 });
+
+test('Float contexts admit exact integer literals without widening values or changing binary arithmetic', () => {
+  const executions: ArtifactExecution[] = [];
+  const both = [
+    'f: Float = 2; d: Double = -3; g: Float64 = (4); outputLine(f, d, g);',
+    'a: Float = 9007199254740992; b: Float = 9007199254740994; c: Float = 18014398509481984; d: Float = -9223372036854775808; outputLine(a, b, c, d);',
+    'a: Float = ((-9007199254740992)); b: Float = (/* before */ 2 /* after */); outputLine(a, b);',
+    'var f: Float = 2; f = -4; outputLine(f); f = ((8)); outputLine(f);',
+    'f: Float = 2; g: Float = f; outputLine(f, g);',
+    'f: Float = 9007199254740993 + 0.5; g: Float = (9007199254740993) + 0.5; outputLine(f, g);',
+    'var f: Float = 2; loop f < 5 { f = f + 1; } outputLine(f);',
+    'Amount := type Double; var f: Amount = 2; f = (4); outputLine(f);',
+    'f: Float = (2.0 + 3.0); g: Float = -(2.5); outputLine(f, g);',
+    'f: Float = (-9007199254740993) * 0.5; outputLine(f);',
+  ];
+  const tsOnly = [
+    'f := fn(n: Float): Float { n } outputLine(f(2), f(-3), f((4)));',
+    'f := fn(): Float { 2 } g := fn(): Double { ((-3)) } outputLine(f(), g());',
+    'f := fn(flag: Bool): Float { if flag { return 2; } return 3; } outputLine(f(true), f(false));',
+    'f := fn(): Float { 9007199254740993; 2 } outputLine(f());',
+    'xs: List<Float> = [1, -2, 9007199254740994]; outputLine(xs);',
+    'p: (n: Float, m: Double) = (n = 2, m = -3); outputLine(p);',
+    'Pair := type (n: Float); f := fn(): Pair { (n = 2) } outputLine(f());',
+    'var flag := true; f: Float = if flag{2}else{3.5}; outputLine(f);',
+    'var flag := false; f: Float = (if (if flag{true}else{false}) {2}else if false{3}else{4.5}); outputLine(f);',
+    'xs: List<(n: Float)> = [(n = 2), (n = -3)]; outputLine(xs);',
+    'f := fn(n: Float): Float { n } outputLine(f(if true{2}else{3.5}));',
+    'f: Float = (if true{9007199254740993}else{2}) + 0.5; outputLine(f);',
+    'f: Float = if true{2}else{3} + 0.5; outputLine(f);',
+    'outputLine(if true{12}else{34}); x := if true {1}else {2} +3; outputLine(x);',
+  ];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
+  }
+  const invalid = ['f: Float = 9007199254740993;', 'f: Float = -9007199254740993;',
+    'f: Float = 18014398509481986;', 'f: Float = 9223372036854775807;', 'f: Float = 9223372036854775808;',
+    'i := 2; f: Float = i;', 'f: Float = 2 + 3;', 'f: Float = (2) + 3;', 'f: Float = 2 + (3);', 'f: Float = (2 + 3);',
+    'f: Float = +2;', 'f: Float = -(2);', 'f := fn(): Float { 2 + 3 } outputLine(f());',
+    'f := fn(n: Float): Float { n } outputLine(f(2 + 3));',
+    'xs: List<Float> = [1 + 1];', 'i := 2; p: (n: Float) = (n = i);',
+    'f: Float = if false{9007199254740993}else{2};', 'f := fn(): Float { 9007199254740993 }',
+    'p: (n: Float) = (n = 9007199254740993);', 'outputLine(if true{1}else{2}+3);'];
+  for (const source of invalid) {
+    const text = 'outputLine("before"); ' + source, expected = runText(text);
+    assert.equal(expected.status, 1, text); assert.equal(expected.stdout.length, 0, text);
+    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2, text); assert.equal(compiled.stdout.length, 0, text); }
+  }
+  for (const source of ['var f: Float = 2; outputLine(f / 0);', 'var f: Float = 0; outputLine(1 / f);',
+    'var f: Float = 2; outputLine(f * 1e308);']) {
+    const text = 'outputLine("before");\r\n' + source, name = 'float-context سلام.lts', expected = runText(text, { name });
+    assert.equal(expected.status, 1); assert.equal(expected.stdout.toString(), 'before\n');
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  // Selected completion behavior: an ordinary dead statement cannot become the function's result.
+  {
+    const text = 'f := fn(): Float { return 2; 9007199254740993; } outputLine(f());';
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected: { status: 0, stdout: Buffer.from('2\n'), stderr: Buffer.alloc(0) }, context: text });
+  }
+  assertExecutions(executions);
+});

@@ -505,5 +505,17 @@
     "summary": "An unconditional return-through-loop produces a strictly runnable generated function",
     "source": "f := fn(): Int { loop { return 7; } } outputLine(f());",
     "test": "function completion joins every conditional arm and preserves earlier definite returns"
+  },
+  {
+    "id": "flow.value-if-first-token",
+    "summary": "A value branch starts immediately after its opening brace",
+    "source": "outputLine(if true{12}else{34});",
+    "test": "Lite compiler Float literal contexts and braced value boundaries"
+  },
+  {
+    "id": "flow.braced-expression-boundary",
+    "summary": "A directly closed braced value ends its item before a following unary expression",
+    "source": "x := if true { 1 } else { 2 } +3; outputLine(x);",
+    "test": "Lite compiler Float literal contexts and braced value boundaries"
   }
 ]

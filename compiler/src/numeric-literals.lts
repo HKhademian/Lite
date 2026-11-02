@@ -5,6 +5,16 @@ numericAliasKind := fn(name: String): String {
     else { "" }
 }
 
+/** True when an admitted Int64 value has no nonzero bits beyond binary64 precision. Division avoids taking the absolute value of Int64.MIN. */
+intExactlyFloat := fn(input: Int): Bool {
+    var value := input;
+    loop value > 9007199254740992 or value < -9007199254740992 {
+        if value % 2 =!= 0 { return false; }
+        value = value / 2;
+    }
+    true
+}
+
 /** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
 finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
     var first := 0;

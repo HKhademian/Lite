@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `77cacbacdc2aa97c6c3b86c61f54501fd322ca081cb8be63bd9e5cf1f91818ee`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -18,18 +18,18 @@ This is the current measured support inventory, not acceptance of new language f
 
 ## Counts
 
-- feature: 40; 27 matches tested behavior; 13 T11 rejects source.
+- feature: 41; 28 matches tested behavior; 13 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 20 matches tested behavior.
-- probe: 82; 42 matches tested behavior; 40 T11 rejects source.
+- probe: 84; 45 matches tested behavior; 39 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
-- trackedSourceFiles: 213.
+- trackedSourceFiles: 214.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
 - 52 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 108/169 executed source cases match; 61 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 112/172 executed source cases match; 60 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -92,6 +92,7 @@ Closed original cases:
 - **int.arithmetic — matches tested behavior.** Signed Int arithmetic and precedence. Source: `verifications/features/int-arithmetic.lts`.
 - **num.float — matches tested behavior.** Finite Float arithmetic and mixed Int/Float comparisons with checked runtime faults. Source: `verifications/features/num-float.lts`.
 - **num.aliases — matches tested behavior.** Int64, Float64 and Double as synonyms of the existing 64-bit numeric types. Source: `verifications/features/num-aliases.lts`.
+- **num.float-context — matches tested behavior.** Exactly representable integer literals in admitted Float storage, call and result contexts. Source: `verifications/features/num-float-context.lts`.
 - **num.widths — T11 rejects source.** Sized integer and floating widths with promotion and lossless widening. Source: `verifications/features/num-widths.lts`.
   First diagnostic: 1:4: unsupported local type Int8
 - **bool.conditions — matches tested behavior.** Bool comparisons and conditional selection. Source: `verifications/features/bool-conditions.lts`.
@@ -152,8 +153,7 @@ Closed original cases:
 - **numeric.float32 — T11 rejects source.** Float32 rounding and promotion
   First diagnostic: 1:4: unsupported local type Float32
 - **numeric.float-aliases — matches tested behavior.** Float64 and Double annotations
-- **numeric.float-integer-literal — T11 rejects source.** An exactly representable integer literal in a Float storage context
-  First diagnostic: 1:1: cannot initialize Float with Int
+- **numeric.float-integer-literal — matches tested behavior.** An exactly representable integer literal in a Float storage context
 - **numeric.exponent-literal — matches tested behavior.** Decimal exponent literal syntax
 - **numeric.power — matches tested behavior.** Right-associative Float-default power
 - **numeric.dynamic-add-overflow — matches tested behavior.** Runtime Int64 addition overflow faults
@@ -267,6 +267,8 @@ Closed original cases:
 - **comparison.bare-function-tail — matches tested behavior.** A bare inequality function tail remains a comparison rather than assignment
 - **flow.unreachable-tail — matches tested behavior.** A definite return excludes an unreachable ordinary tail from the function result
 - **flow.return-through-true-loop — matches tested behavior.** An unconditional return-through-loop produces a strictly runnable generated function
+- **flow.value-if-first-token — matches tested behavior.** A value branch starts immediately after its opening brace
+- **flow.braced-expression-boundary — matches tested behavior.** A directly closed braced value ends its item before a following unary expression
 
 ## example
 
