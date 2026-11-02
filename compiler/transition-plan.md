@@ -8,10 +8,10 @@ todos:
     status: completed
   - id: c-host-migration
     content: Build the C emitter with T11 and remove T00 from the C compilation host
-    status: pending
+    status: completed
   - id: existing-feature-parity
     content: Inventory and port existing T00 features into the shared Lite frontend and targets
-    status: pending
+    status: in_progress
   - id: native-self-host
     content: Complete native C self-hosting and the cross-host fixed-point ladder
     status: pending
@@ -36,6 +36,14 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: C emission and compiler verification now use the Lite C emitter
+  compiled by T11 into a TS-hosted compiler (`bootstrap/c-emitter.ts`, 233360
+  bytes, SHA-256 `b5459cc7…`). Its source hash is `413044da…` and builder is the
+  preserved T11 `8273ce69…`. Both targets work without T00, retain exact
+  artifacts/diagnostics, rebuild changed sources with T11 and validate target-
+  specific caches. This is not the native C11 compiler. Strict host/both seed
+  checks, all 6 host tests, full suite 240/240 with zero skips, both 92-case
+  target comparisons (53 programs/39 rejections) and 91 verifier executions pass.
 - 2026-11-02: owner-requested neutral [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
   precedes further migration work. It audits all 36 feature manifests, 19 examples,
   20 implemented lessons, 78 additional boundary probes, all 8 library tests and
@@ -76,20 +84,6 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Implementation order
 
-### Step 2 — c-host-migration
-
-**Depends on:** t11-default.
-**Files:** `compiler/host.ts`, `compiler/cli.ts`, `compiler/bootstrap/`,
-`compiler/scripts/build.mjs`, `compiler/tests/host.test.ts`, `igniter/verify.ts`,
-compiler/igniter/verifier docs and bootstrap/parity records.
-**Actions:** compile the C-emitter Lite bundle with T11 into a TS-hosted compiler;
-record hashes, validate exact C artifact/rejection output, then route C compilation
-and verification through it. This is not C01 or a native compiler. Keep target
-differences explicit and preserve the ability to reproduce historical bootstrap.
-**Acceptance:** both compile targets work without T00; C artifact hashes and
-native program behavior match the current accepted C subset.
-**Verify:** strict checking, fast suite, full native/compiler gate, no-T00 smoke.
-
 ### Step 3 — existing-feature-parity
 
 **Depends on:** c-host-migration.
@@ -100,6 +94,9 @@ distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
 and record feature parity. Include the known report argument-order difference.
+Before source-changing slices, extend verifier changed-file selection to compiler
+host/seed/source and core-library changes: its runtime hash includes those inputs,
+but the current affected-case selector only explicitly recognizes igniter files.
 **Acceptance:** every existing T00-supported contract has an equivalent Lite
 compiler path or an explicitly approved exception; no new language decisions.
 **Verify:** focused boundary probes per slice, strict check, fast suite, canonical
@@ -113,7 +110,10 @@ feature cases on applicable targets; full regression at the gate.
 record the C memory strategy; build C01 and the defined C21/C22/C23 and
 T21/T22/T23 nodes, plus T13, with exact artifact equality and corpus evidence.
 **Acceptance:** all fixed points and cross-builds pass without a T00 runtime
-dependency. C11 is not currently a defined node; do not relabel C21 silently.
+dependency. The owner-requested C11 is the first native compiler emitted through
+T11, `CompileC(T11, S)`; preserve C01/C21 and the older audit labels, and prove
+their equality rather than silently renaming a node. The current TS-hosted C
+emitter is not C11.
 **Verify:** `-std=c11 -Wall -Wextra -Werror`, native boundary cases, full corpus,
 clean-checkout rebuild and artifact hashes.
 

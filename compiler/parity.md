@@ -10,14 +10,16 @@ features beyond L remain pending work in the [transition plan](transition-plan.m
 
 ## Default compiler transition
 
-TS compilation and the verifier's TS emission use the checked-in
-[T11 seed](bootstrap/README.md), with exact artifact/source identity checks.
+TS and C compilation and the verifier's compiler emission use the checked-in
+[generated seeds](bootstrap/README.md), with exact artifact/source identity checks.
 Changed S is rebuilt by T11 into a strictly checked, source-keyed cache; there
 is no implicit T00 fallback. The historical T00 ladder remains an explicit
 audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
 
-C emission, interpreter run/check and the interpreter regression tests still use
-T00. Native C01/C21 and T13 remain unrecorded. This first transition slice does
+Interpreter run/check and the interpreter regression tests still use
+T00. The C emitter is now a TS-hosted compiler built by T11; its exact source,
+artifact and builder hashes are in `bootstrap/c-seed.ts`. Native C01/C11 and T13
+remain unrecorded. These host transition slices do
 not complete feature parity or authorize deleting T00 before its replacements pass.
 
 ## Terms
@@ -26,6 +28,10 @@ not complete feature parity or authorize deleting T00 before its replacements pa
   [`../igniter/`](../igniter/README.md). It executes S.
 - **S** — the Lite-written compiler source assembled from a manifest.
 - **T00** — the stage-0 TS igniter.
+- **C11** — the owner's requested first native compiler built through T11;
+  `CompileC(T11, S)`. This is distinct from the TS-hosted C emitter and from the
+  historical T00-built C01. Record C11 equality with the historical C nodes at
+  the native gate rather than silently renaming an old ladder node.
 - **T / C** — the TS and C compilers produced by stage 0 from S.
 - **T2 / C2** — the artifacts T/C produce when they compile S again.
 

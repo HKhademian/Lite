@@ -6,8 +6,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadSource } from './loader.ts';
-import { loadCompiler } from './bootstrap.ts';
-import { compileTs } from '../compiler/host.ts';
+import { compileTarget } from '../compiler/host.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
@@ -312,6 +311,8 @@ const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'compiler/entry.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/T11.ts')))
+  .update(readFileSync(resolve(root, 'compiler/bootstrap/c-seed.ts')))
+  .update(readFileSync(resolve(root, 'compiler/bootstrap/c-emitter.ts')))
   .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
   .update(loadBundle(resolve(root, 'compiler/manifests/c.json')).text)
   .update(process.version)
@@ -552,23 +553,9 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
   }
 }
 
-const compilerPrograms = new Map<string, ReturnType<typeof loadCompiler>>();
-
-/** Compiles one compiler application and runs it over the feature source. */
-function compilerEmit(manifestPath: string, source: string): string {
-  if (manifestPath === resolve(root, 'compiler/manifests/ts.json')) {
-    const result = compileTs({ text: source });
-    if (result.status !== 0) {
-      throw new Error(`compiler exited ${result.status}: ${result.stderr.toString('utf8').trim()}`);
-    }
-    return result.stdout.toString('utf8');
-  }
-  let compiler = compilerPrograms.get(manifestPath);
-  if (compiler === undefined) {
-    compiler = loadCompiler(manifestPath);
-    compilerPrograms.set(manifestPath, compiler);
-  }
-  const result = compiler.compile({ text: source });
+/** Emits with the current Lite-written compiler; neither target executes T00. */
+function compilerEmit(target: 'ts' | 'c', source: string): string {
+  const result = compileTarget(target, { text: source });
   if (result.status !== 0) {
     throw new Error(`compiler exited ${result.status}: ${result.stderr.toString('utf8').trim()}`);
   }
@@ -581,7 +568,7 @@ async function runCompilerTarget(target: Target, source: string,
     throw new Error('compiler targets do not support stdin or script arguments');
   }
   if (target === 'ts') {
-    const emitted = compilerEmit(resolve(root, 'compiler/manifests/ts.json'), source);
+    const emitted = compilerEmit('ts', source);
     const directory = mkdtempSync(join(tmpdir(), 'lite-verify-ts-'));
     try {
       writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
@@ -598,7 +585,7 @@ async function runCompilerTarget(target: Target, source: string,
     } finally { rmSync(directory, { recursive: true, force: true }); }
   }
   if (target === 'c') {
-    const emitted = compilerEmit(resolve(root, 'compiler/manifests/c.json'), source);
+    const emitted = compilerEmit('c', source);
     const directory = mkdtempSync(join(tmpdir(), 'lite-verify-c-'));
     try {
       const cPath = join(directory, 'program.c');

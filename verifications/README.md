@@ -68,9 +68,9 @@ compiler fixtures.
 - `targets` — optional execution targets: `igniter` (default), `ts`, `c`.
   Compiler targets are admitted only for sources inside the restricted compiler
   subset and cannot use stdin or script arguments. TS emission uses the current
-  T11-derived compiler; C emission still uses the T00-hosted C emitter during the
-  [transition](../compiler/transition-plan.md). Verification cache identity includes
-  the seed, host adapter and both assembled compiler sources, so changing them
+  T11-derived compiler; C emission uses a TS-hosted C emitter built by T11 during
+  the [transition](../compiler/transition-plan.md). Verification cache identity includes
+  both generated seeds, the host adapter and both assembled compiler sources, so changing them
   cannot reuse a pass from an older compiler.
 - `source.hash` — SHA-256 of the original source bytes (`file`, UTF-8 `text` or raw `bytes`).
   Changed source fails verification until `--update` is reviewed.

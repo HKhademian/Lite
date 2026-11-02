@@ -265,8 +265,10 @@ The compiler implementation now lives in
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
 `litec` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
-verified T11 seed/current Lite compiler; C still delegates to
-[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) during host migration. There is no module/import
+verified T11 seed/current Lite compiler, and C uses its Lite emitter compiled by
+T11 into a TS-hosted compiler. The old
+[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) remains an explicit reference
+path. There is no module/import
 syntax, and compiler source no longer uses `importFlatAll`. Access is
 `./litec --target ts|c file.lts`, `./lite compile ...`, or the short `./ltc`
 command. This removes the duplicated parser/checker while keeping separate
@@ -317,7 +319,7 @@ subset, and the owner approved the [transition](../compiler/transition-plan.md)
 to T11 as the default TS compiler, followed by C host migration, existing-feature
 parity, native self-hosting and eventual T00 retirement. The readable generated
 TS seed is shipped with exact source/builder hashes; the original T00 route and
-published tags remain preserved. Default TS compilation has no automatic T00
+published tags remain preserved. Default TS and C compilation have no automatic T00
 fallback. T13, native C fixed points and full existing-feature parity remain
 unverified. The staged
 implementation route, agent gates and definition of done are in the

@@ -54,11 +54,13 @@ equalities are recorded in
 ## Current transition, 2026-11-02
 
 The owner approved starting the [T11/C transition](../compiler/transition-plan.md)
-after the recorded T11/T12 fixed point and performance comparison. TS compilation
-and TS verification now select the preserved [T11 seed](../compiler/bootstrap/README.md)
-without executing T00. Changed S is rebuilt by T11 and strictly checked before
+after the recorded T11/T12 fixed point and performance comparison. TS and C
+compilation and compiler verification now select preserved
+[generated seeds](../compiler/bootstrap/README.md) without executing T00. The C
+emitter is TS-hosted, built by T11, and is not the future native C11 compiler.
+Changed S is rebuilt by T11 and strictly checked before
 use; artifact/source identities prevent stale or corrupt compiler selection.
-C emission, run/check and interpreter regressions still depend on T00. Feature
+Run/check and interpreter regressions still depend on T00. Feature
 parity, the native C ladder, T13 and eventual T00 removal remain pending.
 
 ## Historical P0 baseline, 2026-11-01
@@ -509,8 +511,9 @@ behavior and produces a runnable C2 from S.
 - [ ] `T11 == T21 == T22 == T23` byte for byte.
 - [ ] `T2 == T` and `C2 == C` byte for byte. If not, identify the nondeterminism
       and fix it; record any normalized fallback before accepting it.
-- [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter; C
-      compiles the TS-emitter source to a C-hosted TS emitter.
+- [ ] Cross-build: T compiles the C-emitter source to a TS-hosted C emitter
+      (recorded 2026-11-02, artifact `b5459cc7…`); the native C compiler must
+      still compile the TS-emitter source to a C-hosted TS emitter.
 - [ ] T and C pass all 53 program and 39 rejection cases with exact streams and
       status.
 - [ ] No T/C runtime dependency on stage 0, the Lite compiler or a hidden host.
@@ -721,7 +724,7 @@ The point is reached only when all of these are true:
 | D10 | Records/enums/`match` become necessary for the AST/checker | **stop and ask** |
 | D11 | Modules/imports become necessary for compiler self-assembly | **stop and ask** |
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
-| D13 | Compiler release tag stream and artifact check-in policy | T11 seed check-in selected by owner-approved transition 2026-11-02; release tag stream remains open |
+| D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; release tag stream remains open |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
 | D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
 

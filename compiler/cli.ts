@@ -1,11 +1,9 @@
-/** Internal default compiler CLI. C remains on its explicit legacy host during transition. */
+/** Internal default compiler CLI. Both targets run Lite-generated compilers, without T00. */
 import { readFileSync, writeSync } from 'node:fs';
-import { compileTs } from './host.ts';
+import { compileTarget } from './host.ts';
 
 const [target, path] = process.argv.slice(2);
-if (target === 'c' && path !== undefined) {
-  await import('../igniter/bundle-cli.ts');
-} else if (target !== 'ts' || path === undefined) {
+if ((target !== 'ts' && target !== 'c') || path === undefined) {
   process.stderr.write('Usage: node compiler/cli.ts ts|c file.lts\n');
   process.exitCode = 2;
 } else {
@@ -19,7 +17,7 @@ if (target === 'c' && path !== undefined) {
   }
   if (source !== undefined) {
     try {
-      const result = compileTs({ text: source, name: path });
+      const result = compileTarget(target, { text: source, name: path });
       if (result.stdout.length > 0) writeSync(1, result.stdout);
       if (result.stderr.length > 0) writeSync(2, result.stderr);
       process.exitCode = result.status;

@@ -6,8 +6,9 @@ import { delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { loadBundle } from '../../igniter/loader.ts';
-import { buildTsCompiler, compileTs } from '../host.ts';
+import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
+import { cSeed } from '../bootstrap/c-seed.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -16,13 +17,14 @@ const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (pro
 function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
   const manifest = resolve(root, 'compiler/manifests/ts.json');
-  const bundle = loadBundle(manifest);
-  const paths = [
+  const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
+  const paths = new Set([
     'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/package.json',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
-    'compiler/manifests/ts.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
-    ...bundle.files.map(path => relative(root, resolve(dirname(manifest), path))),
-  ];
+    'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
+    'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
+    ...bundles.flatMap(bundle => bundle.files.map(path => relative(root, resolve(dirname(manifest), path)))),
+  ]);
   for (const path of paths) {
     const destination = join(directory, path);
     mkdirSync(dirname(destination), { recursive: true });
@@ -33,10 +35,10 @@ function isolatedCheckout(): string {
 }
 
 /** Invokes the copied launcher and captures exact bytes, without a fallback interpreter. */
-function invoke(directory: string, source: string | Buffer) {
+function invoke(directory: string, source: string | Buffer, target: CompilerTarget = 'ts') {
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
-  return spawnSync(join(directory, 'litec'), ['ts', path], { env, timeout: 10000 });
+  return spawnSync(join(directory, 'litec'), [target, path], { env, timeout: 10000 });
 }
 
 test('T11 host selects the recorded seed and preserves output, diagnostics and source line maps', () => {
@@ -57,21 +59,23 @@ test('T11 host selects the recorded seed and preserves output, diagnostics and s
   });
 });
 
-test('default TS compilation works in an isolated checkout with no T00 implementation', () => {
+test('both default compile targets work in an isolated checkout with no T00 implementation', () => {
   const directory = isolatedCheckout();
   try {
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
     assert.equal(existsSync(join(directory, 'igniter/bootstrap.ts')), false);
-    const result = invoke(directory, 'report(42);');
-    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
-    assert.deepEqual(result.stdout, readFileSync(join(root, 'compiler/generated/report-42.ts')));
-    assert.equal(result.stderr.length, 0);
-    const bad = invoke(directory, 'report(42);\nunsupported();\n');
-    assert.equal(bad.error, undefined); assert.equal(bad.status, 2);
-    assert.equal(bad.stdout.length, 0); assert.ok(bad.stderr.length > 0);
-    const invalid = invoke(directory, Buffer.from([0xff]));
-    assert.equal(invalid.status, 1); assert.equal(invalid.stdout.length, 0);
-    assert.match(invalid.stderr.toString(), /InputFault: cannot read input: invalid UTF-8/);
+    for (const target of ['ts', 'c'] as const) {
+      const result = invoke(directory, 'report(42);', target);
+      assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
+      assert.deepEqual(result.stdout, readFileSync(join(root, `compiler/generated/report-42.${target}`)));
+      assert.equal(result.stderr.length, 0);
+      const bad = invoke(directory, 'report(42);\nunsupported();\n', target);
+      assert.equal(bad.error, undefined); assert.equal(bad.status, 2);
+      assert.equal(bad.stdout.length, 0); assert.ok(bad.stderr.length > 0);
+      const invalid = invoke(directory, Buffer.from([0xff]), target);
+      assert.equal(invalid.status, 1); assert.equal(invalid.stdout.length, 0);
+      assert.match(invalid.stderr.toString(), /InputFault: cannot read input: invalid UTF-8/);
+    }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -117,5 +121,44 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
     const result = invoke(directory, 'report(42);');
     assert.equal(result.status, 1); assert.equal(result.stdout.length, 0);
     assert.match(result.stderr.toString(), /T11 bootstrap seed hash mismatch/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('the TS-hosted C seed preserves source names, subset rejection and artifact integrity', () => {
+  const selected = buildCompiler('c');
+  assert.equal(selected.target, 'c');
+  assert.equal(selected.artifactSha256, cSeed.artifactSha256);
+  assert.equal(selected.builderSha256, seed.artifactSha256);
+  assert.equal(selected.sourceSha256, cSeed.sourceSha256);
+  assert.deepEqual(compileTarget('c', { text: 'report(42);', name: 'سلام file.lts' }), {
+    status: 0, stdout: readFileSync(join(root, 'compiler/generated/report-42.c')), stderr: Buffer.alloc(0),
+  });
+  assert.deepEqual(compileTarget('c', { text: 'report(1 +);', name: 'a b.lts' }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:11: expected an Int, String or Bool expression\n'),
+  });
+  assert.deepEqual(compileTarget('c', { text: 'f := fn(): Int { 1 } report(f());' }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support top-level functions yet\n'),
+  });
+  const directory = isolatedCheckout();
+  try {
+    const path = join(directory, 'compiler/bootstrap/c-emitter.ts');
+    writeFileSync(path, readFileSync(path, 'utf8') + '\n');
+    const corrupt = invoke(directory, 'report(42);', 'c');
+    assert.equal(corrupt.status, 1); assert.equal(corrupt.stdout.length, 0);
+    assert.match(corrupt.stderr.toString(), /c bootstrap seed hash mismatch/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('changed C compiler source rebuilds with T11 without a T00 implementation', () => {
+  const directory = isolatedCheckout();
+  try {
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
+    writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../src/fixture-c.lts'] }));
+    writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'source := inputAll(); report("fresh C");');
+    const result = invoke(directory, 'report(42);', 'c');
+    assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
+    assert.equal(result.stdout.toString(), 'fresh C\n');
+    const ts = invoke(directory, 'report(42);', 'ts');
+    assert.equal(ts.status, 0); assert.notEqual(ts.stdout.toString(), result.stdout.toString());
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

@@ -8,7 +8,7 @@
  * status for every program and rejection case.
  *
  * Usage:
- *   node compiler/scripts/corpus-parity.mjs --artifact /tmp/T11.ts
+ *   node compiler/scripts/corpus-parity.mjs --artifact /tmp/T11.ts [--target ts|c]
  *
  * Prints one JSON summary and exits nonzero on the first mismatches.
  */
@@ -29,6 +29,9 @@ if (artifactIndex < 0 || arguments_[artifactIndex + 1] === undefined) {
   process.exit(64);
 }
 const artifactPath = resolve(arguments_[artifactIndex + 1]);
+const targetIndex = arguments_.indexOf('--target');
+const target = targetIndex < 0 ? 'ts' : arguments_[targetIndex + 1];
+if (target !== 'ts' && target !== 'c') throw new Error('--target must be ts or c');
 
 /** Reads one artifact typecheck config from the igniter's strict settings. */
 function checkOptions() {
@@ -55,7 +58,7 @@ try {
     process.exit(typecheck.status ?? 1);
   }
 
-  const compiler = loadCompiler(join(repository, 'compiler', 'manifests', 'ts.json'));
+  const compiler = loadCompiler(join(repository, 'compiler', 'manifests', `${target}.json`));
   const fixtures = join(repository, 'igniter', 'tests', 'compiler');
   const manifests = readdirSync(fixtures).filter(name => name.endsWith('.json')).sort();
 
@@ -91,6 +94,7 @@ try {
   summary = {
     phase: 'compare',
     artifact: artifactPath,
+    target,
     cases: manifests.length,
     programs,
     rejections,

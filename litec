@@ -1,5 +1,5 @@
 #!/bin/sh
-# litec: Lite-written compiler driver. TS uses T11; C awaits host migration.
+# litec: Lite-written compiler driver. Both target compilers are generated through T11.
 lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
 
 usage() {

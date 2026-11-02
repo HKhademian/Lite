@@ -1,4 +1,4 @@
-/** Host-only assembly and process glue. All TS parsing/checking/emission runs in Lite-generated code. */
+/** Host-only assembly and process glue. Both target compilers are Lite-generated TS programs. */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
@@ -6,13 +6,17 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBundle, type LineMapEntry } from '../igniter/loader.ts';
 import { seed } from './bootstrap/seed.ts';
+import { cSeed } from './bootstrap/c-seed.ts';
+
+/** Existing code-generation targets; this is host plumbing, not language syntax. */
+export type CompilerTarget = 'ts' | 'c';
 
 /** Raw streams and process-style status from a compiler invocation. */
 export type CompilerResult = Readonly<{ status: number; stdout: Buffer; stderr: Buffer }>;
 /** Complete source plus optional diagnostic name or flattened-source line map. */
 export type CompilerInput = Readonly<{ text: string; name?: string; lineMap?: readonly LineMapEntry[] }>;
 /** Selected artifact and exact source/builder identities. */
-export type CompilerBuild = Readonly<{ path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; cached: boolean }>;
+export type CompilerBuild = Readonly<{ target: CompilerTarget; path: string; sourceSha256: string; artifactSha256: string; builderSha256: string; cached: boolean }>;
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const seedPath = fileURLToPath(new URL('./bootstrap/T11.ts', import.meta.url));
@@ -47,36 +51,39 @@ function checkArtifact(artifact: string, directory: string): void {
 }
 
 /** Verifies cached compiler bytes and their exact current source and seed identity. */
-function cachedBuild(directory: string, sourceSha256: string): CompilerBuild {
+function cachedBuild(directory: string, sourceSha256: string, target: CompilerTarget): CompilerBuild {
   const record: unknown = JSON.parse(readFileSync(join(directory, 'provenance.json'), 'utf8'));
   const path = join(directory, 'compiler.ts');
   const artifactSha256 = hash(readFileSync(path));
   if (typeof record !== 'object' || record === null || !('sourceSha256' in record) ||
       record.sourceSha256 !== sourceSha256 || !('builderSha256' in record) ||
       record.builderSha256 !== seed.artifactSha256 || !('artifactSha256' in record) ||
-      record.artifactSha256 !== artifactSha256) {
+      record.artifactSha256 !== artifactSha256 || !('target' in record) || record.target !== target) {
     throw new Error(`compiler cache integrity mismatch: ${directory}`);
   }
-  return { path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: true };
+  return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: true };
 }
 
 /**
  * Selects the verified seed for its original S, or rebuilds changed S with that
  * seed and strict-checks it before atomic cache publication. No T00 code runs.
  */
-export function buildTsCompiler(): CompilerBuild {
-  const artifactSha256 = hash(readFileSync(seedPath));
-  if (artifactSha256 !== seed.artifactSha256) throw new Error('T11 bootstrap seed hash mismatch');
-  const bundle = loadBundle(resolve(root, seed.sourceManifest));
+export function buildCompiler(target: CompilerTarget): CompilerBuild {
+  if (hash(readFileSync(seedPath)) !== seed.artifactSha256) throw new Error('T11 bootstrap seed hash mismatch');
+  const known = target === 'ts' ? seed : cSeed;
+  const bundle = loadBundle(resolve(root, known.sourceManifest));
   const source = bundle.text;
   const sourceSha256 = hash(source);
-  if (sourceSha256 === seed.sourceSha256) {
-    return { path: seedPath, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: false };
+  if (sourceSha256 === known.sourceSha256 && (target === 'ts' || cSeed.builderSha256 === seed.artifactSha256)) {
+    const path = fileURLToPath(new URL(`./bootstrap/${known.artifact}`, import.meta.url));
+    const artifactSha256 = hash(readFileSync(path));
+    if (artifactSha256 !== known.artifactSha256) throw new Error(`${target} bootstrap seed hash mismatch`);
+    return { target, path, sourceSha256, artifactSha256, builderSha256: seed.artifactSha256, cached: false };
   }
   const cache = resolve(root, '.cache/compiler');
-  const key = hash(`${seed.artifactSha256}:${sourceSha256}`);
+  const key = hash(`${target}:${seed.artifactSha256}:${sourceSha256}`);
   const destination = join(cache, key);
-  if (existsSync(destination)) return cachedBuild(destination, sourceSha256);
+  if (existsSync(destination)) return cachedBuild(destination, sourceSha256, target);
   mkdirSync(cache, { recursive: true });
   const temporary = mkdtempSync(join(cache, 'build-'));
   try {
@@ -90,7 +97,7 @@ export function buildTsCompiler(): CompilerBuild {
     writeFileSync(join(temporary, 'package.json'), '{"type":"module"}\n');
     checkArtifact(artifact, temporary);
     writeFileSync(join(temporary, 'provenance.json'), JSON.stringify({
-      sourceSha256, builderSha256: seed.artifactSha256, artifactSha256: hash(generated.stdout),
+      target, sourceSha256, builderSha256: seed.artifactSha256, artifactSha256: hash(generated.stdout),
     }, null, 2) + '\n');
     try {
       renameSync(temporary, destination);
@@ -98,7 +105,7 @@ export function buildTsCompiler(): CompilerBuild {
       if (!existsSync(destination)) throw error;
       // Another builder may have published this exact source; verify it below.
     }
-    return cachedBuild(destination, sourceSha256);
+    return cachedBuild(destination, sourceSha256, target);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
@@ -115,9 +122,15 @@ function mapDiagnostics(stderr: Buffer, lineMap: readonly LineMapEntry[]): Buffe
   }).join('\n'));
 }
 
-/** Compiles one whole Lite source with the current Lite-written TS compiler. */
-export function compileTs(input: CompilerInput): CompilerResult {
-  const selected = buildTsCompiler();
+/** Selects the current TS compiler; retained for existing internal callers. */
+export function buildTsCompiler(): CompilerBuild { return buildCompiler('ts'); }
+
+/** Compiles one whole Lite source with a current Lite-written target compiler. */
+export function compileTarget(target: CompilerTarget, input: CompilerInput): CompilerResult {
+  const selected = buildCompiler(target);
   const result = invoke(selected.path, input.text, input.lineMap === undefined ? input.name : undefined);
   return input.lineMap === undefined ? result : { ...result, stderr: mapDiagnostics(result.stderr, input.lineMap) };
 }
+
+/** Compiles to TS through the current generated compiler. */
+export function compileTs(input: CompilerInput): CompilerResult { return compileTarget('ts', input); }

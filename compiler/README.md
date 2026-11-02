@@ -2,9 +2,11 @@
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
 compilation defaults to the verified generated **T11** compiler in
-[`bootstrap/`](bootstrap/README.md). The C-emitter Lite source still runs under
-T00 in [`../igniter/`](../igniter/); migrating that host is the next step in the
-[owner-approved transition](transition-plan.md). The accepted language remains
+[`bootstrap/`](bootstrap/README.md). C compilation uses the Lite C emitter compiled
+by T11 into a TS-hosted compiler, also preserved there with its source/builder
+hashes. Both compile targets and compiler verification avoid T00. Interpreter
+run/check still use T00 during the [owner-approved transition](transition-plan.md).
+The accepted language remains
 the restricted bootstrap subset, not the entire language design.
 
 The [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md) lists
@@ -18,7 +20,7 @@ source. Unchanged S uses the seed directly. Changed S is compiled by T11 and
 strictly typechecked before publication under a source/builder-keyed
 `.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
 explicitly; there is no silent T00 fallback. `node compiler/scripts/build.mjs`
-selects or rebuilds the current TS compiler and prints its provenance. Rebuilding
+selects or rebuilds both target compilers and prints their provenance. Rebuilding
 full S can take minutes. Language implementation belongs in `src/` and `lib/core/`,
 not in the generated seed or host glue.
 
@@ -54,9 +56,9 @@ line-map contract and current hashes are recorded in:
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
 the ordered manifests, and [`../igniter/bootstrap.ts`](../igniter/bootstrap.ts)
 compiles and runs them with flattened-position diagnostics mapped back to the
-original files. `litec` uses [`cli.ts`](cli.ts): TS goes through the T11 host;
-C still delegates explicitly to
-[`../igniter/bundle-cli.ts`](../igniter/bundle-cli.ts). P2 adds the provisional
+original files. `litec` uses [`cli.ts`](cli.ts): both targets use the generated
+compiler host. [`../igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) remains an
+explicit historical/reference path. P2 adds the provisional
 L0 helpers under [`../lib/core/`](../lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.
@@ -129,8 +131,8 @@ order is semantic because Lite has no forward function lookup: literal encoders
 come before the shared front-end, and the front-end comes before the emitter and
 driver.
 
-`litec` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived TS
-compiler or the explicitly retained T00 C-emitter host. The old `ts-emitter.lts` and `c-emitter.lts`
+`litec` compiles through [`cli.ts`](cli.ts), selecting the current T11-derived
+target compiler. The old `ts-emitter.lts` and `c-emitter.lts`
 paths are generated compatibility bundles that match the manifest output; edit
 `src/` and regenerate them, do not edit the bundles.
 

@@ -5,8 +5,9 @@ Keep active handwritten host development minimal; move compiler development into
 Lite as soon as the supported subset and TS emission permit, keeping the igniter
 alongside it until its supported features have replacements. TS compilation now
 defaults to the verified generated [T11 bootstrap](../compiler/bootstrap/README.md);
-the TS verifier uses it too. T00 still handles `lite run`, `lite check`, C-emitter
-execution and interpreter regressions. The [transition plan](../compiler/transition-plan.md)
+the compiler verifier uses T11-derived compilers for both targets. The C emitter
+is now a TS-hosted artifact built by T11. T00 still handles `lite run`, `lite check`
+and interpreter regressions. The [transition plan](../compiler/transition-plan.md)
 tracks migration, feature parity and eventual T00 removal from the active tree,
 with its original seed/source preserved in Git history. TS remains a maintained
 web target and C the first native/export target; native self-hosting and library

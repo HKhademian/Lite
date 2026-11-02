@@ -15,8 +15,9 @@ must remain shipped forever; published tags remain immutable.
 The first slice selects a checked-in, readable generated T11 seed with recorded
 artifact/source hashes and builder revision. Default TS compilation and TS
 verification use that seed/current Lite compiler; changed S rebuilds with T11
-and is strictly checked before use. There is no implicit T00 fallback. C emission,
-run/check and interpreter regression tests remain on T00 until their replacement
+and is strictly checked before use. There is no implicit T00 fallback. C emission
+now uses its own Lite emitter compiled by T11 into a TS-hosted compiler; run/check
+and interpreter regression tests remain on T00 until their replacement
 gates pass. Existing-feature ports are approved scope, not proof of parity already
 achieved; no new syntax, builtin, observable semantics or compiler release/tag
 stream is selected. See the [transition plan](../compiler/transition-plan.md) and
