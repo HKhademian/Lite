@@ -26,7 +26,8 @@ public compilation or checking.
 The generated compiler still accepts a subset of the existing language. The
 [current inventory](compiler/reports/current-t00-t11-inventory.md) records
 112/172 matching source cases, with 60 remaining failures. T00 stays available
-as an explicit reference while those TS ports and verifier/test migration land.
+as an explicit reference while TS ports and default test migration land.
+Verification now defaults to TS artifacts and reports its unsupported cases.
 The [transition plan](compiler/transition-plan.md) tracks retirement separately
 from the later C work. Language implementation belongs in Lite; small host,
 platform and test adapters may use TypeScript under the

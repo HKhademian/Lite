@@ -1,13 +1,11 @@
-import { runTsArtifact } from './artifacts.ts';
+import { withTsArtifact, type TsArtifactRunner } from './artifacts.ts';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadSource } from './loader.ts';
-import { compileTarget } from '../compiler/host.ts';
+import { compileTs } from '../compiler/host.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
@@ -47,6 +45,7 @@ const verifications = resolve(root, 'verifications');
 
 const options = {
   update: false,
+  reference: false,
   coverage: false,
   changed: true,
   cache: true,
@@ -56,7 +55,8 @@ const options = {
 };
 for (let index = 0; index < process.argv.length - 2; index += 1) {
   const flag = process.argv[index + 2] ?? '';
-  if (flag === '--update') options.update = true;
+  if (flag === '--reference') options.reference = true;
+  else if (flag === '--update') options.update = true;
   else if (flag === '--coverage') options.coverage = true;
   else if (flag === '--changed') options.changed = true;
   else if (flag === '--all') options.changed = false;
@@ -80,10 +80,13 @@ for (let index = 0; index < process.argv.length - 2; index += 1) {
   else usage(`unknown argument ${flag}`);
 }
 
+// T00 is loaded only for the explicitly requested historical reference lane.
+const reference = options.reference ? await import('./lite.ts') : undefined;
+
 function usage(message?: string, code = 2): never {
   if (message !== undefined) process.stderr.write(`lite verify: ${message}\n`);
   const target = code === 0 ? process.stdout : process.stderr;
-  target.write('Usage: ./lite verify [--all] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
+  target.write('Usage: ./lite verify [--all] [--reference] [--update] [--coverage] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]\n');
   process.exit(code);
 }
 
@@ -305,17 +308,17 @@ function hash(bytes: Buffer): string {
 }
 
 const runtimeHash = createHash('sha256')
-  .update(readFileSync(resolve(root, 'igniter/lite.ts')))
+  .update(options.reference ? readFileSync(resolve(root, 'igniter/lite.ts')) : 'generated-ts-only')
+  .update(readFileSync(resolve(root, 'igniter/artifacts.ts')))
+  .update(readFileSync(resolve(root, 'igniter/tsconfig.json')))
+  .update(readFileSync(resolve(root, 'igniter/package-lock.json')))
   .update(readFileSync(resolve(root, 'igniter/loader.ts')))
   .update(readFileSync(resolve(root, 'igniter/verify.ts')))
   .update(readFileSync(resolve(root, 'compiler/host.ts')))
   .update(readFileSync(resolve(root, 'compiler/entry.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
   .update(readFileSync(resolve(root, 'compiler/bootstrap/T11.ts')))
-  .update(readFileSync(resolve(root, 'compiler/bootstrap/c-seed.ts')))
-  .update(readFileSync(resolve(root, 'compiler/bootstrap/c-emitter.ts')))
   .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
-  .update(loadBundle(resolve(root, 'compiler/manifests/c.json')).text)
   .update(process.version)
   .digest('hex');
 
@@ -386,6 +389,7 @@ function changedPaths(): Set<string> | undefined {
 
 const invalidating = new Set([
   'igniter/lite.ts', 'igniter/loader.ts', 'igniter/verify.ts', 'igniter/cli.ts',
+  'igniter/artifacts.ts', 'igniter/tsconfig.json', 'igniter/package-lock.json',
   'verifications/features.json', 'verifications/schema/verification.schema.json',
   'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts',
 ]);
@@ -428,14 +432,15 @@ function describe(buffer: Buffer): string {
 }
 
 function runCase(source: string, item: Manifest, fallback: Scenario): { stdout: Buffer; stderr: Buffer; exitCode: number } {
+  if (reference === undefined) throw new Error('T00 execution requires --reference');
   const base = dirname(item.file);
   const input = streamText(fallback.stdin, base, `${item.id}/${fallback.name}/stdin`, !options.update);
   let cursor = 0;
   let stdout = '';
   let stderr = '';
   try {
-    const program = compile(source);
-    const exitCode = execute(program, {
+    const program = reference.compile(source);
+    const exitCode = reference.execute(program, {
       args: [...(fallback.args ?? [])],
       read: () => input[cursor++] ?? null,
       report: value => { stdout += value; },
@@ -443,7 +448,7 @@ function runCase(source: string, item: Manifest, fallback: Scenario): { stdout: 
     });
     return { stdout: Buffer.from(stdout, 'utf8'), stderr: Buffer.from(stderr, 'utf8'), exitCode };
   } catch (error: unknown) {
-    if (error instanceof LiteFault) {
+    if (error instanceof reference.LiteFault) {
       throw new Error(`${error.category}: ${error.message}`);
     }
     throw error;
@@ -561,50 +566,20 @@ function coverage(features: ReadonlyMap<string, RegistryEntry>, items: readonly 
   }
 }
 
-/** Emits with the current Lite-written compiler; neither target executes T00. */
-function compilerEmit(target: 'ts' | 'c', source: string): string {
-  const result = compileTarget(target, { text: source });
-  if (result.status !== 0) {
-    throw new Error(`compiler exited ${result.status}: ${result.stderr.toString('utf8').trim()}`);
+/** Runs a strictly checked artifact in a fresh process for every input scenario. */
+function runGenerated(run: TsArtifactRunner, scenario: Scenario, base: string): CaseResult {
+  const result = run({
+    stdin: streamBytes(scenario.stdin, base, 'stdin', !options.update), args: scenario.args ?? [],
+  });
+  if (result.phase !== 'run' || result.status === null || result.signal !== null) {
+    throw new Error('generated TS artifact failed: ' + result.stdout.toString() + result.stderr.toString());
   }
-  return result.stdout.toString('utf8');
+  return { stdout: result.stdout, stderr: result.stderr, exitCode: result.status };
 }
 
-async function runCompilerTarget(target: Target, source: string,
-                                 scenario: Scenario, base: string): Promise<{ stdout: Buffer; stderr: Buffer; exitCode: number }> {
-  if (target === 'ts') {
-    const result = runTsArtifact(compilerEmit('ts', source), {
-      stdin: streamBytes(scenario.stdin, base, 'stdin', !options.update), args: scenario.args ?? [],
-    });
-    if (result.phase !== 'run' || result.status === null || result.signal !== null) {
-      throw new Error('generated TS artifact failed: ' + result.stdout.toString() + result.stderr.toString());
-    }
-    return { stdout: result.stdout, stderr: result.stderr, exitCode: result.status };
-  }
-  if (scenario.stdin !== undefined || (scenario.args !== undefined && scenario.args.length > 0)) {
-    throw new Error('native compiler verification does not support stdin or script arguments yet');
-  }
-  if (target === 'c') {
-    const emitted = compilerEmit('c', source);
-    const directory = mkdtempSync(join(tmpdir(), 'lite-verify-c-'));
-    try {
-      const cPath = join(directory, 'program.c');
-      const executable = join(directory, 'program');
-      writeFileSync(cPath, emitted);
-      const built = spawnSync(process.env['CC'] ?? 'cc', ['-std=c11', '-Wall', '-Wextra', '-Werror',
-        cPath, '-o', executable, '-lm'], { encoding: 'utf8', timeout: 30000 });
-      if (built.error !== undefined) throw built.error;
-      if (built.status !== 0) throw new Error(`C compiler failed: ${built.stdout}${built.stderr}`);
-      const run = spawnSync(executable, [], { timeout: 5000 });
-      if (run.error !== undefined) throw run.error;
-      if (run.signal !== null) throw new Error(`C program terminated by ${run.signal}`);
-      return { stdout: run.stdout, stderr: run.stderr, exitCode: run.status ?? 1 };
-    } finally { rmSync(directory, { recursive: true, force: true }); }
-  }
-  throw new Error(`unsupported target ${target}`);
-}
+type CaseResult = { stdout: Buffer; stderr: Buffer; exitCode: number };
 
-async function main(): Promise<void> {
+function main(): void {
   let features: Map<string, RegistryEntry>;
   let items: readonly Manifest[];
   try {
@@ -645,33 +620,33 @@ async function main(): Promise<void> {
       continue;
     }
     const updates = new Map<string, Scenario>();
-    for (const original of selected) {
-      let expectedStdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
-      let expectedStderr: Buffer<ArrayBufferLike> = Buffer.alloc(0);
-      if (!options.update) {
-        try {
-          expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`, true);
-          expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`, true);
-        } catch (error: unknown) {
-          process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
-          failures += 1;
+    const target: Target = options.reference ? 'igniter' : 'ts';
+    const processScenarios = (run: (scenario: Scenario) => CaseResult): void => {
+      for (const original of selected) {
+        let expectedStdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+        let expectedStderr: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+        if (!options.update) {
+          try {
+            expectedStdout = streamBytes(original.stdout, dirname(item.file), `${item.id}/${original.name}/stdout`, true);
+            expectedStderr = streamBytes(original.stderr, dirname(item.file), `${item.id}/${original.name}/stderr`, true);
+          } catch (error: unknown) {
+            process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+            failures += 1;
+            continue;
+          }
+        }
+        if (options.update) {
+          executed += 1;
+          try {
+            const actual = run(original);
+            updates.set(original.name, updatedScenario(original, actual, dirname(item.file), item.id));
+          } catch (error: unknown) {
+            process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+            failures += 1;
+          }
           continue;
         }
-      }
-      if (options.update) {
-        executed += 1;
-        try {
-          const actual = runCase(source, item, original);
-          updates.set(original.name, updatedScenario(original, actual, dirname(item.file), item.id));
-        } catch (error: unknown) {
-          process.stdout.write(`FAIL ${item.id}/${original.name}: ${error instanceof Error ? error.message : String(error)}\n`);
-          failures += 1;
-        }
-        continue;
-      }
-      const targets = item.targets ?? ['igniter'];
-      for (const target of targets) {
-        const label = target === 'igniter' ? `${item.id}/${original.name}` : `${item.id}/${original.name} [${target}]`;
+        const label = `${item.id}/${original.name} [${options.reference ? 'T00 reference' : 'ts'}]`;
         const key = caseKey(item, original, sourceHash, target);
         if (options.cache && cache.passed[key] === true) {
           cached += 1;
@@ -681,9 +656,7 @@ async function main(): Promise<void> {
         executed += 1;
         let actual: { stdout: Buffer; stderr: Buffer; exitCode: number };
         try {
-          actual = target === 'igniter'
-            ? runCase(source, item, original)
-            : await runCompilerTarget(target, source, original, dirname(item.file));
+          actual = run(original);
         } catch (error: unknown) {
           delete cache.passed[key]; cacheDirty = true;
           process.stdout.write(`FAIL ${label}: ${error instanceof Error ? error.message : String(error)}\n`);
@@ -709,6 +682,24 @@ async function main(): Promise<void> {
         cache.passed[key] = true; cacheDirty = true;
         if (!options.quiet) process.stdout.write(`PASS ${label}\n`);
       }
+    };
+    const needsArtifact = options.update || selected.some(scenario =>
+      !options.cache || cache.passed[caseKey(item, scenario, sourceHash, target)] !== true);
+    if (!needsArtifact) {
+      processScenarios(() => { throw new Error('cached scenario unexpectedly executed'); });
+    } else if (options.reference) {
+      processScenarios(scenario => runCase(source, item, scenario));
+    } else {
+      try {
+        const compiled = compileTs({ text: source });
+        if (compiled.status !== 0) throw new Error(`compiler exited ${compiled.status}: ${compiled.stderr.toString('utf8').trim()}`);
+        withTsArtifact(compiled.stdout.toString('utf8'), run => {
+          processScenarios(scenario => runGenerated(run, scenario, dirname(item.file)));
+        });
+      } catch (error: unknown) {
+        // Keep every failing input scenario observable when source compilation fails.
+        processScenarios(() => { throw error; });
+      }
     }
     if (options.update) {
       if (failures === failuresBefore) {
@@ -730,4 +721,6 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch(error => { process.stderr.write(`lite verify: ${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1; });
+try { main(); } catch (error: unknown) {
+  process.stderr.write(`lite verify: ${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1;
+}

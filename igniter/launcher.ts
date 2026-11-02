@@ -10,7 +10,7 @@ const usage = [
   'Usage: ./lite <command> [options]', '', 'Commands:',
   '  check file.lts                            Check source only',
   '  compile [--target ts] file.lts            Compile to a TS artifact',
-  '  verify [--all|--update|--coverage]        Verify changed cases (--all for everything)',
+  '  verify [--all|--update|--coverage]        Verify TS artifacts (--reference for T00)',
   '  test [--fast|--full]                      Run the project test suite',
   '  docs                                      Show documentation paths',
   '  help                                      Show this help', '',

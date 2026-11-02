@@ -65,17 +65,17 @@ compiler fixtures.
 - `description` — optional artifact summary.
 - `append` — optional text appended to the source for observation. Used by
   samples whose teaching bodies print nothing.
-- `targets` — optional execution targets: `igniter` (default), `ts`, `c`.
-  Compiler targets are admitted only for sources inside the restricted compiler
-  subset. TS runs as a strictly checked child artifact with fixed stdin and script
-  arguments; the current native verification lane still rejects these inputs. TS emission uses the current
-  T11-derived compiler; C emission uses a TS-hosted C emitter built by T11 during
-  the [transition](../compiler/transition-plan.md). Verification cache identity includes
-  both generated seeds, the host adapter and both assembled compiler sources, so changing them
-  cannot reuse a pass from an older compiler.
-  Changes to compiler host/source/seeds/manifests/runtime or `lib/core` select
-  verified consumers in the default changed-case mode. Inventory reports do not
-  invalidate runtime cases by themselves.
+- `targets` — historical target coverage metadata (`igniter`, `ts`, `c`).
+  During TS migration, ordinary verification always uses the generated TS
+  compiler, including manifests that previously defaulted to T00. The explicit
+  `--reference` lane uses T00 only. C execution is deferred; old metadata is
+  preserved without counting a C pass. Unsupported TS forms fail visibly with
+  their diagnostics, without fallback or an implicit skip. TS artifacts are
+  strictly checked once per manifest, then each input/argument scenario runs in
+  a fresh process. Cache identities include the selected lane, generated seed,
+  assembled TS compiler, host/artifact adapters and pinned checking tools.
+  Compiler/library changes select affected consumers in changed-case mode;
+  inventory-only documentation edits do not invalidate runtime cases.
 - `source.hash` — SHA-256 of the original source bytes (`file`, UTF-8 `text` or raw `bytes`).
   Changed source fails verification until `--update` is reviewed.
 - `cases` — one or more scenarios:
@@ -84,7 +84,7 @@ compiler fixtures.
     `{ "file": "relative-file" }`, optionally with `hash`; omitted means empty.
     `hash` pins the resolved stream bytes, so editing an external input or
     expected-output file fails verification until `--update` is reviewed.
-  - `args` — optional script arguments after `--`.
+  - `args` — optional program argument values, passed directly to the artifact.
   - `exitCode` — required process status.
 
 The JSON Schema is [schema/verification.schema.json](schema/verification.schema.json).
@@ -95,34 +95,38 @@ The runner performs equivalent structural validation in
 
 ```sh
 ./lite verify                    # only cases affected by git changes
-./lite verify --all              # all cases; cached
+./lite verify --all              # all TS artifact cases; cached; remaining ports fail
+./lite verify --all --reference  # explicit historical T00 comparison
 ./lite verify --all --update     # regenerate expected streams and hashes
 ./lite verify --coverage         # coverage report without executing
 ./lite verify --all --filter int.arithmetic
 ./lite verify --all --shard 1/4  # one CI shard
 ```
 
-`--update` writes expected streams from the reference igniter, rewrites external
-stdout/stderr files in place, and refreshes source and stream hashes. Review the
-diff before committing; it is the only supported way to change expectations.
-It updates the selected set, so use `--all --update` for a complete refresh.
+`--update` writes expected streams from the generated TS artifact by default.
+`--reference --update` explicitly uses T00. It rewrites external stdout/stderr
+files and refreshes source/stream hashes; review the diff before committing.
+Only manifests whose selected scenarios all succeed are rewritten. Unsupported
+source never obtains expectations from an implicit fallback. Use `--all` to
+refresh the complete selection.
 
-`--filter` matches manifest IDs, paths or feature IDs.
+`--filter` matches IDs, paths and feature IDs, so selecting `int.arithmetic`
+also selects consumers tagged with that feature. Use `features/int-arithmetic.json`
+for only that canonical manifest. Shards partition scenarios before execution.
 
-The default target is the reference igniter. A manifest with
-`targets: ["igniter", "ts", "c"]` also emits and runs the restricted TS and C
-artifacts and compares the same expected streams. `--update` seeds expectations
-from the igniter only; run `./lite verify --all` afterward to check every target.
-Compiler-target coverage is currently limited to the four compatible feature
-cases; broader compiler verification remains in
-[igniter/tests/compiler](../igniter/tests/compiler/).
+The default TS audit currently executes 81 scenarios: 60 pass and 21 fail
+(13 feature contracts and eight examples still need TS ports). All 81 pass the
+explicit T00 reference lane. The [live gaps](../compiler/gaps.md) and
+[current inventory](../compiler/reports/current-t00-t11-inventory.md) track the
+remaining work. Coverage reports only manifest registration, not compiler support.
 
 ## Performance and scaling
 
 The verifier is designed for a growing corpus, not a fixed case count:
 
-- Interpreter cases execute in one Node process; compiler targets emit and run
-  only for manifests that opt in.
+- TS compilation and strict checking happen once per selected manifest, with
+  isolated fresh executions for each input. Fully cached manifests need neither
+  compilation nor checking. T00 executes only with `--reference`.
 - Passing results are cached in `.cache/verifications.json` (gitignored). The
   cache key includes the target, runner source hash, case source hash, expected
   streams, arguments and exit code. A runner or case change cannot reuse a stale pass.

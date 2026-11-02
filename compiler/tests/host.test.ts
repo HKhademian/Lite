@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, lstatSync, readlinkSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -129,6 +129,37 @@ test('public commands compile and check TS artifacts without T00 and reject sour
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('default verification and expectation updates use TS artifacts without T00', () => {
+  const directory = isolatedCheckout();
+  try {
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
+    copyFileSync(join(root, 'igniter/package-lock.json'), join(directory, 'igniter/package-lock.json'));
+    for (const folder of ['verifications', 'examples', 'samples']) cpSync(join(root, folder), join(directory, folder), { recursive: true });
+    const registry = JSON.parse(readFileSync(join(root, 'verifications/features.json'), 'utf8')) as { features: { docs: string[] }[] };
+    for (const item of registry.features) for (const path of item.docs) {
+      mkdirSync(dirname(join(directory, path)), { recursive: true }); copyFileSync(join(root, path), join(directory, path));
+    }
+    const invoke = (...args: string[]) => spawnSync(join(directory, 'lite'), ['verify', '--all', '--no-cache', ...args],
+      { env, encoding: 'utf8', timeout: 30000 });
+    const io = invoke('--filter', 'io.temporary');
+    assert.equal(io.status, 0, io.stdout + io.stderr); assert.match(io.stdout, /all-helpers \[ts\]/);
+    assert.match(io.stdout, /empty-line-and-remainder \[ts\]/); assert.doesNotMatch(io.stdout, /T00 reference|\[c\]/);
+    const covered = invoke('--coverage'); assert.equal(covered.status, 0, covered.stderr);
+    const manifest = join(directory, 'verifications/features/int-arithmetic.json');
+    const expected = readFileSync(manifest);
+    const updated = invoke('--filter', 'features/int-arithmetic.json', '--update');
+    assert.equal(updated.status, 0, updated.stdout + updated.stderr); assert.match(updated.stdout, /updated/);
+    assert.deepEqual(JSON.parse(readFileSync(manifest, 'utf8')), JSON.parse(expected.toString()));
+    const unsupported = join(directory, 'verifications/features/match-subjectless.json');
+    const before = readFileSync(unsupported);
+    const failed = invoke('--filter', 'match.subjectless', '--update');
+    assert.equal(failed.status, 1); assert.match(failed.stdout, /unsupported feature "match"/);
+    assert.deepEqual(readFileSync(unsupported), before, 'unsupported source must not rewrite expectations');
+    const reference = invoke('--reference', '--filter', 'int.arithmetic');
+    assert.notEqual(reference.status, 0); assert.match(reference.stderr, /ERR_MODULE_NOT_FOUND/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('generated reports evaluate arguments once in order and preserve nested output', () => {
   const cases = [
     { source: 'f := fn(): Int { outputLine("inner"); 7 } outputLine("before"); outputLine(f()); outputLine("after");',
@@ -165,7 +196,7 @@ function isolatedCheckout(): string {
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
     'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
-    'igniter/launcher.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json',
+    'igniter/launcher.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json', 'igniter/verify.ts',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
@@ -325,7 +356,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
         env: changedEnv, encoding: 'utf8', timeout: 30000,
       });
       assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, /verification passed: 3 executed, 0 cached/, path);
+      assert.match(result.stdout, /verification passed: 1 executed, 0 cached/, path);
     }
     writeFileSync(git, "#!/bin/sh\nprintf '%s\\n' ' M compiler/reports/2026-11-02-t00-t11-inventory.md'\n");
     const documentation = spawnSync(join(root, 'lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {

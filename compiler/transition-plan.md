@@ -51,6 +51,18 @@ native-first ordering in historical progress entries.
 
 ## Done
 
+- 2026-11-02: verification and expectation updates now use TS artifacts by
+  default, independent of historical manifest target metadata. T00 loads only
+  with --reference; C execution is deferred. Compile/check once per manifest,
+  then execute each scenario in a fresh process; fully cached manifests do no
+  compilation. A checkout without T00 verifies and updates supported cases,
+  rejects unsupported updates without rewriting expectations, and reports
+  coverage. TS canonical audit: 60/81 pass, 21 visible migration failures
+  (13 features/eight examples); explicit T00 reference: 81/81 pass. Strict host
+  and seed checks pass; full current regression suite: 274 pass, nine native-only
+  skips, zero failures (132.2 s). Three generated-only self-build generations
+  all equal the selected 77cacbac seed. Default regression routing remains next.
+
 - 2026-11-02: public run is removed. Compile defaults to generated TS; check
   compiles with T11 and strictly checks without loading/executing the artifact.
   Both preserve flat-import loading and fail without T00 fallback. Real CLI
@@ -308,9 +320,10 @@ native-first ordering in historical progress entries.
 
 **Depends on:** the completed T11 TS self-build and default compilation path.
 **Current routing:** public compile/check use generated TS. Public run is
-removed, and public C requests fail explicitly. Verifier defaults and legacy
-regression consumers still need migration. Full-source phase sweeps already run
-strictly checked generated drivers.
+removed, and public C requests fail explicitly. Verification defaults to TS
+artifacts with an explicit --reference lane; legacy default regression consumers
+still need migration. Full-source phase sweeps run strictly checked generated
+drivers.
 **Actions:** migrate verification and default tests to compiled TS artifacts;
 keep explicitly named T00 reference/audit lanes separate. Never fall back to
 T00. Check-only must not execute effects. Preserve flat imports, stdin,

@@ -564,32 +564,37 @@ test('lite help and docs expose the command matrix and documentation roots', () 
   const noArgs = spawnSync(join(root, 'lite'), [], { env, encoding: 'utf8', timeout: 5000 });
   assert.equal(noArgs.status, 2); assert.equal(noArgs.stdout, ''); assert.match(noArgs.stderr, /Usage:/);
 });
-test('lite verify runs feature and artifact cases and reports coverage', () => {
+test('lite verify defaults to TS, reports migration gaps and keeps T00 explicitly selectable', () => {
   const root = new URL('../', import.meta.url).pathname;
   const directory = mkdtempSync(join(tmpdir(), 'lite-verify-test-'));
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''),
     LITE_VERIFY_CACHE: join(directory, 'cache.json') };
   try {
     const verified = spawnSync(join(root, 'lite'), ['verify', '--all', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
-    assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
+    assert.equal(verified.error, undefined); assert.equal(verified.status, 1, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 129 executed, 0 cached/);
+    assert.match(verified.stdout, /\[ts\]/); assert.doesNotMatch(verified.stdout, /T00 reference|\[c\]/);
+    assert.match(verified.stdout, /FAIL match\.subjectless\/.*unsupported feature "match"/);
+    assert.match(verified.stdout, /verification failed: 21 failing scenario\(s\), 81 executed, 0 cached/);
+    const reference = spawnSync(join(root, 'lite'), ['verify', '--all', '--reference', '--no-cache'], { env, encoding: 'utf8', timeout: 30000 });
+    assert.equal(reference.status, 0, reference.stdout + reference.stderr);
+    assert.match(reference.stdout, /\[T00 reference\]/); assert.match(reference.stdout, /verification passed: 81 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
     assert.match(covered.stdout, /features: 41 registered, 41 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
-    const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
+    const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr);
     assert.match(first.stdout, /verification passed: \d+ executed, 0 cached/);
-    const second = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
+    const second = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(second.error, undefined); assert.equal(second.status, 0, second.stderr);
     assert.match(second.stdout, /verification passed: 0 executed, \d+ cached/);
     assert.match(second.stdout, /\(cached\)/);
-    const sharded = spawnSync(join(root, 'lite'), ['verify', '--all', '--shard', '1/2', '--no-cache'],
+    const sharded = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'features/int-arithmetic.json', '--shard', '2/2', '--no-cache'],
       { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(sharded.error, undefined); assert.equal(sharded.status, 0, sharded.stderr);
     assert.match(sharded.stdout, /verification passed: \d+ executed, 0 cached/);

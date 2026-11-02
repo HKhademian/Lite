@@ -308,14 +308,15 @@ output is deferred until after T00 retirement. Earlier run/C instructions on
 this page are historical checkpoints. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
-Feature and artifact verification lives in `verifications/`; `./lite verify`
-runs cases affected by git changes, while `./lite verify --all` runs all 26
-feature cases and all 39 artifact manifests. Eight feature cases also execute
-through the restricted TS and C compiler targets. `--update`, `--coverage`,
-`--filter`, `--shard i/n`, `--no-cache` and `--quiet` remain available. Passing
-cases are cached. `./lite test --fast` runs unit/interpreter/verification without
-native C; `./lite test` or `./lite test --full` runs the full local gate with
-cached native builds. See the [verification guide](../verifications/README.md).
+Feature and artifact verification lives in `verifications/`. `./lite verify`
+selects changed cases; `--all` selects everything. All ordinary verification now
+compiles and executes TS artifacts; `--reference` explicitly selects T00.
+There are 41 feature manifests, 19 example manifests and 20 lesson manifests,
+with 81 scenarios. The current TS run passes 60 and reports 21 remaining port
+failures; the reference lane passes all 81. `--update`, `--coverage`, `--filter`,
+`--shard i/n`, `--no-cache` and `--quiet` remain available. Updates use the
+selected execution lane. Legacy regression/test routing is still migrating;
+see the [verification guide](../verifications/README.md).
 
 The compiler implementation now lives in
 [`compiler/`](../compiler/README.md), not in runnable examples. Its source is

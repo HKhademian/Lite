@@ -5,8 +5,8 @@ explicit migration reference, alongside TypeScript host and test adapters.
 Public compile and check now use the Lite-written generated
 [T11 compiler](../compiler/bootstrap/README.md). Public run is removed; programs
 execute from compiled TS artifacts. C output/native self-hosting is postponed
-until after TS migration and T00 retirement. Verification and legacy regression
-consumers are still being migrated; see the
+until after TS migration and T00 retirement. Verification defaults to TS artifacts with explicit `--reference` for T00.
+Legacy default regression consumers still need migration; see the
 [transition plan](../compiler/transition-plan.md).
 
 Ongoing language work follows the

@@ -60,6 +60,13 @@ percentage. Native C is a separate post-migration milestone.
 
 ## Closed slices
 
+- [x] Default verification and expectation updates to TS artifacts, with explicit
+  --reference for T00 and no C execution. Canonical TS audit: 60/81 scenarios
+  pass, 21 fail visibly; T00 reference: 81/81 pass. Supported verification and
+  updates work with T00 absent. Full current regressions: 274 pass, nine native
+  skips, zero failures. Three generated self-build generations retain the exact
+  selected seed. Default regression routing still needs migration.
+
 - [x] Remove public run; default compilation to TS artifacts and migrate check
   to generated compilation plus strict artifact checking without effects.
   Public C output is explicitly deferred. Full current suite: 273 pass, nine
