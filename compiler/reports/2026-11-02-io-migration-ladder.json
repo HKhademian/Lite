@@ -40,7 +40,10 @@
     "artifactSha256": "8928ddc79ac55f0d48990fa71ab163f4f6987e90bc19fba1a863c964de6446a4",
     "artifactBytes": 244073,
     "builderSha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
-    "native": false
+    "native": false,
+    "sourceRevision": "467ac4b3d25fbca2f8a9341b005e18ed93d43599",
+    "artifactRevision": "467ac4b3d25fbca2f8a9341b005e18ed93d43599",
+    "builderRevision": "467ac4b3d25fbca2f8a9341b005e18ed93d43599"
   },
   "validation": {
     "strictHostAndSeeds": true,
@@ -86,5 +89,7 @@
     "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
     "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
     "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
-  ]
+  ],
+  "sourceRevision": "467ac4b3d25fbca2f8a9341b005e18ed93d43599",
+  "artifactRevision": "467ac4b3d25fbca2f8a9341b005e18ed93d43599"
 }
