@@ -150,6 +150,14 @@ Do not widen S or L just to simplify parity.
 
 ## Feature gap
 
+The [measured support inventory](reports/2026-11-02-t00-t11-inventory.md) audits
+all canonical features, examples and samples plus isolated boundary probes.
+Of 36 feature cases, 20 match and 16 reject; of 19 examples, 2 match and 17
+reject; of 20 implemented samples, 11 match and 9 reject. Isolated probes also
+expose missing forms within passing broad feature cases, including typed fixed
+arrays, and behavioral differences in overflow, output retention and invalid
+UTF-8 input. These finite results do not establish general parity.
+
 Stage 0 already supports more than L. That extra surface is frozen debt, not a
 target to expand. New capability is Lite-first: add it to L/S and the compiler
 slice, then give stage 0 only the minimal execution support needed to run S.
@@ -229,4 +237,7 @@ Useful internal tools:
 | Date | Target | Source | First difference | Class | Resolution |
 |---|---|---|---|---|---|
 | 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | open; no S site depends on it, fix with the P6 artifact-hash refresh |
+| 2026-11-02 | TS | Dynamic Int64 addition, subtraction, multiplication and negation overflow | T00 faults; generated TS returns out-of-range BigInt values | checked-arithmetic gap | open; exact probes in the support inventory |
+| 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | open; `output.before-fault` probe |
+| 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | open; `input.invalid-utf8` probe |
 | — | — | — | No generated compiler yet | — | — |

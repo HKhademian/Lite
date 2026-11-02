@@ -36,6 +36,14 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: owner-requested neutral [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
+  precedes further migration work. It audits all 36 feature manifests, 19 examples,
+  20 implemented lessons, 78 additional boundary probes, all 8 library tests and
+  accounts for all 207 tracked Lite source files. T00 matches every canonical
+  manifest. T11 rejects 16 canonical feature cases, 17 examples and 9 samples;
+  probes find 7 runtime behavior differences and 2 diagnostic differences as
+  well as 61 rejected forms. Passing cases are not claims of full feature parity.
+  C-host edits were set aside before auditing; no porting priorities are selected.
 - 2026-11-02: default TS compilation, TS verification and current-S builds now use
   the verified generated T11 seed without executing T00. Changed S rebuilds into
   a strictly checked source/builder-keyed cache; seed/cache integrity, original
@@ -64,6 +72,7 @@ features may be ported; new syntax, builtins and semantics still require approva
 - [Artifact runner](../igniter/artifacts.ts)
 - [TS ladder](scripts/self-host.mjs)
 - [Corpus parity](scripts/corpus-parity.mjs)
+- [Measured T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md)
 
 ## Implementation order
 
@@ -86,8 +95,8 @@ native program behavior match the current accepted C subset.
 **Depends on:** c-host-migration.
 **Files:** `compiler/src/`, `compiler/runtime/`, `compiler/tests/`, existing
 verification cases, seed/build records and relevant docs.
-**Actions:** first create a complete neutral inventory from actual T00 code and
-tests, distinguishing implemented contracts from wider language design. Then
+**Actions:** use the completed neutral support inventory and its exact probes,
+distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
 and record feature parity. Include the known report argument-order difference.

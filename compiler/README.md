@@ -7,6 +7,12 @@ T00 in [`../igniter/`](../igniter/); migrating that host is the next step in the
 [owner-approved transition](transition-plan.md). The accepted language remains
 the restricted bootstrap subset, not the entire language design.
 
+The [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md) lists
+measured missing forms, behavior/diagnostic differences, every maintained example
+and sample, and source-file coverage. It includes exact-source boundary probes
+and a reproducible audit script; it is an inventory, not a priority list or a new
+language decision.
+
 [`host.ts`](host.ts) checks the seed's SHA-256 and the current assembled Lite
 source. Unchanged S uses the seed directly. Changed S is compiled by T11 and
 strictly typechecked before publication under a source/builder-keyed

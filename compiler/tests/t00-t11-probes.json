@@ -1,0 +1,485 @@
+[
+  {
+    "id": "numeric.float",
+    "summary": "Float literals and mixed Int/Float arithmetic",
+    "source": "report(1.5 + 2);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
+    "id": "numeric.sized-int",
+    "summary": "Sized Int8/Int16/Int32 storage and widening",
+    "source": "a: Int8 = 100; b: Int16 = 200; report(a + b);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
+    "id": "numeric.int64-alias",
+    "summary": "Explicit Int64 annotations",
+    "source": "i: Int64 = 5; report(i);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
+    "id": "numeric.float32",
+    "summary": "Float32 rounding and promotion",
+    "source": "a: Float32 = 0.1; report(a);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
+    "id": "numeric.float-aliases",
+    "summary": "Float64 and Double annotations",
+    "source": "f: Float64 = 2.5; d: Double = 3.5; report(f, d);",
+    "test": "numeric widths promote, widen losslessly and range-check"
+  },
+  {
+    "id": "numeric.exponent-literal",
+    "summary": "Decimal exponent literal syntax",
+    "source": "report(1e3);",
+    "test": "zero divisors, non-finite results, and literals fault"
+  },
+  {
+    "id": "numeric.power",
+    "summary": "Right-associative Float-default power",
+    "source": "report(2 ** 3 ** 2);",
+    "test": "power is right-associative, Float-default and positive-exponent only"
+  },
+  {
+    "id": "numeric.dynamic-add-overflow",
+    "summary": "Runtime Int64 addition overflow faults",
+    "source": "var x := 9223372036854775807; report(x + 1);",
+    "test": "integer arithmetic cannot silently wrap"
+  },
+  {
+    "id": "numeric.dynamic-subtract-overflow",
+    "summary": "Runtime Int64 subtraction overflow faults",
+    "source": "var x := -9223372036854775808; report(x - 1);",
+    "test": "integer arithmetic cannot silently wrap"
+  },
+  {
+    "id": "numeric.dynamic-multiply-overflow",
+    "summary": "Runtime Int64 multiplication overflow faults",
+    "source": "var x := 9223372036854775807; report(x * 2);",
+    "test": "integer arithmetic cannot silently wrap"
+  },
+  {
+    "id": "numeric.dynamic-negate-overflow",
+    "summary": "Runtime Int64 negation overflow faults",
+    "source": "var x := -9223372036854775808; report(-x);",
+    "test": "integer arithmetic cannot silently wrap"
+  },
+  {
+    "id": "numeric.dynamic-divide-fault",
+    "summary": "Runtime division fault and diagnostic contract",
+    "source": "var x := 1; var y := 0; report(x / y);",
+    "test": "zero divisors, non-finite results, and literals fault"
+  },
+  {
+    "id": "input.integer",
+    "summary": "Prompted inputInt and token consumption",
+    "source": "report(inputInt(\"N: \"));",
+    "stdin": "7\n",
+    "test": "first checkpoint: stdin integers, mutation, arithmetic and explicit report"
+  },
+  {
+    "id": "input.float",
+    "summary": "inputFloat parsing",
+    "source": "report(inputFloat());",
+    "stdin": "2.5",
+    "test": "direct input faults instead of retrying or fabricating values"
+  },
+  {
+    "id": "input.line",
+    "summary": "inputLine and shared input cursor",
+    "source": "report(inputLine());",
+    "stdin": "سلام\r\n",
+    "test": "line/word input, empty lines, unterminated final lines, Unicode, and shared cursor"
+  },
+  {
+    "id": "input.word",
+    "summary": "inputWord tokenization",
+    "source": "report(inputWord()); report(inputWord());",
+    "stdin": " سلام  world ",
+    "test": "line/word input, empty lines, unterminated final lines, Unicode, and shared cursor"
+  },
+  {
+    "id": "input.whole-prompt",
+    "summary": "Optional inputAll prompt",
+    "source": "report(inputAll(\"Text: \"));",
+    "stdin": "abc\n",
+    "test": "inputAll prompt evaluates once and writes exact stdout before the first read even at EOF"
+  },
+  {
+    "id": "input.whole-unprompted",
+    "summary": "Unprompted inputAll including a trailing newline",
+    "source": "report(inputAll());",
+    "stdin": "abc\n",
+    "test": "inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF"
+  },
+  {
+    "id": "input.arguments",
+    "summary": "Script argument order, empty strings and copies",
+    "source": "loop inputArgs() as item { report(item); }",
+    "args": [
+      "a b",
+      "",
+      "--check"
+    ],
+    "test": "inputArgs returns an ordered String list with independent ordinary receiving copies"
+  },
+  {
+    "id": "condition.partial-default",
+    "summary": "Partial conditional declaration defaults",
+    "source": "x := if false { 5 }; report(x);",
+    "test": "partial conditionals give declarations a default and skip false assignment writes"
+  },
+  {
+    "id": "condition.partial-assignment",
+    "summary": "False partial conditional assignment performs no write",
+    "source": "var count := 10; count = if false { 7 }; report(count);",
+    "test": "partial conditionals give declarations a default and skip false assignment writes"
+  },
+  {
+    "id": "condition.block-value",
+    "summary": "General block-valued expressions and local tails",
+    "source": "x := { y := 2; y * 3;;;; } report(x);",
+    "test": "blocks and branches have lexical scope, scalar results, and Unit declaration tails"
+  },
+  {
+    "id": "condition.statement-value-if",
+    "summary": "Statement-bearing value-if branches outside function tails",
+    "source": "x := if true { y := 2; y * 3 } else { 0 }; report(x);",
+    "test": "blocks and branches have lexical scope, scalar results, and Unit declaration tails"
+  },
+  {
+    "id": "condition.unit-block",
+    "summary": "Empty blocks and declaration tails produce Unit",
+    "source": "report({ x := 3; }); report({});",
+    "test": "blocks and branches have lexical scope, scalar results, and Unit declaration tails"
+  },
+  {
+    "id": "comparison.chain",
+    "summary": "Comparison chains",
+    "source": "report(1 < 3 > 2); report(1 == 1 == 1);",
+    "test": "comparison chains retain the middle value once and skip later operands"
+  },
+  {
+    "id": "comparison.complements",
+    "summary": "Complement comparison spellings <! <!= >! >!=",
+    "source": "report(1 <! 2, 2 <!= 2, 3 >! 2, 2 >!= 2);",
+    "test": "all ten comparison operators complement their adjacent positive form"
+  },
+  {
+    "id": "scope.compound",
+    "summary": "Compound arithmetic updates",
+    "source": "var x := 10; x += 3; x :/= 2; report(x);",
+    "test": "floor division, floor modulo and compound updates follow documented signs"
+  },
+  {
+    "id": "scope.discarded-expression",
+    "summary": "Expression statements with silent Unit script completion",
+    "source": "x := 1; x + 2;",
+    "test": "Unit completion and no automatic binding/expression output"
+  },
+  {
+    "id": "scope.zero-scalar",
+    "summary": "Omitted typed scalar initializers",
+    "source": "a: Int; b: String; c: Bool; report(a, b, c);",
+    "test": "typed scalar, tuple and fixed-array declarations initialize or zero-initialize"
+  },
+  {
+    "id": "scope.reserved",
+    "summary": "Reserved storage and first whole-value initialization",
+    "source": "a: Int = ?; a = 5; report(a);",
+    "test": "reserved storage initializes once and rejects reads before its first whole-value write"
+  },
+  {
+    "id": "tuple.unnamed",
+    "summary": "Unnamed tuple construction and positional reads",
+    "source": "pair := (1, 2); report(pair.0, pair.1);",
+    "test": "flat fixed tuple construction and positional reads retain heterogeneous scalar types"
+  },
+  {
+    "id": "tuple.mixed",
+    "summary": "Mixed named/unnamed tuple fields",
+    "source": "value := (1, name = \"first\", false); report(value.0, value.name, value.2);",
+    "test": "mixed tuple copies, function contracts and homogeneous arrays retain labels and order"
+  },
+  {
+    "id": "tuple.shorthand",
+    "summary": "Named tuple field shorthand",
+    "source": "kind := \"number\"; token := (=kind, value = 12); report(token.kind);",
+    "test": "named scalar tuple members agree with fixed numeric positions without inferring bare-name labels"
+  },
+  {
+    "id": "tuple.destructuring",
+    "summary": "Tuple destructuring declarations",
+    "source": "pair := (a = 1, b = 2); (x, y) := pair; report(x, y);",
+    "test": "flat fixed tuple construction and positional reads retain heterogeneous scalar types"
+  },
+  {
+    "id": "tuple.receiving-labels",
+    "summary": "Typed receiving declarations rename tuple positions",
+    "source": "stored := (r = 20, l = 10); renamed: (l: Int, r: Int) = stored; report(renamed.l, renamed.r);",
+    "test": "typed tuple receiving declarations rename positions without reordering source values"
+  },
+  {
+    "id": "tuple.report",
+    "summary": "Source-like tuple report formatting",
+    "source": "report((left = 1, right = 2));",
+    "test": "report displays flat tuples source-like with labels and a singleton comma"
+  },
+  {
+    "id": "tuple.unit-singleton",
+    "summary": "Unit, empty tuples and singleton tuples",
+    "source": "report(Unit, (), (1,));",
+    "test": "flat fixed tuple construction and positional reads retain heterogeneous scalar types"
+  },
+  {
+    "id": "array.fixed",
+    "summary": "Fixed-extent arrays and bracket reads",
+    "source": "values: [Int; 2] = [1, 2]; report(values[0]);",
+    "test": "homogeneous scalar arrays have fixed extents and matching dot/bracket reads"
+  },
+  {
+    "id": "array.inferred",
+    "summary": "Unannotated brackets infer a fixed array",
+    "source": "values := [1, 2]; report(values.1);",
+    "test": "typed list construction supports known empty elements and preserves the fixed-array default"
+  },
+  {
+    "id": "array.function",
+    "summary": "Fixed-array function parameters/results",
+    "source": "make := fn(): [Int; 2] { [1, 2] } report(make()[1]);",
+    "test": "explicit fixed-array inputs/results check element contracts and extents"
+  },
+  {
+    "id": "list.front-operations",
+    "summary": "push_front/pop_front end operations",
+    "source": "values: mut List<Int> = [1, 2]; push_front(mut values, 0); report(pop_front(mut values));",
+    "test": "both list ends preserve element order, duplicate occurrences and direct pop values"
+  },
+  {
+    "id": "list.inferred-mut",
+    "summary": "Inferred mut and var mut list declarations",
+    "source": "mut values := inputArgs(); push_back(mut values, \"z\"); report(values[0]);",
+    "args": [],
+    "test": "inferred mut and var mut declarations grant writable list access"
+  },
+  {
+    "id": "list.unit-elements",
+    "summary": "List<Unit> element contracts",
+    "source": "values: List<Unit> = [Unit]; loop values as value { report(value); }",
+    "test": "typed list construction supports known empty elements and preserves the fixed-array default"
+  },
+  {
+    "id": "list.tuple-copies",
+    "summary": "Named-tuple list elements and copied end results",
+    "source": "values: mut List<(name: String, n: Int)> = [(name = \"a\", n = 1)]; item := pop_back(mut values); report(item.name, item.n);",
+    "test": "flat tuple list elements preserve labels, positional shape and popped copies"
+  },
+  {
+    "id": "loop.unnamed-traversal",
+    "summary": "Sequence traversal without an item binding",
+    "source": "loop [1, 2] { report(\"tick\"); }",
+    "test": "unnamed array traversal introduces no implicit variable and receiver shadowing stays in the body"
+  },
+  {
+    "id": "loop.value",
+    "summary": "Loop values and then completion",
+    "source": "x := loop [1, 2] as n { n } then { .value }; report(x);",
+    "test": "loops accumulate typed .value and an optional then completion"
+  },
+  {
+    "id": "loop.metadata",
+    "summary": "Loop .item/.index/.count metadata",
+    "source": "loop [10, 20] as n { report(.item, .index, .count); }",
+    "test": "loop metadata, payload exits and tagged targets complete loops"
+  },
+  {
+    "id": "loop.payload",
+    "summary": "Value-bearing break and continue",
+    "source": "x := loop [1, 2, 3] as n { if n == 2 { break 20 } n } then { .value }; report(x);",
+    "test": "loop metadata, payload exits and tagged targets complete loops"
+  },
+  {
+    "id": "loop.tagged",
+    "summary": "Tagged outer-loop exits",
+    "source": "z := @outer loop [1, 2] as n { loop [1] as m { break @outer 9 } .value + n } then { .value }; report(z);",
+    "test": "loop metadata, payload exits and tagged targets complete loops"
+  },
+  {
+    "id": "control.tagged-return",
+    "summary": "Tagged return to an enclosing loop",
+    "source": "v := @o loop [1, 2] as n { loop [1] as m { return @o 42 } .value + n } then { .value }; report(v);",
+    "test": "loop metadata, payload exits and tagged targets complete loops"
+  },
+  {
+    "id": "control.finally",
+    "summary": "Construct-level finally cleanup",
+    "source": "if true { report(\"body\"); } finally { report(\"cleanup\"); }",
+    "test": "construct-level finally runs after then and on every exit"
+  },
+  {
+    "id": "control.match",
+    "summary": "Subjectless Boolean match",
+    "source": "x := 2; label := match { x == 1 { \"one\" } x == 2 { \"two\" } _ { \"other\" } } report(label);",
+    "test": "subjectless match selects the first true arm and requires a final fallback"
+  },
+  {
+    "id": "function.named-arguments",
+    "summary": "Named/positional call routing and shorthand",
+    "source": "op := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c } b := 2; report(op(c = 3, 1, =b));",
+    "test": "named calls route interleaved positional entries into the next unfilled slot"
+  },
+  {
+    "id": "function.argument-replacement",
+    "summary": "Replacement of an earlier positional call contribution",
+    "source": "op := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c } report(op(9, a = 1, 2, 3));",
+    "test": "named calls route interleaved positional entries into the next unfilled slot"
+  },
+  {
+    "id": "function.values",
+    "summary": "Function values, copies and compatible replacement",
+    "source": "var op := fn(n: Int): Int { n * 2 } saved := op; op = fn(n: Int): Int { n * 3 } report(saved(4), op(4));",
+    "test": "ordinary function values copy, shadow helpers, and replace only compatible var bindings"
+  },
+  {
+    "id": "function.live-helper",
+    "summary": "Function helpers retain live lexical bindings",
+    "source": "var double := fn(n: Int): Int { n * 2 } quadruple := fn(n: Int): Int { double(double(n)) } report(quadruple(1)); double = fn(n: Int): Int { n * 3 } report(quadruple(1));",
+    "test": "admitted helper references read live bindings and ignore later shadows"
+  },
+  {
+    "id": "function.nested-helper",
+    "summary": "Nested function declarations without a scalar capture",
+    "source": "outer := fn(n: Int): Int { helper := fn(x: Int): Int { x + 1 } helper(n) } report(outer(4));",
+    "test": "escaped helpers preserve distinct environments from repeated block activations"
+  },
+  {
+    "id": "function.report-order",
+    "summary": "Reports in a function argument precede the outer report",
+    "source": "f := fn(): Int { report(\"inner\"); 7 } report(f());",
+    "test": "restricted compiler completes scalar functions from tail expressions"
+  },
+  {
+    "id": "text.bounds-diagnostic",
+    "summary": "Text bounds faults preserve the diagnostic contract",
+    "source": "report(textAt(\"x\", 2));",
+    "test": "real CLI runs the Lite tokenizer, preserves supplementary text, and reports bounds locations"
+  },
+  {
+    "id": "output.before-fault",
+    "summary": "Earlier output survives a later runtime bounds fault",
+    "source": "report(\"before\"); values: List<Int> = [1]; report(values[2]);",
+    "test": "returns, exit and bounds faults propagate correctly through array traversal"
+  },
+  {
+    "id": "alias.array",
+    "summary": "Transparent aliases to fixed-array types",
+    "source": "Pair := type [Int; 2]; pair: Pair = [1, 2]; report(pair[1]);",
+    "test": "transparent type aliases support scalar, tuple, array and list forms"
+  },
+  {
+    "id": "alias.shadowing",
+    "summary": "One lexical namespace: a later value hides an alias",
+    "source": "T := type Int; old: T = 3; T := 9; report(old, T);",
+    "test": "type aliases follow single lexical scope with value shadowing and rejection"
+  },
+  {
+    "id": "tuple.named-positional-read",
+    "summary": "Positional reads from named tuple values",
+    "source": "value := (x = 1, y = 2); report(value.0);",
+    "test": "flat fixed tuple construction and positional reads retain heterogeneous scalar types"
+  },
+  {
+    "id": "scope.standalone-block",
+    "summary": "Standalone lexical blocks",
+    "source": "{ x := 3; report(x); }",
+    "test": "blocks and branches have lexical scope, scalar results, and Unit declaration tails"
+  },
+  {
+    "id": "function.immutable-copy",
+    "summary": "Copying an immutable function into another binding",
+    "source": "f := fn(n: Int): Int { n + 1 } saved := f; report(saved(2));",
+    "test": "ordinary function values copy, shadow helpers, and replace only compatible var bindings"
+  },
+  {
+    "id": "function.builtin-shadow",
+    "summary": "Lexical shadowing of a temporary builtin by a function",
+    "source": "textLength := fn(text: String): Int { 7 } report(textLength(\"abc\"));",
+    "test": "text signatures are checked before effects and temporary helper names can be shadowed"
+  },
+  {
+    "id": "numeric.unary-plus",
+    "summary": "Unary plus on integer values",
+    "source": "report(+3);",
+    "test": "precedence, exact integer division and fractional mixed division"
+  },
+  {
+    "id": "function.escaped-environments",
+    "summary": "Escaped helper functions retain distinct lexical environments",
+    "source": "var first := fn(n: Int): Int { n } var second := fn(n: Int): Int { n } var i := 0; loop i < 2 { var helper := fn(n: Int): Int { n * 2 } wrapper := fn(n: Int): Int { helper(n) } if i == 0 { first = wrapper; helper = fn(n: Int): Int { n * 3 } } else { second = wrapper; helper = fn(n: Int): Int { n * 4 } } i = i + 1; } report(first(2)); report(second(2));",
+    "test": "escaped helpers preserve distinct environments from repeated block activations"
+  },
+  {
+    "id": "text.adjacent-literals",
+    "summary": "Adjacent quoted strings concatenate",
+    "source": "report(\"a\" \"b\");",
+    "test": "compiler fixture 002-001-adjacent-strings.lts"
+  },
+  {
+    "id": "call.trailing-comma",
+    "summary": "Trailing comma in a call argument list",
+    "source": "report(1,);",
+    "test": "compiler fixture 002-001-report-missing-argument.lts"
+  },
+  {
+    "id": "scope.same-block-shadow",
+    "summary": "Later declarations shadow same-block bindings",
+    "source": "x := 1; x := 2; report(x);",
+    "test": "shadowing retains earlier copies; same-name initializer sees previous binding"
+  },
+  {
+    "id": "syntax.final-semicolon",
+    "summary": "Final declaration can end at EOF without a semicolon",
+    "source": "x := 1",
+    "test": "compiler fixture 002-005-local-missing-semicolon.lts"
+  },
+  {
+    "id": "syntax.empty-script",
+    "summary": "Empty scripts complete silently",
+    "source": "",
+    "test": "compiler fixture 002-001-empty-source.lts"
+  },
+  {
+    "id": "syntax.whitespace-script",
+    "summary": "Whitespace-only scripts complete silently",
+    "source": "   \n",
+    "test": "compiler fixture 002-001-whitespace-source.lts"
+  },
+  {
+    "id": "condition.dead-arithmetic",
+    "summary": "Arithmetic in an unselected branch does not fault",
+    "source": "if false { report(1 / 0); } report(7);",
+    "test": "only the selected branch executes; action conditionals may omit else"
+  },
+  {
+    "id": "logic.short-circuit-fault",
+    "summary": "Short-circuiting skips a failing arithmetic operand",
+    "source": "report(false and (1 / 0 > 0));",
+    "test": "short-circuit logic preserves operand order and Bool-only conditions"
+  },
+  {
+    "id": "comparison.parenthesized-not-equal",
+    "summary": "Parenthesized inequality with a named left operand",
+    "source": "label := \"x\"; report((label =!= \"\"));",
+    "test": "all ten comparison operators complement their adjacent positive form"
+  },
+  {
+    "id": "input.invalid-utf8",
+    "summary": "Invalid UTF-8 stdin is rejected rather than replaced",
+    "source": "report(inputAll());",
+    "stdinBytes": [
+      255
+    ],
+    "test": "whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior"
+  }
+]
