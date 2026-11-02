@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-005-local-missing-semicolon.json -> igniter/tests/compiler/001-005-local-missing-semicolon.json\nR  igniter/tests/compiler/002-005-local-missing-semicolon.lts -> igniter/tests/compiler/001-005-local-missing-semicolon.lts\n?? compiler/reports/2026-11-02-statement-boundaries-ladder.json\n",
   "compilerSourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
-  "compilerSourceRevision": "Statement-boundary source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "af47f07ef4ba524f1cd9eea10b04a95dd5ffb503",
   "node": "v24.16.0",
   "t11Sha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
   "rows": [
@@ -9346,5 +9346,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
 }
