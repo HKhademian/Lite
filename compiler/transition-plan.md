@@ -157,6 +157,7 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Read first
 
+- [Live gap/progress tracker](gaps.md) and [current measured inventory](reports/current-t00-t11-inventory.md)
 - [Parity ledger](parity.md)
 - [Bootstrap plan](../docs/bootstrap-plan.md)
 - [Compiler launcher](../litec)

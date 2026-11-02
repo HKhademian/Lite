@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { dirname, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { compile } from '../../igniter/lite.ts';
+import { compile, execute, LiteFault } from '../../igniter/lite.ts';
 import { runText } from '../../igniter/bootstrap.ts';
 import { loadSource } from '../../igniter/loader.ts';
 import { seed } from '../bootstrap/seed.ts';
@@ -27,6 +27,29 @@ type Probe = { id: string; summary: string; test: string; source: string; stdin?
 
 if (process.argv[2] === '--t00-worker') {
   const request = JSON.parse(readFileSync(0, 'utf8')) as { source: string; stdin?: string; stdinBytes?: number[]; args?: string[] };
+  if (request.stdinBytes !== undefined) {
+    // Match the real CLI's lazy strict decoding: unread malformed input must not fault.
+    const bytes = Buffer.from(request.stdinBytes), decoder = new TextDecoder('utf-8', { fatal: true });
+    let cursor = 0, ended = false, stdout = '', stderr = '', status = 1;
+    try {
+      status = execute(compile(request.source), {
+        args: request.args ?? [], report: text => { stdout += text; }, reportError: text => { stderr += text; },
+        read: () => {
+          while (!ended) {
+            if (cursor === bytes.length) { ended = true; return decoder.decode() || null; }
+            const text = decoder.decode(bytes.subarray(cursor, ++cursor), { stream: true });
+            if (text !== '') return text;
+          }
+          return null;
+        },
+      });
+    } catch (error) {
+      stderr += error instanceof LiteFault ? `${error.at.line}:${error.at.column}: ${error.category}: ${error.message}\n`
+        : `${error instanceof Error ? error.message : String(error)}\n`;
+    }
+    process.stdout.write(JSON.stringify({ status, stdout, stderr, signal: null }));
+    process.exit(0);
+  }
   const result = runText(request.source, { stdin: request.stdinBytes === undefined ? request.stdin ?? '' : Buffer.from(request.stdinBytes), args: request.args ?? [] });
   process.stdout.write(JSON.stringify({ status: result.status, stdout: result.stdout.toString(), stderr: result.stderr.toString(), signal: null }));
   process.exit(0);
@@ -36,7 +59,7 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const self = fileURLToPath(import.meta.url);
 const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const outIndex = process.argv.indexOf('--out');
-const prefix = resolve(outIndex < 0 ? join(root, 'compiler/reports', `${date}-t00-t11-inventory`) : process.argv[outIndex + 1]!);
+const prefix = resolve(outIndex < 0 ? join(root, 'compiler/reports', 'current-t00-t11-inventory') : process.argv[outIndex + 1]!);
 const evidenceIndex = process.argv.indexOf('--source-evidence');
 const sourceEvidence = evidenceIndex < 0 ? [] : JSON.parse(readFileSync(process.argv[evidenceIndex + 1]!, 'utf8')) as Evidence[];
 const largeSources = process.argv.includes('--large-sources');
@@ -98,7 +121,9 @@ function stream(value: Stream | undefined, base: string) {
 function audit(input: AuditInput, source: string, scenarios: Scenario[]): AuditRow {
   const row: AuditRow = { ...input, sourceSha256: hash(source), source, t00Check: t00Accepts(source), status: 'unknown', cases: [] };
   if (!row.t00Check.accepted) { row.status = 'baseline'; report.rows.push(row); checkpoint(); return row; }
-  row.t11Compile = emit(source, row.path ?? row.id);
+  // Both execution paths use anonymous diagnostics, as canonical manifests do.
+  // The owning path/id remains recorded separately, without normalizing output.
+  row.t11Compile = emit(source, '');
   if (row.t11Compile.error || row.t11Compile.signal !== null) row.status = 'unknown';
   else if (row.t11Compile.status !== 0) row.status = 'rejected';
   else {
@@ -220,19 +245,31 @@ try {
   report.finishedAt = new Date().toISOString();
   report.status = report.rows.some(row => row.status === 'baseline') ? 'baseline-failure' : 'complete';
   checkpoint();
+  const historicalPath = join(root, 'compiler/reports/2026-11-02-t00-t11-inventory.json');
+  const historical = JSON.parse(readFileSync(historicalPath, 'utf8')) as { rows: AuditRow[] };
+  const previous = new Map(historical.rows.map(row => [`${row.kind}:${row.id}`, row.status]));
+  const closed = report.rows.filter(row => row.status === 'matches' && previous.has(`${row.kind}:${row.id}`) && previous.get(`${row.kind}:${row.id}`) !== 'matches');
+  const regressed = report.rows.filter(row => row.status !== 'matches' && previous.get(`${row.kind}:${row.id}`) === 'matches');
+  const remaining = report.rows.filter(row => row.status !== 'matches');
   const lines = [ '# T00 versus T11 support inventory', '', `Date: ${date}. Audited revision: \`${report.revision}\`. Node ${report.node}.`, '',
     `T11 identity: \`${seed.artifactSha256}\`. The preserved artifact passed its separate strict TypeScript check.`, '',
-    'This is a neutral inventory, not an implementation order or acceptance of new language features. Existing compiler implementation changes were set aside before the audit.', '',
+    'This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.', '',
     '## Scope and interpretation', '',
     '- All canonical feature, example, sample and showcase manifests were selected, regardless of their existing target lists. Each scenario ran under T00, with its expected manifest bytes checked, and under the T11-generated TS program when compilation and strict checking succeeded.',
     '- Additional boundary probes isolate existing T00 contracts that a broad canonical program can hide. Their exact source, input, output and interpreter-test reference are in the raw JSON and probe file.',
     '- Every tracked Lite source is accounted for. Source fragments/data fixtures rejected as standalone programs by T00 are excluded. Remaining sources receive a compile-only check, except bundles explicitly linked to recorded self-compilation evidence. Large-source artifacts can reuse exact source/builder/artifact identities and receive a fresh strict typecheck; other source checks do not include execution.',
     '- A rejection is a gap for that program, not proof that every subfeature in it is absent. Matching one probe is not universal feature parity. Runtime diagnostics are distinguished from output/status mismatches. The 520 exercise catalog contains only 20 implemented lesson files; planned exercises are not counted as supported programs.',
-    '- In particular, the canonical array.fixed and alias.transparent cases pass, while explicit fixed-array types, positional reads and aliases to arrays fail isolated probes. Scalar zero initialization passes even though the broader init.zero case fails. Canonical feature counts describe case results, not complete feature support.',
+    '- Canonical case counts describe tested programs, not complete feature support. Isolated probes can reveal gaps within a passing broad case. Both runtime paths use anonymous source diagnostics; raw-byte input probes use the reference CLI\'s lazy strict decoding behavior.',
     '- Five-second execution and twenty-second ordinary compiler limits are bounded audit checks, not performance measurements. With --large-sources, compiler bundles over 50 KB receive up to ten minutes each. Timeout rows are unverified, not unsupported.', '',
     '## Counts', '',
     ...Object.entries(report.counts).filter(([, counts]) => typeof counts === 'number' || counts.total > 0).map(([kind, counts]) => typeof counts === 'number' ? `- ${kind}: ${counts}.` : `- ${kind}: ${counts.total}; ${(Object.entries(statuses) as [Status, string][]).filter(([status]) => (counts[status] ?? 0) > 0).map(([status,label]) => `${counts[status]} ${label}`).join('; ')}.`),
     '- Showcases: none currently implemented.', '',
+    '## Progress since the original inventory', '',
+    `- ${closed.length} formerly failing cases now match; ${regressed.length} formerly matching cases regress. Case identity includes kind and id.`,
+    `- ${report.rows.filter(row => row.status === 'matches').length}/${report.rows.length} executed source cases match; ${remaining.length} still fail. These are case counts, not distinct missing features or an overall completion percentage.`,
+    '- Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).', '',
+    'Closed original cases:', '',
+    ...closed.map(row => `- ${row.kind}: ${row.id}`), '',
   ];
   for (const kind of ['feature', 'probe', 'example', 'sample', 'library-test']) {
     lines.push(`## ${kind}`, '');
