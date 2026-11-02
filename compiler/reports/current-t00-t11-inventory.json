@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/check.lts\n M compiler/src/frontend.lts\n M compiler/src/numeric-literals.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/numbers.md\n M igniter/test.ts\n M verifications/features.json\nA  verifications/features/num-aliases.json\nA  verifications/features/num-aliases.lts\n?? compiler/reports/2026-11-02-numeric-aliases-ladder.json\n",
   "compilerSourceSha256": "944a4e8da33c36df699c6e779727a0b699ab9bcfdbdfd65f0e0e789f1f24dd02",
-  "compilerSourceRevision": "Numeric-alias source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "a697c1f5d51b35d3979ac662fa786e43b495dbdf",
   "node": "v24.16.0",
   "t11Sha256": "0900d0ed8fefb5636d676cb4f560e483611e2230cea289c299262847b5bbe15a",
   "rows": [
