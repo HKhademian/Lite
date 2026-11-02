@@ -54,8 +54,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Bounds faults:** positioned text/list diagnostics and retained output;
   supplementary-character column units are tracked separately.
 - [ ] **Unicode diagnostic columns:** a same-line supplementary character counts
-  as one source offset in Lite and two UTF-16 units in T00. The owner is choosing
-  the convention; retain explicit supplementary-character cases when resolved.
+  as one source offset in Lite and two UTF-16 units in T00. Defer this isolated
+  compatibility discrepancy to the final diagnostic audit while closing functional
+  T00 dependencies; broader Unicode work is outside this migration step. Keep
+  existing String/input behavior and retain explicit column cases when resolved.
   Earlier runtime parity probes put supplementary source characters on preceding
   lines, so their passing results do not cover this difference.
 - [x] **Equals-token discrimination:** parenthesized inequality and bare
