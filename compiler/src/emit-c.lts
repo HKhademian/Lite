@@ -8,7 +8,7 @@ cCall := fn(kind: String, code: String): String {
     if kind == "Unit" {
         "printf(\"Unit\")"
     } else if kind == "Float" {
-        "printf(\"%g\", (double)(" + code + "))"
+        "lt_print_float((double)(" + code + "))"
     } else if kind == "Int" {
         "printf(\"%\" PRId64, (int64_t)(" + code + "))"
     } else if kind == "Bool" {
@@ -118,6 +118,97 @@ emitArithmeticTemporaries := fn(items: Items): Unit {
     }
 }
 
+/** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
+emitFloatOutputHelpers := fn(): Unit {
+    outputLine("/* Split printf's positive finite decimal into significant digits and its first-digit exponent. */");
+    outputLine("static int lt_float_digits(const char *text, char *digits, int *exponent) {");
+    outputLine("    int size = 0, before = 0, dot = 0;");
+    outputLine("    const char *at = text;");
+    outputLine("    while (*at && *at != 'e' && *at != 'E') {");
+    outputLine("        if (*at == '.') dot = 1;");
+    outputLine("        else { digits[size++] = *at; if (!dot) before++; }");
+    outputLine("        at++;");
+    outputLine("    }");
+    outputLine("    int power = *at ? (int)strtol(at + 1, NULL, 10) : 0;");
+    outputLine("    int leading = 0;");
+    outputLine("    while (leading + 1 < size && digits[leading] == '0') leading++;");
+    outputLine("    memmove(digits, digits + leading, (size_t)(size - leading));");
+    outputLine("    size -= leading;");
+    outputLine("    digits[size] = '\\0';");
+    outputLine("    *exponent = before - leading - 1 + power;");
+    outputLine("    return size;");
+    outputLine("}");
+    outputLine("/* Move to the adjacent positive decimal having at most precision significant digits. */");
+    outputLine("static void lt_float_neighbor(char *digits, int precision, int *exponent, int direction) {");
+    outputLine("    int at = precision - 1;");
+    outputLine("    if (direction > 0) {");
+    outputLine("        while (at >= 0 && digits[at] == '9') digits[at--] = '0';");
+    outputLine("        if (at >= 0) digits[at]++;");
+    outputLine("        else { digits[0] = '1'; (*exponent)++; }");
+    outputLine("    } else {");
+    outputLine("        while (at >= 0 && digits[at] == '0') digits[at--] = '9';");
+    outputLine("        if (at >= 0) digits[at]--;");
+    outputLine("        if (digits[0] == '0') {");
+    outputLine("            for (int i = 0; i < precision; i++) digits[i] = '9';");
+    outputLine("            (*exponent)--;");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("}");
+    outputLine("/* Find the least significant-digit count that round-trips, including asymmetric boundary candidates. */");
+    outputLine("static int lt_float_format(double value, char *out) {");
+    outputLine("    if (value == 0.0) { strcpy(out, \"0\"); return 1; }");
+    outputLine("    int negative = value < 0.0;");
+    outputLine("    double positive = negative ? -value : value;");
+    outputLine("    char digits[32], nearest[64], adjacent[64];");
+    outputLine("    int size = 0, exponent = 0, found = 0;");
+    outputLine("    for (int precision = 1; precision <= 17 && !found; precision++) {");
+    outputLine("        if (snprintf(nearest, sizeof nearest, \"%.*g\", precision, positive) < 0) return 0;");
+    outputLine("        size = lt_float_digits(nearest, digits, &exponent);");
+    outputLine("        if (strtod(nearest, NULL) == positive) { found = 1; break; }");
+    outputLine("        while (size < precision) digits[size++] = '0';");
+    outputLine("        digits[size] = '\\0';");
+    outputLine("        for (int direction = -1; direction <= 1 && !found; direction += 2) {");
+    outputLine("            char candidate[32]; memcpy(candidate, digits, (size_t)size + 1);");
+    outputLine("            int power = exponent;");
+    outputLine("            lt_float_neighbor(candidate, precision, &power, direction);");
+    outputLine("            if (snprintf(adjacent, sizeof adjacent, \"%se%d\", candidate, power - precision + 1) < 0) return 0;");
+    outputLine("            if (strtod(adjacent, NULL) == positive) {");
+    outputLine("                memcpy(digits, candidate, (size_t)size + 1); exponent = power; found = 1;");
+    outputLine("            }");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("    if (!found) return 0;");
+    outputLine("    while (size > 1 && digits[size - 1] == '0') size--;");
+    outputLine("    int at = 0;");
+    outputLine("    if (negative) out[at++] = '-';");
+    outputLine("    if (exponent >= 21 || exponent < -6) {");
+    outputLine("        out[at++] = digits[0];");
+    outputLine("        if (size > 1) { out[at++] = '.'; memcpy(out + at, digits + 1, (size_t)size - 1); at += size - 1; }");
+    outputLine("        out[at++] = 'e';");
+    outputLine("        if (exponent >= 0) out[at++] = '+';");
+    outputLine("        int length = snprintf(out + at, 64u - (size_t)at, \"%d\", exponent);");
+    outputLine("        if (length < 0) return 0;");
+    outputLine("        at += length;");
+    outputLine("    } else if (exponent < 0) {");
+    outputLine("        out[at++] = '0'; out[at++] = '.';");
+    outputLine("        for (int i = -1; i > exponent; i--) out[at++] = '0';");
+    outputLine("        memcpy(out + at, digits, (size_t)size); at += size;");
+    outputLine("    } else {");
+    outputLine("        for (int i = 0; i <= exponent || i < size; i++) {");
+    outputLine("            if (i == exponent + 1) out[at++] = '.';");
+    outputLine("            out[at++] = i < size ? digits[i] : '0';");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("    out[at] = '\\0';");
+    outputLine("    return 1;");
+    outputLine("}");
+    outputLine("static int lt_print_float(double value) {");
+    outputLine("    char text[64];");
+    outputLine("    if (!lt_float_format(value, text)) return -1;");
+    outputLine("    return printf(\"%s\", text);");
+    outputLine("}");
+}
+
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
 usesStringConcat := fn(calls: String): Bool {
     usesIntHelper(calls, "lite_concat(")
@@ -210,7 +301,12 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 /** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     calls := targetHelperCalls(items);
+    var floatOutput := false;
+    var floatValues := usesIntHelper(calls, "strtod(");
     loop items as item {
+        if item.kind == "Float" { floatOutput = true; }
+        if item.kind == "Float" or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
+            (item.kind == "Discard" and item.name == "Float") { floatValues = true; }
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
         }
@@ -235,10 +331,15 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
         }
     }
     outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) { outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues { outputLine("#include <stdlib.h>"); }
     outputLine("#include <inttypes.h>");
     outputLine("#include <stdbool.h>");
     outputLine("#include <string.h>");
+    if floatValues {
+        outputLine("#include <float.h>");
+        outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
+    }
+    if floatOutput { emitFloatOutputHelpers(); }
     emitIntArithmeticHelpers(calls, source, prefix);
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }

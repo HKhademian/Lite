@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T19:17:01.255Z",
-  "revision": "31601cabca954bb145e2b4c06a759d1ffeaef49a",
+  "startedAt": "2026-11-02T20:25:24.958Z",
+  "revision": "65642322227b1c9c3df80103e2be35bf76584752",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/never-and-unreachable-flow.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n?? compiler/reports/2026-11-02-branch-results-ladder.json\n",
-  "compilerSourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
-  "compilerSourceRevision": "992fa63ddd3b9872eed1000c4529df2a762097a1",
+  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/manifests/c.json\n M compiler/manifests/ts.json\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/frontend.lts\n M compiler/src/lexer.lts\nAM compiler/src/numeric-literals.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/checker/checker-dump.lts\n M compiler/tests/host.test.ts\n M compiler/tests/lexer/lexer-dump.lts\n M compiler/tests/parser/parser-decl-dump.lts\n M compiler/tests/parser/parser-dump.lts\n M compiler/tests/parser/parser-program-dump.lts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/numbers.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nRM igniter/tests/compiler/002-001-decimal-literal.json -> igniter/tests/compiler/001-001-decimal-literal.json\nR  igniter/tests/compiler/002-001-decimal-literal.lts -> igniter/tests/compiler/001-001-decimal-literal.lts\nRM igniter/tests/compiler/002-001-exponent-literal.json -> igniter/tests/compiler/001-001-exponent-literal.json\nR  igniter/tests/compiler/002-001-exponent-literal.lts -> igniter/tests/compiler/001-001-exponent-literal.lts\n M igniter/tests/compiler/002-001-report-missing-expression.json\n M igniter/tests/compiler/002-002-unary-minus-string.json\n M igniter/tests/compiler/002-006-unsupported-loop.json\n?? compiler/reports/2026-11-02-float-literals-ladder.json\n",
+  "compilerSourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
+  "compilerSourceRevision": "Float-literal source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+  "t11Sha256": "554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -361,7 +361,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:8: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -397,7 +397,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -433,7 +433,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:31: expected an Int, String or Bool expression\n"
+        "stderr": "1:31: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -1462,7 +1462,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "2:8: expected an Int, String or Bool expression\n"
+        "stderr": "2:8: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -1501,7 +1501,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -1537,7 +1537,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:15: expected an Int, String or Bool expression\n"
+        "stderr": "1:15: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -1573,7 +1573,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "2:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "2:10: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -1645,7 +1645,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:10: expected an Int, String or Bool expression\n"
+        "stderr": "1:10: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -2102,7 +2102,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "2:6: expected an Int, String or Bool expression\n"
+        "stderr": "2:6: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -2786,7 +2786,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:10: expected ; after local declaration base\n"
+        "stderr": "7:15: operator * does not yet support Float operands\n"
       }
     },
     {
@@ -2823,7 +2823,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:12: expected ; after local declaration radius\n"
+        "stderr": "7:23: operator * does not yet support Float operands\n"
       }
     },
     {
@@ -2860,7 +2860,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:14: expected ; after local declaration celsius\n"
+        "stderr": "5:25: operator * does not yet support Float operands\n"
       }
     },
     {
@@ -2897,7 +2897,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "3:14: expected ; after local declaration meters\n"
+        "stderr": "5:22: operator / does not yet support Float operands\n"
       }
     },
     {
@@ -2985,7 +2985,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "3:15: expected ; after local declaration first_day\n"
+        "stderr": "7:27: operator + does not yet support Float operands\n"
       }
     },
     {
@@ -3022,7 +3022,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:14: expected ; after local declaration finished\n"
+        "stderr": "7:27: operator * does not yet support Float operands\n"
       }
     },
     {
@@ -3209,7 +3209,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "5:23: expected ; after local declaration distance_meters\n"
+        "stderr": "7:26: operator / does not yet support Float operands\n"
       }
     },
     {
@@ -3296,7 +3296,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:14: expected ; after local declaration first_x\n"
+        "stderr": "9:24: operator + does not yet support Float operands\n"
       }
     },
     {
@@ -3333,7 +3333,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "4:12: expected ; after local declaration start\n"
+        "stderr": "8:19: operator - does not yet support Float operands\n"
       }
     },
     {
@@ -3516,7 +3516,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:13: expected )\n"
+        "stderr": "1:16: operator + does not yet support Float operands\n"
       }
     },
     {
@@ -3658,7 +3658,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -3669,14 +3669,27 @@
             "stdout": "1000\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "1000\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (Number(\"1e3\")).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:13: expected )\n"
+        "stderr": ""
       }
     },
     {
@@ -3708,7 +3721,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:15: expected an Int, String or Bool expression\n"
+        "stderr": "1:15: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -4335,7 +4348,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: expected an Int, String or Bool expression\n"
+        "stderr": "1:6: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -4399,7 +4412,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:12: expected an Int, String or Bool expression\n"
+        "stderr": "1:12: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -4521,7 +4534,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:17: expected an Int, String or Bool expression\n"
+        "stderr": "1:17: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -4643,7 +4656,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:10: expected an Int, String or Bool expression\n"
+        "stderr": "1:10: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -4739,7 +4752,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:29: expected an Int, String or Bool expression\n"
+        "stderr": "1:29: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -5040,7 +5053,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:1: unsupported feature \"mut\": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5181,7 +5194,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5213,7 +5226,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:33: expected an Int, String or Bool expression\n"
+        "stderr": "1:33: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -5245,7 +5258,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5277,7 +5290,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: expected an Int, String or Bool expression\n"
+        "stderr": "1:6: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -5309,7 +5322,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:6: expected an Int, String or Bool expression\n"
+        "stderr": "1:6: expected an Int, Float, String or Bool expression\n"
       }
     },
     {
@@ -5341,7 +5354,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:33: unsupported feature \"finally\": see docs/finally.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:33: unsupported feature \"finally\": see docs/finally.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5373,7 +5386,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:18: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:18: unsupported feature \"match\": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5469,7 +5482,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:11: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:11: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5501,7 +5514,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:15: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:15: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -5976,7 +5989,7 @@
         "status": 2,
         "signal": null,
         "stdout": "",
-        "stderr": "1:14: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
+        "stderr": "1:14: unsupported feature \"fn\": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n"
       }
     },
     {
@@ -6931,8 +6944,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "52846827bd1e8050c8dce4b245a2ee0e80d921a8bfe11a75f17b10378ad1566d",
-      "bytes": 165867,
+      "sourceSha256": "41a15f3255c9edef2785e664f7874b03492df98b6440ce12164fdc1f51b0df33",
+      "bytes": 177856,
       "t00Check": {
         "accepted": true
       },
@@ -6941,7 +6954,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 299382
+        "stdoutBytes": 322110
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6950,12 +6963,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "fb3372debe37536940776ad83aa3eab11d396a19a5fb3860230a5503cf0b73a4"
+      "artifactSha256": "49ad9085c040d19e5b86240076d21ed1c205a36555749641944ec8e5f974a756"
     },
     {
       "path": "compiler/src/c-literals.lts",
-      "sourceSha256": "22be8cd720619da5af5079ecc22e4fd9804a5007c82335c04e259e77bea33a4f",
-      "bytes": 7627,
+      "sourceSha256": "d08bb820df4d1b7dc55683ddefa9dafbd7d52f20109cb4d9e9661dc4ec7ea36d",
+      "bytes": 7960,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function fail; forward function lookup is not supported yet"
@@ -6964,8 +6977,8 @@
     },
     {
       "path": "compiler/src/check.lts",
-      "sourceSha256": "13d4b597f979bde68bbe061de55742842bdb8f26fbab0161f6f77a150a360d6d",
-      "bytes": 40038,
+      "sourceSha256": "cb4cdeaa11807242e9a04df5bb17edb77b116897b6dde911424d7f080ba753b6",
+      "bytes": 40451,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function startsWithAt; forward function lookup is not supported yet"
@@ -6994,8 +7007,8 @@
     },
     {
       "path": "compiler/src/emit-c.lts",
-      "sourceSha256": "b4018fa55f06730a4c5e6248033fe4fe3a2adfbbe994cf99decc7358f6be531e",
-      "bytes": 16825,
+      "sourceSha256": "29c57a367befdac492ef369b647b9c5dba7ef1ec3e98681d8d789fe800a338fe",
+      "bytes": 23082,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function indexOfText; forward function lookup is not supported yet"
@@ -7014,8 +7027,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "cd37fadb9b440d75f58b60c3708e8fe8850512a2015f48b9c3834c62bd0f55f4",
-      "bytes": 126925,
+      "sourceSha256": "7a5268f3f43d5904d6ff04d362692617d556edd07fb247ea4ebddccaec897b5e",
+      "bytes": 128336,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7024,8 +7037,8 @@
     },
     {
       "path": "compiler/src/lexer.lts",
-      "sourceSha256": "dc9ba2bb3a4867733c077d973b5fc1612c6cef212814ffae1e55e422030b1d97",
-      "bytes": 13066,
+      "sourceSha256": "e88b00dd432519b09697678ff76d44bb9bd868071cd151b794c0d4332a9ea8ae",
+      "bytes": 13632,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7033,9 +7046,19 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
+      "path": "compiler/src/numeric-literals.lts",
+      "sourceSha256": "64563c035271d27708b27632da440fd50105d79ee513f8cee3c7fa739466e7a7",
+      "bytes": 3988,
+      "t00Check": {
+        "accepted": false,
+        "diagnostic": "TypeError: unknown helper/function digitValue; forward function lookup is not supported yet"
+      },
+      "coverage": "not-a-standalone-T00-program"
+    },
+    {
       "path": "compiler/src/parser.lts",
-      "sourceSha256": "122a0a6c3db679c438b9c823c1a8aabf8cadddc1a3eb4f1c70c32bbdb1b4a8f5",
-      "bytes": 28584,
+      "sourceSha256": "e029f17cc3bee5702f31275fc2486d668139d666f25a9bfb86de7cf09296e7c5",
+      "bytes": 28620,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: function annotations currently require a numeric width, String, Bool, or Unit"
@@ -7044,8 +7067,8 @@
     },
     {
       "path": "compiler/src/ts-literals.lts",
-      "sourceSha256": "2af3586f6e12a6fb185c512b8ec5787d3b8d3a80e3be50075350f39617c92025",
-      "bytes": 6533,
+      "sourceSha256": "050fc75674b17775038ec395c0e33343bb046c310a4d691056b617394cec6572",
+      "bytes": 6860,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function intText; forward function lookup is not supported yet"
@@ -7054,8 +7077,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "82a381e33ff60f07fbde42c31af0887a494f60c9b6d04b1f9fed8c323b971b9b",
-      "bytes": 95119,
+      "sourceSha256": "497c4321a23e02230d3d9b60059907150a168165395838196f9ea62ced58a54b",
+      "bytes": 100122,
       "t00Check": {
         "accepted": true
       },
@@ -7064,7 +7087,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 192764
+        "stdoutBytes": 202151
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7073,7 +7096,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "b5e28296249eb958ec9dc9b116f8a5d5dcf639633efbfa4d28bd05bf8562ef2f"
+      "artifactSha256": "95d6517192719002acc2a143b037b5485bba7d7becef71fc9cfc479bc000a3fa"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -7119,8 +7142,8 @@
     },
     {
       "path": "compiler/tests/lexer/lexer-dump.lts",
-      "sourceSha256": "005557c2b58d4e3f1e0fa73b85f344f0c484893f925cdf35b4ca71b0822f5096",
-      "bytes": 26479,
+      "sourceSha256": "b02f8614027ccf64f5a723ed68940043662de6a5238bc43f52f53248cbb2fd9f",
+      "bytes": 31033,
       "t00Check": {
         "accepted": true
       },
@@ -7129,7 +7152,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 55004
+        "stdoutBytes": 63471
       },
       "status": "accepted"
     },
@@ -7181,8 +7204,8 @@
     },
     {
       "path": "compiler/tests/parser/parser-decl-dump.lts",
-      "sourceSha256": "ede2c5b5801d427c5b330b6d5c89a67c3c1c5e5780c5d93047778f7a5ecfb25c",
-      "bytes": 55086,
+      "sourceSha256": "0faede5f224d6cb07aad973e302f61bfdeb40a80c2989475e9cb7b1c5a7c40fd",
+      "bytes": 59676,
       "t00Check": {
         "accepted": true
       },
@@ -7191,7 +7214,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 111292
+        "stdoutBytes": 119822
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7200,12 +7223,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "c128056483570741da1d458effdb9fb98cb3c7dd3597f433724ddeebe21c02e5"
+      "artifactSha256": "eba756de9e9136f81a6829c8932e7abcde31a2230d241fc120599aafc7d292b7"
     },
     {
       "path": "compiler/tests/parser/parser-dump.lts",
-      "sourceSha256": "5d034ba3835fbcafb402b89fc0758528c2f6d419e3d5d02b7fce6e81395dd074",
-      "bytes": 55095,
+      "sourceSha256": "0b63758aad1c38d7b1f32457504ef732a0150c0f207ec678d985ae8a1e1f678e",
+      "bytes": 59685,
       "t00Check": {
         "accepted": true
       },
@@ -7214,7 +7237,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 111286
+        "stdoutBytes": 119816
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7223,12 +7246,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "995d8723c0539bbe99ca187a75059613f8808d8bde83bbf4b0b829e235f61d02"
+      "artifactSha256": "b6cb60035f26e76737151accc08293152a6d7924c9ee2c56f657718756ec138a"
     },
     {
       "path": "compiler/tests/parser/parser-program-dump.lts",
-      "sourceSha256": "3d7233fac610d9c0d66fd028c900834a45ab8a090bdd0ea25bc4210d875752a8",
-      "bytes": 55082,
+      "sourceSha256": "1e12af6b08eced1e09e1e0bc184964592c7eb0399c5c8e0820ef0d48f8199d26",
+      "bytes": 59672,
       "t00Check": {
         "accepted": true
       },
@@ -7237,7 +7260,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 111293
+        "stdoutBytes": 119823
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7246,7 +7269,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "d419485622d9b6c8acd2ca127bf423ffd5e590f01926870b1e440c1283149773"
+      "artifactSha256": "76e7c2e433dbaa400640fb2ae962ec49f42764708bb41750e19f6bd4d9594273"
     },
     {
       "path": "compiler/tests/parser/program.lts",
@@ -7282,8 +7305,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
-      "bytes": 176783,
+      "sourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
+      "bytes": 182509,
       "t00Check": {
         "accepted": true
       },
@@ -7403,6 +7426,22 @@
       "status": "accepted"
     },
     {
+      "path": "igniter/tests/compiler/001-001-decimal-literal.lts",
+      "sourceSha256": "56a8fa4107b78604b8fb439df19ca7794276ae6b2ae7ef53ec076032216339c5",
+      "bytes": 17,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 361
+      },
+      "status": "accepted"
+    },
+    {
       "path": "igniter/tests/compiler/001-001-empty-source.lts",
       "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "bytes": 0,
@@ -7415,6 +7454,22 @@
         "signal": null,
         "stderr": "",
         "stdoutBytes": 272
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-001-exponent-literal.lts",
+      "sourceSha256": "8945f12a17b84b4b0598d4dd062f97929ddafc77ed7ad2a76a79599ce38aaa90",
+      "bytes": 17,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 361
       },
       "status": "accepted"
     },
@@ -8479,38 +8534,6 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
-      "path": "igniter/tests/compiler/002-001-decimal-literal.lts",
-      "sourceSha256": "56a8fa4107b78604b8fb439df19ca7794276ae6b2ae7ef53ec076032216339c5",
-      "bytes": 17,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-001-decimal-literal.lts:1:13: expected )\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
-      "path": "igniter/tests/compiler/002-001-exponent-literal.lts",
-      "sourceSha256": "8945f12a17b84b4b0598d4dd062f97929ddafc77ed7ad2a76a79599ce38aaa90",
-      "bytes": 17,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-001-exponent-literal.lts:1:13: expected )\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-001-injected-source.lts",
       "sourceSha256": "534c70b01d5e45b7ef2b2c07da9d89cd129e7279cf32e6f730b2cf337a068643",
       "bytes": 32,
@@ -8691,7 +8714,7 @@
       "t11Compile": {
         "status": 2,
         "signal": null,
-        "stderr": "igniter/tests/compiler/002-006-unsupported-loop.lts:1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
+        "stderr": "igniter/tests/compiler/002-006-unsupported-loop.lts:1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
         "stdoutBytes": 0
       },
       "status": "rejected"
@@ -9243,8 +9266,8 @@
     },
     "probe": {
       "total": 81,
-      "matches": 37,
-      "rejected": 44,
+      "matches": 38,
+      "rejected": 43,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9263,7 +9286,7 @@
       "accepted": 0,
       "baseline": 0
     },
-    "trackedSourceFiles": 210
+    "trackedSourceFiles": 211
   },
   "seedStrictTypecheck": "passed",
   "testGroups": [
@@ -9324,7 +9347,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 67 program and 26 rejection cases",
+    "restricted compiler corpus keeps 69 program and 24 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9502,9 +9525,10 @@
     "numbered fixed-array example runs and checks through the root launcher",
     "transparent type aliases support scalar, tuple, array and list forms",
     "type aliases follow single lexical scope with value shadowing and rejection",
-    "type alias example runs and checks through the root launcher"
+    "type alias example runs and checks through the root launcher",
+    "Lite numeric literal phases share Float spelling and finite-range checks"
   ],
-  "finishedAt": "2026-11-02T19:17:54.144Z",
+  "finishedAt": "2026-11-02T20:26:21.518Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9514,6 +9538,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
+  }
 }

@@ -8,6 +8,7 @@
     "../../lib/core/format.lts",
     "../../lib/core/list.lts",
     "../src/ts-literals.lts",
+    "../src/numeric-literals.lts",
     "../src/frontend.lts",
     "../src/emit-ts.lts",
     "../src/driver-ts.lts"

@@ -18,6 +18,8 @@ TOKEN_KIND_KEYWORD := fn(): String { "Keyword" }
 /** Canonical token kind for Int literals. */
 TOKEN_KIND_INT := fn(): String { "Int" }
 
+/** Token kind for a finite decimal/exponent binary64 Float literal. */
+TOKEN_KIND_FLOAT := fn(): String { "Float" }
 /** Canonical token kind for String literals. */
 TOKEN_KIND_STRING := fn(): String { "String" }
 
@@ -287,15 +289,20 @@ tokenize := fn(source: String, prefix: String): Tokens {
             else if isKeyword(value) { kind = TOKEN_KIND_KEYWORD(); }
             else { kind = TOKEN_KIND_NAME(); }
         } else if isDigit(ch) {
-            var digitsEnd := cursor;
-            loop digitsEnd < size and isDigit(textAt(source, digitsEnd)) { digitsEnd = digitsEnd + 1; }
-            value = textSlice(source, cursor, digitsEnd);
-            negative := textToInt("-" + value);
-            if not negative.ok {
-                lexFail(source, cursor, prefix, "integer literal outside signed 64-bit range");
+            scanned := scanNumericLiteral(source, cursor);
+            next = scanned.next;
+            value = textSlice(source, cursor, next);
+            if scanned.exponentMissingAt >= 0 { lexFail(source, scanned.exponentMissingAt, prefix, "expected exponent digits"); }
+            if scanned.floating {
+                digits := textSlice(source, cursor, scanned.integerEnd) + textSlice(source, scanned.fractionStart, scanned.fractionEnd);
+                if not finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
+                    lexFail(source, cursor, prefix, "floating literal is not finite");
+                }
+                kind = TOKEN_KIND_FLOAT();
+            } else {
+                if scanned.outsideInt { lexFail(source, cursor, prefix, "integer literal outside signed 64-bit range"); }
+                kind = TOKEN_KIND_INT();
             }
-            kind = TOKEN_KIND_INT();
-            next = digitsEnd;
         } else if ch == "\"" {
             scanned := scanString(source, cursor, prefix);
             kind = TOKEN_KIND_STRING();

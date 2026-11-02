@@ -178,7 +178,7 @@ test('bundle diagnostics map flattened rows back to original files and lines', (
     const result = compiler.compile({ text: bundle.text, lineMap: bundle.lineMap });
     assert.equal(result.status, 2);
     assert.deepEqual(result.stdout, Buffer.alloc(0));
-    assert.equal(result.stderr.toString(), 'second.lts:1:15: expected an Int, String or Bool expression\n');
+    assert.equal(result.stderr.toString(), 'second.lts:1:15: expected an Int, Float, String or Bool expression\n');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -479,10 +479,10 @@ test('compiler applications preserve optional logical source names in their own 
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
       assert.deepEqual(runCompiler(manifest, 'outputLine(42);', label), { code: 0, output: expected, errors: '' });
       assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);', label), {
-        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:15: expected an Int, String or Bool expression\n',
+        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:15: expected an Int, Float, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);'), { code: 2, output: '', errors: '1:15: expected an Int, String or Bool expression\n' });
+    assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);'), { code: 2, output: '', errors: '1:15: expected an Int, Float, String or Bool expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(loadBundle(manifest).text), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -507,7 +507,7 @@ test('real compiler CLI forwards source-name context without changing emitted by
       writeFileSync(sourcePath, 'outputLine(1 +);');
       const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, String or Bool expression\n`));
+      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, Float, String or Bool expression\n`));
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -536,7 +536,7 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     writeFileSync(invalidPath, 'outputLine(1 +);\n');
     const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, String or Bool expression\n`));
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, Float, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
     assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
@@ -971,7 +971,7 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
     status: 0, stdout: readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
   });
   assert.deepEqual(tsCompiler.compile({ text: 'outputLine(1 +);', name: label }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:15: expected an Int, String or Bool expression\n`),
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:15: expected an Int, Float, String or Bool expression\n`),
   });
 });
 
@@ -1556,13 +1556,13 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
     ['loop and 1 { }', '1:6: leading and requires a Bool expression\n'],
     ['x := and and true;', '1:10: leading and may appear only once\n'],
     ['if or and ready { outputLine(1); }', '1:7: leading or may appear only once\n'],
-    ['x := true and;', '1:14: expected an Int, String or Bool expression\n'],
-    ['if true or { outputLine(1); }', '1:12: expected an Int, String or Bool expression\n'],
-    ['x := or;', '1:8: expected an Int, String or Bool expression\n'],
+    ['x := true and;', '1:14: expected an Int, Float, String or Bool expression\n'],
+    ['if true or { outputLine(1); }', '1:12: expected an Int, Float, String or Bool expression\n'],
+    ['x := or;', '1:8: expected an Int, Float, String or Bool expression\n'],
     ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
-      'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
+      'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
     ['x := not and true;', '1:10: unsupported feature "and": see docs/conditionals.md; ' +
-      'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
+      'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1726,9 +1726,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 67 program and 26 rejection cases', () => {
-  assert.equal(programFixtures.length, 67);
-  assert.equal(rejectionFixtures.length, 26);
+test('restricted compiler corpus keeps 69 program and 24 rejection cases', () => {
+  assert.equal(programFixtures.length, 69);
+  assert.equal(rejectionFixtures.length, 24);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
@@ -2037,7 +2037,7 @@ test('restricted compiler diagnoses invalid action else-if chains', () => {
     ['if true { outputLine(1); } else if 1 { outputLine(2); }\n', '1:36: else if condition must be Bool\n'],
     ['if true { outputLine(1); } else if true outputLine(2);\n', '1:41: expected {\n'],
     ['if true { outputLine(1); } else if { outputLine(2); }\n',
-      '1:36: expected an Int, String or Bool expression\n'],
+      '1:36: expected an Int, Float, String or Bool expression\n'],
     ['if true { outputLine(1); } else { outputLine(2); } else { outputLine(3); }\n', '1:52: unexpected else\n'],
     ['else if true { outputLine(1); }\n', '1:1: unexpected else\n'],
     ['if true { hidden := 1; } else if hidden == 1 { outputLine(2); }\n', '1:34: unknown value hidden\n'],
@@ -2573,10 +2573,10 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   for (const manifest of [tsManifestPath, cManifestPath]) {
     assert.deepEqual(runCompiler(manifest, 'x := loop { 1 };'), {
       code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
-        'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n',
+        'the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n',
     });
     assert.deepEqual(runCompiler(manifest, 'x := 1;\ny := ;\n'), {
-      code: 2, output: '', errors: '2:6: expected an Int, String or Bool expression\n',
+      code: 2, output: '', errors: '2:6: expected an Int, Float, String or Bool expression\n',
     });
   }
 });
@@ -4290,4 +4290,19 @@ test('type alias example runs and checks through the root launcher', () => {
   const check = invoke(true);
   assert.equal(check.error, undefined); assert.equal(check.status, 0);
   assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+});
+
+test('Lite numeric literal phases share Float spelling and finite-range checks', () => {
+  const texts = ['outputLine(0.1, 1e2, -0.0, 5e-324);',
+    'var n: Float = 0.1; n = 2.5;', 'f := fn(n: Float): Float { -n } outputLine(f(1.5));'];
+  for (const driver of [lexerDumpPath, parserProgramDumpPath, checkerDumpPath]) withGeneratedDriver(driver, generated => {
+    for (const text of texts) {
+      const expected = runFile(driver, text); assert.equal(expected.code, 0, text + expected.errors);
+      assert.deepEqual(generated(text), expected);
+    }
+    for (const text of ['outputLine(1e);', 'outputLine(1e309);']) {
+      const expected = runFile(driver, text); assert.equal(expected.code, 2, text); assert.equal(expected.output, '');
+      assert.deepEqual(generated(text), expected);
+    }
+  });
 });

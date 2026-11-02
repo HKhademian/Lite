@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 67 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -160,6 +160,7 @@ enabled. See the [completion assessment and evidence](parity.md#function-complet
 | [`baseline.md`](baseline.md) | P0 baseline counts, source hashes, reference artifacts and test evidence |
 | [`parity.md`](parity.md) | Stage-0 versus generated-compiler burndown and difference log |
 | [`manifests/`](manifests/README.md) | Manifest schema, line-map contract and current TS/C manifests; P1 loader and driver implemented |
+| [`src/numeric-literals.lts`](src/numeric-literals.lts) | Shared Int/Float token scanning and finite Float literal checks |
 | [`src/frontend.lts`](src/frontend.lts) | Shared parser, checked Int evaluation, String/Int locals, report statement stream |
 | [`src/ts-literals.lts`](src/ts-literals.lts) | TypeScript literal encoding |
 | [`src/emit-ts.lts`](src/emit-ts.lts) | TypeScript report formatting and program emission |

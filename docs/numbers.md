@@ -66,6 +66,15 @@ rejects non-finite results. Unsigned widths, explicit narrowing/casts,
 component-wise numeric widening of stored tuples/arrays, and minimal-width
 literal typing remain unimplemented.
 
+Generated FVP coverage, 2026-11-02: finite decimal/exponent Float literals,
+ordinary Float values, unary signs and same-family comparisons now compile on
+TS and C. The frontend and standalone literal phases share digit scanning and
+finite-range checks. C display searches shortest round-trip binary64 digits and
+uses the temporary TS display's decimal/exponent thresholds. Mixed arithmetic,
+width aliases/narrowing and power lowering remain queued. This is temporary
+profile implementation evidence; permanent formatting and native ABI choices
+remain open. See the [literal/value ledger](../compiler/parity.md#float-literals-and-display).
+
 ## Temporary FVP numeric profile
 
 Selected **2026-10-30**, for the first experimental interpreter only:

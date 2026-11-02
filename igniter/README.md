@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 28
+code-point copies. The current test suite has 237 interpreter groups, 32
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -876,7 +876,7 @@ warm cache.
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
-There are 67 programs and 26 rejections; accepted programs include six expected
+There are 69 programs and 24 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and

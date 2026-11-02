@@ -1,0 +1,21 @@
+{
+  "name": "decimal-literal",
+  "source": {
+    "file": "001-001-decimal-literal.lts",
+    "hash": "sha256:56a8fa4107b78604b8fb439df19ca7794276ae6b2ae7ef53ec076032216339c5"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "1.5\n",
+        "hash": "sha256:03c76d47c407b24353b3121bd96490373bd6c5de05f6b3d32bd420c4810f1160"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

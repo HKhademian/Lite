@@ -1116,3 +1116,61 @@ All 268 full tests pass without skips in 127.3 s; fast passes 256 with
 100 verifier executions, coverage, nine editor groups and six native UBSan
 programs also pass. Gate durations are validation observations; the paired
 compiler measurements above ran without concurrent gates.
+
+## Float literals and display
+
+This migration slice ports existing T00 finite Float values: decimal/exponent
+literals, unary signs, same-family comparisons/chains, scalar copies and display.
+The frontend and standalone lexer share `src/numeric-literals.lts`; parser and
+checker phases recognize the same Float token/type. Literal overflow rejects
+before effects, using decimal comparison with the binary64 infinity midpoint
+without requiring Float arithmetic in the compiler's source subset.
+
+C display replaces default-precision %g with a shortest round-trip search and
+the temporary TS runtime's decimal/exponent thresholds. Generated programs use
+the C startup locale and check the binary64 double representation. Native C
+functions, aggregates and input remain pending; this does not establish the
+native compiler bootstrap. Mixed arithmetic/comparisons, width/storage
+conversions and power remain existing T00 migration dependencies.
+
+Coverage: nine TS/C value programs, five TS function/aggregate programs, a
+256-value boundary/random display program on both targets, one input
+short-circuit scenario, sixteen rejected sources and four exact fault
+executions. Three phase drivers each compare three valid and two rejected
+sources between reference/generated execution. Six generated native programs
+pass address/undefined-behavior sanitizers. The production formatter body is
+byte-identical to the independently tested 28401-value native probe.
+
+The decimal and exponent fixtures move from rejection to program cases without
+changing their source bytes: 69 programs/24 rejections, still 93 total. All 67
+older program artifact pairs remain identical. Diagnostics now name Float among
+admitted scalar expressions. The shared scanner caches source length, and a
+single-digit Int fast path avoids general scanner/range work.
+
+The [generated-only ladder](reports/2026-11-02-float-literals-ladder.json)
+records three identical, strictly checked generations. Compiler implementation
+source remains in the previously supported Int/String subset. The
+[performance report](reports/2026-11-02-float-literals-performance.json) records
+paired compiler measurements and exact emitted-output identities; mixed timing
+changes are not a general speedup claim. The independent regular-file TS
+capture fix and its three host groups remain intact.
+
+Current scope follows the owner's migration priority: finish existing T00
+replacement dependencies, including generated run/check and native gates.
+The separately recorded tuple prototype-label defect stays in the migration
+audit; it is not the next implementation detour.
+
+The final full gate passes all 273 tests with zero skips in 142.0 s. The fast
+gate passed 261 with 12 expected skips before the helper's source-length hoist;
+the final full run repeats every case after that self-check correction. Strict
+host/seeds, both 93-case corpora, 100 verifier executions, coverage, nine editor
+groups and six generated native sanitizer cases pass. Inventory: 92/166 match,
+74 remain, 38 original failures closed, no observed regressions, 211 tracked
+Lite sources and no load errors.
+
+Final paired compiler-phase medians are mixed: TS outputs 64.9 → 66.7 ms,
+identical S 693.5 → 705.5 ms, constants 133.1 → 127.1 ms, dead-output input
+44.2 → 44.8 ms; C-emitter outputs 85.5 → 85.1 ms, divisions 169.7 →
+166.1 ms, constants 218.7 → 218.1 ms, dead-output input 45.5 → 45.2 ms.
+All measured output bytes match. Next: existing T00 mixed Float arithmetic
+needed by the remaining sample programs.

@@ -1,0 +1,73 @@
+/** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
+finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
+    var first := 0;
+    loop first < textLength(digits) and textAt(digits, first) == "0" { first = first + 1; }
+    if first == textLength(digits) { return true; }
+    significant := textSlice(digits, first, textLength(digits));
+    power := textLength(significant) - fractionCount + exponent;
+    if power < 309 { return true; }
+    if power > 309 { return false; }
+    midpoint := "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792";
+    var count := textLength(significant);
+    if count < textLength(midpoint) { count = textLength(midpoint); }
+    var index := 0;
+    loop index < count {
+        left := if index < textLength(significant) { digitValue(textAt(significant, index)) } else { 0 };
+        right := if index < textLength(midpoint) { digitValue(textAt(midpoint, index)) } else { 0 };
+        if left < right { return true; }
+        if left > right { return false; }
+        index = index + 1;
+    }
+    false
+}
+
+/** Scans one unsigned decimal numeric token, retaining an Int-range witness and Float grammar/range components without target code or diagnostics. Exponent saturation preserves every possible cancellation with the literal's digits. */
+scanNumericLiteral := fn(source: String, position: Int): (next: Int, integerEnd: Int, fractionStart: Int, fractionEnd: Int, exponent: Int, floating: Bool, exponentMissingAt: Int, magnitude: Int, outsideInt: Bool) {
+    size := textLength(source);
+    var cursor := position;
+    var magnitude := 0;
+    var outsideInt := false;
+    loop cursor < size and isDigit(textAt(source, cursor)) {
+        digit := digitValue(textAt(source, cursor));
+        if not outsideInt {
+            if magnitude < (-9223372036854775808 + digit) / 10 { outsideInt = true; }
+            else { magnitude = magnitude * 10 - digit; }
+        }
+        cursor = cursor + 1;
+    }
+    integerEnd := cursor;
+    var fractionStart := cursor;
+    var fractionEnd := cursor;
+    var floating := false;
+    if cursor + 1 < size and textAt(source, cursor) == "." and isDigit(textAt(source, cursor + 1)) {
+        floating = true;
+        cursor = cursor + 1;
+        fractionStart = cursor;
+        loop cursor < size and isDigit(textAt(source, cursor)) { cursor = cursor + 1; }
+        fractionEnd = cursor;
+    }
+    var exponent := 0;
+    var exponentMissingAt := -1;
+    if cursor < size and (textAt(source, cursor) == "e" or textAt(source, cursor) == "E") {
+        floating = true;
+        exponentAt := cursor;
+        cursor = cursor + 1;
+        var negativeExponent := false;
+        if cursor < size and (textAt(source, cursor) == "+" or textAt(source, cursor) == "-") {
+            negativeExponent = textAt(source, cursor) == "-";
+            cursor = cursor + 1;
+        }
+        exponentStart := cursor;
+        limit := size + 310;
+        loop cursor < size and isDigit(textAt(source, cursor)) {
+            digit := digitValue(textAt(source, cursor));
+            if exponent > (limit - digit) / 10 { exponent = limit; }
+            else { exponent = exponent * 10 + digit; }
+            cursor = cursor + 1;
+        }
+        if cursor == exponentStart { exponentMissingAt = exponentAt; }
+        if negativeExponent { exponent = -exponent; }
+    }
+    (next = cursor, integerEnd = integerEnd, fractionStart = fractionStart, fractionEnd = fractionEnd,
+        exponent = exponent, floating = floating, exponentMissingAt = exponentMissingAt, magnitude = magnitude, outsideInt = outsideInt)
+}

@@ -157,7 +157,7 @@ parseExpression := fn(tokens: Tokens, index: Int, prefix: String, minimum: Int):
         operand := self(tokens, index + 1, prefix, 30);
         leftText = "(" + token.text + operand.text + ")";
         cursor = operand.next;
-    } else if token.kind == TOKEN_KIND_INT() {
+    } else if token.kind == TOKEN_KIND_INT() or token.kind == TOKEN_KIND_FLOAT() {
         leftText = token.text;
         cursor = index + 1;
     } else if token.kind == TOKEN_KIND_STRING() {

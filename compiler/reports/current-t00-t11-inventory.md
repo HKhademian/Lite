@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -21,15 +21,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 24 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 81; 37 matches tested behavior; 44 T11 rejects source.
+- probe: 81; 38 matches tested behavior; 43 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
-- trackedSourceFiles: 210.
+- trackedSourceFiles: 211.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 37 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 91/166 executed source cases match; 75 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 38 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 92/166 executed source cases match; 74 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -45,6 +45,7 @@ Closed original cases:
 - example: example.014-input-history
 - example: example.015-retained-tokens
 - example: example.019-whole-input
+- probe: numeric.exponent-literal
 - probe: numeric.dynamic-add-overflow
 - probe: numeric.dynamic-subtract-overflow
 - probe: numeric.dynamic-multiply-overflow
@@ -84,11 +85,11 @@ Closed original cases:
 - **loop.conditional — matches tested behavior.** Conditional action loops with mutable state. Source: `verifications/features/loop-conditional.lts`.
 - **loop.sequence — matches tested behavior.** Ordered sequence traversal loops. Source: `verifications/features/loop-sequence.lts`.
 - **loop.value — T11 rejects source.** Typed loop .value accumulation and then completion. Source: `verifications/features/loop-value.lts`.
-  First diagnostic: 1:8: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:8: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **loop.metadata — T11 rejects source.** Loop metadata and payload/targeted exits. Source: `verifications/features/loop-metadata.lts`.
-  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **finally.cleanup — T11 rejects source.** Construct-level finally cleanup ordering. Source: `verifications/features/finally-cleanup.lts`.
-  First diagnostic: 1:31: expected an Int, String or Bool expression
+  First diagnostic: 1:31: expected an Int, Float, String or Bool expression
 - **function.recursion — matches tested behavior.** Typed functions and own-name recursion. Source: `verifications/features/function-recursion.lts`.
 - **tuple.shape — T11 rejects source.** Flat tuple values and fields. Source: `verifications/features/tuple-shape.lts`.
   First diagnostic: 3:2: unknown value one
@@ -114,23 +115,23 @@ Closed original cases:
 - **int.limits — matches tested behavior.** Signed 64-bit Int boundaries. Source: `verifications/features/int-limits.lts`.
 - **int.floor — matches tested behavior.** Floor division and floor modulo. Source: `verifications/features/int-floor.lts`.
 - **scope.compound — T11 rejects source.** Compound arithmetic updates. Source: `verifications/features/scope-compound.lts`.
-  First diagnostic: 2:8: expected an Int, String or Bool expression
+  First diagnostic: 2:8: expected an Int, Float, String or Bool expression
 - **mut.inferred — T11 rejects source.** Inferred mut and var mut declarations. Source: `verifications/features/mut-inferred.lts`.
-  First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **num.power — T11 rejects source.** Right-associative Float-default power. Source: `verifications/features/num-power.lts`.
-  First diagnostic: 1:15: expected an Int, String or Bool expression
+  First diagnostic: 1:15: expected an Int, Float, String or Bool expression
 - **match.subjectless — T11 rejects source.** Subjectless Boolean match selection. Source: `verifications/features/match-subjectless.lts`.
-  First diagnostic: 2:10: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 2:10: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **init.zero — T11 rejects source.** Zero initialization for omitted typed locals. Source: `verifications/features/init-zero.lts`.
   First diagnostic: 3:5: expected a tuple field name
 - **init.reserved — T11 rejects source.** Reserved storage and first whole-value initialization. Source: `verifications/features/init-reserved.lts`.
-  First diagnostic: 1:10: expected an Int, String or Bool expression
+  First diagnostic: 1:10: expected an Int, Float, String or Bool expression
 - **io.temporary — matches tested behavior.** Temporary input prompts and variadic output/outputLine helpers. Source: `verifications/features/io-temporary.lts`.
 
 ## probe
 
 - **numeric.float — T11 rejects source.** Float literals and mixed Int/Float arithmetic
-  First diagnostic: 1:13: expected )
+  First diagnostic: 1:16: operator + does not yet support Float operands
 - **numeric.sized-int — T11 rejects source.** Sized Int8/Int16/Int32 storage and widening
   First diagnostic: 1:4: unsupported local type Int8
 - **numeric.int64-alias — T11 rejects source.** Explicit Int64 annotations
@@ -139,10 +140,9 @@ Closed original cases:
   First diagnostic: 1:4: unsupported local type Float32
 - **numeric.float-aliases — T11 rejects source.** Float64 and Double annotations
   First diagnostic: 1:4: unsupported local type Float64
-- **numeric.exponent-literal — T11 rejects source.** Decimal exponent literal syntax
-  First diagnostic: 1:13: expected )
+- **numeric.exponent-literal — matches tested behavior.** Decimal exponent literal syntax
 - **numeric.power — T11 rejects source.** Right-associative Float-default power
-  First diagnostic: 1:15: expected an Int, String or Bool expression
+  First diagnostic: 1:15: expected an Int, Float, String or Bool expression
 - **numeric.dynamic-add-overflow — matches tested behavior.** Runtime Int64 addition overflow faults
 - **numeric.dynamic-subtract-overflow — matches tested behavior.** Runtime Int64 subtraction overflow faults
 - **numeric.dynamic-multiply-overflow — matches tested behavior.** Runtime Int64 multiplication overflow faults
@@ -161,25 +161,25 @@ Closed original cases:
 - **condition.partial-assignment — T11 rejects source.** False partial conditional assignment performs no write
   First diagnostic: 1:40: value if requires a final else
 - **condition.block-value — T11 rejects source.** General block-valued expressions and local tails
-  First diagnostic: 1:6: expected an Int, String or Bool expression
+  First diagnostic: 1:6: expected an Int, Float, String or Bool expression
 - **condition.statement-value-if — T11 rejects source.** Statement-bearing value-if branches outside function tails
   First diagnostic: 1:16: unknown value y
 - **condition.unit-block — T11 rejects source.** Empty blocks and declaration tails produce Unit
-  First diagnostic: 1:12: expected an Int, String or Bool expression
+  First diagnostic: 1:12: expected an Int, Float, String or Bool expression
 - **comparison.chain — matches tested behavior.** Comparison chains
 - **comparison.complements — matches tested behavior.** Complement comparison spellings <! <!= >! >!=
 - **scope.compound — T11 rejects source.** Compound arithmetic updates
-  First diagnostic: 1:17: expected an Int, String or Bool expression
+  First diagnostic: 1:17: expected an Int, Float, String or Bool expression
 - **scope.discarded-expression — matches tested behavior.** Expression statements with silent Unit script completion
 - **scope.zero-scalar — matches tested behavior.** Omitted typed scalar initializers
 - **scope.reserved — T11 rejects source.** Reserved storage and first whole-value initialization
-  First diagnostic: 1:10: expected an Int, String or Bool expression
+  First diagnostic: 1:10: expected an Int, Float, String or Bool expression
 - **tuple.unnamed — T11 rejects source.** Unnamed tuple construction and positional reads
   First diagnostic: 1:11: expected )
 - **tuple.mixed — T11 rejects source.** Mixed named/unnamed tuple fields
   First diagnostic: 1:12: expected )
 - **tuple.shorthand — T11 rejects source.** Named tuple field shorthand
-  First diagnostic: 1:29: expected an Int, String or Bool expression
+  First diagnostic: 1:29: expected an Int, Float, String or Bool expression
 - **tuple.destructuring — T11 rejects source.** Tuple destructuring declarations
   First diagnostic: 1:26: unknown value x
 - **tuple.receiving-labels — T11 rejects source.** Typed receiving declarations rename tuple positions
@@ -196,34 +196,34 @@ Closed original cases:
 - **list.front-operations — T11 rejects source.** push_front/pop_front end operations
   First diagnostic: 1:33: unknown value push_front
 - **list.inferred-mut — T11 rejects source.** Inferred mut and var mut list declarations
-  First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:1: unsupported feature "mut": see docs/declarations-and-assignment.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **list.unit-elements — T11 rejects source.** List<Unit> element contracts
   First diagnostic: 1:14: unsupported list element type Unit
 - **list.tuple-copies — matches tested behavior.** Named-tuple list elements and copied end results
 - **loop.unnamed-traversal — T11 rejects source.** Sequence traversal without an item binding
   First diagnostic: 1:6: loop condition must be Bool
 - **loop.value — T11 rejects source.** Loop values and then completion
-  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **loop.metadata — T11 rejects source.** Loop .item/.index/.count metadata
-  First diagnostic: 1:33: expected an Int, String or Bool expression
+  First diagnostic: 1:33: expected an Int, Float, String or Bool expression
 - **loop.payload — T11 rejects source.** Value-bearing break and continue
-  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **loop.tagged — T11 rejects source.** Tagged outer-loop exits
-  First diagnostic: 1:6: expected an Int, String or Bool expression
+  First diagnostic: 1:6: expected an Int, Float, String or Bool expression
 - **control.tagged-return — T11 rejects source.** Tagged return to an enclosing loop
-  First diagnostic: 1:6: expected an Int, String or Bool expression
+  First diagnostic: 1:6: expected an Int, Float, String or Bool expression
 - **control.finally — T11 rejects source.** Construct-level finally cleanup
-  First diagnostic: 1:33: unsupported feature "finally": see docs/finally.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:33: unsupported feature "finally": see docs/finally.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **control.match — T11 rejects source.** Subjectless Boolean match
-  First diagnostic: 1:18: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:18: unsupported feature "match": see docs/match.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **function.named-arguments — T11 rejects source.** Named/positional call routing and shorthand
   First diagnostic: 1:86: unknown value c
 - **function.argument-replacement — T11 rejects source.** Replacement of an earlier positional call contribution
   First diagnostic: 1:81: unknown value a
 - **function.values — T11 rejects source.** Function values, copies and compatible replacement
-  First diagnostic: 1:11: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:11: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **function.live-helper — T11 rejects source.** Function helpers retain live lexical bindings
-  First diagnostic: 1:15: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:15: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **function.nested-helper — T11 rejects source.** Nested function declarations without a scalar capture
   First diagnostic: 1:28: function definitions are only allowed at top level
 - **function.report-order — matches tested behavior.** Reports in a function argument precede the outer report
@@ -240,7 +240,7 @@ Closed original cases:
 - **function.builtin-shadow — matches tested behavior.** Lexical shadowing of a temporary builtin by a function
 - **numeric.unary-plus — matches tested behavior.** Unary plus on integer values
 - **function.escaped-environments — T11 rejects source.** Escaped helper functions retain distinct lexical environments
-  First diagnostic: 1:14: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
+  First diagnostic: 1:14: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **text.adjacent-literals — matches tested behavior.** Adjacent quoted strings concatenate
 - **call.trailing-comma — matches tested behavior.** Trailing comma in a call argument list
 - **scope.same-block-shadow — matches tested behavior.** Later declarations shadow same-block bindings
@@ -266,7 +266,7 @@ Closed original cases:
   First diagnostic: 1:47: expected a tuple field name
 - **example.007-prompts-and-report — matches tested behavior.** Two prompted integers with a multi-value report. Source: `examples/007-prompts-and-report.lts`.
 - **example.008-named-tuples — T11 rejects source.** Named tuple fields, shorthand construction, and named function contracts. Source: `examples/008-named-tuples.lts`.
-  First diagnostic: 2:6: expected an Int, String or Bool expression
+  First diagnostic: 2:6: expected an Int, Float, String or Bool expression
 - **example.009-fixed-arrays — T11 rejects source.** Traverses token tuples, reads one index, and sums a fixed array. Source: `examples/009-fixed-arrays.lts`.
   First diagnostic: 12:19: unsupported function type
 - **example.010-mixed-tuples — T11 rejects source.** Interleaves named and unnamed tuple fields and destructures stored order. Source: `examples/010-mixed-tuples.lts`.
@@ -291,28 +291,28 @@ Closed original cases:
 - **sample.002-arithmetic-operations — matches tested behavior.** Four integer operations; the verification appends reports for each result. Source: `samples/002_arithmetic_operations.lts`.
 - **sample.003-rectangle-measurements — matches tested behavior.** Rectangle area and perimeter. Source: `samples/003_rectangle_measurements.lts`.
 - **sample.004-triangle-area — T11 rejects source.** Triangle area from base and height. Source: `samples/004_triangle_area.lts`.
-  First diagnostic: 4:10: expected ; after local declaration base
+  First diagnostic: 7:15: operator * does not yet support Float operands
 - **sample.005-circle-measurements — T11 rejects source.** Approximate circumference and area of a circle. Source: `samples/005_circle_measurements.lts`.
-  First diagnostic: 4:12: expected ; after local declaration radius
+  First diagnostic: 7:23: operator * does not yet support Float operands
 - **sample.006-temperature-conversion — T11 rejects source.** Celsius to Fahrenheit and back. Source: `samples/006_temperature_conversion.lts`.
-  First diagnostic: 4:14: expected ; after local declaration celsius
+  First diagnostic: 5:25: operator * does not yet support Float operands
 - **sample.007-distance-conversion — T11 rejects source.** Meters converted to kilometers and centimeters. Source: `samples/007_distance_conversion.lts`.
-  First diagnostic: 3:14: expected ; after local declaration meters
+  First diagnostic: 5:22: operator / does not yet support Float operands
 - **sample.008-duration-parts — matches tested behavior.** Split seconds into hours, minutes and seconds. Source: `samples/008_duration_parts.lts`.
 - **sample.009-average-three-values — T11 rejects source.** Average of three daily values. Source: `samples/009_average_three_values.lts`.
-  First diagnostic: 3:15: expected ; after local declaration first_day
+  First diagnostic: 7:27: operator + does not yet support Float operands
 - **sample.010-percentage-of-total — T11 rejects source.** Completed percentage and a percentage of the total. Source: `samples/010_percentage_of_total.lts`.
-  First diagnostic: 4:14: expected ; after local declaration finished
+  First diagnostic: 7:27: operator * does not yet support Float operands
 - **sample.011-discounted-price — matches tested behavior.** Percentage discount rounded to cents. Source: `samples/011_discounted_price.lts`.
 - **sample.012-tax-and-tip — matches tested behavior.** Tax and tip rounded to cents. Source: `samples/012_tax_and_tip.lts`.
 - **sample.013-simple-interest — matches tested behavior.** Simple interest over three years. Source: `samples/013_simple_interest.lts`.
 - **sample.014-speed-distance-time — T11 rejects source.** Speed, distance and time relations. Source: `samples/014_speed_distance_time.lts`.
-  First diagnostic: 5:23: expected ; after local declaration distance_meters
+  First diagnostic: 7:26: operator / does not yet support Float operands
 - **sample.015-weighted-average — matches tested behavior.** Weighted average of three scores. Source: `samples/015_weighted_average.lts`.
 - **sample.016-midpoint-coordinates — T11 rejects source.** Midpoint of two coordinate pairs. Source: `samples/016_midpoint_coordinates.lts`.
-  First diagnostic: 4:14: expected ; after local declaration first_x
+  First diagnostic: 9:24: operator + does not yet support Float operands
 - **sample.017-linear-interpolation — T11 rejects source.** Linear interpolation at a fraction. Source: `samples/017_linear_interpolation.lts`.
-  First diagnostic: 4:12: expected ; after local declaration start
+  First diagnostic: 8:19: operator - does not yet support Float operands
 - **sample.018-split-bill — matches tested behavior.** Whole-cent bill split with remainder. Source: `samples/018_split_bill.lts`.
 - **sample.019-currency-conversion — matches tested behavior.** Currency conversion rounded to target cents. Source: `samples/019_currency_conversion.lts`.
 - **sample.020-swap-values — matches tested behavior.** Swaps two var bindings through a temporary; verification reports both. Source: `samples/020_swap_values.lts`.
@@ -339,6 +339,7 @@ Closed original cases:
 - `compiler/src/emit-ts.lts`: not-a-standalone-T00-program.
 - `compiler/src/frontend.lts`: not-a-standalone-T00-program.
 - `compiler/src/lexer.lts`: not-a-standalone-T00-program.
+- `compiler/src/numeric-literals.lts`: not-a-standalone-T00-program.
 - `compiler/src/parser.lts`: not-a-standalone-T00-program.
 - `compiler/src/ts-literals.lts`: not-a-standalone-T00-program.
 - `compiler/tests/checker/checker-dump.lts`: compile accepted; execution not tested.
@@ -357,7 +358,9 @@ Closed original cases:
 - `compiler/tests/parser/types.lts`: compile accepted; execution not tested.
 - `compiler/ts-emitter.lts`: compile accepted; execution not tested. Current source bytes exactly match preserved T11/T12 source identity; not recompiled in this audit..
 - `igniter/tests/compiler/001-001-adjacent-strings.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-001-decimal-literal.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-empty-source.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-001-exponent-literal.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-output-line-empty-arguments.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-crlf-spacing.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-int-42.lts`: compile accepted; execution not tested.
@@ -425,8 +428,6 @@ Closed original cases:
 - `igniter/tests/compiler/001-011-overflow-subtract.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/002-001-bare-name.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-call-statement.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-001-decimal-literal.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-001-exponent-literal.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-injected-source.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-missing-close.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-missing-expression.lts`: not-a-standalone-T00-program.

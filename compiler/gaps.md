@@ -5,11 +5,17 @@ each verified slice. Improve compiler speed where measurements support a change;
 keep correctness, source readability and reproducible bootstrap routes intact.
 This tracker covers the T00 replacement goal, including newly discovered flaws.
 
+Owner priority, 2026-11-02: focus on removing T00 dependencies. Work from
+existing T00-supported programs and the generated run/check/native bootstrap
+requirements. Keep independent bug hunts, future language work and broader
+cleanup outside the active path. Recorded issues stay visible for the migration
+audit; they do not automatically become the next implementation topic.
+
 ## Measured checkpoint
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `4877900c…`. All inputs compile/check against the current reference, both
+seed `554f6e1c…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +23,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 24/38 match; 14 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 37/81 match; 44 rejected; no differences among accepted probes.
-- Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
+- Isolated boundary probes: 38/81 match; 43 rejected; no differences among accepted probes.
+- Library tests: 8/8 match. All 211 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 91/166 match, 75 still fail. Compared with the
-  original inventory, 37 previously failing cases now match and none regress.
+- Total executed source cases: 92/166 match, 74 still fail. Compared with the
+  original inventory, 38 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe, chain feature and two
   completion probes account for five additional matching cases. The completion
   probes separately expose corrected unreachable tails and return-through-loop
@@ -93,8 +99,11 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
   Valid constant folding remains; invalid arithmetic executes only when reached.
-- [ ] **Float arithmetic:** decimal/exponent literals, mixed operations,
-  comparisons, finite-result faults, power and display.
+- [x] **Float literals and values:** shared finite decimal/exponent scanning,
+  unary signs, same-family comparisons, scalar copies and round-trip display on
+  TS/C. Broader arithmetic and numeric-width conversions remain separate.
+- [ ] **Float arithmetic:** mixed operations/comparisons, finite-result faults,
+  contextual division/storage and power.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
@@ -102,6 +111,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   checking over currently admitted statement forms is recorded separately below.
 - [ ] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
   positional reads, destructuring, receiving-label conversion and display.
+  Preserve ordinary labels independently of JS object syntax: T00 prints 7 for
+  `p := (__proto__ = 7); outputLine(p.__proto__);`, while generated TS currently
+  prints [object Object]. Tuple construction/default lowering needs computed
+  property keys for the special prototype-setter spelling.
 - [ ] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
   copies and indexed/sequence access. Keep array/List distinctions in function
   tails: T00 rejects `f := fn(): List<Int> { [1, 2] }` as an array result,
@@ -339,3 +352,14 @@ pairs remain unchanged. A matched native dead-output workload compiles in
 66.8 → 46.2 ms, with exact behavior and C size 123183 → 293 bytes; ordinary
 compiler timings are mixed. See the [completion ledger](parity.md#function-completion).
 Broader value/loop-result, Never/callable/capture, native C and consumer gaps remain.
+
+Float literal/value migration: 92/166 cases match, 74 remain; 38 original
+failures closed, no observed regressions. Both 93-case target corpora pass
+with 69 programs/24 rejections; all 67 older program artifact pairs remain
+identical. All 273 full tests pass without skips, along with strict checks,
+100 verifier executions, coverage, nine editor groups and six generated native
+sanitizer cases. Paired compiler timings are mixed and recorded without a
+general speedup claim. See the [literal/value ledger](parity.md#float-literals-and-display).
+Next: port existing mixed Float arithmetic used by the remaining sample
+programs, then continue the generated run/check and native migration dependencies.
+Independent issue cleanup stays outside the active path.

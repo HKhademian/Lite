@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
-        "hash": "sha256:06e6f318669e9f749f7fb574a66183a960b36677327a77575f6e6fc717d9325a"
+        "text": "1:6: unsupported feature \"loop\": see docs/loops.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
+        "hash": "sha256:7fecf949042f1e47f9a90cb9305e6d41b1de5a60b7d11c43c9506f491ec95b9d"
       },
       "exitCode": 2
     }

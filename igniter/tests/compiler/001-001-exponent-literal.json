@@ -1,0 +1,21 @@
+{
+  "name": "exponent-literal",
+  "source": {
+    "file": "001-001-exponent-literal.lts",
+    "hash": "sha256:8945f12a17b84b4b0598d4dd062f97929ddafc77ed7ad2a76a79599ce38aaa90"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "100\n",
+        "hash": "sha256:eea8254c7500ba3de996aa8ad6af399183f04e17d4a8102fde539dbc93a90012"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

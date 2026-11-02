@@ -33,6 +33,12 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
+floatLiteralCode := fn(digits: String, negative: Bool): String {
+    parsed := "Number(" + textLiteralCode(digits) + ")";
+    if negative { "(-" + parsed + ")" } else { parsed }
+}
+
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
 unitEvaluationCode := fn(code: String): String { "(void (" + code + "))" }
 

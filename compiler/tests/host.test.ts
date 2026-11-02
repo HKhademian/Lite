@@ -158,11 +158,11 @@ test('T11 host selects the recorded seed and preserves output, diagnostics and s
     assert.deepEqual(compileTs(input), { status: 0, stdout: reference, stderr: Buffer.alloc(0) });
     const bad = name === undefined ? { text: 'outputLine(1 +);' } : { text: 'outputLine(1 +);', name };
     assert.deepEqual(compileTs(bad), { status: 2, stdout: Buffer.alloc(0),
-      stderr: Buffer.from(`${name === undefined || name === '' ? '' : name + ':'}1:15: expected an Int, String or Bool expression\n`) });
+      stderr: Buffer.from(`${name === undefined || name === '' ? '' : name + ':'}1:15: expected an Int, Float, String or Bool expression\n`) });
   }
   assert.deepEqual(compileTs({ text: 'outputLine(1);\noutputLine(1 +);\n', name: 'flattened.lts',
     lineMap: [{ path: 'first.lts', line: 5 }, { path: 'second.lts', line: 9 }] }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('second.lts:9:15: expected an Int, String or Bool expression\n'),
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('second.lts:9:15: expected an Int, Float, String or Bool expression\n'),
   });
 });
 
@@ -241,7 +241,7 @@ test('the TS-hosted C seed preserves source names, subset rejection and artifact
     status: 0, stdout: readFileSync(join(root, 'compiler/generated/report-42.c')), stderr: Buffer.alloc(0),
   });
   assert.deepEqual(compileTarget('c', { text: 'outputLine(1 +);', name: 'a b.lts' }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:15: expected an Int, String or Bool expression\n'),
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('a b.lts:1:15: expected an Int, Float, String or Bool expression\n'),
   });
   assert.deepEqual(compileTarget('c', { text: 'f := fn(): Int { 1 } outputLine(f());' }), {
     status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from('C backend does not support top-level functions yet\n'),
@@ -1169,6 +1169,90 @@ test('function completion joins every conditional arm and preserves earlier defi
     const name = 'branch سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1, text);
     const compiled = compileTarget('ts', { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
     executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, context: text });
+  }
+  assertExecutions(executions);
+});
+
+test('finite Float literals retain binary64 values, display and same-family comparisons on TS and C', () => {
+  const executions: ArtifactExecution[] = [];
+  const literals = ['0.0', '-0.0', '1.5', '+1.5', '0001.2500', '1e2', '2.5E-2', '1E+21',
+    '0.000001', '0.0000001', '1000000000000000100.0', '1.7976931348623158e308',
+    '5e-324', '2e-324', '1e-99999', '0e' + '9'.repeat(120),
+    '0.' + '0'.repeat(400) + '1e401', '999999999999999999999999999999.0',
+    '- /* comment */ 1.5'];
+  const midpoint = (1n << 1024n) - (1n << 970n);
+  literals.push((midpoint - 1n).toString() + '.0');
+  const both = ['outputLine(' + literals.join(', ') + ');',
+    'var n: Float = 0.1; saved := n; n = 0.2; n := -n; outputLine(saved, n, +n, -(-n));',
+    'zero: Float; outputLine(zero, zero == 0.0, -zero, +zero);',
+    'a := 1.5; b := 2.5; outputLine(a == b, a =!= b, a < b, a <! b, a <= b, a <!= b, a > b, a >! b, a >= b, a >!= b);',
+    'a := 1.5; b := 2.5; c := 3.5; outputLine(a < b < c, c > b > a, a > b < c);',
+    'var n := 1.5; { n := -n; outputLine(n); } outputLine(n);',
+    'var flag := true; var n := 1.5; loop flag { outputLine(n); n = 2.5; flag = false; } outputLine(n);',
+    '1.5; -0.0; 1e-9999; outputLine("after");',
+    'output("before", 0.1); outputLine(1e21, -5e-324, 0.000001);'];
+  const tsOnly = ['f := fn(n: Float): Float { n } outputLine(f(0.1), f(-0.0));',
+    'p := (n = 0.1, label = "value"); values: List<Float> = [0.1, 1e21]; outputLine(p, values);',
+    'f := fn(flag: Bool): Float { if flag { 0.1 } else { 2.5 } } outputLine(f(true), f(false));',
+    'f := fn(n: Float): Float { if n < 0.0 { return -n; } n } outputLine(f(-1.5));',
+    'echo := fn(n: Float): Float { outputLine("call", n); n } outputLine(echo(1.5) < echo(2.5) < echo(3.5), echo(3.5) < echo(2.5) < echo(1.5));'];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+    if (targets.length === 1) { const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0); }
+  }
+  const vectors: number[] = [0, -0, Number.MIN_VALUE, Number.MAX_VALUE, 0.1, 0.2, 0.3, 1e-6, 1e-7, 1e20, 1e21, 1e23];
+  const view = new DataView(new ArrayBuffer(8));
+  for (const power of [-1074, -1022, -100, -53, -1, 0, 1, 10, 53, 100, 1023]) {
+    const n = 2 ** power; vectors.push(n, -n); view.setFloat64(0, n); const bits = view.getBigUint64(0);
+    if (bits > 0n) { view.setBigUint64(0, bits - 1n); vectors.push(view.getFloat64(0)); }
+    if (bits < 0x7fefffffffffffffn) { view.setBigUint64(0, bits + 1n); vectors.push(view.getFloat64(0)); }
+  }
+  let random = 0x123456789abcdefn;
+  for (let i = 0; i < 200; i++) { random = BigInt.asUintN(64, random * 6364136223846793005n + 1442695040888963407n); view.setBigUint64(0, random); const n = view.getFloat64(0); if (Number.isFinite(n)) vectors.push(n); }
+  const text = vectors.map(n => { let token = Object.is(n, -0) ? '-0.0' : String(n); if (!/[.eE]/.test(token)) token += '.0'; return 'outputLine(' + token + ');'; }).join('\n');
+  const expected = runText(text); assert.equal(expected.status, 0, expected.stderr.toString());
+  assert.equal(expected.stdout.toString(), vectors.map(n => String(n)).join('\n') + '\n');
+  for (const target of ['ts', 'c'] as const) {
+    const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    executions.push({ target, artifact: compiled.stdout.toString(), expected, context: 'binary64 boundary/random display vectors' });
+  }
+  const invalid = ['outputLine(.5);', 'outputLine(1.);', 'outputLine(1e);', 'outputLine(1e+);', 'outputLine(1e-);',
+    'outputLine(1.2e);', 'outputLine(1ee2);', 'outputLine(1.2.3);', 'outputLine(1e2.5);', 'outputLine(1e+ 2);',
+    'outputLine(1e309);', 'outputLine(-1e309);', 'outputLine(' + midpoint.toString() + '.0);',
+    'if false { outputLine(1e99999); }', 'var x: Float = "wrong";', 'outputLine(1.5 == "wrong");'];
+  for (const source of invalid) {
+    const text = 'outputLine("before");\r\n' + source;
+    const expected = runText(text); assert.equal(expected.status, 1, source); assert.equal(expected.stdout.length, 0, source);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name: 'float سلام.lts' }); assert.equal(compiled.status, 2, source); assert.equal(compiled.stdout.length, 0, source);
+      assert.match(compiled.stderr.toString(), /^float سلام\.lts:2:[0-9]+: /);
+    }
+  }
+  // Arithmetic/mixed-family admission is the next slice, distinct from finite values and display.
+  for (const text of ['outputLine(1.5 + 2.5);', 'outputLine(1.5 < 2);']) {
+    assert.equal(runText(text).status, 0);
+    for (const target of ['ts', 'c'] as const) { const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 2); assert.equal(compiled.stdout.length, 0); }
+  }
+  for (const text of ['outputLine("before"); var zero := 0; outputLine(0.1, 1 / zero);',
+    'outputLine("before"); outputLine(0.1, 9223372036854775807 + 1);']) {
+    const name = 'float سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  {
+    const text = 'outputLine(0.1 < inputFloat("middle? ") < inputFloat("last? "));', stdin = '0.0 bad', expected = runText(text, { stdin });
+    assert.equal(expected.status, 0); assert.equal(expected.stdout.toString(), 'middle? false\n');
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, options: { stdin }, context: text });
   }
   assertExecutions(executions);
 });

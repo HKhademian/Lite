@@ -450,6 +450,12 @@ textLiteralCode := fn(value: String): String {
     encoded + "\""
 }
 
+/** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
+floatLiteralCode := fn(digits: String, negative: Bool): String {
+    parsed := "strtod(" + textLiteralCode(digits) + ", NULL)";
+    if negative { "(-" + parsed + ")" } else { parsed }
+}
+
 /** Evaluates a Unit expression's effects while suppressing any target builtin return payload. */
 unitEvaluationCode := fn(code: String): String { "((void)(" + code + "), 0)" }
 
@@ -588,6 +594,79 @@ comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operators: L
         index = index + 1;
     }
     result + ")"
+}
+/** Checks finite binary64 literal rounding using decimal digits, without requiring Float arithmetic in the bootstrap compiler. The excluded midpoint is 2^1024 - 2^970; a tie rounds to infinity. */
+finiteFloatDigits := fn(digits: String, fractionCount: Int, exponent: Int): Bool {
+    var first := 0;
+    loop first < textLength(digits) and textAt(digits, first) == "0" { first = first + 1; }
+    if first == textLength(digits) { return true; }
+    significant := textSlice(digits, first, textLength(digits));
+    power := textLength(significant) - fractionCount + exponent;
+    if power < 309 { return true; }
+    if power > 309 { return false; }
+    midpoint := "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792";
+    var count := textLength(significant);
+    if count < textLength(midpoint) { count = textLength(midpoint); }
+    var index := 0;
+    loop index < count {
+        left := if index < textLength(significant) { digitValue(textAt(significant, index)) } else { 0 };
+        right := if index < textLength(midpoint) { digitValue(textAt(midpoint, index)) } else { 0 };
+        if left < right { return true; }
+        if left > right { return false; }
+        index = index + 1;
+    }
+    false
+}
+
+/** Scans one unsigned decimal numeric token, retaining an Int-range witness and Float grammar/range components without target code or diagnostics. Exponent saturation preserves every possible cancellation with the literal's digits. */
+scanNumericLiteral := fn(source: String, position: Int): (next: Int, integerEnd: Int, fractionStart: Int, fractionEnd: Int, exponent: Int, floating: Bool, exponentMissingAt: Int, magnitude: Int, outsideInt: Bool) {
+    size := textLength(source);
+    var cursor := position;
+    var magnitude := 0;
+    var outsideInt := false;
+    loop cursor < size and isDigit(textAt(source, cursor)) {
+        digit := digitValue(textAt(source, cursor));
+        if not outsideInt {
+            if magnitude < (-9223372036854775808 + digit) / 10 { outsideInt = true; }
+            else { magnitude = magnitude * 10 - digit; }
+        }
+        cursor = cursor + 1;
+    }
+    integerEnd := cursor;
+    var fractionStart := cursor;
+    var fractionEnd := cursor;
+    var floating := false;
+    if cursor + 1 < size and textAt(source, cursor) == "." and isDigit(textAt(source, cursor + 1)) {
+        floating = true;
+        cursor = cursor + 1;
+        fractionStart = cursor;
+        loop cursor < size and isDigit(textAt(source, cursor)) { cursor = cursor + 1; }
+        fractionEnd = cursor;
+    }
+    var exponent := 0;
+    var exponentMissingAt := -1;
+    if cursor < size and (textAt(source, cursor) == "e" or textAt(source, cursor) == "E") {
+        floating = true;
+        exponentAt := cursor;
+        cursor = cursor + 1;
+        var negativeExponent := false;
+        if cursor < size and (textAt(source, cursor) == "+" or textAt(source, cursor) == "-") {
+            negativeExponent = textAt(source, cursor) == "-";
+            cursor = cursor + 1;
+        }
+        exponentStart := cursor;
+        limit := size + 310;
+        loop cursor < size and isDigit(textAt(source, cursor)) {
+            digit := digitValue(textAt(source, cursor));
+            if exponent > (limit - digit) / 10 { exponent = limit; }
+            else { exponent = exponent * 10 + digit; }
+            cursor = cursor + 1;
+        }
+        if cursor == exponentStart { exponentMissingAt = exponentAt; }
+        if negativeExponent { exponent = -exponent; }
+    }
+    (next = cursor, integerEnd = integerEnd, fractionStart = fractionStart, fractionEnd = fractionEnd,
+        exponent = exponent, floating = floating, exponentMissingAt = exponentMissingAt, magnitude = magnitude, outsideInt = outsideInt)
 }
 /* Shared restricted front-end. Not a standalone program: a target manifest
    places the target literal encoders before this file and the emitter/driver
@@ -739,7 +818,7 @@ featureDoc := fn(name: String): String {
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
 unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
     failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
-        "; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only");
+        "; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only");
 }
 
 /** Returns the index of the previously declared function named `name`, or -1. */
@@ -1333,8 +1412,8 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     if isListKind(left.kind) {
         failAt(source, at, prefix, "cannot compare list values");
     }
-    if left.kind == "Int" {
-        if left.constant and right.constant {
+    if left.kind == "Int" or left.kind == "Float" {
+        if left.kind == "Int" and left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(boolLiteralCode(value), value, true, right.next);
         }
@@ -1354,8 +1433,8 @@ compareParsed := fn(source: String, at: Int, operator: String, left: Parsed, rig
     boolParsed(comparisonCode(operator, left.kind, left.code, right.code), false, false, right.next)
 }
 
-/** Parses a signed decimal literal, allowing whitespace after the sign. Returns target code, checked value and next position; exits 2 on malformed or out-of-range input. */
-parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
+/** Parses signed decimal Int/Float literals in one digit scan; finite/range admission happens after fractional/exponent classification. */
+parseNumber := fn(source: String, position: Int, prefix: String): Parsed {
     var cursor := position;
     var negative := false;
     ch := textAt(source, cursor);
@@ -1364,29 +1443,35 @@ parseInteger := fn(source: String, position: Int, prefix: String): Parsed {
         cursor = skipTrivia(source, cursor + 1, prefix);
     }
     start := cursor;
-    var magnitude := 0;
-    loop cursor < textLength(source) and isDigit(textAt(source, cursor)) {
+    afterDigit := cursor + 1;
+    following := if afterDigit < textLength(source) { textAt(source, afterDigit) } else { "" };
+    if isDigit(textAt(source, cursor)) and not isDigit(following) and following =!= "." and following =!= "e" and following =!= "E" {
+        /* A lone decimal digit is always an Int: avoid the general scanner record and range arithmetic on this hot path. */
         digit := digitValue(textAt(source, cursor));
-        if magnitude < (-9223372036854775808 + digit) / 10 {
-            failAt(source, position, prefix, "integer literal outside signed 64-bit range");
+        value := if negative { -digit } else { digit };
+        return intParsed(intLiteralCode(value, negative, textSlice(source, cursor, afterDigit)), value, true, afterDigit);
+    }
+    scanned := scanNumericLiteral(source, cursor);
+    cursor = scanned.next;
+    integerEnd := scanned.integerEnd;
+    if start == integerEnd { failAt(source, position, prefix, "expected a decimal numeric literal"); }
+    if scanned.exponentMissingAt >= 0 { failAt(source, scanned.exponentMissingAt, prefix, "expected exponent digits"); }
+    var digitStart := start;
+    loop digitStart + 1 < integerEnd and textAt(source, digitStart) == "0" { digitStart = digitStart + 1; }
+    if scanned.floating {
+        digits := textSlice(source, start, integerEnd) + textSlice(source, scanned.fractionStart, scanned.fractionEnd);
+        if not finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
+            failAt(source, position, prefix, "floating literal is not finite");
         }
-        magnitude = magnitude * 10 - digit;
-        cursor = cursor + 1;
+        raw := textSlice(source, digitStart, cursor);
+        code := floatLiteralCode(raw, negative);
+        return (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
-    if start == cursor {
-        failAt(source, position, prefix, "expected a decimal integer literal");
-    }
-    if not negative and magnitude == -9223372036854775808 {
+    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
         failAt(source, position, prefix, "integer literal outside signed 64-bit range");
     }
-    value := if negative { magnitude } else { 0 - magnitude };
-    raw := textSlice(source, start, cursor);
-    var digitStart := 0;
-    loop digitStart + 1 < textLength(raw) and textAt(raw, digitStart) == "0" {
-        digitStart = digitStart + 1;
-    }
-    digits := textSlice(raw, digitStart, textLength(raw));
-    code := intLiteralCode(value, negative, digits);
+    value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
+    code := intLiteralCode(value, negative, textSlice(source, digitStart, cursor));
     intParsed(code, value, true, cursor)
 }
 
@@ -1670,7 +1755,7 @@ parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Loc
 parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int): Parsed {
     var start := skipTrivia(source, position, prefix);
     if start >= textLength(source) {
-        failAt(source, start, prefix, "expected an Int, String or Bool expression");
+        failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
     var leaderStart := -1;
     var leaderText := "";
@@ -1753,14 +1838,16 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
     } else if ch == "+" or ch == "-" {
         after := skipTrivia(source, start + 1, prefix);
         if after < textLength(source) and isDigit(textAt(source, after)) {
-            left = parseInteger(source, start, prefix);
+            left = parseNumber(source, start, prefix);
         } else {
             operand := self(source, start + 1, prefix, locals, functions, params, currentName, "", 30);
-            if operand.kind =!= "Int" {
-                failAt(source, start, prefix, "unary " + ch + " requires an Int operand");
+            if operand.kind =!= "Int" and operand.kind =!= "Float" {
+                failAt(source, start, prefix, "unary " + ch + " requires an Int or Float operand");
             }
             code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
-            if operand.constant {
+            if operand.kind == "Float" {
+                left = (kind = "Float", code = code, intValue = 0, textValue = "", constant = false, next = operand.next);
+            } else if operand.constant {
                 folded := if ch == "-" { intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
                 if folded.ok { left = intParsed(code, folded.value, true, operand.next); }
                 else { left = intParsed(intNegateCode(operand.code, start), 0, false, operand.next); }
@@ -1770,7 +1857,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
         }
     } else if isDigit(ch) {
-        left = parseInteger(source, start, prefix);
+        left = parseNumber(source, start, prefix);
     } else if ch == "\"" {
         left = parseText(source, start, prefix);
     } else if ch == "[" {
@@ -2041,7 +2128,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
         }
     } else {
-        failAt(source, start, prefix, "expected an Int, String or Bool expression");
+        failAt(source, start, prefix, "expected an Int, Float, String or Bool expression");
     }
     loop true {
         postPosition := skipTrivia(source, left.next, prefix);
@@ -2155,6 +2242,8 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             } else {
                 left = textParsed(concatCode(left.code, right.code), "", false, right.next);
             }
+        } else if left.kind == "Float" or right.kind == "Float" {
+            failAt(source, operatorPosition, prefix, "operator " + operator.text + " does not yet support Float operands");
         } else if isListKind(left.kind) or isListKind(right.kind) {
             failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for list values");
         } else if operator.text == "+" {
@@ -3012,7 +3101,7 @@ cCall := fn(kind: String, code: String): String {
     if kind == "Unit" {
         "printf(\"Unit\")"
     } else if kind == "Float" {
-        "printf(\"%g\", (double)(" + code + "))"
+        "lt_print_float((double)(" + code + "))"
     } else if kind == "Int" {
         "printf(\"%\" PRId64, (int64_t)(" + code + "))"
     } else if kind == "Bool" {
@@ -3122,6 +3211,97 @@ emitArithmeticTemporaries := fn(items: Items): Unit {
     }
 }
 
+/** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
+emitFloatOutputHelpers := fn(): Unit {
+    outputLine("/* Split printf's positive finite decimal into significant digits and its first-digit exponent. */");
+    outputLine("static int lt_float_digits(const char *text, char *digits, int *exponent) {");
+    outputLine("    int size = 0, before = 0, dot = 0;");
+    outputLine("    const char *at = text;");
+    outputLine("    while (*at && *at != 'e' && *at != 'E') {");
+    outputLine("        if (*at == '.') dot = 1;");
+    outputLine("        else { digits[size++] = *at; if (!dot) before++; }");
+    outputLine("        at++;");
+    outputLine("    }");
+    outputLine("    int power = *at ? (int)strtol(at + 1, NULL, 10) : 0;");
+    outputLine("    int leading = 0;");
+    outputLine("    while (leading + 1 < size && digits[leading] == '0') leading++;");
+    outputLine("    memmove(digits, digits + leading, (size_t)(size - leading));");
+    outputLine("    size -= leading;");
+    outputLine("    digits[size] = '\\0';");
+    outputLine("    *exponent = before - leading - 1 + power;");
+    outputLine("    return size;");
+    outputLine("}");
+    outputLine("/* Move to the adjacent positive decimal having at most precision significant digits. */");
+    outputLine("static void lt_float_neighbor(char *digits, int precision, int *exponent, int direction) {");
+    outputLine("    int at = precision - 1;");
+    outputLine("    if (direction > 0) {");
+    outputLine("        while (at >= 0 && digits[at] == '9') digits[at--] = '0';");
+    outputLine("        if (at >= 0) digits[at]++;");
+    outputLine("        else { digits[0] = '1'; (*exponent)++; }");
+    outputLine("    } else {");
+    outputLine("        while (at >= 0 && digits[at] == '0') digits[at--] = '9';");
+    outputLine("        if (at >= 0) digits[at]--;");
+    outputLine("        if (digits[0] == '0') {");
+    outputLine("            for (int i = 0; i < precision; i++) digits[i] = '9';");
+    outputLine("            (*exponent)--;");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("}");
+    outputLine("/* Find the least significant-digit count that round-trips, including asymmetric boundary candidates. */");
+    outputLine("static int lt_float_format(double value, char *out) {");
+    outputLine("    if (value == 0.0) { strcpy(out, \"0\"); return 1; }");
+    outputLine("    int negative = value < 0.0;");
+    outputLine("    double positive = negative ? -value : value;");
+    outputLine("    char digits[32], nearest[64], adjacent[64];");
+    outputLine("    int size = 0, exponent = 0, found = 0;");
+    outputLine("    for (int precision = 1; precision <= 17 && !found; precision++) {");
+    outputLine("        if (snprintf(nearest, sizeof nearest, \"%.*g\", precision, positive) < 0) return 0;");
+    outputLine("        size = lt_float_digits(nearest, digits, &exponent);");
+    outputLine("        if (strtod(nearest, NULL) == positive) { found = 1; break; }");
+    outputLine("        while (size < precision) digits[size++] = '0';");
+    outputLine("        digits[size] = '\\0';");
+    outputLine("        for (int direction = -1; direction <= 1 && !found; direction += 2) {");
+    outputLine("            char candidate[32]; memcpy(candidate, digits, (size_t)size + 1);");
+    outputLine("            int power = exponent;");
+    outputLine("            lt_float_neighbor(candidate, precision, &power, direction);");
+    outputLine("            if (snprintf(adjacent, sizeof adjacent, \"%se%d\", candidate, power - precision + 1) < 0) return 0;");
+    outputLine("            if (strtod(adjacent, NULL) == positive) {");
+    outputLine("                memcpy(digits, candidate, (size_t)size + 1); exponent = power; found = 1;");
+    outputLine("            }");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("    if (!found) return 0;");
+    outputLine("    while (size > 1 && digits[size - 1] == '0') size--;");
+    outputLine("    int at = 0;");
+    outputLine("    if (negative) out[at++] = '-';");
+    outputLine("    if (exponent >= 21 || exponent < -6) {");
+    outputLine("        out[at++] = digits[0];");
+    outputLine("        if (size > 1) { out[at++] = '.'; memcpy(out + at, digits + 1, (size_t)size - 1); at += size - 1; }");
+    outputLine("        out[at++] = 'e';");
+    outputLine("        if (exponent >= 0) out[at++] = '+';");
+    outputLine("        int length = snprintf(out + at, 64u - (size_t)at, \"%d\", exponent);");
+    outputLine("        if (length < 0) return 0;");
+    outputLine("        at += length;");
+    outputLine("    } else if (exponent < 0) {");
+    outputLine("        out[at++] = '0'; out[at++] = '.';");
+    outputLine("        for (int i = -1; i > exponent; i--) out[at++] = '0';");
+    outputLine("        memcpy(out + at, digits, (size_t)size); at += size;");
+    outputLine("    } else {");
+    outputLine("        for (int i = 0; i <= exponent || i < size; i++) {");
+    outputLine("            if (i == exponent + 1) out[at++] = '.';");
+    outputLine("            out[at++] = i < size ? digits[i] : '0';");
+    outputLine("        }");
+    outputLine("    }");
+    outputLine("    out[at] = '\\0';");
+    outputLine("    return 1;");
+    outputLine("}");
+    outputLine("static int lt_print_float(double value) {");
+    outputLine("    char text[64];");
+    outputLine("    if (!lt_float_format(value, text)) return -1;");
+    outputLine("    return printf(\"%s\", text);");
+    outputLine("}");
+}
+
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
 usesStringConcat := fn(calls: String): Bool {
     usesIntHelper(calls, "lite_concat(")
@@ -3214,7 +3394,12 @@ outputWriteCode := fn(kind: String, code: String, indent: String): String {
 /** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     calls := targetHelperCalls(items);
+    var floatOutput := false;
+    var floatValues := usesIntHelper(calls, "strtod(");
     loop items as item {
+        if item.kind == "Float" { floatOutput = true; }
+        if item.kind == "Float" or item.kind == "LocalFloat" or item.kind == "VarFloat" or item.kind == "AssignFloat" or
+            (item.kind == "Discard" and item.name == "Float") { floatValues = true; }
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
         }
@@ -3239,10 +3424,15 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
         }
     }
     outputLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) { outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues { outputLine("#include <stdlib.h>"); }
     outputLine("#include <inttypes.h>");
     outputLine("#include <stdbool.h>");
     outputLine("#include <string.h>");
+    if floatValues {
+        outputLine("#include <float.h>");
+        outputLine("_Static_assert(FLT_RADIX == 2 && DBL_MANT_DIG == 53 && DBL_MAX_EXP == 1024, \"Float requires binary64 double\");");
+    }
+    if floatOutput { emitFloatOutputHelpers(); }
     emitIntArithmeticHelpers(calls, source, prefix);
     emitIntDivisionHelpers(calls);
     if usesStringConcat(calls) { emitStringConcatHelper(); }

@@ -23,7 +23,7 @@ SYMBOL_KIND_VALUE := fn(): String { "value" }
 
 /** True for a built-in type name accepted by the bootstrap subset. */
 isBuiltinType := fn(name: String): Bool {
-    name == "Int" or name == "String" or name == "Bool" or name == "Unit" or name == "List"
+    name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" or name == "List"
 }
 
 /** True when a read-only text list contains `target`. */
@@ -55,9 +55,9 @@ findLocalAtDepth := fn(locals: Locals, name: String, depth: Int): Int {
     -1
 }
 
-/** True for the four built-in scalar type names. */
+/** True for the admitted built-in scalar type names. */
 isScalarType := fn(typeText: String): Bool {
-    typeText == "Int" or typeText == "String" or typeText == "Bool" or typeText == "Unit"
+    typeText == "Int" or typeText == "Float" or typeText == "String" or typeText == "Bool" or typeText == "Unit"
 }
 
 /** Returns `List<T>`'s element type, or empty text when the type is not a list. */
@@ -165,6 +165,7 @@ firstOperandType := fn(symbols: Symbols, locals: Locals, text: String): String {
         token := tokenAt(tokens, cursor);
         if token.kind == TOKEN_KIND_STRING() { return "String"; }
         if token.kind == TOKEN_KIND_INT() { return "Int"; }
+        if token.kind == TOKEN_KIND_FLOAT() { return "Float"; }
         if token.kind == TOKEN_KIND_BOOL() { return "Bool"; }
         if token.kind == TOKEN_KIND_NAME() {
             index := findLocal(locals, token.text);
@@ -239,8 +240,16 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
     if text == "true" or text == "false" { return "Bool"; }
     if startsWithAt(text, 0, "\"") { return "String"; }
     first := textAt(text, 0);
-    if isDigit(first) { return "Int"; }
-    if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") { return "Int"; }
+    if isDigit(first) {
+        token := tokenAt(tokenize(text, ""), 0);
+        if token.kind == TOKEN_KIND_FLOAT() { return "Float"; }
+        return "Int";
+    }
+    if startsWithAt(text, 0, "(-") or startsWithAt(text, 0, "(+") {
+        operand := firstOperandType(symbols, locals, text);
+        if operand == "Float" { return "Float"; }
+        return "Int";
+    }
     if startsWithAt(text, 0, "not ") { return "Bool"; }
     if startsWithAt(text, 0, "[") {
         if size == 2 { return ""; }
@@ -324,6 +333,7 @@ simpleType := fn(symbols: Symbols, locals: Locals, text: String): String {
             }
             if name == "inputAll" or name == "textAt" or name == "textSlice" { return "String"; }
             if name == "textLength" { return "Int"; }
+            if name == "inputFloat" { return "Float"; }
         }
     }
     ""
