@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Weighted average of three scores.",
-  "append": "report(final_grade);",
+  "append": "outputLine(final_grade);",
   "cases": [
     {
       "name": "observed-values",

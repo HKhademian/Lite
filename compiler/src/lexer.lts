@@ -253,7 +253,7 @@ dumpToken := fn(token: Token): String {
 /** Reports every token in order, one per line. */
 dumpTokens := fn(tokens: Tokens): Unit {
     loop tokens as token {
-        report(dumpToken(token));
+        outputLine(dumpToken(token));
     }
 }
 

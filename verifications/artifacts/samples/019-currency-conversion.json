@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Currency conversion rounded to target cents.",
-  "append": "report(target_cents);",
+  "append": "outputLine(target_cents);",
   "cases": [
     {
       "name": "observed-values",

@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/003-sum-positive.lts",
-    "hash": "sha256:f317131d8546eda39dbfcef76d5a6aa0e652a4e377703cfcb1937dcf7d48db2d"
+    "hash": "sha256:4f4b8b9316afe4d58673fb5e4e94492fa7b7ba80558acc033f73d478cf73ed2f"
   },
   "features": [
     "io.input",

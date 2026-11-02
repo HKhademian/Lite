@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Approximate circumference and area of a circle.",
-  "append": "report(circumference); report(area);",
+  "append": "outputLine(circumference); outputLine(area);",
   "cases": [
     {
       "name": "observed-values",

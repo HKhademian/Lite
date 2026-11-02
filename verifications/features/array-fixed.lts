@@ -1,2 +1,2 @@
 values := [10, 20, 30];
-report(values[0] + values[2]);
+outputLine(values[0] + values[2]);

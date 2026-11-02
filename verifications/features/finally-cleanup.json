@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "finally-cleanup.lts",
-    "hash": "sha256:3d99dc5bd76ee895dda0776f7527c1593e75769e2c521557e33f423f0c5afb23"
+    "hash": "sha256:c8eb48c70a9d0077a9ca543f8df44d2d5f436d8c07e14a503750c9989f3090c6"
   },
   "features": [
     "finally.cleanup"

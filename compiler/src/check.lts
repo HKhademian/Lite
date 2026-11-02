@@ -874,6 +874,6 @@ dumpSymbol := fn(symbol: Symbol): String {
 /** Reports collected symbols in source order, one per line. */
 dumpSymbols := fn(symbols: Symbols): Unit {
     loop symbols as symbol {
-        report(dumpSymbol(symbol));
+        outputLine(dumpSymbol(symbol));
     }
 }

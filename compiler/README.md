@@ -9,6 +9,17 @@ run/check still use T00 during the [owner-approved transition](transition-plan.m
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.
 
+The [temporary I/O contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+now supplies optional String prompts on inputAll/inputLine/inputInt/inputFloat
+and replaces the report builtin with output and outputLine. The former adds no
+newline; the latter always adds one, including with zero arguments. Generated TS
+supports scalar/Unit, flat named-tuple and List display; inputFloat results can
+be stored, passed and displayed, while wider Float expressions and fixed-array
+contracts remain separate parity work. Process adapters stream output through an
+optional main callback, preserving earlier output across faults. Calling main()
+without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
+records the current compiler artifacts.
+
 The [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
 and sample, and source-file coverage. It includes exact-source boundary probes
@@ -55,7 +66,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 53 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 55 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -107,8 +118,8 @@ compiler slice first. The remaining stage-0 versus generated gap is tracked in
 | [`ts-emitter.lts`](ts-emitter.lts) | Generated compatibility bundle for the TS manifest |
 | [`c-emitter.lts`](c-emitter.lts) | Generated compatibility bundle for the C manifest |
 | [`runtime/ts/runtime.ts`](runtime/ts/runtime.ts) | P6 TS runtime: checked Int64, code-point text, list copies, faults and exit |
-| [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `report(42);` |
-| [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `report(42);` |
+| [`generated/report-42.ts`](generated/report-42.ts) | Checked-in TS reference for `outputLine(42);` |
+| [`generated/report-42.c`](generated/report-42.c) | Checked-in C reference for `outputLine(42);` |
 | [`generated/run-report.ts`](generated/run-report.ts) | Visible Node adapter for the TS reference |
 | [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) | P0 emitted-artifact hashes for the 50 program cases |
 | [`scripts/run-ts-artifact.ts`](scripts/run-ts-artifact.ts) | Strict-typechecks and runs one emitted TS artifact with fixed stdin and no harness timeout |
@@ -165,7 +176,7 @@ accept the target as a bare positional word: `./ltc ts program.lts`.
 
 The compiler source is still restricted, but the accepted surface now includes
 Int/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
-assignment), `report(...)`, action `if`/`else if`/`else`, Boolean or unconditional `loop`,
+assignment), `outputLine(...)`, action `if`/`else if`/`else`, Boolean or unconditional `loop`,
 transparent top-level type aliases (`Name := type Type;`), top-level
 functions with Int/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
 results, positional calls, recursion/`self` and `return`. Aliases resolve to
@@ -182,7 +193,7 @@ support `.label` reads. Total value
 expressions are accepted in initializers, assignments, arguments, returns and
 function-tail positions; every branch must produce one expression of the same
 kind and a final `else` is required. Unnamed tuples, nested tuples, nested lists,
-destructuring, spread, list reporting/equality and arrays remain rejected. Constant-only expressions
+destructuring, spread, list equality and arrays remain rejected. Constant-only expressions
 keep their compile-time folding and range/division diagnostics; runtime
 expressions lower to target control flow and a runtime report accumulator for TS
 or direct `printf` calls for C. Dynamic `/ % :/ :%` and dynamic String
@@ -199,7 +210,8 @@ diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;
 list traversal lowers to a TS `for...of` loop and the C path rejects it clearly.
 List copies are emitted on declaration, assignment, argument passing and return,
 so list mutation cannot share state.
-`match`, runtime input and self-rebuild remain outside this slice. Reserved
+`match` and native C input remain outside this admitted surface. Current TS
+self-rebuild and temporary input helpers are described above. Reserved
 features outside the subset are rejected by name with status 2.
 
 Diagnostics are source-positioned as `name:line:column: message` (or
@@ -209,7 +221,7 @@ reserved features name the feature, point to its documentation, and repeat the
 accepted subset, for example:
 
 ```text
-verifications/features/loop-metadata.lts:1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only
+verifications/features/loop-metadata.lts:1:6: unsupported feature "loop": see docs/loops.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 ```
 
 The frontend still scans offsets directly; a separate reusable token stream is

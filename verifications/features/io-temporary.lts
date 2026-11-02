@@ -1,0 +1,8 @@
+output(); outputLine();
+line := inputLine("Line: ");
+number := inputInt("Int: ");
+fraction := inputFloat("Float: ");
+rest := inputAll("All: ");
+output("values:", line, number, fraction); outputLine();
+outputLine([1, 2], (left = number, right = line), true);
+outputLine(rest);

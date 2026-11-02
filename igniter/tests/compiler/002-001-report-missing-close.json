@@ -2,7 +2,7 @@
   "name": "report-missing-close",
   "source": {
     "file": "002-001-report-missing-close.lts",
-    "hash": "sha256:a614e5bb0dba7c93f8f60409f981e22f4611b1c1c75b83ebad3ea5ddb2bc6382"
+    "hash": "sha256:f6e43a79efd48a000ebbd4ad8ddcd151e7c54954722c0430d94c81dd44172d8e"
   },
   "cases": [
     {

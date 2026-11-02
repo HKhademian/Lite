@@ -1,1 +1,1 @@
-report(1); report(2); report(3);
+outputLine(1); outputLine(2); outputLine(3);

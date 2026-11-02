@@ -2,7 +2,7 @@
   "name": "local-hygiene-string",
   "source": {
     "file": "001-006-local-hygiene-string.lts",
-    "hash": "sha256:ccfe2193e6dec3fd878b8879df5b6ddd64f5117ec93c4cab14100247a23a6409"
+    "hash": "sha256:e9a8acd8af695a3f9b72ed9c4d1e7a51c30bac02a7318148605f0e1b9b06f627"
   },
   "cases": [
     {

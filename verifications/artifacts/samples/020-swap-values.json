@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Swaps two var bindings through a temporary; verification reports both.",
-  "append": "report(first_box); report(second_box);",
+  "append": "outputLine(first_box); outputLine(second_box);",
   "cases": [
     {
       "name": "swapped",

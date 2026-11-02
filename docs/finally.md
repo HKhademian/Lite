@@ -93,7 +93,7 @@ run := fn(mode: Int, path: String) {
         ({
             /* One operation, its recovery, and its cleanup. */
             quantity := read_quantity(path) else(failure) {
-                report(failure);
+                outputLine(failure);
                 1
             } finally {
                 finish_quantity_read()

@@ -1,1 +1,1 @@
-report("bad \q");
+outputLine("bad \q");

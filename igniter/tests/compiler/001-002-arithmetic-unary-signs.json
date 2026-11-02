@@ -2,7 +2,7 @@
   "name": "arithmetic-unary-signs",
   "source": {
     "file": "001-002-arithmetic-unary-signs.lts",
-    "hash": "sha256:02bcce8f5a8c03cdf9e924b45c14a6306884f886d0e9b0b6869847b2f4f5b215"
+    "hash": "sha256:a817f21bc161e609f6c43a976bf47fdac62f2692dd40d13a92f28f0c32e48a14"
   },
   "cases": [
     {

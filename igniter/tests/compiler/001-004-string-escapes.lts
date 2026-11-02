@@ -1,1 +1,1 @@
-report("quote: \" slash: \\ tab:\t end");
+outputLine("quote: \" slash: \\ tab:\t end");

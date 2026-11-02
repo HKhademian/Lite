@@ -2,7 +2,7 @@
   "name": "decimal-literal",
   "source": {
     "file": "002-001-decimal-literal.lts",
-    "hash": "sha256:86f21c639f4cb6a360d607c10154c4a2487dcd118760a4713cb1b2d4fa037884"
+    "hash": "sha256:56a8fa4107b78604b8fb439df19ca7794276ae6b2ae7ef53ec076032216339c5"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:9: expected )\n",
-        "hash": "sha256:c0300ea2edeaf526122441942212b4a6df0b01c9029991e226010c32ef7b71a1"
+        "text": "1:13: expected )\n",
+        "hash": "sha256:07f3197a60206bc2d8f07f75ee48539fc30dac87aec2403e338bbc3430100561"
       },
       "exitCode": 2
     }

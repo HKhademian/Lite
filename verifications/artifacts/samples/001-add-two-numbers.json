@@ -9,8 +9,8 @@
     "int.arithmetic",
     "scope.locals"
   ],
-  "description": "Adds two supplied baskets; the verification appends report(apples).",
-  "append": "report(apples);",
+  "description": "Adds two supplied baskets; the verification appends outputLine(apples).",
+  "append": "outputLine(apples);",
   "cases": [
     {
       "name": "apples",

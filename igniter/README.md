@@ -19,11 +19,16 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 8
+code-point copies. The current test suite has 236 interpreter groups, 11
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
 argument evaluation; see the [report-order refresh](../compiler/parity.md#report-order-seed-refresh).
+
+The [current temporary helper contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+uses output/outputLine and optional input prompts. The report builtin is removed;
+maintained Lite calls use outputLine. T00 output now includes array/list display;
+generated TS implements the admitted forms and the four input helpers.
 
 ## Run
 
@@ -247,7 +252,7 @@ construct's result. A faulting cleanup currently replaces a pending exit.
 ```text
 double := fn(n: Int): Int { n * 2 }
 quadruple := fn(n: Int): Int { double(double(n)) }
-report(quadruple(3));
+outputLine(quadruple(3));
 ```
 
 Parameters and results use explicit scalar, flat tuple or supported fixed-array annotations:
@@ -319,8 +324,8 @@ makeToken := fn(kind: String, text: String): (:String, :String) {
 }
 token := makeToken("number", "12");
 (kind, text) := token;
-report(token.0);
-report(text);
+outputLine(token.0);
+outputLine(text);
 ```
 
 Construct flat unnamed tuples of existing scalar values, evaluating components
@@ -360,7 +365,7 @@ The selected named-field forms now work for flat fully named scalar tuples:
 kind := "number";
 text := "12";
 token := (= kind, = text);
-report(token.kind, token.text);
+outputLine(token.kind, token.text);
 ```
 
 The shorthand =name is exactly label = name: token above is equivalent to
@@ -419,8 +424,8 @@ values: mut List<Int> = [1, 2];
 saved := values;
 push_front(mut values, 0);
 push_back(mut values, 3);
-report(pop_front(mut values), pop_back(mut values));
-loop saved as value { report(value); }
+outputLine(pop_front(mut values), pop_back(mut values));
+loop saved as value { outputLine(value); }
 ```
 
 Output is 0 3, then 1, then 2 on separate lines. A typed empty literal such as
@@ -466,10 +471,10 @@ scalars or flat scalar tuples, including named and mixed tuples. For example:
 ```text
 values := [10, 20, 30];
 loop values as value {
-    report(value);
+    outputLine(value);
 }
 index := inputInt("Index: ");
-report(values[index]);
+outputLine(values[index]);
 ```
 
 All literal elements evaluate once in written order before the completed array
@@ -632,7 +637,7 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   line without LF/CRLF, including a valid empty line or nonempty final EOF line.
   Thus `inputInt()` followed by `inputLine()` can return empty text at a newline.
   EOF without a requested value faults; there is no retry or fabricated value.
-- `report(value, ...)` accepts one or more ordinary scalar/Unit arguments and
+- `outputLine(value, ...)` accepts one or more ordinary scalar/Unit arguments and
   flat fixed tuples. Evaluate them once left to right, then join their displayed
   values with one space and append one newline on stdout. An optional first
   String such as "sum:" is just another value, with no special detection or
@@ -642,7 +647,7 @@ Lite lexer, an arithmetic parser/evaluator, or a self-hosted compiler.
   one-component tuple, `(1, 2)` for plain components, and
   `(1, left=2, right=3, 4)` with `label=value` for named components. Unit stays
   `Unit`, so `()` in value position displays as `Unit`. Array/list/callable
-  values, report(), report(...tuple) and reportError(tuple) remain unsupported.
+  values, outputLine(), outputLine(...tuple) and reportError(tuple) remain unsupported.
   `reportError(value)` keeps its one-value stderr/report-only behavior, and
   inputFloat/inputLine/inputWord retain their zero-argument forms.
   Strings are shown as text, Unit as `Unit`, floats using Number's conversion.

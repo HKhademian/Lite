@@ -2,7 +2,7 @@
   "name": "report-int-min",
   "source": {
     "file": "001-001-report-int-min.lts",
-    "hash": "sha256:a56433725f80b8be41d3e91477922560897a33615000decc5f9010741e5b08c2"
+    "hash": "sha256:0fe2f266ca75bea0e00fbf49796d5e211376d30f89e810979c7cb57b9c5ee5a7"
   },
   "cases": [
     {

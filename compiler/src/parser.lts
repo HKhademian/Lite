@@ -594,6 +594,6 @@ dumpNode := fn(node: Node): String {
 /** Reports parsed nodes in source order, one per line. */
 dumpNodes := fn(nodes: Nodes): Unit {
     loop nodes as node {
-        report(dumpNode(node));
+        outputLine(dumpNode(node));
     }
 }

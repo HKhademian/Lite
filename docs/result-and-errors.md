@@ -108,7 +108,7 @@ Stored Result patterns explicitly select the lowercase outcome cases `.ok(value)
 ```text
 match attempt {
     .ok(value) { use_value(value) }
-    .err(error) { report(error) }
+    .err(error) { outputLine(error) }
 }
 ```
 
@@ -118,7 +118,7 @@ Match-arm and chains can inspect fields or match additional values after an outc
 
 ```text
 if .err(error) := validate_age(text_age) {
-    report(error)
+    outputLine(error)
 }
 ```
 
@@ -228,7 +228,7 @@ An earlier candidate requested an arithmetic outcome through an explicit expecte
 attempt: Int ! ArithmeticError = a + b;
 
 if .err(error) := attempt {
-    report(error)
+    outputLine(error)
 }
 ```
 
@@ -242,7 +242,7 @@ An attached `else` handles the selected Result outcome. Its error receiver is op
 
 ```text
 user := load_user(id) else(error) {
-    report(error);
+    outputLine(error);
     guest_user()
 }
 ```

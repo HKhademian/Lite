@@ -1,7 +1,7 @@
 value := 7;
 if value > 5 and value < 10 {
-    report("inside");
+    outputLine("inside");
 } else {
-    report("outside");
+    outputLine("outside");
 }
-report(if value < 10 { "single" } else { "multiple" });
+outputLine(if value < 10 { "single" } else { "multiple" });

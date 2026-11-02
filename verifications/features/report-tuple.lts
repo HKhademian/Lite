@@ -1,4 +1,4 @@
-report("a tuple", (), (1,), (1, 2), (1, left=2, right=3, 4));
+outputLine("a tuple", (), (1,), (1, 2), (1, left=2, right=3, 4));
 stored := (1, 2);
 named: (left: Int, right: Int) = stored;
-report(named);
+outputLine(named);

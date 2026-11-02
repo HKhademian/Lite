@@ -34,8 +34,8 @@ tokenize := fn(line: String): List<(kind: String, text: String)> {
     tokens
 }
 
-report("Arithmetic expression:");
+outputLine("Arithmetic expression:");
 tokens := tokenize(inputLine());
 loop tokens as token {
-    report(token.kind, token.text);
+    outputLine(token.kind, token.text);
 }

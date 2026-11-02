@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/007-prompts-and-report.lts",
-    "hash": "sha256:7597da6d9992cd08a92421fc777e5ea3b2c1b81cd85f2ed7479d471f83641c80"
+    "hash": "sha256:5bd4d43858bf414cf5595316d838b4a6bdd6d07b36f55c561eda1ea90c708439"
   },
   "features": [
     "io.input",

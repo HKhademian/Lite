@@ -1,1 +1,1 @@
-report(1, "two", 3);
+outputLine(1, "two", 3);

@@ -225,7 +225,7 @@ Returning age constructs success implicitly. Stored outcomes are ordinary data u
 
 ```text
 age := validate_age(inputAge) else(error) {
-    report(error);
+    outputLine(error);
     0
 }
 
@@ -287,7 +287,7 @@ describe_student := fn(id: Int): String {
         .ok(.Some) { "Student needs review" }
         .ok(.None) { "Student not found" }
         .err(error) {
-            report(error);
+            outputLine(error);
             "Student unavailable"
         }
     }

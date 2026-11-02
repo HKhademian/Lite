@@ -2,7 +2,7 @@
   "name": "arithmetic-int-min",
   "source": {
     "file": "001-002-arithmetic-int-min.lts",
-    "hash": "sha256:e8b931b0f05d3f4f91583f1f8ca4eca3998c269e788479be691725a395cbbc52"
+    "hash": "sha256:d2fd17863d754b13bae84baa58a9e80e8e7e64785de45d9cd9bfb5852a2ae12f"
   },
   "cases": [
     {

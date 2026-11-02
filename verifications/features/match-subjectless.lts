@@ -4,8 +4,8 @@ label := match {
   x == 2 { "two" }
   _ { "other" }
 }
-report(label);
+outputLine(label);
 match {
-  false { report("bad"); }
-  _ { report("ok"); }
+  false { outputLine("bad"); }
+  _ { outputLine("ok"); }
 }

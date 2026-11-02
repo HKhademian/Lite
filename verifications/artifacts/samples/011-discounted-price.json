@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Percentage discount rounded to cents.",
-  "append": "report(discount_cents); report(pay_cents);",
+  "append": "outputLine(discount_cents); outputLine(pay_cents);",
   "cases": [
     {
       "name": "observed-values",

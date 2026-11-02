@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "num-power.lts",
-    "hash": "sha256:4ed8ea19bfb8eb6e1622544457aa1cbbf8cf571d7f9b065b068135a66a373a1c"
+    "hash": "sha256:c6eab6250aff98ffceea45c9976e944eceda3f7f9f4c0159e0026d72f728fae1"
   },
   "features": [
     "num.power"

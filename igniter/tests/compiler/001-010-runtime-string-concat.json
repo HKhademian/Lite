@@ -2,7 +2,7 @@
   "name": "runtime-string-concat",
   "source": {
     "file": "001-010-runtime-string-concat.lts",
-    "hash": "sha256:af4839f4a0227af40fd5484729064a2031eaa78e5ffe7a131352b122d0b6d840"
+    "hash": "sha256:c4df1f28d1c04cec3a94107cffddee73cbd6eb6d0c6851416ecc369b9a7f22ab"
   },
   "cases": [
     {

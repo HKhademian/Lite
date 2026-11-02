@@ -11,7 +11,7 @@
     "scope.locals"
   ],
   "description": "Whole-cent bill split with remainder.",
-  "append": "report(share_cents); report(leftover_cents);",
+  "append": "outputLine(share_cents); outputLine(leftover_cents);",
   "cases": [
     {
       "name": "observed-values",

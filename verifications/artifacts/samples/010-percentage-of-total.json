@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Completed percentage and a percentage of the total.",
-  "append": "report(percent_done); report(tasks);",
+  "append": "outputLine(percent_done); outputLine(tasks);",
   "cases": [
     {
       "name": "observed-values",

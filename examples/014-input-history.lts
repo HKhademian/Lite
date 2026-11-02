@@ -4,10 +4,10 @@ loop {
     if number == 0 { break; }
     push_back(mut numbers, number);
 }
-report("entered:");
+outputLine("entered:");
 var total := 0;
 loop numbers as number {
-    report(number);
+    outputLine(number);
     total = total + number;
 }
-report("sum:", total);
+outputLine("sum:", total);

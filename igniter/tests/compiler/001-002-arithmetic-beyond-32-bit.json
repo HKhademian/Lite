@@ -2,7 +2,7 @@
   "name": "arithmetic-beyond-32-bit",
   "source": {
     "file": "001-002-arithmetic-beyond-32-bit.lts",
-    "hash": "sha256:e549955541397a519dc8615f87027aafcb5a8920fb3008b56825ae63f32f7363"
+    "hash": "sha256:655d3c44ac329e77759b2390d61f2a5dc680af7dbc20600ad247064ea010d381"
   },
   "cases": [
     {

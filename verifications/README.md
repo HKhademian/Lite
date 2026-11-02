@@ -9,7 +9,7 @@ The same runner executes both:
   or edge condition and carry a short guideline.
 - **Artifact cases** verify that a polished example/sample/showcase still runs
   and produces its documented streams. Samples may append observation calls via
-  `append` instead of putting `report` calls into teaching material.
+  `append` instead of putting `outputLine` calls into teaching material.
 
 ## Layout
 
@@ -67,7 +67,8 @@ compiler fixtures.
   samples whose teaching bodies print nothing.
 - `targets` — optional execution targets: `igniter` (default), `ts`, `c`.
   Compiler targets are admitted only for sources inside the restricted compiler
-  subset and cannot use stdin or script arguments. TS emission uses the current
+  subset. TS runs as a strictly checked child artifact with fixed stdin and script
+  arguments; the current native verification lane still rejects these inputs. TS emission uses the current
   T11-derived compiler; C emission uses a TS-hosted C emitter built by T11 during
   the [transition](../compiler/transition-plan.md). Verification cache identity includes
   both generated seeds, the host adapter and both assembled compiler sources, so changing them
@@ -147,17 +148,19 @@ Target budgets:
 | `lite verify --all --shard i/n` | one CI shard of the full matrix | bounded |
 
 At 10k+ cases, the default local lanes must not compile every native case.
-Feature/artifact verification remains in-process, full native coverage is
+T00 feature/artifact verification remains in-process; generated TS uses isolated
+child processes with strict artifact checks. Full native coverage is
 sharded or curated, and caches make unchanged work nearly free.
 
 ## Coverage status
 
-- Features: 36 registered, 36 cases.
+- Features: 37 registered, 37 case manifests.
 - Examples: 19 of 19 manifest-covered.
 - Samples: 20 of 20 manifest-covered.
 - Showcases: reserved, no manifests yet.
-- Scenarios: 75 (36 feature + 19 example + 20 sample); 91 target executions
-  because eight feature cases run through all three targets.
+- Scenarios: 77 (38 feature + 19 example + 20 sample); 95 target executions.
+  Eight original feature cases use all three targets; the new temporary I/O
+  feature supplies two scenarios on T00 and generated TS.
 
 Coverage is now a blocking gate: `./lite verify --coverage` exits nonzero if any
 feature, example or sample lacks a manifest. Showcases are allowed to remain

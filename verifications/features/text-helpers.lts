@@ -1,4 +1,4 @@
 text := "abc";
-report(textLength(text));
-report(textAt(text, 1));
-report(textSlice(text, 1, 3));
+outputLine(textLength(text));
+outputLine(textAt(text, 1));
+outputLine(textSlice(text, 1, 3));

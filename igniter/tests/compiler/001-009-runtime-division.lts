@@ -1,2 +1,2 @@
 var x := 4;
-report(x / 2);
+outputLine(x / 2);

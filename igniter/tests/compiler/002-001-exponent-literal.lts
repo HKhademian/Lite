@@ -1,1 +1,1 @@
-report(1e2);
+outputLine(1e2);

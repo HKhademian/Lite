@@ -2,7 +2,7 @@
   "name": "int-comparisons-if-else",
   "source": {
     "file": "001-007-int-comparisons-if-else.lts",
-    "hash": "sha256:46b9f0310c5ab5a56dd8e1fa7e7ef0e52fa4c5f5971508996e9567b13bdf9491"
+    "hash": "sha256:d226bb96e932c5f8992294de5d610eca59b416abddcc5690460fb0189c98664d"
   },
   "cases": [
     {

@@ -71,7 +71,7 @@ try {
   const runnerPath = join(directory, 'runner.ts');
   writeFileSync(artifactPath, readFileSync(artifact));
   writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-  writeFileSync(runnerPath, "import { main } from './artifact.ts';\nprocess.stdout.write(main());\n");
+  writeFileSync(runnerPath, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
 
   if (checked) {
     const config = checkOptions();

@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Meters converted to kilometers and centimeters.",
-  "append": "report(kilometers); report(centimeters);",
+  "append": "outputLine(kilometers); outputLine(centimeters);",
   "cases": [
     {
       "name": "observed-values",

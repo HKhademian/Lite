@@ -36,5 +36,5 @@ checkBool := fn(name: String, expected: Bool, actual: Bool): Unit {
 
 /** Reports a successful test entry as `name: ok`. */
 done := fn(name: String): Unit {
-    report(name + ": ok");
+    outputLine(name + ": ok");
 }

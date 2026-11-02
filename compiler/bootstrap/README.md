@@ -1,19 +1,20 @@
 # Generated bootstrap seeds
 
-`T11.ts` is the current generated compiler recorded in the
-[parity ledger](../parity.md#report-order-seed-refresh), not handwritten compiler logic.
-Its source/builder revision and SHA-256 identities are in [`seed.ts`](seed.ts).
-For the report-order source snapshot, three self-compilation generations are
-byte-identical: 253122 bytes, SHA-256 `49ac81d6…`. Original seed identities remain in the ledger.
-The native C fixed point is still pending.
+`T11.ts` is the current generated compiler from the owner-approved
+[I/O migration](../parity.md#temporary-io-migration). Its exact source/builder
+identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
+273040 bytes, SHA-256 `fa134de2…`. The refresh starts from the
+previous generated seed and uses a temporary source-call spelling adapter; it
+does not need T00 execution. The [ladder record](../reports/2026-11-02-io-migration-ladder.json)
+preserves the recipe, previous seed revision and transitional source/artifact
+hashes. Historical T00-built ladder identities remain in the parity ledger.
 
-`c-emitter.ts` is T11 compiling the unchanged Lite C-emitter bundle into a
-TS-hosted compiler. Its identities are in [`c-seed.ts`](c-seed.ts): source SHA-256
-`413044da…`, artifact SHA-256 `4dd040ad…`, builder SHA-256 `49ac81d6…`.
-It is 237671 bytes and passes the same strict TS check. It emits C for the
-existing restricted C subset; it is not a native C01/C11 compiler or a C fixed
-point. The C-emitter Lite source and emitted C program bytes are preserved by
-the host migration.
+`c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
+It is 244073 bytes, SHA-256 `8928ddc7…`; C source
+SHA-256 `b342a963…`, builder SHA-256 `fa134de2…`.
+Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
+forms and still rejects unsupported input/aggregate forms explicitly. It is a
+TS-hosted C emitter, not the pending native C11 compiler or a native fixed point.
 
 The owner approved starting the default-compiler transition on 2026-11-02.
 Checking in the verified seeds makes both compile targets in a clean checkout

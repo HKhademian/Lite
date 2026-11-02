@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/005-scan-arithmetic.lts",
-    "hash": "sha256:01141e9a3d44acb7ea328f9cec644026337bea250913e4793fdd055acb37fbaf"
+    "hash": "sha256:b28d45c3e1f8cc739edea27f121c1ddc107fef63185f2458b41b3342ac215e78"
   },
   "features": [
     "io.input",

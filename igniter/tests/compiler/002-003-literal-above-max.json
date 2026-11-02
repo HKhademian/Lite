@@ -2,7 +2,7 @@
   "name": "literal-above-max",
   "source": {
     "file": "002-003-literal-above-max.lts",
-    "hash": "sha256:e1791f5907187892cde46f07d972816d686e9a1cc7fbf7e5c44ba2afdd90aa99"
+    "hash": "sha256:b26538cfc6e2f5dab8c65c0ececc7e53fe1c8751dbac2327dcbf016ff9d07522"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:8: integer literal outside signed 64-bit range\n",
-        "hash": "sha256:251c07461b25dbc2647924ad889b1499d1c6d8b070ea4294d678a0b80266ce98"
+        "text": "1:12: integer literal outside signed 64-bit range\n",
+        "hash": "sha256:0baea174e6667718c46c68111101c08b531049ac154c913444b70ebdceeecc94"
       },
       "exitCode": 2
     }

@@ -2,6 +2,19 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Temporary I/O helper migration approved, 2026-11-02
+
+The owner selects optional positional String prompts for inputAll, inputLine,
+inputInt and inputFloat, and replaces report with outputLine plus output without
+a final newline. Output accepts zero or more ordinary values, separated by one
+space; a leading String is a value, and outputLine always adds a newline. Tuple
+and array display are included. No report compatibility alias is wanted: bulk
+migrate maintained Lite calls. These are temporary/fake helpers, not a permanent
+stdlib or a general optional/variadic declaration grammar. The detailed current
+[contract](tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+supersedes earlier report signatures below. Implement on T00 and the Lite TS
+compiler together; preserve existing failures and the wider parity backlog.
+
 ## T11 default compiler and staged T00 retirement, 2026-11-02
 
 The owner approved starting the transition after the T11/T12 fixed point and

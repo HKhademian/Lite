@@ -2,8 +2,8 @@
   "id": "io.report",
   "kind": "feature",
   "source": {
-    "text": "report(1, \"two\", true);\n",
-    "hash": "sha256:ff7955ffe1a07aca9aeec44d29189b740dd53dc90960ce1c1d60ea1fb892ad6e"
+    "text": "outputLine(1, \"two\", true);\n",
+    "hash": "sha256:6e75aa3581728cf893758e1997e6a2bef3ddd6160bd890ebc617a709a43d4f04"
   },
   "features": [
     "io.report"

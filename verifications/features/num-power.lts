@@ -1,5 +1,5 @@
-report(2 ** 3);
-report(2 ** 3 ** 2);
-report(4 ** 0.5);
-report((-2) ** 3);
-report(-(2 ** 2));
+outputLine(2 ** 3);
+outputLine(2 ** 3 ** 2);
+outputLine(4 ** 0.5);
+outputLine((-2) ** 3);
+outputLine(-(2 ** 2));

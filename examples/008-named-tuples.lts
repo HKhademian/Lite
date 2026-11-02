@@ -7,10 +7,10 @@ describe := fn(token: (kind: String, text: String)): String {
 }
 
 token := makeToken("number", "12");
-report(token.kind, token.text);
-report(describe(token));
+outputLine(token.kind, token.text);
+outputLine(describe(token));
 (first, second) := token;
-report(first, second);
+outputLine(first, second);
 
 one := (value = 42);
-report(one.value);
+outputLine(one.value);

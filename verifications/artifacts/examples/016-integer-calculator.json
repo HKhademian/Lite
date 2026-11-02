@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/016-integer-calculator.lts",
-    "hash": "sha256:7548293609eddf18c4179a9f48a8c0557384ffb8ea8a52f064ec3ba5ad5e5d05"
+    "hash": "sha256:900f6c8cad1735afaafe803ae386a0b04ad99b4f2ba8f3c3805cd10e1a0f3498"
   },
   "features": [
     "int.arithmetic",

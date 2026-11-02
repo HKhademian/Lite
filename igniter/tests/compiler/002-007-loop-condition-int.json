@@ -2,7 +2,7 @@
   "name": "loop-condition-int",
   "source": {
     "file": "002-007-loop-condition-int.lts",
-    "hash": "sha256:c94cddf298fe06f856bfd5f540aa4189276ca85e78f0a8dcce2d1dc96ef1eee2"
+    "hash": "sha256:58c9a05c430c6a77e4ae82d18e15fac9109520d0840e51ce81941fce9acaeec5"
   },
   "cases": [
     {

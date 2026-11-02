@@ -2,7 +2,7 @@
   "name": "arithmetic-parentheses",
   "source": {
     "file": "001-002-arithmetic-parentheses.lts",
-    "hash": "sha256:26edbacb25a3f3a1b85b6e9e2ee46d4bebeee1a3e0ad4bcc69e33806031d51e7"
+    "hash": "sha256:5bcdfe7bec89ec1bb0507dd04b9b25f908c4cd52f5e2e74096f092399a24d64a"
   },
   "cases": [
     {

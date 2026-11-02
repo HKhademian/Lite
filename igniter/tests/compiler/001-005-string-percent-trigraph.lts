@@ -1,1 +1,1 @@
-report("%s ??/");
+outputLine("%s ??/");

@@ -2,7 +2,7 @@
   "name": "injected-source",
   "source": {
     "file": "002-001-injected-source.lts",
-    "hash": "sha256:1493a6d8046dd4a1a255a771960034f1bcf908c1fd6c583744559a02c4adbc82"
+    "hash": "sha256:534c70b01d5e45b7ef2b2c07da9d89cd129e7279cf32e6f730b2cf337a068643"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:13: expected a statement: report, declaration, assignment, if or loop\n",
-        "hash": "sha256:8e42a08890e098ad1fa7563f515bba4ccb748adc21539f127a9e50fcba2a59dd"
+        "text": "1:17: expected a statement: output/outputLine, declaration, assignment, if or loop\n",
+        "hash": "sha256:7d4ffa7f50035851cefa3de57a52dc8254240aec0dc6ee775e4def78e913947e"
       },
       "exitCode": 2
     }

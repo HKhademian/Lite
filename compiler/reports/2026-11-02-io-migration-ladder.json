@@ -1,0 +1,90 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "8b887ad6ea270eb2010204c04c6de5f6a0fc34d0",
+  "node": "v24.16.0",
+  "previousSeedSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+  "transitionalSourceSha256": "eb053c55d9678f464253c07862c3d0d77582591a94cace901bb737bb0b849722",
+  "transitionalArtifactSha256": "1f79d95de003150475a38517179933055398ba630eb43d7f472ad876ad02de99",
+  "recipe": "Assemble current TS manifest S; replace outputLine followed by optional whitespace and ( with report followed by that same whitespace and (. Compile this transitional S with the previous generated seed, then compile unchanged current S with the transitional compiler and twice more. This adapter changes compiler-source call spellings, not the new frontend contract.",
+  "source": {
+    "sha256": "4cf236be54783ca9b2854dbdc22c4c28a08d579ff92cb902714c36619f9c1991",
+    "bytes": 167117
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+      "bytes": 273040,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+      "bytes": 273040,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+      "bytes": 273040,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "b342a963d939d754497573d9f768987006abdd40631c00b3948cd5172fe3d984",
+    "sourceBytes": 152067,
+    "artifactSha256": "8928ddc79ac55f0d48990fa71ab163f4f6987e90bc19fba1a863c964de6446a4",
+    "artifactBytes": 244073,
+    "builderSha256": "fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "fullSuite": {
+      "tests": 251,
+      "passed": 251,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 51726.721916
+    },
+    "fastSuite": {
+      "tests": 251,
+      "passed": 242,
+      "failed": 0,
+      "skipped": 9,
+      "durationMs": 30095.393291
+    },
+    "editorGroups": 9,
+    "hostGroups": 11,
+    "tsCorpus": {
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0
+    },
+    "cCorpus": {
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0
+    },
+    "features": 37,
+    "scenarios": 77,
+    "verifierExecutions": 95,
+    "activeLiteReportCalls": 0,
+    "knownLimits": "Generated TS still follows its admitted frontend types; wider Float operations, unnamed/mixed tuples and fixed-array grammar remain parity work. C input/aggregate emission and native self-hosting remain pending."
+  },
+  "reproductionCommands": [
+    "git show 8b887ad6ea270eb2010204c04c6de5f6a0fc34d0:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; const s=loadBundle(\"compiler/manifests/ts.json\").text; writeFileSync(\"/tmp/S.lts\",s); writeFileSync(\"/tmp/transitional-S.lts\",s.replace(/outputLine\\s*\\(/g,m=>m.replace(\"outputLine\",\"report\"))); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/transitional-S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

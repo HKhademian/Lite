@@ -2,7 +2,7 @@
   "name": "report-leading-plus-zeroes",
   "source": {
     "file": "001-001-report-leading-plus-zeroes.lts",
-    "hash": "sha256:058db78930ace60252625231a83d8a6158f92cc10d4e112b52ff8073f03cf0fb"
+    "hash": "sha256:d85e9053a3f6460fe66cff12f4e27e3b2586a61076db94c1b8ddab3895c7eaec"
   },
   "cases": [
     {

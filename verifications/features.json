@@ -333,6 +333,15 @@
         "docs/reserved-storage.md",
         "docs/first-initialization.md"
       ]
+    },
+    {
+      "id": "io.temporary",
+      "summary": "Temporary input prompts and variadic output/outputLine helpers.",
+      "case": "features/io-temporary.json",
+      "status": "verified",
+      "docs": [
+        "docs/tooling-and-learning.md"
+      ]
     }
   ]
 }

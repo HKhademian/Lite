@@ -1,1 +1,1 @@
-report("سلام🙂");
+outputLine("سلام🙂");

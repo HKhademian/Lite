@@ -1,1 +1,1 @@
-report("hello");
+outputLine("hello");

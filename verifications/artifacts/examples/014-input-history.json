@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/014-input-history.lts",
-    "hash": "sha256:dadc54bc5b4451e906125c3b965e0fb34d713ca4530ae7faae70ed0100dbb5f2"
+    "hash": "sha256:41e8a819a0712fe1516dc1b9c46a6e38a43cfc82189a76b526f8b3f87cbe3af7"
   },
   "features": [
     "list.mutation",

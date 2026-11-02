@@ -10,11 +10,11 @@
 
 ## Tags name their explicit blocks
 
-In `@inner { save_report() } else { fallback() }`, @inner names only the protected block. Its scope does not extend into the attached handler. A handler cannot return to that already-completed block. To make @inner an enclosing return target for the whole chain, write an additional explicit block:
+In `@inner { save_outputLine() } else { fallback() }`, @inner names only the protected block. Its scope does not extend into the attached handler. A handler cannot return to that already-completed block. To make @inner an enclosing return target for the whole chain, write an additional explicit block:
 
 ```text
 y := @inner {
-    { save_report() }
+    { save_outputLine() }
         else ...errs: DiskFull { return @inner first_value() }
         else ...errs: CloseFailed { second_value() }
 }
@@ -25,7 +25,7 @@ The lexical target is now valid. A return to it bypasses later clauses; the poli
 A handler body can have its own tag, placed immediately before that body's opening brace:
 
 ```text
-y := { save_report() }
+y := { save_outputLine() }
     else ...errs: DiskFull @myblock {
         return @myblock first_value()
     }
@@ -39,7 +39,7 @@ Here `return @myblock` completes only the first handler body. Its value contribu
 For future ambiguous recovery examples, first untangle the expression into temporary outcome layers:
 
 ```text
-tmp1 := { save_report() }
+tmp1 := { save_outputLine() }
 tmp2 := tmp1 else ...errs: DiskFull @myblock {
     return @myblock first_value()
 }

@@ -2,6 +2,57 @@
 
 Status: **official formatter required; compact/multiline presentation, unchanged malformed files, idempotence, verification before writing, and read-only --check mode selected 2026-10-25; broader toolchain and teaching approach proposed**.
 
+## Temporary input and output helpers, selected 2026-11-02
+
+The owner selects these temporary/fake host helpers for the igniter transition.
+These descriptive signatures do not introduce source-level optional/variadic
+parameter syntax or a permanent standard library:
+
+- `inputAll(prompt?) -> String`: remaining stdin as strict UTF-8 text, preserving line endings and whitespace; immediate EOF returns empty text.
+- `inputLine(prompt?) -> String`: one line without its newline; CRLF loses its final CR. An empty supplied line is valid; immediate EOF faults.
+- `inputInt(prompt?) -> Int`: one signed decimal token, checked to the signed 64-bit range.
+- `inputFloat(prompt?) -> Float`: one finite decimal/exponent token, using the existing numeric-input grammar.
+- `output(...values) -> Unit`: zero or more ordinary display values, separated by one space, with no added newline.
+- `outputLine(...values) -> Unit`: the same display plus exactly one final newline, including when no values are supplied.
+
+Each input takes zero arguments or one positional String prompt. Evaluate the
+prompt once and write its exact stdout text, without padding or a newline,
+before reading. Invalid input or EOF before a requested value faults once,
+without retry or a default value. The four helpers share input lookahead, so a
+line/all read retains the delimiter left by a numeric token read. Generated TS
+uses buffered byte reads and strict incremental UTF-8 decoding, preserving the
+read at which a malformed sequence faults and its positioned InputFault.
+
+Output has no special prompt parameter: a leading String is an ordinary value.
+Evaluate arguments once in source order and display them using their static
+value types. Zero or one argument adds no separating space. Scalars and Unit
+keep their existing display; tuples retain source order and labels, including a
+singleton comma. Arrays and lists display with square brackets and comma-space
+separators, including tuple elements. Function values remain unprintable. This
+is ordinary multiple-argument calling, not call spread or a formatting language.
+Normal generated process adapters supply a streaming output callback, retaining
+output before later faults; the zero-argument main() return-text adapter remains
+compatible for existing callers.
+
+The `report` builtin is removed, with no compatibility alias. All maintained
+Lite calls are migrated to `outputLine`; ordinary lexical bindings may still
+use any otherwise valid name. The source-level `reportError`, `inputWord` and
+`inputArgs` helpers retain their existing separate contracts. The host IO
+callback named `report` is internal plumbing, not a source builtin.
+
+T00 implements this display contract for its admitted scalar, tuple, array and
+list types. Generated TS supports the types its frontend admits: scalar/Unit
+values, flat named tuples and List values, including inputFloat results in
+storage, calls and output. Wider Float arithmetic, unnamed/mixed tuple grammar
+and typed fixed arrays remain on the existing-feature parity track. C implements
+the admitted scalar output forms and clearly rejects unsupported input/aggregate
+forms; native C self-hosting remains pending.
+
+The [canonical I/O case](../verifications/features/io-temporary.lts) runs through
+both T00 and generated TS. Focused host tests cover EOF, numeric range/grammar,
+prompt order, mixed reads, zero arguments, aggregate display, Unicode buffer
+boundaries, exact real-CLI UTF-8 diagnostics and removal of the old builtin.
+
 ## Purpose
 
 Students should spend their early effort understanding programs rather than choosing build tools or interpreting parser jargon.
@@ -214,7 +265,7 @@ valid artifact bytes stay unchanged and extra arguments fail before reads.
 Strict checking and 147 groups pass; generated runtime fault locations remain
 separate. See [context evidence](../investigations/INV-061-compiler-source-context.md).
 
-Both compiler applications subsequently advance to sequence arbitrary `report(integer);`
+Both compiler applications subsequently advance to sequence arbitrary `outputLine(integer);`
 statements across the whole input without language extensions. Emitted TS and native C
 preserve exact byte/status parity across 15 admitted programs. Strict checking and 148
 groups pass. See [statement sequencing evidence](../investigations/INV-061-statement-sequencing.md).
@@ -412,7 +463,7 @@ policies. This selects observation intent, not a new checked effect system.
 ## Temporary FVP input and reporting
 
 Selected **2026-10-30** for the tiny FVP: provide a minimal temporary/fake helper
-surface named inputInt, inputFloat, inputLine, inputWord, report(...), and
+surface named inputInt, inputFloat, inputLine, inputWord, outputLine(...), and
 reportError(...). These are demonstrator scaffolding to try language features,
 not a settled standard-library API or a requirement to implement modules first.
 The names may be supplied directly by the demonstrator for now; their eventual
@@ -438,7 +489,7 @@ Illustrative FVP use, not a complete executable contract:
 ```text
 first := inputInt();
 second := inputInt();
-report(first + second);
+outputLine(first + second);
 ```
 
 Only the explicit calls request input/reporting. Ordinary bindings and file
@@ -480,7 +531,7 @@ No quoting, sorting, padding or nested formatting is introduced by this rule.
 
 The user explicitly chooses ordinary multiple arguments only: ...values in the
 request describes the helper's argument count, not source-level tuple call spread.
-report() and call spread stay unsupported. Arrays, lists and callables remain
+outputLine() and call spread stay unsupported. Arrays, lists and callables remain
 unreportable, and reportError keeps its single ordinary-value contract. This is
 temporary FVP scaffolding, not a general variadic function implementation or a
 permanent standard-library API.
@@ -527,7 +578,7 @@ For example, assuming successful reporting:
 ```text
 reportError("Cannot continue");
 exit(1);
-report("Not reached");
+outputLine("Not reached");
 ```
 
 The default code for exit(), code type/range and host conversion, cleanup/finally

@@ -24,7 +24,7 @@ For recovery reasoning, schematic `(ErrA, ErrB, ErrC)` describes multiple pendin
 ## Selected example
 
 ```text
-status := { save_report() }
+status := { save_outputLine() }
     else (: DiskFull) { "Write failed" }
     else (: CloseFailed) { "Cleanup failed" }
 ```

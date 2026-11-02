@@ -1,5 +1,5 @@
-loop [1, 2] as n { report(.count); } then { report("then"); } finally { report("finally"); }
-x := if true { 1 } else { 2 } finally { report("cond"); }
-report(x);
-f := fn(): Int { loop [1] { return 5 } finally { report("return-cleanup"); } 0 }
-report(f());
+loop [1, 2] as n { outputLine(.count); } then { outputLine("then"); } finally { outputLine("finally"); }
+x := if true { 1 } else { 2 } finally { outputLine("cond"); }
+outputLine(x);
+f := fn(): Int { loop [1] { return 5 } finally { outputLine("return-cleanup"); } 0 }
+outputLine(f());

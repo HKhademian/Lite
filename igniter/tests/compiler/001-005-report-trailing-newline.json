@@ -2,7 +2,7 @@
   "name": "report-trailing-newline",
   "source": {
     "file": "001-005-report-trailing-newline.lts",
-    "hash": "sha256:cc799a376ca142d21da75b56b138ace671264ce2c21d468d438bd5ab6ad23e5e"
+    "hash": "sha256:11c45fff5c9a579bf353cfc71a3b94376f079010260ab19cb6e3de7eb1fa1869"
   },
   "cases": [
     {

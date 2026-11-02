@@ -2,7 +2,7 @@
   "name": "string-escapes",
   "source": {
     "file": "001-004-string-escapes.lts",
-    "hash": "sha256:fb1e8364a73d7ddeefe7ff138863ce6b19ad5c8af78fbbf4cf955d287be2db11"
+    "hash": "sha256:b01a0fbbe6de00be05800c49575c6b25fc5487964be0b513b209bf1ed37678f8"
   },
   "cases": [
     {

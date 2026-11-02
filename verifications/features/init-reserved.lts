@@ -4,4 +4,4 @@ b: (:Int, :String) = ?;
 b = (1, "x");
 var c: [Int; 2] = ?;
 c = [3, 4];
-report(a, b.0, b.1, c[0], c[1]);
+outputLine(a, b.0, b.1, c[0], c[1]);

@@ -4,5 +4,5 @@ describe := fn(order: (:Int, tea: String, cups: Int, :Bool)): String {
     order.tea
 }
 (number, drink, cups, ready) := order;
-report(number, describe(order), cups, ready);
-report(order.0, order.1, order.cups, order.3);
+outputLine(number, describe(order), cups, ready);
+outputLine(order.0, order.1, order.cups, order.3);

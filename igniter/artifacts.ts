@@ -55,7 +55,7 @@ export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunn
     const config = join(directory, 'tsconfig.json');
     writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
     writeFileSync(artifact, source);
-    writeFileSync(runner, "import { main } from './artifact.ts';\nprocess.stdout.write(main());\n");
+    writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
     writeFileSync(config, JSON.stringify({
       compilerOptions: { ...checkOptions(), types: [], typeRoots: [], lib: ['ESNext'] },
       files: [artifact],

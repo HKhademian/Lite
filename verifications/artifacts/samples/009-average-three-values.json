@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Average of three daily values.",
-  "append": "report(average_hours);",
+  "append": "outputLine(average_hours);",
   "cases": [
     {
       "name": "observed-values",

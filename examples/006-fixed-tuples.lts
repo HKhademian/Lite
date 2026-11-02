@@ -8,11 +8,11 @@ describe := fn(token: (:String, :String)): String {
 
 token := makeToken("number", "12");
 (kind, text) := token;
-report(kind);
-report(text);
-report(describe(token));
+outputLine(kind);
+outputLine(text);
+outputLine(describe(token));
 
 one := (42,);
 (value,) := one;
-report(value);
+outputLine(value);
 () := ();

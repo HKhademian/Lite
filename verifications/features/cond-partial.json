@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "cond-partial.lts",
-    "hash": "sha256:8671676d0b7e2447f00fc815fe8279ec7d96327addb6f76cd6f82cc9642cea56"
+    "hash": "sha256:4d56c059cde3318c01fa024bfb0746c886831b139ae57ab44f8971641fc60818"
   },
   "features": [
     "cond.partial"

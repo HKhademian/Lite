@@ -1,0 +1,42 @@
+{
+  "id": "io.temporary",
+  "kind": "feature",
+  "source": {
+    "file": "io-temporary.lts",
+    "hash": "sha256:8dff829c9d8eb8c1297b2a32664aceaf814773634b5744d795beb75bcd5deacf"
+  },
+  "features": [
+    "io.temporary"
+  ],
+  "guideline": "Checks optional input prompts, ordered token/line/all reads, Float display, arrays/tuples, zero arguments and output newlines.",
+  "targets": [
+    "igniter",
+    "ts"
+  ],
+  "cases": [
+    {
+      "name": "all-helpers",
+      "stdin": {
+        "text": "hello\r\n7 -2.5e2\nremaining🙂",
+        "hash": "sha256:0c338048d106c6c76c384ba9b088826967ac3b56374e31aeb4cb9b0fff902eac"
+      },
+      "stdout": {
+        "text": "\nLine: Int: Float: All: values: hello 7 -250\n[1, 2] (left=7, right=hello) true\n\nremaining🙂\n",
+        "hash": "sha256:552789348dd2bedafbe608a749a15ff76c83efc1b385c72fc1ca3d22bd6a9c85"
+      },
+      "exitCode": 0
+    },
+    {
+      "name": "empty-line-and-remainder",
+      "stdin": {
+        "text": "\n-7 0",
+        "hash": "sha256:18c4235f5a24186221ce48b38fde87d5111d6daab04cfc7ea34faf6972e73c24"
+      },
+      "stdout": {
+        "text": "\nLine: Int: Float: All: values:  -7 0\n[1, 2] (left=-7, right=) true\n\n",
+        "hash": "sha256:c93f01d7b8e4783add7705843e509ef464a871d41337d0de245c436f8cc56147"
+      },
+      "exitCode": 0
+    }
+  ]
+}

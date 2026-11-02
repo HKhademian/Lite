@@ -1,1 +1,1 @@
-x := 1; report(y);
+x := 1; outputLine(y);

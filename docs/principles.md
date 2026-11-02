@@ -59,7 +59,7 @@ helper calls; numeric/text details remain open. The TypeScript/Node igniter is s
 
 The selected [temporary input/reporting helpers](tooling-and-learning.md#temporary-fvp-input-and-reporting)
 provide a minimal FVP surface: inputInt, inputFloat, inputLine, inputWord,
-report(...), and reportError(...). These provisional names do not require the
+outputLine(...), and reportError(...). These provisional names do not require the
 future module/standard-library design; exact I/O contracts remain open.
 
 Selected 2026-10-30: TypeScript/Node is a minimal [bootstrap igniter](tooling-and-learning.md#typescript-igniter-and-early-self-hosting),

@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Rectangle area and perimeter.",
-  "append": "report(area); report(perimeter);",
+  "append": "outputLine(area); outputLine(perimeter);",
   "cases": [
     {
       "name": "observed-values",

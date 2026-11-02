@@ -13,5 +13,5 @@ choose := fn(flag: Bool): Int {
 }
 
 main := fn(): Unit {
-    if sumTo(3) >= 6 { report("ok"); } else { reportError("bad"); }
+    if sumTo(3) >= 6 { outputLine("ok"); } else { reportError("bad"); }
 }

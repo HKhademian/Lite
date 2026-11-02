@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/013-growable-lists.lts",
-    "hash": "sha256:b0555bfc42aef610661755b69f42f2b018b899ac8a851e1cf02171b54526a180"
+    "hash": "sha256:077f1deedeb470d24deaa96a98d86d411aab8d721c1a57389b991fec0275f8e1"
   },
   "features": [
     "list.mutation",

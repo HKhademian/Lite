@@ -2,7 +2,7 @@
   "name": "local-macro-name",
   "source": {
     "file": "001-006-local-macro-name.lts",
-    "hash": "sha256:9d628d56dbd8e2a91df4ab559edd87bd231a5542f086c75e1e6c1584147f3915"
+    "hash": "sha256:efe82e40f79338ca5fc4d7d626187125a291d47f7aaa8d94667eddbe782c792e"
   },
   "cases": [
     {

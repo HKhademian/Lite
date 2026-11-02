@@ -2,7 +2,7 @@
   "name": "string-equality-if",
   "source": {
     "file": "001-007-string-equality-if.lts",
-    "hash": "sha256:1218624a716a7f1ad65f6618f053b9267dbc41413cdef65d00599ad0939368ec"
+    "hash": "sha256:e5882cf2e9e005028def27e0b4ff67ae526fa9846a34215ed9632d946bd8c22d"
   },
   "cases": [
     {

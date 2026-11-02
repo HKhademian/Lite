@@ -1,1 +1,1 @@
-report(1 + "text");
+outputLine(1 + "text");

@@ -2,7 +2,7 @@
   "name": "local-arithmetic",
   "source": {
     "file": "001-003-local-arithmetic.lts",
-    "hash": "sha256:30a4786e7609253a8bf5d1591b49e164654da24bcd5da6fce561c67e8c42c20e"
+    "hash": "sha256:528f27e6f206a619a4ad587a6d96a5dd8d5baae662ec8ceb858bb782fa4973e9"
   },
   "cases": [
     {

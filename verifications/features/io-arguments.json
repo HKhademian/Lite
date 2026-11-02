@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "io-arguments.lts",
-    "hash": "sha256:f37be6d1cbdc471d7da9ecb90fadcc756119fb13ec0883c7aa3336492d12966d"
+    "hash": "sha256:ac3cda8eee18f3f6929ec952a668b72bd9c2edbb3c1d84afeb07c5b7acd5f709"
   },
   "features": [
     "io.arguments"

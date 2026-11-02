@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:1: expected a statement: report, declaration, assignment, if or loop\n",
-        "hash": "sha256:1c78c668478124b57a2fe522d1edeab8cf2b903f2908767ce6c9b70b58a7624f"
+        "text": "1:1: expected a statement: output/outputLine, declaration, assignment, if or loop\n",
+        "hash": "sha256:f2586a14a8823bf2cf305833b718e8e2010bf8706b303d4c70aa00a5ea22e82d"
       },
       "exitCode": 2
     }

@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Tax and tip rounded to cents.",
-  "append": "report(tax_cents); report(tip_cents); report(total_cents);",
+  "append": "outputLine(tax_cents); outputLine(tip_cents); outputLine(total_cents);",
   "cases": [
     {
       "name": "observed-values",

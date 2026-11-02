@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Linear interpolation at a fraction.",
-  "append": "report(value);",
+  "append": "outputLine(value);",
   "cases": [
     {
       "name": "observed-values",

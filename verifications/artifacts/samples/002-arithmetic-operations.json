@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Four integer operations; the verification appends reports for each result.",
-  "append": "report(sum); report(difference); report(product); report(quotient);",
+  "append": "outputLine(sum); outputLine(difference); outputLine(product); outputLine(quotient);",
   "cases": [
     {
       "name": "four-operations",

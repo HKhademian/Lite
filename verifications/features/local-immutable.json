@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "local-immutable.lts",
-    "hash": "sha256:51aeebee57c29aad890a169d203acc92b22b2dc74893629b75b1f19f2c0f5be6"
+    "hash": "sha256:697ab690ed3403f6acff62150a702e3108bbafdee3ba99fc8454ec1be7d9eff9"
   },
   "features": [
     "local.immutable"

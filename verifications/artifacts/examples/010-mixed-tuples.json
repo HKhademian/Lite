@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/010-mixed-tuples.lts",
-    "hash": "sha256:7535885f377f5467f7820e391c25ef34f55416803040ea9bf614cd16641f7786"
+    "hash": "sha256:6dcb30c10a6f5db6828f607276d1f218c6109413a07fb31aadc3acc5372e9c71"
   },
   "features": [
     "tuple.shape",

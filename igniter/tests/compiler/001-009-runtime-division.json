@@ -2,7 +2,7 @@
   "name": "runtime-division",
   "source": {
     "file": "001-009-runtime-division.lts",
-    "hash": "sha256:883f20d5a1ae282a688dab70b52fc2c9ba5a036af3811386a8d523f1021a9a97"
+    "hash": "sha256:f5600d41e5c6e3bc556ba7b1455c045fd4f3ee500b11dca326375c0e84181150"
   },
   "cases": [
     {

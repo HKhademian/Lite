@@ -2,7 +2,7 @@
   "name": "overflow-add",
   "source": {
     "file": "002-003-overflow-add.lts",
-    "hash": "sha256:ccf802791e1e51b676aea5a1a7b37490765b5d17dd68067ae3f3bc83d413fba4"
+    "hash": "sha256:c14764e9740d3799768926d96db86988b6211fb54c0f2d2bcd91110f8afc271b"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:28: integer expression outside signed 64-bit range\n",
-        "hash": "sha256:3702eb841b82461e043e48922127211399ab75b77d591eb3e9d76af4dca83fd0"
+        "text": "1:32: integer expression outside signed 64-bit range\n",
+        "hash": "sha256:dbbcb1ddcbe059b758ec1b07fae5afa4ae03bfb4476f92fcc7b662b68782bea6"
       },
       "exitCode": 2
     }

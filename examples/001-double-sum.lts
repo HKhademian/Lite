@@ -3,4 +3,4 @@ first := inputInt("First integer: ");
 second := inputInt("Second integer: ");
 var total := first + second;
 total = total * 2;
-report(total);
+outputLine(total);

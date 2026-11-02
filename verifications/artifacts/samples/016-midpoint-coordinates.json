@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Midpoint of two coordinate pairs.",
-  "append": "report(midpoint_x); report(midpoint_y);",
+  "append": "outputLine(midpoint_x); outputLine(midpoint_y);",
   "cases": [
     {
       "name": "observed-values",

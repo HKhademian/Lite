@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Celsius to Fahrenheit and back.",
-  "append": "report(fahrenheit); report(celsius_again);",
+  "append": "outputLine(fahrenheit); outputLine(celsius_again);",
   "cases": [
     {
       "name": "observed-values",

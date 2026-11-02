@@ -2,13 +2,13 @@
   "name": "string-multiline",
   "source": {
     "file": "001-004-string-multiline.lts",
-    "hash": "sha256:635cac263268846550bf306a3bf471f3861164b3cb267f045b0c80717bd7552f"
+    "hash": "sha256:08e23c8564e0533b0740cb051d210f10a89ad5396b0430907717b592c3be3c25"
   },
   "cases": [
     {
       "name": "default",
       "stdout": {
-        "file": "001-004-string-multiline.stdout",
+        "text": "line1\nline2\n",
         "hash": "sha256:2751a3a2f303ad21752038085e2b8c5f98ecff61a2e4ebbd43506a941725be80"
       },
       "stderr": {

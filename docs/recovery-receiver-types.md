@@ -134,8 +134,8 @@ This handles `BoundError`; other returned errors remain subject to explicit hand
 
 ```text
 target else { recover_without_binding() }
-target else (_) { report(_) ; recover() }
-target else (failure) { report(failure); recover() }
+target else (_) { outputLine(_) ; recover() }
+target else (failure) { outputLine(failure); recover() }
 ```
 
 Receiverless `else` binds no failure. `_` is an ordinary readable binding, not a special nonbinding wildcard; it matches every supported failure and can be used or left unused without a warning. An untyped name also matches all and binds the broad failure value. If both channels are possible, its static receiver type and channel-origin representation remain open.

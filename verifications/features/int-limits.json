@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "int-limits.lts",
-    "hash": "sha256:9b04d1d4b8c445ec40101b5cc447ef36224b142f2f38066f3b00ce4e00b7648b"
+    "hash": "sha256:21c412eb6ef2709b82c0a65a52a9d2388944571a4a08a992edd571f922bd675f"
   },
   "features": [
     "int.limits"

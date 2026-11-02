@@ -1,4 +1,4 @@
-report(7 % 3);
-report(-7 % 3);
-report(7 % -3);
-report(6 % 3);
+outputLine(7 % 3);
+outputLine(-7 % 3);
+outputLine(7 % -3);
+outputLine(6 % 3);

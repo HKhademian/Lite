@@ -2,7 +2,7 @@
   "name": "min-divide-minus-one",
   "source": {
     "file": "002-003-min-divide-minus-one.lts",
-    "hash": "sha256:08d31af328400331239ac2ff9f43b7c9631f9a7beaced37dda4ee5053b910b8f"
+    "hash": "sha256:2e6ee56e1748da36a61e1aec2d7ec6ae73d82613d4fdb993d2fc014162a1210c"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:29: integer expression outside signed 64-bit range\n",
-        "hash": "sha256:ae317900bcdfa8e12600796e09cef7abcf7b07b6c878df18e7271f0f35b89a76"
+        "text": "1:33: integer expression outside signed 64-bit range\n",
+        "hash": "sha256:9c13dd6c0242a84dce6db249eb487497d80e82915594c85a5dbac920b45dd4a5"
       },
       "exitCode": 2
     }

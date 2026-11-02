@@ -2,4 +2,4 @@ factorial := fn(n: Int): Int {
     if n == 0 { return 1; }
     n * self(n - 1)
 }
-report(factorial(5));
+outputLine(factorial(5));

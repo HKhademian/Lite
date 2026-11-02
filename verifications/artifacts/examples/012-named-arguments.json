@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/012-named-arguments.lts",
-    "hash": "sha256:55f1527b3f9d41658997e042a2840708fbedd6382a3ec03d6f22c5e45ac0f7ed"
+    "hash": "sha256:41accbbda4a18597d6580cd0a7ecaa956eef5b115f5269ebcbf9ad1810ef491e"
   },
   "features": [
     "tuple.shape",

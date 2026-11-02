@@ -5,5 +5,5 @@ flag := true;
 text := "a\n\"b";
 pair := (name, flag);
 name = name + 1;
-report(pair.1);
-if flag and name >= 40 { report(text); }
+outputLine(pair.1);
+if flag and name >= 40 { outputLine(text); }

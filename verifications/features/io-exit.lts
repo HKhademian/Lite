@@ -1,3 +1,3 @@
-report("before");
+outputLine("before");
 exit(3);
-report("after");
+outputLine("after");

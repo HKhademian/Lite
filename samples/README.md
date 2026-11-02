@@ -44,5 +44,5 @@ The current lessons use Lite’s simple-English reference spellings. [Multilingu
 **Can I run these?** The [experimental igniter](../igniter/README.md) runs a small
 subset now. All 20 lessons have checked outcomes through `verifications/` manifests; other
 lessons may use unsupported features. Lesson files themselves print nothing—add
-an explicit report(value) call to see an answer. See the [contributor notes](NOTES.md)
+an explicit outputLine(value) call to see an answer. See the [contributor notes](NOTES.md)
 for verification limits.

@@ -1,2 +1,2 @@
 INT64_MIN := 7;
-report(INT64_MIN);
+outputLine(INT64_MIN);

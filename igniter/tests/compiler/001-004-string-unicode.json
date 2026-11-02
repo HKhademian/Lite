@@ -2,7 +2,7 @@
   "name": "string-unicode",
   "source": {
     "file": "001-004-string-unicode.lts",
-    "hash": "sha256:61ba917f4193b509d064b2dbeba3f39b038c73119fc9c5637f809b6a9a05b820"
+    "hash": "sha256:347025859425ae2a5d54d761de942dee352ddf176393eae0985bca20c7366a6c"
   },
   "cases": [
     {

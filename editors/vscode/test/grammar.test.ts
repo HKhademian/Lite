@@ -47,14 +47,14 @@ function has(rows: Row[], line: number, needle: string, scope: string) { assert.
 function lacks(rows: Row[], line: number, needle: string, scope: string) { assert.ok(!scopesAt(rows, line, needle).includes(scope), `${needle}: unexpected ${scope}`); }
 
 test('ordinary Lite declarations, calls, scalar types, literals and Unicode identifiers', async () => {
-  const rows = await tokenize('double := fn(n: Int): Int { n * 2 }\nvar شمارنده := 1.25e-3;\nreport(double(4));\nif true and not false { return Unit; }');
+  const rows = await tokenize('double := fn(n: Int): Int { n * 2 }\nvar شمارنده := 1.25e-3;\noutputLine(double(4));\nif true and not false { return Unit; }');
   has(rows, 0, 'double', 'entity.name.function.lite');
   has(rows, 0, 'fn', 'storage.type.lite');
   has(rows, 0, 'Int', 'support.type.lite');
   has(rows, 1, 'var', 'storage.modifier.lite');
   has(rows, 1, 'شمارنده', 'variable.other.lite');
   has(rows, 1, '1.25e-3', 'constant.numeric.lite');
-  has(rows, 2, 'report', 'entity.name.function.call.lite');
+  has(rows, 2, 'outputLine', 'entity.name.function.call.lite');
   has(rows, 3, 'if', 'keyword.control.lite');
   has(rows, 3, 'and', 'keyword.operator.word.lite');
   has(rows, 3, 'Unit', 'constant.language.lite');
@@ -76,39 +76,39 @@ test('ordinary Lite declarations, calls, scalar types, literals and Unicode iden
   }
 });
 test('multiline strings and escaped quotes keep comment/keyword text inside the string', async () => {
-  const rows = await tokenize('message := "if /* not a comment\n\\"quoted\\" and // text"; report(1);');
+  const rows = await tokenize('message := "if /* not a comment\n\\"quoted\\" and // text"; outputLine(1);');
   has(rows, 0, 'if', 'string.quoted.double.lite');
   lacks(rows, 0, 'if', 'keyword.control.lite');
   has(rows, 1, '\\"', 'constant.character.escape.lite');
   has(rows, 1, '//', 'string.quoted.double.lite');
-  has(rows, 1, 'report', 'entity.name.function.call.lite');
+  has(rows, 1, 'outputLine', 'entity.name.function.call.lite');
 });
 test('ordinary comments nest; quotes do not shield inner delimiters', async () => {
-  const rows = await tokenize('/* outer " /* inner */ still outer\nreturn 1; */ report(2);');
+  const rows = await tokenize('/* outer " /* inner */ still outer\nreturn 1; */ outputLine(2);');
   has(rows, 0, 'still', 'comment.block.lite');
   has(rows, 1, 'return', 'comment.block.lite');
   lacks(rows, 1, 'return', 'keyword.control.lite');
-  has(rows, 1, 'report', 'entity.name.function.call.lite');
+  has(rows, 1, 'outputLine', 'entity.name.function.call.lite');
 });
 test('raw fences use the exact hash count and ignore ordinary delimiters', async () => {
-  const rows = await tokenize('/*## raw\n#*/ shorter\n###*/ longer\n/* " if */ remains raw\n##*/ report(2);');
+  const rows = await tokenize('/*## raw\n#*/ shorter\n###*/ longer\n/* " if */ remains raw\n##*/ outputLine(2);');
   for (const [line, text] of ([[1, 'shorter'], [2, 'longer'], [3, 'if']] as const)) has(rows, line, text, 'comment.block.raw.lite');
-  has(rows, 4, 'report', 'entity.name.function.call.lite');
-  const one = await tokenize('/*# ##*/ still raw #*/ report(1);');
+  has(rows, 4, 'outputLine', 'entity.name.function.call.lite');
+  const one = await tokenize('/*# ##*/ still raw #*/ outputLine(1);');
   has(one, 0, 'still', 'comment.block.raw.lite');
-  has(one, 0, 'report', 'entity.name.function.call.lite');
+  has(one, 0, 'outputLine', 'entity.name.function.call.lite');
 });
 test('raw comments nested in ordinary comments resume their enclosing comment', async () => {
-  const rows = await tokenize('/* outer /*# unmatched /* and */ #*/ outer again */ report(3);');
+  const rows = await tokenize('/* outer /*# unmatched /* and */ #*/ outer again */ outputLine(3);');
   has(rows, 0, 'unmatched', 'comment.block.raw.lite');
   has(rows, 0, 'again', 'comment.block.lite');
   lacks(rows, 0, 'again', 'comment.block.raw.lite');
-  has(rows, 0, 'report', 'entity.name.function.call.lite');
+  has(rows, 0, 'outputLine', 'entity.name.function.call.lite');
 });
 test('no line comments, invented builtin classification, or keyword matches within identifiers', async () => {
-  const rows = await tokenize('// report(1); returning := 2; if_نام := 3; trueValue := 4; textAt("a", 0);');
-  has(rows, 0, 'report', 'entity.name.function.call.lite');
-  lacks(rows, 0, 'report', 'comment.block.lite');
+  const rows = await tokenize('// outputLine(1); returning := 2; if_نام := 3; trueValue := 4; textAt("a", 0);');
+  has(rows, 0, 'outputLine', 'entity.name.function.call.lite');
+  lacks(rows, 0, 'outputLine', 'comment.block.lite');
   for (const name of ['returning', 'if_نام', 'trueValue']) has(rows, 0, name, 'variable.other.lite');
   lacks(rows, 0, 'returning', 'keyword.control.lite');
   has(rows, 0, 'textAt', 'entity.name.function.call.lite');
@@ -125,12 +125,12 @@ test('long operators stay intact; leading-dot access is not a fractional literal
   has(rows, 0, '0.5', 'constant.numeric.lite');
 });
 test('unfinished comments and multiline strings stay open without guessing a terminator', async () => {
-  for (const source of ['/* open\nreport(1);', '/*### open\n##*/ report(1);']) {
+  for (const source of ['/* open\noutputLine(1);', '/*### open\n##*/ outputLine(1);']) {
     const rows = await tokenize(source);
-    assert.ok(scopesAt(rows, 1, 'report').some(scope => scope.startsWith('comment.block')));
+    assert.ok(scopesAt(rows, 1, 'outputLine').some(scope => scope.startsWith('comment.block')));
   }
-  const rows = await tokenize('"open\nreport(1);');
-  has(rows, 1, 'report', 'string.quoted.double.lite');
+  const rows = await tokenize('"open\noutputLine(1);');
+  has(rows, 1, 'outputLine', 'string.quoted.double.lite');
 });
 test('tokenize project samples and indexed examples using the real TextMate engine', async () => {
   let files = 0;

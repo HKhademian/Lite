@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "tuple-shape.lts",
-    "hash": "sha256:8fc783a4d86efcf53f813c3efb31ef92cc91d0839878eeeb6713456a0e117508"
+    "hash": "sha256:d97c4e968ba7d92dd973b30b8d2ec2d59886d8e60582c0be9b29909c943215da"
   },
   "features": [
     "tuple.shape"

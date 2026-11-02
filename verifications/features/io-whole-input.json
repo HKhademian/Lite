@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "io-whole-input.lts",
-    "hash": "sha256:b193dcaeef3bae673246b649e2a945f7ac7a7b134bfde6a166e9e4396374d9e8"
+    "hash": "sha256:bc60b28f0846ab1611ff7d2437a8c10c93f3a61029509e588096ceb36224a8d0"
   },
   "features": [
     "io.whole-input"

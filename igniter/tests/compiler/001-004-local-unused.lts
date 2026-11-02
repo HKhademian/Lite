@@ -1,2 +1,2 @@
 unused := 5;
-report(42);
+outputLine(42);

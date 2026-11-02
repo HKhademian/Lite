@@ -4,4 +4,4 @@ loop i < 5 {
     total = total + i;
     i = i + 1;
 }
-report(total);
+outputLine(total);

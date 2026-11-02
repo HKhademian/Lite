@@ -92,8 +92,8 @@ test('temporary importFlatAll flattens declarations relative to the importing fi
     writeFileSync(join(directory, 'shared.lts'), 'importFlatAll "base.lts";\ndouble := fn(x: Int): Int { x + x }\n');
     writeFileSync(join(directory, 'main.lts'),
       'importFlatAll "shared.lts";\nimportFlatAll "shared.lts";\n' +
-      '/* importFlatAll "missing.lts"; */\nreport(base + 2);\n' +
-      'report("importFlatAll \\"missing.lts\\";");\n');
+      '/* importFlatAll "missing.lts"; */\noutputLine(base + 2);\n' +
+      'outputLine("importFlatAll \\"missing.lts\\";");\n');
     assert.deepEqual(run(loadSource(join(directory, 'main.lts'))), {
       code: 0, output: '42\nimportFlatAll "missing.lts";\n', errors: '',
     });
@@ -107,7 +107,7 @@ test('temporary importFlatAll flattens declarations relative to the importing fi
 test('temporary importFlatAll reports missing files and cycles', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-import-fault-'));
   try {
-    writeFileSync(join(directory, 'missing.lts'), 'importFlatAll "nope.lts";\nreport(1);\n');
+    writeFileSync(join(directory, 'missing.lts'), 'importFlatAll "nope.lts";\noutputLine(1);\n');
     assert.throws(() => loadSource(join(directory, 'missing.lts')), /ENOENT/);
     writeFileSync(join(directory, 'a.lts'), 'importFlatAll "b.lts";\n');
     writeFileSync(join(directory, 'b.lts'), 'importFlatAll "a.lts";\n');
@@ -122,13 +122,13 @@ test('bundle manifests flatten ordered sources with exact text and line maps', (
     writeFileSync(join(directory, 'base.lts'), 'base := 40;\n');
     writeFileSync(join(directory, 'nested', 'mid.lts'), 'importFlatAll "../base.lts";\nmid := 2;\n');
     writeFileSync(join(directory, 'main.lts'),
-      'importFlatAll "nested/mid.lts";\nimportFlatAll "nested/mid.lts";\nreport(base + mid);\n');
+      'importFlatAll "nested/mid.lts";\nimportFlatAll "nested/mid.lts";\noutputLine(base + mid);\n');
     const manifestPath = join(directory, 'bundle.json');
     writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['main.lts'] }));
     assert.deepEqual(loadManifest(manifestPath), { target: 'ts', files: ['main.lts'] });
     const bundle = loadBundle(manifestPath);
     assert.equal(bundle.target, 'ts');
-    assert.equal(bundle.text, 'base := 40;\nmid := 2;\nreport(base + mid);\n');
+    assert.equal(bundle.text, 'base := 40;\nmid := 2;\noutputLine(base + mid);\n');
     assert.deepEqual(bundle.lineMap, [
       { path: 'base.lts', line: 1 },
       { path: 'nested/mid.lts', line: 2 },
@@ -169,8 +169,8 @@ test('bundle manifests reject duplicates, cycles, missing files and invalid path
 test('bundle diagnostics map flattened rows back to original files and lines', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lite-bundle-diagnostic-'));
   try {
-    writeFileSync(join(directory, 'first.lts'), 'report(1);\n');
-    writeFileSync(join(directory, 'second.lts'), 'report(1 +);\n');
+    writeFileSync(join(directory, 'first.lts'), 'outputLine(1);\n');
+    writeFileSync(join(directory, 'second.lts'), 'outputLine(1 +);\n');
     const manifestPath = join(directory, 'bundle.json');
     writeFileSync(manifestPath, JSON.stringify({ target: 'ts', files: ['first.lts', 'second.lts'] }));
     const bundle = loadBundle(manifestPath);
@@ -178,15 +178,15 @@ test('bundle diagnostics map flattened rows back to original files and lines', (
     const result = compiler.compile({ text: bundle.text, lineMap: bundle.lineMap });
     assert.equal(result.status, 2);
     assert.deepEqual(result.stdout, Buffer.alloc(0));
-    assert.equal(result.stderr.toString(), 'second.lts:1:11: expected an Int, String or Bool expression\n');
+    assert.equal(result.stderr.toString(), 'second.lts:1:15: expected an Int, String or Bool expression\n');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('internal run harness captures report streams and exit status from fixed inputs', () => {
-  assert.deepEqual(runText('report(inputArgs()[0]); reportError("warn"); exit(7);', {
+  assert.deepEqual(runText('outputLine(inputArgs()[0]); reportError("warn"); exit(7);', {
     args: ['a b'], stdin: 'unread',
   }), { status: 7, stdout: Buffer.from('a b\n'), stderr: Buffer.from('warn\n') });
-  assert.deepEqual(runText('report(inputAll());', { stdin: 'one\ntwo\n' }), {
+  assert.deepEqual(runText('outputLine(inputAll());', { stdin: 'one\ntwo\n' }), {
     status: 0, stdout: Buffer.from('one\ntwo\n\n'), stderr: Buffer.alloc(0),
   });
 });
@@ -216,12 +216,12 @@ test('Lite lexer tokenizes lexical fixtures exactly', () => {
 
 test('Lite lexer rejects malformed lexical input with positioned diagnostics', () => {
   for (const [source, errors] of [
-    ['report("bad \\q");', '1:13: unsupported string escape \\q\n'],
-    ['report("unterminated);', '1:8: unterminated string literal\n'],
+    ['outputLine("bad \\q");', '1:17: unsupported string escape \\q\n'],
+    ['outputLine("unterminated);', '1:12: unterminated string literal\n'],
     ['/* unterminated', '1:1: unterminated comment\n'],
     ['/*# unterminated', '1:1: unterminated raw comment\n'],
-    ['report(9223372036854775809);', '1:8: integer literal outside signed 64-bit range\n'],
-    ['report(🙂);', '1:8: unsupported symbol: 🙂\n'],
+    ['outputLine(9223372036854775809);', '1:12: integer literal outside signed 64-bit range\n'],
+    ['outputLine(🙂);', '1:12: unsupported symbol: 🙂\n'],
     ['a =! b;', '1:3: incomplete operator =!; use =!=\n'],
     ['a && b;', '1:3: unsupported operator &&; use and\n'],
     ['a || b;', '1:3: unsupported operator ||; use or\n'],
@@ -359,7 +359,7 @@ test('Lite checker collects top-level symbols and rejects duplicates', () => {
     'f := fn(value: Int): (value: Int, ok: Bool) { (value = value, ok = true) }\n',
     'f := fn(a: Int, b: Int): Int { a + b }\ng := fn(): Int { f(1, 2) }\n',
     'f := fn(): Int { 1 }\ng := fn(): Int { f() }\n',
-    'values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { report(value); } 1 }\n',
+    'values: List<Int> = [1, 2];\nf := fn(): Int { loop values as value { outputLine(value); } 1 }\n',
     'x: Int = 42;\n',
     'f := fn(a: Int): Int { a }\ng := fn(): Int { f(1) }\n',
     'f := fn(a: String): Int { 1 }\ng := fn(): Int { f("ok") }\n',
@@ -442,14 +442,14 @@ test('compiler, L0 and lexer declarations carry doc comments', () => {
 });
 test('compiler applications preserve optional logical source names in their own diagnostics only', () => {
   for (const manifest of [tsManifestPath, cManifestPath]) {
-    const expected = runCompiler(manifest, 'report(42);').output;
+    const expected = runCompiler(manifest, 'outputLine(42);').output;
     for (const label of ['', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
-      assert.deepEqual(runCompiler(manifest, 'report(42);', label), { code: 0, output: expected, errors: '' });
-      assert.deepEqual(runCompiler(manifest, 'report(1 +);', label), {
-        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:11: expected an Int, String or Bool expression\n',
+      assert.deepEqual(runCompiler(manifest, 'outputLine(42);', label), { code: 0, output: expected, errors: '' });
+      assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);', label), {
+        code: 2, output: '', errors: (label === '' ? '' : label + ':') + '1:15: expected an Int, String or Bool expression\n',
       });
     }
-    assert.deepEqual(runCompiler(manifest, 'report(1 +);'), { code: 2, output: '', errors: '1:11: expected an Int, String or Bool expression\n' });
+    assert.deepEqual(runCompiler(manifest, 'outputLine(1 +);'), { code: 2, output: '', errors: '1:15: expected an Int, String or Bool expression\n' });
     let reads = 0; let errors = '';
     const code = execute(compile(loadBundle(manifest).text), {
       args: ['first.lts', 'extra'], read: () => { reads++; return null; },
@@ -466,15 +466,15 @@ test('real compiler CLI forwards source-name context without changing emitted by
   try {
     const sourcePath = join(directory, 'label with spaces.lts');
     for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
-      writeFileSync(sourcePath, 'report(42);');
+      writeFileSync(sourcePath, 'outputLine(42);');
       const valid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
       assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
       assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference)));
       assert.equal(valid.stderr.length, 0);
-      writeFileSync(sourcePath, 'report(1 +);');
+      writeFileSync(sourcePath, 'outputLine(1 +);');
       const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:11: expected an Int, String or Bool expression\n`));
+      assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, String or Bool expression\n`));
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -485,7 +485,7 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
   const directory = mkdtempSync(join(tmpdir(), 'litec-'));
   try {
     const sourcePath = join(directory, 'sample.lts');
-    writeFileSync(sourcePath, 'report(42);');
+    writeFileSync(sourcePath, 'outputLine(42);');
     const ts = spawnSync(join(root, 'litec'), ['--target', 'ts', sourcePath], { env, timeout: 5000 });
     assert.equal(ts.error, undefined); assert.equal(ts.status, 0, ts.stderr.toString());
     assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/generated/report-42.ts')));
@@ -500,10 +500,10 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     assert.equal(validCheck.error, undefined); assert.equal(validCheck.status, 0);
     assert.equal(validCheck.stdout.length, 0); assert.equal(validCheck.stderr.length, 0);
     const invalidPath = join(directory, 'bad.lts');
-    writeFileSync(invalidPath, 'report(1 +);\n');
+    writeFileSync(invalidPath, 'outputLine(1 +);\n');
     const invalid = spawnSync(join(root, 'litec'), ['ts', invalidPath], { env, timeout: 5000 });
     assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
-    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:11: expected an Int, String or Bool expression\n`));
+    assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
     assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
@@ -541,10 +541,10 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
     assert.equal(verified.error, undefined); assert.equal(verified.status, 0, verified.stderr);
     assert.match(verified.stdout, /PASS int\.arithmetic\/precedence-and-division/);
     assert.match(verified.stdout, /PASS example\.001-double-sum\/seven-and-five/);
-    assert.match(verified.stdout, /verification passed: 91 executed, 0 cached/);
+    assert.match(verified.stdout, /verification passed: 95 executed, 0 cached/);
     const covered = spawnSync(join(root, 'lite'), ['verify', '--coverage'], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(covered.error, undefined); assert.equal(covered.status, 0, covered.stderr);
-    assert.match(covered.stdout, /features: 36 registered, 36 cases/);
+    assert.match(covered.stdout, /features: 37 registered, 37 cases/);
     assert.match(covered.stdout, /examples: 19\/19 manifests/);
     assert.match(covered.stdout, /samples: 20\/20 manifests/);
     const first = spawnSync(join(root, 'lite'), ['verify', '--all', '--filter', 'int.arithmetic'],
@@ -564,32 +564,32 @@ test('lite verify runs feature and artifact cases and reports coverage', () => {
 });
 test('inputArgs returns an ordered String list with independent ordinary receiving copies', () => {
   assert.equal(run(`original := inputArgs(); editable: mut List<String> = original;
-    push_front(mut editable, "local"); report(original[0], editable[0]);
+    push_front(mut editable, "local"); outputLine(original[0], editable[0]);
     copy := fn(values: List<String>): List<String> { values }
-    loop copy(inputArgs()) as value { report(value); }`, 'unread', ['first', '', 'سلام🙂', '--check']).output,
+    loop copy(inputArgs()) as value { outputLine(value); }`, 'unread', ['first', '', 'سلام🙂', '--check']).output,
     'first local\nfirst\n\nسلام🙂\n--check\n');
-  assert.equal(run('loop inputArgs() { report("unexpected"); }').output, '');
+  assert.equal(run('loop inputArgs() { outputLine("unexpected"); }').output, '');
   fault('values := inputArgs(); push_back(mut values, "not granted");', 'TypeError');
 });
 test('inputArgs has no stream effects and snapshots host arguments before program execution', () => {
   const unexpected = (): never => { throw new Error('unexpected stream effect'); };
   assert.equal(execute(compile('inputArgs();'), { read: unexpected, report: unexpected, reportError: unexpected }), 0);
-  assert.equal(run('inputArgs(); report(inputAll());', 'unread\r\n').output, 'unread\r\n\n');
+  assert.equal(run('inputArgs(); outputLine(inputAll());', 'unread\r\n').output, 'unread\r\n\n');
   const args = ['original']; let output = '';
-  execute(compile('report(inputArgs()[0]); report(inputArgs()[0]);'), {
+  execute(compile('outputLine(inputArgs()[0]); outputLine(inputArgs()[0]);'), {
     args, read: unexpected, report: text => { output += text; args[0] = 'changed externally'; }, reportError: unexpected,
   });
   assert.equal(output, 'original\noriginal\n');
 });
 test('inputArgs signatures fail before effects and normal helper shadowing is preserved', () => {
-  for (const source of ['inputArgs(1);', 'inputArgs("prompt");', 'inputArgs(value = "x");', 'report(inputArgs());']) {
+  for (const source of ['inputArgs(1);', 'inputArgs("prompt");', 'inputArgs(value = "x");']) {
     let effects = false;
-    assert.throws(() => execute(compile(`report("before"); ${source}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${source}`), {
       args: ['value'], read: () => { effects = true; return null; }, report: () => { effects = true; }, reportError: () => { effects = true; },
     }), LiteFault);
     assert.equal(effects, false, source);
   }
-  assert.equal(run('inputArgs := fn(n: Int): Int { n + 1 } report(inputArgs(n = 2));', '', ['unread']).output, '3\n');
+  assert.equal(run('inputArgs := fn(n: Int): Int { n + 1 } outputLine(inputArgs(n = 2));', '', ['unread']).output, '3\n');
 });
 test('real launcher preserves only script argument values after the first separating suffix', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -610,7 +610,7 @@ test('argument suffix errors precede execution and check-only ignores all script
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const directory = mkdtempSync(join(tmpdir(), 'lite-args-'));
   try {
-    const path = join(directory, 'side-effects.lts'); writeFileSync(path, 'report("before"); inputAll("prompt: ");');
+    const path = join(directory, 'side-effects.lts'); writeFileSync(path, 'outputLine("before"); inputAll("prompt: ");');
     for (const suffix of [['extra'], ['--check'], ['extra', '--', 'later']]) {
       const rejected = spawnSync(join(root, 'lite'), ['run', path, ...suffix], { env, timeout: 5000 });
       assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2);
@@ -637,25 +637,25 @@ test('script arguments survive caller-relative paths and script filenames with s
 
 test('inputAll preserves multi-line text, line endings, trailing whitespace and empty EOF', () => {
   for (const text of ['', 'one', 'one\n', 'one\r\ntwo\r\n', ' \t\r\n\n', 'سلام🙂\né\t ']) {
-    assert.equal(run('text := inputAll(); report(text);', text).output, text + '\n');
+    assert.equal(run('text := inputAll(); outputLine(text);', text).output, text + '\n');
   }
   assert.deepEqual(run('text := inputAll(); text;', 'one\ntwo\n'), { code: 0, output: '', errors: '' });
-  assert.equal(run('report(inputAll()); report(inputAll());', 'first\nlast').output, 'first\nlast\n\n');
+  assert.equal(run('outputLine(inputAll()); outputLine(inputAll());', 'first\nlast').output, 'first\nlast\n\n');
 });
 test('inputAll consumes unread lookahead and the remainder after other input helpers', () => {
-  assert.equal(run('first := inputWord(); report(first); report(inputAll());', 'first \tsecond\r\n').output,
+  assert.equal(run('first := inputWord(); outputLine(first); outputLine(inputAll());', 'first \tsecond\r\n').output,
     'first\n \tsecond\r\n\n');
-  assert.equal(run('first := inputInt(); report(first); report(inputAll());', '7\r\nmore\n').output,
+  assert.equal(run('first := inputInt(); outputLine(first); outputLine(inputAll());', '7\r\nmore\n').output,
     '7\n\r\nmore\n\n');
-  assert.equal(run('first := inputLine(); report(first); report(inputAll());', 'first\r\nsecond\r\n').output,
+  assert.equal(run('first := inputLine(); outputLine(first); outputLine(inputAll());', 'first\r\nsecond\r\n').output,
     'first\nsecond\r\n\n');
-  assert.equal(run('report(inputAll());', '').output, '\n');
+  assert.equal(run('outputLine(inputAll());', '').output, '\n');
   for (const helper of ['inputInt', 'inputFloat', 'inputWord', 'inputLine']) fault(`${helper}();`, 'InputFault');
 });
 test('inputAll prompt evaluates once and writes exact stdout before the first read even at EOF', () => {
   const events: string[] = [];
   let read = false;
-  execute(compile('text := inputAll(({report("prepare"); "source: "})); report(text);'), {
+  execute(compile('text := inputAll(({outputLine("prepare"); "source: "})); outputLine(text);'), {
     read: () => { events.push('read'); if (read) return null; read = true; return 'x'; },
     report: text => { events.push(`write:${text}`); }, reportError: () => { throw new Error('unexpected stderr'); },
   });
@@ -671,7 +671,7 @@ test('inputAll retains terminal read failures and never reads after a failed pro
   }), /closed output/);
   assert.equal(reads, 0);
   let output = '';
-  assert.throws(() => execute(compile('inputAll("source: "); report("later");'), {
+  assert.throws(() => execute(compile('inputAll("source: "); outputLine("later");'), {
     read: () => { throw new Error('read failed'); }, report: text => { output += text; }, reportError: () => {},
   }), (error: unknown) => error instanceof LiteFault && error.category === 'InputFault' && error.message.includes('read failed'));
   assert.equal(output, 'source: ');
@@ -680,12 +680,12 @@ test('inputAll signatures and named arguments fail before effects while ordinary
   for (const code of ['inputAll(1);', 'inputAll(false);', 'inputAll("a", "b");',
     'inputAll(prompt = "source: ");', 'inputAll((1,));']) {
     let effects = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { effects = true; return null; }, report: () => { effects = true; }, reportError: () => { effects = true; },
     }), LiteFault);
     assert.equal(effects, false, code);
   }
-  assert.equal(run('inputAll := fn(): String { "local" } report(inputAll());', 'unread').output, 'local\n');
+  assert.equal(run('inputAll := fn(): String { "local" } outputLine(inputAll());', 'unread').output, 'local\n');
 });
 test('whole-input example runs via the real launcher preserving UTF-8 bytes and silent check-only behavior', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -912,11 +912,11 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
     }
   }
   const label = 'named source.lts';
-  assert.deepEqual(tsCompiler.compile({ text: 'report(42);', name: label }), {
+  assert.deepEqual(tsCompiler.compile({ text: 'outputLine(42);', name: label }), {
     status: 0, stdout: readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url)), stderr: Buffer.alloc(0),
   });
-  assert.deepEqual(tsCompiler.compile({ text: 'report(1 +);', name: label }), {
-    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:11: expected an Int, String or Bool expression\n`),
+  assert.deepEqual(tsCompiler.compile({ text: 'outputLine(1 +);', name: label }), {
+    status: 2, stdout: Buffer.alloc(0), stderr: Buffer.from(`${label}:1:15: expected an Int, String or Bool expression\n`),
   });
 });
 
@@ -1029,7 +1029,7 @@ test('TS runtime helpers preserve checked Int64, text and list semantics', () =>
 });
 
 test('restricted compiler accepts typed scalar locals without changing existing cases', async context => {
-  const source = 'x: Int = 1;\ns: String = "a";\nb: Bool = true;\ny: Int;\nreport(x, s, b, y);\nvar z: Int = 2;\nz = 3;\nreport(z);\n';
+  const source = 'x: Int = 1;\ns: String = "a";\nb: Bool = true;\ny: Int;\noutputLine(x, s, b, y);\nvar z: Int = 2;\nz = 3;\noutputLine(z);\n';
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
@@ -1075,7 +1075,7 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     's: Word = "ok";',
     'b: Flag = true;',
     'z: Forward = 3;',
-    'report(x, y, s, b, add(x, y), echo(s), z);',
+    'outputLine(x, y, s, b, add(x, y), echo(s), z);',
     'noop();',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -1098,7 +1098,7 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
     's: Word = "ok";',
     'b: Flag = true;',
     'z: Forward = 3;',
-    'report(x, y, s, b, z);',
+    'outputLine(x, y, s, b, z);',
   ].join('\n');
   if (process.env['LITE_SKIP_NATIVE'] !== '1') {
     const cc = process.env['CC'] ?? 'cc';
@@ -1123,8 +1123,8 @@ test('restricted compiler resolves transparent scalar aliases', async context =>
       '1:11: expected a list element type\n'],
     ['A := type ();\n',
       '1:11: tuple type needs at least one field\n'],
-    ['A := type Float;\n',
-      '1:11: unsupported type alias Float; only Int, String, Bool, Unit, List<T>, flat named tuples and aliases are supported\n'],
+    ['A := type Float32;\n',
+      '1:11: unknown type alias Float32\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1142,10 +1142,10 @@ test('restricted compiler compiles flat named tuples and tuple functions to runn
     'var current := p;',
     'current = (kind = "symbol", code = "+");',
     'blank: Pair2;',
-    'report(p.kind, p.code, q.kind, current.kind, current.code);',
-    'report(blank.kind);',
-    'report(blank.code);',
-    'report(rewrap(p).kind, rewrap(p).code, label((kind = "call", code = "1")));',
+    'outputLine(p.kind, p.code, q.kind, current.kind, current.code);',
+    'outputLine(blank.kind);',
+    'outputLine(blank.code);',
+    'outputLine(rewrap(p).kind, rewrap(p).code, label((kind = "call", code = "1")));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1157,19 +1157,19 @@ test('restricted compiler compiles flat named tuples and tuple functions to runn
 
 test('restricted compiler diagnoses invalid flat named tuples clearly', () => {
   for (const [bad, errors] of [
-    ['p: (kind: String) = (kind = "a");\nreport(p.nope);\n', '2:10: tuple has no field nope\n'],
+    ['p: (kind: String) = (kind = "a");\noutputLine(p.nope);\n', '2:14: tuple has no field nope\n'],
     ['p: (kind: String) = (kind = 1);\n', '1:1: cannot initialize (kind: String) with (kind: Int)\n'],
     ['p := (kind = 1, kind = 2);\n', '1:17: duplicate tuple field kind\n'],
     ['p: (kind: String, kind: Int) = (kind = "a", kind = 2);\n', '1:19: duplicate tuple field kind\n'],
-    ['f := fn (x: (kind: String)): String { return x.kind; }\nreport(f((kind = 1)));\n',
-      '2:10: argument 1 of f must be (kind: String), got (kind: Int)\n'],
+    ['f := fn (x: (kind: String)): String { return x.kind; }\noutputLine(f((kind = 1)));\n',
+      '2:14: argument 1 of f must be (kind: String), got (kind: Int)\n'],
     ['f := fn (): (kind: String) { return (kind = 1); }\n',
       '1:37: cannot return (kind: Int) from function f returning (kind: String)\n'],
     ['p := (kind = (a = 1));\n', '1:14: nested tuple values are not supported\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  const tupleSource = 'p: (kind: String) = (kind = "a");\nreport(p.kind);\n';
+  const tupleSource = 'p: (kind: String) = (kind = "a");\noutputLine(p.kind);\n';
   assert.deepEqual(runCompiler(cManifestPath, tupleSource), {
     code: 2, output: '', errors: 'C backend does not support tuple values yet\n',
   });
@@ -1197,8 +1197,8 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
     'counts: Counts = [8, 9];',
     'var editable: List<Int> = [1];',
     'editable = [];',
-    'report(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));',
-    'report([4, 5][1], count(empty), count(none()), counts[1]);',
+    'outputLine(values[1], names[0], first(more), pairs[1].kind, pairs[0].code, make()[1], copy(names)[1], count([]));',
+    'outputLine([4, 5][1], count(empty), count(none()), counts[1]);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1207,7 +1207,7 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
     stdout: Buffer.from('20 alpha 7 symbol 12 7 beta 0\n5 0 0 9\n'), stderr: Buffer.alloc(0),
   });
 
-  const bounds = runCompiler(tsManifestPath, 'values: List<Int> = [1];\nreport(values[1]);\n');
+  const bounds = runCompiler(tsManifestPath, 'values: List<Int> = [1];\noutputLine(values[1]);\n');
   assert.equal(bounds.code, 0, bounds.errors);
   const boundsRun = runTsArtifact(bounds.output);
   assert.equal(boundsRun.phase, 'run');
@@ -1218,16 +1218,15 @@ test('restricted compiler compiles growable lists, literals and indexing to runn
 test('restricted compiler diagnoses invalid list types, literals and indexes clearly', () => {
   for (const [bad, errors] of [
     ['values: List<Int> = ["bad"];\n', '1:22: list element 1 must be Int, got String\n'],
-    ['x := 1;\nreport(x[0]);\n', '2:9: indexing requires a list value\n'],
-    ['values: List<Int> = [1];\nreport(values["x"]);\n', '2:15: list index must be Int, got String\n'],
+    ['x := 1;\noutputLine(x[0]);\n', '2:13: indexing requires a list value\n'],
+    ['values: List<Int> = [1];\noutputLine(values["x"]);\n', '2:19: list index must be Int, got String\n'],
     ['values: List<Int> = [1];\nother: List<String> = values;\n', '2:1: cannot initialize List<String> with List<Int>\n'],
     ['values := [];\n', '1:11: empty list literal requires a List element type\n'],
     ['values: List<List<Int>> = [];\n', '1:14: nested list types are not supported\n'],
-    ['values: List<Int> = [1];\nreport(values);\n', '2:8: report does not accept a list value\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  for (const bad of ['values: List<Int> = [1];\nreport(1);\n', 'report([1][0]);\n']) {
+  for (const bad of ['values: List<Int> = [1];\noutputLine(1);\n', 'outputLine([1][0]);\n']) {
     assert.deepEqual(runCompiler(cManifestPath, bad), {
       code: 2, output: '', errors: 'C backend does not support list values yet\n',
     }, bad);
@@ -1245,29 +1244,29 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
     'values: Ints = [10, 20];',
     'names: List<String> = ["alpha", "beta"];',
     'loop values as value {',
-    '    report(value);',
+    '    outputLine(value);',
     '}',
     'loop names as name {',
-    '    report(name);',
+    '    outputLine(name);',
     '}',
     'loop pairs() as pair {',
-    '    report(pair.kind, pair.code);',
+    '    outputLine(pair.kind, pair.code);',
     '}',
     'loop make() as value {',
-    '    report(value);',
+    '    outputLine(value);',
     '}',
     'item: String = "outer";',
     'loop values as item {',
-    '    report(item);',
+    '    outputLine(item);',
     '    if item == 10 {',
     '        item: String = "inner";',
-    '        report(item);',
+    '        outputLine(item);',
     '    }',
-    '    report(item);',
+    '    outputLine(item);',
     '}',
-    'report(item);',
+    'outputLine(item);',
     'loop values as ignored {',
-    '    report("tick");',
+    '    outputLine("tick");',
     '}',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -1281,16 +1280,16 @@ test('restricted compiler compiles list traversal to runnable TS', () => {
 
 test('restricted compiler diagnoses invalid list traversal clearly', () => {
   for (const [bad, errors] of [
-    ['loop 1 as item { report(item); }\n', '1:6: loop sequence must be a List, got Int\n'],
-    ['loop true as item { report(item); }\n', '1:6: loop sequence must be a List, got Bool\n'],
+    ['loop 1 as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Int\n'],
+    ['loop true as item { outputLine(item); }\n', '1:6: loop sequence must be a List, got Bool\n'],
     ['values: List<Int> = [1];\nloop values as {\n}\n', '2:16: expected an item name after as\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item: Int = 2;\n}\n', '3:5: duplicate local item\n'],
     ['values: List<Int> = [1];\nloop values as item {\n    item = 2;\n}\n', '3:5: cannot assign to immutable local item\n'],
-    ['values: List<Int> = [1];\nloop values as item {\n    report(item);\n}\nreport(item);\n', '5:8: unknown value item\n'],
+    ['values: List<Int> = [1];\nloop values as item {\n    outputLine(item);\n}\noutputLine(item);\n', '5:12: unknown value item\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  assert.deepEqual(runCompiler(cManifestPath, 'loop [1, 2] as item { report(item); }\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, 'loop [1, 2] as item { outputLine(item); }\n'), {
     code: 2, output: '', errors: 'C backend does not support list traversal yet\n',
   });
 });
@@ -1305,7 +1304,7 @@ const loopExitCases = [
     '    if i == 6 { break; }',
     '    total = total + i;',
     '}',
-    'report(total);',
+    'outputLine(total);',
   ].join('\n'), '12\n'],
   [[
     'var n := 0;',
@@ -1313,9 +1312,9 @@ const loopExitCases = [
     '    n = n + 1;',
     '    if n == 2 { continue; }',
     '    if n == 4 { break; }',
-    '    report(n);',
+    '    outputLine(n);',
     '}',
-    'report(n);',
+    'outputLine(n);',
   ].join('\n'), '1\n3\n4\n'],
   [[
     'var outer := 0;',
@@ -1329,17 +1328,17 @@ const loopExitCases = [
     '        if inner == 4 { break; }',
     '        visits = visits + 1;',
     '    }',
-    '    report(outer, inner);',
+    '    outputLine(outer, inner);',
     '    visits = visits + 10;',
     '}',
-    'report(visits);',
+    'outputLine(visits);',
   ].join('\n'), '1 4\n2 4\n24\n'],
   [[
     'values: List<Int> = [1, 2, 3, 4, 5];',
     'loop values as value {',
     '    if value == 2 { continue; }',
     '    if value == 5 { break; }',
-    '    report(value);',
+    '    outputLine(value);',
     '}',
   ].join('\n'), '1\n3\n4\n'],
 ] as const;
@@ -1381,7 +1380,7 @@ test('restricted compiler diagnoses break and continue outside loops', () => {
     ['if true { break; }\n', '1:11: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\nbreak;\n', '3:1: break outside loop\n'],
     ['var i := 0;\nloop i < 1 { i = i + 1; }\ncontinue;\n', '3:1: continue outside loop\n'],
-    ['f := fn(): Int { loop true { break; } break; 1 }\nreport(f());\n', '1:39: break outside loop\n'],
+    ['f := fn(): Int { loop true { break; } break; 1 }\noutputLine(f());\n', '1:39: break outside loop\n'],
     ['loop true { break 1; }\n', '1:19: expected ; after break\n'],
     ['loop true { continue @outer; }\n', '1:22: expected ; after continue\n'],
   ] as const) {
@@ -1401,18 +1400,18 @@ const leadingSeparatorTsSource = [
   'single := and ready;',
   'var flag := true;',
   'flag = and ready and not false;',
-  'report(ready, single, flag);',
+  'outputLine(ready, single, flag);',
   'if or ready and flag {',
-  '    report("or-if");',
+  '    outputLine("or-if");',
   '}',
   'if and ready {',
-  '    report("and-if");',
+  '    outputLine("and-if");',
   '}',
-  'report(pick(or ready and flag, and flag), explicit(or ready));',
+  'outputLine(pick(or ready and flag, and flag), explicit(or ready));',
   'value := if and ready { 7 } else { 9 };',
-  'report(value);',
-  'report(and (or ready or false) and flag);',
-  'report(and true, or false);',
+  'outputLine(value);',
+  'outputLine(and (or ready or false) and flag);',
+  'outputLine(and true, or false);',
 ].join('\n');
 const leadingSeparatorTsStdout = 'true true true\nor-if\nand-if\ntrue true\n7\ntrue\ntrue false\n';
 const leadingSeparatorCSource = [
@@ -1422,11 +1421,11 @@ const leadingSeparatorCSource = [
   'single := and ready;',
   'var flag := true;',
   'flag = and ready and not false;',
-  'report(ready, single, flag);',
-  'if or ready and flag { report("or-if"); }',
-  'if and ready { report("and-if"); }',
-  'report(and (or ready or false) and flag);',
-  'report(and true, or false);',
+  'outputLine(ready, single, flag);',
+  'if or ready and flag { outputLine("or-if"); }',
+  'if and ready { outputLine("and-if"); }',
+  'outputLine(and (or ready or false) and flag);',
+  'outputLine(and true, or false);',
 ].join('\n');
 const leadingSeparatorCStdout = 'true true true\nor-if\nand-if\ntrue\ntrue false\n';
 
@@ -1461,17 +1460,17 @@ test('restricted compiler diagnoses invalid leading and/or forms', () => {
     ['x := and 1;', '1:6: leading and requires a Bool expression\n'],
     ['x := or [1];', '1:6: leading or requires a Bool expression\n'],
     ['flag := or "text";', '1:9: leading or requires a Bool expression\n'],
-    ['if and (1) { report(1); }', '1:4: leading and requires a Bool expression\n'],
+    ['if and (1) { outputLine(1); }', '1:4: leading and requires a Bool expression\n'],
     ['loop and 1 { }', '1:6: leading and requires a Bool expression\n'],
     ['x := and and true;', '1:10: leading and may appear only once\n'],
-    ['if or and ready { report(1); }', '1:7: leading or may appear only once\n'],
+    ['if or and ready { outputLine(1); }', '1:7: leading or may appear only once\n'],
     ['x := true and;', '1:14: expected an Int, String or Bool expression\n'],
-    ['if true or { report(1); }', '1:12: expected an Int, String or Bool expression\n'],
+    ['if true or { outputLine(1); }', '1:12: expected an Int, String or Bool expression\n'],
     ['x := or;', '1:8: expected an Int, String or Bool expression\n'],
     ['x := true and or false;', '1:15: unsupported feature "or": see docs/conditionals.md; ' +
-      'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n'],
+      'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
     ['x := not and true;', '1:10: unsupported feature "and": see docs/conditionals.md; ' +
-      'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n'],
+      'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1486,47 +1485,47 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
     'pass := fn (items: List<Int>): List<Int> { items }',
     'values: mut Values = [1, 2];',
     'push_back(mut values, 3);',
-    'report(values[0], values[2]);',
-    'report(pop_back(mut values));',
-    'report(values[1]);',
+    'outputLine(values[0], values[2]);',
+    'outputLine(pop_back(mut values));',
+    'outputLine(values[1]);',
     'source: List<Int> = [10, 20];',
     'copy: mut List<Int> = source;',
     'push_back(mut copy, 9);',
-    'report(source[0], source[1], copy[2]);',
+    'outputLine(source[0], source[1], copy[2]);',
     'var replaced: mut List<Int> = [4];',
     'replaced = [7];',
     'push_back(mut replaced, 8);',
-    'report(replaced[0], replaced[1]);',
+    'outputLine(replaced[0], replaced[1]);',
     'origin: mut List<Int> = [5];',
     'detached: mut List<Int> = pass(origin);',
     'push_back(mut detached, 6);',
-    'report(origin[0], detached[1]);',
+    'outputLine(origin[0], detached[1]);',
     'var first: mut List<Int> = [1];',
     'second: mut List<Int> = [2, 4];',
     'first = second;',
     'push_back(mut first, 3);',
-    'report(pop_back(mut second), first[2]);',
+    'outputLine(pop_back(mut second), first[2]);',
     'stack: mut List<Int> = [1, 2, 3];',
-    'report(pop_back(mut stack), pop_back(mut stack), pop_back(mut stack));',
+    'outputLine(pop_back(mut stack), pop_back(mut stack), pop_back(mut stack));',
     'growing: mut List<Int> = [1];',
     'loop growing as value {',
     '    if value == 1 {',
     '        push_back(mut growing, 2);',
     '    }',
-    '    report(value);',
+    '    outputLine(value);',
     '}',
-    'report(growing[1]);',
+    'outputLine(growing[1]);',
     'pairs: mut List<Pair> = [(kind = "a", code = 1)];',
     'push_back(mut pairs, (kind = "b", code = 2));',
     'pair := pop_back(mut pairs);',
-    'report(pair.kind, pair.code, pairs[0].kind);',
+    'outputLine(pair.kind, pair.code, pairs[0].kind);',
     'blank: mut List<String>;',
     'push_back(mut blank, "ok");',
     'push_back(mut blank, "later");',
-    'report(pop_back(mut blank));',
+    'outputLine(pop_back(mut blank));',
     'pop_back(mut blank);',
     'push_back(mut blank, "again");',
-    'report(blank[0]);',
+    'outputLine(blank[0]);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1536,7 +1535,7 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
     stderr: Buffer.alloc(0),
   });
 
-  const empty = runCompiler(tsManifestPath, 'empty: mut List<Int> = [];\nreport(pop_back(mut empty));\n');
+  const empty = runCompiler(tsManifestPath, 'empty: mut List<Int> = [];\noutputLine(pop_back(mut empty));\n');
   assert.equal(empty.code, 0, empty.errors);
   const emptyRun = runTsArtifact(empty.output);
   assert.equal(emptyRun.phase, 'run');
@@ -1558,12 +1557,10 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
       '1:15: unknown value missing\n'],
     ['values: mut List<Int> = [];\npush_back(mut values);\n',
       '2:21: push_back expects a value after the mut list\n'],
-    ['values: mut List<Int> = [];\nreport(pop_back(values));\n',
-      '2:17: pop_back requires mut list argument\n'],
+    ['values: mut List<Int> = [];\noutputLine(pop_back(values));\n',
+      '2:21: pop_back requires mut list argument\n'],
     ['values: mut Int = 1;\n',
       '1:9: mut requires a List type, got Int\n'],
-    ['values: mut List<Int> = [];\nreport(push_back(mut values, 1));\n',
-      '2:8: report does not accept a Unit value\n'],
     ['values: mut List<Int> = [];\nx := push_back(mut values, 1);\n',
       '2:1: cannot declare a Unit local x\n'],
   ] as const) {
@@ -1571,7 +1568,7 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
   }
   for (const bad of [
     'values: mut List<Int> = [1];\npush_back(mut values, 2);\n',
-    'values: mut List<Int> = [1];\nreport(pop_back(mut values));\n',
+    'values: mut List<Int> = [1];\noutputLine(pop_back(mut values));\n',
     'values: mut List<Int>;\npush_back(mut values, 2);\n',
   ]) {
     assert.deepEqual(runCompiler(cManifestPath, bad), {
@@ -1583,11 +1580,11 @@ test('restricted compiler compiles list mutation grants, push and pop to runnabl
 test('restricted compiler treats nested, doc and raw comments as separating trivia', async context => {
   const source = [
     '/* ordinary leading comment',
-    '   /* nested existing comment: report(999); */',
+    '   /* nested existing comment: outputLine(999); */',
     '   /*# embedded raw: /* not a nested opener " ( { #*/',
     '   "unterminated string and unmatched ( {',
     '*/',
-    '/** documentation comment: report(888); */',
+    '/** documentation comment: outputLine(888); */',
     'x := 10/* separator */+ 2;',
     'y := x /* between tokens */',
     '    * 3;',
@@ -1597,11 +1594,11 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
     '#*/',
     'z := y + 1;',
     '/*## longer fence: the text may contain #*/ without ending the comment. ##*/',
-    'report(x, y, z);',
+    'outputLine(x, y, z);',
   ].join('\n');
   const baseline = run(source);
   assert.deepEqual(baseline, { code: 0, output: '12 36 37\n', errors: '' });
-  const withoutComments = 'x := 10 + 2;\ny := x * 3;\nz := y + 1;\nreport(x, y, z);\n';
+  const withoutComments = 'x := 10 + 2;\ny := x * 3;\nz := y + 1;\noutputLine(x, y, z);\n';
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.equal(ts.output, runCompiler(tsManifestPath, withoutComments).output);
@@ -1609,13 +1606,13 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
     phase: 'run', status: 0, signal: null, stdout: Buffer.from(baseline.output), stderr: Buffer.alloc(0),
   });
   for (const manifest of [tsManifestPath, cManifestPath]) {
-    assert.deepEqual(runCompiler(manifest, 'report(1/*x*/2);'), {
-      code: 2, output: '', errors: '1:14: expected )\n',
+    assert.deepEqual(runCompiler(manifest, 'outputLine(1/*x*/2);'), {
+      code: 2, output: '', errors: '1:18: expected )\n',
     });
-    assert.deepEqual(runCompiler(manifest, 'report(1);\n/* outer /* inner */\n'), {
+    assert.deepEqual(runCompiler(manifest, 'outputLine(1);\n/* outer /* inner */\n'), {
       code: 2, output: '', errors: '2:1: unterminated comment\n',
     });
-    assert.deepEqual(runCompiler(manifest, 'report(1);\n/*# raw */\n'), {
+    assert.deepEqual(runCompiler(manifest, 'outputLine(1);\n/*# raw */\n'), {
       code: 2, output: '', errors: '2:1: unterminated raw comment\n',
     });
     assert.deepEqual(runCompiler(manifest, '/*## raw #*/'), {
@@ -1637,9 +1634,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 53 program and 39 rejection cases', () => {
-  assert.equal(programFixtures.length, 53);
-  assert.equal(rejectionFixtures.length, 39);
+test('restricted compiler corpus keeps 55 program and 38 rejection cases', () => {
+  assert.equal(programFixtures.length, 55);
+  assert.equal(rejectionFixtures.length, 38);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
@@ -1650,7 +1647,7 @@ test('restricted compiler compiles scalar functions, calls and returns to runnab
     'positive := fn (x: Int): Bool { return x > 0; }',
     'noop := fn (): Unit { return; }',
     'value := fn (u: Unit): Int { return 7; }',
-    'report(double(21), add(2, 3), echo("ok"), positive(1), positive(-1), value(noop()));',
+    'outputLine(double(21), add(2, 3), echo("ok"), positive(1), positive(-1), value(noop()));',
     'noop();',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
@@ -1663,7 +1660,7 @@ test('restricted compiler compiles scalar functions, calls and returns to runnab
   const recursive = [
     'factorial := fn (n: Int): Int { if n <= 1 { return 1; } return n * self(n - 1); }',
     'countdown := fn (n: Int): Int { if n == 0 { return 0; } return 1 + countdown(n - 1); }',
-    'report(factorial(5), countdown(3));',
+    'outputLine(factorial(5), countdown(3));',
   ].join('\n');
   const recursiveTs = runCompiler(tsManifestPath, recursive);
   assert.equal(recursiveTs.code, 0, recursiveTs.errors);
@@ -1679,7 +1676,7 @@ test('restricted compiler completes scalar functions from tail expressions', () 
     'double := fn (x: Int): Int { x * 2 }',
     'greeting := fn (): String { "hi" }',
     'pick := fn (flag: Bool): Int { if flag { return 1; } 2 }',
-    'report(double(21), greeting(), pick(true), pick(false));',
+    'outputLine(double(21), greeting(), pick(true), pick(false));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1693,7 +1690,7 @@ test('restricted compiler completes function tails from Bool literals and calls'
   const source = [
     'isZero := fn (x: Int): Bool { if x == 0 { return true; } false }',
     'flag := fn (x: Int): Bool { isZero(x) }',
-    'report(flag(0), flag(1));',
+    'outputLine(flag(0), flag(1));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1711,7 +1708,7 @@ test('restricted compiler allows top-level declarations between functions', () =
     'one := fn (): Int { 1 }',
     'label := "n";',
     'two := fn (): String { label + label }',
-    'report(one(), two());',
+    'outputLine(one(), two());',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1724,8 +1721,8 @@ test('restricted compiler allows top-level declarations between functions', () =
 test('restricted compiler diagnoses scalar function arity, argument and return mismatches', () => {
   const prefix = 'f := fn (x: Int): Int { return x; }\n';
   for (const [bad, errors] of [
-    [prefix + 'report(f());\n', '2:8: function f expects 1 argument, got 0\n'],
-    [prefix + 'report(f("x"));\n', '2:10: argument 1 of f must be Int, got String\n'],
+    [prefix + 'outputLine(f());\n', '2:12: function f expects 1 argument, got 0\n'],
+    [prefix + 'outputLine(f("x"));\n', '2:14: argument 1 of f must be Int, got String\n'],
     ['f := fn (x: Int): Int { return "x"; }\n', '1:32: cannot return String from function f returning Int\n'],
     ['f := fn (): Int { return; }\n', '1:19: function f must return Int\n'],
   ] as const) {
@@ -1745,11 +1742,11 @@ test('restricted compiler compiles value if expressions in every value position'
     'y: Int = if false { 1 } else { 2 };',
     'var z := 0;',
     'z = if true { 7 } else { 8 };',
-    'report(x, y, z, pickInt(true), pickInt(false));',
-    'report(pickText(true), pickText(false), pickBool(true), pickBool(false));',
-    'report(classify(-1), classify(0), classify(5));',
-    'report(nested(true, true), nested(true, false), nested(false, false));',
-    'report(early(true), early(false), pickBool(if true { true } else { false }));',
+    'outputLine(x, y, z, pickInt(true), pickInt(false));',
+    'outputLine(pickText(true), pickText(false), pickBool(true), pickBool(false));',
+    'outputLine(classify(-1), classify(0), classify(5));',
+    'outputLine(nested(true, true), nested(true, false), nested(false, false));',
+    'outputLine(early(true), early(false), pickBool(if true { true } else { false }));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1778,8 +1775,8 @@ test('restricted compiler completes statement-shaped if branches as function res
     'grade := fn (n: Int): String { if n > 90 { "a" } else if n > 80 { "b" } else { "c" } }',
     'negate := fn (x: Bool): Bool { not x }',
     'guard := fn (a: Bool, b: Bool): Bool { if a { not b } else { false } }',
-    'report(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
-    'report(negate(true), negate(false), guard(true, false), guard(false, false));',
+    'outputLine(pick(-2).text, pick(0).next, pick(5).next, bump(-3), bump(4), grade(95), grade(85), grade(10));',
+    'outputLine(negate(true), negate(false), guard(true, false), guard(false, false));',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1791,7 +1788,7 @@ test('restricted compiler completes statement-shaped if branches as function res
   // typecheck rejects the emitted function that can fall through.
   const incomplete = runCompiler(tsManifestPath, [
     'g := fn (x: Bool): Int { if x { reportError("a"); } else { 2 } }',
-    'report(g(true));',
+    'outputLine(g(true));',
     '',
   ].join('\n'));
   assert.equal(incomplete.code, 0, incomplete.errors);
@@ -1808,10 +1805,10 @@ test('restricted compiler diagnoses invalid value if expressions and rejects the
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
-  assert.deepEqual(runCompiler(cManifestPath, 'x := if true { 1 } else { 2 };\nreport(x);\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, 'x := if true { 1 } else { 2 };\noutputLine(x);\n'), {
     code: 2, output: '', errors: 'C backend does not support value if expressions yet\n',
   });
-  assert.deepEqual(runCompiler(cManifestPath, 'if true { report(1); } else { report(2); }\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, 'if true { outputLine(1); } else { outputLine(2); }\n'), {
     code: 0, output: '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n' +
       'int main(void) {\n    int status = 0;\n    if (true) {\n' +
       '        if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
@@ -1856,34 +1853,34 @@ test('restricted compiler compiles action else-if chains to runnable TS', () => 
     '    var index := 0;',
     '    loop index < limit {',
     '        if index == 0 {',
-    '            report("loop-zero", index);',
+    '            outputLine("loop-zero", index);',
     '        } else if index == 1 {',
-    '            report("loop-one", index);',
+    '            outputLine("loop-one", index);',
     '        } else if index == 2 {',
-    '            report("loop-two", index);',
+    '            outputLine("loop-two", index);',
     '        } else {',
-    '            report("loop-many", index);',
+    '            outputLine("loop-many", index);',
     '        }',
     '        index = index + 1;',
     '    }',
     '}',
     'x := 2;',
-    'report(classify(-1), classify(0), classify(5), classify(50));',
-    'report(noFinal(-1), noFinal(0), noFinal(5));',
-    'report(nested(-1, true), nested(-20, false), nested(-5, false), nested(1, true), nested(1, false));',
-    'report("before");',
-    'if x == 1 { report("one"); }',
-    'else if x == 2 { report("two-first"); report("two-second"); }',
-    'else if x == 3 { report("three"); }',
-    'else { report("other"); }',
-    'report("after");',
+    'outputLine(classify(-1), classify(0), classify(5), classify(50));',
+    'outputLine(noFinal(-1), noFinal(0), noFinal(5));',
+    'outputLine(nested(-1, true), nested(-20, false), nested(-5, false), nested(1, true), nested(1, false));',
+    'outputLine("before");',
+    'if x == 1 { outputLine("one"); }',
+    'else if x == 2 { outputLine("two-first"); outputLine("two-second"); }',
+    'else if x == 3 { outputLine("three"); }',
+    'else { outputLine("other"); }',
+    'outputLine("after");',
     'loopReport(4);',
     'var total := 0;',
     'if true { armLocal := 1; total = total + armLocal; }',
     'else if false { armLocal := 2; total = total + armLocal; }',
     'else { armLocal := 3; total = total + armLocal; }',
-    'report(total, x);',
-    'report("end");',
+    'outputLine(total, x);',
+    'outputLine("end");',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -1902,28 +1899,28 @@ test('restricted compiler compiles action else-if chains to runnable C', async c
   const source = [
     'var index := 0;',
     'loop index < 3 {',
-    '    if index == 0 { report("zero", index); }',
-    '    else if index == 1 { report("one", index); }',
-    '    else if index == 2 { report("two", index); }',
-    '    else { report("many", index); }',
+    '    if index == 0 { outputLine("zero", index); }',
+    '    else if index == 1 { outputLine("one", index); }',
+    '    else if index == 2 { outputLine("two", index); }',
+    '    else { outputLine("many", index); }',
     '    index = index + 1;',
     '}',
     'var x := 2;',
-    'if x == 1 { report("one"); }',
+    'if x == 1 { outputLine("one"); }',
     'else if x == 2 {',
     '    if index == 3 {',
-    '        report("nested", x);',
+    '        outputLine("nested", x);',
     '    } else if index == 4 {',
-    '        report("nested-four", x);',
+    '        outputLine("nested-four", x);',
     '    } else {',
-    '        report("nested-other", x);',
+    '        outputLine("nested-other", x);',
     '    }',
-    '} else { report("other"); }',
-    'if x == 1 { report("skip"); }',
-    'else if x == 2 { report("two-arm"); }',
-    'if x == 1 { report("a"); }',
-    'else if x == 3 { report("b"); }',
-    'report("done");',
+    '} else { outputLine("other"); }',
+    'if x == 1 { outputLine("skip"); }',
+    'else if x == 2 { outputLine("two-arm"); }',
+    'if x == 1 { outputLine("a"); }',
+    'else if x == 3 { outputLine("b"); }',
+    'outputLine("done");',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -1943,18 +1940,18 @@ test('restricted compiler compiles action else-if chains to runnable C', async c
 
 test('restricted compiler diagnoses invalid action else-if chains', () => {
   for (const [bad, errors] of [
-    ['if true { report(1); } else if 1 { report(2); }\n', '1:32: else if condition must be Bool\n'],
-    ['if true { report(1); } else if true report(2);\n', '1:37: expected {\n'],
-    ['if true { report(1); } else if { report(2); }\n',
-      '1:32: expected an Int, String or Bool expression\n'],
-    ['if true { report(1); } else { report(2); } else { report(3); }\n', '1:44: unexpected else\n'],
-    ['else if true { report(1); }\n', '1:1: unexpected else\n'],
-    ['if true { hidden := 1; } else if hidden == 1 { report(2); }\n', '1:34: unknown value hidden\n'],
-    ['if true { report(1); } else if false { report(hidden); }\n', '1:47: unknown value hidden\n'],
-    ['var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { report(2); }\n',
+    ['if true { outputLine(1); } else if 1 { outputLine(2); }\n', '1:36: else if condition must be Bool\n'],
+    ['if true { outputLine(1); } else if true outputLine(2);\n', '1:41: expected {\n'],
+    ['if true { outputLine(1); } else if { outputLine(2); }\n',
+      '1:36: expected an Int, String or Bool expression\n'],
+    ['if true { outputLine(1); } else { outputLine(2); } else { outputLine(3); }\n', '1:52: unexpected else\n'],
+    ['else if true { outputLine(1); }\n', '1:1: unexpected else\n'],
+    ['if true { hidden := 1; } else if hidden == 1 { outputLine(2); }\n', '1:34: unknown value hidden\n'],
+    ['if true { outputLine(1); } else if false { outputLine(hidden); }\n', '1:55: unknown value hidden\n'],
+    ['var total := 0;\nif false { hidden := 1; total = total + hidden; } else if hidden == 1 { outputLine(2); }\n',
       '2:59: unknown value hidden\n'],
-    ['var total := 0;\nif true { hidden := 1; total = total + hidden; }\nreport(hidden);\n',
-      '3:8: unknown value hidden\n'],
+    ['var total := 0;\nif true { hidden := 1; total = total + hidden; }\noutputLine(hidden);\n',
+      '3:12: unknown value hidden\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors }, bad);
@@ -1962,7 +1959,7 @@ test('restricted compiler diagnoses invalid action else-if chains', () => {
 });
 
 test('restricted compiler compiles text builtins with code-point semantics and bounds faults', () => {
-  const source = 'report(textLength("a🙂é"), textAt("a🙂é", 1), textSlice("a🙂é", 1, 3));\n';
+  const source = 'outputLine(textLength("a🙂é"), textAt("a🙂é", 1), textSlice("a🙂é", 1, 3));\n';
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
   assert.deepEqual(runTsArtifact(ts.output), {
@@ -1970,10 +1967,10 @@ test('restricted compiler compiles text builtins with code-point semantics and b
     stdout: Buffer.from('3 🙂 🙂é\n'), stderr: Buffer.alloc(0),
   });
   for (const [bad, pattern] of [
-    ['report(textAt("a", 9));\n', /BoundPanic: textAt index outside text/],
-    ['report(textAt("a", -1));\n', /BoundPanic: textAt index outside text/],
-    ['report(textSlice("abc", 2, 1));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
-    ['report(textSlice("abc", 0, 4));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+    ['outputLine(textAt("a", 9));\n', /BoundPanic: textAt index outside text/],
+    ['outputLine(textAt("a", -1));\n', /BoundPanic: textAt index outside text/],
+    ['outputLine(textSlice("abc", 2, 1));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
+    ['outputLine(textSlice("abc", 0, 4));\n', /BoundPanic: textSlice requires 0 <= start <= end <= textLength\(text\)/],
   ] as const) {
     const bounds = runCompiler(tsManifestPath, bad);
     assert.equal(bounds.code, 0, bounds.errors);
@@ -1986,12 +1983,12 @@ test('restricted compiler compiles text builtins with code-point semantics and b
 
 test('generated text helpers preserve Unicode values after many distinct cached inputs', () => {
   const text = 'A🙂éسلام';
-  const probes = Array.from({ length: 32 }, (_, index) => `report(textLength("text-${index}🙂"));`);
+  const probes = Array.from({ length: 32 }, (_, index) => `outputLine(textLength("text-${index}🙂"));`);
   const source = [
     `original := "${text}";`,
-    'report(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+    'outputLine(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
     ...probes,
-    'report(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
+    'outputLine(textLength(original), textAt(original, 1), textSlice(original, 2, 4));',
   ].join('\n');
   const expected = run(source);
   assert.equal(expected.code, 0);
@@ -2006,9 +2003,9 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
   const argsSource = [
     'label := fn (n: Int): String { if n == 0 { "zero" } else { textAt("abc", n) } }',
     'names := inputArgs();',
-    'loop names as name { report(textLength(name)); }',
-    'report(if textLength("xy") == 2 { "two" } else { "other" });',
-    'report(label(1), label(0), names[1]);',
+    'loop names as name { outputLine(textLength(name)); }',
+    'outputLine(if textLength("xy") == 2 { "two" } else { "other" });',
+    'outputLine(label(1), label(0), names[1]);',
   ].join('\n');
   const args = runCompiler(tsManifestPath, argsSource);
   assert.equal(args.code, 0, args.errors);
@@ -2017,7 +2014,7 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
     stdout: Buffer.from('2\n1\ntwo\nb zero c\n'), stderr: Buffer.alloc(0),
   });
 
-  const whole = runCompiler(tsManifestPath, 'report(inputAll());\n');
+  const whole = runCompiler(tsManifestPath, 'outputLine(inputAll());\n');
   assert.equal(whole.code, 0, whole.errors);
   assert.deepEqual(runTsArtifact(whole.output, { stdin: 'one\ntwo\n' }), {
     phase: 'run', status: 0, signal: null,
@@ -2029,13 +2026,13 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
   });
 
   const diagnostic = runCompiler(tsManifestPath,
-    'report("before");\nreportError("warn");\nexit(3);\n');
+    'outputLine("before");\nreportError("warn");\nexit(3);\n');
   assert.equal(diagnostic.code, 0, diagnostic.errors);
   assert.deepEqual(runTsArtifact(diagnostic.output), {
     phase: 'run', status: 3, signal: null,
     stdout: Buffer.from('before\n'), stderr: Buffer.from('warn\n'),
   });
-  const clean = runCompiler(tsManifestPath, 'report("ok");\nexit(0);\n');
+  const clean = runCompiler(tsManifestPath, 'outputLine("ok");\nexit(0);\n');
   assert.equal(clean.code, 0, clean.errors);
   assert.deepEqual(runTsArtifact(clean.output), {
     phase: 'run', status: 0, signal: null,
@@ -2045,20 +2042,19 @@ test('restricted compiler compiles input, diagnostic and exit builtins in value 
 
 test('restricted compiler diagnoses I/O and text builtin arity and argument mismatches', () => {
   for (const [bad, errors] of [
-    ['report(inputArgs(1));\n', '1:8: inputArgs expects no arguments\n'],
-    ['report(inputAll("p"));\n', '1:8: inputAll expects no arguments\n'],
+    ['outputLine(inputArgs(1));\n', '1:12: inputArgs expects no arguments\n'],
+    ['outputLine(inputAll(1));\n', '1:21: argument 1 of inputAll must be String, got Int\n'],
     ['reportError();\n', '1:1: reportError expects 1 argument, got 0\n'],
     ['reportError(1);\n', '1:13: argument 1 of reportError must be String, got Int\n'],
     ['reportError("x", "y");\n', '1:1: reportError expects 1 argument, got more\n'],
     ['exit();\n', '1:1: exit expects 1 argument, got 0\n'],
     ['exit("x");\n', '1:6: argument 1 of exit must be Int, got String\n'],
-    ['report(textLength());\n', '1:8: textLength expects 1 argument, got 0\n'],
-    ['report(textLength(1));\n', '1:19: argument 1 of textLength must be String, got Int\n'],
-    ['report(textAt("a"));\n', '1:8: textAt expects 2 arguments, got 1\n'],
-    ['report(textAt("a", "b"));\n', '1:20: argument 2 of textAt must be Int, got String\n'],
-    ['report(textSlice("a", 0));\n', '1:8: textSlice expects 3 arguments, got 2\n'],
-    ['report(inputArgs);\n', '1:8: inputArgs must be called\n'],
-    ['report(exit(1));\n', '1:8: report does not accept a Unit value\n'],
+    ['outputLine(textLength());\n', '1:12: textLength expects 1 argument, got 0\n'],
+    ['outputLine(textLength(1));\n', '1:23: argument 1 of textLength must be String, got Int\n'],
+    ['outputLine(textAt("a"));\n', '1:12: textAt expects 2 arguments, got 1\n'],
+    ['outputLine(textAt("a", "b"));\n', '1:24: argument 2 of textAt must be Int, got String\n'],
+    ['outputLine(textSlice("a", 0));\n', '1:12: textSlice expects 3 arguments, got 2\n'],
+    ['outputLine(inputArgs);\n', '1:12: inputArgs must be called\n'],
   ] as const) {
     assert.deepEqual(runCompiler(tsManifestPath, bad), { code: 2, output: '', errors }, bad);
   }
@@ -2066,30 +2062,30 @@ test('restricted compiler diagnoses I/O and text builtin arity and argument mism
 
 test('restricted C compiler rejects input, diagnostic and text builtins clearly', () => {
   for (const [bad, message] of [
-    ['report(inputAll());\n', 'C backend does not support input builtins yet\n'],
-    ['report(inputArgs()[0]);\n', 'C backend does not support input builtins yet\n'],
+    ['outputLine(inputAll());\n', 'C backend does not support input builtins yet\n'],
+    ['outputLine(inputArgs()[0]);\n', 'C backend does not support input builtins yet\n'],
     ['reportError("x");\n', 'C backend does not support reportError or exit yet\n'],
     ['exit(2);\n', 'C backend does not support reportError or exit yet\n'],
-    ['report(textLength("abc"));\n', 'C backend does not support text builtins yet\n'],
-    ['report(textAt("abc", 0));\n', 'C backend does not support text builtins yet\n'],
-    ['report(textSlice("abc", 0, 1));\n', 'C backend does not support text builtins yet\n'],
+    ['outputLine(textLength("abc"));\n', 'C backend does not support text builtins yet\n'],
+    ['outputLine(textAt("abc", 0));\n', 'C backend does not support text builtins yet\n'],
+    ['outputLine(textSlice("abc", 0, 1));\n', 'C backend does not support text builtins yet\n'],
   ] as const) {
     assert.deepEqual(runCompiler(cManifestPath, bad), { code: 2, output: '', errors: message }, bad);
   }
 });
 
 test('restricted C compiler preserves existing output and rejects function syntax clearly', () => {
-  assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), {
+  assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), {
     code: 0, output: readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8'), errors: '',
   });
-  assert.deepEqual(runCompiler(cManifestPath, 'f := fn (x: Int): Int { return x; }\nreport(f(42));\n'), {
+  assert.deepEqual(runCompiler(cManifestPath, 'f := fn (x: Int): Int { return x; }\noutputLine(f(42));\n'), {
     code: 2, output: '', errors: 'C backend does not support top-level functions yet\n',
   });
 });
 
 test('artifact runner typechecks emitted TS and compiles C with warnings as errors', async context => {
   const root = new URL('../', import.meta.url).pathname;
-  const source = 'x := 2 * 3;\nreport(x);\n';
+  const source = 'x := 2 * 3;\noutputLine(x);\n';
   const tsCompiler = loadCompiler(join(root, 'compiler/manifests/ts.json'));
   const tsArtifact = tsCompiler.compile({ text: source });
   assert.equal(tsArtifact.status, 0);
@@ -2118,7 +2114,7 @@ test('bundle artifacts are deterministic and leak no timestamps or host paths', 
   const root = new URL('../', import.meta.url).pathname;
   const manifest = join(root, 'compiler/manifests/ts.json');
   const compiler = loadCompiler(manifest);
-  const source = 'x := 1;\nreport(x + 1);\n';
+  const source = 'x := 1;\noutputLine(x + 1);\n';
   const first = compiler.compile({ text: source });
   const second = compiler.compile({ text: source });
   assert.equal(first.status, 0);
@@ -2141,13 +2137,13 @@ test('whole-source TS and C compilers reject later statements and decoding failu
   try {
     const sourcePath = join(directory, 'source.lts');
     for (const target of ['ts', 'c'] as const) {
-      for (const input of ['', 'report(42);\nunsupported();\n', 'report(42);\nprocess.exit(7);\n']) {
+      for (const input of ['', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
         writeFileSync(sourcePath, input);
         const rejected = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
         assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
       }
-      writeFileSync(sourcePath, Buffer.concat([Buffer.from('report(42);\n'), Buffer.from([0xff])]));
+      writeFileSync(sourcePath, Buffer.concat([Buffer.from('outputLine(42);\n'), Buffer.from([0xff])]));
       const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
       assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
@@ -2157,8 +2153,8 @@ test('whole-source TS and C compilers reject later statements and decoding failu
 
 test('restricted C compiler emits the readable reference and sequences reports', () => {
   const expected = readFileSync(new URL('../compiler/generated/report-42.c', import.meta.url), 'utf8');
-  assert.deepEqual(runCompiler(cManifestPath, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runCompiler(cManifestPath, 'report(42);\nreport(9);').output,
+  assert.deepEqual(runCompiler(cManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(cManifestPath, 'outputLine(42);\noutputLine(9);').output,
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
     '    if (printf("%" PRId64, (int64_t)(INT64_C(42))) < 0) { status = 1; }\n' +
     '    if (printf("\\n") < 0) { status = 1; }\n' +
@@ -2219,7 +2215,7 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       const typescript = await importedMain(tsPath);
       assert.equal(typescript, expectedOutput, fixture.name);
       // Feed stdin through a file descriptor rather than a pipe: a program that
-      // exits without reading its input (report(0) ignores the fixture bytes)
+      // exits without reading its input (outputLine(0) ignores the fixture bytes)
       // otherwise races the parent's write and spuriously reports EPIPE, which
       // is a harness artifact, not an output or status difference.
       const stdinFd = openSync(stdinPath, 'r');
@@ -2235,24 +2231,24 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
 });
 
 test('quoted closing delimiters remain values in calls, tuple entries and array/list elements', () => {
-  assert.equal(run(`report("(", ")", "]", "}");
+  assert.equal(run(`outputLine("(", ")", "]", "}");
     pair := ("(", ")"); array := ["[", "]"];
     list: List<String> = ["[", "]"];
-    report(pair.1, array[1], list[1]);`).output, '( ) ] }\n) ] ]\n');
+    outputLine(pair.1, array[1], list[1]);`).output, '( ) ] }\n) ] ]\n');
 });
 test('Lite-written TS emitter produces a deterministic readable reference with no extra source', () => {
   const expected = readFileSync(new URL('../compiler/generated/report-42.ts', import.meta.url), 'utf8');
-  assert.deepEqual(runCompiler(tsManifestPath, 'report(42);'), { code: 0, output: expected, errors: '' });
-  assert.equal(runCompiler(tsManifestPath, 'report(42);').output, runCompiler(tsManifestPath, 'report(42);').output);
-  assert.equal(runCompiler(tsManifestPath, ' report ( +00042 ) ; ').output, expected);
-  assert.equal(runCompiler(tsManifestPath, 'report(-000);').output,
-    'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (0n).toString();\n    lite_out += lite$report0 + "\\n";\n    return lite_out;\n}\n');
+  assert.deepEqual(runCompiler(tsManifestPath, 'outputLine(42);'), { code: 0, output: expected, errors: '' });
+  assert.equal(runCompiler(tsManifestPath, 'outputLine(42);').output, runCompiler(tsManifestPath, 'outputLine(42);').output);
+  assert.equal(runCompiler(tsManifestPath, ' outputLine ( +00042 ) ; ').output, expected);
+  assert.equal(runCompiler(tsManifestPath, 'outputLine(-000);').output,
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (0n).toString();\n    lite$emit(lite$report0 + "\\n");\n    return lite_out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
-  const program = 'report(10);\nreport(20);\nreport(-30);\n';
+  const program = 'outputLine(10);\noutputLine(20);\noutputLine(-30);\n';
   const tsOutput = runCompiler(tsManifestPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
-  assert.equal(tsOutput.output, 'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (10n).toString();\n    lite_out += lite$report0 + "\\n";\n    const lite$report1 = (20n).toString();\n    lite_out += lite$report1 + "\\n";\n    const lite$report2 = ((-30n)).toString();\n    lite_out += lite$report2 + "\\n";\n    return lite_out;\n}\n');
+  assert.equal(tsOutput.output, 'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (10n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (20n).toString();\n    lite$emit(lite$report1 + "\\n");\n    const lite$report2 = ((-30n)).toString();\n    lite$emit(lite$report2 + "\\n");\n    return lite_out;\n}\n');
   const cOutput = runCompiler(cManifestPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
   assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
@@ -2265,14 +2261,13 @@ test('Lite-written TS and C compilers sequence multiple report statements determ
     '    return status;\n}\n');
 });
 test('Lite-written TS and C compilers lower arithmetic expressions and immutable locals deterministically', () => {
-  const program = 'x := 2 * (3 - 4);\nreport(x + 10);\nreport(-x);\n';
+  const program = 'x := 2 * (3 - 4);\noutputLine(x + 10);\noutputLine(-x);\n';
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
-    'export function main(): string {\n' +
-    '    let lite_out = "";\n' +
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
     '    void lite_x;\n' +
-    '    const lite$report0 = ((lite_x + 10n)).toString();\n    lite_out += lite$report0 + "\\n";\n' +
-    '    const lite$report1 = ((-lite_x)).toString();\n    lite_out += lite$report1 + "\\n";\n' +
+    '    const lite$report0 = ((lite_x + 10n)).toString();\n    lite$emit(lite$report0 + "\\n");\n' +
+    '    const lite$report1 = ((-lite_x)).toString();\n    lite$emit(lite$report1 + "\\n");\n' +
     '    return lite_out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
@@ -2290,12 +2285,12 @@ test('restricted compiler lowers dynamic Int division and remainder with checked
     'var a := -7;',
     'var b := 2;',
     'var c := -2;',
-    'report(a / b, a % b, a :/ b, a :% b);',
-    'report(a / c, a % c, a :/ c, a :% c);',
-    'report(7 / c, 7 % c, 7 :/ c, 7 :% c);',
+    'outputLine(a / b, a % b, a :/ b, a :% b);',
+    'outputLine(a / c, a % c, a :/ c, a :% c);',
+    'outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
     'var m := -9223372036854775808;',
     'var n := -1;',
-    'report(m :% n);',
+    'outputLine(m :% n);',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -2318,12 +2313,12 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
     'var a := -7;',
     'var b := 2;',
     'var c := -2;',
-    'report(a / b, a % b, a :/ b, a :% b);',
-    'report(a / c, a % c, a :/ c, a :% c);',
-    'report(7 / c, 7 % c, 7 :/ c, 7 :% c);',
+    'outputLine(a / b, a % b, a :/ b, a :% b);',
+    'outputLine(a / c, a % c, a :/ c, a :% c);',
+    'outputLine(7 / c, 7 % c, 7 :/ c, 7 :% c);',
     'var m := -9223372036854775808;',
     'var n := -1;',
-    'report(m :% n);',
+    'outputLine(m :% n);',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -2332,13 +2327,13 @@ test('restricted compiler lowers dynamic Int division and remainder to runnable 
     stdout: Buffer.from('-3 -1 -4 1\n3 -1 3 -1\n-3 1 -4 -1\n0\n'), stderr: Buffer.alloc(0),
   });
   for (const [faultSource, message] of [
-    ['var x := 1; var y := 0; report(x / y);', 'ArithmeticPanic: division by zero in integer expression\n'],
-    ['var x := 1; var y := 0; report(x % y);', 'ArithmeticPanic: remainder by zero in integer expression\n'],
-    ['var x := 1; var y := 0; report(x :/ y);', 'ArithmeticPanic: division by zero in integer expression\n'],
-    ['var x := 1; var y := 0; report(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression\n'],
-    ['var x := -9223372036854775808; report(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
-    ['var x := -9223372036854775808; report(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
-    ['var x := -9223372036854775808; report(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
+    ['var x := 1; var y := 0; outputLine(x / y);', 'ArithmeticPanic: division by zero in integer expression\n'],
+    ['var x := 1; var y := 0; outputLine(x % y);', 'ArithmeticPanic: remainder by zero in integer expression\n'],
+    ['var x := 1; var y := 0; outputLine(x :/ y);', 'ArithmeticPanic: division by zero in integer expression\n'],
+    ['var x := 1; var y := 0; outputLine(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression\n'],
+    ['var x := -9223372036854775808; outputLine(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
+    ['var x := -9223372036854775808; outputLine(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
+    ['var x := -9223372036854775808; outputLine(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range\n'],
   ] as const) {
     const faulting = runCompiler(cManifestPath, faultSource);
     assert.equal(faulting.code, 0, faulting.errors);
@@ -2355,15 +2350,15 @@ test('restricted compiler lowers dynamic String concatenation with left-to-right
     'name := "er";',
     'pair := (left = "tu", right = "ple");',
     'values := ["li", "st"];',
-    'report(prefix + name);',
-    'report(join("fun", "ction"));',
-    'report(pair.left + pair.right);',
-    'report(values[0] + values[1]);',
-    'report("" + prefix + "" + name);',
-    'report("snow🙂" + "man");',
-    'report("line\\n" + "break");',
-    'report("tab\\t" + "stop");',
-    'report("quote\\"" + "back\\\\slash");',
+    'outputLine(prefix + name);',
+    'outputLine(join("fun", "ction"));',
+    'outputLine(pair.left + pair.right);',
+    'outputLine(values[0] + values[1]);',
+    'outputLine("" + prefix + "" + name);',
+    'outputLine("snow🙂" + "man");',
+    'outputLine("line\\n" + "break");',
+    'outputLine("tab\\t" + "stop");',
+    'outputLine("quote\\"" + "back\\\\slash");',
   ].join('\n');
   const ts = runCompiler(tsManifestPath, source);
   assert.equal(ts.code, 0, ts.errors);
@@ -2374,7 +2369,7 @@ test('restricted compiler lowers dynamic String concatenation with left-to-right
       'snow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
     stderr: Buffer.alloc(0),
   });
-  const order = runCompiler(tsManifestPath, 'report(textAt("a", 9) + textSlice("a", 0, 9));');
+  const order = runCompiler(tsManifestPath, 'outputLine(textAt("a", 9) + textSlice("a", 0, 9));');
   assert.equal(order.code, 0, order.errors);
   const orderRun = runTsArtifact(order.output);
   assert.equal(orderRun.phase, 'run');
@@ -2394,13 +2389,13 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
   const source = [
     'var prefix := "lit";',
     'name := "er";',
-    'report(prefix + name);',
-    'report(prefix + name + "!");',
-    'report("" + prefix + "");',
-    'report("snow🙂" + "man");',
-    'report("line\\n" + "break");',
-    'report("tab\\t" + "stop");',
-    'report("quote\\"" + "back\\\\slash");',
+    'outputLine(prefix + name);',
+    'outputLine(prefix + name + "!");',
+    'outputLine("" + prefix + "");',
+    'outputLine("snow🙂" + "man");',
+    'outputLine("line\\n" + "break");',
+    'outputLine("tab\\t" + "stop");',
+    'outputLine("quote\\"" + "back\\\\slash");',
   ].join('\n');
   const c = runCompiler(cManifestPath, source);
   assert.equal(c.code, 0, c.errors);
@@ -2411,7 +2406,7 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
     stdout: Buffer.from('liter\nliter!\nlit\nsnow🙂man\nline\nbreak\ntab\tstop\nquote"back\\slash\n'),
     stderr: Buffer.alloc(0),
   });
-  const plain = runCompiler(cManifestPath, 's := "a";\nreport(s);\n');
+  const plain = runCompiler(cManifestPath, 's := "a";\noutputLine(s);\n');
   assert.equal(plain.code, 0, plain.errors);
   assert.equal(plain.output.includes('lite_concat'), false);
   assert.equal(plain.output.includes('#include <stdlib.h>'), false);
@@ -2419,13 +2414,13 @@ test('restricted compiler lowers dynamic String concatenation to runnable C', co
 
 test('restricted compiler division faults preserve zero divisor and minimum/-1 status and stderr', () => {
   for (const [source, message] of [
-    ['var x := 1; var y := 0; report(x / y);', 'ArithmeticPanic: division by zero in integer expression'],
-    ['var x := 1; var y := 0; report(x % y);', 'ArithmeticPanic: remainder by zero in integer expression'],
-    ['var x := 1; var y := 0; report(x :/ y);', 'ArithmeticPanic: division by zero in integer expression'],
-    ['var x := 1; var y := 0; report(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression'],
-    ['var x := -9223372036854775808; report(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
-    ['var x := -9223372036854775808; report(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
-    ['var x := -9223372036854775808; report(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
+    ['var x := 1; var y := 0; outputLine(x / y);', 'ArithmeticPanic: division by zero in integer expression'],
+    ['var x := 1; var y := 0; outputLine(x % y);', 'ArithmeticPanic: remainder by zero in integer expression'],
+    ['var x := 1; var y := 0; outputLine(x :/ y);', 'ArithmeticPanic: division by zero in integer expression'],
+    ['var x := 1; var y := 0; outputLine(x :% y);', 'ArithmeticPanic: modulo by zero in integer expression'],
+    ['var x := -9223372036854775808; outputLine(x / -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
+    ['var x := -9223372036854775808; outputLine(x % -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
+    ['var x := -9223372036854775808; outputLine(x :/ -1);', 'ArithmeticPanic: integer expression outside signed 64-bit range'],
   ] as const) {
     const ts = runCompiler(tsManifestPath, source);
     assert.equal(ts.code, 0, ts.errors);
@@ -2437,14 +2432,13 @@ test('restricted compiler division faults preserve zero divisor and minimum/-1 s
   }
 });
 test('Lite-written TS and C compilers lower String values and multi-value reports deterministically', () => {
-  const program = 's := "a\\"b";\nreport(s);\nreport(1, s, 2);\n';
+  const program = 's := "a\\"b";\noutputLine(s);\noutputLine(1, s, 2);\n';
   assert.deepEqual(runCompiler(tsManifestPath, program), { code: 0, errors: '', output:
-    'export function main(): string {\n' +
-    '    let lite_out = "";\n' +
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n' +
     '    const lite_s = "a\\"b";\n' +
     '    void lite_s;\n' +
-    '    const lite$report0 = lite_s;\n    lite_out += lite$report0 + "\\n";\n' +
-    '    const lite$report1 = (1n).toString() + " " + lite_s + " " + (2n).toString();\n    lite_out += lite$report1 + "\\n";\n' +
+    '    const lite$report0 = lite_s;\n    lite$emit(lite$report0 + "\\n");\n' +
+    '    const lite$report1 = (1n).toString() + " " + lite_s + " " + (2n).toString();\n    lite$emit(lite$report1 + "\\n");\n' +
     '    return lite_out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
@@ -2477,7 +2471,7 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   for (const manifest of [tsManifestPath, cManifestPath]) {
     assert.deepEqual(runCompiler(manifest, 'x := loop { 1 };'), {
       code: 2, output: '', errors: '1:6: unsupported feature "loop": see docs/loops.md; ' +
-        'the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only\n',
+        'the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only\n',
     });
     assert.deepEqual(runCompiler(manifest, 'x := 1;\ny := ;\n'), {
       code: 2, output: '', errors: '2:6: expected an Int, String or Bool expression\n',
@@ -2485,8 +2479,8 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
   }
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
-  assert.equal(runCompiler(tsManifestPath, 'report(42);\nreport(9);').output,
-    'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (42n).toString();\n    lite_out += lite$report0 + "\\n";\n    const lite$report1 = (9n).toString();\n    lite_out += lite$report1 + "\\n";\n    return lite_out;\n}\n');
+  assert.equal(runCompiler(tsManifestPath, 'outputLine(42);\noutputLine(9);').output,
+    'export function main(lite$write?: (text: string) => void): string {\n    let lite_out = "";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (42n).toString();\n    lite$emit(lite$report0 + "\\n");\n    const lite$report1 = (9n).toString();\n    lite$emit(lite$report1 + "\\n");\n    return lite_out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -2616,27 +2610,27 @@ test('retained tokenizer runs and checks through the root launcher with explicit
 });
 
 test('typed list construction supports known empty elements and preserves the fixed-array default', () => {
-  assert.equal(run(`empty: mut List<Int>=[]; push_back(mut empty, 7); report(empty[0]);
+  assert.equal(run(`empty: mut List<Int>=[]; push_back(mut empty, 7); outputLine(empty[0]);
     floats: List<Float> = [1.5]; text: List<String> = ["tea"]; flags: List<Bool> = [true];
-    units: mut List<Unit> = [(), Unit]; report(floats[0], text[0], flags[0], pop_back(mut units));
-    fixed := [3, 4]; report(fixed.1);`).output, '7\n1.5 tea true Unit\n4\n');
+    units: mut List<Unit> = [(), Unit]; outputLine(floats[0], text[0], flags[0], pop_back(mut units));
+    fixed := [3, 4]; outputLine(fixed.1);`).output, '7\n1.5 tea true Unit\n4\n');
   fault('fixed := [1]; list: List<Int> = fixed;', 'TypeError');
   fault('list: List<Int> = [1]; f := fn(a: [Int; 1]): Int { a[0] } f(list);', 'TypeError');
   fault('[];', 'TypeError');
 });
 test('both list ends preserve element order, duplicate occurrences and direct pop values', () => {
-  assert.equal(run(`values: mut List<Int> = []; report(push_back(mut values, 2));
+  assert.equal(run(`values: mut List<Int> = []; outputLine(push_back(mut values, 2));
     push_front(mut values, 1); push_back(mut values, 2); push_front(mut values, 0);
-    loop values as item { report(item); }
-    report(pop_front(mut values), pop_back(mut values), pop_back(mut values), pop_front(mut values));
-    loop values { report("unexpected"); }`).output, 'Unit\n0\n1\n2\n2\n0 2 2 1\n');
+    loop values as item { outputLine(item); }
+    outputLine(pop_front(mut values), pop_back(mut values), pop_back(mut values), pop_front(mut values));
+    loop values { outputLine("unexpected"); }`).output, 'Unit\n0\n1\n2\n2\n0 2 2 1\n');
 });
 test('list copies and typed mutable receiving copies remain independent under end operations', () => {
   assert.equal(run(`var original: mut List<Int> = [1, 2]; saved := original;
     editable: mut List<Int> = original; push_front(mut editable, 8);
-    push_back(mut original, 3); report(pop_front(mut original));
+    push_back(mut original, 3); outputLine(pop_front(mut original));
     original = editable; push_back(mut original, 9);
-    report(saved[0], saved[1], editable[0], editable[2], original[3]);`).output,
+    outputLine(saved[0], saved[1], editable[0], editable[2], original[3]);`).output,
     '1\n1 2 8 2 9\n');
 });
 test('list arguments and results retain evaluated snapshots through later argument mutation', () => {
@@ -2644,40 +2638,40 @@ test('list arguments and results retain evaluated snapshots through later argume
     keep := fn(items: List<Int>, ignored: Unit): List<Int> { items }
     saved := keep(values, push_front(mut values, 9));
     returned: mut List<Int> = saved; push_back(mut returned, 3);
-    report(values[0], saved[0], saved[1], returned[2]);
+    outputLine(values[0], saved[0], saved[1], returned[2]);
     make := fn(): List<Int> { local: mut List<Int> = []; push_back(mut local, 6); local }
-    report(make()[0]);`).output, '9 1 2 3\n6\n');
+    outputLine(make()[0]);`).output, '9 1 2 3\n6\n');
 });
 test('flat tuple list elements preserve labels, positional shape and popped copies', () => {
   assert.equal(run(`tokens: mut List<(kind: String, text: String)> = [];
     kind := "number"; text := "12"; push_back(mut tokens, (=kind, =text));
     push_front(mut tokens, (kind = "symbol", text = "+"));
-    first := pop_front(mut tokens); report(first.kind, first.text, tokens[0].text);
+    first := pop_front(mut tokens); outputLine(first.kind, first.text, tokens[0].text);
     mixed: List<(:Int, text: String)> = [(7, text = "tea")];
-    loop mixed as pair { (number, word) := pair; report(number, word); }`).output,
+    loop mixed as pair { (number, word) := pair; outputLine(number, word); }`).output,
     'symbol + 12\n7 tea\n');
   fault('tokens: mut List<(kind: String)> = []; push_back(mut tokens, (text = "wrong"));', 'TypeError');
 });
 test('list construction, supplied elements and indexed receivers evaluate once in written order', () => {
-  assert.equal(run(`values: mut List<Int> = [({report("first"); 1}), ({report("second"); 2})];
-    push_back(mut values, ({report("supplied"); inputInt("value: ")}));
-    source := fn(items: List<Int>): List<Int> { report("receiver"); items }
-    report(source(values)[({report("index"); 2})]);`, '7').output,
+  assert.equal(run(`values: mut List<Int> = [({outputLine("first"); 1}), ({outputLine("second"); 2})];
+    push_back(mut values, ({outputLine("supplied"); inputInt("value: ")}));
+    source := fn(items: List<Int>): List<Int> { outputLine("receiver"); items }
+    outputLine(source(values)[({outputLine("index"); 2})]);`, '7').output,
     'first\nsecond\nsupplied\nvalue: receiver\nindex\n7\n');
 });
 test('list traversal evaluates a source snapshot once while original end mutations remain independent', () => {
   assert.equal(run(`values: mut List<Int> = [1, 2];
-    source := fn(items: List<Int>): List<Int> { report("source"); items }
-    loop source(values) as item { report(item); push_back(mut values, item + 10); }
-    loop values as item { if item == 2 { continue; } report(item); if item == 11 { break; } }
-    report(values[3]);`).output, 'source\n1\n2\n1\n11\n12\n');
+    source := fn(items: List<Int>): List<Int> { outputLine("source"); items }
+    loop source(values) as item { outputLine(item); push_back(mut values, item + 10); }
+    loop values as item { if item == 2 { continue; } outputLine(item); if item == 11 { break; } }
+    outputLine(values[3]);`).output, 'source\n1\n2\n1\n11\n12\n');
 });
 test('list mutation grants follow lexical slots and never silently capture surrounding runtime data', () => {
   assert.equal(run(`values: mut List<Int> = [1];
-    { push_back(mut values, 2); values: mut List<Int> = [9]; push_front(mut values, 8); report(values[0]); }
-    report(values[1]);
+    { push_back(mut values, 2); values: mut List<Int> = [9]; push_front(mut values, 8); outputLine(values[0]); }
+    outputLine(values[1]);
     f := fn(): Int { local: mut List<Int> = [3]; push_back(mut local, 4); pop_back(mut local) }
-    report(f());`).output, '8\n2\n4\n');
+    outputLine(f());`).output, '8\n2\n4\n');
   fault('values: mut List<Int> = []; f := fn(): Unit { push_back(mut values, 1); }', 'TypeError');
 });
 test('list bounds and empty pops are located terminal BoundPanic failures', () => {
@@ -2695,12 +2689,12 @@ test('list bounds and empty pops are located terminal BoundPanic failures', () =
 });
 test('faults and exits during list preparation stop later effects and invocation', () => {
   assert.deepEqual(run(`values: mut List<Int> = [];
-    push_back(mut values, ({report("supplied"); exit(7); 1})); report("later");`),
+    push_back(mut values, ({outputLine("supplied"); exit(7); 1})); outputLine("later");`),
     { code: 7, output: 'supplied\n', errors: '' });
-  assert.deepEqual(run(`values: List<Int> = [({report("first"); exit(6); 1}), ({report("later"); 2})];`),
+  assert.deepEqual(run(`values: List<Int> = [({outputLine("first"); exit(6); 1}), ({outputLine("later"); 2})];`),
     { code: 6, output: 'first\n', errors: '' });
   let observed = '';
-  assert.throws(() => execute(compile(`values: mut List<Int> = []; pop_back(mut values); report("later");`), {
+  assert.throws(() => execute(compile(`values: mut List<Int> = []; pop_back(mut values); outputLine("later");`), {
     read: () => null, report: text => { observed += text; }, reportError: () => {},
   }), LiteFault);
   assert.equal(observed, '');
@@ -2716,13 +2710,13 @@ test('invalid list contracts, grants and unsupported aliasing fail before any in
     'values: List<Int> = [true];', 'values: List<Int> = [1.0];',
     'values: List<List<Int>> = [];', 'values: [List<Int>; 1] = [];',
     'values: List<Int> = [1]; values.0;', 'values: List<Int> = [1]; values[true];',
-    'values: List<Int> = [1]; report(values);', 'values: List<Int> = [1]; values == values;',
+    'values: List<Int> = [1]; values == values;',
     'values: mut List<Int> = []; push_back(target = mut values, value = 1);',
     'values: mut List<Int> = []; push_back(mut values);',
     'values: mut List<Int> = []; pop_front(mut values, 1);',
     'values: mut List<Int> = []; push_back(mut missing, 1);',
     'values: mut List<Int> = []; push_back(mut values[0], 1);',
-    'values: mut List<Int> = []; report(mut values);',
+    'values: mut List<Int> = []; outputLine(mut values);',
     'f := fn(a: List<Int>): Unit {} values: mut List<Int> = []; f(mut values);',
     'values: mut List<Int> = [1]; push_back(mut values, values[0]);',
     'values: mut List<Int> = [1]; push_back(mut values, pop_back(mut values));',
@@ -2730,7 +2724,7 @@ test('invalid list contracts, grants and unsupported aliasing fail before any in
     'var values: mut List<Int> = [1]; push_back(mut values, ({other: List<Int> = [2]; values = other; 7}));',
   ]) {
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; },
       reportError: () => { observed = true; },
     }), LiteFault, code);
@@ -2758,28 +2752,28 @@ test('growable list example runs and checks through the launcher with runtime fa
 
 test('named calls route interleaved positional entries into the next unfilled slot', () => {
   assert.equal(run(`op := fn(a: Int, b: Int, c: Int): Int { a * 100 + b * 10 + c }
-    b := 2; report(op(c = 3, 1, =b), op(9, a = 1, 2, 3), op(c = 3, b = 2, a = 1));
-    report := fn(value: Int): Int { value + 1 }
-    result := report(value = 7);
+    b := 2; outputLine(op(c = 3, 1, =b), op(9, a = 1, 2, 3), op(c = 3, b = 2, a = 1));
+    outputLine := fn(value: Int): Int { value + 1 }
+    result := outputLine(value = 7);
     output := fn(v: Int): Int { v } output(v = result);`).output, '123 123 123\n');
 });
 test('named call replacement checks only surviving slot types but evaluates every supplied expression', () => {
-  assert.equal(run(`take := fn(a: Int, b: Int): Int { report("body"); a * 10 + b }
-    report(take(({report("old"); "superseded"}), b = ({report("b"); 2}), a = ({report("a"); 1})));`).output,
+  assert.equal(run(`take := fn(a: Int, b: Int): Int { outputLine("body"); a * 10 + b }
+    outputLine(take(({outputLine("old"); "superseded"}), b = ({outputLine("b"); 2}), a = ({outputLine("a"); 1})));`).output,
     'old\nb\na\nbody\n12\n');
   fault('take := fn(a: Int): Int { a } take(unknown, a = 1);', 'TypeError');
   fault('take := fn(a: Int): Int { a } take(1, a = "bad");', 'TypeError');
 });
 test('named call arguments retain callee-before-arguments selection and stop on exits or faults', () => {
   assert.equal(run(`var op := fn(a: Int, b: Int): Int { a + b }
-    report(op(b = ({op = fn(a: Int, b: Int): Int { a * b } 3}), a = 2));
-    report(op(a = 2, b = 3));`).output, '5\n6\n');
-  assert.deepEqual(run(`op := fn(a: Int, b: Int): Int { report("body"); 0 }
-    op(b = ({report("first"); exit(7); 1}), a = ({report("later"); 2}));`),
+    outputLine(op(b = ({op = fn(a: Int, b: Int): Int { a * b } 3}), a = 2));
+    outputLine(op(a = 2, b = 3));`).output, '5\n6\n');
+  assert.deepEqual(run(`op := fn(a: Int, b: Int): Int { outputLine("body"); 0 }
+    op(b = ({outputLine("first"); exit(7); 1}), a = ({outputLine("later"); 2}));`),
     { code: 7, output: 'first\n', errors: '' });
   let output = '';
-  assert.throws(() => execute(compile(`op := fn(a: Int): Int { report("body"); a }
-    op(1 / 0, a = ({report("later"); 2}));`), {
+  assert.throws(() => execute(compile(`op := fn(a: Int): Int { outputLine("body"); a }
+    op(1 / 0, a = ({outputLine("later"); 2}));`), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), LiteFault);
   assert.equal(output, '');
@@ -2789,7 +2783,7 @@ test('named recursive calls and aggregate arguments preserve public labels and s
       if n == 0 { return total; } self(total = total + n, n = n - 1)
     }
     consume := fn(values: [Int; 2], pair: (:Int, label: String)): Int { values[0] + pair.0 }
-    report(sum(total = 0, n = 4), consume(pair = (3, label = "tea"), values = [7, 8]));`).output,
+    outputLine(sum(total = 0, n = 4), consume(pair = (3, label = "tea"), values = [7, 8]));`).output,
     '10 10\n');
   fault('f := fn(pair: (x: Int)): Int { pair.x } stored := (y = 1); f(pair = stored);', 'TypeError');
 });
@@ -2801,10 +2795,10 @@ test('invalid named mappings and unsupported builtin labels fail before effects'
     'f := fn(a: Int, b: Int): Int { a } f(b = 2);',
     'f := fn(a: Int): Int { a } f(a = 1, 2);',
     'f := fn(): Int { 0 } f(a = 1);',
-    'report(value = 1);', 'inputInt(prompt = "Age: ");',
+    'outputLine(value = 1);', 'inputInt(prompt = "Age: ");',
   ]) {
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; },
       reportError: () => { observed = true; },
     }), LiteFault);
@@ -2826,24 +2820,24 @@ test('indexed named argument example executes and checks through the root launch
 test('typed tuple receiving declarations rename positions without reordering source values', () => {
   assert.equal(run(`stored := (r = 20, l = 10); renamed: (l: Int, r: Int) = stored;
     plain: (:Int, :Int) = renamed; mixed: (:Int, last: Int) = plain;
-    report(stored.r, stored.l, renamed.l, renamed.r, mixed.0, mixed.last);`).output,
+    outputLine(stored.r, stored.l, renamed.l, renamed.r, mixed.0, mixed.last);`).output,
     '20 10 20 10 20 10\n');
 });
 test('typed tuple declarations evaluate once and preserve source copies and old shadow targets', () => {
   assert.equal(run(`var original := (a = 1, b = 2);
-    var renamed: (x: Int, y: Int) = ({report("source"); original});
+    var renamed: (x: Int, y: Int) = ({outputLine("source"); original});
     original = (a = 3, b = 4); renamed = (x = 5, y = 6);
     renamed: (left: Int, right: Int) = renamed;
-    report(original.a, renamed.left, renamed.right);
-    boxed := (v = Unit); unit: (:Unit,) = boxed; report(unit.0);`).output,
+    outputLine(original.a, renamed.left, renamed.right);
+    boxed := (v = Unit); unit: (:Unit,) = boxed; outputLine(unit.0);`).output,
     'source\n3 5 6\nUnit\n');
 });
 test('typed tuple conversions produce ordinary label-sensitive values usable in calls and arrays', () => {
   assert.equal(run(`size := (width = 7, height = 9); point: (x: Int, y: Int) = size;
     take := fn(p: (x: Int, y: Int)): Int { p.x + p.y }
-    copies := [point, point]; report(take(copies[0]));
+    copies := [point, point]; outputLine(take(copies[0]));
     make := fn(): (x: Int, y: Int) { source := (7, 9); result: (x: Int, y: Int) = source; result }
-    report(take(make()));`).output, '16\n16\n');
+    outputLine(take(make()));`).output, '16\n16\n');
   for (const code of [
     'source := (a = 1); renamed: (x: Int) = source; var target := renamed; target = source;',
     'source := (a = 1); renamed: (x: Int) = source; source.x;',
@@ -2861,14 +2855,14 @@ test('typed tuple conversion rejects incompatible shapes and types before effect
     'target: (x: Int) = (missing = 1);',
   ]) {
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => null, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), LiteFault);
     assert.equal(observed, false, code);
   }
   assert.throws(() => compile('target: (x: Int, y: Int) = (y = 2, x = 1);'),
     (error: unknown) => error instanceof LiteFault && error.message.includes('contextual tuple constructor routing'));
-  assert.equal(run('target: (x: Int) = (x = 3); report(target.x);').output, '3\n');
+  assert.equal(run('target: (x: Int) = (x = 3); outputLine(target.x);').output, '3\n');
 });
 test('indexed typed tuple conversion example runs and checks through the launcher', () => {
   const root = new URL('../', import.meta.url).pathname;
@@ -2884,9 +2878,9 @@ test('indexed typed tuple conversion example runs and checks through the launche
 
 test('mixed tuples preserve interleaved positions, shorthand and source evaluation order', () => {
   assert.equal(run(`tea := "green";
-    value := (({report("first"); 7}), =tea, cups = ({report("third"); 2}), true);
-    report(value.0, value.tea, value.2, value.3);
-    (a, b, c, d) := value; report(a, b, c, d);`).output,
+    value := (({outputLine("first"); 7}), =tea, cups = ({outputLine("third"); 2}), true);
+    outputLine(value.0, value.tea, value.2, value.3);
+    (a, b, c, d) := value; outputLine(a, b, c, d);`).output,
     'first\nthird\n7 green 2 true\n7 green 2 true\n');
 });
 test('mixed tuple copies, function contracts and homogeneous arrays retain labels and order', () => {
@@ -2894,7 +2888,7 @@ test('mixed tuple copies, function contracts and homogeneous arrays retain label
     value = (2, name = "second", true);
     identity := fn(v: (:Int, name: String, :Bool)): (:Int, name: String, :Bool) { v }
     items := [identity(saved), value];
-    loop items as item { report(item.0, item.name, item.2); }`).output,
+    loop items as item { outputLine(item.0, item.name, item.2); }`).output,
     '1 first false\n2 second true\n');
 });
 test('mixed tuple identity rejects label movement, duplication and unknown fields before effects', () => {
@@ -2907,7 +2901,7 @@ test('mixed tuple identity rejects label movement, duplication and unknown field
     'a := (1, x = 2); a.missing;',
   ]) {
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => null, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), LiteFault);
     assert.equal(observed, false, code);
@@ -2928,19 +2922,19 @@ test('indexed mixed tuple example executes and checks without effects', () => {
 test('first checkpoint: stdin integers, mutation, arithmetic and explicit report', () => {
   const code = readFileSync(new URL('../examples/001-double-sum.lts', import.meta.url), 'utf8');
   assert.deepEqual(run(code, '7\n5\n'), { code: 0, output: 'First integer: Second integer: 24\n', errors: '' });
-  assert.equal(run(code.replace('report(total);', ''), '7\n5\n').output, 'First integer: Second integer: ');
+  assert.equal(run(code.replace('outputLine(total);', ''), '7\n5\n').output, 'First integer: Second integer: ');
 });
 test('Unit completion and no automatic binding/expression output', () => {
   for (const code of ['', ';;;;', 'x := 3;', '12;', 'x := 3; x']) assert.equal(run(code).output, '');
-  assert.equal(run('report(()); report(Unit);').output, 'Unit\nUnit\n');
+  assert.equal(run('outputLine(()); outputLine(Unit);').output, 'Unit\nUnit\n');
 });
 test('shadowing retains earlier copies; same-name initializer sees previous binding', () => {
-  assert.equal(run('var x := 2; saved := x; x = 3; x := x + 4; report(saved); report(x);').output, '2\n7\n');
+  assert.equal(run('var x := 2; saved := x; x = 3; x := x + 4; outputLine(saved); outputLine(x);').output, '2\n7\n');
 });
 test('all syntax/name/type checking precedes input or output', () => {
-  for (const code of ['report(1); unknown;', 'report(1); x := 1; x = 2;',
-    'report(1); var x := 1; x = "text";', 'report(1); loop 3 {}',
-    'report(1); x := 2\ny := 3;', 'report(1); report(inputInt(1));']) {
+  for (const code of ['outputLine(1); unknown;', 'outputLine(1); x := 1; x = 2;',
+    'outputLine(1); var x := 1; x = "text";', 'outputLine(1); loop 3 {}',
+    'outputLine(1); x := 2\ny := 3;', 'outputLine(1); outputLine(inputInt(1));']) {
     let observed = false;
     assert.throws(() => {
       const program = compile(code);
@@ -2951,44 +2945,44 @@ test('all syntax/name/type checking precedes input or output', () => {
   }
 });
 test('builtin spelling can be shadowed without calling hidden implementation', () => {
-  assert.equal(run('report := 3; report').output, '');
-  fault('inputInt := 3; report(inputInt());', 'TypeError');
+  assert.equal(run('outputLine := 3; outputLine').output, '');
+  fault('inputInt := 3; outputLine(inputInt());', 'TypeError');
 });
 test('precedence, exact integer division and fractional mixed division', () => {
-  assert.equal(run('report(2 + 3 * 4); report((2 + 3) * 4); report(-7/2); report(7.0/2);').output,
+  assert.equal(run('outputLine(2 + 3 * 4); outputLine((2 + 3) * 4); outputLine(-7/2); outputLine(7.0/2);').output,
     '14\n20\n-3\n3.5\n');
-  assert.equal(run('report(9223372036854775807 / 3);').output, '3074457345618258602\n');
-  assert.equal(run('report(-9223372036854775808);').output, '-9223372036854775808\n');
+  assert.equal(run('outputLine(9223372036854775807 / 3);').output, '3074457345618258602\n');
+  assert.equal(run('outputLine(-9223372036854775808);').output, '-9223372036854775808\n');
 });
 test('truncating remainder follows the dividend and rejects zero or Float', () => {
-  assert.equal(run('report(7 % 3); report(-7 % 3); report(7 % -3); report(6 % 3);').output,
+  assert.equal(run('outputLine(7 % 3); outputLine(-7 % 3); outputLine(7 % -3); outputLine(6 % 3);').output,
     '1\n-1\n1\n0\n');
-  assert.equal(run('report(9223372036854775807 % 2);').output, '1\n');
-  fault('report(5 % 0);', 'ArithmeticPanic');
-  fault('report(5.0 % 2.0);', 'TypeError');
-  fault('report(5 % 2.0);', 'TypeError');
+  assert.equal(run('outputLine(9223372036854775807 % 2);').output, '1\n');
+  fault('outputLine(5 % 0);', 'ArithmeticPanic');
+  fault('outputLine(5.0 % 2.0);', 'TypeError');
+  fault('outputLine(5 % 2.0);', 'TypeError');
 });
 test('floor division, floor modulo and compound updates follow documented signs', () => {
-  assert.equal(run('report(7 :/ 3); report(-7 :/ 3); report(7 :/ -3); report(-7 :/ -3);').output,
+  assert.equal(run('outputLine(7 :/ 3); outputLine(-7 :/ 3); outputLine(7 :/ -3); outputLine(-7 :/ -3);').output,
     '2\n-3\n-3\n2\n');
-  assert.equal(run('report(7 :% 3); report(-7 :% 3); report(7 :% -3); report(-7 :% -3);').output,
+  assert.equal(run('outputLine(7 :% 3); outputLine(-7 :% 3); outputLine(7 :% -3); outputLine(-7 :% -3);').output,
     '1\n2\n-2\n-1\n');
-  assert.equal(run('var x := 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 3; report(x);').output, '0\n');
-  assert.equal(run('var s := "a"; s += "b"; report(s);').output, 'ab\n');
-  assert.equal(run('var y := -7; y :/= 2; report(y); y :%= 3; report(y);').output, '-4\n2\n');
-  assert.equal(run('a := 7; report(a:/2); report(a :/ 2); report(a:%2); report(a :% 2);').output,
+  assert.equal(run('var x := 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 3; outputLine(x);').output, '0\n');
+  assert.equal(run('var s := "a"; s += "b"; outputLine(s);').output, 'ab\n');
+  assert.equal(run('var y := -7; y :/= 2; outputLine(y); y :%= 3; outputLine(y);').output, '-4\n2\n');
+  assert.equal(run('a := 7; outputLine(a:/2); outputLine(a :/ 2); outputLine(a:%2); outputLine(a :% 2);').output,
     '3\n3\n1\n1\n');
-  assert.equal(run('var b := 7; b:/=2; report(b); b:%=2; report(b);').output, '3\n1\n');
-  fault('report(5 :/ 0);', 'ArithmeticPanic');
-  fault('report(5 :% 0);', 'ArithmeticPanic');
-  fault('report(5.0 :/ 2.0);', 'TypeError');
+  assert.equal(run('var b := 7; b:/=2; outputLine(b); b:%=2; outputLine(b);').output, '3\n1\n');
+  fault('outputLine(5 :/ 0);', 'ArithmeticPanic');
+  fault('outputLine(5 :% 0);', 'ArithmeticPanic');
+  fault('outputLine(5.0 :/ 2.0);', 'TypeError');
   fault('x := 1; x += 1;', 'TypeError');
   fault('var x := 1; x += "a";', 'TypeError');
 });
 test('inferred mut and var mut declarations grant writable list access', () => {
-  assert.equal(run('mut args := inputArgs(); push_back(mut args, "z"); report(args[0], args[2]);',
+  assert.equal(run('mut args := inputArgs(); push_back(mut args, "z"); outputLine(args[0], args[2]);',
     'unread', ['a', 'b']).output, 'a z\n');
-  assert.equal(run('var mut args := inputArgs(); args = inputArgs(); push_front(mut args, "z"); report(args[0], args[2]);',
+  assert.equal(run('var mut args := inputArgs(); args = inputArgs(); push_front(mut args, "z"); outputLine(args[0], args[2]);',
     'unread', ['a', 'b']).output, 'z b\n');
   fault('mut x := 1;', 'TypeError');
   fault('mut args := inputArgs(); args = inputArgs();', 'TypeError');
@@ -2996,19 +2990,19 @@ test('inferred mut and var mut declarations grant writable list access', () => {
   fault('var mut args := inputArgs(); args = 1;', 'TypeError');
 });
 test('power is right-associative, Float-default and positive-exponent only', () => {
-  assert.equal(run('report(2 ** 3); report(2 ** 3 ** 2); report(4 ** 0.5); report((-2) ** 3); report(-(2 ** 2)); report(2 ** 3 + 0.5);').output,
+  assert.equal(run('outputLine(2 ** 3); outputLine(2 ** 3 ** 2); outputLine(4 ** 0.5); outputLine((-2) ** 3); outputLine(-(2 ** 2)); outputLine(2 ** 3 + 0.5);').output,
     '8\n512\n2\n-8\n-4\n8.5\n');
-  fault('report(-2 ** 2);', 'SourceError');
-  fault('report(2 ** 0);', 'ArithmeticPanic');
-  fault('report(2 ** -1);', 'ArithmeticPanic');
-  fault('report("a" ** 2);', 'TypeError');
-  fault('report(2 ** "a");', 'TypeError');
-  assert.equal(run('report(2 ** 3 * 2);').output, '16\n');
+  fault('outputLine(-2 ** 2);', 'SourceError');
+  fault('outputLine(2 ** 0);', 'ArithmeticPanic');
+  fault('outputLine(2 ** -1);', 'ArithmeticPanic');
+  fault('outputLine("a" ** 2);', 'TypeError');
+  fault('outputLine(2 ** "a");', 'TypeError');
+  assert.equal(run('outputLine(2 ** 3 * 2);').output, '16\n');
 });
 test('subjectless match selects the first true arm and requires a final fallback', () => {
-  assert.equal(run('x := 2; label := match { x == 1 { "one" } x == 2 { "two" } _ { "other" } } report(label);').output,
+  assert.equal(run('x := 2; label := match { x == 1 { "one" } x == 2 { "two" } _ { "other" } } outputLine(label);').output,
     'two\n');
-  assert.equal(run('match { false { report("no"); } true { report("yes"); } _ { report("other"); } }').output,
+  assert.equal(run('match { false { outputLine("no"); } true { outputLine("yes"); } _ { outputLine("other"); } }').output,
     'yes\n');
   fault('match { true { 1 } }', 'TypeError');
   fault('match { _ { 1 } true { 2 } }', 'TypeError');
@@ -3017,23 +3011,23 @@ test('subjectless match selects the first true arm and requires a final fallback
   fault('match true { _ { 1 } }', 'SourceError');
 });
 test('typed scalar, tuple and fixed-array declarations initialize or zero-initialize', () => {
-  assert.equal(run('a: Int; b: Float; c: String; d: Bool; e: Unit; f: (:Int, :String); g: [Int; 2]; report(a, b, c, d, e, f.0, f.1, g[0], g[1]);').output,
+  assert.equal(run('a: Int; b: Float; c: String; d: Bool; e: Unit; f: (:Int, :String); g: [Int; 2]; outputLine(a, b, c, d, e, f.0, f.1, g[0], g[1]);').output,
     '0 0  false Unit 0  0 0\n');
-  assert.equal(run('x: Int = 7; report(x);').output, '7\n');
-  assert.equal(run('var x: Int; x = 5; report(x);').output, '5\n');
+  assert.equal(run('x: Int = 7; outputLine(x);').output, '7\n');
+  assert.equal(run('var x: Int; x = 5; outputLine(x);').output, '5\n');
   fault('x: Int = "a";', 'TypeError');
   fault('l: List<Int>;', 'TypeError');
   fault('x: [Int; 2] = [1];', 'TypeError');
 });
 test('reserved storage initializes once and rejects reads before its first whole-value write', () => {
-  assert.equal(run('x: Int = ?; x = 74; report(x);').output, '74\n');
-  assert.equal(run('var y: Int = ?; y = 1; y = 2; report(y);').output, '2\n');
-  assert.equal(run('pair: (:Int, :String) = ?; pair = (1, "a"); report(pair.0, pair.1);').output, '1 a\n');
-  assert.equal(run('values: [Int; 2] = ?; values = [3, 4]; report(values[0], values[1]);').output, '3 4\n');
-  assert.equal(run('x: Int = ?; { x = 5; } report(x);').output, '5\n');
-  assert.equal(run('loop { x: Int = ?; x = 1; report(x); break }').output, '1\n');
-  assert.equal(run('pick := fn(): Int { var n: Int = ?; n = 3; n } report(pick());').output, '3\n');
-  fault('x: Int = ?; report(x);', 'TypeError');
+  assert.equal(run('x: Int = ?; x = 74; outputLine(x);').output, '74\n');
+  assert.equal(run('var y: Int = ?; y = 1; y = 2; outputLine(y);').output, '2\n');
+  assert.equal(run('pair: (:Int, :String) = ?; pair = (1, "a"); outputLine(pair.0, pair.1);').output, '1 a\n');
+  assert.equal(run('values: [Int; 2] = ?; values = [3, 4]; outputLine(values[0], values[1]);').output, '3 4\n');
+  assert.equal(run('x: Int = ?; { x = 5; } outputLine(x);').output, '5\n');
+  assert.equal(run('loop { x: Int = ?; x = 1; outputLine(x); break }').output, '1\n');
+  assert.equal(run('pick := fn(): Int { var n: Int = ?; n = 3; n } outputLine(pick());').output, '3\n');
+  fault('x: Int = ?; outputLine(x);', 'TypeError');
   fault('x: Int = ?; y := x;', 'TypeError');
   fault('x: Int = ?; x += 1;', 'TypeError');
   fault('x: Int = ?; x = 1; x = 2;', 'TypeError');
@@ -3042,156 +3036,156 @@ test('reserved storage initializes once and rejects reads before its first whole
   fault('x := ?;', 'SourceError');
 });
 test('reserved storage requires initialization on every path that reaches a read', () => {
-  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { x = 2 } report(x);').output, '1\n');
-  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { exit(0) } report(x);').output, '1\n');
-  assert.equal(run('x: Int = ?; match { 1 < 2 { x = 1 } _ { x = 2 } } report(x);').output, '1\n');
-  fault('x: Int = ?; if 1 < 2 { x = 1 } report(x);', 'TypeError');
+  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { x = 2 } outputLine(x);').output, '1\n');
+  assert.equal(run('x: Int = ?; if 1 < 2 { x = 1 } else { exit(0) } outputLine(x);').output, '1\n');
+  assert.equal(run('x: Int = ?; match { 1 < 2 { x = 1 } _ { x = 2 } } outputLine(x);').output, '1\n');
+  fault('x: Int = ?; if 1 < 2 { x = 1 } outputLine(x);', 'TypeError');
   fault('x: Int = ?; if 1 < 2 { x = 1 } x = 2;', 'TypeError');
   fault('x: Int = ?; loop { x = 1; break } x = 2;', 'TypeError');
-  fault('x: Int = ?; loop { x = 1; break } report(x);', 'TypeError');
-  fault('x: Int = ?; match { 1 < 2 { x = 1 } _ { report("no"); } } report(x);', 'TypeError');
+  fault('x: Int = ?; loop { x = 1; break } outputLine(x);', 'TypeError');
+  fault('x: Int = ?; match { 1 < 2 { x = 1 } _ { outputLine("no"); } } outputLine(x);', 'TypeError');
 });
 test('loops accumulate typed .value and an optional then completion', () => {
-  assert.equal(run('sum := loop [1, 2, 3] as n { .value + n }; report(sum);').output, '6\n');
-  assert.equal(run('last := loop [1, 2, 3] as n { n * 2 }; report(last);').output, '6\n');
-  assert.equal(run('skipped := loop [1, 2, 3] as n { if n == 2 { continue; } .value + n }; report(skipped);').output, '4\n');
-  assert.equal(run('stopped := loop [1, 2, 3] as n { if n == 2 { break; } .value + n }; report(stopped);').output, '1\n');
-  assert.equal(run('empty := loop inputArgs() as a { 1 }; report(empty);').output, '0\n');
-  assert.equal(run('loop [1, 2] as n { n } then { report(.count); report(.value); } report("after");').output,
+  assert.equal(run('sum := loop [1, 2, 3] as n { .value + n }; outputLine(sum);').output, '6\n');
+  assert.equal(run('last := loop [1, 2, 3] as n { n * 2 }; outputLine(last);').output, '6\n');
+  assert.equal(run('skipped := loop [1, 2, 3] as n { if n == 2 { continue; } .value + n }; outputLine(skipped);').output, '4\n');
+  assert.equal(run('stopped := loop [1, 2, 3] as n { if n == 2 { break; } .value + n }; outputLine(stopped);').output, '1\n');
+  assert.equal(run('empty := loop inputArgs() as a { 1 }; outputLine(empty);').output, '0\n');
+  assert.equal(run('loop [1, 2] as n { n } then { outputLine(.count); outputLine(.value); } outputLine("after");').output,
     '2\n2\nafter\n');
-  assert.equal(run('counted := loop [1, 2, 3] as n { n } then { .count }; report(counted);').output, '3\n');
-  assert.equal(run('label := loop [1, 2, 3] as n { n } then { "done" }; report(label);').output, 'done\n');
-  assert.equal(run('x := loop [1] as n { report(n); }; report(x);').output, '1\nUnit\n');
-  assert.equal(run('loop [1, 2] { report("tick"); } then { report("done"); }').output, 'tick\ntick\ndone\n');
+  assert.equal(run('counted := loop [1, 2, 3] as n { n } then { .count }; outputLine(counted);').output, '3\n');
+  assert.equal(run('label := loop [1, 2, 3] as n { n } then { "done" }; outputLine(label);').output, 'done\n');
+  assert.equal(run('x := loop [1] as n { outputLine(n); }; outputLine(x);').output, '1\nUnit\n');
+  assert.equal(run('loop [1, 2] { outputLine("tick"); } then { outputLine("done"); }').output, 'tick\ntick\ndone\n');
   fault('sum := loop { .value + 1 };', 'TypeError');
-  fault('report(.value);', 'TypeError');
-  assert.equal(run('loop [1, 2] as n { report(.count); }').output, '1\n2\n');
+  fault('outputLine(.value);', 'TypeError');
+  assert.equal(run('loop [1, 2] as n { outputLine(.count); }').output, '1\n2\n');
   fault('loop [1] as a { loop [2] as b { .value } }', 'TypeError');
   fault('loop [1] as n { f := fn(): Int { .value }; f() }', 'TypeError');
   fault('x: Int = loop [1] as n { "s" };', 'TypeError');
   fault('x: Int = loop [1] as n { n } then { "s" };', 'TypeError');
-  assert.equal(run('x := loop [1, 2] as n { n } then { .item }; report(x);').output, '2\n');
-  assert.equal(run('x := loop inputArgs() as a { 1 } then { .item }; report("[" + x + "]");').output, '[]\n');
-  fault('loop true { report(1); } then { .index };', 'TypeError');
+  assert.equal(run('x := loop [1, 2] as n { n } then { .item }; outputLine(x);').output, '2\n');
+  assert.equal(run('x := loop inputArgs() as a { 1 } then { .item }; outputLine("[" + x + "]");').output, '[]\n');
+  fault('loop true { outputLine(1); } then { .index };', 'TypeError');
 });
 test('loop metadata, payload exits and tagged targets complete loops', () => {
-  assert.equal(run('loop [10, 20] as n { report(.item, .index, .count); }').output, '10 0 1\n20 1 2\n');
-  assert.equal(run('a := loop [5, 6] as n { n } then { report(.item, .index, .count); .item }; report(a);').output,
+  assert.equal(run('loop [10, 20] as n { outputLine(.item, .index, .count); }').output, '10 0 1\n20 1 2\n');
+  assert.equal(run('a := loop [5, 6] as n { n } then { outputLine(.item, .index, .count); .item }; outputLine(a);').output,
     '6 1 2\n6\n');
-  assert.equal(run('x := loop [1, 2, 3] as n { if n == 2 { break 20 } n } then { .value }; report(x);').output, '20\n');
-  assert.equal(run('y := loop [1, 2, 3] as n { if n == 2 { continue 50 } n } then { .value }; report(y);').output, '3\n');
-  assert.equal(run('x := loop [1, 2] as n { break 5 }; report(x);').output, '5\n');
-  assert.equal(run('z := @outer loop [1, 2] as n { loop [1] as m { if n == 1 { break @outer 9 } } .value + n } then { .value }; report(z);').output, '9\n');
-  assert.equal(run('w := @scan loop [1, 2] as n { loop [1] as m { if n == 1 { continue @scan 7 } } .value + n } then { .value }; report(w);').output, '9\n');
-  assert.equal(run('v := @o loop [1, 2] as n { loop [1] as m { if n == 1 { return @o 42 } } .value + n } then { .value }; report(v);').output, '42\n');
-  assert.equal(run('loop true { report(.item); break; }').output, 'Unit\n');
-  assert.equal(run('x := loop inputArgs() as a { 1 } then { report(.count, .index); .item }; report("[" + x + "]");').output,
+  assert.equal(run('x := loop [1, 2, 3] as n { if n == 2 { break 20 } n } then { .value }; outputLine(x);').output, '20\n');
+  assert.equal(run('y := loop [1, 2, 3] as n { if n == 2 { continue 50 } n } then { .value }; outputLine(y);').output, '3\n');
+  assert.equal(run('x := loop [1, 2] as n { break 5 }; outputLine(x);').output, '5\n');
+  assert.equal(run('z := @outer loop [1, 2] as n { loop [1] as m { if n == 1 { break @outer 9 } } .value + n } then { .value }; outputLine(z);').output, '9\n');
+  assert.equal(run('w := @scan loop [1, 2] as n { loop [1] as m { if n == 1 { continue @scan 7 } } .value + n } then { .value }; outputLine(w);').output, '9\n');
+  assert.equal(run('v := @o loop [1, 2] as n { loop [1] as m { if n == 1 { return @o 42 } } .value + n } then { .value }; outputLine(v);').output, '42\n');
+  assert.equal(run('loop true { outputLine(.item); break; }').output, 'Unit\n');
+  assert.equal(run('x := loop inputArgs() as a { 1 } then { outputLine(.count, .index); .item }; outputLine("[" + x + "]");').output,
     '0 0\n[]\n');
-  assert.equal(run('x := @scan loop [1, 2] as n { loop [1] { report(@scan.value); } .value + n } then { .value }; report(x);').output,
+  assert.equal(run('x := @scan loop [1, 2] as n { loop [1] { outputLine(@scan.value); } .value + n } then { .value }; outputLine(x);').output,
     '0\n1\n3\n');
-  fault('loop true { report(1); } then { .index };', 'TypeError');
+  fault('loop true { outputLine(1); } then { .index };', 'TypeError');
   fault('loop { break 3; }', 'TypeError');
-  fault('report(.value);', 'TypeError');
+  fault('outputLine(.value);', 'TypeError');
   fault('loop [1] as a { loop [2] as b { .value } }', 'TypeError');
   fault('break @missing 1;', 'TypeError');
   fault('continue @scan.value;', 'SourceError');
 });
 test('construct-level finally runs after then and on every exit', () => {
-  assert.equal(run('loop [1, 2] as n { report(.count); } then { report("then"); } finally { report("finally"); }').output,
+  assert.equal(run('loop [1, 2] as n { outputLine(.count); } then { outputLine("then"); } finally { outputLine("finally"); }').output,
     '1\n2\nthen\nfinally\n');
-  assert.equal(run('if 1 < 2 { report("body"); } finally { report("cleanup"); }').output, 'body\ncleanup\n');
-  assert.equal(run('x := if true { 1 } else { 2 } finally { report("cond-finally"); } report(x);').output,
+  assert.equal(run('if 1 < 2 { outputLine("body"); } finally { outputLine("cleanup"); }').output, 'body\ncleanup\n');
+  assert.equal(run('x := if true { 1 } else { 2 } finally { outputLine("cond-finally"); } outputLine(x);').output,
     'cond-finally\n1\n');
-  assert.equal(run('f := fn(): Int { loop [1] { return 5 } finally { report("return-cleanup"); } 0 } report(f());').output,
+  assert.equal(run('f := fn(): Int { loop [1] { return 5 } finally { outputLine("return-cleanup"); } 0 } outputLine(f());').output,
     'return-cleanup\n5\n');
-  assert.equal(run('g := fn(): Int { @o loop [1] as n { loop [1] { break @o 7 } finally { report("inner-finally"); } .value + n } then { .value } finally { report("outer-finally"); } 0 } report(g());').output,
+  assert.equal(run('g := fn(): Int { @o loop [1] as n { loop [1] { break @o 7 } finally { outputLine("inner-finally"); } .value + n } then { .value } finally { outputLine("outer-finally"); } 0 } outputLine(g());').output,
     'inner-finally\nouter-finally\n0\n');
-  const exited = run('if true { exit(0) } finally { report("exit-cleanup"); } report("unreachable");');
+  const exited = run('if true { exit(0) } finally { outputLine("exit-cleanup"); } outputLine("unreachable");');
   assert.equal(exited.code, 0);
   assert.equal(exited.output, 'exit-cleanup\n');
   let output = '';
-  assert.throws(() => execute(compile('loop [1] { 1 / 0 } finally { report("fault-cleanup"); }'), {
+  assert.throws(() => execute(compile('loop [1] { 1 / 0 } finally { outputLine("fault-cleanup"); }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), (error: unknown) => error instanceof LiteFault && error.category === 'ArithmeticPanic');
   assert.equal(output, 'fault-cleanup\n');
 });
 test('numeric widths promote, widen losslessly and range-check', () => {
-  assert.equal(run('a: Int8 = 127; b: Int16 = 32767; c: Int32 = 2147483647; report(a, b, c);').output,
+  assert.equal(run('a: Int8 = 127; b: Int16 = 32767; c: Int32 = 2147483647; outputLine(a, b, c);').output,
     '127 32767 2147483647\n');
-  assert.equal(run('i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; report(i, f, d);').output, '5 2.5 3.5\n');
-  assert.equal(run('a: Int8 = 100; b: Int16 = 200; report(a + b);').output, '300\n');
-  assert.equal(run('a: Int8 = 127; y := a + 1; report(y);').output, '128\n');
-  assert.equal(run('a: Float32 = 0.1; report(a);').output, '0.10000000149011612\n');
-  assert.equal(run('b: Float32 = 0.1; c: Float = 1.5; report(b + c);').output, '1.6000000014901161\n');
-  assert.equal(run('a: Int8 = 3; f: Float32 = a; g: Float = a; report(f, g);').output, '3 3\n');
-  assert.equal(run('h: Float32 = 0.5; j: Float = h; report(j);').output, '0.5\n');
-  assert.equal(run('k: Float = 2; report(k);').output, '2\n');
-  assert.equal(run('z8: Int8; zf: Float32; report(z8, zf);').output, '0 0\n');
-  assert.equal(run('f := fn(x: Int8): Float32 { x } report(f(3));').output, '3\n');
-  assert.equal(run('kg: Int8 = 5; base: Float = 1.2; report(base + kg);').output, '6.2\n');
-  assert.equal(run('kg: Int8 = 5; base: Float32 = 1.5; report(kg + base);').output, '6.5\n');
-  assert.equal(run('report(1.2 + 5); report(5 + 1.2);').output, '6.2\n6.2\n');
+  assert.equal(run('i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; outputLine(i, f, d);').output, '5 2.5 3.5\n');
+  assert.equal(run('a: Int8 = 100; b: Int16 = 200; outputLine(a + b);').output, '300\n');
+  assert.equal(run('a: Int8 = 127; y := a + 1; outputLine(y);').output, '128\n');
+  assert.equal(run('a: Float32 = 0.1; outputLine(a);').output, '0.10000000149011612\n');
+  assert.equal(run('b: Float32 = 0.1; c: Float = 1.5; outputLine(b + c);').output, '1.6000000014901161\n');
+  assert.equal(run('a: Int8 = 3; f: Float32 = a; g: Float = a; outputLine(f, g);').output, '3 3\n');
+  assert.equal(run('h: Float32 = 0.5; j: Float = h; outputLine(j);').output, '0.5\n');
+  assert.equal(run('k: Float = 2; outputLine(k);').output, '2\n');
+  assert.equal(run('z8: Int8; zf: Float32; outputLine(z8, zf);').output, '0 0\n');
+  assert.equal(run('f := fn(x: Int8): Float32 { x } outputLine(f(3));').output, '3\n');
+  assert.equal(run('kg: Int8 = 5; base: Float = 1.2; outputLine(base + kg);').output, '6.2\n');
+  assert.equal(run('kg: Int8 = 5; base: Float32 = 1.5; outputLine(kg + base);').output, '6.5\n');
+  assert.equal(run('outputLine(1.2 + 5); outputLine(5 + 1.2);').output, '6.2\n6.2\n');
   fault('x: Int8 = 128;', 'SourceError');
   fault('x: Int16 = 32768;', 'SourceError');
   fault('x: Int8 = 12345;', 'SourceError');
   fault('x: Float32 = 16777217;', 'SourceError');
   fault('i16: Int16 = 5; x: Int8 = i16;', 'TypeError');
   fault('i64: Int = 5; x: Float = i64;', 'TypeError');
-  fault('a: Int8 = 100; report(a + a);', 'ArithmeticPanic');
-  fault('a: Float32 = 3e38; b: Float32 = 3e38; report(a * b);', 'ArithmeticPanic');
+  fault('a: Int8 = 100; outputLine(a + a);', 'ArithmeticPanic');
+  fault('a: Float32 = 3e38; b: Float32 = 3e38; outputLine(a * b);', 'ArithmeticPanic');
 });
 test('integer arithmetic cannot silently wrap', () => {
-  for (const code of ['report(9223372036854775807 + 1);', 'report(-9223372036854775808 - 1);',
-    'report(9223372036854775807 * 2);', 'var x := -9223372036854775808; report(-x);',
-    'report(-9223372036854775808 / -1);']) fault(code, 'ArithmeticPanic');
+  for (const code of ['outputLine(9223372036854775807 + 1);', 'outputLine(-9223372036854775808 - 1);',
+    'outputLine(9223372036854775807 * 2);', 'var x := -9223372036854775808; outputLine(-x);',
+    'outputLine(-9223372036854775808 / -1);']) fault(code, 'ArithmeticPanic');
   fault('x := 9223372036854775808;', 'SourceError');
   fault('x := -9223372036854775809;', 'SourceError');
 });
 test('zero divisors, non-finite results, and literals fault', () => {
-  for (const code of ['report(1/0);', 'report(1.0 / 0);', 'report(1.0 / -0.0);',
-    'report(1e308 * 2.0);']) fault(code, 'ArithmeticPanic');
-  fault('report(1e999);', 'SourceError');
-  assert.equal(run('report(1 + 2.0); report(2.0 + 1);').output, '3\n3\n');
+  for (const code of ['outputLine(1/0);', 'outputLine(1.0 / 0);', 'outputLine(1.0 / -0.0);',
+    'outputLine(1e308 * 2.0);']) fault(code, 'ArithmeticPanic');
+  fault('outputLine(1e999);', 'SourceError');
+  assert.equal(run('outputLine(1 + 2.0); outputLine(2.0 + 1);').output, '3\n3\n');
 });
 test('direct input faults instead of retrying or fabricating values', () => {
-  for (const input of ['', 'hello', '12.5', '9223372036854775808']) fault('report(inputInt());', 'InputFault', input);
-  for (const input of ['', 'nan', 'Infinity', '1e999', '.5', '0x10']) fault('report(inputFloat());', 'InputFault', input);
-  fault('report(inputWord());', 'InputFault', ' \t\n');
-  assert.equal(run('report(inputInt()); report(inputFloat());', '-12 +2.5').output, '-12\n2.5\n');
+  for (const input of ['', 'hello', '12.5', '9223372036854775808']) fault('outputLine(inputInt());', 'InputFault', input);
+  for (const input of ['', 'nan', 'Infinity', '1e999', '.5', '0x10']) fault('outputLine(inputFloat());', 'InputFault', input);
+  fault('outputLine(inputWord());', 'InputFault', ' \t\n');
+  assert.equal(run('outputLine(inputInt()); outputLine(inputFloat());', '-12 +2.5').output, '-12\n2.5\n');
 });
 test('line/word input, empty lines, unterminated final lines, Unicode, and shared cursor', () => {
-  assert.equal(run('report(inputLine());', '\n').output, '\n');
-  assert.equal(run('report(inputLine());', 'سلام\r\n').output, 'سلام\n');
-  assert.equal(run('report(inputLine());', 'final').output, 'final\n');
-  fault('report(inputLine());', 'InputFault');
-  assert.equal(run('report(inputWord()); report(inputWord());', ' سلام  world ').output, 'سلام\nworld\n');
-  assert.equal(run('report(inputInt()); report(inputLine()); report(inputLine());', '12\nnext\n').output, '12\n\nnext\n');
+  assert.equal(run('outputLine(inputLine());', '\n').output, '\n');
+  assert.equal(run('outputLine(inputLine());', 'سلام\r\n').output, 'سلام\n');
+  assert.equal(run('outputLine(inputLine());', 'final').output, 'final\n');
+  fault('outputLine(inputLine());', 'InputFault');
+  assert.equal(run('outputLine(inputWord()); outputLine(inputWord());', ' سلام  world ').output, 'سلام\nworld\n');
+  assert.equal(run('outputLine(inputInt()); outputLine(inputLine()); outputLine(inputLine());', '12\nnext\n').output, '12\n\nnext\n');
 });
 test('text tokens are data, including keyword and punctuation lookalikes', () => {
-  assert.equal(run('report("var"); report(";"); report("+"); report("(");').output, 'var\n;\n+\n(\n');
-  assert.equal(run('سلام := "Hi, " "🌍"; report(سلام); report("first\\nsecond");').output,
+  assert.equal(run('outputLine("var"); outputLine(";"); outputLine("+"); outputLine("(");').output, 'var\n;\n+\n(\n');
+  assert.equal(run('سلام := "Hi, " "🌍"; outputLine(سلام); outputLine("first\\nsecond");').output,
     'Hi, 🌍\nfirst\nsecond\n');
-  fault('report("bad\\q");', 'SourceError');
+  fault('outputLine("bad\\q");', 'SourceError');
 });
 test('nested/raw comments do not create code or separators', () => {
-  assert.equal(run('/* outer /* inner */ /*# unmatched /* #*/ end */ report(3);').output, '3\n');
-  assert.equal(run('/*## #*/ is content ##*/ report(4);').output, '4\n');
+  assert.equal(run('/* outer /* inner */ /*# unmatched /* #*/ end */ outputLine(3);').output, '3\n');
+  assert.equal(run('/*## #*/ is content ##*/ outputLine(4);').output, '4\n');
   fault('/*# ##*/', 'SourceError');
   fault('/* unclosed', 'SourceError');
-  fault('report(1) /* comment */ report(2)', 'SourceError');
+  fault('outputLine(1) /* comment */ outputLine(2)', 'SourceError');
 });
 test('reportError is report-only and exit explicitly prevents continuation', () => {
-  assert.deepEqual(run('reportError("error"); report("fallback");'),
+  assert.deepEqual(run('reportError("error"); outputLine("fallback");'),
     { code: 0, output: 'fallback\n', errors: 'error\n' });
-  assert.deepEqual(run('report(7); exit(9); report(8);'), { code: 9, output: '7\n', errors: '' });
-  assert.equal(run('exit(); report(1);').code, 0);
+  assert.deepEqual(run('outputLine(7); exit(9); outputLine(8);'), { code: 9, output: '7\n', errors: '' });
+  assert.equal(run('exit(); outputLine(1);').code, 0);
   fault('exit(256);', 'TypeError');
 });
 test('existing lessons remain unchanged and execute within the supported subset', () => {
   const cases = [
-    ['001_add_two_numbers.lts', 'report(apples);', '12\n'],
-    ['002_arithmetic_operations.lts', 'report(sum); report(difference); report(product); report(quotient);', '9\n5\n14\n3\n'],
-    ['020_swap_values.lts', 'report(first_box); report(second_box);', '3\n7\n'],
+    ['001_add_two_numbers.lts', 'outputLine(apples);', '12\n'],
+    ['002_arithmetic_operations.lts', 'outputLine(sum); outputLine(difference); outputLine(product); outputLine(quotient);', '9\n5\n14\n3\n'],
+    ['020_swap_values.lts', 'outputLine(first_box); outputLine(second_box);', '3\n7\n'],
   ];
   for (const [file, observation, expected] of cases) {
     if (file === undefined || observation === undefined || expected === undefined) throw new Error('bad fixture');
@@ -3209,11 +3203,11 @@ test('CLI: direct TS run, exact statuses, source locations, and check-only mode'
     return spawnSync(process.execPath, [cli.pathname, ...(check ? ['--check'] : []), path], { input, encoding: 'utf8' });
   };
   try {
-    assert.equal(invoke('report(inputInt() * 2);', '12').stdout, '24\n');
-    const bad = invoke('number := inputInt();\nreport(number);', 'bad');
+    assert.equal(invoke('outputLine(inputInt() * 2);', '12').stdout, '24\n');
+    const bad = invoke('number := inputInt();\noutputLine(number);', 'bad');
     assert.equal(bad.status, 1); assert.match(bad.stderr, /:1:11: InputFault:/); assert.equal(bad.stdout, '');
     assert.equal(invoke('exit(7);').status, 7);
-    const check = invoke('report(inputInt());', '', true);
+    const check = invoke('outputLine(inputInt());', '', true);
     assert.equal(check.status, 0); assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
     writeFileSync(path, Buffer.from([0xff]));
     assert.equal(spawnSync(process.execPath, [cli.pathname, path]).status, 1);
@@ -3221,84 +3215,84 @@ test('CLI: direct TS run, exact statuses, source locations, and check-only mode'
 });
 
 test('Bool values and complete same-type conditional expressions', () => {
-  assert.equal(run('var ready := true; ready = false; report(ready);').output, 'false\n');
-  assert.equal(run('x := if false { 1 } else if true { 2 } else { 3 } report(x);').output, '2\n');
-  assert.equal(run('report((if true { 2 } else { 3 }) + 4);').output, '6\n');
-  assert.equal(run('report(if true { if false { "wrong" } else { "right" } } else { "wrong" });').output, 'right\n');
-  assert.equal(run('report(if true { x := 1; } else { y := 2; });').output, 'Unit\n');
+  assert.equal(run('var ready := true; ready = false; outputLine(ready);').output, 'false\n');
+  assert.equal(run('x := if false { 1 } else if true { 2 } else { 3 } outputLine(x);').output, '2\n');
+  assert.equal(run('outputLine((if true { 2 } else { 3 }) + 4);').output, '6\n');
+  assert.equal(run('outputLine(if true { if false { "wrong" } else { "right" } } else { "wrong" });').output, 'right\n');
+  assert.equal(run('outputLine(if true { x := 1; } else { y := 2; });').output, 'Unit\n');
 });
 test('only the selected branch executes; action conditionals may omit else', () => {
-  assert.equal(run('if false { report(1 / 0); } if true { report(7); }').output, '7\n');
-  assert.equal(run('if true { report(3); } else { report(inputInt()); }').output, '3\n');
-  assert.equal(run('if false { exit(5); } report(8);').output, '8\n');
-  assert.equal(run('if true { exit(5); } report(8);').code, 5);
+  assert.equal(run('if false { outputLine(1 / 0); } if true { outputLine(7); }').output, '7\n');
+  assert.equal(run('if true { outputLine(3); } else { outputLine(inputInt()); }').output, '3\n');
+  assert.equal(run('if false { exit(5); } outputLine(8);').output, '8\n');
+  assert.equal(run('if true { exit(5); } outputLine(8);').code, 5);
   const code = readFileSync(new URL('../examples/002-decisions.lts', import.meta.url), 'utf8');
   assert.equal(run(code, '0').output, 'Integer: zero\nbetween zero and nine\n');
   assert.equal(run(code, '5').output, 'Integer: positive\nbetween zero and nine\nquotient exceeds five\n');
 });
 test('blocks and branches have lexical scope, scalar results, and Unit declaration tails', () => {
-  assert.equal(run('var x := 1; if true { x = 2; x := 8; report(x); } report(x);').output, '8\n2\n');
-  assert.equal(run('x := { y := 2; y * 3;;;; } report(x);').output, '6\n');
-  assert.equal(run('report({ x := 3; }); report({});').output, 'Unit\nUnit\n');
+  assert.equal(run('var x := 1; if true { x = 2; x := 8; outputLine(x); } outputLine(x);').output, '8\n2\n');
+  assert.equal(run('x := { y := 2; y * 3;;;; } outputLine(x);').output, '6\n');
+  assert.equal(run('outputLine({ x := 3; }); outputLine({});').output, 'Unit\nUnit\n');
   assert.equal(run('{ x := 3; x; }').output, '');
-  fault('if true { local := 4; } report(local);', 'TypeError');
-  fault('x := { local := 4; local } report(local);', 'TypeError');
+  fault('if true { local := 4; } outputLine(local);', 'TypeError');
+  fault('x := { local := 4; local } outputLine(local);', 'TypeError');
   fault('x := if true { local := 4; local } else { local };', 'TypeError');
 });
 test('truthiness, branch unions, partial value conditionals and malformed branches are rejected', () => {
-  for (const code of ['if 1 { report(1); }', 'if "yes" {}', 'report(1 and true);', 'report(not 1);',
-    'report(true + 1);', 'x := if true { 1 } else { "one" };', 'report(if true { 1 });',
+  for (const code of ['if 1 { outputLine(1); }', 'if "yes" {}', 'outputLine(1 and true);', 'outputLine(not 1);',
+    'outputLine(true + 1);', 'x := if true { 1 } else { "one" };', 'outputLine(if true { 1 });',
     'x := if true { "a" } else { 1 };']) fault(code, 'TypeError');
-  for (const code of ['if true report(1);', 'if true {} else report(2);', 'if true {',
+  for (const code of ['if true outputLine(1);', 'if true {} else outputLine(2);', 'if true {',
     'if true {}; else {}', 'var true := 1;']) fault(code, 'SourceError');
   let output = '';
-  assert.throws(() => execute(compile('report(1); if false { missing; }'), {
+  assert.throws(() => execute(compile('outputLine(1); if false { missing; }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), LiteFault);
   assert.equal(output, '');
 });
 test('partial conditionals give declarations a default and skip false assignment writes', () => {
-  assert.equal(run('x := if false { 5 }; report(x);').output, '0\n');
-  assert.equal(run('x := if 1 < 2 { 5 }; report(x);').output, '5\n');
-  assert.equal(run('x: Int = if false { 5 }; report(x);').output, '0\n');
-  assert.equal(run('x: String = if false { "a" }; report("[" + x + "]");').output, '[]\n');
-  assert.equal(run('i := if false { inputInt() }; report(i);', '9').output, '0\n');
-  assert.equal(run('var x := 3; x = if false { 4 }; report(x);').output, '3\n');
-  assert.equal(run('var x := 3; x = if true { 4 }; report(x);').output, '4\n');
-  assert.equal(run('var x := 0; x = if true { report("yes"); 2 }; report(x);').output, 'yes\n2\n');
-  assert.equal(run('flag := true; a := if flag { 5 }; var b := 0; if flag { b = 5 } report(a, b);').output, '5 5\n');
-  assert.equal(run('flag := false; a := if flag { 5 }; var b := 0; if flag { b = 5 } report(a, b);').output, '0 0\n');
-  assert.equal(run('var a := 10; var b := 10; flag := false; a = if flag { 7 }; if flag { b = 7 } report(a, b);').output,
+  assert.equal(run('x := if false { 5 }; outputLine(x);').output, '0\n');
+  assert.equal(run('x := if 1 < 2 { 5 }; outputLine(x);').output, '5\n');
+  assert.equal(run('x: Int = if false { 5 }; outputLine(x);').output, '0\n');
+  assert.equal(run('x: String = if false { "a" }; outputLine("[" + x + "]");').output, '[]\n');
+  assert.equal(run('i := if false { inputInt() }; outputLine(i);', '9').output, '0\n');
+  assert.equal(run('var x := 3; x = if false { 4 }; outputLine(x);').output, '3\n');
+  assert.equal(run('var x := 3; x = if true { 4 }; outputLine(x);').output, '4\n');
+  assert.equal(run('var x := 0; x = if true { outputLine("yes"); 2 }; outputLine(x);').output, 'yes\n2\n');
+  assert.equal(run('flag := true; a := if flag { 5 }; var b := 0; if flag { b = 5 } outputLine(a, b);').output, '5 5\n');
+  assert.equal(run('flag := false; a := if flag { 5 }; var b := 0; if flag { b = 5 } outputLine(a, b);').output, '0 0\n');
+  assert.equal(run('var a := 10; var b := 10; flag := false; a = if flag { 7 }; if flag { b = 7 } outputLine(a, b);').output,
     '10 10\n');
-  assert.equal(run('var a := 10; var b := 10; flag := true; a = if flag { 7 }; if flag { b = 7 } report(a, b);').output,
+  assert.equal(run('var a := 10; var b := 10; flag := true; a = if flag { 7 }; if flag { b = 7 } outputLine(a, b);').output,
     '7 7\n');
-  assert.equal(run('a := if inputInt() > 0 { 5 }; report(a, inputInt());', '7 9').output, '5 9\n');
-  assert.equal(run('var a := 0; a = if inputInt() > 0 { 5 }; report(a, inputInt());', '7 9').output, '5 9\n');
+  assert.equal(run('a := if inputInt() > 0 { 5 }; outputLine(a, inputInt());', '7 9').output, '5 9\n');
+  assert.equal(run('var a := 0; a = if inputInt() > 0 { 5 }; outputLine(a, inputInt());', '7 9').output, '5 9\n');
   fault('x := if true { if true { 1 } };', 'TypeError');
   fault('f := fn(): Int { if true { 1 } }', 'TypeError');
   fault('x := if true { exit(0) };', 'TypeError');
   fault('x: Int = if true { "a" };', 'TypeError');
 });
 test('short-circuit logic preserves operand order and Bool-only conditions', () => {
-  assert.equal(run('report(false and inputInt() > 0); report(true or inputInt() > 0); report(inputInt());', '9').output,
+  assert.equal(run('outputLine(false and inputInt() > 0); outputLine(true or inputInt() > 0); outputLine(inputInt());', '9').output,
     'false\ntrue\n9\n');
-  assert.equal(run('report(true or false and false); report(not 0 < 2 < 3); report((not false) and true);').output,
+  assert.equal(run('outputLine(true or false and false); outputLine(not 0 < 2 < 3); outputLine((not false) and true);').output,
     'true\nfalse\ntrue\n');
-  assert.equal(run('report(and true and false); report(or false or true); if and true { report(3); }').output,
+  assert.equal(run('outputLine(and true and false); outputLine(or false or true); if and true { outputLine(3); }').output,
     'false\ntrue\n3\n');
-  for (const code of ['report(and or true);', 'report(true and and false);', 'report(or);']) fault(code, 'SourceError');
-  for (const code of ['report(and 3);', 'x := or "text";', 'report((and Unit));']) fault(code, 'TypeError');
-  fault('report(true or missing);', 'TypeError');
+  for (const code of ['outputLine(and or true);', 'outputLine(true and and false);', 'outputLine(or);']) fault(code, 'SourceError');
+  for (const code of ['outputLine(and 3);', 'x := or "text";', 'outputLine((and Unit));']) fault(code, 'TypeError');
+  fault('outputLine(true or missing);', 'TypeError');
 });
 test('comparison chains retain the middle value once and skip later operands', () => {
-  assert.equal(run('report(0 < inputInt() < 10); report(inputInt());', '5 77').output, 'true\n77\n');
-  assert.equal(run('report(10 < inputInt() < inputInt()); report(inputInt());', '5 77').output, 'false\n77\n');
-  assert.equal(run('report(3 < 2 < (1 / 0));').output, 'false\n');
-  assert.equal(run('report(1 < 3 > 2); report((1 < 2) == true); report(1 == 1 == 1);').output, 'true\ntrue\ntrue\n');
-  assert.equal(run('var middle := 5; report(0 < middle < ({ middle = 100; 10 })); report(middle);').output,
+  assert.equal(run('outputLine(0 < inputInt() < 10); outputLine(inputInt());', '5 77').output, 'true\n77\n');
+  assert.equal(run('outputLine(10 < inputInt() < inputInt()); outputLine(inputInt());', '5 77').output, 'false\n77\n');
+  assert.equal(run('outputLine(3 < 2 < (1 / 0));').output, 'false\n');
+  assert.equal(run('outputLine(1 < 3 > 2); outputLine((1 < 2) == true); outputLine(1 == 1 == 1);').output, 'true\ntrue\ntrue\n');
+  assert.equal(run('var middle := 5; outputLine(0 < middle < ({ middle = 100; 10 })); outputLine(middle);').output,
     'true\n100\n');
-  fault('report(3 < 2 < "bad");', 'TypeError');
-  fault('report(1 < true);', 'TypeError');
+  fault('outputLine(3 < 2 < "bad");', 'TypeError');
+  fault('outputLine(1 < true);', 'TypeError');
 });
 test('all ten comparison operators complement their adjacent positive form', () => {
   const cases: readonly (readonly [string, string])[] = [
@@ -3308,34 +3302,34 @@ test('all ten comparison operators complement their adjacent positive form', () 
     ['1.0 < 2.0 <= 2.0', 'true'], ['9223372036854775806 < 9223372036854775807', 'true'],
     ['"سلام" == "سلام"', 'true'], ['true =!= false', 'true'], ['() == Unit', 'true'],
   ];
-  for (const [expression, expected] of cases) assert.equal(run(`report(${expression});`).output, `${expected}\n`, expression);
-  assert.equal(run('report(1 == 1.0); report(2 < 1.5);').output, 'true\nfalse\n');
-  fault('report("a" < "b");', 'TypeError');
+  for (const [expression, expected] of cases) assert.equal(run(`outputLine(${expression});`).output, `${expected}\n`, expression);
+  assert.equal(run('outputLine(1 == 1.0); outputLine(2 < 1.5);').output, 'true\nfalse\n');
+  fault('outputLine("a" < "b");', 'TypeError');
 });
 
 test('Boolean loops test before entry and reevaluate the header after each body', () => {
-  assert.equal(run('loop false { report(inputInt()); } report(8);').output, '8\n');
-  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; sum = sum + i; } report(sum);').output, '15\n');
-  assert.equal(run('loop and inputInt() > 0 { report(1); } report(inputInt());', '2 1 0 99').output, '1\n1\n99\n');
-  assert.equal(run('loop ({ loop { break; } inputInt() > 0 }) { report(7); }', '1 0').output, '7\n');
+  assert.equal(run('loop false { outputLine(inputInt()); } outputLine(8);').output, '8\n');
+  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; sum = sum + i; } outputLine(sum);').output, '15\n');
+  assert.equal(run('loop and inputInt() > 0 { outputLine(1); } outputLine(inputInt());', '2 1 0 99').output, '1\n1\n99\n');
+  assert.equal(run('loop ({ loop { break; } inputInt() > 0 }) { outputLine(7); }', '1 0').output, '7\n');
 });
 test('continue skips the body tail and reevaluates the condition', () => {
-  assert.equal(run('loop inputInt() > 0 { if inputInt() == 2 { continue; } report(7); } report(inputInt());',
+  assert.equal(run('loop inputInt() > 0 { if inputInt() == 2 { continue; } outputLine(7); } outputLine(inputInt());',
     '1 2 1 3 0 99').output, '7\n99\n');
-  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; if i < 3 { continue; } sum = sum + i; } report(sum);').output, '12\n');
+  assert.equal(run('var i := 0; var sum := 0; loop i < 5 { i = i + 1; if i < 3 { continue; } sum = sum + i; } outputLine(sum);').output, '12\n');
 });
 test('bare break ends the nearest loop without rechecking its condition', () => {
-  assert.equal(run('loop inputInt() > 0 { break; } report(inputInt());', '1 8').output, '8\n');
-  assert.equal(run('loop { if true { break; } report(1 / 0); } report(3);').output, '3\n');
-  assert.equal(run('var outer := 0; var entries := 0; loop outer < 3 { outer = outer + 1; var inner := 0; loop true { inner = inner + 1; entries = entries + 1; if inner == 2 { break; } } } report(entries);').output, '6\n');
+  assert.equal(run('loop inputInt() > 0 { break; } outputLine(inputInt());', '1 8').output, '8\n');
+  assert.equal(run('loop { if true { break; } outputLine(1 / 0); } outputLine(3);').output, '3\n');
+  assert.equal(run('var outer := 0; var entries := 0; loop outer < 3 { outer = outer + 1; var inner := 0; loop true { inner = inner + 1; entries = entries + 1; if inner == 2 { break; } } } outputLine(entries);').output, '6\n');
 });
 test('nested continue stays in the inner loop and execution resumes after it', () => {
-  assert.equal(run('var outer := 0; var total := 0; loop outer < 2 { outer = outer + 1; var inner := 0; loop inner < 3 { inner = inner + 1; if inner < 3 { continue; } total = total + 1; } total = total + 10; } report(total);').output, '22\n');
+  assert.equal(run('var outer := 0; var total := 0; loop outer < 2 { outer = outer + 1; var inner := 0; loop inner < 3 { inner = inner + 1; if inner < 3 { continue; } total = total + 1; } total = total + 10; } outputLine(total);').output, '22\n');
 });
 test('body locals initialize on every entry; header and outer shadows keep their bindings', () => {
-  assert.equal(run('var i := 0; var sum := 0; loop i < 3 { i = i + 1; var local := 0; local = local + 1; sum = sum + local; } report(sum);').output, '3\n');
-  assert.equal(run('var i := 0; loop i < 2 { i = i + 1; i := 10; report(i); } report(i);').output, '10\n10\n2\n');
-  fault('loop false { local := 7; } report(local);', 'TypeError');
+  assert.equal(run('var i := 0; var sum := 0; loop i < 3 { i = i + 1; var local := 0; local = local + 1; sum = sum + local; } outputLine(sum);').output, '3\n');
+  assert.equal(run('var i := 0; loop i < 2 { i = i + 1; i := 10; outputLine(i); } outputLine(i);').output, '10\n10\n2\n');
+  fault('loop false { local := 7; } outputLine(local);', 'TypeError');
 });
 test('loops reject invalid sources, escaping controls, and value/completion forms before effects', () => {
   for (const code of ['loop 1 {}', 'loop "items" {}', 'break;', 'continue;',
@@ -3344,18 +3338,18 @@ test('loops reject invalid sources, escaping controls, and value/completion form
     'loop { break 3; }', 'loop { continue 3; }']) fault(code, 'TypeError');
   fault('loop { loop ({ break; true }) {} break; }', 'TypeError');
   fault('loop { loop ({ continue; false }) {} break; }', 'TypeError');
-  for (const code of ['loop true report(1);', 'loop false {} finally 1;', 'var break := 1;']) fault(code, 'SourceError');
+  for (const code of ['loop true outputLine(1);', 'loop false {} finally 1;', 'var break := 1;']) fault(code, 'SourceError');
   let output = '';
-  assert.throws(() => execute(compile('report(1); loop false { continue; missing; }'), {
+  assert.throws(() => execute(compile('outputLine(1); loop false { continue; missing; }'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), LiteFault);
   assert.equal(output, '');
 });
 test('program exit and runtime faults propagate through nested loops', () => {
-  assert.deepEqual(run('loop { loop { reportError("stop"); exit(9); } report(8); } report(7);'),
+  assert.deepEqual(run('loop { loop { reportError("stop"); exit(9); } outputLine(8); } outputLine(7);'),
     { code: 9, output: '', errors: 'stop\n' });
-  fault('loop { loop { report(1 / 0); } }', 'ArithmeticPanic');
-  fault('loop { report(inputInt()); }', 'InputFault', '');
+  fault('loop { loop { outputLine(1 / 0); } }', 'ArithmeticPanic');
+  fault('loop { outputLine(inputInt()); }', 'InputFault', '');
 });
 test('sentinel-input sum example runs through the real CLI', () => {
   const example = new URL('../examples/003-sum-positive.lts', import.meta.url);
@@ -3378,27 +3372,27 @@ test('typed functions accept scalar inputs and yield tail or explicit results wi
     echo := fn(text: String): String { text }
     negate := fn(flag: Bool): Bool { not flag }
     nothing := fn(u: Unit): Unit { return; }
-    report(double(4)); report(twice(1.5)); report(echo("hello"));
-    report(negate(false)); report(nothing(())); double(99);`).output, '8\n3\nhello\ntrue\nUnit\n');
+    outputLine(double(4)); outputLine(twice(1.5)); outputLine(echo("hello"));
+    outputLine(negate(false)); outputLine(nothing(())); double(99);`).output, '8\n3\nhello\ntrue\nUnit\n');
   assert.equal(run('action := fn(): Unit {} action();').output, '');
 });
 test('ordinary function values copy, shadow helpers, and replace only compatible var bindings', () => {
   assert.equal(run(`var op := fn(n: Int): Int { n * 2 }
     saved := op;
     op = fn(n: Int): Int { n * 3 }
-    report(saved(4)); report(op(4));
+    outputLine(saved(4)); outputLine(op(4));
     inputInt := fn(): Int { 7 }
-    report(inputInt());`).output, '8\n12\n7\n');
+    outputLine(inputInt());`).output, '8\n12\n7\n');
   fault('op := fn(): Int { 1 } op = fn(): Int { 2 }', 'TypeError');
   fault('var op := fn(n: Int): Int { n } op = fn(n: Float): Int { 1 }', 'TypeError');
   fault('var op := fn(n: Int): Int { n } op = fn(x: Int): Int { x }', 'TypeError');
 });
 test('calls select the callee once before arguments and evaluate arguments left to right', () => {
   assert.equal(run(`var op := fn(n: Int): Int { n * 2 }
-    report(op(({ op = fn(n: Int): Int { n * 3 } 4 })));
-    report(op(4));
+    outputLine(op(({ op = fn(n: Int): Int { n * 3 } 4 })));
+    outputLine(op(4));
     combine := fn(a: Int, b: Int): Int { a * 10 + b }
-    report(combine(({report(1); inputInt()}), ({report(2); inputInt()})));`, '3 4').output,
+    outputLine(combine(({outputLine(1); inputInt()}), ({outputLine(2); inputInt()})));`, '3 4').output,
     '8\n12\n1\n2\n34\n');
 });
 test('self recursion and direct own-name recursion keep separate call locals', () => {
@@ -3408,41 +3402,41 @@ test('self recursion and direct own-name recursion keep separate call locals', (
       left + self(n - 2)
     }
     factorial := fn(n: Int): Int { if n <= 1 { 1 } else { n * factorial(n - 1) } }
-    report(fib(8)); report(factorial(5)); report(fib(6));`).output, '21\n120\n8\n');
+    outputLine(fib(8)); outputLine(factorial(5)); outputLine(fib(6));`).output, '21\n120\n8\n');
 });
 test('parameters, local vars and block shadows belong to each invocation', () => {
   assert.equal(run(`sum := fn(n: Int): Int {
       var total := 0;
-      { n := 100; report(n); }
+      { n := 100; outputLine(n); }
       var i := 0;
       loop i < n { i = i + 1; total = total + i; }
       total
     }
-    report(sum(3)); report(sum(1));`).output, '100\n6\n100\n1\n');
+    outputLine(sum(3)); outputLine(sum(1));`).output, '100\n6\n100\n1\n');
   fault('f := fn(n: Int): Int { n = 2; n }', 'TypeError');
-  fault('f := fn(): Int { local := 7; local } report(local);', 'TypeError');
+  fault('f := fn(): Int { local := 7; local } outputLine(local);', 'TypeError');
 });
 test('an earlier same-name helper remains the ordinary named recursion target', () => {
   assert.equal(run(`step := fn(n: Int): Int { n * 2 }
     step := fn(n: Int): Int { if n == 0 { 0 } else { step(n - 1) } }
-    report(step(3));
+    outputLine(step(3));
     step := fn(n: Int): Int { if n == 0 { 0 } else { self(n - 1) } }
-    report(step(3));`).output, '4\n0\n');
+    outputLine(step(3));`).output, '4\n0\n');
 });
 test('self calls retain the executing implementation after its source binding is replaced', () => {
   assert.equal(run(`var step := fn(n: Int): Int { if n == 0 { 0 } else { 1 + self(n - 1) } }
     saved := step;
     step = fn(n: Int): Int { 100 }
-    report(saved(4)); report(step(4));`).output, '4\n100\n');
+    outputLine(saved(4)); outputLine(step(4));`).output, '4\n100\n');
 });
 test('admitted helper references read live bindings and ignore later shadows', () => {
   assert.equal(run(`var double := fn(n: Int): Int { n * 2 }
     quadruple := fn(n: Int): Int { double(double(n)) }
-    report(quadruple(1));
+    outputLine(quadruple(1));
     double = fn(n: Int): Int { n * 3 }
-    report(quadruple(1));
+    outputLine(quadruple(1));
     double := fn(n: Int): Int { n * 4 }
-    report(quadruple(1)); report(double(1));`).output, '4\n9\n9\n4\n');
+    outputLine(quadruple(1)); outputLine(double(1));`).output, '4\n9\n9\n4\n');
 });
 test('escaped helpers preserve distinct environments from repeated block activations', () => {
   assert.equal(run(`var first := fn(n: Int): Int { n }
@@ -3460,7 +3454,7 @@ test('escaped helpers preserve distinct environments from repeated block activat
       }
       i = i + 1;
     }
-    report(first(2)); report(second(2));`).output, '6\n8\n');
+    outputLine(first(2)); outputLine(second(2));`).output, '6\n8\n');
 });
 test('return exits the nearest function through loops and nested calls return locally', () => {
   assert.equal(run(`inner := fn(): Int { return 7; }
@@ -3469,16 +3463,16 @@ test('return exits the nearest function through loops and nested calls return lo
       if flag { return 1; } else { return 2; }
       999
     }
-    report(outer(true)); report(outer(false));
+    outputLine(outer(true)); outputLine(outer(false));
     stop := fn(): Unit { loop { return; } () }
-    loop { stop(); report(3); break; }`).output, '7\n2\n3\n');
+    loop { stop(); outputLine(3); break; }`).output, '7\n2\n3\n');
   fault('loop { f := fn(): Unit { break; } break; }', 'TypeError');
   fault('loop { f := fn(): Unit { continue; } break; }', 'TypeError');
 });
 test('exit, input faults and arithmetic faults propagate through user functions', () => {
-  assert.deepEqual(run('stop := fn(): Int { exit(9); } loop { report(stop()); }'), { code: 9, output: '', errors: '' });
-  fault('f := fn(): Int { inputInt() } report(f());', 'InputFault');
-  fault('f := fn(n: Int): Int { 1 / n } report(f(0));', 'ArithmeticPanic');
+  assert.deepEqual(run('stop := fn(): Int { exit(9); } loop { outputLine(stop()); }'), { code: 9, output: '', errors: '' });
+  fault('f := fn(): Int { inputInt() } outputLine(f());', 'InputFault');
+  fault('f := fn(n: Int): Int { 1 / n } outputLine(f(0));', 'ArithmeticPanic');
 });
 test('invalid signatures, captures, forward references and unsupported forms fail before effects', () => {
   for (const code of [
@@ -3489,11 +3483,11 @@ test('invalid signatures, captures, forward references and unsupported forms fai
     'x := 2; f := fn(): Int { x }',
     'var x := 2; f := fn(): Unit { x = 3; }',
     'f := fn(n: Int): Int { g := fn(): Int { n } g() }',
-    'f := fn(): Int { 1 } report(f);', 'f := fn(): Int { 1 } report(f == f);',
+    'f := fn(): Int { 1 } outputLine(f);', 'f := fn(): Int { 1 } outputLine(f == f);',
     'f := fn(n: Number): Int { 1 }', 'f := fn(): Int { self }',
   ]) {
     let observed = false;
-    assert.throws(() => execute(compile(`report(99); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine(99); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
     assert.equal(observed, false, code);
@@ -3524,27 +3518,27 @@ test('computed String concatenation preserves contents and ordinary value copies
   assert.equal(run(`var prefix := "hello";
     saved := prefix + ", " + "سلام🙂";
     prefix = "changed";
-    report(saved); report("" + prefix + "");
-    report("line\n" + "two");`).output, 'hello, سلام🙂\nchanged\nline\ntwo\n');
-  for (const code of ['report("x" + 1);', 'report(1 + "x");', 'report("x" - "y");',
-    'report("x" * 2);', 'report(+"x");']) fault(code, 'TypeError');
+    outputLine(saved); outputLine("" + prefix + "");
+    outputLine("line\n" + "two");`).output, 'hello, سلام🙂\nchanged\nline\ntwo\n');
+  for (const code of ['outputLine("x" + 1);', 'outputLine(1 + "x");', 'outputLine("x" - "y");',
+    'outputLine("x" * 2);', 'outputLine(+"x");']) fault(code, 'TypeError');
 });
 test('text helpers use consistent code-point positions without normalization or grapheme grouping', () => {
   assert.equal(run(`text := "A🙂éسلام";
-    report(textLength(text)); report(textAt(text, 1)); report(textAt(text, 3));
-    report(textSlice(text, 0, 2)); report(textSlice(text, 2, 4));
-    report(textSlice(text, 4, 8)); report(textLength(""));
-    report(textLength("é")); report(textLength("é"));`).output,
+    outputLine(textLength(text)); outputLine(textAt(text, 1)); outputLine(textAt(text, 3));
+    outputLine(textSlice(text, 0, 2)); outputLine(textSlice(text, 2, 4));
+    outputLine(textSlice(text, 4, 8)); outputLine(textLength(""));
+    outputLine(textLength("é")); outputLine(textLength("é"));`).output,
     '8\n🙂\ń\nA🙂\né\nسلام\n0\n1\n2\n');
-  assert.equal(run('report(textAt("🙂", 0)); report(textLength("👩‍💻"));').output, '🙂\n3\n');
+  assert.equal(run('outputLine(textAt("🙂", 0)); outputLine(textLength("👩‍💻"));').output, '🙂\n3\n');
 });
 test('textSlice admits empty and full half-open intervals, including the end of empty text', () => {
-  assert.equal(run(`report(textSlice("", 0, 0));
-    report(textSlice("abc", 0, 0)); report(textSlice("abc", 3, 3));
-    report(textSlice("abc", 0, 3)); report(textSlice("abc", 1, 2));
+  assert.equal(run(`outputLine(textSlice("", 0, 0));
+    outputLine(textSlice("abc", 0, 0)); outputLine(textSlice("abc", 3, 3));
+    outputLine(textSlice("abc", 0, 3)); outputLine(textSlice("abc", 1, 2));
     source := "a🙂b";
     copy := textSlice(source, 0, 1) + textSlice(source, 1, 3);
-    report(copy == source);`).output, '\n\n\nabc\nb\ntrue\n');
+    outputLine(copy == source);`).output, '\n\n\nabc\nb\ntrue\n');
 });
 test('invalid text positions fault without negative wrapping, clamping or huge-index rounding', () => {
   for (const code of ['textAt("", 0);', 'textAt("abc", -1);', 'textAt("abc", 3);',
@@ -3554,11 +3548,11 @@ test('invalid text positions fault without negative wrapping, clamping or huge-i
     'textSlice("abc", 0, 9223372036854775807);']) fault(code, 'BoundPanic');
 });
 test('text operands and helper arguments execute once in written order before bounds checks', () => {
-  assert.equal(run(`report(({report(1); inputWord()}) + ({report(2); inputWord()}));
-    report(textSlice(({report(3); inputWord()}), ({report(4); 1}), ({report(5); 3})));`,
+  assert.equal(run(`outputLine(({outputLine(1); inputWord()}) + ({outputLine(2); inputWord()}));
+    outputLine(textSlice(({outputLine(3); inputWord()}), ({outputLine(4); 1}), ({outputLine(5); 3})));`,
   'hello world abcde').output, '1\n2\nhelloworld\n3\n4\n5\nbc\n');
   let observed = '';
-  assert.throws(() => execute(compile('textSlice("abc", ({report(1); -1}), ({report(2); 2}));'), {
+  assert.throws(() => execute(compile('textSlice("abc", ({outputLine(1); -1}), ({outputLine(2); 2}));'), {
     read: () => null, report: text => { observed += text; }, reportError: () => {},
   }), (error: unknown) => error instanceof LiteFault && error.category === 'BoundPanic');
   assert.equal(observed, '1\n2\n');
@@ -3569,12 +3563,12 @@ test('text signatures are checked before effects and temporary helper names can 
     'textSlice("a", 0);', 'textSlice("a", false, 1);', 'textSlice("a", 0, "1");',
     'f := fn(): Int { 1 } textLength(f);', 'textLength := 1; textLength("a");']) {
     let observed = false;
-    assert.throws(() => execute(compile(`report(99); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine(99); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
     assert.equal(observed, false, code);
   }
-  assert.equal(run('textLength := fn(text: String): Int { 7 } report(textLength("abc"));').output, '7\n');
+  assert.equal(run('textLength := fn(text: String): Int { 7 } outputLine(textLength("abc"));').output, '7\n');
 });
 test('a Lite function can scan and reconstruct text recursively with the temporary helpers', () => {
   assert.equal(run(`reverse := fn(text: String): String {
@@ -3582,7 +3576,7 @@ test('a Lite function can scan and reconstruct text recursively with the tempora
       if length == 0 { return ""; }
       textAt(text, length - 1) + self(textSlice(text, 0, length - 1))
     }
-    report(reverse("a🙂ب")); report(reverse(""));`).output, 'ب🙂a\n\n');
+    outputLine(reverse("a🙂ب")); outputLine(reverse(""));`).output, 'ب🙂a\n\n');
 });
 test('Lite arithmetic tokenizer handles final digits, whitespace, punctuation and explicit rejection', () => {
   const source = readFileSync(new URL('../examples/005-scan-arithmetic.lts', import.meta.url), 'utf8');
@@ -3611,7 +3605,7 @@ test('real CLI runs the Lite tokenizer, preserves supplementary text, and report
   const dir = mkdtempSync(join(tmpdir(), 'lite-text-'));
   const path = join(dir, 'probe.lts');
   try {
-    writeFileSync(path, 'report(textLength(inputLine())); report(textAt("🙂", 0));');
+    writeFileSync(path, 'outputLine(textLength(inputLine())); outputLine(textAt("🙂", 0));');
     const valid = spawnSync(process.execPath, [cli, path], { input: 'a🙂ب\n', encoding: 'utf8', timeout: 5000 });
     assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
     assert.equal(valid.stdout, '3\n🙂\n'); assert.equal(valid.stderr, '');
@@ -3627,40 +3621,40 @@ test('real CLI runs the Lite tokenizer, preserves supplementary text, and report
 
 test('flat fixed tuple construction and positional reads retain heterogeneous scalar types', () => {
   assert.equal(run(`values := (7, 2.5, "tea", true, Unit);
-    report(values.0 + 1); report(values.1); report(values.2); report(not values.3); report(values.4);
-    report((1, 2,).1); report(-(3, 4).0);`).output, '8\n2.5\ntea\nfalse\nUnit\n2\n-3\n');
+    outputLine(values.0 + 1); outputLine(values.1); outputLine(values.2); outputLine(not values.3); outputLine(values.4);
+    outputLine((1, 2,).1); outputLine(-(3, 4).0);`).output, '8\n2.5\ntea\nfalse\nUnit\n2\n-3\n');
   assert.equal(run('pair := (1, 2); pair;').output, '');
 });
 test('tuple expressions and receivers evaluate once in written order', () => {
-  assert.equal(run(`pair := (({report(1); inputInt()}), ({report(2); inputInt()}));
-    report(pair.0); report(pair.1);
-    make := fn(): (:Int, :Int) { report(3); (8, 9) }
-    (a, b) := make(); report(a); report(b); report(make().1);`, '4 5').output,
+  assert.equal(run(`pair := (({outputLine(1); inputInt()}), ({outputLine(2); inputInt()}));
+    outputLine(pair.0); outputLine(pair.1);
+    make := fn(): (:Int, :Int) { outputLine(3); (8, 9) }
+    (a, b) := make(); outputLine(a); outputLine(b); outputLine(make().1);`, '4 5').output,
     '1\n2\n4\n5\n3\n8\n9\n3\n9\n');
 });
 test('Unit, grouping, singleton tuples and Unit-valued positions keep distinct shapes', () => {
   assert.equal(run(`one := (42,); (whole) := one; (value,) := one;
-    report(whole.0); report(value);
-    unitBox := (Unit,); report(unitBox.0);
+    outputLine(whole.0); outputLine(value);
+    unitBox := (Unit,); outputLine(unitBox.0);
     () := (); () := Unit;
-    action := fn(): () { report(7); () }
+    action := fn(): () { outputLine(7); () }
     () := action();
     takeUnit := fn(value: (Unit)): Int { 9 }
-    report(takeUnit(()));`).output, '42\n42\nUnit\n7\n9\n');
-  for (const source of ['(value,) := 42;', 'value := (42); report(value.0);',
-    '() := 42;', '() := (Unit,);', 'report(().0);',
+    outputLine(takeUnit(()));`).output, '42\n42\nUnit\n7\n9\n');
+  for (const source of ['(value,) := 42;', 'value := (42); outputLine(value.0);',
+    '() := 42;', '() := (Unit,);', 'outputLine(().0);',
     'f := fn(value: Unit): Unit { value } f();',
     'f := fn(box: (:Unit,)): Unit { box.0 } f(());']) fault(source, 'TypeError');
 });
 test('destructuring resolves the source first, then shadows receiver names in written order', () => {
   assert.equal(run(`x := 7; y := 9;
-    (x, y) := (y, x); report(x); report(y);
-    (x, x) := (1, "last"); report(x);
-    (_, _) := (3, "visible"); report(_);
-    ((whole)) := (4, 5); report(whole.1);
-    (a, (b)) := (6, 7); report(a); report(b);`).output, '9\n7\nlast\nvisible\n5\n6\n7\n');
-  assert.equal(run('report({ (a, b) := (1, 2); });').output, 'Unit\n');
-  fault('{ (a, b) := (1, 2); } report(a);', 'TypeError');
+    (x, y) := (y, x); outputLine(x); outputLine(y);
+    (x, x) := (1, "last"); outputLine(x);
+    (_, _) := (3, "visible"); outputLine(_);
+    ((whole)) := (4, 5); outputLine(whole.1);
+    (a, (b)) := (6, 7); outputLine(a); outputLine(b);`).output, '9\n7\nlast\nvisible\n5\n6\n7\n');
+  assert.equal(run('outputLine({ (a, b) := (1, 2); });').output, 'Unit\n');
+  fault('{ (a, b) := (1, 2); } outputLine(a);', 'TypeError');
   fault('(a, b) := (a, 2);', 'TypeError');
 });
 test('ordinary tuple copies survive whole-value var replacement and later shadows', () => {
@@ -3668,7 +3662,7 @@ test('ordinary tuple copies survive whole-value var replacement and later shadow
     saved := pair; (count, text) := pair;
     pair = (2, "second");
     pair := (3, "third");
-    report(saved.0); report(saved.1); report(count); report(text); report(pair.1);`).output,
+    outputLine(saved.0); outputLine(saved.1); outputLine(count); outputLine(text); outputLine(pair.1);`).output,
     '1\nfirst\n1\nfirst\nthird\n');
   fault('pair := (1, 2); pair = (3, 4);', 'TypeError');
   fault('var pair := (1, 2); pair = (3, "wrong");', 'TypeError');
@@ -3678,11 +3672,11 @@ test('explicit tuple inputs and outputs support tail returns, early returns and 
   assert.equal(run(`var make := fn(n: Int): (:Int, :String) { (n, "first") }
     make = fn(n: Int): (:Int, :String) { if n < 0 { return (0, "negative"); } (n, "normal") }
     describe := fn(pair: (:Int, :String)): String { pair.1 }
-    report(describe(make(7))); report(describe(make(-1)));
+    outputLine(describe(make(7))); outputLine(describe(make(-1)));
     one := fn(n: Int): (:Int,) { (n,) }
     takeOne := fn(pair: (:Int,)): Int { pair.0 }
-    report(takeOne(one(8)));
-    report((if true { (1, "yes") } else { (2, "no") }).1);`).output, 'normal\nnegative\n8\nyes\n');
+    outputLine(takeOne(one(8)));
+    outputLine((if true { (1, "yes") } else { (2, "no") }).1);`).output, 'normal\nnegative\n8\nyes\n');
   fault('one := fn(): (:Int,) { 42 }', 'TypeError');
   fault('one := fn(): Int { (42,) }', 'TypeError');
   fault('make := fn(): (:Int, :String) { return (1, false); }', 'TypeError');
@@ -3690,9 +3684,9 @@ test('explicit tuple inputs and outputs support tail returns, early returns and 
 test('a tuple is one ordinary call argument and is copied at its evaluation position', () => {
   assert.equal(run(`var pair := (10, 11);
     first := fn(original: (:Int, :Int), ignored: Unit): Int { original.0 }
-    report(first(pair, ({pair = (20, 30); Unit}))); report(pair.0);
+    outputLine(first(pair, ({pair = (20, 30); Unit}))); outputLine(pair.0);
     combine := fn(a: Int, b: Int): Int { a + b }
-    report(combine(pair.0, pair.1));`).output, '10\n20\n50\n');
+    outputLine(combine(pair.0, pair.1));`).output, '10\n20\n50\n');
   fault('f := fn(pair: (:Int, :Int)): Int { pair.0 } f(1, 2);', 'TypeError');
   fault('f := fn(a: Int, b: Int): Int { a + b } f((1, 2));', 'TypeError');
 });
@@ -3703,19 +3697,19 @@ test('tuple parameters and destructured locals remain separate across recursive 
       saved := n;
       saved + self((n - 1, extra))
     }
-    report(sum((4, 7))); report(sum((2, 1)));`).output, '17\n4\n');
+    outputLine(sum((4, 7))); outputLine(sum((2, 1)));`).output, '17\n4\n');
   fault('pair := (1, 2); f := fn(): Int { pair.0 }', 'TypeError');
 });
 test('invalid tuple shapes, positions and transfers fail before any input or output', () => {
   for (const source of ['(a, b) := (1,);', '(a,) := ();',
     'pair := (1, 2); pair.2;', 'pair := (1, 2); pair.9223372036854775807;',
     'f := fn(pair: (:Int, :String)): String { pair.1 } f((1, true));',
-    'pair := (1, 2); report(pair == pair);',
+    'pair := (1, 2); outputLine(pair == pair);',
     'pair := (1, 2); pair();', 'textLength((1, 2));',
     'f := fn(): Int { 1 } value := (f,);', 'value := ((1, 2), 3);',
     'f := fn(): (:Int, :(:Int, :Int)) { (1, 2) }']) {
     let observed = false;
-    assert.throws(() => execute(compile(`report(99); ${source}`), {
+    assert.throws(() => execute(compile(`outputLine(99); ${source}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', source);
     assert.equal(observed, false, source);
@@ -3748,18 +3742,18 @@ test('root shebang launcher forwards run arguments, stdin, diagnostics and statu
     const example = invoke(['run', 'examples/006-fixed-tuples.lts'], '', launcher, root);
     assert.equal(example.error, undefined); assert.equal(example.status, 0);
     assert.equal(example.stdout, 'number\n12\nnumber: 12\n42\n'); assert.equal(example.stderr, '');
-    writeFileSync(source, 'report(inputInt()); reportError("done"); exit(7);');
+    writeFileSync(source, 'outputLine(inputInt()); reportError("done"); exit(7);');
     const result = invoke(['run', source], '19\n');
     assert.equal(result.error, undefined); assert.equal(result.status, 7);
     assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
-    writeFileSync(source, 'report(inputInt());');
+    writeFileSync(source, 'outputLine(inputInt());');
     const check = invoke(['run', '--check', source]);
     assert.equal(check.error, undefined); assert.equal(check.status, 0);
     assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
-    writeFileSync(source, 'report(1/0);');
+    writeFileSync(source, 'outputLine(1/0);');
     const fault = invoke(['run', source]);
     assert.equal(fault.error, undefined); assert.equal(fault.status, 1);
-    assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:9: ArithmeticPanic:/);
+    assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
     for (const args of [[], ['run'], ['unknown', source]]) {
       const usage = invoke(args);
       assert.equal(usage.error, undefined); assert.equal(usage.status, 2);
@@ -3767,7 +3761,7 @@ test('root shebang launcher forwards run arguments, stdin, diagnostics and statu
     }
     const alias = join(dir, 'project with spaces');
     symlinkSync(root, alias, 'dir');
-    writeFileSync(source, 'report(23);');
+    writeFileSync(source, 'outputLine(23);');
     const spaced = invoke(['run', source], '', join(alias, 'lite'));
     assert.equal(spaced.error, undefined); assert.equal(spaced.status, 0);
     assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
@@ -3775,12 +3769,12 @@ test('root shebang launcher forwards run arguments, stdin, diagnostics and statu
 });
 
 test('inputInt optionally writes an exact String prompt before reading without an added newline', () => {
-  assert.deepEqual(run('x := inputInt("Age: "); report(x);', '7'), { code: 0, output: 'Age: 7\n', errors: '' });
-  assert.equal(run('x := inputInt(""); report(x);', '8').output, '8\n');
-  assert.equal(run('x := inputInt("first\nsecond: "); report(x);', '9').output, 'first\nsecond: 9\n');
+  assert.deepEqual(run('x := inputInt("Age: "); outputLine(x);', '7'), { code: 0, output: 'Age: 7\n', errors: '' });
+  assert.equal(run('x := inputInt(""); outputLine(x);', '8').output, '8\n');
+  assert.equal(run('x := inputInt("first\nsecond: "); outputLine(x);', '9').output, 'first\nsecond: 9\n');
   const events: string[] = [];
   let supplied = false;
-  execute(compile('inputInt(({report("argument"); "prompt: "}));'), {
+  execute(compile('inputInt(({outputLine("argument"); "prompt: "}));'), {
     read: () => { events.push('read'); if (supplied) return null; supplied = true; return '1'; },
     report: text => { events.push(text); }, reportError: () => {},
   });
@@ -3790,7 +3784,7 @@ test('invalid or missing input faults after one prompt; prompt output failure pr
   for (const input of ['', 'bad', '9223372036854775808']) {
     let output = '';
     let cursor = 0;
-    assert.throws(() => execute(compile('inputInt("Number: "); report("unreachable");'), {
+    assert.throws(() => execute(compile('inputInt("Number: "); outputLine("unreachable");'), {
       read: () => input[cursor++] ?? null, report: text => { output += text; }, reportError: () => {},
     }), (error: unknown) => error instanceof LiteFault && error.category === 'InputFault');
     assert.equal(output, 'Number: ');
@@ -3803,42 +3797,42 @@ test('invalid or missing input faults after one prompt; prompt output failure pr
   assert.equal(read, false);
 });
 test('report joins one or more ordinary scalar values with spaces and exactly one final newline', () => {
-  assert.equal(run('report("sum:", 1, 2); report(1, 2, 3); report("hello", "world");').output,
+  assert.equal(run('outputLine("sum:", 1, 2); outputLine(1, 2, 3); outputLine("hello", "world");').output,
     'sum: 1 2\n1 2 3\nhello world\n');
-  assert.equal(run('report("", "", 7); report(false, (), 2.5); report("%s {}", "literal");').output,
+  assert.equal(run('outputLine("", "", 7); outputLine(false, (), 2.5); outputLine("%s {}", "literal");').output,
     '  7\nfalse Unit 2.5\n%s {} literal\n');
-  assert.equal(run('report("single"); reportError("error");').output, 'single\n');
+  assert.equal(run('outputLine("single"); reportError("error");').output, 'single\n');
 });
 test('report evaluates each argument once left to right and writes the joined line after evaluation', () => {
-  assert.equal(run('report(({report("left"); inputInt()}), ({report("right"); inputInt()}));', '3 4').output,
+  assert.equal(run('outputLine(({outputLine("left"); inputInt()}), ({outputLine("right"); inputInt()}));', '3 4').output,
     'left\nright\n3 4\n');
   let output = '';
-  assert.throws(() => execute(compile('report(({report("first effect"); 1}), 1/0);'), {
+  assert.throws(() => execute(compile('outputLine(({outputLine("first effect"); 1}), 1/0);'), {
     read: () => null, report: text => { output += text; }, reportError: () => {},
   }), (error: unknown) => error instanceof LiteFault && error.category === 'ArithmeticPanic');
   assert.equal(output, 'first effect\n');
 });
 test('prompt and report signatures fail before effects without broadening other helpers or tuple spread', () => {
   for (const code of ['inputInt(7);', 'inputInt("a", "b");', 'inputInt(("a",));',
-    'report();', 'report("prefix", [1, 2]);', 'report("prefix", missing);',
-    'inputFloat("prompt");', 'inputLine("prompt");', 'inputWord("prompt");', 'reportError("a", 1);']) {
+    'outputLine("prefix", fn(): Int { 1 });', 'outputLine("prefix", missing);',
+    'inputFloat(7);', 'inputLine(7);', 'inputWord("prompt");', 'reportError("a", 1);']) {
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === 'TypeError', code);
     assert.equal(observed, false, code);
   }
-  fault('values := (1, 2); report(...values);', 'SourceError');
-  assert.equal(run('report := fn(a: Int, b: Int): Int { a + b } result := report(2, 3);').output, '');
+  fault('values := (1, 2); outputLine(...values);', 'SourceError');
+  assert.equal(run('outputLine := fn(a: Int, b: Int): Int { a + b } result := outputLine(2, 3);').output, '');
 });
 test('report displays flat tuples source-like with labels and a singleton comma', () => {
-  assert.equal(run('report("a tuple", (), (1,), (1,2), (1, left=2, right=3, 4));').output,
+  assert.equal(run('outputLine("a tuple", (), (1,), (1,2), (1, left=2, right=3, 4));').output,
     'a tuple Unit (1,) (1, 2) (1, left=2, right=3, 4)\n');
-  assert.equal(run('t := (1, 2); report(t);').output, '(1, 2)\n');
-  assert.equal(run('stored := (1, 2); named: (left: Int, right: Int) = stored; report(named);').output,
+  assert.equal(run('t := (1, 2); outputLine(t);').output, '(1, 2)\n');
+  assert.equal(run('stored := (1, 2); named: (left: Int, right: Int) = stored; outputLine(named);').output,
     '(left=1, right=2)\n');
-  assert.equal(run('pair := fn(): (:Int, :String) { (7, "x") } report(pair());').output, '(7, x)\n');
-  fault('report([1, 2]);', 'TypeError');
+  assert.equal(run('pair := fn(): (:Int, :String) { (7, "x") } outputLine(pair());').output, '(7, x)\n');
+  assert.equal(run('outputLine([1, 2]);').output, '[1, 2]\n');
   fault('reportError((1, 2));', 'TypeError');
 });
 test('numbered prompt/report example runs through the root command with real redirected stdin', () => {
@@ -3862,19 +3856,19 @@ test('numbered prompt/report example runs through the root command with real red
 
 test('named scalar tuple members agree with fixed numeric positions without inferring bare-name labels', () => {
   assert.equal(run(`token := (kind = "number", text = "12", count = 3, ready = true, empty = Unit);
-    report(token.kind, token.0, token.text, token.1, token.count + 1, not token.ready, token.empty);`).output,
+    outputLine(token.kind, token.0, token.text, token.1, token.count + 1, not token.ready, token.empty);`).output,
     'number number 12 12 4 false Unit\n');
-  fault('kind := "number"; text := "12"; token := (kind, text); report(token.kind);', 'TypeError');
-  fault('position := "kind"; token := (kind = "number"); report(token.position);', 'TypeError');
-  assert.equal(run('token := (نام = "Ali"); report(token.نام);').output, 'Ali\n');
-  fault('token := (Kind = "number"); report(token.kind);', 'TypeError');
+  fault('kind := "number"; text := "12"; token := (kind, text); outputLine(token.kind);', 'TypeError');
+  fault('position := "kind"; token := (kind = "number"); outputLine(token.position);', 'TypeError');
+  assert.equal(run('token := (نام = "Ali"); outputLine(token.نام);').output, 'Ali\n');
+  fault('token := (Kind = "number"); outputLine(token.kind);', 'TypeError');
 });
 test('same-name shorthand copies a lexical value while explicit labels do not assign that lexical binding', () => {
   assert.equal(run(`var kind := "number"; text := "12";
     token := (= kind, = text); kind = "changed";
     other := (kind = "label only");
-    report(token.kind, token.text, kind, other.kind);
-    _ := 7; box := (= _); report(box._);`).output,
+    outputLine(token.kind, token.text, kind, other.kind);
+    _ := 7; box := (= _); outputLine(box._);`).output,
     'number 12 changed label only\n7\n');
   fault('token := (= missing);', 'TypeError');
   fault('f := fn(): Int { 1 } token := (= f());', 'SourceError');
@@ -3887,37 +3881,37 @@ test('named singleton value/type forms need no comma and do not erase Unit-value
     takeComma := fn(box: (value: Int,)): Int { box.0 }
     emptyBox := (empty = Unit);
     empty := fn(box: (empty: Unit)): Unit { box.empty }
-    report(take(one), takeComma(oneComma), shorthand.value, grouped, empty(emptyBox));
-    (component,) := one; report(component);`).output, '42 43 44 44 Unit\n42\n');
+    outputLine(take(one), takeComma(oneComma), shorthand.value, grouped, empty(emptyBox));
+    (component,) := one; outputLine(component);`).output, '42 43 44 44 Unit\n42\n');
   fault('() := (empty = Unit);', 'TypeError');
   fault('f := fn(box: (value: Int)): Int { box.value } f(42);', 'TypeError');
 });
 test('named tuple construction and member receivers evaluate once in written order', () => {
-  assert.equal(run(`token := (kind = ({report("kind"); inputWord()}), text = ({report("text"); inputWord()}));
-    report(token.kind, token.text);
-    make := fn(): (a: Int, b: Int) { report("called"); (a = 1, b = 2) }
-    report(make().b);`, 'number 12').output, 'kind\ntext\nnumber 12\ncalled\n2\n');
+  assert.equal(run(`token := (kind = ({outputLine("kind"); inputWord()}), text = ({outputLine("text"); inputWord()}));
+    outputLine(token.kind, token.text);
+    make := fn(): (a: Int, b: Int) { outputLine("called"); (a = 1, b = 2) }
+    outputLine(make().b);`, 'number 12').output, 'kind\ntext\nnumber 12\ncalled\n2\n');
 });
 test('named tuple copies, grouping and positional binding preserve stored order and independent values', () => {
   assert.equal(run(`var source := (text = "12", kind = "number");
     saved := source; (whole) := source; (first, second) := source;
     source = (text = "99", kind = "changed");
-    report(saved.text, whole.kind, first, second, source.text);
-    (same, same) := saved; report(same);
-    source := (value = 7); report(saved.text, source.value);`).output,
+    outputLine(saved.text, whole.kind, first, second, source.text);
+    (same, same) := saved; outputLine(same);
+    source := (value = 7); outputLine(saved.text, source.value);`).output,
     '12 number 12 number 99\nnumber\n12 7\n');
 });
 test('explicit named tuple inputs/results and recursive calls preserve label-sensitive contracts', () => {
   assert.equal(run(`var make := fn(kind: String, text: String): (kind: String, text: String) { (= kind, = text) }
     make = fn(kind: String, text: String): (kind: String, text: String) { return (kind = kind, text = text); }
     describe := fn(token: (kind: String, text: String)): String { token.kind + ": " + token.text }
-    report(describe(make("number", "12")));
+    outputLine(describe(make("number", "12")));
     sum := fn(state: (n: Int, extra: Int)): Int {
       if state.n == 0 { return state.extra; }
       state.n + self((n = state.n - 1, extra = state.extra))
     }
-    report(sum((n = 4, extra = 7)));
-    report((if true { (a = 1) } else { (a = 2) }).a);`).output, 'number: 12\n17\n1\n');
+    outputLine(sum((n = 4, extra = 7)));
+    outputLine((if true { (a = 1) } else { (a = 2) }).a);`).output, 'number: 12\n17\n1\n');
 });
 test('stored tuple transfers never silently relabel or reorder through a known parameter/result type', () => {
   for (const code of [
@@ -3959,7 +3953,7 @@ test('invalid labels and unsupported tuple extensions are rejected before effect
   ]) {
     if (code === undefined || category === undefined) throw new Error('bad fixture');
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === category, code);
     assert.equal(observed, false, code);
@@ -3983,47 +3977,47 @@ test('named tuple example runs through the root launcher and check-only mode', (
 test('homogeneous scalar arrays have fixed extents and matching dot/bracket reads', () => {
   assert.equal(run(`integers := [1, 2, 3,]; floats := [1.5, 2.5]; words := ["a", "b"];
     flags := [true, false]; units := [(), Unit, ()];
-    report(integers[0], integers.2, floats[1], words.0, not flags[1], units.2);
-    loop units as value { report(value); }`).output, '1 3 2.5 a true Unit\nUnit\nUnit\nUnit\n');
+    outputLine(integers[0], integers.2, floats[1], words.0, not flags[1], units.2);
+    loop units as value { outputLine(value); }`).output, '1 3 2.5 a true Unit\nUnit\nUnit\nUnit\n');
   fault('pair := (1, 2); pair[0];', 'TypeError');
 });
 test('array constructors and bracket receivers/indices evaluate once in written order', () => {
-  assert.equal(run(`values := [({report("first"); inputInt()}), ({report("second"); inputInt()})];
-    report(values[0], values[1]);
-    make := fn(): [Int; 3] { report("receiver"); [10, 20, 30] }
-    report(make()[({report("index"); inputInt()})]); report(inputInt());`, '3 4 2 9').output,
+  assert.equal(run(`values := [({outputLine("first"); inputInt()}), ({outputLine("second"); inputInt()})];
+    outputLine(values[0], values[1]);
+    make := fn(): [Int; 3] { outputLine("receiver"); [10, 20, 30] }
+    outputLine(make()[({outputLine("index"); inputInt()})]); outputLine(inputInt());`, '3 4 2 9').output,
     'first\nsecond\n3 4\nreceiver\nindex\n30\n9\n');
-  assert.equal(run('var values := [10, 20]; report(values[({values = [30, 40]; 1})]); report(values[1]);').output,
+  assert.equal(run('var values := [10, 20]; outputLine(values[({values = [30, 40]; 1})]); outputLine(values[1]);').output,
     '20\n40\n');
 });
 test('array bracket bounds fault safely while invalid static dot positions fail before execution', () => {
-  for (const index of ['-1', '3', '9223372036854775807']) fault(`values := [10, 20, 30]; report(values[${index}]);`, 'BoundPanic');
+  for (const index of ['-1', '3', '9223372036854775807']) fault(`values := [10, 20, 30]; outputLine(values[${index}]);`, 'BoundPanic');
   fault('values := [10, 20, 30]; if false { values.3; }', 'TypeError');
-  assert.equal(run('values := [1]; if false { report(values[7]); } report(2);').output, '2\n');
-  fault('values := [1]; report(values[0.0]);', 'TypeError');
+  assert.equal(run('values := [1]; if false { outputLine(values[7]); } outputLine(2);').output, '2\n');
+  fault('values := [1]; outputLine(values[0.0]);', 'TypeError');
   fault('values := [1]; values.9223372036854775807;', 'TypeError');
 });
 test('array traversal evaluates its source once and creates fresh scoped body/item bindings', () => {
-  assert.equal(run(`make := fn(): [Int; 3] { report("source"); [2, 4, 6] }
+  assert.equal(run(`make := fn(): [Int; 3] { outputLine("source"); [2, 4, 6] }
     var sum := 0;
     loop make() as value {
       var local := 0; local = local + 1;
       sum = sum + value + local;
     }
-    report(sum);`).output, 'source\n15\n');
-  fault('loop [1, 2] as value {} report(value);', 'TypeError');
+    outputLine(sum);`).output, 'source\n15\n');
+  fault('loop [1, 2] as value {} outputLine(value);', 'TypeError');
   fault('loop [1, 2] as value { value = 3; }', 'TypeError');
 });
 test('unnamed array traversal introduces no implicit variable and receiver shadowing stays in the body', () => {
-  assert.equal(run('loop [1, 2] { report("tick"); }').output, 'tick\ntick\n');
-  assert.equal(run('values := [3, 4]; loop values as values { report(values); } report(values[0]);').output, '3\n4\n3\n');
-  fault('loop [1] { report(it); }', 'TypeError');
+  assert.equal(run('loop [1, 2] { outputLine("tick"); }').output, 'tick\ntick\n');
+  assert.equal(run('values := [3, 4]; loop values as values { outputLine(values); } outputLine(values[0]);').output, '3\n4\n3\n');
+  fault('loop [1] { outputLine(it); }', 'TypeError');
   fault('loop true as value { break; }', 'TypeError');
 });
 test('traversal retains the evaluated array value when its original variable is replaced', () => {
   assert.equal(run(`var values := [1, 2, 3];
-    loop values as value { report(value); values = [9, 8, 7]; }
-    report(values[0], values[2]);`).output, '1\n2\n3\n9 7\n');
+    loop values as value { outputLine(value); values = [9, 8, 7]; }
+    outputLine(values[0], values[2]);`).output, '1\n2\n3\n9 7\n');
 });
 test('array loop break/continue target the nearest loop without restarting the source', () => {
   assert.equal(run(`var total := 0;
@@ -4032,27 +4026,27 @@ test('array loop break/continue target the nearest loop without restarting the s
       if value == 4 { break; }
       total = total + value;
     }
-    report(total);
+    outputLine(total);
     loop [1, 2] as outer {
-      loop [3, 4] as inner { if inner == 3 { continue; } report(outer, inner); break; }
+      loop [3, 4] as inner { if inner == 3 { continue; } outputLine(outer, inner); break; }
     }`).output, '4\n1 4\n2 4\n');
-  assert.equal(run(`loop [({report("a"); 1}), ({report("b"); 2})] as item {
-    report(item); break;
+  assert.equal(run(`loop [({outputLine("a"); 1}), ({outputLine("b"); 2})] as item {
+    outputLine(item); break;
   }`).output, 'a\nb\n1\n');
-  assert.equal(run('loop [1, 2] as value { loop { report(value); break; } }').output, '1\n2\n');
+  assert.equal(run('loop [1, 2] as value { loop { outputLine(value); break; } }').output, '1\n2\n');
 });
 test('arrays of flat named and unnamed tuples preserve member types and body destructuring', () => {
   assert.equal(run(`tokens := [(kind = "number", text = "12"), (kind = "symbol", text = "+")];
-    report(tokens.0.kind, tokens[1].text);
-    loop tokens as token { (kind, text) := token; report(kind, text); }
+    outputLine(tokens.0.kind, tokens[1].text);
+    loop tokens as token { (kind, text) := token; outputLine(kind, text); }
     pairs := [(1, "a"), (2, "b")];
-    loop pairs as pair { report(pair.0, pair.1); }`).output, 'number +\nnumber 12\nsymbol +\n1 a\n2 b\n');
+    loop pairs as pair { outputLine(pair.0, pair.1); }`).output, 'number +\nnumber 12\nsymbol +\n1 a\n2 b\n');
 });
 test('explicit fixed-array inputs/results check element contracts and extents', () => {
   assert.equal(run(`make := fn(): [Int; 3] { return [1, 2, 3]; }
     first := fn(values: [Int; 3]): Int { values[0] }
     token := fn(values: [(kind: String, text: String); 2]): String { values[1].text }
-    report(first(make())); report(token([(kind = "n", text = "1"), (kind = "s", text = "+")]));`).output, '1\n+\n');
+    outputLine(first(make())); outputLine(token([(kind = "n", text = "1"), (kind = "s", text = "+")]));`).output, '1\n+\n');
   fault('f := fn(values: [Int; 3]): Int { values[0] } f([1, 2]);', 'TypeError');
   fault('f := fn(): [Int; 2] { [1.0, 2.0] }', 'TypeError');
   fault('f := fn(values: [(x: Int); 1]): Int { values[0].x } f([(y = 1)]);', 'TypeError');
@@ -4061,8 +4055,8 @@ test('explicit fixed-array inputs/results check element contracts and extents', 
 test('ordinary fixed-array copies and supplied arguments survive source replacement', () => {
   assert.equal(run(`var values := [10, 11]; saved := values;
     first := fn(original: [Int; 2], ignored: Unit): Int { original[0] }
-    report(first(values, ({values = [20, 30]; Unit})), saved[0], values[0]);
-    values := [40, 50]; report(saved[1], values[1]);`).output, '10 10 20\n11 50\n');
+    outputLine(first(values, ({values = [20, 30]; Unit})), saved[0], values[0]);
+    values := [40, 50]; outputLine(saved[1], values[1]);`).output, '10 10 20\n11 50\n');
   fault('values := [1, 2]; values = [3, 4];', 'TypeError');
   fault('var values := [1, 2]; values = [3];', 'TypeError');
 });
@@ -4072,13 +4066,13 @@ test('array arguments and item locals stay separate through recursive calls', ()
       saved := values[count - 1];
       saved + self(values, count - 1)
     }
-    report(sum([1, 2, 3], 3)); report(sum([4, 5, 6], 2));`).output, '6\n9\n');
+    outputLine(sum([1, 2, 3], 3)); outputLine(sum([4, 5, 6], 2));`).output, '6\n9\n');
   fault('values := [1, 2]; f := fn(): Int { values[0] }', 'TypeError');
 });
 test('returns, exit and bounds faults propagate correctly through array traversal', () => {
   assert.equal(run(`first := fn(values: [Int; 2]): Int { loop values as value { return value; } 0 }
-    report(first([7, 8]));`).output, '7\n');
-  assert.deepEqual(run('loop [1, 2] { reportError("stop"); exit(6); } report(9);'), { code: 6, output: '', errors: 'stop\n' });
+    outputLine(first([7, 8]));`).output, '7\n');
+  assert.deepEqual(run('loop [1, 2] { reportError("stop"); exit(6); } outputLine(9);'), { code: 6, output: '', errors: 'stop\n' });
   fault('loop [1] as value { values := [2]; values[value]; }', 'BoundPanic');
   fault('loop [1] { f := fn(): Unit { break; } }', 'TypeError');
   fault('loop { loop ({ break; [1] }) {} break; }', 'TypeError');
@@ -4089,17 +4083,17 @@ test('unsupported array forms fail before effects without inventing empty types,
     ['values := [1, true];', 'TypeError'], ['values := [[1], [2]];', 'TypeError'],
     ['f := fn(): [[Int; 1]; 1] { [1] }', 'TypeError'],
     ['values := [fn(): Int { 1 }];', 'TypeError'], ['values := ([1, 2],);', 'TypeError'],
-    ['loop [1] as value { unknown; }', 'TypeError'], ['report([1, 2]);', 'TypeError'],
+    ['loop [1] as value { unknown; }', 'TypeError'], ['outputLine(fn(): Int { 1 });', 'TypeError'],
     ['var values := [1, 2]; values[0] = 3;', 'SourceError'],
     ['mut values := [1, 2];', 'TypeError'], ['f := fn(values: [Int]): Int { 1 }', 'SourceError'],
     ['f := fn(values: [Int; 2.0]): Int { 1 }', 'SourceError'],
     ['loop [1, 2] as (a, b) {}', 'SourceError'],
-    ['values := [1, 2]; report(values.count);', 'TypeError'],
+    ['values := [1, 2]; outputLine(values.count);', 'TypeError'],
     ['values := [1, 2]; values[0:1];', 'SourceError'],
   ]) {
     if (code === undefined || category === undefined) throw new Error('bad fixture');
     let observed = false;
-    assert.throws(() => execute(compile(`report("before"); ${code}`), {
+    assert.throws(() => execute(compile(`outputLine("before"); ${code}`), {
       read: () => { observed = true; return null; }, report: () => { observed = true; }, reportError: () => { observed = true; },
     }), (error: unknown) => error instanceof LiteFault && error.category === category, code);
     assert.equal(observed, false, code);
@@ -4127,29 +4121,29 @@ test('numbered fixed-array example runs and checks through the root launcher', (
 test('transparent type aliases support scalar, tuple, array and list forms', () => {
   assert.equal(run('Token := type (kind: String, text: String);\n' +
     'take := fn(t: Token): String { t.text };\n' +
-    'report(take((kind = "id", text = "hello")));').output, 'hello\n');
+    'outputLine(take((kind = "id", text = "hello")));').output, 'hello\n');
 
   assert.equal(run('Token := type (kind: String, text: String);\n' +
     'make := fn(s: String): Token { (kind = "text", text = s) };\n' +
-    'report(make("world").text);').output, 'world\n');
+    'outputLine(make("world").text);').output, 'world\n');
 
   assert.equal(run('Token := type (kind: String, text: String);\n' +
     'tok: Token = (kind = "op", text = "+");\n' +
-    'report(tok.text);').output, '+\n');
+    'outputLine(tok.text);').output, '+\n');
 
   assert.equal(run('MyInt := type Int;\n' +
     'double := fn(x: MyInt): MyInt { x + x };\n' +
-    'report(double(21));').output, '42\n');
+    'outputLine(double(21));').output, '42\n');
 
   assert.equal(run('Pair := type [Int; 2];\n' +
     'sum := fn(p: Pair): Int { p[0] + p[1] };\n' +
-    'report(sum([10, 20]));').output, '30\n');
+    'outputLine(sum([10, 20]));').output, '30\n');
 
   assert.equal(run('Token := type (kind: String, text: String);\n' +
     'Tokens := type List<Token>;\n' +
     'tokens: mut Tokens = [];\n' +
     'push_back(mut tokens, (kind = "num", text = "42"));\n' +
-    'report(tokens[0].text);').output, '42\n');
+    'outputLine(tokens[0].text);').output, '42\n');
 
   assert.equal(run('Token := type (kind: String, text: String);').output, '');
 });
@@ -4161,15 +4155,15 @@ test('type aliases follow single lexical scope with value shadowing and rejectio
   assert.equal(run('x := 10;\n' +
     'x := type String;\n' +
     'f := fn(s: x): String { s };\n' +
-    'report(f("ok"));').output, 'ok\n');
+    'outputLine(f("ok"));').output, 'ok\n');
 
   assert.equal(run('Token := type (kind: String, text: String);\n' +
     '{\n' +
     '    Token := 42;\n' +
-    '    report(Token);\n' +
+    '    outputLine(Token);\n' +
     '}\n' +
     'take := fn(t: Token): String { t.text };\n' +
-    'report(take((kind = "id", text = "restored")));').output, '42\nrestored\n');
+    'outputLine(take((kind = "id", text = "restored")));').output, '42\nrestored\n');
 
   fault('Token := type (kind: String, text: String); x := Token;', 'TypeError');
   fault('Token := type (kind: String, text: String); x := Token();', 'TypeError');

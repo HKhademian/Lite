@@ -11,7 +11,7 @@
     "scope.locals"
   ],
   "description": "Split seconds into hours, minutes and seconds.",
-  "append": "report(hours); report(minutes); report(seconds);",
+  "append": "outputLine(hours); outputLine(minutes); outputLine(seconds);",
   "cases": [
     {
       "name": "observed-values",

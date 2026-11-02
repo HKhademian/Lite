@@ -2,7 +2,7 @@
   "name": "report-signed-sequence",
   "source": {
     "file": "001-002-report-signed-sequence.lts",
-    "hash": "sha256:dfe886365af880adc68350fee07bf239f2e437222dc17bcc86c56155a57266e4"
+    "hash": "sha256:b38d71f3134cf3902a14e3166e4e7227951e638e467dfebcf5485524ab8c8883"
   },
   "cases": [
     {

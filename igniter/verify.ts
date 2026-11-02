@@ -1,9 +1,10 @@
+import { runTsArtifact } from './artifacts.ts';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadSource } from './loader.ts';
 import { compileTarget } from '../compiler/host.ts';
@@ -570,26 +571,18 @@ function compilerEmit(target: 'ts' | 'c', source: string): string {
 }
 
 async function runCompilerTarget(target: Target, source: string,
-                                 scenario: Scenario): Promise<{ stdout: Buffer; stderr: Buffer; exitCode: number }> {
-  if (scenario.stdin !== undefined || (scenario.args !== undefined && scenario.args.length > 0)) {
-    throw new Error('compiler targets do not support stdin or script arguments');
-  }
+                                 scenario: Scenario, base: string): Promise<{ stdout: Buffer; stderr: Buffer; exitCode: number }> {
   if (target === 'ts') {
-    const emitted = compilerEmit('ts', source);
-    const directory = mkdtempSync(join(tmpdir(), 'lite-verify-ts-'));
-    try {
-      writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-      const path = join(directory, 'program.ts');
-      writeFileSync(path, emitted);
-      const imported: unknown = await import(pathToFileURL(path).href);
-      if (typeof imported !== 'object' || imported === null || !('main' in imported) ||
-          typeof (imported as { main: unknown }).main !== 'function') {
-        throw new Error('emitted TS has no main export');
-      }
-      const result: unknown = (imported as { main: () => unknown }).main();
-      if (typeof result !== 'string') throw new Error('emitted TS main did not return a string');
-      return { stdout: Buffer.from(result, 'utf8'), stderr: Buffer.alloc(0), exitCode: 0 };
-    } finally { rmSync(directory, { recursive: true, force: true }); }
+    const result = runTsArtifact(compilerEmit('ts', source), {
+      stdin: streamBytes(scenario.stdin, base, 'stdin', !options.update), args: scenario.args ?? [],
+    });
+    if (result.phase !== 'run' || result.status === null || result.signal !== null) {
+      throw new Error('generated TS artifact failed: ' + result.stdout.toString() + result.stderr.toString());
+    }
+    return { stdout: result.stdout, stderr: result.stderr, exitCode: result.status };
+  }
+  if (scenario.stdin !== undefined || (scenario.args !== undefined && scenario.args.length > 0)) {
+    throw new Error('native compiler verification does not support stdin or script arguments yet');
   }
   if (target === 'c') {
     const emitted = compilerEmit('c', source);
@@ -690,7 +683,7 @@ async function main(): Promise<void> {
         try {
           actual = target === 'igniter'
             ? runCase(source, item, original)
-            : await runCompilerTarget(target, source, original);
+            : await runCompilerTarget(target, source, original, dirname(item.file));
         } catch (error: unknown) {
           delete cache.passed[key]; cacheDirty = true;
           process.stdout.write(`FAIL ${label}: ${error instanceof Error ? error.message : String(error)}\n`);

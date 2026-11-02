@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/020-script-arguments.lts",
-    "hash": "sha256:992130acdecf308a31db5f13cc693c03d418e80a55d90d24cea0515e7c298c24"
+    "hash": "sha256:ad0fae5630ab400a2e4bdb70c51512b5d55134a92a17f37bba9108a5e4d5d73d"
   },
   "features": [
     "io.arguments",

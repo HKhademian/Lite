@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Speed, distance and time relations.",
-  "append": "report(speed); report(distance); report(time);",
+  "append": "outputLine(speed); outputLine(distance); outputLine(time);",
   "cases": [
     {
       "name": "observed-values",

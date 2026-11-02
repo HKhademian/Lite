@@ -7,6 +7,7 @@ dedent := fn(indent: String): String {
 tsScalarType := fn(kind: String): String {
     if kind == "Int" { "bigint" }
     else if kind == "String" { "string" }
+    else if kind == "Float" { "number" }
     else if kind == "Bool" { "boolean" }
     else { "void" }
 }
@@ -74,17 +75,47 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
         if separator >= 0 { end = separator; }
         entry := textSlice(encoded, start, end);
         equals := indexOfText(entry, "=", 0);
-        report(indent + "void lite_" + textSlice(entry, 0, equals) + ";");
+        outputLine(indent + "void lite_" + textSlice(entry, 0, equals) + ";");
         if separator < 0 { break; }
         start = separator + 1;
     }
 }
 
-/** Formats one report argument as a TypeScript string expression. */
+/** Formats an admitted output value using its static kind; aggregates evaluate once and retain tuple labels. */
+displayValueCode := fn(kind: String, code: String): String {
+    if kind == "Int" or kind == "Float" { return "(" + code + ").toString()"; }
+    if kind == "Bool" { return "((" + code + ") ? \"true\" : \"false\")"; }
+    if kind == "Unit" { return "((value: unknown): string => { void value; return \"Unit\"; })(" + code + ")"; }
+    if isListKind(kind) {
+        element := listElementKind(kind);
+        return "(\"[\" + (" + code + ").map((value: " + tsFunctionType(element) + ") => " + self(element, "value") + ").join(\", \") + \"]\")";
+    }
+    if isTupleKind(kind) {
+        var result := textLiteralCode("(");
+        var cursor := 1;
+        var count := 0;
+        loop cursor < textLength(kind) and textAt(kind, cursor) =!= ")" {
+            start := cursor;
+            cursor = skipName(kind, cursor);
+            label := textSlice(kind, start, cursor);
+            cursor = cursor + 1;
+            typeStart := cursor;
+            cursor = skipName(kind, cursor);
+            component := textSlice(kind, typeStart, cursor);
+            separator := if count == 0 { "" } else { ", " };
+            result = result + " + " + textLiteralCode(separator + label + "=") + " + " + self(component, "value." + label);
+            count = count + 1;
+            if cursor < textLength(kind) and textAt(kind, cursor) == "," { cursor = cursor + 1; }
+        }
+        ending := if count == 1 { ",)" } else { ")" };
+        return "((value: " + tsFunctionType(kind) + "): string => " + result + " + " + textLiteralCode(ending) + ")(" + code + ")";
+    }
+    code
+}
+
+/** Formats one output argument without duplicating its evaluation. */
 reportArgumentCode := fn(item: Item): String {
-    if item.kind == "Int" { "(" + item.code + ").toString()" }
-    else if item.kind == "Bool" { "((" + item.code + ") ? \"true\" : \"false\")" }
-    else { item.code }
+    displayValueCode(item.kind, item.code)
 }
 
 /** True when any emitted item reads a list element through the checked helper. */
@@ -111,172 +142,260 @@ usesBuiltin := fn(items: Items, name: String): Bool {
     false
 }
 
-/** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
-emitBuiltinHelpers := fn(items: Items): Unit {
-    if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or
-        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") {
-        report("declare const process: {");
-        report("    argv: string[];");
-        report("    exit(code: number): never;");
-        report("    getBuiltinModule(name: \"node:fs\"): {");
-        report("        readFileSync(fd: number, encoding: \"utf8\"): string;");
-        report("        writeSync(fd: number, text: string): number;");
-        report("    };");
-        report("};");
-        report("");
-    }
-    if usesBuiltin(items, "inputArgs") {
-        report("function lite$inputArgs(): string[] {");
-        report("    return process.argv.slice(2);");
-        report("}");
-        report("");
+/** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
+emitInputHelpers := fn(items: Items): Unit {
+    if not (usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat")) { return; }
+    outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
+    outputLine("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
+    outputLine("const lite$bytes = new Uint8Array(4096);");
+    outputLine("let lite$byteAt = 0, lite$byteEnd = 0;");
+    outputLine("let lite$ended = false;");
+    outputLine("let lite$pending: string | null | undefined;");
+    outputLine("function lite$inputFault(at: string, message: string): never {");
+    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");");
+    outputLine("    process.exit(1);");
+    outputLine("}");
+    outputLine("function lite$prompt(text: string | undefined): void {");
+    outputLine("    if (text === undefined) return;");
+    outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);");
+    outputLine("    lite_out = \"\";");
+    outputLine("}");
+    outputLine("function lite$peek(at: string): string | null {");
+    outputLine("    if (lite$pending !== undefined) return lite$pending;");
+    outputLine("    if (lite$ended) return null;");
+    outputLine("    try {");
+    outputLine("        while (true) {");
+    outputLine("            if (lite$byteAt === lite$byteEnd) {");
+    outputLine("                lite$byteEnd = process.getBuiltinModule(\"node:fs\").readSync(0, lite$bytes, 0, lite$bytes.length, null);");
+    outputLine("                lite$byteAt = 0;");
+    outputLine("                if (lite$byteEnd === 0) {");
+    outputLine("                    lite$ended = true;");
+    outputLine("                    lite$pending = lite$decoder.decode() || null;");
+    outputLine("                    return lite$pending;");
+    outputLine("                }");
+    outputLine("            }");
+    outputLine("            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });");
+    outputLine("            if (text !== \"\") { lite$pending = text; return text; }");
+    outputLine("        }");
+    outputLine("    } catch (error) {");
+    outputLine("        return lite$inputFault(at, \"cannot read input: \" + (error instanceof Error ? error.message : String(error)));");
+    outputLine("    }");
+    outputLine("}");
+    outputLine("function lite$take(at: string): string | null {");
+    outputLine("    const text = lite$peek(at); lite$pending = undefined; return text;");
+    outputLine("}");
+    if usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") {
+        outputLine("function lite$word(at: string): string | null {");
+        outputLine("    let ch = lite$peek(at);");
+        outputLine("    while (ch !== null && /\\s/u.test(ch)) { lite$take(at); ch = lite$peek(at); }");
+        outputLine("    if (ch === null) return null;");
+        outputLine("    let text = \"\";");
+        outputLine("    while (ch !== null && !/\\s/u.test(ch)) { text += lite$take(at); ch = lite$peek(at); }");
+        outputLine("    return text;");
+        outputLine("}");
     }
     if usesBuiltin(items, "inputAll") {
-        report("function lite$inputAll(): string {");
-        report("    return process.getBuiltinModule(\"node:fs\").readFileSync(0, \"utf8\");");
-        report("}");
-        report("");
+        outputLine("function lite$inputAll(prompt: string | undefined, at: string): string {");
+        outputLine("    lite$prompt(prompt);");
+        outputLine("    let text = \"\";");
+        outputLine("    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;");
+        outputLine("    return text;");
+        outputLine("}");
     }
+    if usesBuiltin(items, "inputLine") {
+        outputLine("function lite$inputLine(prompt: string | undefined, at: string): string {");
+        outputLine("    lite$prompt(prompt);");
+        outputLine("    let text = \"\", ch = lite$take(at);");
+        outputLine("    if (ch === null) return lite$inputFault(at, \"EOF before inputLine value\");");
+        outputLine("    while (ch !== null && ch !== \"\\n\") { text += ch; ch = lite$take(at); }");
+        outputLine("    return ch === \"\\n\" && text.endsWith(\"\\r\") ? text.slice(0, -1) : text;");
+        outputLine("}");
+    }
+    if usesBuiltin(items, "inputInt") {
+        outputLine("function lite$inputInt(prompt: string | undefined, at: string): bigint {");
+        outputLine("    lite$prompt(prompt);");
+        outputLine("    const text = lite$word(at);");
+        outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputInt value\");");
+        outputLine("    if (!/^[+-]?[0-9]+$/.test(text)) return lite$inputFault(at, \"expected an integer token\");");
+        outputLine("    const value = BigInt(text);");
+        outputLine("    if (value < -(1n << 63n) || value > (1n << 63n) - 1n) return lite$inputFault(at, \"input outside signed 64-bit range\");");
+        outputLine("    return value;");
+        outputLine("}");
+    }
+    if usesBuiltin(items, "inputFloat") {
+        outputLine("function lite$inputFloat(prompt: string | undefined, at: string): number {");
+        outputLine("    lite$prompt(prompt);");
+        outputLine("    const text = lite$word(at);");
+        outputLine("    if (text === null) return lite$inputFault(at, \"EOF before inputFloat value\");");
+        outputLine("    const value = Number(text);");
+        outputLine("    if (!/^[+-]?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/.test(text) || !Number.isFinite(value)) return lite$inputFault(at, \"expected a finite floating token\");");
+        outputLine("    return value;");
+        outputLine("}");
+    }
+    outputLine("");
+}
+
+/** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
+emitBuiltinHelpers := fn(items: Items): Unit {
+    if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") or
+        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") {
+        outputLine("declare const process: {");
+        outputLine("    argv: string[];");
+        outputLine("    exit(code: number): never;");
+        outputLine("    getBuiltinModule(name: \"node:fs\"): {");
+        outputLine("        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;");
+        outputLine("        writeSync(fd: number, text: string): number;");
+        outputLine("    };");
+        outputLine("};");
+        outputLine("");
+    }
+    if usesBuiltin(items, "inputArgs") {
+        outputLine("function lite$inputArgs(): string[] {");
+        outputLine("    return process.argv.slice(2);");
+        outputLine("}");
+        outputLine("");
+    }
+    emitInputHelpers(items);
     if usesBuiltin(items, "reportError") {
-        report("function lite$reportError(text: string): void {");
-        report("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
-        report("}");
-        report("");
+        outputLine("function lite$reportError(text: string): void {");
+        outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
+        outputLine("}");
+        outputLine("");
     }
     if usesBuiltin(items, "exit") {
-        report("function lite$exit(status: bigint): void {");
-        report("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
-        report("    process.exit(Number(status));");
-        report("}");
-        report("");
+        outputLine("function lite$exit(status: bigint): void {");
+        outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
+        outputLine("    process.exit(Number(status));");
+        outputLine("}");
+        outputLine("");
     }
     if usesBuiltin(items, "textLength") or usesBuiltin(items, "textAt") or usesBuiltin(items, "textSlice") {
-        report("const lite$textCache = new Map<string, readonly string[]>();");
-        report("function lite$textPoints(text: string): readonly string[] {");
-        report("    const found = lite$textCache.get(text);");
-        report("    if (found !== undefined) {");
-        report("        lite$textCache.delete(text);");
-        report("        lite$textCache.set(text, found);");
-        report("        return found;");
-        report("    }");
-        report("    const points = Array.from(text);");
-        report("    lite$textCache.set(text, points);");
-        report("    if (lite$textCache.size > 8) {");
-        report("        const oldest = lite$textCache.keys().next();");
-        report("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
-        report("    }");
-        report("    return points;");
-        report("}");
-        report("");
+        outputLine("const lite$textCache = new Map<string, readonly string[]>();");
+        outputLine("function lite$textPoints(text: string): readonly string[] {");
+        outputLine("    const found = lite$textCache.get(text);");
+        outputLine("    if (found !== undefined) {");
+        outputLine("        lite$textCache.delete(text);");
+        outputLine("        lite$textCache.set(text, found);");
+        outputLine("        return found;");
+        outputLine("    }");
+        outputLine("    const points = Array.from(text);");
+        outputLine("    lite$textCache.set(text, points);");
+        outputLine("    if (lite$textCache.size > 8) {");
+        outputLine("        const oldest = lite$textCache.keys().next();");
+        outputLine("        if (oldest.done !== true) lite$textCache.delete(oldest.value);");
+        outputLine("    }");
+        outputLine("    return points;");
+        outputLine("}");
+        outputLine("");
     }
     if usesBuiltin(items, "textLength") {
-        report("function lite$textLength(text: string): bigint {");
-        report("    return BigInt(lite$textPoints(text).length);");
-        report("}");
-        report("");
+        outputLine("function lite$textLength(text: string): bigint {");
+        outputLine("    return BigInt(lite$textPoints(text).length);");
+        outputLine("}");
+        outputLine("");
     }
     if usesBuiltin(items, "textAt") {
-        report("function lite$textAt(text: string, position: bigint): string {");
-        report("    const points = lite$textPoints(text);");
-        report("    if (position < 0n || position >= BigInt(points.length)) {");
-        report("        throw new Error(\"BoundPanic: textAt index outside text\");");
-        report("    }");
-        report("    const value = points[Number(position)];");
-        report("    if (value === undefined) {");
-        report("        throw new Error(\"BoundPanic: textAt index outside text\");");
-        report("    }");
-        report("    return value;");
-        report("}");
-        report("");
+        outputLine("function lite$textAt(text: string, position: bigint): string {");
+        outputLine("    const points = lite$textPoints(text);");
+        outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
+        outputLine("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        outputLine("    }");
+        outputLine("    const value = points[Number(position)];");
+        outputLine("    if (value === undefined) {");
+        outputLine("        throw new Error(\"BoundPanic: textAt index outside text\");");
+        outputLine("    }");
+        outputLine("    return value;");
+        outputLine("}");
+        outputLine("");
     }
     if usesBuiltin(items, "textSlice") {
-        report("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
-        report("    const points = lite$textPoints(text);");
-        report("    if (start < 0n || end < start || end > BigInt(points.length)) {");
-        report("        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");");
-        report("    }");
-        report("    return points.slice(Number(start), Number(end)).join(\"\");");
-        report("}");
-        report("");
+        outputLine("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
+        outputLine("    const points = lite$textPoints(text);");
+        outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
+        outputLine("        throw new Error(\"BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)\");");
+        outputLine("    }");
+        outputLine("    return points.slice(Number(start), Number(end)).join(\"\");");
+        outputLine("}");
+        outputLine("");
     }
     return;
 }
 
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(): Unit {
-    report("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
-    report("    if (index < 0n || index >= BigInt(items.length)) {");
-    report("        throw new Error(\"BoundPanic: list index outside its extent\");");
-    report("    }");
-    report("    const value = items[Number(index)];");
-    report("    if (value === undefined) {");
-    report("        throw new Error(\"BoundPanic: list index outside its extent\");");
-    report("    }");
-    report("    return value;");
-    report("}");
-    report("");
+    outputLine("function lite$listAt<T>(items: readonly T[], index: bigint): T {");
+    outputLine("    if (index < 0n || index >= BigInt(items.length)) {");
+    outputLine("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    outputLine("    }");
+    outputLine("    const value = items[Number(index)];");
+    outputLine("    if (value === undefined) {");
+    outputLine("        throw new Error(\"BoundPanic: list index outside its extent\");");
+    outputLine("    }");
+    outputLine("    return value;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked list-pop helper used by generated programs that pop a list tail. */
 emitListPopHelper := fn(): Unit {
-    report("function lite$listPopBack<T>(items: T[]): T {");
-    report("    const value = items.pop();");
-    report("    if (value === undefined) {");
-    report("        throw new Error(\"BoundPanic: pop_back on an empty list\");");
-    report("    }");
-    report("    return value;");
-    report("}");
-    report("");
+    outputLine("function lite$listPopBack<T>(items: T[]): T {");
+    outputLine("    const value = items.pop();");
+    outputLine("    if (value === undefined) {");
+    outputLine("        throw new Error(\"BoundPanic: pop_back on an empty list\");");
+    outputLine("    }");
+    outputLine("    return value;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked truncating BigInt division helper used by generated programs that divide at runtime. */
 emitIntDivideHelper := fn(): Unit {
-    report("function lite$divideInt(left: bigint, right: bigint): bigint {");
-    report("    if (right === 0n) {");
-    report("        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");");
-    report("    }");
-    report("    if (left === -(1n << 63n) && right === -1n) {");
-    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
-    report("    }");
-    report("    return left / right;");
-    report("}");
-    report("");
+    outputLine("function lite$divideInt(left: bigint, right: bigint): bigint {");
+    outputLine("    if (right === 0n) {");
+    outputLine("        throw new Error(\"ArithmeticPanic: division by zero in integer expression\");");
+    outputLine("    }");
+    outputLine("    if (left === -(1n << 63n) && right === -1n) {");
+    outputLine("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    outputLine("    }");
+    outputLine("    return left / right;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked BigInt remainder helper used by generated programs that take a runtime remainder. */
 emitIntRemainderHelper := fn(): Unit {
-    report("function lite$remainderInt(left: bigint, right: bigint): bigint {");
-    report("    if (right === 0n) {");
-    report("        throw new Error(\"ArithmeticPanic: remainder by zero in integer expression\");");
-    report("    }");
-    report("    if (left === -(1n << 63n) && right === -1n) {");
-    report("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
-    report("    }");
-    report("    return left % right;");
-    report("}");
-    report("");
+    outputLine("function lite$remainderInt(left: bigint, right: bigint): bigint {");
+    outputLine("    if (right === 0n) {");
+    outputLine("        throw new Error(\"ArithmeticPanic: remainder by zero in integer expression\");");
+    outputLine("    }");
+    outputLine("    if (left === -(1n << 63n) && right === -1n) {");
+    outputLine("        throw new Error(\"ArithmeticPanic: integer expression outside signed 64-bit range\");");
+    outputLine("    }");
+    outputLine("    return left % right;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked BigInt floor-division helper used by generated programs that floor-divide at runtime. */
 emitIntFloorDivideHelper := fn(): Unit {
-    report("function lite$floorDivideInt(left: bigint, right: bigint): bigint {");
-    report("    const quotient = lite$divideInt(left, right);");
-    report("    const remainder = left % right;");
-    report("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
-    report("}");
-    report("");
+    outputLine("function lite$floorDivideInt(left: bigint, right: bigint): bigint {");
+    outputLine("    const quotient = lite$divideInt(left, right);");
+    outputLine("    const remainder = left % right;");
+    outputLine("    return remainder !== 0n && (left < 0n) !== (right < 0n) ? quotient - 1n : quotient;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked BigInt floor-modulo helper used by generated programs that take a runtime floor modulo. */
 emitIntFloorModuloHelper := fn(): Unit {
-    report("function lite$floorModuloInt(left: bigint, right: bigint): bigint {");
-    report("    if (right === 0n) {");
-    report("        throw new Error(\"ArithmeticPanic: modulo by zero in integer expression\");");
-    report("    }");
-    report("    const remainder = left % right;");
-    report("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
-    report("}");
-    report("");
+    outputLine("function lite$floorModuloInt(left: bigint, right: bigint): bigint {");
+    outputLine("    if (right === 0n) {");
+    outputLine("        throw new Error(\"ArithmeticPanic: modulo by zero in integer expression\");");
+    outputLine("    }");
+    outputLine("    const remainder = left % right;");
+    outputLine("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits every checked Int division-family helper the program reads. */
@@ -290,70 +409,75 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
 emitProgram := fn(items: Items): Unit {
-    hasExit := usesBuiltin(items, "exit");
+    hasExit := usesBuiltin(items, "exit") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat");
     if hasExit {
-        report("let lite_out = \"\";");
-        report("");
+        outputLine("let lite_out = \"\";");
+        outputLine("");
     }
     emitBuiltinHelpers(items);
     if usesListIndex(items) { emitListIndexHelper(); }
     if usesListPop(items) { emitListPopHelper(); }
     emitIntDivisionHelpers(items);
-    report("export function main(): string {");
-    if not hasExit { report("    let lite_out = \"\";"); }
+    outputLine("export function main(lite$write?: (text: string) => void): string {");
+    if not hasExit { outputLine("    let lite_out = \"\";"); }
+    outputLine("    function lite$emit(text: string): void {");
+    outputLine("        if (lite$write === undefined) lite_out += text;");
+    outputLine("        else lite$write(text);");
+    outputLine("    }");
+    outputLine("    void lite$emit;");
     var indent := "    ";
     var line := "";
     var count := 0;
     var reportIndex := 0;
     loop items as item {
         if item.kind == "FunctionStart" {
-            report(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
+            outputLine(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
                 tsFunctionType(item.code) + " {");
             indent = indent + "    ";
             reportParameterReads(item.textValue, indent);
         } else if item.kind == "FunctionEnd" {
             indent = dedent(indent);
-            report(indent + "}");
-            report(indent + "void " + item.runtime + ";");
+            outputLine(indent + "}");
+            outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "Return" {
             if item.code == "" {
-                report(indent + "return;");
+                outputLine(indent + "return;");
             } else {
-                report(indent + "return " + item.code + ";");
+                outputLine(indent + "return " + item.code + ";");
             }
         } else if item.kind == "Break" {
-            report(indent + "break;");
+            outputLine(indent + "break;");
         } else if item.kind == "Continue" {
-            report(indent + "continue;");
+            outputLine(indent + "continue;");
         } else if item.kind == "Call" {
-            report(indent + item.code + ";");
-        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalTuple" {
-            report(indent + "const " + item.runtime + " = " + item.code + ";");
-            report(indent + "void " + item.runtime + ";");
+            outputLine(indent + item.code + ";");
+        } else if item.kind == "LocalInt" or item.kind == "LocalString" or item.kind == "LocalBool" or item.kind == "LocalFloat" or item.kind == "LocalTuple" {
+            outputLine(indent + "const " + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "LocalList" {
-            report(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
-            report(indent + "void " + item.runtime + ";");
-        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarTuple" {
-            report(indent + "let " + item.runtime + " = " + item.code + ";");
-            report(indent + "void " + item.runtime + ";");
+            outputLine(indent + "const " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            outputLine(indent + "void " + item.runtime + ";");
+        } else if item.kind == "VarInt" or item.kind == "VarString" or item.kind == "VarBool" or item.kind == "VarFloat" or item.kind == "VarTuple" {
+            outputLine(indent + "let " + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "VarList" {
-            report(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
-            report(indent + "void " + item.runtime + ";");
-        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignTuple" {
-            report(indent + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "let " + item.runtime + ": " + tsFunctionType(item.textValue) + " = " + item.code + ";");
+            outputLine(indent + "void " + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" or item.kind == "AssignTuple" {
+            outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "AssignList" {
-            report(indent + item.runtime + " = " + item.code + ";");
+            outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "If" {
             condition := if item.code == "true" or item.code == "false" {
                 "Boolean(" + item.code + ")"
             } else {
                 item.code
             };
-            report(indent + "if (" + condition + ") {");
+            outputLine(indent + "if (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "Else" {
             indent = dedent(indent);
-            report(indent + "} else {");
+            outputLine(indent + "} else {");
             indent = indent + "    ";
         } else if item.kind == "ElseIf" {
             indent = dedent(indent);
@@ -362,28 +486,30 @@ emitProgram := fn(items: Items): Unit {
             } else {
                 item.code
             };
-            report(indent + "} else if (" + condition + ") {");
+            outputLine(indent + "} else if (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndIf" {
             indent = dedent(indent);
-            report(indent + "}");
+            outputLine(indent + "}");
         } else if item.kind == "LoopSeq" {
-            report(indent + "for (const " + item.runtime + " of " + listCopyCode(item.code) + ") {");
+            outputLine(indent + "for (const " + item.runtime + " of " + listCopyCode(item.code) + ") {");
             indent = indent + "    ";
-            report(indent + "void " + item.runtime + ";");
+            outputLine(indent + "void " + item.runtime + ";");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "Boolean(true)" }
                 else if item.code == "false" { "Boolean(false)" }
                 else { item.code };
-            report(indent + "while (" + condition + ") {");
+            outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndLoop" {
             indent = dedent(indent);
-            report(indent + "}");
-        } else if item.kind == "End" {
+            outputLine(indent + "}");
+        } else if item.kind == "End" or item.kind == "EndOutput" {
+            if count == 0 { line = textLiteralCode(""); }
             temporary := "lite$report" + intText(reportIndex);
-            report(indent + "const " + temporary + " = " + line + ";");
-            report(indent + "lite_out += " + temporary + " + \"\\n\";");
+            outputLine(indent + "const " + temporary + " = " + line + ";");
+            ending := if item.kind == "End" { " + \"\\n\"" } else { "" };
+            outputLine(indent + "lite$emit(" + temporary + ending + ");");
             reportIndex = reportIndex + 1;
             line = "";
             count = 0;
@@ -393,6 +519,6 @@ emitProgram := fn(items: Items): Unit {
             count = count + 1;
         }
     }
-    report("    return lite_out;");
-    report("}");
+    outputLine("    return lite_out;");
+    outputLine("}");
 }

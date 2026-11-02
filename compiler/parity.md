@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 53 program / 39 rejection
+Immediate scope: the bootstrap subset L, S, and the 55 program / 38 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -18,8 +18,8 @@ audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
 
 Interpreter run/check and the interpreter regression tests still use
 T00. The C emitter is now a TS-hosted compiler built by T11; its exact source,
-artifact and builder hashes are in `bootstrap/c-seed.ts`. The report-order seed
-refresh below records T11 == T12 == T13 for its source snapshot. Native C01/C11
+artifact and builder hashes are in `bootstrap/c-seed.ts`. The I/O seed
+refresh below records three byte-identical generated generations for its source snapshot. Native C01/C11
 remain unrecorded. These host transition slices do
 not complete feature parity or authorize deleting T00 before its replacements pass.
 
@@ -226,6 +226,49 @@ compiler-throughput benchmark. [Raw timings and method](reports/2026-11-02-gener
 This migrates three test consumers; full feature parity, native C11 and run/check
 replacement remain pending.
 
+## Temporary I/O migration
+
+Owner selection, 2026-11-02: replace report with outputLine, add output without a
+newline, allow empty output calls, display ordinary values including arrays,
+and give inputAll/inputLine/inputInt/inputFloat an optional positional String
+prompt. A leading output String is a value. The [current helper contract](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+supersedes earlier report signatures; there is no source-level report alias.
+All maintained Lite calls and live source snippets are migrated. Historical
+snapshots and published tags remain unchanged.
+
+T00 supports its admitted scalar/Unit, tuple, array and list values. Generated
+TS supports admitted scalar/Unit, flat named-tuple and List display, prompted
+line/token/all input with shared lookahead, checked Int64 input and finite Float
+input values. Strict incremental UTF-8 decoding preserves prompt/read/fault
+order. Wider Float operators, unnamed/mixed tuple grammar and fixed-array
+contracts remain existing-feature parity work. The C emitter supports admitted
+scalar output and explicitly rejects unsupported input/aggregate forms.
+
+Generated main accepts an optional streaming writer used by the process
+adapters; a zero-argument main call retains the original return-text contract.
+Output is now retained before later runtime faults in normal artifact runs.
+A Unit-returning function tail also preserves its called function's effects.
+TS verification now runs strict-checked child artifacts with supplied stdin and
+arguments, rather than importing programs into the verifier process.
+
+Current S: 167117 bytes, SHA-256 `4cf236be54783ca9b2854dbdc22c4c28a08d579ff92cb902714c36619f9c1991`.
+Three generated compiler generations are identical, 273040 bytes,
+SHA-256 `fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf`. The generated-only refresh adapts
+source call spellings for the previous seed and then compiles unchanged current
+S three times; this preserves the historical ladder node meanings. The current
+TS-hosted C emitter is 244073 bytes, SHA-256 `8928ddc79ac55f0d48990fa71ab163f4f6987e90bc19fba1a863c964de6446a4`.
+[Exact builder recipe and identities](reports/2026-11-02-io-migration-ladder.json).
+
+The compiler corpus now has 55 programs and 38 rejections: empty outputLine()
+moves to the program category, and a new output/no-newline case is added.
+Canonical verification adds one feature with two scenarios on T00 and TS:
+37 features, 77 total scenarios and 95 target executions. Focused host probes
+cover value/effect order, shared input state, prompts, numeric faults, EOF,
+Unicode chunk boundaries, exact real-CLI decoding faults, empty calls and the
+removed report spelling. Strict host/seed checks pass. All 251 full tests pass with zero skips in 51.7 s;
+the fast suite passes 242 with nine expected skips in 30.1 s. All nine editor
+groups, both 93-case compiler comparisons and 95 verifier executions pass.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:
@@ -332,6 +375,6 @@ Useful internal tools:
 |---|---|---|---|---|---|
 | 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | closed by the report-order seed refresh above; six focused T00/generated scenarios and current corpus hashes |
 | 2026-11-02 | TS | Dynamic Int64 addition, subtraction, multiplication and negation overflow | T00 faults; generated TS returns out-of-range BigInt values | checked-arithmetic gap | open; exact probes in the support inventory |
-| 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | open; `output.before-fault` probe |
-| 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | open; `input.invalid-utf8` probe |
+| 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | closed for process adapters by the I/O migration; exact runtime fault diagnostics remain separate |
+| 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | closed by strict incremental input decoding and exact real-CLI UTF-8 probes |
 | — | — | — | No generated compiler yet | — | — |

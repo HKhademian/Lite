@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/009-fixed-arrays.lts",
-    "hash": "sha256:22c8b2215b4561e49f661aa04cde8e6b730a1fb59d5a02f2e930dc3737edeab7"
+    "hash": "sha256:fec2bf374260b1841c7ff12819420c8e6b940310d616a9b9e4f5927f02114f84"
   },
   "features": [
     "array.fixed",

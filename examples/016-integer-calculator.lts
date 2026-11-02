@@ -108,7 +108,7 @@ parse := fn(tokens: List<(kind: String, text: String)>, count: Int, start: Int, 
     (value, position)
 }
 
-report("Arithmetic expression:");
+outputLine("Arithmetic expression:");
 tokens := tokenize(inputLine());
 var count := 0;
 loop tokens { count = count + 1; }
@@ -117,4 +117,4 @@ if parsed.1 =!= count {
     reportError("unexpected trailing token: " + tokens[parsed.1].text);
     exit(2);
 }
-report("result:", parsed.0);
+outputLine("result:", parsed.0);

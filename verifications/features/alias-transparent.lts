@@ -2,4 +2,4 @@ Token := type (kind: String, text: String);
 Tokens := type List<Token>;
 tokens: mut Tokens = [];
 push_back(mut tokens, (kind = "num", text = "42"));
-report(tokens[0].text);
+outputLine(tokens[0].text);

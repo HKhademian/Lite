@@ -1,6 +1,6 @@
 x := 10;
 {
     x := 20;
-    report(x);
+    outputLine(x);
 }
-report(x);
+outputLine(x);

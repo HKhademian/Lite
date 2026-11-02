@@ -1,3 +1,3 @@
 text := inputAll("Text (finish with EOF): ");
-report("code points:", textLength(text));
-report(text);
+outputLine("code points:", textLength(text));
+outputLine(text);

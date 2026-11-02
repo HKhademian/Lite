@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/001-double-sum.lts",
-    "hash": "sha256:ac8a28b0284da427280c6c4b40297c06f75d26d25289ff1c9f20836a67afd954"
+    "hash": "sha256:a971acff90fcc4ed6b5cca972b179d7da1e85c15b482619d16653d852cf939e5"
   },
   "features": [
     "io.input",

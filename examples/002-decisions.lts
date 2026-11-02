@@ -8,13 +8,13 @@ description := if number < 0 {
 } else {
     "positive"
 }
-report(description);
+outputLine(description);
 
 if 0 <= number < 10 {
-    report("between zero and nine");
+    outputLine("between zero and nine");
 }
 
 /* The division is skipped when number is zero. */
 if number =!= 0 and 100 / number > 5 {
-    report("quotient exceeds five");
+    outputLine("quotient exceeds five");
 }

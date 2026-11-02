@@ -1,2 +1,2 @@
 s := "hi";
-report(s);
+outputLine(s);

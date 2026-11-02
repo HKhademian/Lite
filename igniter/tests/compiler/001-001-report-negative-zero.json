@@ -2,7 +2,7 @@
   "name": "report-negative-zero",
   "source": {
     "file": "001-001-report-negative-zero.lts",
-    "hash": "sha256:8c6c521ff883302a942c7e2e977ea0c273896c8ae28449e7c038942b2a9d923c"
+    "hash": "sha256:60a8cb04a8b6ac3b3ae90cd0ae856e0ce4a263e271d7f197b7feee95e5885a27"
   },
   "cases": [
     {

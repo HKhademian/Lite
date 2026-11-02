@@ -1,4 +1,4 @@
 a := 5;
 b := a * 2;
-report(b);
-report(a - b);
+outputLine(b);
+outputLine(a - b);

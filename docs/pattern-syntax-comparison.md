@@ -57,7 +57,7 @@ Odin type switches introduce a named receiver, with `case Type:` arms. A single-
 if (outcome) |value| {
     use(value);
 } else |err| {
-    report(err);
+    outputLine(err);
 }
 ```
 

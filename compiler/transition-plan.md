@@ -36,6 +36,24 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: owner-selected [temporary I/O migration](../docs/tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+  replaces report with outputLine (no alias), adds output without a newline,
+  allows zero output arguments, and adds array/list display on T00. Generated TS
+  displays admitted scalar/Unit, named-tuple and List values and implements all
+  four optional-prompt input helpers, with shared lookahead, checked numeric
+  input and strict incremental UTF-8. Process adapters stream output, retaining
+  earlier output on faults; Unit function tails retain effects. All maintained
+  Lite calls, active snippets and source/position/AST/hash fixtures are migrated.
+  Generated verification now uses strict child artifacts with stdin/arguments.
+  Three generated compiler generations match, rebuilt from the previous seed
+  through a reproducible call-spelling adapter, without T00 execution. The
+  [ladder](reports/2026-11-02-io-migration-ladder.json) records identities and
+  validation: strict checks, 251 full tests with zero skips (51.7 s), fast
+  242 pass/nine expected skips (30.1 s), nine editor groups, both 93-case corpus
+  comparisons (55 programs/38 rejections), and 95 canonical target executions.
+  Historical checkpoints stay preserved. Wider TS type/operator parity and C
+  input/aggregate support remain pending; next work is checked Int64 arithmetic.
+
 - 2026-11-02: migrate full-source lexer/parser/checker test consumers from T00
   interpretation to T11-generated, strictly checked TS drivers. Retain every
   sweep assertion and compare focused fixtures exactly with T00; reuse each
@@ -146,7 +164,7 @@ distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
 and record feature parity. The report argument-order difference is closed by the
-first feature-parity slice; next port checked dynamic Int64 arithmetic, then continue the measured
+first feature-parity slice; the owner-selected I/O migration follows it. Next port checked dynamic Int64 arithmetic, then continue the measured
 input, expression/control-flow and data/function gaps. No new language surface
 is selected by this order.
 **Acceptance:** every existing T00-supported contract has an equivalent Lite
@@ -190,10 +208,10 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 253122 bytes, SHA-256
-  `49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c`.
-- Current S is 156467 bytes, SHA-256
-  `70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10`.
+- The current seed is 273040 bytes, SHA-256
+  `fa134de2a4c19891ce0a8970d83682ea4acafdfe21736ac73a30e1f4ac330daf`.
+- Current S is 167117 bytes, SHA-256
+  `4cf236be54783ca9b2854dbdc22c4c28a08d579ff92cb902714c36619f9c1991`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

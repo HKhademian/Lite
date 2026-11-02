@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "bool-conditions.lts",
-    "hash": "sha256:85a4997aa867507b4e79c740fd799ac7dc264dad1994fb3d2ed9a5365e884619"
+    "hash": "sha256:1f369280b57612fdf8c0d2b5739ac97492372b940ebeda57da529e857bc15a90"
   },
   "features": [
     "bool.conditions"

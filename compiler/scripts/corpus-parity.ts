@@ -46,7 +46,7 @@ try {
   const runner = join(directory, 'runner.ts');
   writeFileSync(artifact, readFileSync(artifactPath));
   writeFileSync(join(directory, 'package.json'), '{"type":"module"}\n');
-  writeFileSync(runner, "import { main } from './artifact.ts';\nprocess.stdout.write(main());\n");
+  writeFileSync(runner, "import { main } from './artifact.ts';\nimport { writeSync } from 'node:fs';\nprocess.stdout.write(main((text: string): void => { writeSync(1, text); }));\n");
   writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({ ...checkOptions(), files: [artifact] }));
   const tsc = join(repository, 'igniter', 'node_modules', 'typescript', 'bin', 'tsc');
   const typecheck = spawnSync(process.execPath, [tsc, '-p', join(directory, 'tsconfig.json')], { timeout: 0 });

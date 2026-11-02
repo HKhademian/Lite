@@ -1,7 +1,7 @@
 mut args := inputArgs();
 push_back(mut args, "z");
-report(args[0], args[2]);
+outputLine(args[0], args[2]);
 var mut other := inputArgs();
 other = inputArgs();
 push_front(mut other, "z");
-report(other[0], other[2]);
+outputLine(other[0], other[2]);

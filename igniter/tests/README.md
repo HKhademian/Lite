@@ -84,7 +84,7 @@ Top-level keys:
 
 ```json
 { "file": "001-001-report-int-42.lts", "hash": "sha256:…" }
-{ "text": "report(42);\n", "hash": "sha256:…" }
+{ "text": "outputLine(42);\n", "hash": "sha256:…" }
 { "bytes": [114, 101, 112, 111, 114, 116, 40, 52, 50, 41, 59, 10], "hash": "sha256:…" }
 ```
 

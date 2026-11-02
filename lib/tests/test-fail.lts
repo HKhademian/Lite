@@ -2,4 +2,4 @@ importFlatAll "../core/int.lts";
 importFlatAll "../core/test.lts";
 
 check("bad", false);
-report("unreachable");
+outputLine("unreachable");

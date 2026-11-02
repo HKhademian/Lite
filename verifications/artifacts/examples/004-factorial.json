@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../examples/004-factorial.lts",
-    "hash": "sha256:f37bd53e7a2a7efcfabc22d2a652ca3eb6631feccf9b155afd33ad05551d6140"
+    "hash": "sha256:f4b401f22cd0fc86eb14086e17e2b01fcc043d553ecbe7c801b189554224d73c"
   },
   "features": [
     "io.input",

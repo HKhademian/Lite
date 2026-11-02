@@ -2,7 +2,7 @@
   "name": "report-two-statements",
   "source": {
     "file": "001-005-report-two-statements.lts",
-    "hash": "sha256:dd3cb5871417c32bb581baa894a7a1fa1c7549b99bc395986e0e3c9e5c6c163c"
+    "hash": "sha256:df929a5ecb83d1e9c46497b8a9b74778797b3cbc6abfd0d4964c25bcd72ea5cb"
   },
   "cases": [
     {

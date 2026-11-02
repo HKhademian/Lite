@@ -1,6 +1,9 @@
 # T11/T12 atomic implementation plan
 
-Status: **active, 2026-11-01**. Target order is T00 → T11 → T12 only. C/P7 waits.
+Historical T11/T12 slice record, 2026-11-01. The later owner-approved
+[transition](transition-plan.md) and [I/O migration](parity.md#temporary-io-migration)
+own current names/counts; the checkpoint counts and scope below remain historical.
+Original target order was T00 → T11 → T12 only, with C/P7 waiting.
 
 Each slice is one atomic commit. During T11/T12, verify with
 `npm --prefix igniter run check`, `./lite test --fast`, and focused TS tests only.

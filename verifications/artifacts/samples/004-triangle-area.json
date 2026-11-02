@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Triangle area from base and height.",
-  "append": "report(area);",
+  "append": "outputLine(area);",
   "cases": [
     {
       "name": "observed-values",

@@ -2,7 +2,7 @@
   "name": "overflow-multiply-large",
   "source": {
     "file": "002-003-overflow-multiply-large.lts",
-    "hash": "sha256:af32c6964007f1ed26e39f249fa720afe38151288331e10028d15ee1c1ace0ae"
+    "hash": "sha256:4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7"
   },
   "cases": [
     {
@@ -12,8 +12,8 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:19: integer expression outside signed 64-bit range\n",
-        "hash": "sha256:8aa9a91b7e355ec5a0d5defdb41230c6bc9c17b4158b01f7979bdebd68152656"
+        "text": "1:23: integer expression outside signed 64-bit range\n",
+        "hash": "sha256:f3456e7d3801b94fd48ba19f4633cd0ad66e9465f2d321e6cf5f9f3d10f5093f"
       },
       "exitCode": 2
     }

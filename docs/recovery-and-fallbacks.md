@@ -12,7 +12,7 @@ Separate two questions: whether a handler names the error, and which values the 
 
 ```text
 user := load_user(id) else(error) {
-    report(error);
+    outputLine(error);
     guest_user()
 }
 ```

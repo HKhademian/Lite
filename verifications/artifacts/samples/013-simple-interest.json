@@ -10,7 +10,7 @@
     "scope.locals"
   ],
   "description": "Simple interest over three years.",
-  "append": "report(interest_cents); report(balance_cents);",
+  "append": "outputLine(interest_cents); outputLine(balance_cents);",
   "cases": [
     {
       "name": "observed-values",

@@ -1,1 +1,1 @@
-report("text" * 2);
+outputLine("text" * 2);

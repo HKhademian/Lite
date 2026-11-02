@@ -1,4 +1,4 @@
 values := inputArgs();
 loop values as value {
-    report(value);
+    outputLine(value);
 }

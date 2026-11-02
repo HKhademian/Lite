@@ -1,2 +1,2 @@
 x := 5;
-report(x + 1);
+outputLine(x + 1);

@@ -68,11 +68,19 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 8 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 11 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
 exact T00 comparisons. See the [test-consumer migration](../compiler/parity.md#generated-full-source-test-consumers).
+
+The owner-selected [temporary I/O migration](tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+renames S's report calls to outputLine, adds output without a newline, and ports
+the four prompted input helpers to generated TS. This explicit owner decision
+updates the temporary helper contract; it does not add general optional/variadic
+function grammar. Current corpus: 55 programs/38 rejections; verification:
+37 features, 77 scenarios, 95 target executions. The generated-only spelling
+adapter and current fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
 
 ## Historical P0 baseline, 2026-11-01
 
@@ -580,9 +588,9 @@ Allowed in S now:
   reads, parentheses, unary minus, `+ - * / % :/ :%`, comparisons,
   `and`/`or`/`not`, value `if`/`else if`/`else`.
 - Statements: action `if`/`else if`/`else`, loops, `break`, `return`, blocks,
-  `report`, `reportError`, `exit`.
+  `outputLine`, `reportError`, `exit`.
 - Functions: typed parameters/results, calls, recursion, `self`.
-- Builtins used by S: `inputArgs`, `inputAll`, `report`, `reportError`, `exit`,
+- Builtins used by S: `inputArgs`, `inputAll`, `outputLine`, `reportError`, `exit`,
   `textLength`, `textAt`, `textSlice`, `push_back`.
 - List value semantics: copies on declaration/argument/return; iteration
   snapshots.

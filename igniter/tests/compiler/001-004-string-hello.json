@@ -2,20 +2,13 @@
   "name": "string-hello",
   "source": {
     "file": "001-004-string-hello.lts",
-    "hash": "sha256:7160b6932ce320f35ca88b856d44711a22af83f20a49aeb5514da9da3f8cc5c4"
+    "hash": "sha256:714c0b8d73696511a0976bb47c68c5b9efcae9fa6d78ae824dc3b821ac5dcee0"
   },
   "cases": [
     {
       "name": "default",
       "stdout": {
-        "bytes": [
-          104,
-          101,
-          108,
-          108,
-          111,
-          10
-        ],
+        "text": "hello\n",
         "hash": "sha256:5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
       },
       "stderr": {

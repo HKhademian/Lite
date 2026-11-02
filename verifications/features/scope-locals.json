@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "scope-locals.lts",
-    "hash": "sha256:dd103ca4b8f599c58b116a4f5f90dc62ce8952285e27f401b4d878af14d94ed2"
+    "hash": "sha256:3623332742821c39a5ad83d31d1b356f1534bba7c1d44e39fc60dc84f2336540"
   },
   "features": [
     "scope.locals"

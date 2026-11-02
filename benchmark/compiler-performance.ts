@@ -130,9 +130,9 @@ try {
     { compiler: 'T11', status: 'available', role: 'Lite-written TS compiler emitted as TS; exact snapshot hash recorded' });
   const cCompiler = loadCompiler(join(repository, 'compiler/manifests/c.json'));
   const prerequisiteProbes = ([
-    ['function', 'f := fn(): Int { 42 }\nreport(f());'],
-    ['list', 'values: List<Int> = [1, 2]; report(values[0]);'],
-    ['input', 'source := inputAll(); report(source);'],
+    ['function', 'f := fn(): Int { 42 }\noutputLine(f());'],
+    ['list', 'values: List<Int> = [1, 2]; outputLine(values[0]);'],
+    ['input', 'source := inputAll(); outputLine(source);'],
   ] as const).map(([feature, text]) => {
     const result = cCompiler.compile({ text });
     return { feature, source: text, status: result.status, stdoutBytes: result.stdout.length, stderr: result.stderr.toString() };
@@ -147,9 +147,9 @@ try {
     return { name, text: readFileSync(join(repository, name), 'utf8') };
   });
   const workloads = [
-    { id: 'report-1', inputs: [{ name: 'benchmark:report-1', text: 'report(42);\n' }] },
-    { id: 'report-100', inputs: [{ name: 'benchmark:report-100', text: Array.from({ length: 100 }, (_,i) => `report(${i});`).join('\n') + '\n' }] },
-    { id: 'report-1000', inputs: [{ name: 'benchmark:report-1000', text: Array.from({ length: 1000 }, (_,i) => `report(${i});`).join('\n') + '\n' }] },
+    { id: 'report-1', inputs: [{ name: 'benchmark:report-1', text: 'outputLine(42);\n' }] },
+    { id: 'report-100', inputs: [{ name: 'benchmark:report-100', text: Array.from({ length: 100 }, (_,i) => `outputLine(${i});`).join('\n') + '\n' }] },
+    { id: 'report-1000', inputs: [{ name: 'benchmark:report-1000', text: Array.from({ length: 1000 }, (_,i) => `outputLine(${i});`).join('\n') + '\n' }] },
     { id: 'compiler-corpus', inputs: corpus },
   ];
   for (const workload of workloads) {

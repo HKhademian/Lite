@@ -12,5 +12,5 @@ push_back(mut tokens, (kind = "op", text = "+="));
 push_back(mut tokens, (kind = "num", text = "100"));
 
 loop tokens as token {
-    report(describe(token));
+    outputLine(describe(token));
 }

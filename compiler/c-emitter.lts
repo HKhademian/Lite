@@ -665,7 +665,7 @@ featureDoc := fn(name: String): String {
 /** Reports a reserved Lite feature this compiler checkpoint cannot translate, with its documentation reference, then exits 2. */
 unsupportedFeature := fn(source: String, position: Int, name: String, prefix: String): Unit {
     failAt(source, position, prefix, "unsupported feature \"" + name + "\": see " + featureDoc(name) +
-        "; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only");
+        "; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only");
 }
 
 /** Returns the index of the previously declared function named `name`, or -1. */
@@ -687,7 +687,7 @@ isUnsupportedAliasTarget := fn(name: String): Bool {
 /** Reports one unsupported transparent-alias target, naming a known type constructor when possible. */
 unsupportedAliasTarget := fn(source: String, position: Int, prefix: String, target: String): Unit {
     failAt(source, position, prefix, "unsupported type alias " + target +
-        "; only Int, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
+        "; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported");
 }
 
 /** Returns the index of the first top-level alias named `name`, or -1 when absent. */
@@ -921,7 +921,7 @@ resolveTypeText := fn(source: String, position: Int, prefix: String, aliases: Li
     if afterTrivia < size {
         failAt(source, position, prefix, "unexpected text after type " + name);
     }
-    if name == "Int" or name == "String" or name == "Bool" or name == "Unit" { return name; }
+    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" { return name; }
     if isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(source, position, prefix, name);
         return "";
@@ -991,7 +991,7 @@ parseTupleTypeAt := fn(source: String, position: Int, prefix: String, aliases: L
         cursor = skipName(source, cursor);
         componentName := textSlice(source, componentStart, cursor);
         var componentKind := "";
-        if componentName == "Int" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
+        if componentName == "Int" or componentName == "Float" or componentName == "String" or componentName == "Bool" or componentName == "Unit" {
             componentKind = componentName;
         } else if findAlias(aliases, componentName) >= 0 {
             seen: mut List<String> = [];
@@ -1047,7 +1047,7 @@ parseTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<A
         close = expectSymbol(source, close, ">", prefix);
         return (kind = "List<" + inner.kind + ">", next = close);
     }
-    if name == "Int" or name == "String" or name == "Bool" or name == "Unit" {
+    if name == "Int" or name == "Float" or name == "String" or name == "Bool" or name == "Unit" {
         return (kind = name, next = after);
     }
     if findAlias(aliases, name) >= 0 {
@@ -1520,13 +1520,13 @@ copiedValueCode := fn(kind: String, code: String): String {
 
 /** True for the zero-argument or checked I/O and text builtins this compiler admits. */
 isAdmittedBuiltin := fn(name: String): Bool {
-    name == "inputArgs" or name == "inputAll" or name == "reportError" or name == "exit" or
+    name == "inputArgs" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" or name == "reportError" or name == "exit" or
     name == "textLength" or name == "textAt" or name == "textSlice"
 }
 
 /** Number of positional arguments one admitted builtin requires. */
 builtinArity := fn(name: String): Int {
-    if name == "inputArgs" or name == "inputAll" { 0 }
+    if name == "inputArgs" { 0 }
     else if name == "textAt" { 2 }
     else if name == "textSlice" { 3 }
     else { 1 }
@@ -1534,7 +1534,7 @@ builtinArity := fn(name: String): Int {
 
 /** Required kind of argument `index` for one admitted builtin. */
 builtinParameterKind := fn(name: String, index: Int): String {
-    if name == "reportError" or name == "textLength" { "String" }
+    if name == "reportError" or name == "textLength" or name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat" { "String" }
     else if name == "textAt" or name == "textSlice" {
         if index == 0 { "String" } else { "Int" }
     } else { "Int" }
@@ -1543,8 +1543,9 @@ builtinParameterKind := fn(name: String, index: Int): String {
 /** Result kind of one admitted builtin. */
 builtinResultKind := fn(name: String): String {
     if name == "inputArgs" { "List<String>" }
-    else if name == "inputAll" or name == "textAt" or name == "textSlice" { "String" }
-    else if name == "textLength" { "Int" }
+    else if name == "inputAll" or name == "inputLine" or name == "textAt" or name == "textSlice" { "String" }
+    else if name == "textLength" or name == "inputInt" { "Int" }
+    else if name == "inputFloat" { "Float" }
     else { "Unit" }
 }
 
@@ -1595,7 +1596,9 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
     var left := intParsed("", 0, true, start);
     ch := textAt(source, start);
     if ch == "(" {
-        if looksLikeTupleEntry(source, start + 1, prefix) {
+        if textAt(source, skipTrivia(source, start + 1, prefix)) == ")" {
+            left = (kind = "Unit", code = "undefined", intValue = 0, textValue = "", constant = true, next = skipTrivia(source, start + 1, prefix) + 1);
+        } else if looksLikeTupleEntry(source, start + 1, prefix) {
             var cursor := skipTrivia(source, start + 1, prefix);
             labels: mut List<String> = [];
             codes: mut List<String> = [];
@@ -1722,7 +1725,9 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
         nameStart := start;
         next := skipName(source, start);
         name := textSlice(source, nameStart, next);
-        if name == "true" {
+        if name == "Unit" {
+            left = (kind = "Unit", code = "undefined", intValue = 0, textValue = "", constant = true, next = next);
+        } else if name == "true" {
             left = boolParsed(boolLiteralCode(true), true, true, next);
         } else if name == "false" {
             left = boolParsed(boolLiteralCode(false), false, true, next);
@@ -1857,7 +1862,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     intValue = 0, textValue = "", constant = false, next = cursor);
             } else if callableIndex >= 0 {
                 failAt(source, nameStart, prefix, "function " + calleeName + " must be called");
-            } else if isAdmittedBuiltin(name) {
+            } else if isAdmittedBuiltin(name) and localIndex(locals, name) < 0 {
                 if afterName >= textLength(source) or textAt(source, afterName) =!= "(" {
                     failAt(source, nameStart, prefix, name + " must be called");
                 }
@@ -1896,10 +1901,17 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     }
                 }
                 builtinCursor = expectSymbol(source, builtinCursor, ")", prefix);
-                if builtinCount =!= builtinArityCount {
+                optionalPrompt := name == "inputAll" or name == "inputLine" or name == "inputInt" or name == "inputFloat";
+                if builtinCount =!= builtinArityCount and not (optionalPrompt and builtinCount == 0) {
                     suffix := if builtinArityCount == 1 { " argument" } else { " arguments" };
                     failAt(source, nameStart, prefix, name + " expects " + decimalText(builtinArityCount) + suffix +
                         ", got " + decimalText(builtinCount));
+                }
+                if optionalPrompt {
+                    if builtinCount == 0 { push_back(mut builtinCodes, "undefined"); }
+                    place := lineColumn(source, nameStart);
+                    location := (if prefix == "" { "" } else { prefix + ":" }) + decimalText(place.line) + ":" + decimalText(place.column) + ": InputFault: ";
+                    push_back(mut builtinCodes, textLiteralCode(location));
                 }
                 left = (kind = builtinResultKind(name), code = "lite$" + name + "(" + joinTexts(builtinCodes, ", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = builtinCursor);
@@ -2102,6 +2114,7 @@ tupleZeroParsed := fn(kind: String, next: Int): Parsed {
         if count > 0 { code = code + ", "; }
         code = code + label + ": ";
         if fieldKind == "Int" { code = code + "0n"; }
+        else if fieldKind == "Float" { code = code + "0"; }
         else if fieldKind == "String" { code = code + "\"\""; }
         else { code = code + "false"; }
         count = count + 1;
@@ -2115,6 +2128,7 @@ zeroParsed := fn(kind: String, next: Int): Parsed {
     if isTupleKind(kind) { tupleZeroParsed(kind, next) }
     else if isListKind(kind) { (kind = kind, code = "[]", intValue = 0, textValue = "", constant = false, next = next) }
     else if kind == "Int" { intParsed(intLiteralCode(0, false, "0"), 0, true, next) }
+    else if kind == "Float" { (kind = "Float", code = "0", intValue = 0, textValue = "", constant = false, next = next) }
     else if kind == "String" { textParsed(textLiteralCode(""), "", true, next) }
     else { boolParsed(boolLiteralCode(false), false, true, next) }
 }
@@ -2188,7 +2202,7 @@ valueIfBranchAt := fn(source: String, open: Int, close: Int, prefix: String): Bo
     if cursor >= close { return false; }
     if isNameStart(textAt(source, cursor)) {
         word := textSlice(source, cursor, skipName(source, cursor));
-        if word == "return" or word == "report" or word == "var" or word == "loop" or
+        if word == "return" or word == "outputLine" or word == "output" or word == "var" or word == "loop" or
             word == "break" or word == "continue" or word == "else" or word == "fn" {
             return false;
         }
@@ -2288,7 +2302,7 @@ parseProgram := fn(source: String, prefix: String): Items {
     var currentReturned := false;
     var position := skipTrivia(source, 0, prefix);
     if position == size {
-        failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+        failAt(source, position, prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
     }
     loop position < size {
         ch := textAt(source, position);
@@ -2375,7 +2389,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             failAt(source, afterTail, prefix, "expected ; after expression statement");
         }
         if not isNameStart(ch) {
-            failAt(source, position, prefix, "expected a statement: report, declaration, assignment, if or loop");
+            failAt(source, position, prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
         }
         nameStart := position;
         position = skipName(source, position);
@@ -2447,7 +2461,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             if position < size and textAt(source, position) == "}" and currentName =!= "" and
                 atValueTail(blocks, blockCount) {
                 if currentResult == "Unit" {
-                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
+                    push_back(mut items, (kind = "Return", name = "", runtime = "", code = if parsed.kind == "Unit" { parsed.code } else { "" },
                         intValue = 0, textValue = ""));
                 } else {
                     if parsed.kind =!= currentResult {
@@ -2479,9 +2493,15 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = 0, textValue = ""));
             continue;
         }
-        if (name == "reportError" or name == "exit") and position < size and textAt(source, position) == "(" {
+        if isAdmittedBuiltin(name) and localIndex(locals, name) < 0 and position < size and textAt(source, position) == "(" {
             parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
             position = skipTrivia(source, parsed.next, prefix);
+            if position < size and textAt(source, position) == "}" and currentName =!= "" and atValueTail(blocks, blockCount) {
+                if parsed.kind =!= currentResult { failAt(source, nameStart, prefix, "cannot return " + parsed.kind + " from function " + currentName + " returning " + currentResult); }
+                push_back(mut items, (kind = "Return", name = "", runtime = "", code = parsed.code, intValue = 0, textValue = ""));
+                currentReturned = true;
+                continue;
+            }
             if position >= size or textAt(source, position) =!= ";" {
                 failAt(source, position, prefix, "expected ; after " + name);
             }
@@ -2490,27 +2510,19 @@ parseProgram := fn(source: String, prefix: String): Items {
                 intValue = 0, textValue = ""));
             continue;
         }
-        if name == "report" {
+        if (name == "output" or name == "outputLine") and localIndex(locals, name) < 0 {
             if position >= size or textAt(source, position) =!= "(" {
-                failAt(source, position, prefix, "expected ( after report");
+                failAt(source, position, prefix, "expected ( after " + name);
             }
             position = skipTrivia(source, position + 1, prefix);
-            loop true {
+            loop position < size and textAt(source, position) =!= ")" {
                 argument := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
-                if argument.kind == "Unit" {
-                    failAt(source, position, prefix, "report does not accept a Unit value");
-                }
-                if isTupleKind(argument.kind) {
-                    failAt(source, position, prefix, "report does not accept a tuple value");
-                }
-                if isListKind(argument.kind) {
-                    failAt(source, position, prefix, "report does not accept a list value");
-                }
                 push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
                     intValue = argument.intValue, textValue = argument.textValue));
                 position = skipTrivia(source, argument.next, prefix);
                 if position < size and textAt(source, position) == "," {
                     position = skipTrivia(source, position + 1, prefix);
+                    if position < size and textAt(source, position) == ")" { failAt(source, position, prefix, "expected an Int, String or Bool expression"); }
                 } else {
                     break;
                 }
@@ -2520,7 +2532,7 @@ parseProgram := fn(source: String, prefix: String): Items {
             if position < size and textAt(source, position) == ";" {
                 position = skipTrivia(source, position + 1, prefix);
             }
-            push_back(mut items, (kind = "End", name = "", runtime = "", code = "",
+            push_back(mut items, (kind = if name == "outputLine" { "End" } else { "EndOutput" }, name = "", runtime = "", code = "",
                 intValue = 0, textValue = ""));
             continue;
         }
@@ -2885,7 +2897,11 @@ dedent := fn(indent: String): String {
 
 /** Builds one checked printf call for an Int, String or Bool report value without a trailing newline. */
 cCall := fn(kind: String, code: String): String {
-    if kind == "Int" {
+    if kind == "Unit" {
+        "printf(\"Unit\")"
+    } else if kind == "Float" {
+        "printf(\"%g\", (double)(" + code + "))"
+    } else if kind == "Int" {
         "printf(\"%\" PRId64, (int64_t)(" + code + "))"
     } else if kind == "Bool" {
         "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))"
@@ -2896,7 +2912,7 @@ cCall := fn(kind: String, code: String): String {
 
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
 unsupportedBuiltinCode := fn(code: String): String {
-    if codeUsesTextCall(code, "lite$inputArgs(") or codeUsesTextCall(code, "lite$inputAll(") {
+    if codeUsesTextCall(code, "lite$inputArgs(") or codeUsesTextCall(code, "lite$inputAll(") or codeUsesTextCall(code, "lite$inputLine(") or codeUsesTextCall(code, "lite$inputInt(") or codeUsesTextCall(code, "lite$inputFloat(") {
         "C backend does not support input builtins yet"
     } else if codeUsesTextCall(code, "lite$reportError(") or codeUsesTextCall(code, "lite$exit(") {
         "C backend does not support reportError or exit yet"
@@ -2929,58 +2945,58 @@ usesStringConcat := fn(items: Items): Bool {
 
 /** Emits the checked truncating int64_t division helper. */
 emitIntDivideHelper := fn(): Unit {
-    report("static int64_t lite_divide_int(int64_t left, int64_t right) {");
-    report("    if (right == 0) {");
-    report("        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    if (left == INT64_MIN && right == -1) {");
-    report("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    return left / right;");
-    report("}");
-    report("");
+    outputLine("static int64_t lite_divide_int(int64_t left, int64_t right) {");
+    outputLine("    if (right == 0) {");
+    outputLine("        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    if (left == INT64_MIN && right == -1) {");
+    outputLine("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    return left / right;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked int64_t remainder helper. */
 emitIntRemainderHelper := fn(): Unit {
-    report("static int64_t lite_remainder_int(int64_t left, int64_t right) {");
-    report("    if (right == 0) {");
-    report("        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    if (left == INT64_MIN && right == -1) {");
-    report("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    return left % right;");
-    report("}");
-    report("");
+    outputLine("static int64_t lite_remainder_int(int64_t left, int64_t right) {");
+    outputLine("    if (right == 0) {");
+    outputLine("        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    if (left == INT64_MIN && right == -1) {");
+    outputLine("        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    return left % right;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked int64_t floor-division helper. */
 emitIntFloorDivideHelper := fn(): Unit {
-    report("static int64_t lite_floor_divide_int(int64_t left, int64_t right) {");
-    report("    const int64_t quotient = lite_divide_int(left, right);");
-    report("    const int64_t remainder = left % right;");
-    report("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
-    report("}");
-    report("");
+    outputLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right) {");
+    outputLine("    const int64_t quotient = lite_divide_int(left, right);");
+    outputLine("    const int64_t remainder = left % right;");
+    outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the checked int64_t floor-modulo helper. */
 emitIntFloorModuloHelper := fn(): Unit {
-    report("static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {");
-    report("    if (right == 0) {");
-    report("        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    if (left == INT64_MIN && right == -1) { return 0; }");
-    report("    const int64_t remainder = left % right;");
-    report("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
-    report("}");
-    report("");
+    outputLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {");
+    outputLine("    if (right == 0) {");
+    outputLine("        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    if (left == INT64_MIN && right == -1) { return 0; }");
+    outputLine("    const int64_t remainder = left % right;");
+    outputLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits every checked Int division-family helper the program reads. */
@@ -2996,19 +3012,19 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
 
 /** Emits the checked UTF-8 byte concatenation helper; each allocated result is intentionally leaked by this bootstrap backend. */
 emitStringConcatHelper := fn(): Unit {
-    report("static const char *lite_concat(const char *left, const char *right) {");
-    report("    const size_t left_length = strlen(left);");
-    report("    const size_t right_length = strlen(right);");
-    report("    char *combined = malloc(left_length + right_length + 1);");
-    report("    if (combined == NULL) {");
-    report("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
-    report("        exit(1);");
-    report("    }");
-    report("    memcpy(combined, left, left_length);");
-    report("    memcpy(combined + left_length, right, right_length + 1);");
-    report("    return combined;");
-    report("}");
-    report("");
+    outputLine("static const char *lite_concat(const char *left, const char *right) {");
+    outputLine("    const size_t left_length = strlen(left);");
+    outputLine("    const size_t right_length = strlen(right);");
+    outputLine("    char *combined = malloc(left_length + right_length + 1);");
+    outputLine("    if (combined == NULL) {");
+    outputLine("        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");");
+    outputLine("        exit(1);");
+    outputLine("    }");
+    outputLine("    memcpy(combined, left, left_length);");
+    outputLine("    memcpy(combined + left_length, right, right_length + 1);");
+    outputLine("    return combined;");
+    outputLine("}");
+    outputLine("");
 }
 
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
@@ -3021,10 +3037,10 @@ emitProgram := fn(items: Items): Unit {
         if unsupported =!= "" {
             fail("", unsupported);
         }
-        if item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
+        if isTupleKind(item.kind) or item.kind == "LocalTuple" or item.kind == "VarTuple" or item.kind == "AssignTuple" {
             fail("", "C backend does not support tuple values yet");
         }
-        if item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
+        if isListKind(item.kind) or item.kind == "LocalList" or item.kind == "VarList" or item.kind == "AssignList" {
             fail("", "C backend does not support list values yet");
         }
         if item.kind == "LoopSeq" {
@@ -3037,65 +3053,68 @@ emitProgram := fn(items: Items): Unit {
             fail("", "C backend does not support value if expressions yet");
         }
     }
-    report("#include <stdio.h>");
-    if usesIntDivision(items) or usesStringConcat(items) { report("#include <stdlib.h>"); }
-    report("#include <inttypes.h>");
-    report("#include <stdbool.h>");
-    report("#include <string.h>");
+    outputLine("#include <stdio.h>");
+    if usesIntDivision(items) or usesStringConcat(items) { outputLine("#include <stdlib.h>"); }
+    outputLine("#include <inttypes.h>");
+    outputLine("#include <stdbool.h>");
+    outputLine("#include <string.h>");
     emitIntDivisionHelpers(items);
     if usesStringConcat(items) { emitStringConcatHelper(); }
-    report("int main(void) {");
-    report("    int status = 0;");
+    outputLine("int main(void) {");
+    outputLine("    int status = 0;");
     var indent := "    ";
     var count := 0;
     loop items as item {
         if item.kind == "LocalInt" or item.kind == "VarInt" {
-            report(indent + "int64_t " + item.runtime + " = " + item.code + ";");
-            report(indent + "(void)" + item.runtime + ";");
+            outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "LocalString" or item.kind == "VarString" {
-            report(indent + "const char *" + item.runtime + " = " + item.code + ";");
-            report(indent + "(void)" + item.runtime + ";");
+            outputLine(indent + "const char *" + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "LocalFloat" or item.kind == "VarFloat" {
+            outputLine(indent + "double " + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "(void)" + item.runtime + ";");
         } else if item.kind == "LocalBool" or item.kind == "VarBool" {
-            report(indent + "bool " + item.runtime + " = " + item.code + ";");
-            report(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" {
-            report(indent + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "bool " + item.runtime + " = " + item.code + ";");
+            outputLine(indent + "(void)" + item.runtime + ";");
+        } else if item.kind == "AssignInt" or item.kind == "AssignString" or item.kind == "AssignBool" or item.kind == "AssignFloat" {
+            outputLine(indent + item.runtime + " = " + item.code + ";");
         } else if item.kind == "Break" {
-            report(indent + "break;");
+            outputLine(indent + "break;");
         } else if item.kind == "Continue" {
-            report(indent + "continue;");
+            outputLine(indent + "continue;");
         } else if item.kind == "If" {
-            report(indent + "if (" + item.code + ") {");
+            outputLine(indent + "if (" + item.code + ") {");
             indent = indent + "    ";
         } else if item.kind == "Else" {
             indent = dedent(indent);
-            report(indent + "} else {");
+            outputLine(indent + "} else {");
             indent = indent + "    ";
         } else if item.kind == "ElseIf" {
             indent = dedent(indent);
-            report(indent + "} else if (" + item.code + ") {");
+            outputLine(indent + "} else if (" + item.code + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndIf" {
             indent = dedent(indent);
-            report(indent + "}");
+            outputLine(indent + "}");
         } else if item.kind == "Loop" {
             condition := if item.code == "" { "true" } else { item.code };
-            report(indent + "while (" + condition + ") {");
+            outputLine(indent + "while (" + condition + ") {");
             indent = indent + "    ";
         } else if item.kind == "EndLoop" {
             indent = dedent(indent);
-            report(indent + "}");
-        } else if item.kind == "End" {
-            report(indent + "if (printf(\"\\n\") < 0) { status = 1; }");
+            outputLine(indent + "}");
+        } else if item.kind == "End" or item.kind == "EndOutput" {
+            if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
         } else {
-            if count > 0 { report(indent + "if (printf(\" \") < 0) { status = 1; }"); }
-            report(indent + "if (" + cCall(item.kind, item.code) + " < 0) { status = 1; }");
+            if count > 0 { outputLine(indent + "if (printf(\" \") < 0) { status = 1; }"); }
+            outputLine(indent + "if (" + cCall(item.kind, item.code) + " < 0) { status = 1; }");
             count = count + 1;
         }
     }
-    report("    return status;");
-    report("}");
+    outputLine("    return status;");
+    outputLine("}");
 }
 prefix := sourcePrefix();
 source := inputAll();

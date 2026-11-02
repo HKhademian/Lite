@@ -4,8 +4,17 @@ Current components:
 
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
-- Verification corpus: 36 features, 19 examples, 20 samples, 75 scenarios, 91 target executions
-- Tests: 236 interpreter groups, 8 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
+- Tests: 236 interpreter groups, 11 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Unreleased I/O selection, 2026-11-02: outputLine replaces report with no alias;
+output adds the same space-separated display without a newline. Empty calls are
+allowed; outputLine always adds its newline. All four input helpers accept an
+optional positional String prompt. Generated TS adds strict shared input,
+Float input values, aggregate display for admitted forms, and streaming process
+output. Maintained Lite calls and live fixtures are migrated. The [contract](tooling-and-learning.md#temporary-input-and-output-helpers-selected-2026-11-02)
+and [generated-only seed refresh](../compiler/parity.md#temporary-io-migration)
+record the scope and remaining broader type/native gaps. This is not a release tag.
 
 The igniter tags are annotated and pinned to the source commit that produced
 each milestone. Do not move or delete a published tag; corrections get a new

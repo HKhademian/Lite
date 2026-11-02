@@ -1,7 +1,7 @@
-report(not 1 == 2);
-report(not 1 < 0);
-report(not true == false);
+outputLine(not 1 == 2);
+outputLine(not 1 < 0);
+outputLine(not true == false);
 var flag := true;
 flag = false;
-report(not flag == true);
-report(not flag == false);
+outputLine(not flag == true);
+outputLine(not flag == false);

@@ -2,7 +2,7 @@
   "name": "string-empty",
   "source": {
     "file": "001-004-string-empty.lts",
-    "hash": "sha256:1325b348f07207d688bb06c56956764fda86b80ed35a57f15044ef19bd4a653b"
+    "hash": "sha256:e4428c8c4ec96d553325951e9bc0942c14fd076ecbaaa59249e12beccf5cdc3d"
   },
   "cases": [
     {

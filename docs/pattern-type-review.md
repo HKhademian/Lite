@@ -112,7 +112,7 @@ Option retains .Some/.None. Stored Result cases now use the selected lowercase f
 ```text
 match attempt {
     .ok(value) { use_value(value) }
-    .err(error) { report(error) }
+    .err(error) { outputLine(error) }
 }
 ```
 

@@ -38,7 +38,7 @@ export type Value =
 type Frame = Readonly<{ parent: Frame | undefined; values: Map<number, Value> }>;
 type FunctionCode = Readonly<{ parameters: readonly Binding[]; body: Expr }>;
 type FunctionValue = Readonly<{ kind: 'Function'; code: FunctionCode; environment: Frame }>;
-type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'inputAll' | 'inputArgs' | 'report' | 'reportError' | 'exit'
+type Builtin = 'inputInt' | 'inputFloat' | 'inputLine' | 'inputWord' | 'inputAll' | 'inputArgs' | 'output' | 'outputLine' | 'reportError' | 'exit'
   | 'textLength' | 'textAt' | 'textSlice';
 type Raw = Readonly<{ at: Position }> & (
   | { kind: 'number'; text: string }
@@ -379,7 +379,7 @@ function literalExpr(value: Extract<Value, { kind: 'Int' | 'Float' }>, expected:
 function builtin(name: string): Builtin | undefined {
   switch (name) {
     case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll': case 'inputArgs':
-    case 'report': case 'reportError': case 'exit':
+    case 'output': case 'outputLine': case 'reportError': case 'exit':
     case 'textLength': case 'textAt': case 'textSlice': return name;
     default: return undefined;
   }
@@ -1484,7 +1484,7 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
         case 'inputInt': case 'textLength': type = 'Int'; break;
         case 'inputFloat': type = 'Float'; break;
         case 'inputLine': case 'inputWord': case 'inputAll': case 'textAt': case 'textSlice': type = 'String'; break;
-        case 'report': case 'reportError': type = 'Unit'; break;
+        case 'output': case 'outputLine': case 'reportError': type = 'Unit'; break;
         case 'exit': type = 'Never'; break;
         default: return unreachable(name);
       }
@@ -1497,21 +1497,20 @@ function checkExpression(raw: Raw, names: ReadonlyMap<string, ScopeEntry>, state
           const arg = args[index];
           if (arg === undefined || !fits(arg.type, parameter)) typeError(`${name} argument ${index + 1} must be ${parameter}`, arg?.at ?? at);
         }
-      } else if (name === 'inputInt' || name === 'inputAll') {
+      } else if (name === 'inputInt' || name === 'inputAll' || name === 'inputLine' || name === 'inputFloat') {
         if (args.length > 1 || (args[0] !== undefined && !fits(args[0].type, 'String'))) {
           typeError(`${name} accepts zero arguments or one String prompt`, at);
         }
-      } else if (name === 'report') {
-        if (args.length === 0) typeError('report expects at least one value', at);
-        if (args.some(arg => typeof arg.type !== 'string' && arg.type.kind !== 'Tuple')) {
-          typeError('report currently accepts scalar, Unit and flat tuple values only', at);
+      } else if (name === 'output' || name === 'outputLine') {
+        if (args.some(arg => typeof arg.type !== 'string' && arg.type.kind === 'Function')) {
+          typeError(`${name} does not accept function values`, at);
         }
       } else if (name === 'exit') {
         if (args.length > 1 || (args[0] !== undefined && !fits(args[0].type, 'Int'))) {
           typeError('exit accepts zero arguments or one Int code', at);
         }
       } else if (args.length !== count) { typeError(`${name} expects ${count} argument(s)`, at); }
-      if (name !== 'report' && args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept aggregate/function values yet; report scalar components', at);
+      if (name !== 'output' && name !== 'outputLine' && args.some(arg => typeof arg.type !== 'string')) typeError('helpers do not accept aggregate/function values yet; output scalar components', at);
       return { kind: 'call', name, args, type, at };
     }
     default: return unreachable(raw);
@@ -1827,6 +1826,12 @@ function format(value: Value): string {
 }
 /** Displays one report argument; flat tuples use labeled source-like parentheses. */
 function formatReport(value: Value, type: Type): string {
+  if (value.kind === 'Array' || value.kind === 'List') {
+    if (typeof type === 'string' || (type.kind !== 'Array' && type.kind !== 'List')) {
+      throw new Error('igniter invariant: sequence display without a sequence type');
+    }
+    return `[${value.items.map(item => formatReport(item, type.element)).join(', ')}]`;
+  }
   if (value.kind !== 'Tuple') return format(value);
   if (typeof type === 'string' || type.kind !== 'Tuple') {
     throw new Error('igniter invariant: tuple display without a tuple type');
@@ -2186,15 +2191,14 @@ export function execute(program: Program, io: IO): number {
             }
             return { kind: 'String', value: points.slice(Number(start.value), Number(end.value)).join('') };
           }
-          case 'report': case 'reportError': {
-            if (args.length === 0) throw new Error('igniter invariant: missing report argument');
-            const writer = expr.name === 'report' ? io.report : io.reportError;
+          case 'output': case 'outputLine': case 'reportError': {
+            const writer = expr.name === 'reportError' ? io.reportError : io.report;
             const text = args.map((value, index) => {
               const argument = expr.args[index];
               if (argument === undefined) throw new Error('igniter invariant: missing checked report argument');
               return formatReport(value, argument.type);
             }).join(' ');
-            writer(text + '\n'); return UNIT;
+            writer(text + (expr.name === 'output' ? '' : '\n')); return UNIT;
           }
           case 'exit': {
             const value = args[0];
@@ -2203,7 +2207,7 @@ export function execute(program: Program, io: IO): number {
             throw new EndRun(Number(code));
           }
           case 'inputInt': case 'inputFloat': case 'inputLine': case 'inputWord': case 'inputAll': {
-            if ((expr.name === 'inputInt' || expr.name === 'inputAll') && args[0] !== undefined) {
+            if (expr.name !== 'inputWord' && args[0] !== undefined) {
               const prompt = args[0];
               if (prompt.kind !== 'String') throw new Error('igniter invariant: non-String checked prompt');
               io.report(prompt.value);

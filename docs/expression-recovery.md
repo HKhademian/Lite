@@ -21,7 +21,7 @@ first := pop_front(mut values) else {
 }
 
 value := values[index] else(fault) {
-    report(fault);
+    outputLine(fault);
     fallback_value()
 }
 ```
@@ -32,7 +32,7 @@ The same source form already handles returned errors:
 
 ```text
 user := load_user(id) else(error) {
-    report(error);
+    outputLine(error);
     guest_user()
 }
 ```
@@ -50,7 +50,7 @@ Clarified by the user, 2026-10-26 ([LP-0003 r1](proposals/LP-0003-pending-failur
 Process clauses in written `else` order, independently of the order in which errors occurred. A matching clause consumes its match, runs its handler, and leaves every unmatched occurrence for later handling. A nonmatching clause runs no handler and consumes nothing. An empty remainder matches no failure clause, including receiverless/catch-all clauses; it does not trigger a fallback merely because the target's normal value could be Unit. Existing coverage of new failures from an earlier handler remains selected, so a later clause can still run if that earlier handler introduces a new matching failure.
 
 ```text
-status := { save_report() }
+status := { save_outputLine() }
     else (: DiskFull) { "Write failed" }
     else (: CloseFailed) { "Cleanup failed" }
 ```
@@ -158,7 +158,7 @@ Selected 2026-10-27 in [LP-0008 r1](proposals/LP-0008-recovery-block-tags-and-tr
 A handler can tag its own body:
 
 ```text
-value := { save_report() }
+value := { save_outputLine() }
     else ...errs: DiskFull @myblock {
         return @myblock first_value()
     }
@@ -175,8 +175,8 @@ An operation or block target can use receiverless or untyped `else` to match eve
 
 ```text
 target else { recover_any_failure() }
-target else (_) { report(_); fallback() }
-target else (failure) { report(failure); fallback() }
+target else (_) { outputLine(_); fallback() }
+target else (failure) { outputLine(failure); fallback() }
 ```
 
 Omitting the receiver catches without binding. An untyped name matches all supported failures and binds a broad failure value. `_` also matches all and is an ordinary readable binding, so it can be used in the handler or left unused without a warning; it is not a special nonbinding wildcard. When both returned errors and panics can reach the target, the exact static type and origin representation of that broad value remain open.

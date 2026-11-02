@@ -1,1 +1,1 @@
-report(textLength(inputAll()));
+outputLine(textLength(inputAll()));

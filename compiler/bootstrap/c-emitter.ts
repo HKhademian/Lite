@@ -4,7 +4,7 @@ declare const process: {
     argv: string[];
     exit(code: number): never;
     getBuiltinModule(name: "node:fs"): {
-        readFileSync(fd: number, encoding: "utf8"): string;
+        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;
         writeSync(fd: number, text: string): number;
     };
 };
@@ -13,8 +13,50 @@ function lite$inputArgs(): string[] {
     return process.argv.slice(2);
 }
 
-function lite$inputAll(): string {
-    return process.getBuiltinModule("node:fs").readFileSync(0, "utf8");
+declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };
+const lite$decoder = new TextDecoder("utf-8", { fatal: true });
+const lite$bytes = new Uint8Array(4096);
+let lite$byteAt = 0, lite$byteEnd = 0;
+let lite$ended = false;
+let lite$pending: string | null | undefined;
+function lite$inputFault(at: string, message: string): never {
+    process.getBuiltinModule("node:fs").writeSync(2, at + message + "\n");
+    process.exit(1);
+}
+function lite$prompt(text: string | undefined): void {
+    if (text === undefined) return;
+    process.getBuiltinModule("node:fs").writeSync(1, lite_out + text);
+    lite_out = "";
+}
+function lite$peek(at: string): string | null {
+    if (lite$pending !== undefined) return lite$pending;
+    if (lite$ended) return null;
+    try {
+        while (true) {
+            if (lite$byteAt === lite$byteEnd) {
+                lite$byteEnd = process.getBuiltinModule("node:fs").readSync(0, lite$bytes, 0, lite$bytes.length, null);
+                lite$byteAt = 0;
+                if (lite$byteEnd === 0) {
+                    lite$ended = true;
+                    lite$pending = lite$decoder.decode() || null;
+                    return lite$pending;
+                }
+            }
+            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });
+            if (text !== "") { lite$pending = text; return text; }
+        }
+    } catch (error) {
+        return lite$inputFault(at, "cannot read input: " + (error instanceof Error ? error.message : String(error)));
+    }
+}
+function lite$take(at: string): string | null {
+    const text = lite$peek(at); lite$pending = undefined; return text;
+}
+function lite$inputAll(prompt: string | undefined, at: string): string {
+    lite$prompt(prompt);
+    let text = "";
+    for (let ch = lite$take(at); ch !== null; ch = lite$take(at)) text += ch;
+    return text;
 }
 
 function lite$reportError(text: string): void {
@@ -106,7 +148,12 @@ function lite$remainderInt(left: bigint, right: bigint): bigint {
     return left % right;
 }
 
-export function main(): string {
+export function main(lite$write?: (text: string) => void): string {
+    function lite$emit(text: string): void {
+        if (lite$write === undefined) lite_out += text;
+        else lite$write(text);
+    }
+    void lite$emit;
     function liteFn_intMin(): bigint {
         return (-9223372036854775808n);
     }
@@ -962,7 +1009,7 @@ export function main(): string {
         void lite_position;
         void lite_name;
         void lite_prefix;
-        liteFn_failAt(lite_source, lite_position, lite_prefix, (((((((("unsupported feature \"") + (lite_name))) + ("\": see "))) + (liteFn_featureDoc(lite_name)))) + ("; the restricted compiler accepts Int/String/Bool expressions, locals, report, if/else and loop only")));
+        liteFn_failAt(lite_source, lite_position, lite_prefix, (((((((("unsupported feature \"") + (lite_name))) + ("\": see "))) + (liteFn_featureDoc(lite_name)))) + ("; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only")));
     }
     void liteFn_unsupportedFeature;
     function liteFn_findFunction(lite_functions: { name: string; result: string; first: bigint; count: bigint }[], lite_name: string): bigint {
@@ -990,7 +1037,7 @@ export function main(): string {
         void lite_position;
         void lite_prefix;
         void lite_target;
-        liteFn_failAt(lite_source, lite_position, lite_prefix, (((("unsupported type alias ") + (lite_target))) + ("; only Int, String, Bool, Unit, List<T>, flat named tuples and aliases are supported")));
+        liteFn_failAt(lite_source, lite_position, lite_prefix, (((("unsupported type alias ") + (lite_target))) + ("; only Int, Float, String, Bool, Unit, List<T>, flat named tuples and aliases are supported")));
     }
     void liteFn_unsupportedAliasTarget;
     function liteFn_findAlias(lite_aliases: { name: string; target: string; at: bigint; end: bigint }[], lite_name: string): bigint {
@@ -1302,7 +1349,7 @@ export function main(): string {
         if (((lite_afterTrivia) < (lite_size))) {
             liteFn_failAt(lite_source, lite_position, lite_prefix, (("unexpected text after type ") + (lite_name)));
         }
-        if (((((((((lite_name) === ("Int"))) || (((lite_name) === ("String"))))) || (((lite_name) === ("Bool"))))) || (((lite_name) === ("Unit"))))) {
+        if (((((((((((lite_name) === ("Int"))) || (((lite_name) === ("Float"))))) || (((lite_name) === ("String"))))) || (((lite_name) === ("Bool"))))) || (((lite_name) === ("Unit"))))) {
             return lite_name;
         }
         if (liteFn_isUnsupportedAliasTarget(lite_name)) {
@@ -1399,7 +1446,7 @@ export function main(): string {
             void lite_componentName;
             let lite_componentKind = "";
             void lite_componentKind;
-            if (((((((((lite_componentName) === ("Int"))) || (((lite_componentName) === ("String"))))) || (((lite_componentName) === ("Bool"))))) || (((lite_componentName) === ("Unit"))))) {
+            if (((((((((((lite_componentName) === ("Int"))) || (((lite_componentName) === ("Float"))))) || (((lite_componentName) === ("String"))))) || (((lite_componentName) === ("Bool"))))) || (((lite_componentName) === ("Unit"))))) {
                 lite_componentKind = lite_componentName;
             } else if (((liteFn_findAlias([...(lite_aliases)], lite_componentName)) >= (0n))) {
                 const lite_seen: string[] = [...([])];
@@ -1469,7 +1516,7 @@ export function main(): string {
             lite_close = liteFn_expectSymbol(lite_source, lite_close, ">", lite_prefix);
             return { kind: (((("List<") + ((lite_inner).kind))) + (">")), next: lite_close };
         }
-        if (((((((((lite_name) === ("Int"))) || (((lite_name) === ("String"))))) || (((lite_name) === ("Bool"))))) || (((lite_name) === ("Unit"))))) {
+        if (((((((((((lite_name) === ("Int"))) || (((lite_name) === ("Float"))))) || (((lite_name) === ("String"))))) || (((lite_name) === ("Bool"))))) || (((lite_name) === ("Unit"))))) {
             return { kind: lite_name, next: lite_after };
         }
         if (((liteFn_findAlias([...(lite_aliases)], lite_name)) >= (0n))) {
@@ -2134,23 +2181,23 @@ export function main(): string {
     void liteFn_copiedValueCode;
     function liteFn_isAdmittedBuiltin(lite_name: string): boolean {
         void lite_name;
-        return ((((((((((((((lite_name) === ("inputArgs"))) || (((lite_name) === ("inputAll"))))) || (((lite_name) === ("reportError"))))) || (((lite_name) === ("exit"))))) || (((lite_name) === ("textLength"))))) || (((lite_name) === ("textAt"))))) || (((lite_name) === ("textSlice"))));
+        return ((((((((((((((((((((lite_name) === ("inputArgs"))) || (((lite_name) === ("inputAll"))))) || (((lite_name) === ("inputLine"))))) || (((lite_name) === ("inputInt"))))) || (((lite_name) === ("inputFloat"))))) || (((lite_name) === ("reportError"))))) || (((lite_name) === ("exit"))))) || (((lite_name) === ("textLength"))))) || (((lite_name) === ("textAt"))))) || (((lite_name) === ("textSlice"))));
     }
     void liteFn_isAdmittedBuiltin;
     function liteFn_builtinArity(lite_name: string): bigint {
         void lite_name;
-        return (Boolean(((((lite_name) === ("inputArgs"))) || (((lite_name) === ("inputAll"))))) ? 0n : (Boolean(((lite_name) === ("textAt"))) ? 2n : (Boolean(((lite_name) === ("textSlice"))) ? 3n : 1n)));
+        return (Boolean(((lite_name) === ("inputArgs"))) ? 0n : (Boolean(((lite_name) === ("textAt"))) ? 2n : (Boolean(((lite_name) === ("textSlice"))) ? 3n : 1n)));
     }
     void liteFn_builtinArity;
     function liteFn_builtinParameterKind(lite_name: string, lite_index: bigint): string {
         void lite_name;
         void lite_index;
-        return (Boolean(((((lite_name) === ("reportError"))) || (((lite_name) === ("textLength"))))) ? "String" : (Boolean(((((lite_name) === ("textAt"))) || (((lite_name) === ("textSlice"))))) ? (Boolean(((lite_index) === (0n))) ? "String" : "Int") : "Int"));
+        return (Boolean(((((((((((((lite_name) === ("reportError"))) || (((lite_name) === ("textLength"))))) || (((lite_name) === ("inputAll"))))) || (((lite_name) === ("inputLine"))))) || (((lite_name) === ("inputInt"))))) || (((lite_name) === ("inputFloat"))))) ? "String" : (Boolean(((((lite_name) === ("textAt"))) || (((lite_name) === ("textSlice"))))) ? (Boolean(((lite_index) === (0n))) ? "String" : "Int") : "Int"));
     }
     void liteFn_builtinParameterKind;
     function liteFn_builtinResultKind(lite_name: string): string {
         void lite_name;
-        return (Boolean(((lite_name) === ("inputArgs"))) ? "List<String>" : (Boolean(((((((lite_name) === ("inputAll"))) || (((lite_name) === ("textAt"))))) || (((lite_name) === ("textSlice"))))) ? "String" : (Boolean(((lite_name) === ("textLength"))) ? "Int" : "Unit")));
+        return (Boolean(((lite_name) === ("inputArgs"))) ? "List<String>" : (Boolean(((((((((lite_name) === ("inputAll"))) || (((lite_name) === ("inputLine"))))) || (((lite_name) === ("textAt"))))) || (((lite_name) === ("textSlice"))))) ? "String" : (Boolean(((((lite_name) === ("textLength"))) || (((lite_name) === ("inputInt"))))) ? "Int" : (Boolean(((lite_name) === ("inputFloat"))) ? "Float" : "Unit"))));
     }
     void liteFn_builtinResultKind;
     function liteFn_parseListGrant(lite_source: string, lite_open: bigint, lite_prefix: string, lite_locals: { name: string; runtime: string; kind: string; mutable: boolean; writable: boolean; depth: bigint; constant: boolean; code: string; intValue: bigint; textValue: string }[], lite_operation: string): { runtime: string; kind: string; next: bigint } {
@@ -2223,7 +2270,9 @@ export function main(): string {
         const lite_ch = lite$textAt(lite_source, lite_start);
         void lite_ch;
         if (((lite_ch) === ("("))) {
-            if (liteFn_looksLikeTupleEntry(lite_source, (lite_start + 1n), lite_prefix)) {
+            if (((lite$textAt(lite_source, liteFn_skipTrivia(lite_source, (lite_start + 1n), lite_prefix))) === (")"))) {
+                lite_left = { kind: "Unit", code: "undefined", intValue: 0n, textValue: "", constant: true, next: (liteFn_skipTrivia(lite_source, (lite_start + 1n), lite_prefix) + 1n) };
+            } else if (liteFn_looksLikeTupleEntry(lite_source, (lite_start + 1n), lite_prefix)) {
                 let lite_cursor = liteFn_skipTrivia(lite_source, (lite_start + 1n), lite_prefix);
                 void lite_cursor;
                 const lite_labels: string[] = [...([])];
@@ -2380,7 +2429,9 @@ export function main(): string {
             void lite_next;
             const lite_name = lite$textSlice(lite_source, lite_nameStart, lite_next);
             void lite_name;
-            if (((lite_name) === ("true"))) {
+            if (((lite_name) === ("Unit"))) {
+                lite_left = { kind: "Unit", code: "undefined", intValue: 0n, textValue: "", constant: true, next: lite_next };
+            } else if (((lite_name) === ("true"))) {
                 lite_left = liteFn_boolParsed(liteFn_boolLiteralCode(true), true, true, lite_next);
             } else if (((lite_name) === ("false"))) {
                 lite_left = liteFn_boolParsed(liteFn_boolLiteralCode(false), false, true, lite_next);
@@ -2540,7 +2591,7 @@ export function main(): string {
                     lite_left = { kind: (lite_info).result, code: (((((((("liteFn_") + (lite_calleeName))) + ("("))) + (liteFn_joinTexts([...(lite_argumentCodes)], ", ")))) + (")")), intValue: 0n, textValue: "", constant: false, next: lite_cursor };
                 } else if (((lite_callableIndex) >= (0n))) {
                     liteFn_failAt(lite_source, lite_nameStart, lite_prefix, (((("function ") + (lite_calleeName))) + (" must be called")));
-                } else if (liteFn_isAdmittedBuiltin(lite_name)) {
+                } else if (((liteFn_isAdmittedBuiltin(lite_name)) && (((liteFn_localIndex([...(lite_locals)], lite_name)) < (0n))))) {
                     if (((((lite_afterName) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_afterName)) !== ("("))))) {
                         liteFn_failAt(lite_source, lite_nameStart, lite_prefix, ((lite_name) + (" must be called")));
                     }
@@ -2585,10 +2636,22 @@ export function main(): string {
                         }
                     }
                     lite_builtinCursor = liteFn_expectSymbol(lite_source, lite_builtinCursor, ")", lite_prefix);
-                    if (((lite_builtinCount) !== (lite_builtinArityCount))) {
+                    const lite_optionalPrompt = ((((((((lite_name) === ("inputAll"))) || (((lite_name) === ("inputLine"))))) || (((lite_name) === ("inputInt"))))) || (((lite_name) === ("inputFloat"))));
+                    void lite_optionalPrompt;
+                    if (((((lite_builtinCount) !== (lite_builtinArityCount))) && ((!((((lite_optionalPrompt) && (((lite_builtinCount) === (0n)))))))))) {
                         const lite_suffix = (Boolean(((lite_builtinArityCount) === (1n))) ? " argument" : " arguments");
                         void lite_suffix;
                         liteFn_failAt(lite_source, lite_nameStart, lite_prefix, ((((((((((lite_name) + (" expects "))) + (liteFn_decimalText(lite_builtinArityCount)))) + (lite_suffix))) + (", got "))) + (liteFn_decimalText(lite_builtinCount))));
+                    }
+                    if (lite_optionalPrompt) {
+                        if (((lite_builtinCount) === (0n))) {
+                            lite_builtinCodes.push("undefined");
+                        }
+                        const lite_place = liteFn_lineColumn(lite_source, lite_nameStart);
+                        void lite_place;
+                        const lite_location = ((((((((((Boolean(((lite_prefix) === (""))) ? "" : ((lite_prefix) + (":"))))) + (liteFn_decimalText((lite_place).line)))) + (":"))) + (liteFn_decimalText((lite_place).column)))) + (": InputFault: "));
+                        void lite_location;
+                        lite_builtinCodes.push(liteFn_textLiteralCode(lite_location));
                     }
                     lite_left = { kind: liteFn_builtinResultKind(lite_name), code: (((((((("lite$") + (lite_name))) + ("("))) + (liteFn_joinTexts([...(lite_builtinCodes)], ", ")))) + (")")), intValue: 0n, textValue: "", constant: false, next: lite_builtinCursor };
                 } else if (((((((lite_name) === ("push_back"))) && (((lite_afterName) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_afterName)) === ("("))))) {
@@ -2845,6 +2908,8 @@ export function main(): string {
             lite_code = ((((lite_code) + (lite_label))) + (": "));
             if (((lite_fieldKind) === ("Int"))) {
                 lite_code = ((lite_code) + ("0n"));
+            } else if (((lite_fieldKind) === ("Float"))) {
+                lite_code = ((lite_code) + ("0"));
             } else if (((lite_fieldKind) === ("String"))) {
                 lite_code = ((lite_code) + ("\"\""));
             } else {
@@ -2861,7 +2926,7 @@ export function main(): string {
     function liteFn_zeroParsed(lite_kind: string, lite_next: bigint): { kind: string; code: string; intValue: bigint; textValue: string; constant: boolean; next: bigint } {
         void lite_kind;
         void lite_next;
-        return (Boolean(liteFn_isTupleKind(lite_kind)) ? liteFn_tupleZeroParsed(lite_kind, lite_next) : (Boolean(liteFn_isListKind(lite_kind)) ? { kind: lite_kind, code: "[]", intValue: 0n, textValue: "", constant: false, next: lite_next } : (Boolean(((lite_kind) === ("Int"))) ? liteFn_intParsed(liteFn_intLiteralCode(0n, false, "0"), 0n, true, lite_next) : (Boolean(((lite_kind) === ("String"))) ? liteFn_textParsed(liteFn_textLiteralCode(""), "", true, lite_next) : liteFn_boolParsed(liteFn_boolLiteralCode(false), false, true, lite_next)))));
+        return (Boolean(liteFn_isTupleKind(lite_kind)) ? liteFn_tupleZeroParsed(lite_kind, lite_next) : (Boolean(liteFn_isListKind(lite_kind)) ? { kind: lite_kind, code: "[]", intValue: 0n, textValue: "", constant: false, next: lite_next } : (Boolean(((lite_kind) === ("Int"))) ? liteFn_intParsed(liteFn_intLiteralCode(0n, false, "0"), 0n, true, lite_next) : (Boolean(((lite_kind) === ("Float"))) ? { kind: "Float", code: "0", intValue: 0n, textValue: "", constant: false, next: lite_next } : (Boolean(((lite_kind) === ("String"))) ? liteFn_textParsed(liteFn_textLiteralCode(""), "", true, lite_next) : liteFn_boolParsed(liteFn_boolLiteralCode(false), false, true, lite_next))))));
     }
     void liteFn_zeroParsed;
     function liteFn_storageKind(lite_kind: string): string {
@@ -2954,7 +3019,7 @@ export function main(): string {
         if (liteFn_isNameStart(lite$textAt(lite_source, lite_cursor))) {
             const lite_word = lite$textSlice(lite_source, lite_cursor, liteFn_skipName(lite_source, lite_cursor));
             void lite_word;
-            if (((((((((((((((((lite_word) === ("return"))) || (((lite_word) === ("report"))))) || (((lite_word) === ("var"))))) || (((lite_word) === ("loop"))))) || (((lite_word) === ("break"))))) || (((lite_word) === ("continue"))))) || (((lite_word) === ("else"))))) || (((lite_word) === ("fn"))))) {
+            if (((((((((((((((((((lite_word) === ("return"))) || (((lite_word) === ("outputLine"))))) || (((lite_word) === ("output"))))) || (((lite_word) === ("var"))))) || (((lite_word) === ("loop"))))) || (((lite_word) === ("break"))))) || (((lite_word) === ("continue"))))) || (((lite_word) === ("else"))))) || (((lite_word) === ("fn"))))) {
                 return false;
             }
         }
@@ -3098,7 +3163,7 @@ export function main(): string {
         let lite_position = liteFn_skipTrivia(lite_source, 0n, lite_prefix);
         void lite_position;
         if (((lite_position) === (lite_size))) {
-            liteFn_failAt(lite_source, lite_position, lite_prefix, "expected a statement: report, declaration, assignment, if or loop");
+            liteFn_failAt(lite_source, lite_position, lite_prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
         }
         while (((lite_position) < (lite_size))) {
             const lite_ch = lite$textAt(lite_source, lite_position);
@@ -3186,7 +3251,7 @@ export function main(): string {
                 liteFn_failAt(lite_source, lite_afterTail, lite_prefix, "expected ; after expression statement");
             }
             if ((!(liteFn_isNameStart(lite_ch)))) {
-                liteFn_failAt(lite_source, lite_position, lite_prefix, "expected a statement: report, declaration, assignment, if or loop");
+                liteFn_failAt(lite_source, lite_position, lite_prefix, "expected a statement: output/outputLine, declaration, assignment, if or loop");
             }
             const lite_nameStart = lite_position;
             void lite_nameStart;
@@ -3261,7 +3326,7 @@ export function main(): string {
                 lite_position = liteFn_skipTrivia(lite_source, (lite_parsed).next, lite_prefix);
                 if (((((((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) === ("}"))))) && (((lite_currentName) !== (""))))) && (liteFn_atValueTail([...(lite_blocks)], lite_blockCount)))) {
                     if (((lite_currentResult) === ("Unit"))) {
-                        lite_items.push({ kind: "Return", name: "", runtime: "", code: "", intValue: 0n, textValue: "" });
+                        lite_items.push({ kind: "Return", name: "", runtime: "", code: (Boolean((((lite_parsed).kind) === ("Unit"))) ? (lite_parsed).code : ""), intValue: 0n, textValue: "" });
                     } else {
                         if ((((lite_parsed).kind) !== (lite_currentResult))) {
                             liteFn_failAt(lite_source, lite_nameStart, lite_prefix, (((((((((("cannot return ") + ((lite_parsed).kind))) + (" from function "))) + (lite_currentName))) + (" returning "))) + (lite_currentResult)));
@@ -3289,10 +3354,18 @@ export function main(): string {
                 lite_items.push({ kind: "Call", name: "", runtime: "", code: (lite_parsed).code, intValue: 0n, textValue: "" });
                 continue;
             }
-            if ((((((((((lite_name) === ("reportError"))) || (((lite_name) === ("exit")))))) && (((lite_position) < (lite_size))))) && (((lite$textAt(lite_source, lite_position)) === ("("))))) {
+            if (((((((liteFn_isAdmittedBuiltin(lite_name)) && (((liteFn_localIndex([...(lite_locals)], lite_name)) < (0n))))) && (((lite_position) < (lite_size))))) && (((lite$textAt(lite_source, lite_position)) === ("("))))) {
                 const lite_parsed = liteFn_parseExpression(lite_source, lite_nameStart, lite_prefix, [...(lite_locals)], [...(lite_functions)], [...(lite_functionParams)], lite_currentName);
                 void lite_parsed;
                 lite_position = liteFn_skipTrivia(lite_source, (lite_parsed).next, lite_prefix);
+                if (((((((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) === ("}"))))) && (((lite_currentName) !== (""))))) && (liteFn_atValueTail([...(lite_blocks)], lite_blockCount)))) {
+                    if ((((lite_parsed).kind) !== (lite_currentResult))) {
+                        liteFn_failAt(lite_source, lite_nameStart, lite_prefix, (((((((((("cannot return ") + ((lite_parsed).kind))) + (" from function "))) + (lite_currentName))) + (" returning "))) + (lite_currentResult)));
+                    }
+                    lite_items.push({ kind: "Return", name: "", runtime: "", code: (lite_parsed).code, intValue: 0n, textValue: "" });
+                    lite_currentReturned = true;
+                    continue;
+                }
                 if (((((lite_position) >= (lite_size))) || (((lite$textAt(lite_source, lite_position)) !== (";"))))) {
                     liteFn_failAt(lite_source, lite_position, lite_prefix, (("expected ; after ") + (lite_name)));
                 }
@@ -3300,27 +3373,21 @@ export function main(): string {
                 lite_items.push({ kind: "Call", name: "", runtime: "", code: (lite_parsed).code, intValue: 0n, textValue: "" });
                 continue;
             }
-            if (((lite_name) === ("report"))) {
+            if ((((((((lite_name) === ("output"))) || (((lite_name) === ("outputLine")))))) && (((liteFn_localIndex([...(lite_locals)], lite_name)) < (0n))))) {
                 if (((((lite_position) >= (lite_size))) || (((lite$textAt(lite_source, lite_position)) !== ("("))))) {
-                    liteFn_failAt(lite_source, lite_position, lite_prefix, "expected ( after report");
+                    liteFn_failAt(lite_source, lite_position, lite_prefix, (("expected ( after ") + (lite_name)));
                 }
                 lite_position = liteFn_skipTrivia(lite_source, (lite_position + 1n), lite_prefix);
-                while (Boolean(true)) {
+                while (((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) !== (")"))))) {
                     const lite_argument = liteFn_parseExpression(lite_source, lite_position, lite_prefix, [...(lite_locals)], [...(lite_functions)], [...(lite_functionParams)], lite_currentName);
                     void lite_argument;
-                    if ((((lite_argument).kind) === ("Unit"))) {
-                        liteFn_failAt(lite_source, lite_position, lite_prefix, "report does not accept a Unit value");
-                    }
-                    if (liteFn_isTupleKind((lite_argument).kind)) {
-                        liteFn_failAt(lite_source, lite_position, lite_prefix, "report does not accept a tuple value");
-                    }
-                    if (liteFn_isListKind((lite_argument).kind)) {
-                        liteFn_failAt(lite_source, lite_position, lite_prefix, "report does not accept a list value");
-                    }
                     lite_items.push({ kind: (lite_argument).kind, name: "", runtime: "", code: (lite_argument).code, intValue: (lite_argument).intValue, textValue: (lite_argument).textValue });
                     lite_position = liteFn_skipTrivia(lite_source, (lite_argument).next, lite_prefix);
                     if (((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) === (","))))) {
                         lite_position = liteFn_skipTrivia(lite_source, (lite_position + 1n), lite_prefix);
+                        if (((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) === (")"))))) {
+                            liteFn_failAt(lite_source, lite_position, lite_prefix, "expected an Int, String or Bool expression");
+                        }
                     } else {
                         break;
                     }
@@ -3330,7 +3397,7 @@ export function main(): string {
                 if (((((lite_position) < (lite_size))) && (((lite$textAt(lite_source, lite_position)) === (";"))))) {
                     lite_position = liteFn_skipTrivia(lite_source, (lite_position + 1n), lite_prefix);
                 }
-                lite_items.push({ kind: "End", name: "", runtime: "", code: "", intValue: 0n, textValue: "" });
+                lite_items.push({ kind: (Boolean(((lite_name) === ("outputLine"))) ? "End" : "EndOutput"), name: "", runtime: "", code: "", intValue: 0n, textValue: "" });
                 continue;
             }
             if (((lite_name) === ("if"))) {
@@ -3730,12 +3797,12 @@ export function main(): string {
     function liteFn_cCall(lite_kind: string, lite_code: string): string {
         void lite_kind;
         void lite_code;
-        return (Boolean(((lite_kind) === ("Int"))) ? (((("printf(\"%\" PRId64, (int64_t)(") + (lite_code))) + ("))")) : (Boolean(((lite_kind) === ("Bool"))) ? (((("printf(\"%s\", ((") + (lite_code))) + (") ? \"true\" : \"false\"))")) : (((("printf(\"%s\", ") + (lite_code))) + (")"))));
+        return (Boolean(((lite_kind) === ("Unit"))) ? "printf(\"Unit\")" : (Boolean(((lite_kind) === ("Float"))) ? (((("printf(\"%g\", (double)(") + (lite_code))) + ("))")) : (Boolean(((lite_kind) === ("Int"))) ? (((("printf(\"%\" PRId64, (int64_t)(") + (lite_code))) + ("))")) : (Boolean(((lite_kind) === ("Bool"))) ? (((("printf(\"%s\", ((") + (lite_code))) + (") ? \"true\" : \"false\"))")) : (((("printf(\"%s\", ") + (lite_code))) + (")"))))));
     }
     void liteFn_cCall;
     function liteFn_unsupportedBuiltinCode(lite_code: string): string {
         void lite_code;
-        return (Boolean(((liteFn_codeUsesTextCall(lite_code, "lite$inputArgs(")) || (liteFn_codeUsesTextCall(lite_code, "lite$inputAll(")))) ? "C backend does not support input builtins yet" : (Boolean(((liteFn_codeUsesTextCall(lite_code, "lite$reportError(")) || (liteFn_codeUsesTextCall(lite_code, "lite$exit(")))) ? "C backend does not support reportError or exit yet" : (Boolean(((((liteFn_codeUsesTextCall(lite_code, "lite$textLength(")) || (liteFn_codeUsesTextCall(lite_code, "lite$textAt(")))) || (liteFn_codeUsesTextCall(lite_code, "lite$textSlice(")))) ? "C backend does not support text builtins yet" : "")));
+        return (Boolean(((((((((liteFn_codeUsesTextCall(lite_code, "lite$inputArgs(")) || (liteFn_codeUsesTextCall(lite_code, "lite$inputAll(")))) || (liteFn_codeUsesTextCall(lite_code, "lite$inputLine(")))) || (liteFn_codeUsesTextCall(lite_code, "lite$inputInt(")))) || (liteFn_codeUsesTextCall(lite_code, "lite$inputFloat(")))) ? "C backend does not support input builtins yet" : (Boolean(((liteFn_codeUsesTextCall(lite_code, "lite$reportError(")) || (liteFn_codeUsesTextCall(lite_code, "lite$exit(")))) ? "C backend does not support reportError or exit yet" : (Boolean(((((liteFn_codeUsesTextCall(lite_code, "lite$textLength(")) || (liteFn_codeUsesTextCall(lite_code, "lite$textAt(")))) || (liteFn_codeUsesTextCall(lite_code, "lite$textSlice(")))) ? "C backend does not support text builtins yet" : "")));
     }
     void liteFn_unsupportedBuiltinCode;
     function liteFn_usesIntHelper(lite_items: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[], lite_name: string): boolean {
@@ -3762,94 +3829,94 @@ export function main(): string {
     void liteFn_usesStringConcat;
     function liteFn_emitIntDivideHelper(): void {
         const lite$report0 = "static int64_t lite_divide_int(int64_t left, int64_t right) {";
-        lite_out += lite$report0 + "\n";
+        lite$emit(lite$report0 + "\n");
         const lite$report1 = "    if (right == 0) {";
-        lite_out += lite$report1 + "\n";
+        lite$emit(lite$report1 + "\n");
         const lite$report2 = "        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");";
-        lite_out += lite$report2 + "\n";
+        lite$emit(lite$report2 + "\n");
         const lite$report3 = "        exit(1);";
-        lite_out += lite$report3 + "\n";
+        lite$emit(lite$report3 + "\n");
         const lite$report4 = "    }";
-        lite_out += lite$report4 + "\n";
+        lite$emit(lite$report4 + "\n");
         const lite$report5 = "    if (left == INT64_MIN && right == -1) {";
-        lite_out += lite$report5 + "\n";
+        lite$emit(lite$report5 + "\n");
         const lite$report6 = "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");";
-        lite_out += lite$report6 + "\n";
+        lite$emit(lite$report6 + "\n");
         const lite$report7 = "        exit(1);";
-        lite_out += lite$report7 + "\n";
+        lite$emit(lite$report7 + "\n");
         const lite$report8 = "    }";
-        lite_out += lite$report8 + "\n";
+        lite$emit(lite$report8 + "\n");
         const lite$report9 = "    return left / right;";
-        lite_out += lite$report9 + "\n";
+        lite$emit(lite$report9 + "\n");
         const lite$report10 = "}";
-        lite_out += lite$report10 + "\n";
+        lite$emit(lite$report10 + "\n");
         const lite$report11 = "";
-        lite_out += lite$report11 + "\n";
+        lite$emit(lite$report11 + "\n");
     }
     void liteFn_emitIntDivideHelper;
     function liteFn_emitIntRemainderHelper(): void {
         const lite$report12 = "static int64_t lite_remainder_int(int64_t left, int64_t right) {";
-        lite_out += lite$report12 + "\n";
+        lite$emit(lite$report12 + "\n");
         const lite$report13 = "    if (right == 0) {";
-        lite_out += lite$report13 + "\n";
+        lite$emit(lite$report13 + "\n");
         const lite$report14 = "        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");";
-        lite_out += lite$report14 + "\n";
+        lite$emit(lite$report14 + "\n");
         const lite$report15 = "        exit(1);";
-        lite_out += lite$report15 + "\n";
+        lite$emit(lite$report15 + "\n");
         const lite$report16 = "    }";
-        lite_out += lite$report16 + "\n";
+        lite$emit(lite$report16 + "\n");
         const lite$report17 = "    if (left == INT64_MIN && right == -1) {";
-        lite_out += lite$report17 + "\n";
+        lite$emit(lite$report17 + "\n");
         const lite$report18 = "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");";
-        lite_out += lite$report18 + "\n";
+        lite$emit(lite$report18 + "\n");
         const lite$report19 = "        exit(1);";
-        lite_out += lite$report19 + "\n";
+        lite$emit(lite$report19 + "\n");
         const lite$report20 = "    }";
-        lite_out += lite$report20 + "\n";
+        lite$emit(lite$report20 + "\n");
         const lite$report21 = "    return left % right;";
-        lite_out += lite$report21 + "\n";
+        lite$emit(lite$report21 + "\n");
         const lite$report22 = "}";
-        lite_out += lite$report22 + "\n";
+        lite$emit(lite$report22 + "\n");
         const lite$report23 = "";
-        lite_out += lite$report23 + "\n";
+        lite$emit(lite$report23 + "\n");
     }
     void liteFn_emitIntRemainderHelper;
     function liteFn_emitIntFloorDivideHelper(): void {
         const lite$report24 = "static int64_t lite_floor_divide_int(int64_t left, int64_t right) {";
-        lite_out += lite$report24 + "\n";
+        lite$emit(lite$report24 + "\n");
         const lite$report25 = "    const int64_t quotient = lite_divide_int(left, right);";
-        lite_out += lite$report25 + "\n";
+        lite$emit(lite$report25 + "\n");
         const lite$report26 = "    const int64_t remainder = left % right;";
-        lite_out += lite$report26 + "\n";
+        lite$emit(lite$report26 + "\n");
         const lite$report27 = "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;";
-        lite_out += lite$report27 + "\n";
+        lite$emit(lite$report27 + "\n");
         const lite$report28 = "}";
-        lite_out += lite$report28 + "\n";
+        lite$emit(lite$report28 + "\n");
         const lite$report29 = "";
-        lite_out += lite$report29 + "\n";
+        lite$emit(lite$report29 + "\n");
     }
     void liteFn_emitIntFloorDivideHelper;
     function liteFn_emitIntFloorModuloHelper(): void {
         const lite$report30 = "static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {";
-        lite_out += lite$report30 + "\n";
+        lite$emit(lite$report30 + "\n");
         const lite$report31 = "    if (right == 0) {";
-        lite_out += lite$report31 + "\n";
+        lite$emit(lite$report31 + "\n");
         const lite$report32 = "        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");";
-        lite_out += lite$report32 + "\n";
+        lite$emit(lite$report32 + "\n");
         const lite$report33 = "        exit(1);";
-        lite_out += lite$report33 + "\n";
+        lite$emit(lite$report33 + "\n");
         const lite$report34 = "    }";
-        lite_out += lite$report34 + "\n";
+        lite$emit(lite$report34 + "\n");
         const lite$report35 = "    if (left == INT64_MIN && right == -1) { return 0; }";
-        lite_out += lite$report35 + "\n";
+        lite$emit(lite$report35 + "\n");
         const lite$report36 = "    const int64_t remainder = left % right;";
-        lite_out += lite$report36 + "\n";
+        lite$emit(lite$report36 + "\n");
         const lite$report37 = "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;";
-        lite_out += lite$report37 + "\n";
+        lite$emit(lite$report37 + "\n");
         const lite$report38 = "}";
-        lite_out += lite$report38 + "\n";
+        lite$emit(lite$report38 + "\n");
         const lite$report39 = "";
-        lite_out += lite$report39 + "\n";
+        lite$emit(lite$report39 + "\n");
     }
     void liteFn_emitIntFloorModuloHelper;
     function liteFn_emitIntDivisionHelpers(lite_items: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[]): void {
@@ -3871,31 +3938,31 @@ export function main(): string {
     void liteFn_emitIntDivisionHelpers;
     function liteFn_emitStringConcatHelper(): void {
         const lite$report40 = "static const char *lite_concat(const char *left, const char *right) {";
-        lite_out += lite$report40 + "\n";
+        lite$emit(lite$report40 + "\n");
         const lite$report41 = "    const size_t left_length = strlen(left);";
-        lite_out += lite$report41 + "\n";
+        lite$emit(lite$report41 + "\n");
         const lite$report42 = "    const size_t right_length = strlen(right);";
-        lite_out += lite$report42 + "\n";
+        lite$emit(lite$report42 + "\n");
         const lite$report43 = "    char *combined = malloc(left_length + right_length + 1);";
-        lite_out += lite$report43 + "\n";
+        lite$emit(lite$report43 + "\n");
         const lite$report44 = "    if (combined == NULL) {";
-        lite_out += lite$report44 + "\n";
+        lite$emit(lite$report44 + "\n");
         const lite$report45 = "        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");";
-        lite_out += lite$report45 + "\n";
+        lite$emit(lite$report45 + "\n");
         const lite$report46 = "        exit(1);";
-        lite_out += lite$report46 + "\n";
+        lite$emit(lite$report46 + "\n");
         const lite$report47 = "    }";
-        lite_out += lite$report47 + "\n";
+        lite$emit(lite$report47 + "\n");
         const lite$report48 = "    memcpy(combined, left, left_length);";
-        lite_out += lite$report48 + "\n";
+        lite$emit(lite$report48 + "\n");
         const lite$report49 = "    memcpy(combined + left_length, right, right_length + 1);";
-        lite_out += lite$report49 + "\n";
+        lite$emit(lite$report49 + "\n");
         const lite$report50 = "    return combined;";
-        lite_out += lite$report50 + "\n";
+        lite$emit(lite$report50 + "\n");
         const lite$report51 = "}";
-        lite_out += lite$report51 + "\n";
+        lite$emit(lite$report51 + "\n");
         const lite$report52 = "";
-        lite_out += lite$report52 + "\n";
+        lite$emit(lite$report52 + "\n");
     }
     void liteFn_emitStringConcatHelper;
     function liteFn_emitProgram(lite_items: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[]): void {
@@ -3910,10 +3977,10 @@ export function main(): string {
             if (((lite_unsupported) !== (""))) {
                 liteFn_fail("", lite_unsupported);
             }
-            if ((((((((lite_item).kind) === ("LocalTuple"))) || ((((lite_item).kind) === ("VarTuple"))))) || ((((lite_item).kind) === ("AssignTuple"))))) {
+            if (((((((liteFn_isTupleKind((lite_item).kind)) || ((((lite_item).kind) === ("LocalTuple"))))) || ((((lite_item).kind) === ("VarTuple"))))) || ((((lite_item).kind) === ("AssignTuple"))))) {
                 liteFn_fail("", "C backend does not support tuple values yet");
             }
-            if ((((((((lite_item).kind) === ("LocalList"))) || ((((lite_item).kind) === ("VarList"))))) || ((((lite_item).kind) === ("AssignList"))))) {
+            if (((((((liteFn_isListKind((lite_item).kind)) || ((((lite_item).kind) === ("LocalList"))))) || ((((lite_item).kind) === ("VarList"))))) || ((((lite_item).kind) === ("AssignList"))))) {
                 liteFn_fail("", "C backend does not support list values yet");
             }
             if ((((lite_item).kind) === ("LoopSeq"))) {
@@ -3927,25 +3994,25 @@ export function main(): string {
             }
         }
         const lite$report53 = "#include <stdio.h>";
-        lite_out += lite$report53 + "\n";
+        lite$emit(lite$report53 + "\n");
         if (((liteFn_usesIntDivision([...(lite_items)])) || (liteFn_usesStringConcat([...(lite_items)])))) {
             const lite$report54 = "#include <stdlib.h>";
-            lite_out += lite$report54 + "\n";
+            lite$emit(lite$report54 + "\n");
         }
         const lite$report55 = "#include <inttypes.h>";
-        lite_out += lite$report55 + "\n";
+        lite$emit(lite$report55 + "\n");
         const lite$report56 = "#include <stdbool.h>";
-        lite_out += lite$report56 + "\n";
+        lite$emit(lite$report56 + "\n");
         const lite$report57 = "#include <string.h>";
-        lite_out += lite$report57 + "\n";
+        lite$emit(lite$report57 + "\n");
         liteFn_emitIntDivisionHelpers([...(lite_items)]);
         if (liteFn_usesStringConcat([...(lite_items)])) {
             liteFn_emitStringConcatHelper();
         }
         const lite$report58 = "int main(void) {";
-        lite_out += lite$report58 + "\n";
+        lite$emit(lite$report58 + "\n");
         const lite$report59 = "    int status = 0;";
-        lite_out += lite$report59 + "\n";
+        lite$emit(lite$report59 + "\n");
         let lite_indent = "    ";
         void lite_indent;
         let lite_count = 0n;
@@ -3954,79 +4021,86 @@ export function main(): string {
             void lite_item;
             if ((((((lite_item).kind) === ("LocalInt"))) || ((((lite_item).kind) === ("VarInt"))))) {
                 const lite$report60 = ((((((((((lite_indent) + ("int64_t "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
-                lite_out += lite$report60 + "\n";
+                lite$emit(lite$report60 + "\n");
                 const lite$report61 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
-                lite_out += lite$report61 + "\n";
+                lite$emit(lite$report61 + "\n");
             } else if ((((((lite_item).kind) === ("LocalString"))) || ((((lite_item).kind) === ("VarString"))))) {
                 const lite$report62 = ((((((((((lite_indent) + ("const char *"))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
-                lite_out += lite$report62 + "\n";
+                lite$emit(lite$report62 + "\n");
                 const lite$report63 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
-                lite_out += lite$report63 + "\n";
-            } else if ((((((lite_item).kind) === ("LocalBool"))) || ((((lite_item).kind) === ("VarBool"))))) {
-                const lite$report64 = ((((((((((lite_indent) + ("bool "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
-                lite_out += lite$report64 + "\n";
+                lite$emit(lite$report63 + "\n");
+            } else if ((((((lite_item).kind) === ("LocalFloat"))) || ((((lite_item).kind) === ("VarFloat"))))) {
+                const lite$report64 = ((((((((((lite_indent) + ("double "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite$emit(lite$report64 + "\n");
                 const lite$report65 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
-                lite_out += lite$report65 + "\n";
-            } else if ((((((((lite_item).kind) === ("AssignInt"))) || ((((lite_item).kind) === ("AssignString"))))) || ((((lite_item).kind) === ("AssignBool"))))) {
-                const lite$report66 = ((((((((lite_indent) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
-                lite_out += lite$report66 + "\n";
+                lite$emit(lite$report65 + "\n");
+            } else if ((((((lite_item).kind) === ("LocalBool"))) || ((((lite_item).kind) === ("VarBool"))))) {
+                const lite$report66 = ((((((((((lite_indent) + ("bool "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite$emit(lite$report66 + "\n");
+                const lite$report67 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
+                lite$emit(lite$report67 + "\n");
+            } else if ((((((((((lite_item).kind) === ("AssignInt"))) || ((((lite_item).kind) === ("AssignString"))))) || ((((lite_item).kind) === ("AssignBool"))))) || ((((lite_item).kind) === ("AssignFloat"))))) {
+                const lite$report68 = ((((((((lite_indent) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite$emit(lite$report68 + "\n");
             } else if ((((lite_item).kind) === ("Break"))) {
-                const lite$report67 = ((lite_indent) + ("break;"));
-                lite_out += lite$report67 + "\n";
+                const lite$report69 = ((lite_indent) + ("break;"));
+                lite$emit(lite$report69 + "\n");
             } else if ((((lite_item).kind) === ("Continue"))) {
-                const lite$report68 = ((lite_indent) + ("continue;"));
-                lite_out += lite$report68 + "\n";
+                const lite$report70 = ((lite_indent) + ("continue;"));
+                lite$emit(lite$report70 + "\n");
             } else if ((((lite_item).kind) === ("If"))) {
-                const lite$report69 = ((((((lite_indent) + ("if ("))) + ((lite_item).code))) + (") {"));
-                lite_out += lite$report69 + "\n";
+                const lite$report71 = ((((((lite_indent) + ("if ("))) + ((lite_item).code))) + (") {"));
+                lite$emit(lite$report71 + "\n");
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("Else"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                const lite$report70 = ((lite_indent) + ("} else {"));
-                lite_out += lite$report70 + "\n";
+                const lite$report72 = ((lite_indent) + ("} else {"));
+                lite$emit(lite$report72 + "\n");
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("ElseIf"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                const lite$report71 = ((((((lite_indent) + ("} else if ("))) + ((lite_item).code))) + (") {"));
-                lite_out += lite$report71 + "\n";
+                const lite$report73 = ((((((lite_indent) + ("} else if ("))) + ((lite_item).code))) + (") {"));
+                lite$emit(lite$report73 + "\n");
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("EndIf"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                const lite$report72 = ((lite_indent) + ("}"));
-                lite_out += lite$report72 + "\n";
+                const lite$report74 = ((lite_indent) + ("}"));
+                lite$emit(lite$report74 + "\n");
             } else if ((((lite_item).kind) === ("Loop"))) {
                 const lite_condition = (Boolean((((lite_item).code) === (""))) ? "true" : (lite_item).code);
                 void lite_condition;
-                const lite$report73 = ((((((lite_indent) + ("while ("))) + (lite_condition))) + (") {"));
-                lite_out += lite$report73 + "\n";
+                const lite$report75 = ((((((lite_indent) + ("while ("))) + (lite_condition))) + (") {"));
+                lite$emit(lite$report75 + "\n");
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("EndLoop"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                const lite$report74 = ((lite_indent) + ("}"));
-                lite_out += lite$report74 + "\n";
-            } else if ((((lite_item).kind) === ("End"))) {
-                const lite$report75 = ((lite_indent) + ("if (printf(\"\\n\") < 0) { status = 1; }"));
-                lite_out += lite$report75 + "\n";
+                const lite$report76 = ((lite_indent) + ("}"));
+                lite$emit(lite$report76 + "\n");
+            } else if ((((((lite_item).kind) === ("End"))) || ((((lite_item).kind) === ("EndOutput"))))) {
+                if ((((lite_item).kind) === ("End"))) {
+                    const lite$report77 = ((lite_indent) + ("if (printf(\"\\n\") < 0) { status = 1; }"));
+                    lite$emit(lite$report77 + "\n");
+                }
                 lite_count = 0n;
             } else {
                 if (((lite_count) > (0n))) {
-                    const lite$report76 = ((lite_indent) + ("if (printf(\" \") < 0) { status = 1; }"));
-                    lite_out += lite$report76 + "\n";
+                    const lite$report78 = ((lite_indent) + ("if (printf(\" \") < 0) { status = 1; }"));
+                    lite$emit(lite$report78 + "\n");
                 }
-                const lite$report77 = ((((((lite_indent) + ("if ("))) + (liteFn_cCall((lite_item).kind, (lite_item).code)))) + (" < 0) { status = 1; }"));
-                lite_out += lite$report77 + "\n";
+                const lite$report79 = ((((((lite_indent) + ("if ("))) + (liteFn_cCall((lite_item).kind, (lite_item).code)))) + (" < 0) { status = 1; }"));
+                lite$emit(lite$report79 + "\n");
                 lite_count = (lite_count + 1n);
             }
         }
-        const lite$report78 = "    return status;";
-        lite_out += lite$report78 + "\n";
-        const lite$report79 = "}";
-        lite_out += lite$report79 + "\n";
+        const lite$report80 = "    return status;";
+        lite$emit(lite$report80 + "\n");
+        const lite$report81 = "}";
+        lite$emit(lite$report81 + "\n");
     }
     void liteFn_emitProgram;
     const lite_prefix = liteFn_sourcePrefix();
     void lite_prefix;
-    const lite_source = lite$inputAll();
+    const lite_source = lite$inputAll(undefined, "3120:11: InputFault: ");
     void lite_source;
     liteFn_emitProgram([...(liteFn_parseProgram(lite_source, lite_prefix))]);
     return lite_out;

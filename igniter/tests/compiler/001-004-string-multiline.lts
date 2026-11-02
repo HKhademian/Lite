@@ -1,2 +1,2 @@
-report("line1
+outputLine("line1
 line2");

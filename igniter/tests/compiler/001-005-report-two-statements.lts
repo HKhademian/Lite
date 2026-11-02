@@ -1,2 +1,2 @@
-report(42);
-report(9);
+outputLine(42);
+outputLine(9);

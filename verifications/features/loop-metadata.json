@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "loop-metadata.lts",
-    "hash": "sha256:819b3b75a3c04bb66a7b4116de38d74ab37855aca6f9b3626d2c886bb8a9bc38"
+    "hash": "sha256:640fabc00f771027398a807309ec73b114eb50f3e99308815ea7cf3cd8d27529"
   },
   "features": [
     "loop.metadata"

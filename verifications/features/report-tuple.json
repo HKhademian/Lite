@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "report-tuple.lts",
-    "hash": "sha256:35b61838dc5af81f73d9f6eec4fcdc9f669bc4606e93b6e84d224ba8e2f15105"
+    "hash": "sha256:07c1ed90b622af51aa9d2a87ef6f319f6c93675e0a4652822e835785fd3640ce"
   },
   "features": [
     "report.tuple"

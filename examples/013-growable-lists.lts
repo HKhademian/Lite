@@ -2,7 +2,7 @@ values: mut List<Int> = [1, 2];
 saved := values;
 push_front(mut values, 0);
 push_back(mut values, 3);
-report(pop_front(mut values), pop_back(mut values));
+outputLine(pop_front(mut values), pop_back(mut values));
 loop saved as value {
-    report(value);
+    outputLine(value);
 }

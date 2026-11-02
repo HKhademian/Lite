@@ -2,7 +2,7 @@
   "name": "string-percent-trigraph",
   "source": {
     "file": "001-005-string-percent-trigraph.lts",
-    "hash": "sha256:fd7f63036cc31bd1940f1edffd580ab181b9c16426ec5f73381983f5ab7a208a"
+    "hash": "sha256:a9a3ba9e98de75ab9f883f9308603104a583dfffc83711591a81efcb3ea49404"
   },
   "cases": [
     {

@@ -1,1 +1,1 @@
-report(7 / -2);
+outputLine(7 / -2);

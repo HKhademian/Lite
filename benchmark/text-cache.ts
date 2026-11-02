@@ -50,7 +50,7 @@ function run(version: Version, text: string, name: string, timeout = 30000): Mea
 }
 function median(a: number[]): number { const s = [...a].sort((x,y) => x-y); return s[Math.floor(s.length/2)]!; }
 for (const n of [100, 1000]) {
-  const input = Array.from({ length: n }, (_,i) => `report(${i});`).join('\n') + '\n';
+  const input = Array.from({ length: n }, (_,i) => `outputLine(${i});`).join('\n') + '\n';
   for (let pass = -1; pass < 7; pass++) {
     const pair: Partial<Record<Version, Measurement>> = {};
     for (const version of (pass % 2 === 0 ? versions : [...versions].reverse())) {

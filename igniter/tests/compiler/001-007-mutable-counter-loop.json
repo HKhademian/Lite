@@ -2,7 +2,7 @@
   "name": "mutable-counter-loop",
   "source": {
     "file": "001-007-mutable-counter-loop.lts",
-    "hash": "sha256:90af41c9db4ada635e884a1b85fc40b27963012c6da0e7a3245b2cb85dc64231"
+    "hash": "sha256:a7999c57a23cec04a2fb2a1ce0677e74530349443cc46a28f27597efb62dc1d5"
   },
   "cases": [
     {

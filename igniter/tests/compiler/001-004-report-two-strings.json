@@ -2,7 +2,7 @@
   "name": "report-two-strings",
   "source": {
     "file": "001-004-report-two-strings.lts",
-    "hash": "sha256:c4a8ea30ceafd62fa669acb79ba02e5bfd77f7852eda1375ad67723b9e0a5e24"
+    "hash": "sha256:5d6a9849405a52911015d2e2d7829c4adad1816635b9957698c4a5573a8c1534"
   },
   "cases": [
     {

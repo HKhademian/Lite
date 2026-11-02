@@ -1,2 +1,2 @@
-report("line\nnext");
-report("quote: \"");
+outputLine("line\nnext");
+outputLine("quote: \"");

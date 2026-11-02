@@ -7,4 +7,4 @@ loop {
     if number < 0 { continue; }
     sum = sum + number;
 }
-report(sum);
+outputLine(sum);
