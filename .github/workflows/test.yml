@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -49,3 +50,17 @@ jobs:
       - name: Editor grammar tests
         working-directory: editors/vscode
         run: npm test
+
+      - name: Bootstrap release packaging smoke test
+        run: |
+          node compiler/scripts/release.ts prepare .cache/release-smoke
+          node compiler/scripts/release.ts native .cache/native-smoke .cache/release-smoke
+          mkdir -p .cache/extracted-release
+          tar -xf .cache/release-smoke/*-bootstrap.tar.gz -C .cache/extracted-release
+          cd .cache/extracted-release
+          test ! -e .git
+          test ! -e igniter/node_modules
+          test "$(./lite run igniter/tests/compiler/001-001-report-int-42.lts)" = 42
+          ./litec --target c igniter/tests/compiler/001-001-report-int-42.lts > hello.c
+          cc -std=c11 -Wall -Wextra -Werror hello.c -o hello
+          test "$(./hello)" = 42

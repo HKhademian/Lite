@@ -1,5 +1,13 @@
 # Release and tag history
 
+Tagged pushes now have a [bootstrap release workflow](release-automation.md):
+`lite-v*` and `igniter-v*` annotated tags run the full gates and package the
+complete bootstrap source, provisional libraries, generated C programs and
+verified Linux/macOS x64/ARM64 program builds with source/builder hashes and
+checksums. Manual workflow runs build without publishing. The native C compiler
+ladder remains pending; native assets currently contain conformance programs.
+No version bump or tag is introduced by this automation change.
+
 Current components:
 
 - Igniter: **0.1.0-alpha.38**

@@ -1,0 +1,129 @@
+name: Bootstrap release
+
+on:
+  push:
+    tags:
+      - 'lite-v*'
+      - 'igniter-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  prepare:
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: igniter/.node-version
+          cache: npm
+          cache-dependency-path: igniter/package-lock.json
+      - run: npm --prefix igniter ci
+      - name: Verify bootstrap and package the exact source revision
+        run: node compiler/scripts/release.ts prepare .cache/release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-sources
+          path: .cache/release/*
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+
+  native:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+          - runner: macos-15-intel
+            target: darwin-x64
+          - runner: macos-15
+            target: darwin-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: igniter/.node-version
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-sources
+          path: .cache/release
+      - name: Compile and run every packaged C fixture
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: node compiler/scripts/release.ts native .cache/native .cache/release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-native-${{ matrix.target }}
+          path: .cache/native/*
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+
+  publish:
+    needs: [prepare, native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: igniter/.node-version
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: .cache/release
+      - name: Assemble the manifest and checksums
+        run: node compiler/scripts/release.ts finalize .cache/release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bootstrap-release
+          path: .cache/release/*
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+      - name: Publish the existing tag after every gate passes
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          flags=()
+          if [[ "$RELEASE_TAG" == *-*.*.*-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" .cache/release/* \
+            --draft --verify-tag --latest=false --title "$RELEASE_TAG" \
+            --notes-file .cache/release/RELEASE-NOTES.md "${flags[@]}"
+          gh release edit "$RELEASE_TAG" --draft=false --latest=false

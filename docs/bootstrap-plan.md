@@ -576,6 +576,15 @@ the point.
 
 **Goal:** make the bootstrap repeatable and reviewable.
 
+The owner-requested [release automation](release-automation.md) implements a
+bounded packaging lane: annotated `lite-v*` and `igniter-v*` pushes run the full
+gates, verify regeneration of both TS-hosted compilers, and preserve the complete
+source/seed/library snapshot with manifests, line maps and hashes. Generated C
+program fixtures are built and executed on Linux/macOS x64/ARM64. Manual runs
+build without publishing. The remaining native C compiler ladder and native
+fixed point are still required for the full P9 gate below; program executables
+do not satisfy those compiler gates. No version or tag is created by this change.
+
 - [ ] A visible build script records exact commands, Node/TypeScript/C versions,
       source/manifest revisions and artifact hashes.
 - [ ] CI runs the bootstrap chain (or a bounded lane) with pinned tools.
@@ -771,7 +780,7 @@ The point is reached only when all of these are true:
 | D10 | Records/enums/`match` become necessary for the AST/checker | **stop and ask** |
 | D11 | Modules/imports become necessary for compiler self-assembly | **stop and ask** |
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
-| D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; release tag stream remains open |
+| D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; owner-requested bootstrap release automation uses annotated `lite-v*`/`igniter-v*` snapshots; independent compiler/library versions remain unassigned |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
 | D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
 

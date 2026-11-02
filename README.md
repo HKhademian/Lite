@@ -49,6 +49,7 @@ are `./lite docs`; help is `./lite help`. See
 - [First working targets](docs/principles.md#first-working-targets): the interpreter and restricted TS/C emission prototypes now run; practical scripts and broader compiled subsets follow.
 - [Bootstrap and target direction](docs/tooling-and-learning.md#typescript-igniter-and-early-self-hosting): readable permanent TS bootstrap, maintained TS/web and C/native export targets, and overlapping igniter/self-hosted development. Full self-rebuild and AS/Wasm compatibility remain open.
 - [Bootstrap and self-hosting plan](docs/bootstrap-plan.md): staged compiler-bootstrap defaults, igniter tooling, shared library layers, gates and agent workflow; implementation plan, not a language/std decision.
+- [Bootstrap releases](docs/release-automation.md): tag-triggered GitHub releases with complete bootstrap sources, libraries, generated C, native program builds and rebuild instructions.
 - [Lightweight native execution](docs/memory-and-performance.md#lightweight-native-execution-priority): selected priorities, proposed compiler/memory direction, and [focused investigation points](investigations/lightweight-native-execution.md).
 - [Continuity and analogical coherence](docs/continuity-and-analogy.md): design-method principle for local predictability and visible semantic boundaries.
 - [Current decisions and open questions](docs/decisions-and-open-questions.md)
