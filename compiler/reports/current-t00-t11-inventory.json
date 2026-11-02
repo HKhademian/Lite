@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M docs/strings.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-001-adjacent-strings.json -> igniter/tests/compiler/001-001-adjacent-strings.json\nR  igniter/tests/compiler/002-001-adjacent-strings.lts -> igniter/tests/compiler/001-001-adjacent-strings.lts\n?? compiler/reports/2026-11-02-adjacent-strings-ladder.json\n",
   "compilerSourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
-  "compilerSourceRevision": "Adjacent-string source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "e295ddedd16ee601efb9229f83cd390c4457a640",
   "node": "v24.16.0",
   "t11Sha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
   "rows": [
@@ -9359,5 +9359,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
 }
