@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/test.ts\n M verifications/README.md\n M verifications/features/scope-locals.json\n?? compiler/reports/2026-11-02-statement-scopes-ladder.json\n",
   "compilerSourceSha256": "a5d23ef5ef3b8afd6f67c3be648e0415e8a430dca388d310409cf1a7339bdac1",
-  "compilerSourceRevision": "Statement-scope source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "43ec8aa9ee097b73253a79a782d96626707412ea",
   "node": "v24.16.0",
   "t11Sha256": "4b2152ec54f17ac7c7cf5c3f70a8c6b581ea971ec8d5510d1b2a02f3e4bc7343",
   "rows": [
@@ -9398,5 +9398,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
 }
