@@ -4,18 +4,42 @@ These sources were consulted during the design discussion. They support comparis
 
 ## Project reference languages
 
-Updated by user direction, **2026-10-28**: **Salam is a project reference
-language**, alongside **Rust, Zig, Odin, V, Swift, Kotlin, Dart, C++, TypeScript,
-Python, Lua, and Scala 3**. This makes 13 project reference languages. Comparisons
-also consult topic-specific sources such as C, C#, Java, JavaScript, Go, and R;
-being cited in a focused review does not by itself change this reference set.
+Updated by user direction, **2026-11-02**: LiteLang's 17 project reference
+languages are:
 
-Each language informs particular questions rather than supplying LiteLang's whole
-contract. Older twelve-language comparisons retain their dated coverage; Salam's
-addition does not mean those tables now contain an audited Salam comparison.
+- C
+- C++
+- Rust
+- Zig
+- V (Vlang)
+- Odin
+- C3
+- Jai
+- Kotlin
+- Python
+- Dart
+- Salam
+- C#
+- TypeScript
+- Swift
+- Lua
+- Scala 3
+
+Each language has particular parts that can inspire LiteLang. This is selective
+inspiration: it does not mean adopting all of any language's features or design
+decisions. Evaluate ideas individually against LiteLang's own goals and
+contracts; inclusion in this list does not select a feature, syntax, semantic
+rule, or implementation strategy. The inspiring parts remain topic-specific,
+rather than a fixed package of features to import from each language.
+
+This update retains every previous project reference language and adds C, C3,
+Jai, and C#. Existing comparisons retain their dated coverage and sources;
+other languages may still be consulted for particular questions. Being cited in
+a focused review does not by itself change the project reference set. Adding a
+language here does not establish comparison coverage or implementation evidence.
 Future reviews should state the languages, versions, features, and evidence they
-actually cover. Simple English as Lite's reference human-language presentation is
-a separate concept from this programming-language reference set.
+actually cover. Simple English as Lite's reference human-language presentation
+is a separate concept from this programming-language reference set.
 
 ## Salam and multilingual source, reviewed 2026-10-28
 
@@ -68,7 +92,7 @@ Primary sources by area:
 - **Failure inside a pipeline:** [JLS 11.2.3 checked exceptions in lambdas](https://docs.oracle.com/javase/specs/jls/se25/html/jls-11.html#jls-11.2.3), [Rust `Result` collection](https://doc.rust-lang.org/std/result/enum.Result.html), [Odin `or_return`](https://odin-lang.org/docs/overview/#or_return-operator).
 - **Composition and cost models:** [Kotlin extension functions](https://kotlinlang.org/docs/extensions.html), [Lodash chain sequence methods](https://lodash.com/docs), [Lodash FP guide](https://github.com/lodash/lodash/wiki/FP-Guide), [Underscore chaining](https://underscorejs.org/#chaining), [Odin `core:slice`](https://pkg.odin-lang.org/core/slice/).
 
-This review adds Java, Go, TypeScript, Jai, ReactiveX, Underscore.js, and Lodash as topic-specific sources; it does **not** change the thirteen project reference languages. Jai has no public official specification, so its entries are low-confidence and community-derived. No toolchain was executed and no benchmark was run: this is documentation evidence, not foreign-language verification or a LiteLang implementation claim. The survey does not select a surface, an execution model, a generator form, or a failure policy.
+At the time of this review, Java, Go, TypeScript, Jai, ReactiveX, Underscore.js, and Lodash were included as topic-specific sources; the survey itself did not change the then-current thirteen project reference languages. The owner's 2026-11-02 update above subsequently adds Jai to the project reference set. This review records Jai's entries as low-confidence and community-derived, with no public official specification consulted. No toolchain was executed and no benchmark was run: this is documentation evidence, not foreign-language verification or a LiteLang implementation claim. The survey does not select a surface, an execution model, a generator form, or a failure policy.
 
 ## Collection protocols and storage families, reviewed 2026-11-01
 

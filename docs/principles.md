@@ -10,6 +10,7 @@ Let people and programming agents focus on problem solving through concise, read
 
 ## Design goals
 
+- Draw selective inspiration from the [project reference languages](references.md#project-reference-languages). Each has useful parts; evaluate individual ideas against LiteLang's goals without adopting all of a language's features or design decisions.
 - Keep ceremony low and make programs easy to read, write, and reason about.
 - Make the first programming concepts approachable for learners who do not yet read English. Investigate [multilingual source and learning](multilingual-source-and-learning.md), retaining simple English as the shared reference presentation and one set of language semantics. Localized source remains a proposal; exact vocabularies and tooling are open.
 - Make consequential behavior explicit through concise operations, including failure handling and caller mutation grants.

@@ -2,6 +2,17 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Selective language inspiration, 2026-11-02
+
+The owner expands the [project reference languages](references.md#project-reference-languages)
+to C, C++, Rust, Zig, V (Vlang), Odin, C3, Jai, Kotlin, Python, Dart, Salam, C#,
+and TypeScript while explicitly retaining all preexisting languages, including
+Swift, Lua, and Scala 3. The set now contains 17 languages. Each provides
+particular inspiration; this does not adopt all of its features or design
+decisions. Evaluate ideas individually against LiteLang's goals and contracts.
+Existing comparisons retain their dated coverage, and inclusion in the reference
+set selects no new language feature or implementation strategy.
+
 ## Lite compiler development and coverage policy, 2026-11-02
 
 The owner directs ongoing language implementation into Lite source, with a
