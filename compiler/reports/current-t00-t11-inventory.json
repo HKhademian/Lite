@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/c-literals.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M verifications/artifacts/samples/004-triangle-area.json\n M verifications/artifacts/samples/005-circle-measurements.json\n M verifications/artifacts/samples/006-temperature-conversion.json\n M verifications/artifacts/samples/007-distance-conversion.json\n M verifications/artifacts/samples/009-average-three-values.json\n M verifications/artifacts/samples/010-percentage-of-total.json\n M verifications/artifacts/samples/014-speed-distance-time.json\n M verifications/artifacts/samples/016-midpoint-coordinates.json\n M verifications/artifacts/samples/017-linear-interpolation.json\n M verifications/features.json\nA  verifications/features/num-float.json\nA  verifications/features/num-float.lts\n?? compiler/reports/2026-11-02-float-arithmetic-ladder.json\n",
   "compilerSourceSha256": "9e0da572aff9520ff5e17c7e3b04b53b481feb455a848aefae46f777920dd6d3",
-  "compilerSourceRevision": "Float-arithmetic source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "07337c34952b1ee48119d62db57147eafca449ba",
   "node": "v24.16.0",
   "t11Sha256": "99b18ccf1ef01633b7f5c1432603a60ac86ce19f762b52f6833f5da9a64b3b1c",
   "rows": [
