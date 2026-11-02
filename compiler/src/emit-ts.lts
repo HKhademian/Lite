@@ -118,45 +118,38 @@ reportArgumentCode := fn(item: Item): String {
     displayValueCode(item.kind, item.code)
 }
 
+/** True when any emitted item calls the named `lite$` helper outside quoted String literal text. */
+usesBuiltin := fn(calls: String, name: String): Bool {
+    if calls == "|" { return false; }
+    indexOfText(calls, "|lite$" + name + "(|", 0) >= 0
+}
+
 /** True when any emitted item reads a list element through the checked helper. */
-usesListIndex := fn(items: Items): Bool {
-    loop items as item {
-        if codeUsesListIndex(item.code) { return true; }
-    }
-    false
+usesListIndex := fn(calls: String): Bool {
+    usesBuiltin(calls, "listAt")
 }
 
 /** True when any emitted item pops a list element through the checked helper. */
-usesListPop := fn(items: Items): Bool {
-    loop items as item {
-        if codeUsesListPop(item.code) { return true; }
-    }
-    false
+usesListPop := fn(calls: String): Bool {
+    usesBuiltin(calls, "listPopBack")
 }
 
-/** True when any emitted item calls the named `lite$` helper outside quoted String literal text. */
-usesBuiltin := fn(items: Items, name: String): Bool {
-    loop items as item {
-        if codeUsesTextCall(item.code, "lite$" + name + "(") { return true; }
-    }
-    false
-}
 
 /** True when a program needs the checked dynamic Int64 arithmetic runtime. */
-usesIntArithmetic := fn(items: Items): Bool {
-    usesBuiltin(items, "addInt") or usesBuiltin(items, "subtractInt") or usesBuiltin(items, "multiplyInt") or usesBuiltin(items, "negateInt")
+usesIntArithmetic := fn(calls: String): Bool {
+    usesBuiltin(calls, "addInt") or usesBuiltin(calls, "subtractInt") or usesBuiltin(calls, "multiplyInt") or usesBuiltin(calls, "negateInt")
 }
 
 /** True when positioned division-family helpers are needed. */
-usesIntDivision := fn(items: Items): Bool {
-    usesBuiltin(items, "divideInt") or usesBuiltin(items, "remainderInt") or usesBuiltin(items, "floorDivideInt") or usesBuiltin(items, "floorModuloInt")
+usesIntDivision := fn(calls: String): Bool {
+    usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
 /** Emits position metadata once, a checked result guard, and only the arithmetic helpers the program uses. */
-emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
-    if not usesIntArithmetic(items) and not usesIntDivision(items) { return; }
+emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
+    if not usesIntArithmetic(calls) and not usesIntDivision(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
-    needsRange := usesIntArithmetic(items) or usesBuiltin(items, "divideInt") or usesBuiltin(items, "floorDivideInt");
+    needsRange := usesIntArithmetic(calls) or usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
     outputLine("const lite$intLines: readonly number[] = [" + lineStartCodes(source) + "];");
     outputLine("const lite$intSource = " + textLiteralCode(namePrefix) + ";");
     if needsRange { outputLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
@@ -173,24 +166,24 @@ emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Un
         outputLine("    return value;");
         outputLine("}");
     }
-    if usesBuiltin(items, "addInt") {
+    if usesBuiltin(calls, "addInt") {
         outputLine("function lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }");
     }
-    if usesBuiltin(items, "subtractInt") {
+    if usesBuiltin(calls, "subtractInt") {
         outputLine("function lite$subtractInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left - right, at); }");
     }
-    if usesBuiltin(items, "multiplyInt") {
+    if usesBuiltin(calls, "multiplyInt") {
         outputLine("function lite$multiplyInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left * right, at); }");
     }
-    if usesBuiltin(items, "negateInt") {
+    if usesBuiltin(calls, "negateInt") {
         outputLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
     }
     outputLine("");
 }
 
 /** Emits shared buffered byte input and strict incremental UTF-8 decoding for the temporary input helpers. */
-emitInputHelpers := fn(items: Items): Unit {
-    if not (usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat")) { return; }
+emitInputHelpers := fn(calls: String): Unit {
+    if not (usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat")) { return; }
     outputLine("declare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };");
     outputLine("const lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });");
     outputLine("const lite$bytes = new Uint8Array(4096);");
@@ -230,7 +223,7 @@ emitInputHelpers := fn(items: Items): Unit {
     outputLine("function lite$take(at: string): string | null {");
     outputLine("    const text = lite$peek(at); lite$pending = undefined; return text;");
     outputLine("}");
-    if usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") {
+    if usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") {
         outputLine("function lite$word(at: string): string | null {");
         outputLine("    let ch = lite$peek(at);");
         outputLine("    while (ch !== null && /\\s/u.test(ch)) { lite$take(at); ch = lite$peek(at); }");
@@ -240,7 +233,7 @@ emitInputHelpers := fn(items: Items): Unit {
         outputLine("    return text;");
         outputLine("}");
     }
-    if usesBuiltin(items, "inputAll") {
+    if usesBuiltin(calls, "inputAll") {
         outputLine("function lite$inputAll(prompt: string | undefined, at: string): string {");
         outputLine("    lite$prompt(prompt);");
         outputLine("    let text = \"\";");
@@ -248,7 +241,7 @@ emitInputHelpers := fn(items: Items): Unit {
         outputLine("    return text;");
         outputLine("}");
     }
-    if usesBuiltin(items, "inputLine") {
+    if usesBuiltin(calls, "inputLine") {
         outputLine("function lite$inputLine(prompt: string | undefined, at: string): string {");
         outputLine("    lite$prompt(prompt);");
         outputLine("    let text = \"\", ch = lite$take(at);");
@@ -257,7 +250,7 @@ emitInputHelpers := fn(items: Items): Unit {
         outputLine("    return ch === \"\\n\" && text.endsWith(\"\\r\") ? text.slice(0, -1) : text;");
         outputLine("}");
     }
-    if usesBuiltin(items, "inputInt") {
+    if usesBuiltin(calls, "inputInt") {
         outputLine("function lite$inputInt(prompt: string | undefined, at: string): bigint {");
         outputLine("    lite$prompt(prompt);");
         outputLine("    const text = lite$word(at);");
@@ -268,7 +261,7 @@ emitInputHelpers := fn(items: Items): Unit {
         outputLine("    return value;");
         outputLine("}");
     }
-    if usesBuiltin(items, "inputFloat") {
+    if usesBuiltin(calls, "inputFloat") {
         outputLine("function lite$inputFloat(prompt: string | undefined, at: string): number {");
         outputLine("    lite$prompt(prompt);");
         outputLine("    const text = lite$word(at);");
@@ -282,9 +275,9 @@ emitInputHelpers := fn(items: Items): Unit {
 }
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
-emitBuiltinHelpers := fn(items: Items): Unit {
-    if usesBuiltin(items, "inputArgs") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat") or
-        usesBuiltin(items, "reportError") or usesBuiltin(items, "exit") or usesIntArithmetic(items) or usesIntDivision(items) {
+emitBuiltinHelpers := fn(calls: String): Unit {
+    if usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or
+        usesBuiltin(calls, "reportError") or usesBuiltin(calls, "exit") or usesIntArithmetic(calls) or usesIntDivision(calls) {
         outputLine("declare const process: {");
         outputLine("    argv: string[];");
         outputLine("    exit(code: number): never;");
@@ -295,27 +288,27 @@ emitBuiltinHelpers := fn(items: Items): Unit {
         outputLine("};");
         outputLine("");
     }
-    if usesBuiltin(items, "inputArgs") {
+    if usesBuiltin(calls, "inputArgs") {
         outputLine("function lite$inputArgs(): string[] {");
         outputLine("    return process.argv.slice(2);");
         outputLine("}");
         outputLine("");
     }
-    emitInputHelpers(items);
-    if usesBuiltin(items, "reportError") {
+    emitInputHelpers(calls);
+    if usesBuiltin(calls, "reportError") {
         outputLine("function lite$reportError(text: string): void {");
         outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, text + \"\\n\");");
         outputLine("}");
         outputLine("");
     }
-    if usesBuiltin(items, "exit") {
+    if usesBuiltin(calls, "exit") {
         outputLine("function lite$exit(status: bigint): void {");
         outputLine("    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out);");
         outputLine("    process.exit(Number(status));");
         outputLine("}");
         outputLine("");
     }
-    if usesBuiltin(items, "textLength") or usesBuiltin(items, "textAt") or usesBuiltin(items, "textSlice") {
+    if usesBuiltin(calls, "textLength") or usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") {
         outputLine("const lite$textCache = new Map<string, readonly string[]>();");
         outputLine("function lite$textPoints(text: string): readonly string[] {");
         outputLine("    const found = lite$textCache.get(text);");
@@ -334,13 +327,13 @@ emitBuiltinHelpers := fn(items: Items): Unit {
         outputLine("}");
         outputLine("");
     }
-    if usesBuiltin(items, "textLength") {
+    if usesBuiltin(calls, "textLength") {
         outputLine("function lite$textLength(text: string): bigint {");
         outputLine("    return BigInt(lite$textPoints(text).length);");
         outputLine("}");
         outputLine("");
     }
-    if usesBuiltin(items, "textAt") {
+    if usesBuiltin(calls, "textAt") {
         outputLine("function lite$textAt(text: string, position: bigint): string {");
         outputLine("    const points = lite$textPoints(text);");
         outputLine("    if (position < 0n || position >= BigInt(points.length)) {");
@@ -354,7 +347,7 @@ emitBuiltinHelpers := fn(items: Items): Unit {
         outputLine("}");
         outputLine("");
     }
-    if usesBuiltin(items, "textSlice") {
+    if usesBuiltin(calls, "textSlice") {
         outputLine("function lite$textSlice(text: string, start: bigint, end: bigint): string {");
         outputLine("    const points = lite$textPoints(text);");
         outputLine("    if (start < 0n || end < start || end > BigInt(points.length)) {");
@@ -433,26 +426,27 @@ emitIntFloorModuloHelper := fn(): Unit {
 }
 
 /** Emits every checked Int division-family helper the program reads. */
-emitIntDivisionHelpers := fn(items: Items): Unit {
-    if (usesBuiltin(items, "divideInt") or usesBuiltin(items, "floorDivideInt")) { emitIntDivideHelper(); }
-    if usesBuiltin(items, "remainderInt") { emitIntRemainderHelper(); }
-    if usesBuiltin(items, "floorDivideInt") { emitIntFloorDivideHelper(); }
-    if usesBuiltin(items, "floorModuloInt") { emitIntFloorModuloHelper(); }
+emitIntDivisionHelpers := fn(calls: String): Unit {
+    if (usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt")) { emitIntDivideHelper(); }
+    if usesBuiltin(calls, "remainderInt") { emitIntRemainderHelper(); }
+    if usesBuiltin(calls, "floorDivideInt") { emitIntFloorDivideHelper(); }
+    if usesBuiltin(calls, "floorModuloInt") { emitIntFloorModuloHelper(); }
     return;
 }
 
 /** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
-    hasExit := usesBuiltin(items, "exit") or usesBuiltin(items, "inputAll") or usesBuiltin(items, "inputLine") or usesBuiltin(items, "inputInt") or usesBuiltin(items, "inputFloat");
+    calls := targetHelperCalls(items);
+    hasExit := usesBuiltin(calls, "exit") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     if hasExit {
         outputLine("let lite_out = \"\";");
         outputLine("");
     }
-    emitBuiltinHelpers(items);
-    if usesListIndex(items) { emitListIndexHelper(); }
-    if usesListPop(items) { emitListPopHelper(); }
-    emitIntArithmeticHelpers(items, source, prefix);
-    emitIntDivisionHelpers(items);
+    emitBuiltinHelpers(calls);
+    if usesListIndex(calls) { emitListIndexHelper(); }
+    if usesListPop(calls) { emitListPopHelper(); }
+    emitIntArithmeticHelpers(calls, source, prefix);
+    emitIntDivisionHelpers(calls);
     outputLine("export function main(lite$write?: (text: string) => void): string {");
     if not hasExit { outputLine("    let lite_out = \"\";"); }
     outputLine("    function lite$emit(text: string): void {");

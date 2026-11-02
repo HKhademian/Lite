@@ -1,0 +1,101 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "020b2ad84e5fd6d2289e980bcabd57180b232167",
+  "node": "v24.16.0",
+  "previousSeedSha256": "625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9",
+  "transitionalArtifactSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8",
+    "bytes": 172660
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+      "bytes": 312229,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+      "bytes": 312229,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+      "bytes": 312229,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "450a6578c13a0f3a4803189edd63679505d6f116afe24fb7bf52755594b63eef",
+    "sourceBytes": 159510,
+    "artifactSha256": "eba31df8415d845789dc3a3e1dd6c97666d2381655486b7d260a35184d1f1692",
+    "artifactBytes": 284104,
+    "builderSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "fullSuite": {
+      "tests": 255,
+      "passed": 255,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 49110.097083
+    },
+    "fastSuite": {
+      "tests": 255,
+      "passed": 244,
+      "failed": 0,
+      "skipped": 11,
+      "durationMs": 30292.609
+    },
+    "editorGroups": 9,
+    "hostGroups": 15,
+    "tsCorpus": {
+      "phase": "compare",
+      "target": "ts",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "target": "c",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 95,
+    "exactCompilerComparison": {
+      "sources": 261,
+      "targetComparisons": 522,
+      "mismatches": 0,
+      "report": "2026-11-02-helper-scan-exact.json"
+    },
+    "performanceReport": "2026-11-02-helper-scan-performance.json",
+    "behavior": "All compared status/stdout/stderr and program artifact bytes unchanged. Runtime inventory remains 71/162; C/native/run/check and tracked flaws still pending."
+  },
+  "reproductionCommands": [
+    "git show 020b2ad84e5fd6d2289e980bcabd57180b232167:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ],
+  "comparisonScript": "import assert from 'node:assert/strict';import{readFileSync,readdirSync,writeFileSync}from'node:fs';import{spawnSync}from'node:child_process';import{createHash}from'node:crypto';\nconst root=process.cwd(),dir='/tmp/lite-helper-scan',hash=(x:string|Uint8Array)=>createHash('sha256').update(x).digest('hex');\nconst current=JSON.parse(readFileSync(root+'/compiler/reports/current-t00-t11-inventory.json','utf8'));\nconst sources=current.rows.map((r:any)=>({id:r.kind+':'+r.id,text:r.source}));\nfor(const p of readdirSync(root+'/igniter/tests/compiler').filter(p=>p.endsWith('.json')).sort()){const j=JSON.parse(readFileSync(root+'/igniter/tests/compiler/'+p,'utf8'));sources.push({id:p,text:readFileSync(root+'/igniter/tests/compiler/'+j.source.file,'utf8')});}\nfor(const [i,text]of [\n 'outputLine('+JSON.stringify('lite$inputAll( \"lite$divideInt( \\\\ lt_checked_add( lite_concat(')+');',\n '/* lite$inputAll( lt_checked_add( */ outputLine(42);',\n 'inputLine := fn(): Int { 7 } outputLine(inputLine());',\n 'outputLine(textLength(inputLine()));',\n 'var lt_checked_add := 1; var lite_divide_int := 2; outputLine((lt_checked_add + lite_divide_int) / lite_divide_int);',\n 'values := [(name = \"lite$listAt(\", value = 42)]; outputLine(values[0]);',\n].entries())sources.push({id:'helper-hygiene-'+i,text});\nconst rows:any[]=[];\nfor(const target of ['ts','c'])for(const input of sources){const results=[];for(const artifact of target==='ts'?['previous-seed.ts','stage3.ts']:['previous-c-emitter.ts','c-emitter.ts']){\n const r=spawnSync(process.execPath,[root+'/compiler/entry.ts',dir+'/'+artifact,''],{cwd:root,input:input.text,timeout:10000,maxBuffer:32*1024*1024});assert.equal(r.error,undefined,input.id);assert.equal(r.signal,null,input.id);results.push(r);\n}assert.equal(results[0]!.status,results[1]!.status,target+':'+input.id);assert.deepEqual(results[0]!.stdout,results[1]!.stdout,target+':'+input.id);assert.deepEqual(results[0]!.stderr,results[1]!.stderr,target+':'+input.id);rows.push({target,id:input.id,inputSha256:hash(input.text),status:results[0]!.status,stdoutSha256:hash(results[0]!.stdout),stderrSha256:hash(results[0]!.stderr)});}\nwriteFileSync(dir+'/exact-comparison.json',JSON.stringify({method:'Previous/current generated compilers in fresh processes, anonymous names, exact status/stdout/stderr; all current inventory sources, all compiler corpus sources, six quote/shadow/nesting cases. C comparisons include explicit rejections.',sources:sources.length,targetComparisons:rows.length,mismatches:0,rows},null,2)+'\\n');console.log({sources:sources.length,targetComparisons:rows.length,mismatches:0});\n",
+  "comparisonSetup": "Save comparisonScript to /tmp/compare.ts; place previous/current TS artifacts as previous-seed.ts/stage3.ts and C emitters as previous-c-emitter.ts/c-emitter.ts under /tmp/lite-helper-scan; run node /tmp/compare.ts from this checkout. Previous artifacts are available at baseRevision; current artifacts are preserved in compiler/bootstrap."
+}

@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after positioned Int64 division-family faults and defined MIN%-1 remainders. Historical records remain unchanged.",
+  "note": "Current exact artifacts after single-pass helper discovery. Program artifact hashes remain unchanged from the division-family checkpoint.",
   "recorded": "2026-11-02",
-  "sourceSha256": "5957b6aceb411bdc2e234e526cda941b4863ab8520ac402ecc43688ab2b0a271",
-  "compilerSha256": "625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9",
+  "sourceSha256": "9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8",
+  "compilerSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
   "programCases": 55,
   "rejectedCases": 38,
   "artifacts": [

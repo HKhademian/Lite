@@ -357,6 +357,49 @@ all 95 verifier executions and all nine editor groups pass. A combined-feature
 C probe found that a multi-value output call can print a prefix before a later
 argument faults; the reproducer is tracked separately in [the gap list](gaps.md).
 
+## Single-pass helper discovery
+
+The compiler collects distinct target helper calls once per program, skipping
+escaped quoted strings and consuming whole identifiers. Helper queries reuse
+that set instead of rescanning every emitted expression and copying the item
+list for each helper. C's unsupported-builtin checks likewise scan each item's
+code once before testing required names. This is implemented in shared Lite
+source and both Lite emitters; it selects the same runtime helpers and changes
+no language contract.
+
+The [paired measurements](reports/2026-11-02-helper-scan-performance.json) record
+compiler-phase medians of 100.0 → 60.4 ms for 1,000 output statements and
+899.0 → 649.8 ms for identical current compiler source. Both emitted outputs
+are byte-identical across all five pairs. These are fresh processes with one
+warm-up pair, alternating order, and module loading/typechecking excluded.
+The earlier division-family scan cost is recovered on these workloads.
+The C-emitter pairs likewise improve: 133.0 → 81.0 ms for 1,000 outputs,
+and 238.5 → 170.9 ms for 200 dynamic divisions, with identical emitted C.
+An early no-helper path avoids a slowdown found in the initial C experiment.
+
+Exact previous/current generated-compiler comparisons cover 261 source inputs
+on each target: all 162 inventory cases, 93 compiler corpus cases and six extra
+quote/escape/shadow/nesting cases. All 522 comparisons match status/stdout/stderr,
+including explicit C rejections; artifacts are not normalized. The
+[raw comparison](reports/2026-11-02-helper-scan-exact.json) records input and
+output identities. The 71/162 runtime inventory count is unchanged.
+
+Current TS S is 172660 bytes, SHA-256
+`9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8`.
+Three generated generations are identical, 312229 bytes, SHA-256
+`c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683`.
+The TS-hosted C emitter is 284104 bytes, SHA-256
+`eba31df8415d845789dc3a3e1dd6c97666d2381655486b7d260a35184d1f1692`,
+from C source SHA-256
+`450a6578c13a0f3a4803189edd63679505d6f116afe24fb7bf52755594b63eef`.
+The [generated-only ladder](reports/2026-11-02-helper-scan-ladder.json) records
+exact source/builder/artifact identities and reproduction.
+
+Strict host/seed checks, all 255 full tests (zero skips, 49.1 s), fast 244 pass
+with eleven expected skips (30.3 s), both 93-case corpus comparisons, all 95
+verifier executions and all nine editor groups pass. The next behavior topic is
+the discovered C output argument-fault ordering gap.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

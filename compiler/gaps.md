@@ -48,10 +48,12 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 
 - [x] **Integer division family:** exact positioned faults, MIN/-1 remainders,
   single evaluation and left-to-right fault ordering on TS/C.
-- [ ] **Helper-scan performance:** collect needed target helpers once per
-  program; verify exact artifacts and paired throughput. Next slice.
+- [x] **Helper-scan performance:** collect needed target helpers once per
+  program; verify exact artifacts and paired throughput.
 - [ ] **Bounds faults:** exact text/list diagnostics and retained output.
 - [ ] **Comparisons:** parenthesized inequality, chains and single evaluation.
+  A bare function tail `value =!= ""` is also mistaken for assignment to the
+  parameter; retain a regression for that form when fixing comparison parsing.
 - [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
@@ -87,6 +89,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [ ] **C output argument faults:** `var zero := 0;
   outputLine("prefix", 1 / zero);` must evaluate arguments before printing any
   part of the call. C currently prints `prefix ` before the fault; T00/TS do not.
+  Next behavior slice.
 - [ ] **Native C ladder:** C11, historical-node equality and cross-host fixed
   points, strict native compilation, boundary cases and clean rebuilds.
 - [ ] **Consumers:** generated check/run and remaining regression consumers,
@@ -123,3 +126,12 @@ targets; division faults match source names, positions, streams and status.
 The final stable-snapshot full gate passes all 255 tests, with zero skips, in
 52.3 s; fast is 244 pass/11 expected skips. Strict host/seeds, both 93-case
 corpus comparisons, 95 verifier executions and nine editor groups also pass.
+
+The subsequent [single-pass helper scan](reports/2026-11-02-helper-scan-performance.json)
+reduces compiler-phase medians from 100.0 to 60.4 ms for 1,000 output statements
+and from 899.0 to 649.8 ms for identical compiler source, with exact emitted
+bytes in all five paired samples. Current seed: `c25922d7…`; the preceding
+inventory remains the measured behavior snapshot, with unchanged case counts.
+Paired C-emitter medians also improve: 133.0 → 81.0 ms for 1,000 outputs and
+238.5 → 170.9 ms for 200 dynamic divisions. All measured emitted outputs match
+exactly. The no-helper fast path removes the initial output-only C slowdown.

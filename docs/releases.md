@@ -15,6 +15,12 @@ Current components:
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
 - Tests: 236 interpreter groups, 15 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
+Single-pass target helper discovery now avoids repeated emitted-code scans.
+Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 output
+statements and from 899.0 to 649.8 ms for identical compiler source, with exact
+emitted bytes. All 522 previous/current compiler comparisons match; see the
+[helper-scan ledger](../compiler/parity.md#single-pass-helper-discovery).
+
 Dynamic integer division/remainder now match exact positioned faults in both
 generated targets, and MIN%-1 returns zero without undefined C arithmetic.
 The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records

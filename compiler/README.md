@@ -18,7 +18,10 @@ be stored, passed and displayed, while wider Float expressions and fixed-array
 contracts remain separate parity work. Process adapters stream output through an
 optional main callback, preserving earlier output across faults. Calling main()
 without that callback retains the return-text contract. The [I/O seed refresh](parity.md#temporary-io-migration)
-records the current compiler artifacts.
+records that snapshot's compiler artifacts. The subsequent
+[helper-scan refresh](parity.md#single-pass-helper-discovery) collects target
+runtime requirements once per program and records about 30% less compiler time
+on paired output/self-source workloads, with exact emitted bytes preserved.
 
 The [T00/T11 support inventory](reports/2026-11-02-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example

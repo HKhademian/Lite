@@ -46,6 +46,12 @@ generated targets, and MIN%-1 returns zero without undefined C arithmetic.
 The [division-family ledger](../compiler/parity.md#positioned-integer-division-family) records
 the seed refresh, differential coverage and paired speed measurements.
 
+Single-pass target helper discovery now avoids repeated emitted-code scans.
+Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 output
+statements and from 899.0 to 649.8 ms for identical compiler source, with exact
+emitted bytes. All 522 previous/current compiler comparisons match; see the
+[helper-scan ledger](../compiler/parity.md#single-pass-helper-discovery).
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript

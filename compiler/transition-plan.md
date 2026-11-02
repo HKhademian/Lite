@@ -36,6 +36,17 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: target helper requirements are collected once per program, skipping
+  escaped quoted text and consuming whole identifiers. TS/C helper queries now
+  read a distinct-name set instead of rescanning item code and copying the full
+  item list. The [paired benchmark](reports/2026-11-02-helper-scan-performance.json)
+  records compiler-phase medians of 100.0 → 60.4 ms for 1,000 output statements
+  and 899.0 → 649.8 ms for the same compiler source (five pairs; exact emitted
+  bytes). The [generated-only ladder](reports/2026-11-02-helper-scan-ladder.json)
+  records three matching generations. This optimization changes no accepted
+  language behavior or measured gap count; next is the discovered C output
+  argument-fault ordering flaw.
+
 - 2026-11-02: the [division-family refresh](parity.md#positioned-integer-division-family)
   matches exact runtime fault positions, names, streams and status for dynamic
   `/`, `%`, `:/` and `:%`. MIN%-1 returns zero, including the shared core's
@@ -237,10 +248,10 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 310973 bytes, SHA-256
-  `625bee56643e91b2836a6d5b3660a28f0e3a6cb0efa28b66fbd175e2d68ac8f9`.
-- Current S is 171273 bytes, SHA-256
-  `5957b6aceb411bdc2e234e526cda941b4863ab8520ac402ecc43688ab2b0a271`.
+- The current seed is 312229 bytes, SHA-256
+  `c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683`.
+- Current S is 172660 bytes, SHA-256
+  `9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

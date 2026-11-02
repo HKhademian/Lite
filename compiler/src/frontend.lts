@@ -878,6 +878,40 @@ skipAliasString := fn(source: String, position: Int): Int {
     size
 }
 
+/** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
+targetCodeCalls := fn(code: String, existing: String): String {
+    if indexOfText(code, "lite", 0) < 0 and indexOfText(code, "lt_", 0) < 0 { return existing; }
+    var calls := existing;
+    var cursor := 0;
+    loop cursor < textLength(code) {
+        ch := textAt(code, cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(code, cursor);
+        } else if isNameStart(ch) {
+            start := cursor;
+            cursor = skipName(code, cursor);
+            if cursor < textLength(code) and textAt(code, cursor) == "$" {
+                cursor = skipName(code, cursor + 1);
+            }
+            if cursor < textLength(code) and textAt(code, cursor) == "(" {
+                name := textSlice(code, start, cursor);
+                if startsWithAt(name, 0, "lite$") or startsWithAt(name, 0, "lite_") or startsWithAt(name, 0, "lt_") {
+                    token := name + "(|";
+                    if indexOfText(calls, "|" + token, 0) < 0 { calls = calls + token; }
+                }
+            }
+        } else { cursor = cursor + 1; }
+    }
+    calls
+}
+
+/** Collects a program's target helper requirements once, with a bounded distinct-name result. */
+targetHelperCalls := fn(items: Items): String {
+    var calls := "|";
+    loop items as item { calls = targetCodeCalls(item.code, calls); }
+    calls
+}
+
 /** Reads one raw alias target type from `position`, capturing a parenthesized tuple type or a generic `List<...>` application through its matching close, or a single name. */
 collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: String, next: Int) {
     size := textLength(source);

@@ -1,17 +1,17 @@
 # Generated bootstrap seeds
 
 `T11.ts` is the current generated compiler after the
-[division-family refresh](../parity.md#positioned-integer-division-family). Its exact source/builder
+[helper-scan refresh](../parity.md#single-pass-helper-discovery). Its exact source/builder
 identities are in [seed.ts](seed.ts). Three generated generations are byte-identical:
-310973 bytes, SHA-256 `625bee56…`. The refresh starts from the
+312229 bytes, SHA-256 `c25922d7…`. The refresh starts from the
 previous generated seed, compiles unchanged current S at each generation, and
-does not need T00 execution. The [ladder record](../reports/2026-11-02-division-ladder.json)
+does not need T00 execution. The [ladder record](../reports/2026-11-02-helper-scan-ladder.json)
 preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 281923 bytes, SHA-256 `a0e02fca…`; C source
-SHA-256 `3c42fcff…`, builder SHA-256 `625bee56…`.
+It is 284104 bytes, SHA-256 `eba31df8…`; C source
+SHA-256 `450a6578…`, builder SHA-256 `c25922d7…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
 forms and checked dynamic Int64 arithmetic, including positioned division-family faults;
 it still rejects unsupported input/aggregate forms explicitly. It is a

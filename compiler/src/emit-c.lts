@@ -18,43 +18,42 @@ cCall := fn(kind: String, code: String): String {
     }
 }
 
+/** True when any emitted item calls the checked Int division-family helper `name`. */
+usesIntHelper := fn(calls: String, name: String): Bool {
+    if calls == "|" { return false; }
+    indexOfText(calls, "|" + name + "|", 0) >= 0
+}
+
 /** Returns the C rejection message for one emitted expression that calls an unsupported I/O or text builtin, or empty text. */
-unsupportedBuiltinCode := fn(code: String): String {
-    if codeUsesTextCall(code, "lite$inputArgs(") or codeUsesTextCall(code, "lite$inputAll(") or codeUsesTextCall(code, "lite$inputLine(") or codeUsesTextCall(code, "lite$inputInt(") or codeUsesTextCall(code, "lite$inputFloat(") {
+unsupportedBuiltinCode := fn(calls: String): String {
+    if usesIntHelper(calls, "lite$inputArgs(") or usesIntHelper(calls, "lite$inputAll(") or usesIntHelper(calls, "lite$inputLine(") or usesIntHelper(calls, "lite$inputInt(") or usesIntHelper(calls, "lite$inputFloat(") {
         "C backend does not support input builtins yet"
-    } else if codeUsesTextCall(code, "lite$reportError(") or codeUsesTextCall(code, "lite$exit(") {
+    } else if usesIntHelper(calls, "lite$reportError(") or usesIntHelper(calls, "lite$exit(") {
         "C backend does not support reportError or exit yet"
-    } else if codeUsesTextCall(code, "lite$textLength(") or codeUsesTextCall(code, "lite$textAt(") or
-        codeUsesTextCall(code, "lite$textSlice(") {
+    } else if usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
+        usesIntHelper(calls, "lite$textSlice(") {
         "C backend does not support text builtins yet"
     } else {
         ""
     }
 }
 
-/** True when any emitted item calls the checked Int division-family helper `name`. */
-usesIntHelper := fn(items: Items, name: String): Bool {
-    loop items as item {
-        if codeUsesTextCall(item.code, name) { return true; }
-    }
-    false
-}
 
 /** True when any emitted item needs one of the checked Int division helpers. */
-usesIntDivision := fn(items: Items): Bool {
-    usesIntHelper(items, "lite_divide_int(") or usesIntHelper(items, "lite_remainder_int(") or
-    usesIntHelper(items, "lite_floor_divide_int(") or usesIntHelper(items, "lite_floor_modulo_int(")
+usesIntDivision := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_remainder_int(") or
+    usesIntHelper(calls, "lite_floor_divide_int(") or usesIntHelper(calls, "lite_floor_modulo_int(")
 }
 
 /** True when a program needs checked dynamic Int64 arithmetic. */
-usesIntArithmetic := fn(items: Items): Bool {
-    usesIntHelper(items, "lt_checked_add(") or usesIntHelper(items, "lt_checked_subtract(") or
-        usesIntHelper(items, "lt_checked_multiply(") or usesIntHelper(items, "lt_checked_negate(")
+usesIntArithmetic := fn(calls: String): Bool {
+    usesIntHelper(calls, "lt_checked_add(") or usesIntHelper(calls, "lt_checked_subtract(") or
+        usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(")
 }
 
 /** Emits portable C11 guards that reject overflow before evaluating a signed operation. */
-emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Unit {
-    if not usesIntArithmetic(items) and not usesIntDivision(items) { return; }
+emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
+    if not usesIntArithmetic(calls) and not usesIntDivision(calls) { return; }
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     outputLine("static const size_t lt_int_lines[] = {" + lineStartCodes(source) + "};");
     outputLine("static const char *lt_int_source = " + textLiteralCode(namePrefix) + ";");
@@ -64,19 +63,19 @@ emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Un
     outputLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
     outputLine("    exit(1);");
     outputLine("}");
-    if usesIntHelper(items, "lt_checked_add(") {
+    if usesIntHelper(calls, "lt_checked_add(") {
         outputLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
         outputLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return left + right;");
         outputLine("}");
     }
-    if usesIntHelper(items, "lt_checked_subtract(") {
+    if usesIntHelper(calls, "lt_checked_subtract(") {
         outputLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
         outputLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return left - right;");
         outputLine("}");
     }
-    if usesIntHelper(items, "lt_checked_multiply(") {
+    if usesIntHelper(calls, "lt_checked_multiply(") {
         outputLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
         outputLine("    if (left == 0 || right == 0) { return 0; }");
         outputLine("    if (left > 0) {");
@@ -88,7 +87,7 @@ emitIntArithmeticHelpers := fn(items: Items, source: String, prefix: String): Un
         outputLine("    return left * right;");
         outputLine("}");
     }
-    if usesIntHelper(items, "lt_checked_negate(") {
+    if usesIntHelper(calls, "lt_checked_negate(") {
         outputLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
         outputLine("    if (value == INT64_MIN) { lt_int_fault(at, \"integer outside Int range\"); }");
         outputLine("    return -value;");
@@ -116,8 +115,8 @@ emitArithmeticTemporaries := fn(items: Items): Unit {
 }
 
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
-usesStringConcat := fn(items: Items): Bool {
-    usesIntHelper(items, "lite_concat(")
+usesStringConcat := fn(calls: String): Bool {
+    usesIntHelper(calls, "lite_concat(")
 }
 
 /** Emits positioned portable division, guarding undefined C arithmetic. */
@@ -162,13 +161,13 @@ emitIntFloorModuloHelper := fn(): Unit {
 }
 
 /** Emits every checked Int division-family helper the program reads. */
-emitIntDivisionHelpers := fn(items: Items): Unit {
-    if usesIntHelper(items, "lite_divide_int(") or usesIntHelper(items, "lite_floor_divide_int(") {
+emitIntDivisionHelpers := fn(calls: String): Unit {
+    if usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_floor_divide_int(") {
         emitIntDivideHelper();
     }
-    if usesIntHelper(items, "lite_remainder_int(") { emitIntRemainderHelper(); }
-    if usesIntHelper(items, "lite_floor_divide_int(") { emitIntFloorDivideHelper(); }
-    if usesIntHelper(items, "lite_floor_modulo_int(") { emitIntFloorModuloHelper(); }
+    if usesIntHelper(calls, "lite_remainder_int(") { emitIntRemainderHelper(); }
+    if usesIntHelper(calls, "lite_floor_divide_int(") { emitIntFloorDivideHelper(); }
+    if usesIntHelper(calls, "lite_floor_modulo_int(") { emitIntFloorModuloHelper(); }
     return;
 }
 
@@ -191,11 +190,12 @@ emitStringConcatHelper := fn(): Unit {
 
 /** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
+    calls := targetHelperCalls(items);
     loop items as item {
         if item.kind == "FunctionStart" {
             fail("", "C backend does not support top-level functions yet");
         }
-        unsupported := unsupportedBuiltinCode(item.code);
+        unsupported := unsupportedBuiltinCode(targetCodeCalls(item.code, "|"));
         if unsupported =!= "" {
             fail("", unsupported);
         }
@@ -216,13 +216,13 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
         }
     }
     outputLine("#include <stdio.h>");
-    if usesIntDivision(items) or usesStringConcat(items) or usesIntArithmetic(items) { outputLine("#include <stdlib.h>"); }
+    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) { outputLine("#include <stdlib.h>"); }
     outputLine("#include <inttypes.h>");
     outputLine("#include <stdbool.h>");
     outputLine("#include <string.h>");
-    emitIntArithmeticHelpers(items, source, prefix);
-    emitIntDivisionHelpers(items);
-    if usesStringConcat(items) { emitStringConcatHelper(); }
+    emitIntArithmeticHelpers(calls, source, prefix);
+    emitIntDivisionHelpers(calls);
+    if usesStringConcat(calls) { emitStringConcatHelper(); }
     outputLine("int main(void) {");
     outputLine("    int status = 0;");
     emitArithmeticTemporaries(items);
