@@ -51,13 +51,13 @@ jobs:
         working-directory: editors/vscode
         run: npm test
 
-      - name: Bootstrap release packaging smoke test
+      - name: Igniter release packaging smoke test
         run: |
           node --test compiler/scripts/release-streams.test.ts
           node compiler/scripts/release.ts prepare .cache/release-smoke
           node compiler/scripts/release.ts native .cache/native-smoke .cache/release-smoke
           mkdir -p .cache/extracted-release
-          tar -xf .cache/release-smoke/*-bootstrap.tar.gz -C .cache/extracted-release
+          tar -xf .cache/release-smoke/*-igniter.tar.gz -C .cache/extracted-release
           cd .cache/extracted-release
           test ! -e .git
           test ! -e igniter/node_modules

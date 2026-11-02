@@ -738,13 +738,16 @@ The earlier Python choice below is superseded; it produced no Python seed.
 
 ## Independent release streams, 2026-11-02
 
+- Naming clarification: **igniter** is the entity; bootstrapping the project is
+  its responsibility. Release workflow, archive and guide names use igniter.
+  Bootstrap stages, rebuild chains and fixed-point checks describe the process.
 - Owner selection: `lite-v*` identifies umbrella releases, `lang-v*`
   language-only changes and `script-v*` scripting-part changes. These have
   separate versions. lite-lang uses `lang-v*`, LiteScript uses `script-v*`,
   and lite-compiler uses `compiler-v*`.
 - Compiler fixes and coverage (`compiler-v*`), igniter (`igniter-v*`), CLI
   (`cli-v*`), formatter (`formatter-v*`), runtime (`runtime-v*`) and libraries
-  (`std-v*`) can progress independently. Shipping a full bootstrap snapshot
+  (`std-v*`) can progress independently. Shipping a full igniter snapshot
   for a component release does not bump every component.
 - Every release manifest names the tagged component, the complete version
   combination and exact source/builder identities. `versions.json` records

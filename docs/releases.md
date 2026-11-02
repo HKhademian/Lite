@@ -1,10 +1,10 @@
 # Release and tag history
 
-Tagged pushes now have a [bootstrap release workflow](release-automation.md):
+Tagged pushes now have an [igniter release workflow](release-automation.md):
 Independent umbrella (`lite-v*`), language (`lang-v*`), scripting
 (`script-v*`), compiler (`compiler-v*`), igniter, CLI, formatter, runtime and
 library annotated tags run the full gates and package the
-complete bootstrap source, provisional libraries, generated C programs and
+complete igniter source, provisional libraries, generated C programs and
 verified Linux/macOS x64/ARM64 program builds with source/builder hashes and
 checksums. Manual workflow runs build without publishing. The native C compiler
 ladder remains pending; native assets currently contain conformance programs.

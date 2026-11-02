@@ -161,8 +161,8 @@ function prepare(): void {
     json(join(out, 'release.json'), release);
     json(join(generated, 'release.json'), release);
     json(join(c, 'release.json'), release);
-    copyFileSync(join(root, 'docs/release-automation.md'), join(source, 'BOOTSTRAP.md'));
-    archive(source, `lite-${label}-bootstrap.tar.gz`, ['.']);
+    copyFileSync(join(root, 'docs/release-automation.md'), join(source, 'IGNITER.md'));
+    archive(source, `lite-${label}-igniter.tar.gz`, ['.']);
     archive(source, `lite-${label}-libraries.tar.gz`, ['lib', 'release/release.json']);
     archive(c, `lite-${label}-generated-c.tar.gz`, ['.']);
     process.stdout.write(`Packaged ${label} at ${commit}: both compilers rebuilt; ${programs.length} C programs.\n`);
@@ -238,14 +238,14 @@ function finalize(): void {
     assets: archives.map(file => ({ file, sha256: sha(readFileSync(join(out, file))) })),
     workflowRun: process.env['GITHUB_RUN_ID'] ?? null,
   });
-  writeFileSync(join(out, 'RELEASE-NOTES.md'), `Bootstrap snapshot ${release.label}\n\n` +
+  writeFileSync(join(out, 'RELEASE-NOTES.md'), `Igniter snapshot ${release.label}\n\n` +
     (release.releasedComponent === null ? 'Unpublished source snapshot.\n\n' :
       `Released component: ${release.releasedComponent.component} ${release.releasedComponent.version}. Other component versions advance independently.\n\n`) +
     `Source commit: ${release.commit}. Igniter package: ${release.igniterVersion}.\n\n` +
     `Component versions: ${Object.entries(release.componentVersions).map(([component, version]) => `${component}=${version ?? 'unassigned'}`).join(', ')}.\n\n` +
-    'The bootstrap archive contains the complete source tree, igniter, provisional libraries, generated TS compiler seeds, flattened compiler sources, line maps and rebuild instructions.\n\n' +
+    'The igniter archive contains the complete source tree, igniter, provisional libraries, generated TS compiler seeds, flattened compiler sources, line maps and rebuild instructions.\n\n' +
     `Generated C and ${targets.join(', ')} executables cover ${release.programs.length} admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n` +
-    'See BOOTSTRAP.md in the bootstrap archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n');
+    'See IGNITER.md in the igniter archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n');
   const files = readdirSync(out).filter(file => file !== 'SHA256SUMS').sort();
   writeFileSync(join(out, 'SHA256SUMS'), files.map(file => `${sha(readFileSync(join(out, file)))}  ${file}\n`).join(''));
   process.stdout.write(`Verified ${targets.length} native targets and wrote the release manifest/checksums.\n`);

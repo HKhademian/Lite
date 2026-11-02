@@ -853,7 +853,7 @@ The point is reached only when all of these are true:
 | D10 | Records/enums/`match` become necessary for the AST/checker | **stop and ask** |
 | D11 | Modules/imports become necessary for compiler self-assembly | **stop and ask** |
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
-| D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; bootstrap release automation uses independent annotated streams: `lite-v*` umbrella, `lang-v*` language, `script-v*` scripting and `compiler-v*` compiler; unselected versions remain unassigned in `versions.json` |
+| D13 | Compiler release tag stream and artifact check-in policy | Generated TS/C-emitter seed check-in selected by owner-approved transition 2026-11-02; igniter release automation uses independent annotated streams: `lite-v*` umbrella, `lang-v*` language, `script-v*` scripting and `compiler-v*` compiler; unselected versions remain unassigned in `versions.json` |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
 | D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
 

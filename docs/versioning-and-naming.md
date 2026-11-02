@@ -1,6 +1,6 @@
 # Naming and versioning
 
-Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Bootstrap release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
+Status: **selected naming and version policy, 2026-10-25; distinct script/module suffixes selected 2026-10-30; tool alias matrix extended 2026-10-31; name origin recorded 2026-11-01; independent release streams selected 2026-11-02**. The prototype compiler lives in `compiler/` and is exposed as `./ltc`, `./litec` and `./lite compile`; the checker as `./lite check`; docs as `./lite docs`; and help as `./lite help`. Linker and formatter names are reserved but unimplemented; the verifier and tester have first implemented slices. [Igniter release automation](release-automation.md) packages exact component snapshots. Package-registry spelling remains open.
 
 ## 1. Canonical names
 
@@ -22,6 +22,7 @@ Lightness, here, means three things at once.
 | Language | **LiteLang** | `litelang` | The language and its reference |
 | Program | **LiteScript** | `litescript` | A script/program; module source is a distinct file kind |
 | Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc` | Compiles LiteLang programs; CLI `lite compile` |
+| Igniter | **Lite igniter** | `lite-igniter`; release tags `igniter-v*` | Bootstraps the project from preserved sources and generated compiler seeds |
 | Linker | **Lite linker** | `lite-linker`; executable `ltl` | Links compiled outputs; CLI `lite link` (planned) |
 | Runner | **Lite runner** | `lite-runner` | Runs scripts through the igniter; CLI `lite run` |
 | Checker | **Lite checker** | `lite-checker` | Check-only source validation; CLI `lite check` |
@@ -46,6 +47,7 @@ Lightness, here, means three things at once.
 - Do not call the language “LiteScript”; that names a program. Do not call the project “LiteLang”.
 - The project is `lite`. Do not say “write lite code”; code is written in LiteLang.
 - The compiler is the **Lite compiler**, package `lite-compiler`, executable `litec`.
+- The entity is the **Lite igniter**, named `lite-igniter`. Its responsibility is bootstrapping the project; “bootstrap” names the process, not a separate component.
 - The runtime is the **Lite runtime**, package `lite-runtime`, executable `literun`.
 - The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
 - Compiler entry points are equivalent: component/package `lite-compiler`, binary `./litec`, short `./ltc`, and CLI `./lite compile`.
@@ -98,7 +100,7 @@ revisions, stage dependencies, preservation/rebuild verification, and distributi
 procedure remain open under [INV-061.06](../investigations/SUBTOPICS.md#inv-061-06).
 See [the owning self-hosting direction](tooling-and-learning.md#typescript-igniter-and-early-self-hosting).
 Clarified **2026-10-31**: preserve a permanent shippable readable TypeScript
-bootstrap while moving compiler development into Lite. Keep igniter and
+igniter while moving compiler development into Lite. Keep igniter and
 self-hosted work overlapping until sufficient confidence; retirement of active
 igniter development does not remove the seed or the maintained TS/web target.
 For generated compiler snapshots, preserve generating Lite sources, exact builder
@@ -107,8 +109,10 @@ bytes and behavioral parity separately; readable source/tags alone do not prove
 the absence of hidden compiler behavior. C remains a maintained native/export
 path. See [the target/safety direction](../investigations/INV-061-first-compiler-output.md).
 
-The first [igniter checkpoint](../igniter/README.md) exists; there is no self-hosted
-bootstrap bundle or verified compiler-to-compiler rebuild chain yet.
+The preserved generated TypeScript igniter can rebuild its supported compiler
+source subset; native C self-hosting remains pending. The original handwritten
+reference is preserved alongside the generated igniter. See the
+[igniter guide](../igniter/README.md) and [generated seeds](../compiler/bootstrap/README.md).
 
 Reaffirmed **2026-10-30**: version control and stable version tags are required
 for bootstrap continuity. Tag the igniter and compiler milestones needed by the

@@ -1,4 +1,8 @@
-# Bootstrap release automation
+# Igniter release automation
+
+The **igniter** is the entity responsible for bootstrapping the project. Its
+release archive preserves the sources, compiler seeds and instructions needed
+to perform that process at the selected version.
 
 The umbrella and each component have independent versions and **annotated Git tags**:
 
@@ -27,7 +31,7 @@ controls `std-v*`.
 `null` means unassigned, and blocks a tag for that component until its version
 is explicitly selected. No initial component versions are invented here.
 
-Every component release still packages a complete bootstrap snapshot of the
+Every component release still packages a complete igniter snapshot of the
 exact commit. The manifest records `releasedComponent` (the tagged component
 and version) and `componentVersions` (the full combination), alongside exact
 source and builder identities. Shipping other components in the same archive
@@ -56,18 +60,18 @@ git push github compiler-v0.5.1
 
 The example version is illustrative; choose an unused version. No tag is
 created by installing this workflow. Branch pushes and pull requests continue
-to run CI. The manual **Bootstrap release → Run workflow** action builds the
+to run CI. The manual **Igniter release → Run workflow** action builds the
 same assets for the selected ref without publishing, even when the ref is a
-tag. Download the `bootstrap-release` artifact to inspect that dry run.
+tag. Download the `igniter-release` artifact to inspect that dry run.
 
 ## Release assets
 
-- `lite-TAG-bootstrap.tar.gz`: complete tracked source tree, including the
+- `lite-TAG-igniter.tar.gz`: complete tracked source tree, including the
   igniter and lockfile, launchers, provisional libraries and tests, compiler
   manifests, runtime support, checked-in seeds and their historical builder
   records. Its additional `release/` directory contains the selected generated
   TS and C-emitting **TS** compilers, flattened Lite sources, line maps and the
-  source/builder/artifact SHA-256 map. `BOOTSTRAP.md` is this guide.
+  source/builder/artifact SHA-256 map. `IGNITER.md` is this guide.
 - `lite-TAG-libraries.tar.gz`: the provisional `lib/` tree, its tests and the
   matching release record. This is not a separately versioned stable stdlib.
 - `lite-TAG-generated-c.tar.gz`: one `.c` and original `.lts` per admitted
@@ -94,7 +98,7 @@ each build. Compiler source regeneration is checked byte for byte.
 ## Bootstrap from an extracted release
 
 Check the downloaded assets before extraction, using `sha256sum -c SHA256SUMS`
-on Linux or `shasum -a 256 -c SHA256SUMS` on macOS. Extract the bootstrap archive
+on Linux or `shasum -a 256 -c SHA256SUMS` on macOS. Extract the igniter archive
 into an empty directory and enter it. The archive is usable without `.git` and
 without downloading any older release. Keep `release/release.json` to identify
 the source and generated compiler pair.
@@ -136,7 +140,7 @@ compiler gaps are recorded in [compiler/README.md](../compiler/README.md).
 
 To rebuild and verify all packaged C programs on one of the four supported
 hosts, extract the generated-C archive or retain it alongside `release.json`.
-From the extracted bootstrap tree, run:
+From the extracted igniter tree, run:
 
 ```sh
 node compiler/scripts/release.ts native /tmp/lite-native-rebuild /path/to/downloaded-assets

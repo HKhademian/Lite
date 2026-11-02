@@ -1,4 +1,4 @@
-name: Bootstrap release
+name: Igniter release
 
 on:
   push:
@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: bootstrap-release-${{ github.ref }}
+  group: igniter-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
           cache: npm
           cache-dependency-path: igniter/package-lock.json
       - run: npm --prefix igniter ci
-      - name: Verify bootstrap and package the exact source revision
+      - name: Verify the igniter and package the exact source revision
         run: node compiler/scripts/release.ts prepare .cache/release
       - uses: actions/upload-artifact@v7
         with:
@@ -112,7 +112,7 @@ jobs:
         run: node compiler/scripts/release.ts finalize .cache/release
       - uses: actions/upload-artifact@v7
         with:
-          name: bootstrap-release
+          name: igniter-release
           path: .cache/release/*
           include-hidden-files: true
           if-no-files-found: error
