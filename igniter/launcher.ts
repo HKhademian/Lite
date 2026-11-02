@@ -8,14 +8,15 @@ const args = process.argv.slice(2);
 const command = args.shift();
 const usage = [
   'Usage: ./lite <command> [options]', '', 'Commands:',
-  '  run [--check] file.lts [-- argument ...]  Run a Lite source',
   '  check file.lts                            Check source only',
-  '  compile --target ts|c file.lts            Compile to TS or C',
+  '  compile [--target ts] file.lts            Compile to a TS artifact',
   '  verify [--all|--update|--coverage]        Verify changed cases (--all for everything)',
   '  test [--fast|--full]                      Run the project test suite',
   '  docs                                      Show documentation paths',
   '  help                                      Show this help', '',
   'Compiler entry points: ./ltc, ./litec, ./lite compile',
+  'Execute artifacts: node compiler/entry.ts program.ts [argument ...]',
+  'C output is deferred until after the TS compiler migration.',
   'Reserved names: ./ltl/lite link, lite fmt', '',
 ].join('\n');
 
@@ -61,9 +62,6 @@ switch (command) {
   }
   case 'check':
     if (args.length === 0) { process.stderr.write('Usage: ./lite check file.lts\n'); process.exit(2); }
-    run('cli.ts', ['--check', ...args]);
-  case 'run':
-    if (args.length === 0) { process.stderr.write(usage); process.exit(2); }
-    run('cli.ts', args);
+    run('check.ts', args);
   default: process.stderr.write(usage); process.exitCode = 2;
 }

@@ -24,6 +24,12 @@ Rules:
 - Every declaration carries a `/** ... */` doc comment.
 - These files stay inside bootstrap subset L.
 
-`lib/tests/` holds direct Lite test entries. Run them through the root launcher,
-for example `./lite run lib/tests/text.lts`; the Igniter test suite runs all of
-them. These are library tests, not examples or samples.
+`lib/tests/` holds direct Lite test entries. Compile and execute them:
+
+```sh
+./lite compile lib/tests/text.lts > /tmp/lite-text-test.ts
+node compiler/entry.ts /tmp/lite-text-test.ts
+```
+
+All eight library entries pass the generated TS migration inventory. These are
+library tests, not examples or samples.

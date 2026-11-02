@@ -2,10 +2,13 @@
 
 This directory contains the Lite-written compiler and its bootstrap host. TS
 compilation defaults to the verified generated **T11** compiler in
-[`bootstrap/`](bootstrap/README.md). C compilation uses the Lite C emitter compiled
-by T11 into a TS-hosted compiler, also preserved there with its source/builder
-hashes. Both compile targets and compiler verification avoid T00. Interpreter
-run/check still use T00 during the [owner-approved transition](transition-plan.md).
+[`bootstrap/`](bootstrap/README.md). Public compile and check use generated TS;
+check-only also strictly checks the artifact without executing it. Public run is
+removed. Execute compiled programs with `node compiler/entry.ts program.ts`.
+C output and native self-hosting are deferred until after the TS migration and
+T00 retirement. The earlier TS-hosted C emitter and its provenance remain for
+explicit historical tests; they are not a public C output promise. See the
+[owner-approved transition](transition-plan.md).
 The accepted language remains
 the restricted bootstrap subset, not the entire language design.
 
@@ -218,8 +221,9 @@ use it. It is not part of the permanent module/import design.
 ## Run the compiler
 
 ```sh
-./litec --target ts program.lts > program.ts
-./litec --target c program.lts > program.c
+./litec program.lts > /tmp/program.ts
+node compiler/entry.ts /tmp/program.ts
+./lite check program.lts
 ```
 
 Equivalent forms:
@@ -231,7 +235,8 @@ Equivalent forms:
 
 The component/package is `lite-compiler`; its entry points are `ltc` (short
 command), `litec` (full binary) and `lite compile` (CLI form). Both binaries also
-accept the target as a bare positional word: `./ltc ts program.lts`.
+accept `ts` as a bare positional target: `./ltc ts program.lts`. TS is the
+default. Public C requests fail explicitly until the post-migration C phase.
 
 Generated TS/C also lower the existing right-associative, Float-default `**`
 checkpoint with explicit negative-base grouping and positive exponents. C power

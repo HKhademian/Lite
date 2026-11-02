@@ -5,19 +5,11 @@ each verified slice. Improve compiler speed where measurements support a change;
 keep correctness, source readability and reproducible bootstrap routes intact.
 This tracker covers the T00 replacement goal, including newly discovered flaws.
 
-Owner priority, 2026-11-02: focus on removing T00 dependencies. Work from
-existing T00-supported programs and the generated run/check/native bootstrap
-requirements. Keep independent bug hunts, future language work and broader
-cleanup outside the active path. Recorded issues stay visible for the migration
-audit; they do not automatically become the next implementation topic.
-
-Owner sequencing update, 2026-11-02: important existing syntax first, then use
-Lite by default for run/check, verification, tests and compilation. Continue
-broader correctness and advanced edge coverage on that default; retain T00 as
-an explicit reference until final conformance/native/retirement gates pass.
-The [core syntax and default-workflow gates](transition-plan.md#implementation-order)
-define this earlier cutover. Neither every measured failure nor native C11
-self-hosting must be closed before switching defaults.
+Latest owner direction prioritizes TS migration over independent correctness
+work. Public run is removed; compile and execute artifacts. Keep self-hosted TS
+rebuilds/fixed points throughout. T00 remains an explicit reference until TS
+features and consumers migrate. C output/native work and advanced edge audits
+follow retirement. See the [transition order](transition-plan.md#implementation-order).
 
 ## Immediate migration priorities
 
@@ -63,10 +55,15 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 
 These counts describe measured programs. Several failing cases share one cause;
 a passing broad case can still contain unsupported forms. The detailed report
-lists every remaining case and exact first diagnostic. Native C and consumer
-migration are additional work, so this is not an overall completion percentage.
+lists every remaining case and exact first diagnostic. Consumer migration is additional work, so this is not an overall completion
+percentage. Native C is a separate post-migration milestone.
 
 ## Closed slices
+
+- [x] Remove public run; default compilation to TS artifacts and migrate check
+  to generated compilation plus strict artifact checking without effects.
+  Public C output is explicitly deferred. Full current suite: 273 pass, nine
+  native-only skips, zero failures; verifier/default test routing still pending.
 
 - [x] Make T11 the default TS compiler and compile the C emitter through T11.
 - [x] Preserve nested output effects and argument order.

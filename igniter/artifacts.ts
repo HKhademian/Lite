@@ -51,6 +51,11 @@ export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunn
   return withTsArtifacts([source], runs => use(runs[0]!));
 }
 
+/** Strict-checks an artifact without loading or executing its program. */
+export function checkTsArtifact(source: string): ArtifactRun {
+  return withPreparedTsArtifacts([source], (_runs, checked) => checked);
+}
+
 /**
  * Strict-checks generated TS modules in one project, then supplies one isolated
  * process runner per source. Sources keep separate directories and module
@@ -58,7 +63,12 @@ export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunn
  * The synchronous callback and cleanup contract match withTsArtifact.
  */
 export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: readonly TsArtifactRunner[]) => Result): Result {
-  if (sources.length === 0) return use([]);
+  return withPreparedTsArtifacts(sources, runs => use(runs));
+}
+
+/** Shares preparation and checking between check-only and isolated execution callers. */
+function withPreparedTsArtifacts<Result>(sources: readonly string[], use: (runs: readonly TsArtifactRunner[], checked: ArtifactRun) => Result): Result {
+  if (sources.length === 0) return use([], { phase: 'typecheck', status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) });
   const directory = mkdtempSync(join(tmpdir(), 'lite-artifact-ts-'));
   try {
     const config = join(directory, 'tsconfig.json');
@@ -81,12 +91,12 @@ export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: 
     const tsc = new URL('./node_modules/typescript/bin/tsc', import.meta.url).pathname;
     const checked = spawnSync(process.execPath, [tsc, '-p', config], { encoding: 'utf8', timeout: 30000 });
     if (checked.error !== undefined) throw checked.error;
-    if (checked.status !== 0) {
-      const failure: ArtifactRun = {
-        phase: 'typecheck', status: checked.status, signal: checked.signal,
-        stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
-      };
-      return use(sources.map(() => () => failure));
+    const check: ArtifactRun = {
+      phase: 'typecheck', status: checked.status, signal: checked.signal,
+      stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
+    };
+    if (checked.status !== 0 || checked.signal !== null) {
+      return use(sources.map(() => () => check), check);
     }
     return use(runners.map((runner): TsArtifactRunner => (options = {}) => {
       const stdoutPath = `${runner}.stdout`;
@@ -115,7 +125,7 @@ export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: 
         if (stderr !== undefined) closeSync(stderr);
         if (stdout !== undefined) closeSync(stdout);
       }
-    }));
+    }), check);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

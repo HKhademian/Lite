@@ -1,4 +1,4 @@
-/** Temporary CLI: loads source through the flat-import loader, checks or executes it, and forwards stdio. */
+/** Explicit historical T00 reference CLI; public Lite commands compile/check generated TS artifacts. */
 
 import { readSync, writeSync } from 'node:fs';
 import { compile, execute, LiteFault } from './lite.ts';

@@ -1,17 +1,13 @@
 # Lite igniter
 
-An experimental TypeScript interpreter for the first Lite FVP checkpoints.
-Keep active handwritten host development minimal; move compiler development into
-Lite as soon as the supported subset and TS emission permit, keeping the igniter
-alongside it until its supported features have replacements. TS compilation now
-defaults to the verified generated [T11 bootstrap](../compiler/bootstrap/README.md);
-the compiler verifier uses T11-derived compilers for both targets. The C emitter
-is now a TS-hosted artifact built by T11. T00 still handles `lite run`, `lite check`
-and interpreter regressions. The [transition plan](../compiler/transition-plan.md)
-tracks migration, feature parity and eventual T00 removal from the active tree,
-with its original seed/source preserved in Git history. TS remains a maintained
-web target and C the first native/export target; native self-hosting and library
-export are not implemented yet.
+This directory retains the historical handwritten **T00** interpreter as an
+explicit migration reference, alongside TypeScript host and test adapters.
+Public compile and check now use the Lite-written generated
+[T11 compiler](../compiler/bootstrap/README.md). Public run is removed; programs
+execute from compiled TS artifacts. C output/native self-hosting is postponed
+until after TS migration and T00 retirement. Verification and legacy regression
+consumers are still being migrated; see the
+[transition plan](../compiler/transition-plan.md).
 
 Ongoing language work follows the
 [compiler development guidelines](../.agents/rules/compiler-development.md): implement in
@@ -127,37 +123,19 @@ no npm package dependencies and executes the `.ts` sources directly.
 From the repository root:
 
 ```sh
-./lite run examples/001-double-sum.lts
-```
-
-Enter `7` and `5` on separate lines; it reports `24`. Redirected stdin works too.
-For basic conditions, run `./lite run examples/002-decisions.lts`
-and supply an integer such as `0` or `5`.
-For loops, run `./lite run examples/003-sum-positive.lts`; enter
-`3`, `-2`, `4`, `0` to report `7`.
-For functions and recursion, run `./lite run examples/004-factorial.lts`;
-enter `5` to report `120` (or `0` to report `1`). Negative input explicitly
-reports an error and exits with status 2; overflow faults instead of wrapping.
-For a tiny Lite-written tokenizer, run
-`./lite run examples/005-scan-arithmetic.lts`; enter `12 + 30`
-to report `number: 12`, `symbol: +`, and `number: 30` on separate lines.
-For tuple values, destructuring and function inputs/results, run
-`./lite run examples/006-fixed-tuples.lts`. See the
-[numbered project examples](../examples/README.md) for the shared index.
-For explicitly prompted input and multiple report values, run
-`./lite run examples/007-prompts-and-report.lts` and enter 7 and 5.
-For named tuple fields and function contracts, run
-`./lite run examples/008-named-tuples.lts`; no input is needed.
-For fixed arrays, indexed reads and traversal, run
-`./lite run examples/009-fixed-arrays.lts` and enter a token index from 0 to 2.
-Prompts are written only when supplied to inputInt or inputAll; there are no automatic
-binding dumps. `--check` parses and checks
-without executing or reading stdin:
-
-```sh
+./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
+node compiler/entry.ts /tmp/lite-example.ts
 ./lite check examples/001-double-sum.lts
-./lite run --check examples/001-double-sum.lts
 ```
+
+Enter `7` and `5` on separate lines; it prints `24` after the explicit prompts.
+Compile other sources the same way. Arguments follow the artifact path directly,
+for example `node compiler/entry.ts /tmp/args.ts "a b" "" --check`.
+Check-only never executes program effects or reads program stdin. Unsupported
+source fails explicitly, without T00 fallback; the
+[current inventory](../compiler/reports/current-t00-t11-inventory.md) lists gaps.
+The old `node igniter/cli.ts file.lts` entry remains an explicitly requested T00
+reference, rather than the public execution workflow.
 
 Install and typecheck the igniter once:
 
@@ -174,14 +152,11 @@ Run tests through the CLI:
 ```
 
 The root [lite launcher](../lite) links to the executable TypeScript entry
-[`launcher.ts`](launcher.ts). It forwards
-run to `node igniter/cli.ts` using node from PATH, preserving arguments, stdin,
-output and exit status. It locates the igniter relative to itself while source
-paths stay relative to the caller's working directory. No installation, build or
-runtime npm dependencies are required. Direct Node invocation remains available
-as the bootstrap entry. The pinned checking toolchain remains Node 26.13.0;
-the exact launcher/example command was also smoke-tested with the current PATH's
-Node 24.16.0, without changing that version policy or the user's Node selection.
+[`launcher.ts`](launcher.ts). Compile/check locate their adapters relative to
+the launcher while source paths remain relative to the caller. TS artifacts run
+through [`compiler/entry.ts`](../compiler/entry.ts), preserving program arguments,
+stdin, streamed output and exit status. No runtime npm dependencies are required;
+strict check-only requires the pinned checking toolchain installed above.
 
 Node strips types; it does **not** typecheck this code. Always run the separate
 check before accepting changes. The config enables strict mode, checked indexed
@@ -610,15 +585,15 @@ array values; it does not validate native header-free storage or performance.
 inputArgs() returns a readable List<String> containing only script arguments:
 
 ```sh
-./lite run examples/020-script-arguments.lts -- "a b" "" "سلام🙂" --check
+./lite compile examples/020-script-arguments.lts > /tmp/args.ts
+node compiler/entry.ts /tmp/args.ts "a b" "" "سلام🙂" --check
 ```
 
 The example reports each supplied value in order, including an empty line for
-the empty argument. Values after the first -- following the script path stay
-data, including another -- or --check. Without arguments, or with an empty --
-suffix, inputArgs returns an empty known-String list. Do not supply extra runner
-arguments without that separator. The general form is
-./lite run [--check] file.lts [-- argument ...].
+the empty argument. Every value after the artifact path is program data,
+including `--` and `--check`. Without arguments, inputArgs returns an empty
+known-String list. Public run is removed; no separating `--` is required by the
+artifact adapter.
 
 The zero-argument helper consumes no stdin and produces no prompt/output. It
 snapshots host argument String values at execution entry; repeated calls retain
@@ -900,16 +875,16 @@ self-hosted build. See [INV-061 evidence](../investigations/INV-061-lite-arithme
 The Lite-written compiler now lives in [compiler/](../compiler/README.md), not
 in the runnable example list. It has one shared front-end and separate TS/C
 backends assembled by the ordered manifests. `litec` compiles the manifest
-bundle through [bundle-cli.ts](bundle-cli.ts); no module or import syntax is
+bundle through the [generated host](../compiler/host.ts); no module or import syntax is
 introduced, and compiler source no longer uses the temporary `importFlatAll`
 directive.
 
 Run the compiler with:
 
 ```sh
-./litec --target ts program.lts > program.ts
-./litec --target c program.lts > program.c
-./lite compile --target ts program.lts
+./litec program.lts > /tmp/program.ts
+node compiler/entry.ts /tmp/program.ts
+./lite check program.lts
 ./ltc ts program.lts
 ```
 

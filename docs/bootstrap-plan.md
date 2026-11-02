@@ -21,14 +21,15 @@ investigations are permitted under those guidelines. The restrictions below
 describe the current L and bootstrap phase scope; they do not permanently freeze
 Lite compiler feature development. Native C self-hosting remains pending.
 
-Owner sequencing update, 2026-11-02: the
+Latest owner direction, 2026-11-02: switch immediately toward generated TS
+workflows while keeping the compiler self-hosted. Public run is removed;
+compile programs and execute their TS artifacts. Check-only uses generated Lite
+and strict artifact checking without program effects. Verifier/default test
+consumers and missing ordinary syntax are still migrating. C output and native
+self-hosting resume **after TS migration and T00 retirement**. The
 [current transition order](../compiler/transition-plan.md#implementation-order)
-prioritizes important existing syntax, then switches everyday run/check,
-verification, tests and compilation to Lite. Broader conformance, advanced edge
-coverage and native C self-hosting continue afterward, with T00 retained as an
-explicit reference until final retirement. This approved order supersedes the
-original phase ordering below for the default-workflow cutover; the final
-bootstrap/native acceptance requirements remain in force.
+supersedes earlier phase ordering and native retirement prerequisites below.
+Advanced correctness/edge audits do not block ordinary syntax migration.
 
 Related direction:
 
@@ -78,8 +79,9 @@ compilation and compiler verification now select preserved
 emitter is TS-hosted, built by T11, and is not the future native C11 compiler.
 Changed S is rebuilt by T11 and strictly checked before
 use; artifact/source identities prevent stale or corrupt compiler selection.
-Run/check and interpreter regressions still depend on T00. Feature
-parity, the native C ladder and eventual T00 removal remain pending. The
+Public compile/check now use generated TS, public run is removed and C output
+is deferred. Verifier/default regression consumers and TS feature parity still
+need migration before T00 retirement. The native C ladder follows retirement. The
 [text-cache seed refresh](../compiler/parity.md#text-cache-seed-refresh) records
 T11 == T12 == T13 for its exact source snapshot. Generated text scanning reuses
 bounded code-point views; that source snapshot has a 668 ms self-build median in the
@@ -821,8 +823,8 @@ Use the existing visible commands:
 | `./lite test` / `./lite test --full` | Full local gate, including native C |
 | `./lite verify --all` | All feature/example/sample scenarios and targets |
 | `./lite check file.lts` | Source check |
-| `./lite compile --target ts\|c file.lts` | Existing compiler path |
-| `./lite run file.lts [-- args]` | Existing interpreter path |
+| `./lite compile [--target ts] file.lts` | Generated TS compiler; C deferred |
+| `node compiler/entry.ts program.ts [argument ...]` | Execute compiled TS artifact; public run removed |
 
 The repository CI also runs the strict TypeScript check and editor tests. Do not
 add npm commands to user-facing documentation.

@@ -108,14 +108,14 @@ Install the Node version recorded in `igniter/.node-version` (currently
 dependencies:
 
 ```sh
-./lite run igniter/tests/compiler/001-001-report-int-42.lts
-./litec --target c igniter/tests/compiler/001-001-report-int-42.lts > hello.c
-cc -std=c11 -Wall -Wextra -Werror hello.c -o hello -lm
-./hello
+./lite compile igniter/tests/compiler/001-001-report-int-42.lts > hello.ts
+node compiler/entry.ts hello.ts
 ```
 
-Both runs print `42`. To execute the exact packaged C-emitting compiler
-directly, without selecting or rebuilding one through the host:
+This prints `42`. Public run is removed and public C output is deferred during
+the TS migration. Older releases retain their documented command contracts.
+For a historical package containing the C-emitting compiler, its exact artifact
+can still be executed directly:
 
 ```sh
 node compiler/entry.ts release/c-compiler.ts < igniter/tests/compiler/001-001-report-int-42.lts > hello.c

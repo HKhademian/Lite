@@ -500,12 +500,12 @@ test('real compiler CLI forwards source-name context without changing emitted by
     const sourcePath = join(directory, 'label with spaces.lts');
     for (const [target, reference] of [['ts', 'report-42.ts'], ['c', 'report-42.c']] as const) {
       writeFileSync(sourcePath, 'outputLine(42);');
-      const valid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      const valid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(valid.error, undefined); assert.equal(valid.status, 0);
       assert.deepEqual(valid.stdout, readFileSync(join(root, 'compiler/generated', reference)));
       assert.equal(valid.stderr.length, 0);
       writeFileSync(sourcePath, 'outputLine(1 +);');
-      const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0);
       assert.deepEqual(invalid.stderr, Buffer.from(`${sourcePath}:1:15: expected an Int, Float, String or Bool expression\n`));
     }
@@ -524,8 +524,8 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     assert.deepEqual(ts.stdout, readFileSync(join(root, 'compiler/generated/report-42.ts')));
     assert.equal(ts.stderr.length, 0);
     const c = spawnSync(join(root, 'lite'), ['compile', '--target', 'c', sourcePath], { env, timeout: 5000 });
-    assert.equal(c.error, undefined); assert.equal(c.status, 0, c.stderr.toString());
-    assert.deepEqual(c.stdout, readFileSync(join(root, 'compiler/generated/report-42.c')));
+    assert.equal(c.error, undefined); assert.equal(c.status, 2);
+    assert.equal(c.stdout.length, 0); assert.match(c.stderr.toString(), /C output is deferred/);
     const shorthand = spawnSync(join(root, 'ltc'), ['ts', sourcePath], { env, timeout: 5000 });
     assert.equal(shorthand.error, undefined); assert.equal(shorthand.status, 0);
     assert.deepEqual(shorthand.stdout, ts.stdout);
@@ -539,7 +539,7 @@ test('litec, ltc, lite compile and lite check expose the compiler sources direct
     assert.deepEqual(invalid.stderr, Buffer.from(`${invalidPath}:1:15: expected an Int, Float, String or Bool expression\n`));
     const invalidCheck = spawnSync(join(root, 'lite'), ['check', invalidPath], { env, timeout: 5000 });
     assert.equal(invalidCheck.status, 1); assert.equal(invalidCheck.stdout.length, 0);
-    assert.match(invalidCheck.stderr.toString(), /SourceError: expected expression/);
+    assert.match(invalidCheck.stderr.toString(), /bad\.lts:1:15: expected an Int, Float, String or Bool expression/);
     for (const args of [[], ['--target', 'x', sourcePath], ['ts', join(directory, 'missing.lts')],
       ['ts', join(directory, 'sample.txt')]]) {
       const bad = spawnSync(join(root, 'litec'), args, { env, timeout: 5000 });
@@ -624,13 +624,13 @@ test('inputArgs signatures fail before effects and normal helper shadowing is pr
   }
   assert.equal(run('inputArgs := fn(n: Int): Int { n + 1 } outputLine(inputArgs(n = 2));', '', ['unread']).output, '3\n');
 });
-test('real launcher preserves only script argument values after the first separating suffix', () => {
+test('explicit T00 reference CLI preserves script argument values after the separating suffix', () => {
   const root = new URL('../', import.meta.url).pathname;
   const example = join(root, 'examples/020-script-arguments.lts');
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   const values = ['', 'a b', 'سلام🙂', '--check', '--', '*.lts', 'line\nbreak'];
   for (const args of [[], ['--'], ['--', ...values]]) {
-    const result = spawnSync(join(root, 'lite'), ['run', example, ...args], { env, timeout: 5000 });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), example, ...args], { env, timeout: 5000 });
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
     assert.deepEqual(result.stdout, Buffer.from(args.length > 1 ? values.map(value => value + '\n').join('') : ''));
     assert.equal(result.stderr.length, 0);
@@ -645,11 +645,11 @@ test('argument suffix errors precede execution and check-only ignores all script
   try {
     const path = join(directory, 'side-effects.lts'); writeFileSync(path, 'outputLine("before"); inputAll("prompt: ");');
     for (const suffix of [['extra'], ['--check'], ['extra', '--', 'later']]) {
-      const rejected = spawnSync(join(root, 'lite'), ['run', path, ...suffix], { env, timeout: 5000 });
+      const rejected = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path, ...suffix], { env, timeout: 5000 });
       assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2);
       assert.equal(rejected.stdout.length, 0); assert.match(rejected.stderr.toString(), /Usage:/);
     }
-    const checked = spawnSync(join(root, 'lite'), ['run', '--check', path, '--', '--check', '', 'x'], { env, timeout: 5000 });
+    const checked = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), '--check', path, '--', '--check', '', 'x'], { env, timeout: 5000 });
     assert.equal(checked.error, undefined); assert.equal(checked.status, 0);
     assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -660,7 +660,7 @@ test('script arguments survive caller-relative paths and script filenames with s
   const directory = mkdtempSync(join(tmpdir(), 'lite args '));
   try {
     writeFileSync(join(directory, 'argument script.lts'), readFileSync(join(root, 'examples/020-script-arguments.lts')));
-    const result = spawnSync(join(root, 'lite'), ['run', 'argument script.lts', '--', 'a b', ''], {
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), 'argument script.lts', '--', 'a b', ''], {
       cwd: directory, env, timeout: 5000,
     });
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
@@ -725,17 +725,17 @@ test('whole-input example runs via the real launcher preserving UTF-8 bytes and 
   const path = join(root, 'examples/019-whole-input.lts');
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const input of ['', 'a\r\n🙂\n']) {
-    const result = spawnSync(join(root, 'lite'), ['run', path], { input, env, timeout: 5000 });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path], { input, env, timeout: 5000 });
     assert.equal(result.error, undefined); assert.equal(result.status, 0);
     assert.deepEqual(result.stdout, Buffer.from(`Text (finish with EOF): code points: ${Array.from(input).length}\n${input}\n`));
     assert.equal(result.stderr.length, 0);
   }
-  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { env, timeout: 5000 });
+  const check = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), '--check', path], { env, timeout: 5000 });
   assert.equal(check.error, undefined); assert.equal(check.status, 0); assert.equal(check.stdout.length, 0); assert.equal(check.stderr.length, 0);
   const directory = mkdtempSync(join(tmpdir(), 'lite-whole-utf8-'));
   try {
     const source = join(directory, 'read.lts'); writeFileSync(source, 'inputAll();');
-    const invalid = spawnSync(join(root, 'lite'), ['run', source], { input: Buffer.from([0xff]), env, timeout: 5000 });
+    const invalid = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), source], { input: Buffer.from([0xff]), env, timeout: 5000 });
     assert.equal(invalid.status, 1); assert.equal(invalid.stdout.length, 0);
     assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -2232,17 +2232,17 @@ test('whole-source TS and C compilers reject later statements and decoding failu
     const sourcePath = join(directory, 'source.lts');
     for (const target of ['ts', 'c'] as const) {
       writeFileSync(sourcePath, '');
-      const empty = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      const empty = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(empty.error, undefined); assert.equal(empty.status, 0, empty.stderr.toString());
       assert.ok(empty.stdout.length > 0); assert.equal(empty.stderr.length, 0);
       for (const input of [' \n}', 'outputLine(42);\nunsupported();\n', 'outputLine(42);\nprocess.exit(7);\n']) {
         writeFileSync(sourcePath, input);
-        const rejected = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+        const rejected = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
         assert.equal(rejected.error, undefined); assert.equal(rejected.status, 2, rejected.stderr.toString());
         assert.equal(rejected.stdout.length, 0); assert.notEqual(rejected.stderr.length, 0);
       }
       writeFileSync(sourcePath, Buffer.concat([Buffer.from('outputLine(42);\n'), Buffer.from([0xff])]));
-      const invalid = spawnSync(join(root, 'litec'), [target, sourcePath], { env, timeout: 5000 });
+      const invalid = spawnSync(target === 'ts' ? join(root, 'litec') : process.execPath, target === 'ts' ? [target, sourcePath] : [join(root, 'compiler/cli.ts'), target, sourcePath], { env, timeout: 5000 });
       assert.equal(invalid.error, undefined); assert.equal(invalid.status, 1);
       assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /InputFault: cannot read input/);
     }
@@ -2672,11 +2672,11 @@ test('integer calculator runs and checks through the root launcher without exten
     ['(1 + 2', 2, 'Arithmetic expression:\n', /expected '\)'/],
     ['1 / 0', 1, 'Arithmetic expression:\n', /ArithmeticPanic: division by zero/],
   ] as const) {
-    const result = spawnSync(join(root, 'lite'), ['run', path], { input, encoding: 'utf8', env, timeout: 5000 });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path], { input, encoding: 'utf8', env, timeout: 5000 });
     assert.equal(result.error, undefined); assert.equal(result.status, status);
     assert.equal(result.stdout, output); assert.match(result.stderr, pattern);
   }
-  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { encoding: 'utf8', env, timeout: 5000 });
+  const check = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), '--check', path], { encoding: 'utf8', env, timeout: 5000 });
   assert.equal(check.error, undefined); assert.equal(check.status, 0);
   assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
 });
@@ -2702,11 +2702,11 @@ test('retained tokenizer runs and checks through the root launcher with explicit
     ['12 + 🙂', 2, 'Arithmetic expression:\n', 'unsupported symbol: 🙂\n'],
     ['\n', 0, 'Arithmetic expression:\n', ''],
   ] as const) {
-    const result = spawnSync(join(root, 'lite'), ['run', path], { input, encoding: 'utf8', env, timeout: 5000 });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path], { input, encoding: 'utf8', env, timeout: 5000 });
     assert.equal(result.error, undefined); assert.equal(result.status, status);
     assert.equal(result.stdout, output); assert.equal(result.stderr, errors);
   }
-  const check = spawnSync(join(root, 'lite'), ['run', '--check', path], { encoding: 'utf8', env, timeout: 5000 });
+  const check = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), '--check', path], { encoding: 'utf8', env, timeout: 5000 });
   assert.equal(check.error, undefined); assert.equal(check.status, 0);
   assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
 });
@@ -2838,7 +2838,7 @@ test('growable list example runs and checks through the launcher with runtime fa
   const example = new URL('../examples/013-growable-lists.lts', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const check of [false, true]) {
-    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), example], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), example], { encoding: 'utf8', env });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, check ? '' : '0 3\n1\n2\n'); assert.equal(result.stderr, '');
   }
@@ -2846,7 +2846,7 @@ test('growable list example runs and checks through the launcher with runtime fa
   try {
     const path = join(directory, 'empty.lts');
     writeFileSync(path, 'values: mut List<Int> = []; pop_back(mut values);');
-    const result = spawnSync(join(root, 'lite'), ['run', path], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), path], { encoding: 'utf8', env });
     assert.equal(result.status, 1); assert.equal(result.stdout, '');
     assert.match(result.stderr, /empty\.lts:1:\d+: BoundPanic: pop_back on an empty list/);
   } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -2912,7 +2912,7 @@ test('indexed named argument example executes and checks through the root launch
   const path = new URL('../examples/012-named-arguments.lts', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const check of [false, true]) {
-    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, check ? '' : '123\n123\n10\n');
     assert.equal(result.stderr, '');
@@ -2971,7 +2971,7 @@ test('indexed typed tuple conversion example runs and checks through the launche
   const path = new URL('../examples/011-tuple-label-conversion.lts', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const check of [false, true]) {
-    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, check ? '' : '640 480\n640 480\n640 480\n');
     assert.equal(result.stderr, '');
@@ -3014,7 +3014,7 @@ test('indexed mixed tuple example executes and checks without effects', () => {
   const path = new URL('../examples/010-mixed-tuples.lts', import.meta.url).pathname;
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const check of [false, true]) {
-    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), path], { encoding: 'utf8', env });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, check ? '' : '7 green 2 true\n7 green 2 true\n');
     assert.equal(result.stderr, '');
@@ -3832,41 +3832,32 @@ test('tuple demonstration runs from the numbered project examples through the re
   assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
 });
 
-test('root shebang launcher forwards run arguments, stdin, diagnostics and statuses from any caller directory', () => {
-  const root = new URL('../', import.meta.url).pathname;
-  const launcher = join(root, 'lite');
-  const dir = mkdtempSync(join(tmpdir(), 'lite-launcher-'));
-  const source = join(dir, 'program with spaces.lts');
+test('root launcher compiles artifacts and forwards their input, diagnostics and status from caller directories', () => {
+  const root = new URL('../', import.meta.url).pathname, launcher = join(root, 'lite');
+  const dir = mkdtempSync(join(tmpdir(), 'lite-launcher-')), source = join(dir, 'program with spaces.lts'), artifact = join(dir, 'program.ts');
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? ''), CDPATH: dir };
-  const invoke = (args: readonly string[], input = '', executable = launcher, cwd = dir) =>
-    spawnSync(executable, args, { cwd, env, input, encoding: 'utf8', timeout: 5000 });
+  const invoke = (args: readonly string[], executable = launcher, cwd = dir) =>
+    spawnSync(executable, args, { cwd, env, encoding: 'utf8', timeout: 10000 });
+  const build = (path = source, executable = launcher, cwd = dir) => {
+    const result = invoke(['compile', path], executable, cwd); assert.equal(result.status, 0, result.stderr); assert.equal(result.stderr, ''); writeFileSync(artifact, result.stdout);
+  };
+  const executeArtifact = (input = '', args: readonly string[] = []) => spawnSync(process.execPath,
+    [join(root, 'compiler/entry.ts'), artifact, ...args], { cwd: dir, env, input, encoding: 'utf8', timeout: 10000 });
   try {
-    const example = invoke(['run', 'examples/006-fixed-tuples.lts'], '', launcher, root);
-    assert.equal(example.error, undefined); assert.equal(example.status, 0);
-    assert.equal(example.stdout, 'number\n12\nnumber: 12\n42\n'); assert.equal(example.stderr, '');
-    writeFileSync(source, 'outputLine(inputInt()); reportError("done"); exit(7);');
-    const result = invoke(['run', source], '19\n');
-    assert.equal(result.error, undefined); assert.equal(result.status, 7);
-    assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
+    build('examples/001-double-sum.lts', launcher, root);
+    const example = executeArtifact('7\n5\n'); assert.equal(example.status, 0, example.stderr); assert.equal(example.stdout, 'First integer: Second integer: 24\n');
+    writeFileSync(source, 'outputLine(inputInt()); reportError("done"); exit(7);'); build();
+    const result = executeArtifact('19\n'); assert.equal(result.status, 7); assert.equal(result.stdout, '19\n'); assert.equal(result.stderr, 'done\n');
     writeFileSync(source, 'outputLine(inputInt());');
-    const check = invoke(['run', '--check', source]);
-    assert.equal(check.error, undefined); assert.equal(check.status, 0);
-    assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
-    writeFileSync(source, 'outputLine(1/0);');
-    const fault = invoke(['run', source]);
-    assert.equal(fault.error, undefined); assert.equal(fault.status, 1);
-    assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
-    for (const args of [[], ['run'], ['unknown', source]]) {
-      const usage = invoke(args);
-      assert.equal(usage.error, undefined); assert.equal(usage.status, 2);
-      assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/);
-    }
-    const alias = join(dir, 'project with spaces');
-    symlinkSync(root, alias, 'dir');
-    writeFileSync(source, 'outputLine(23);');
-    const spaced = invoke(['run', source], '', join(alias, 'lite'));
-    assert.equal(spaced.error, undefined); assert.equal(spaced.status, 0);
-    assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
+    const check = invoke(['check', source]); assert.equal(check.status, 0, check.stderr); assert.equal(check.stdout, ''); assert.equal(check.stderr, '');
+    writeFileSync(source, 'loop inputArgs() as arg { outputLine(arg); }'); build();
+    const args = executeArtifact('', ['a b', '', '--check']); assert.equal(args.status, 0, args.stderr); assert.equal(args.stdout, 'a b\n\n--check\n');
+    writeFileSync(source, 'outputLine(1/0);'); build(); const fault = executeArtifact();
+    assert.equal(fault.status, 1); assert.equal(fault.stdout, ''); assert.match(fault.stderr, /program with spaces\.lts:1:13: ArithmeticPanic:/);
+    for (const argv of [[], ['run'], ['unknown', source]]) { const usage = invoke(argv); assert.equal(usage.status, 2); assert.equal(usage.stdout, ''); assert.match(usage.stderr, /^Usage: \.\/lite <command>/); }
+    const alias = join(dir, 'project with spaces'); symlinkSync(root, alias, 'dir');
+    writeFileSync(source, 'outputLine(23);'); build(source, join(alias, 'lite')); const spaced = executeArtifact();
+    assert.equal(spaced.status, 0, spaced.stderr); assert.equal(spaced.stdout, '23\n'); assert.equal(spaced.stderr, '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -3942,13 +3933,13 @@ test('numbered prompt/report example runs through the root command with real red
   const expected = 'First number: Second number: sum: 12\ninputs: 7 5 equal: false\n';
   assert.equal(run(readFileSync(example, 'utf8'), '7 5').output, expected);
   const root = new URL('../', import.meta.url).pathname;
-  const result = spawnSync(join(root, 'lite'), ['run', 'examples/007-prompts-and-report.lts'], {
+  const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), 'examples/007-prompts-and-report.lts'], {
     cwd: root, input: '7\n5\n', encoding: 'utf8', timeout: 5000,
     env: { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') },
   });
   assert.equal(result.error, undefined); assert.equal(result.status, 0);
   assert.equal(result.stdout, expected); assert.equal(result.stderr, '');
-  const checked = spawnSync(join(root, 'lite'), ['run', '--check', example.pathname], {
+  const checked = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), '--check', example.pathname], {
     cwd: root, encoding: 'utf8', timeout: 5000,
     env: { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') },
   });
@@ -4068,7 +4059,7 @@ test('named tuple example runs through the root launcher and check-only mode', (
   assert.equal(run(readFileSync(example, 'utf8')).output, expected);
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
   for (const check of [false, true]) {
-    const result = spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), example.pathname], {
+    const result = spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), example.pathname], {
       cwd: root, encoding: 'utf8', env, timeout: 5000,
     });
     assert.equal(result.error, undefined); assert.equal(result.status, 0);
@@ -4207,7 +4198,7 @@ test('numbered fixed-array example runs and checks through the root launcher', (
   const expected = 'number 12\nsymbol +\nnumber 30\nToken index: +\nsum: 60\n';
   assert.equal(run(readFileSync(source, 'utf8'), '1').output, expected);
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  const invoke = (input: string, check = false) => spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), source.pathname], {
+  const invoke = (input: string, check = false) => spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), source.pathname], {
     cwd: root, env, input, encoding: 'utf8', timeout: 5000,
   });
   const result = invoke('1\n');
@@ -4281,7 +4272,7 @@ test('type alias example runs and checks through the root launcher', () => {
   const expected = 'ident: total\nop: +=\nnum: 100\n';
   assert.equal(run(readFileSync(source, 'utf8')).output, expected);
   const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
-  const invoke = (check = false) => spawnSync(join(root, 'lite'), ['run', ...(check ? ['--check'] : []), source.pathname], {
+  const invoke = (check = false) => spawnSync(process.execPath, [join(root, 'igniter/cli.ts'), ...(check ? ['--check'] : []), source.pathname], {
     cwd: root, env, encoding: 'utf8', timeout: 5000,
   });
   const result = invoke(false);

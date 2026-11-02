@@ -298,9 +298,14 @@ self-rebuild remain open. See
 [String/report evidence](../investigations/INV-061-string-and-multi-value-reports.md)
 and the [fixture schema](../igniter/tests/README.md).
 
-Current CLI entry points are `./lite run`, `./lite check`, `./lite compile`,
+Current CLI entry points are `./lite check`, `./lite compile`,
 `./lite verify`, `./lite test`, `./lite docs` and `./lite help`; compiler aliases
-are `./ltc` and `./litec`. Linker and formatter names are reserved but
+are `./ltc` and `./litec`. Public run is removed for the TS migration. Compile
+with `./lite compile source.lts > /tmp/program.ts`, then execute
+`node compiler/entry.ts /tmp/program.ts [argument ...]`. Check-only uses the
+generated compiler and strict artifact checking without program effects. C
+output is deferred until after T00 retirement. Earlier run/C instructions on
+this page are historical checkpoints. Linker and formatter names are reserved but
 unimplemented. See [tool naming](versioning-and-naming.md#1-canonical-names).
 
 Feature and artifact verification lives in `verifications/`; `./lite verify`
@@ -322,7 +327,7 @@ T11 into a TS-hosted compiler. The old
 [`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) remains an explicit reference
 path. There is no module/import
 syntax, and compiler source no longer uses `importFlatAll`. Access is
-`./litec --target ts|c file.lts`, `./lite compile ...`, or the short `./ltc`
+`./litec [--target ts] file.lts`, `./lite compile ...`, or the short `./ltc`
 command. This removes the duplicated parser/checker while keeping separate
 target backends.
 
@@ -728,9 +733,9 @@ The existing future two-pass idempotence conformance requirement remains indepen
 
 ## Run and build proposals
 
-The root run launcher is now implemented as `./lite run file.lts`, as recorded
-[above](#root-run-launcher). Build/native caching and broader installed-CLI
-behavior below remain proposals.
+The historical root run launcher described [above](#root-run-launcher) is
+removed for the 2026-11-02 TS migration. Compile and execute artifacts instead.
+Build/native caching and broader installed-CLI behavior below remain proposals.
 
 ```text
 lite run lesson.lts

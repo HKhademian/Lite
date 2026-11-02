@@ -3,7 +3,7 @@
 import { statSync } from 'node:fs';
 
 function usage(): never {
-  process.stderr.write('Usage: ./ltc --target ts|c file.lts\n       ./litec --target ts|c file.lts\n       ./lite compile --target ts|c file.lts\n');
+  process.stderr.write('Usage: ./ltc [--target ts] file.lts\n       ./litec [--target ts] file.lts\n       ./lite compile [--target ts] file.lts\n');
   process.exit(2);
 }
 const args = process.argv.slice(2);
@@ -16,7 +16,9 @@ while (args.length > 0) {
   else { if (arg === '--') args.shift(); break; }
 }
 const path = args[0];
+target ??= 'ts';
 if ((target !== 'ts' && target !== 'c') || args.length !== 1 || path === undefined) usage();
+if (target === 'c') { process.stderr.write('litec: C output is deferred until after the TS compiler migration\n'); process.exit(2); }
 if (!path.endsWith('.lts')) { process.stderr.write('litec: source must be a .lts file\n'); process.exit(2); }
 try { if (!statSync(path).isFile()) throw new Error('not a file'); }
 catch { process.stderr.write(`litec: cannot read ${path}\n`); process.exit(2); }

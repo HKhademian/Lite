@@ -10,7 +10,7 @@ import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type Compiler
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
 import { runText } from '../../igniter/bootstrap.ts';
-import { runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
+import { checkTsArtifact, runTsArtifact, runCArtifact, withTsArtifact, withTsArtifacts, type ArtifactOptions, type ArtifactRun } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
@@ -90,6 +90,45 @@ test('TS artifact capture rejects oversized buffers and clears output before the
   });
 });
 
+test('artifact check-only reports strict errors without loading or executing a module', () => {
+  const checked = checkTsArtifact('export function main(): string { return "unused"; }\nthrow new Error("must not load");');
+  assert.equal(checked.phase, 'typecheck'); assert.equal(checked.status, 0); assert.equal(checked.signal, null);
+  assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
+  const rejected = checkTsArtifact('export function main(): string { return 42; }');
+  assert.equal(rejected.phase, 'typecheck'); assert.notEqual(rejected.status, 0);
+  assert.match(rejected.stdout.toString() + rejected.stderr.toString(), /not assignable to type 'string'/);
+});
+
+test('public commands compile and check TS artifacts without T00 and reject source run/C output', () => {
+  const directory = isolatedCheckout();
+  try {
+    symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
+    assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);
+    const path = join(directory, 'program with spaces.lts');
+    writeFileSync(join(directory, 'helper.lts'), 'twice := fn(n: Int): Int { n * 2 }');
+    writeFileSync(path, 'importFlatAll "helper.lts";\noutputLine(twice(inputInt("n? ")));');
+    const compiled = spawnSync(join(directory, 'lite'), ['compile', path], { env, timeout: 10000 });
+    assert.equal(compiled.status, 0, compiled.stderr.toString()); assert.equal(compiled.stderr.length, 0);
+    const artifact = join(directory, 'program.ts'); writeFileSync(artifact, compiled.stdout);
+    const executed = spawnSync(process.execPath, [join(directory, 'compiler/entry.ts'), artifact], { input: '7', env, timeout: 10000 });
+    assert.equal(executed.status, 0, executed.stderr.toString()); assert.equal(executed.stdout.toString(), 'n? 14\n');
+    const checked = spawnSync(join(directory, 'lite'), ['check', path], { input: Buffer.from([0xff]), env, timeout: 10000 });
+    assert.equal(checked.status, 0, checked.stderr.toString()); assert.equal(checked.stdout.length, 0); assert.equal(checked.stderr.length, 0);
+    for (const args of [['run', path], ['compile', '--target', 'c', path]]) {
+      const result = spawnSync(join(directory, 'lite'), args, { env, timeout: 10000 });
+      assert.equal(result.status, 2); assert.equal(result.stdout.length, 0);
+      assert.match(result.stderr.toString(), args[0] === 'run' ? /Usage:/ : /C output is deferred/);
+    }
+    writeFileSync(path, 'outputLine("before"); match { true { 1 } _ { 2 } }');
+    const unsupported = spawnSync(join(directory, 'lite'), ['check', path], { env, timeout: 10000 });
+    assert.equal(unsupported.status, 1); assert.equal(unsupported.stdout.length, 0);
+    assert.match(unsupported.stderr.toString(), /unsupported feature "match"/);
+    writeFileSync(path, 'outputLine("before"); unknown();');
+    const invalid = spawnSync(join(directory, 'lite'), ['compile', path], { env, timeout: 10000 });
+    assert.equal(invalid.status, 2); assert.equal(invalid.stdout.length, 0); assert.match(invalid.stderr.toString(), /unknown value unknown/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('generated reports evaluate arguments once in order and preserve nested output', () => {
   const cases = [
     { source: 'f := fn(): Int { outputLine("inner"); 7 } outputLine("before"); outputLine(f()); outputLine("after");',
@@ -125,7 +164,8 @@ function isolatedCheckout(): string {
   const manifest = resolve(root, 'compiler/manifests/ts.json');
   const bundles = [loadBundle(manifest), loadBundle(resolve(root, 'compiler/manifests/c.json'))];
   const paths = new Set([
-    'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
+    'lite', 'ltc', 'litec', 'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts', 'compiler/launcher.ts', 'compiler/package.json',
+    'igniter/launcher.ts', 'igniter/check.ts', 'igniter/artifacts.ts', 'igniter/package.json',
     'compiler/bootstrap/T11.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/bootstrap/c-emitter.ts', 'compiler/bootstrap/c-seed.ts',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/loader.ts', 'igniter/tsconfig.json',
@@ -145,7 +185,8 @@ function isolatedCheckout(): string {
 function invoke(directory: string, source: string | Buffer, target: CompilerTarget = 'ts') {
   const path = join(directory, 'source with spaces.lts');
   writeFileSync(path, source);
-  return spawnSync(join(directory, 'litec'), [target, path], { env, timeout: 10000 });
+  return target === 'ts' ? spawnSync(join(directory, 'litec'), [target, path], { env, timeout: 10000 })
+    : spawnSync(process.execPath, [join(directory, 'compiler/cli.ts'), target, path], { env, timeout: 10000 });
 }
 
 test('T11 host selects the recorded seed and preserves output, diagnostics and source line maps', () => {
@@ -166,7 +207,7 @@ test('T11 host selects the recorded seed and preserves output, diagnostics and s
   });
 });
 
-test('both default compile targets work in an isolated checkout with no T00 implementation', () => {
+test('public TS compilation and the retained internal C host work without T00', () => {
   const directory = isolatedCheckout();
   try {
     assert.equal(existsSync(join(directory, 'igniter/lite.ts')), false);

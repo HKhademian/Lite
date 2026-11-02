@@ -1,6 +1,7 @@
 /** Internal default compiler CLI. Both targets run Lite-generated compilers, without T00. */
-import { readFileSync, writeSync } from 'node:fs';
+import { writeSync } from 'node:fs';
 import { compileTarget } from './host.ts';
+import { loadSource } from '../igniter/loader.ts';
 
 const [target, path] = process.argv.slice(2);
 if ((target !== 'ts' && target !== 'c') || path === undefined) {
@@ -9,10 +10,12 @@ if ((target !== 'ts' && target !== 'c') || path === undefined) {
 } else {
   let source: string | undefined;
   try {
-    source = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path));
+    source = loadSource(path);
   } catch (error: unknown) {
-    const invalidUtf8 = error instanceof TypeError;
-    process.stderr.write(`${path}: ${invalidUtf8 ? 'InputFault: cannot read input: invalid UTF-8' : error instanceof Error ? error.message : String(error)}\n`);
+    const message = error instanceof Error ? error.message : String(error);
+    const invalidUtf8 = message.includes('source is not valid UTF-8');
+    process.stderr.write(invalidUtf8 ? `${path}: InputFault: cannot read input: invalid UTF-8\n`
+      : `${message.startsWith(path + ':') ? message : path + ': ' + message}\n`);
     process.exitCode = invalidUtf8 ? 1 : 2;
   }
   if (source !== undefined) {

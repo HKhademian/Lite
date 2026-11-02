@@ -1,14 +1,17 @@
 # Runnable FVP examples
 
-Short programs for exploring the current Lite interpreter. These are project
-examples, shared by the interpreter tests and editor tooling. Their local index
+Short programs for exploring LiteLang. These project examples are shared by
+reference tests, generated compiler migration checks and editor tooling. Their local index
 is independent of the [520 learning exercises](../samples/list.md).
 
 Run from the repository root with Node 26.13.0:
 
 ```sh
-./lite run examples/001-double-sum.lts
+./lite compile examples/001-double-sum.lts > /tmp/lite-example.ts
+node compiler/entry.ts /tmp/lite-example.ts
 ```
+
+Eight examples still need TS ports; see the [current inventory](../compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. Public run is removed and C output is deferred.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -80,7 +83,8 @@ examples. They live under [compiler/](../compiler/README.md) and are run with
   its own newline. Empty input is a valid empty String.
 
 - [020 — Script arguments](020-script-arguments.lts): reports ordered values from
-  inputArgs(). Run ./lite run examples/020-script-arguments.lts -- "a b" "" --check
+  inputArgs(). Compile it to `/tmp/args.ts`, then execute
+  `node compiler/entry.ts /tmp/args.ts "a b" "" --check`
   to report a b, an empty line, and the literal --check. Omit the suffix for no
   arguments/output. The helper consumes no stdin and adds no prompt.
 
@@ -91,7 +95,7 @@ examples. They live under [compiler/](../compiler/README.md) and are run with
 When a language feature lands, revisit these examples for obsolete workarounds. Keep an example that explicitly demonstrates the replaced construct; otherwise prefer the simpler current form. See the [artifact-refresh checklist](../docs/tooling-and-learning.md#refreshing-artifacts-after-a-language-change).
 
 Each Lite file is self-contained. Its visible output is explicitly requested with
-report/reportError. Keep future demonstrations here with the next three-digit
+output/outputLine/reportError. Keep future demonstrations here with the next three-digit
 index, a descriptive hyphenated filename and an entry in this guide. Module
 examples, when supported, should use .lt; runnable scripts use .lts. No .lite
 compatibility extension is introduced.

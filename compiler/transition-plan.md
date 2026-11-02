@@ -13,16 +13,16 @@ todos:
     content: Port important existing syntax and ordinary program behavior needed by generated default workflows
     status: in_progress
   - id: generated-default-workflows
-    content: Use Lite by default for run, check, verification, tests and compilation; retain explicit T00 reference paths
-    status: pending
+    content: Remove public run; use generated TS artifacts for check, compile, verification and tests; retain explicit T00 references
+    status: in_progress
   - id: existing-feature-parity
-    content: Continue broader conformance and advanced edge coverage on the default Lite implementation
-    status: pending
-  - id: native-self-host
-    content: Complete native C self-hosting and the cross-host fixed-point ladder
+    content: Compile all existing supported features to TS and execute their artifacts; defer advanced edge audits
     status: pending
   - id: retire-t00
-    content: Remove T00 from the active tree after all consumers and features migrate
+    content: Remove T00 after TS features, consumers and clean-checkout self-build migrate
+    status: pending
+  - id: native-self-host
+    content: Post migration restore C output and complete native self-hosting and cross-host ladder
     status: pending
 plans:
   requires: []
@@ -40,14 +40,26 @@ the transition on 2026-11-02, after benchmarking; start with the TS default path
 Retain T00 functionality until it has a tested replacement. Existing language
 features may be ported; new syntax, builtins and semantics still require approval.
 
-Owner sequencing update, 2026-11-02: prioritize important existing language
-syntax, then make the Lite implementation the default for everyday development.
-Continue verification, runs, tests and compilation on that default while closing
-the remaining conformance gaps. Advanced edge coverage and native C self-hosting
-do not block this earlier default switch. Keep T00 available as an explicit
-reference until the final Lite implementations and retirement gates pass.
+Latest owner direction, 2026-11-02: switch to the Lite-written compiler as fast
+as possible while retaining TS self-hosting. Remove public run. Compile every
+supported language feature to a TS artifact and execute that artifact. Public C
+output and native self-hosting resume **after TS migration and T00 retirement**;
+neither blocks the default switch or retirement. Advanced correctness and edge
+coverage follow ordinary syntax migration. Retain T00 only as an explicit
+reference until the TS replacements are complete. This supersedes earlier
+native-first ordering in historical progress entries.
 
 ## Done
+
+- 2026-11-02: public run is removed. Compile defaults to generated TS; check
+  compiles with T11 and strictly checks without loading/executing the artifact.
+  Both preserve flat-import loading and fail without T00 fallback. Real CLI
+  cases cover absent T00, unsupported source, input/arguments, effects, status,
+  caller directories and path spaces. C requests reject explicitly; C/native
+  gates move after TS retirement. Strict host/seed checks pass, six focused CLI
+  groups pass, and the current full suite passes 273/282 with nine native-only
+  skips and zero failures (130.0 s). No Lite source or seed changed. Verifier and
+  default test routing remain the next separate consumer migration unit.
 
 - 2026-11-02: shared Lite numeric-name normalization admits Int64/Float64/Double
   across existing scalar, user-alias, tuple, List and function contracts. Parser
@@ -292,109 +304,90 @@ reference until the final Lite implementations and retirement gates pass.
 
 ## Implementation order
 
-### Step 3a — core-syntax-baseline
+### Step 3a — generated-default-workflows
 
-**Depends on:** c-host-migration.
-**Files:** `compiler/src/`, `compiler/runtime/`, `compiler/tests/`, existing
-verification cases, seed/build records and relevant docs.
-**Actions:** port ordinary supported forms of each important syntax family before
-independent correctness investigations. Keep source acceptance distinct from the
-subset used to write the compiler. Prioritize:
+**Depends on:** the completed T11 TS self-build and default compilation path.
+**Current routing:** public compile/check use generated TS. Public run is
+removed, and public C requests fail explicitly. Verifier defaults and legacy
+regression consumers still need migration. Full-source phase sweeps already run
+strictly checked generated drivers.
+**Actions:** migrate verification and default tests to compiled TS artifacts;
+keep explicitly named T00 reference/audit lanes separate. Never fall back to
+T00. Check-only must not execute effects. Preserve flat imports, stdin,
+arguments, streamed output, diagnostics and status. Keep generated self-build,
+strict checks and the TS fixed-point ladder passing throughout.
+**Acceptance:** default check/verify/test/compile exercise Lite. A checkout
+without T00 supports the generated baseline and everyday workflow; explicit
+reference tests may still require T00. Unsupported source remains a visible
+gap, never a skipped or T00-executed Lite pass.
+**Verify:** real CLI/no-T00 tests, strict checking, TS suites, verifier target
+selection and dependency scans. Record generated and reference results separately.
 
-- Numeric expressions: Int/Float arithmetic and comparisons, precedence, power,
-  and common numeric annotations. Mixed Float arithmetic now runs all nine
-  previously blocked lesson programs. The power checkpoint is also ported;
-  common 64-bit numeric synonyms are also ported. Ordinary Float literal
-  contexts follow.
-  Exhaustive width/promotion/rounding matrices follow the default switch.
-- Bindings and storage: inference, annotations, aliases, lexical scope, mutability,
-  compound updates, zero initialization and reserved storage's first assignment.
-- Data: tuple shapes, fields and destructuring; fixed arrays and List operations,
-  indexing, copies and display. A passing broad array case does not close its
-  still-rejected function and tuple interactions.
-- Functions and calls: parameters/results, recursion, ordinary function values
-  and supported environments, named/positional/shorthand arguments, returns and
-  Never-valued exits. Use selected Lite behavior when T00 is not the better rule.
-- Expressions and control flow: blocks, complete/partial conditionals, conditional
-  and sequence loops, ordinary loop values/completion and supported exits,
-  subjectless match and construct-level cleanup. Implement existing forms;
-  exhaustive metadata, tagged-exit and cleanup interaction matrices can follow.
-- Program interface: Strings/text, the selected input/output helpers, arguments,
-  exit, flat-import loading and source diagnostics sufficient for everyday use.
+### Step 3b — core-syntax-baseline
 
-**Acceptance:** the generated TS path runs all 19 existing example manifests,
-all 20 implemented lesson manifests and all eight library tests, plus named
-focused cases for every family above. Record the exact supported forms and any
-deferred cases before cutover; those finite programs do not establish full parity.
-Keep ordinary type/name validation, rejection before effects, evaluation order
-and runtime faults in scope for each port. Do not require all inventory boundary
-probes or a native compiler fixed point before the default switch.
-**Verify:** focused valid/rejected/interaction cases on applicable generated
-targets; fast/full suites, strict checks, verification, editor checks and
-reproducible generated-seed rebuilds as required by the compiler guidelines.
+**Depends on:** generated-default-workflows; feature ports may proceed while
+consumer migration is in progress.
+**Actions:** port ordinary existing syntax, prioritizing shared blockers:
 
-### Step 3b — generated-default-workflows
+- Bindings/storage: inference, annotations, aliases, mutability, compound updates,
+  zero initialization and reserved storage's first assignment.
+- Data: tuple shapes, fields/destructuring, fixed arrays, List end operations,
+  indexing, copies and output. Include function and receiving-type interactions.
+- Calls/functions: parameters/results, recursion, function values and supported
+  environments, named/positional/shorthand arguments, returns and Never exits.
+- Control: blocks, complete/partial conditionals, sequence/conditional loops,
+  loop values/completion and exits, subjectless match and cleanup.
+- Program interface: text, selected input/output helpers, arguments, exit,
+  flat-import loading and usable source diagnostics.
 
-**Depends on:** core-syntax-baseline, not complete existing-feature-parity or native-self-host.
-**Files:** CLI, loader/diagnostic adapters, verifier, test harnesses and host tests.
-**Current routing:** both compile targets already use Lite-generated compilers;
-run/check still import T00, manifests without targets verify on T00, and many
-regression tests still call T00. Generated full-source phase sweeps already run
-on T11.
-**Actions:** switch run/check and ordinary verification/regression consumers to
-the Lite-generated TS compiler. Keep explicitly named T00 reference/audit tests
-separate. Compilation and source changes must never fall back to T00 implicitly.
-Execute accepted source through strictly checked generated artifacts; check-only
-must not execute program effects. Preserve imports/line maps, stdin/arguments,
-streamed output, errors and status. Run all subsequent development gates on Lite.
-**Acceptance:** default run/check/verify/test/compile exercise Lite, generated
-rebuilds remain reproducible, and a checkout without the T00 implementation can
-run the generated baseline and default workflows. Explicit reference tests may
-still require T00. Deferred conformance cases remain reported as gaps; do not
-silently use T00, delete their assertions or count skipped cases as Lite passes.
-**Verify:** real CLI tests, core baseline, strict/full/editor gates, verifier target
-selection and a dependency scan. Record separate generated and reference results.
+Mixed Float arithmetic, the power checkpoint, common numeric synonyms and exact
+Float literal contexts are already ported. Do not reopen exhaustive numeric,
+Unicode, metadata or tagged-exit matrices as prerequisites for ordinary ports.
+Use the selected Lite rule when T00 behavior is worse.
+**Acceptance:** TS artifacts execute all 19 existing examples, all 20 implemented
+lessons and all eight library entries, plus focused accepted/rejected and combined
+cases for each family. Record exact supported forms; finite cases do not prove
+full language coverage.
+**Verify:** relevant TS artifact tests, strict/full TS gates, reproducible seed
+rebuilds and the TS fixed point. C ports are outside this phase.
 
 ### Step 3c — existing-feature-parity
 
-**Depends on:** generated-default-workflows.
-**Actions:** continue the measured remaining contracts and advanced boundary,
-diagnostic and interaction cases using Lite as the default. T00 is reference
-evidence, not automatic language-design authority. Keep atomic feature slices and
-matched speed measurements; do not turn optional optimization into a cutover gate.
-**Acceptance:** every existing supported contract has an equivalent Lite path or
-an explicitly approved exception. This is a final conformance gate, not the gate
-for starting everyday development on the Lite compiler.
-**Verify:** remaining inventory probes, canonical cases, full regression and
-applicable generated-target parity.
+**Depends on:** generated-default-workflows and ordinary core ports.
+**Actions:** finish existing supported feature compilation/execution using the
+Lite default. T00 is reference evidence, not automatic design authority. Keep
+atomic topics and measured speed improvements; optional optimization must not
+hold up migration. Preserve ordinary validation, evaluation order, rejection
+before effects and runtime fault behavior.
+**Acceptance:** every existing supported contract compiles to TS and executes
+from its artifact, or has an explicitly owner-approved exception. Advanced
+correctness/edge audits remain a separate backlog, not a demand for perfection.
+**Verify:** canonical features, remaining migration inventory, TS regression and
+artifact corpus checks. Report any approved exceptions explicitly.
 
-### Step 4 — native-self-host
+### Step 4 — retire-t00
 
-**Depends on:** generated-default-workflows and the C runtime/source support
-needed to compile S; full conformance remains a final retirement requirement.
-**Files:** C emitter/runtime, bootstrap scripts/provenance, corpus tests and docs.
-**Actions:** complete native compiler runtime/memory support and checked arithmetic;
-record the C memory strategy; build C01 and the defined C21/C22/C23 and
-T21/T22/T23 nodes, plus T13, with exact artifact equality and corpus evidence.
-**Acceptance:** all fixed points and cross-builds pass without a T00 runtime
-dependency. The owner-requested C11 is the first native compiler emitted through
-T11, `CompileC(T11, S)`; preserve C01/C21 and the older audit labels, and prove
-their equality rather than silently renaming a node. The current TS-hosted C
-emitter is not C11.
-**Verify:** `-std=c11 -Wall -Wextra -Werror`, native boundary cases, full corpus,
-clean-checkout rebuild and artifact hashes.
+**Depends on:** generated-default-workflows and TS existing-feature migration.
+**Actions:** audit active CLI, tests, verifier, tooling and recovery dependencies.
+Preserve the exact T00 seed revision and builder map in Git history. Remove its
+handwritten implementation from the active tree after TS replacements pass.
+**Acceptance:** a clean checkout compiles and executes formerly supported
+programs from TS artifacts without T00; S rebuilds through the generated seed
+with a reproducible TS fixed point. Recovery remains reproducible from history.
+**Verify:** strict/runtime/editor TS gates, clean-checkout generated rebuild,
+artifact corpus and dependency scan. Native C is not a retirement gate.
 
-### Step 5 — retire-t00
+### Step 5 — native-self-host (post migration)
 
-**Depends on:** generated-default-workflows, existing-feature-parity and native-self-host.
-**Files:** `igniter/`, launchers, host tests and all current references.
-**Actions:** audit every import, CLI/test/verification dependency and historical
-rebuild instruction. Preserve the exact T00 seed revision and builder map in Git
-history; do not move tags. Remove the handwritten implementation from the active
-tree only after run/check/test/verification replacements and parity pass.
-**Acceptance:** clean checkout supports all formerly supported features with no
-active T00 implementation; bootstrap recovery remains reproducible from history.
-**Verify:** full strict/runtime/editor/native gates, clean rebuild, dependency scan.
+**Depends on:** TS migration and T00 retirement.
+**Actions:** restore public C output after porting the remaining frontend/runtime
+support; build native C11 and the defined C01/C21-C23 and T21-T23 ladder. Preserve
+all historical node identities and prove their equality rather than renaming.
+The retained TS-hosted C emitter is not a native compiler fixed point.
+**Acceptance:** all TS/native cross-builds and fixed points pass with recorded
+source/builder identities and a documented C memory strategy.
+**Verify:** strict native C builds, runtime boundary tests, corpus, clean rebuild,
+artifact hashes and the full native/cross-host ladder. These are later gates.
 
 ## Constraints and key facts
 
@@ -417,6 +410,9 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 
 ## Overall acceptance
 
-- Both targets and all former T00 capabilities share the Lite frontend.
-- TS/native fixed-point and corpus gates pass with recorded provenance.
-- T00 is removed only after its active consumers have replacements.
+- TS migration: existing supported features compile and execute from TS artifacts;
+  default consumers use Lite; the TS self-build/fixed point remains reproducible.
+- T00 retirement: active consumers have TS replacements and pass in a clean
+  checkout without T00. C/native work does not block this gate.
+- Post migration: restore C output and complete native/cross-host fixed points
+  and corpus gates with recorded provenance.

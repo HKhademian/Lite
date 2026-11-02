@@ -24,10 +24,10 @@ Lightness, here, means three things at once.
 | Compiler | **Lite compiler** | `lite-compiler`; binary `litec`, short `ltc` | Compiles LiteLang programs; CLI `lite compile` |
 | Igniter | **Lite igniter** | `lite-igniter`; release tags `igniter-v*` | Bootstraps the project from preserved sources and generated compiler seeds |
 | Linker | **Lite linker** | `lite-linker`; executable `ltl` | Links compiled outputs; CLI `lite link` (planned) |
-| Runner | **Lite runner** | `lite-runner` | Runs scripts through the igniter; CLI `lite run` |
+| Runner | **Lite runner** | `lite-runner` | Reserved; public `lite run` removed during TS migration |
 | Checker | **Lite checker** | `lite-checker` | Check-only source validation; CLI `lite check` |
 | Compiled runtime | **Lite runtime** | `lite-runtime`; binary `literun` | Executes compiled LiteScript programs (separate, planned) |
-| Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite compile`, `lite link`, `lite run`, `lite check`, `lite docs`, `lite help`, `lite fmt`, `lite verify`, `lite test` |
+| Command-line tool | **Lite CLI** | `lite` | Dispatcher for `lite compile`, `lite link` (reserved), `lite check`, `lite docs`, `lite help`, `lite fmt`, `lite verify`, `lite test` |
 | Script source | **LiteScript file** | `.lts` | Convenient standalone script body |
 | Module source | **LiteLang module file** | `.lt` | Package/module-owned declarations and explicit module access |
 | Formatter | **Lite formatter** | `lite-formatter` | CLI `lite fmt` (planned) |
@@ -52,8 +52,8 @@ Lightness, here, means three things at once.
 - The CLI is `lite`. `lite` is not the compiler binary and must not be used as a synonym for `litec`.
 - Compiler entry points are equivalent: component/package `lite-compiler`, binary `./litec`, short `./ltc`, and CLI `./lite compile`.
 - Linker entry points are reserved as component `lite-linker`, executable `./ltl`, and CLI `./lite link`; no linker is implemented.
-- The runner is `lite-runner` / `./lite run`. It currently executes scripts through the igniter.
-- The checker is `lite-checker` / `./lite check`; `./lite run --check` remains compatible.
+- The runner name remains reserved; public `./lite run` is removed during the TS migration. Compile source, then execute the TS artifact with `node compiler/entry.ts program.ts`.
+- The checker is `lite-checker` / `./lite check`; it compiles with generated Lite and strictly checks the TS artifact without executing it.
 - Documentation is `lite-docs` / `./lite docs`; help is `lite-help` / `./lite help` (also `--help`/`-h`).
 - The verifier is `lite-verifier` / `./lite verify`; its first slice covers 36 features and all 39 artifacts, with eight feature cases running through TS and C. Showcase transcripts remain open; GitHub Actions runs the test gates.
 - The tester is `lite-tester` / `./lite test`, with `--fast` and `--full` lanes. The formatter is reserved as `lite-formatter`/`./lite fmt` and is not implemented.
