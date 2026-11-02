@@ -50,8 +50,9 @@ features may be ported; new syntax, builtins and semantics still require approva
   a native follow-up passed 235 with only the 3 full-S sweeps skipped.
 - T11/T12 are recorded byte-identical; the current compiler corpus is 53 program
   and 39 rejection cases. T13 and native C fixed points are not recorded.
-- The performance report and raw samples are under `benchmark/reports/`.
-  Do not stage or change the unrelated, currently untracked `benchmark/` tree.
+- The performance report and raw samples are under `benchmark/reports/`, saved
+  separately from the TS migration. Preserve their recorded source revision and
+  historical raw measurements when updating the benchmark runner.
 
 ## Read first
 
