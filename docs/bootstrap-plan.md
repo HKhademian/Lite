@@ -21,6 +21,15 @@ investigations are permitted under those guidelines. The restrictions below
 describe the current L and bootstrap phase scope; they do not permanently freeze
 Lite compiler feature development. Native C self-hosting remains pending.
 
+Owner sequencing update, 2026-11-02: the
+[current transition order](../compiler/transition-plan.md#implementation-order)
+prioritizes important existing syntax, then switches everyday run/check,
+verification, tests and compilation to Lite. Broader conformance, advanced edge
+coverage and native C self-hosting continue afterward, with T00 retained as an
+explicit reference until final retirement. This approved order supersedes the
+original phase ordering below for the default-workflow cutover; the final
+bootstrap/native acceptance requirements remain in force.
+
 Related direction:
 
 - [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting)

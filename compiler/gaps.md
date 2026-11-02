@@ -11,6 +11,35 @@ requirements. Keep independent bug hunts, future language work and broader
 cleanup outside the active path. Recorded issues stay visible for the migration
 audit; they do not automatically become the next implementation topic.
 
+Owner sequencing update, 2026-11-02: important existing syntax first, then use
+Lite by default for run/check, verification, tests and compilation. Continue
+broader correctness and advanced edge coverage on that default; retain T00 as
+an explicit reference until final conformance/native/retirement gates pass.
+The [core syntax and default-workflow gates](transition-plan.md#implementation-order)
+define this earlier cutover. Neither all 74 measured failures nor native C11
+self-hosting must be closed before switching defaults.
+
+## Immediate migration priorities
+
+1. Mixed Float arithmetic/comparisons, then remaining ordinary numeric syntax.
+   This is the first blocker for nine implemented samples.
+2. Missing ordinary binding/storage, tuple/array/List, call/function and
+   block/conditional/loop/match/cleanup forms. Use the existing examples and
+   focused syntax-family cases to decide the next dependency, rather than
+   launching independent edge-case hunts.
+3. Switch default run/check, verification and regression consumers to Lite once
+   the core baseline passes. Both compile targets already use Lite. Keep T00
+   only on explicit reference/audit paths; no automatic fallback.
+4. Continue deferred conformance and native C work on the Lite default, then
+   retire T00 after the final gates. Known gaps remain visible throughout.
+
+For the early cutover, require the 19 example, 20 implemented sample and eight
+library-test manifests plus focused cases for the important syntax families
+listed in the transition plan. This does not require every boundary probe.
+Advanced numeric-width/rounding matrices, Unicode column compatibility and
+exhaustive tagged-control-flow/cleanup combinations follow the default switch.
+Basic validation and normal runtime behavior remain part of each syntax port.
+
 ## Measured checkpoint
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
@@ -102,8 +131,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Float literals and values:** shared finite decimal/exponent scanning,
   unary signs, same-family comparisons, scalar copies and round-trip display on
   TS/C. Broader arithmetic and numeric-width conversions remain separate.
-- [ ] **Float arithmetic:** mixed operations/comparisons, finite-result faults,
-  contextual division/storage and power.
+- [ ] **Float arithmetic:** existing mixed operations/comparisons, finite-result
+  faults and power. Unselected contextual division/storage semantics are not a
+  migration dependency.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
@@ -159,8 +189,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Inventory provenance:** report HEAD as the base revision when auditing
   uncommitted compiler changes; retain actual artifact/source hashes and record
   worktree state rather than labeling HEAD as the complete audited snapshot.
-- [ ] **Consumers:** generated check/run and remaining regression consumers,
-  source names/line maps, rejection-before-effects and full diagnostic parity.
+- [ ] **Consumers (early default gate):** generated check/run and ordinary
+  verification/regression consumers, source names/line maps and rejection before
+  effects. Keep full diagnostic edge parity in the later conformance audit.
 - [ ] **Retirement:** dependency scan, reproducible recovery from Git history,
   clean-checkout gates, remove active T00, then repeat the gap/flaw audit.
 
