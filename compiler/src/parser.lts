@@ -52,6 +52,15 @@ expectSymbol := fn(tokens: Tokens, index: Int, text: String, prefix: String): In
     index + 1
 }
 
+/** Consumes a simple-item separator, allowing EOF, a closing scope and a directly closed block token as implicit boundaries. */
+consumeStatementEnd := fn(tokens: Tokens, index: Int, prefix: String): Int {
+    token := tokenAt(tokens, index);
+    if isSymbol(token, ";") { return index + 1; }
+    if token.kind == TOKEN_KIND_EOF() or isSymbol(token, "}") or
+        (index > 0 and isSymbol(tokenAt(tokens, index - 1), "}")) { return index; }
+    expectSymbol(tokens, index, ";", prefix)
+}
+
 /** Parses one type: a name, `List<T>` or a flat tuple with optional labels. */
 parseType := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, text: String) {
     token := tokenAt(tokens, index);
@@ -355,7 +364,7 @@ parseDeclaration := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, 
     } else {
         parseFail(tokenAt(tokens, cursor), prefix, "expected := or : after declaration name");
     }
-    ended := expectSymbol(tokens, cursor, ";", prefix);
+    ended := consumeStatementEnd(tokens, cursor, prefix);
     (next = ended, name = name, detail = detail, offset = token.offset, line = token.line, column = token.column)
 }
 
@@ -431,6 +440,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                     break;
                 }
             }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
             itemText = branchText;
         } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "loop" {
             source := parseExpression(tokens, cursor + 1, prefix, 0);
@@ -450,6 +460,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 itemText = "loop " + source.text + " " + bodyBlock.text;
                 cursor = bodyBlock.next;
             }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else if token.kind == TOKEN_KIND_KEYWORD() and (token.text == "break" or token.text == "continue") {
             itemText = token.text;
             cursor = cursor + 1;
@@ -459,7 +470,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 itemText = itemText + " @" + label.text;
                 cursor = cursor + 2;
             }
-            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "return" {
             afterReturn := cursor + 1;
             if isSymbol(tokenAt(tokens, afterReturn), ";") or isSymbol(tokenAt(tokens, afterReturn), "}") or
@@ -471,11 +482,11 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 itemText = "return " + value.text;
                 cursor = value.next;
             }
-            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else if token.kind == TOKEN_KIND_SYMBOL() and token.text == "{" {
             blockText := self(tokens, cursor, prefix, true);
             itemText = blockText.text;
-            cursor = blockText.next;
+            cursor = consumeStatementEnd(tokens, blockText.next, prefix);
         } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
             tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "fn" {
             name := token.text;
@@ -508,7 +519,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             functionBody := self(tokens, resultType.next, prefix, true);
             itemText = name + " := fn(" + parameters + "): " + resultType.text + " " + functionBody.text;
             cursor = functionBody.next;
-            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else if token.kind == TOKEN_KIND_NAME() and isSymbol(tokenAt(tokens, cursor + 1), ":=") and
             tokenAt(tokens, cursor + 2).kind == TOKEN_KIND_KEYWORD() and tokenAt(tokens, cursor + 2).text == "type" {
             assigned := expectSymbol(tokens, cursor + 1, ":=", prefix);
@@ -517,7 +528,7 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
                 parseFail(typeWord, prefix, "expected type after :=");
             }
             aliasType := parseType(tokens, assigned + 1, prefix);
-            ended := expectSymbol(tokens, aliasType.next, ";", prefix);
+            ended := consumeStatementEnd(tokens, aliasType.next, prefix);
             itemText = token.text + " := type " + aliasType.text;
             cursor = ended;
         } else if token.kind == TOKEN_KIND_KEYWORD() and token.text == "var" or
@@ -530,12 +541,12 @@ parseBlock := fn(tokens: Tokens, index: Int, prefix: String, closed: Bool): (nex
             value := parseExpression(tokens, cursor + 2, prefix, 0);
             itemText = token.text + " = " + value.text;
             cursor = value.next;
-            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         } else {
             expression := parseExpression(tokens, cursor, prefix, 0);
             itemText = expression.text;
             cursor = expression.next;
-            if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; }
+            cursor = consumeStatementEnd(tokens, cursor, prefix);
         }
         if itemCount > 0 { body = body + "; "; }
         body = body + itemText;
@@ -564,7 +575,7 @@ parseTypeAlias := fn(tokens: Tokens, index: Int, prefix: String): (next: Int, na
         parseFail(typeWord, prefix, "expected type after :=");
     }
     parsed := parseType(tokens, assigned + 1, prefix);
-    ended := expectSymbol(tokens, parsed.next, ";", prefix);
+    ended := consumeStatementEnd(tokens, parsed.next, prefix);
     (next = ended, name = token.text, detail = parsed.text,
         offset = token.offset, line = token.line, column = token.column)
 }

@@ -696,3 +696,46 @@ test('empty and comment-only scripts compile silently without hiding malformed s
     }
   }
 });
+
+
+test('statement separators follow EOF, closing scope and directly closed block boundaries', () => {
+  const both = ['outputLine(7)', 'output("x") /* tail */', 'x := 1', 'var x := 1', 'x: Int = 1', 'x: Int',
+    'var x := 1; x = 2', 'Number := type Int', 'if true { outputLine(7) }',
+    'if true { x := 7 } outputLine(8)', 'var n := 0; loop n < 3 { n = n + 1; continue } outputLine(n)',
+    'loop { outputLine(7); break }', '/* before */ outputLine(0 < 1 < 2) /* after */'];
+  const tsOnly = ['noop := fn(): Unit { return } noop()', 'f := fn(): Int { return 7 } outputLine(f())',
+    'x := if true { 7 } else { 9 } /* boundary */ outputLine(x)',
+    'var x := 0; x = if true { 7 } else { 9 } outputLine(x)',
+    'f := fn(): Int { return if true { 7 } else { 9 } } outputLine(f())',
+    'values: mut List<Int> = [1]; pop_back(mut values)',
+    'inputLine("Prompt: ")', 'f := fn(): Unit { outputLine(7) } f()'];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const expected = runText(text, { stdin: 'line\n' }); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'line\n' }) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, text);
+    }
+  }
+  const invalid = ['outputLine(1) outputLine(2);', 'outputLine(1)\noutputLine(2)', 'output("x") outputLine("y")',
+    'x := 1 outputLine(x);', 'var x := 1\nx = 2', 'x := 1 /* } */ outputLine(x);',
+    'x := (if true { 1 } else { 2 }) outputLine(x);', 'Number := type Int outputLine(1);',
+    'if true { outputLine(1)', 'noop := fn(): Unit { return', 'f := fn(): Int { return }'];
+  for (const text of invalid) {
+    assert.equal(runText(text).status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
+    }
+  }
+  const text = 'outputLine("before");\r\nvar zero := 0; outputLine(1 / zero) /* tail */', name = 'boundary سلام.lts';
+  const expected = runText(text, { name }); assert.equal(expected.status, 1);
+  for (const target of ['ts', 'c'] as const) {
+    const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+    const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString()) : runCArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stderr.toString());
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+  }
+});

@@ -680,6 +680,15 @@ skipTrivia := fn(source: String, start: Int, prefix: String): Int {
     position
 }
 
+/** Consumes an explicit separator or an implicit boundary at EOF, a closing scope or a directly closed block expression. Returns -1 when a simple item still needs a separator. */
+consumeStatementEnd := fn(source: String, position: Int, prefix: String): Int {
+    next := skipTrivia(source, position, prefix);
+    if next < textLength(source) and textAt(source, next) == ";" { return skipTrivia(source, next + 1, prefix); }
+    if next == textLength(source) or textAt(source, next) == "}" or
+        (position > 0 and textAt(source, position - 1) == "}") { return next; }
+    -1
+}
+
 /** True for a Lite keyword that this restricted compiler does not implement. */
 isReservedWord := fn(name: String): Bool {
     name == "var" or name == "mut" or name == "fn" or name == "loop" or
@@ -2473,11 +2482,11 @@ parseProgram := fn(source: String, prefix: String): Items {
                 failAt(source, nameStart, prefix, "return outside a function");
             }
             valueStart := position;
-            if valueStart < size and textAt(source, valueStart) == ";" {
+            if valueStart >= size or textAt(source, valueStart) == ";" or textAt(source, valueStart) == "}" {
                 if currentResult =!= "Unit" {
                     failAt(source, nameStart, prefix, "function " + currentName + " must return " + currentResult);
                 }
-                position = skipTrivia(source, valueStart + 1, prefix);
+                position = consumeStatementEnd(source, valueStart, prefix);
                 push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
                     intValue = 0, textValue = ""));
                 currentReturned = true;
@@ -2491,11 +2500,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                 failAt(source, valueStart, prefix, "cannot return " + displayKind(parsed.kind) + " from function " +
                     currentName + " returning " + displayKind(currentResult));
             }
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after return");
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
+            position = statementNext;
             push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
                 intValue = 0, textValue = ""));
             currentReturned = true;
@@ -2505,10 +2512,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             if not insideLoop(blocks) {
                 failAt(source, nameStart, prefix, name + " outside loop");
             }
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, position, prefix);
+            if statementNext < 0 { failAt(source, position, prefix, "expected ; after " + name); }
+            position = statementNext;
             push_back(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
                 code = "", intValue = 0, textValue = ""));
             continue;
@@ -2541,21 +2547,18 @@ parseProgram := fn(source: String, prefix: String): Items {
                 currentReturned = true;
                 continue;
             }
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after function call");
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, position, prefix, "expected ; after function call"); }
+            position = statementNext;
             push_back(mut items, (kind = "Call", name = callName, runtime = "", code = parsed.code,
                 intValue = 0, textValue = ""));
             continue;
         }
         if (name == "push_back" or name == "pop_back") and position < size and textAt(source, position) == "(" {
             parsed := parseExpression(source, nameStart, prefix, locals, functions, functionParams, currentName);
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after " + name); }
+            position = statementNext;
             push_back(mut items, (kind = "Call", name = "", runtime = "", code = parsed.code,
                 intValue = 0, textValue = ""));
             continue;
@@ -2569,10 +2572,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                 currentReturned = true;
                 continue;
             }
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, position, prefix, "expected ; after " + name); }
+            position = statementNext;
             push_back(mut items, (kind = "Call", name = "", runtime = "", code = parsed.code,
                 intValue = 0, textValue = ""));
             continue;
@@ -2595,10 +2597,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                 }
             }
             position = expectSymbol(source, position, ")", prefix);
-            position = skipTrivia(source, position, prefix);
-            if position < size and textAt(source, position) == ";" {
-                position = skipTrivia(source, position + 1, prefix);
-            }
+            statementNext := consumeStatementEnd(source, position, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + name); }
+            position = statementNext;
             push_back(mut items, (kind = if name == "outputLine" { "End" } else { "EndOutput" }, name = "", runtime = "", code = "",
                 intValue = 0, textValue = ""));
             continue;
@@ -2744,11 +2745,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             } else {
                 failAt(source, position, prefix, "expected := or : after local name " + localName);
             }
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after local declaration " + localName);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
+            position = statementNext;
             if localSameBlock(locals, localName, depth) {
                 failAt(source, localStart, prefix, "duplicate local " + localName);
             }
@@ -2803,14 +2802,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             }
             seenAliases: mut List<String> = [];
             resolveTypeText(source, targetStart, prefix, aliases, aliasEntry.target, seenAliases);
-            afterTarget := skipTrivia(source, aliasEntry.end, prefix);
-            if afterTarget < size and textAt(source, afterTarget) =!= ";" {
-                unsupportedAliasTarget(source, aliasEntry.at, prefix, "target");
-            }
-            if afterTarget >= size {
-                failAt(source, afterTarget, prefix, "expected ; after type alias " + name);
-            }
-            position = skipTrivia(source, afterTarget + 1, prefix);
+            afterTarget := consumeStatementEnd(source, aliasEntry.end, prefix);
+            if afterTarget < 0 { unsupportedAliasTarget(source, aliasEntry.at, prefix, "target"); }
+            position = afterTarget;
             continue;
         }
         if startsWithAt(source, position, ":=") {
@@ -2861,11 +2855,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             if parsed.kind == "Unit" {
                 failAt(source, nameStart, prefix, "cannot declare a Unit local " + name);
             }
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after local declaration " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
+            position = statementNext;
             if localSameBlock(locals, name, depth) {
                 failAt(source, nameStart, prefix, "duplicate local " + name);
             }
@@ -2887,11 +2879,9 @@ parseProgram := fn(source: String, prefix: String): Items {
                     failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                 }
             }
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after local declaration " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
+            position = statementNext;
             if localSameBlock(locals, name, depth) {
                 failAt(source, nameStart, prefix, "duplicate local " + name);
             }
@@ -2917,11 +2907,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             if parsed.kind =!= entry.kind {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
-            position = skipTrivia(source, parsed.next, prefix);
-            if position >= size or textAt(source, position) =!= ";" {
-                failAt(source, position, prefix, "expected ; after assignment to " + name);
-            }
-            position = skipTrivia(source, position + 1, prefix);
+            statementNext := consumeStatementEnd(source, parsed.next, prefix);
+            if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
+            position = statementNext;
             push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));

@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 63 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 64 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -119,6 +119,13 @@ malformed comments still rejected before effects. The corpus is 63 programs and
 30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
 scanning and remaining state allocation for empty scripts. See the [empty-script
 ledger](parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+
+
+Simple statement separators now follow EOF, closing scopes and directly closed
+block initializers on generated targets. Adjacent output calls still require a
+separator and reject before effects. The corpus is 64 programs/29 rejections;
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](parity.md#statement-boundaries)
+for coverage, generated bootstrap and paired timing evidence.
 
 
 ## Layout

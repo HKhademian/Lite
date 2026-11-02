@@ -13,7 +13,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 98 target executions
-- Tests: 236 interpreter groups, 21 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 22 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -146,6 +146,13 @@ malformed comments still rejected before effects. The corpus is 63 programs and
 30 rejections; existing 61 artifact pairs are unchanged. The parser skips alias
 scanning and remaining state allocation for empty scripts. See the [empty-script
 ledger](../compiler/parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
+
+
+Simple statement separators now follow EOF, closing scopes and directly closed
+block initializers on generated targets. Adjacent output calls still require a
+separator and reject before effects. The corpus is 64 programs/29 rejections;
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](../compiler/parity.md#statement-boundaries)
+for coverage, generated bootstrap and paired timing evidence.
 
 
 ## Current tag conventions

@@ -89,6 +89,13 @@ malformed comments still rejected before effects. The corpus is 63 programs and
 scanning and remaining state allocation for empty scripts. See the [empty-script
 ledger](../compiler/parity.md#empty-script-support) for generated bootstrap and paired timing evidence.
 
+
+Simple statement separators now follow EOF, closing scopes and directly closed
+block initializers on generated targets. Adjacent output calls still require a
+separator and reject before effects. The corpus is 64 programs/29 rejections;
+all 63 older artifact pairs stay identical. See the [statement-boundary ledger](../compiler/parity.md#statement-boundaries)
+for coverage, generated bootstrap and paired timing evidence.
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript
@@ -837,7 +844,7 @@ warm cache.
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
-There are 63 programs and 30 rejections; accepted programs include six expected
+There are 64 programs and 29 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and

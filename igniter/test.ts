@@ -277,6 +277,22 @@ test('Lite parser parses L0 libraries and every program case', () => {
     assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
     assert.equal(result.errors, '', fixture.name);
   }
+  const boundaryPrograms = ['x := 1', 'x: Int', 'Number := type Int',
+    'if true { x := 1 } outputLine(2)', 'if true { outputLine(1) }; outputLine(2)',
+    'f := fn(): Int { return 7 } outputLine(f())',
+    'x := if true { 1 } else { 2 } outputLine(x)',
+    'var x := 1; x = 2', '{ outputLine(1) }; outputLine(2)'];
+  const boundaryRejections = ['outputLine(1) outputLine(2)', 'x := 1 outputLine(x)',
+    'x := (if true { 1 } else { 2 }) outputLine(x)', 'x := 1 /* } */ outputLine(x)',
+    'f := fn(): Int { return 7 outputLine(9); }'];
+  withGeneratedDriver(parserProgramDumpPath, generated => {
+    for (const input of boundaryPrograms) for (const result of [runParser(input), generated(input)]) {
+      assert.equal(result.code, 0, input + result.errors); assert.equal(result.errors, '');
+    }
+    for (const input of boundaryRejections) for (const result of [runParser(input), generated(input)]) {
+      assert.equal(result.code, 2, input); assert.equal(result.output, '');
+    }
+  });
 });
 
 test('Lite parser parses the assembled compiler S and lexer source', context => {
@@ -1656,9 +1672,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 63 program and 30 rejection cases', () => {
-  assert.equal(programFixtures.length, 63);
-  assert.equal(rejectionFixtures.length, 30);
+test('restricted compiler corpus keeps 64 program and 29 rejection cases', () => {
+  assert.equal(programFixtures.length, 64);
+  assert.equal(rejectionFixtures.length, 29);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {

@@ -1,7 +1,7 @@
 {
   "name": "local-missing-semicolon",
   "source": {
-    "file": "002-005-local-missing-semicolon.lts",
+    "file": "001-005-local-missing-semicolon.lts",
     "hash": "sha256:e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8"
   },
   "cases": [
@@ -12,10 +12,10 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "2:1: expected ; after local declaration x\n",
-        "hash": "sha256:ee4c2eb84a4e0042c1eb08a3e608fd685a20848560799a1e1da309b88b8b696a"
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
-      "exitCode": 2
+      "exitCode": 0
     }
   ]
 }

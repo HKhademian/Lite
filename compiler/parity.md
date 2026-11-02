@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 63 program / 30 rejection
+Immediate scope: the bootstrap subset L, S, and the 64 program / 29 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -747,3 +747,44 @@ and each generated compiler by 126 bytes.
 Inventory: 81/164 match, 83 remain; 29 original failures closed, no regressions,
 210 tracked Lite sources, no load errors. Next: optional final semicolons and
 closed-block statement boundaries. The broader gap queue remains active.
+
+## Statement boundaries
+
+The shared parser now consumes simple statement separators consistently: explicit
+`;`, EOF, a closing scope, or an initializer ending directly in a closed block.
+Declarations, assignments, type aliases, calls, return and loop exits use this
+rule. Unit functions admit bare `return` before their closing brace. Parentheses
+after a block still end in `)`, so they do not create a closed-block boundary.
+Comments and line breaks alone do not separate simple items.
+
+The same change fixes a permissive output parser: `outputLine(1) outputLine(2)`
+now rejects before any artifact or program output, as T00 requires. Missing
+function/scope braces and non-Unit empty returns still reject. Runtime faults
+without a final semicolon retain exact locations, prior output and status.
+Coverage includes thirteen admitted TS/C programs, eight TS function/value/input
+programs, eleven rejection sources and fault execution on both targets.
+C input/functions/value-if remain separate target gaps.
+
+The standalone token parser uses the same boundary contract, including optional
+separators after closed if/loop/scope bodies. Nine valid and five invalid sources
+run through both reference and generated parser drivers; full-source sweeps
+continue to cover the compiler itself.
+
+The final-semicolon declaration fixture moves to 001-005 with unchanged source
+bytes. The corpus has 64 programs/29 rejections (93 sources); all 63 previous
+program artifact pairs remain identical. Both compiler corpora, 98 verifier
+executions, coverage, strict host/seeds and nine editor groups pass. The
+[generated-only ladder](reports/2026-11-02-statement-boundaries-ladder.json)
+records three identical TS generations and the TS-hosted C emitter.
+
+All 262 full tests pass with zero skips in 63.4 s; fast passes 250 with
+12 expected skips in 39.6 s. The gate duration is a
+validation observation, separate from the isolated paired compiler measurements.
+
+The boundary helper removes six duplicate trivia scans and builds diagnostic
+messages only on failure. Five paired compiler-phase medians stay steady:
+TS outputs 61.3 → 61.9 ms, identical S 676.2 → 669.4 ms, constant expressions
+127.3 → 127.9 ms; C-emitter outputs 80.9 → 79.7 ms, divisions 169.4 → 171.8 ms,
+constant expressions 218.0 → 215.0 ms. All measured output bytes match exactly;
+these mixed changes do not establish a general speedup. See the
+[raw performance report](reports/2026-11-02-statement-boundaries-performance.json).

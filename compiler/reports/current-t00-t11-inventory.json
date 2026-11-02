@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T16:46:24.085Z",
-  "revision": "7057b3e76a706f5888b30e63481be73a51c24dcc",
+  "startedAt": "2026-11-02T16:54:39.470Z",
+  "revision": "f52496e9f723c0a6001c5a6e5af24ce1cb137604",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/scripts/t00-t11-inventory.ts\n",
-  "compilerSourceSha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
-  "compilerSourceRevision": "25987b5a8e07c59e64db47999a449ef2c7cd6ab6",
+  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-005-local-missing-semicolon.json -> igniter/tests/compiler/001-005-local-missing-semicolon.json\nR  igniter/tests/compiler/002-005-local-missing-semicolon.lts -> igniter/tests/compiler/001-005-local-missing-semicolon.lts\n?? compiler/reports/2026-11-02-statement-boundaries-ladder.json\n",
+  "compilerSourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
+  "compilerSourceRevision": "Statement-boundary source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
+  "t11Sha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -1772,7 +1772,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "five",
@@ -1784,14 +1784,27 @@
             "stderr": "",
             "signal": null
           },
-          "t00MatchesManifest": true
+          "t00MatchesManifest": true,
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "Integer: positive\nbetween zero and nine\nquotient exceeds five\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "let lite_out = \"\";\n\ndeclare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\ndeclare const TextDecoder: { new(label: string, options: { fatal: boolean }): { decode(input?: Uint8Array, options?: { stream: boolean }): string } };\nconst lite$decoder = new TextDecoder(\"utf-8\", { fatal: true });\nconst lite$bytes = new Uint8Array(4096);\nlet lite$byteAt = 0, lite$byteEnd = 0;\nlet lite$ended = false;\nlet lite$pending: string | null | undefined;\nfunction lite$inputFault(at: string, message: string): never {\n    process.getBuiltinModule(\"node:fs\").writeSync(2, at + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$prompt(text: string | undefined): void {\n    if (text === undefined) return;\n    process.getBuiltinModule(\"node:fs\").writeSync(1, lite_out + text);\n    lite_out = \"\";\n}\nfunction lite$peek(at: string): string | null {\n    if (lite$pending !== undefined) return lite$pending;\n    if (lite$ended) return null;\n    try {\n        while (true) {\n            if (lite$byteAt === lite$byteEnd) {\n                lite$byteEnd = process.getBuiltinModule(\"node:fs\").readSync(0, lite$bytes, 0, lite$bytes.length, null);\n                lite$byteAt = 0;\n                if (lite$byteEnd === 0) {\n                    lite$ended = true;\n                    lite$pending = lite$decoder.decode() || null;\n                    return lite$pending;\n                }\n            }\n            const text = lite$decoder.decode(lite$bytes.subarray(lite$byteAt, ++lite$byteAt), { stream: true });\n            if (text !== \"\") { lite$pending = text; return text; }\n        }\n    } catch (error) {\n        return lite$inputFault(at, \"cannot read input: \" + (error instanceof Error ? error.message : String(error)));\n    }\n}\nfunction lite$take(at: string): string | null {\n    const text = lite$peek(at); lite$pending = undefined; return text;\n}\nfunction lite$word(at: string): string | null {\n    let ch = lite$peek(at);\n    while (ch !== null && /\\s/u.test(ch)) { lite$take(at); ch = lite$peek(at); }\n    if (ch === null) return null;\n    let text = \"\";\n    while (ch !== null && !/\\s/u.test(ch)) { text += lite$take(at); ch = lite$peek(at); }\n    return text;\n}\nfunction lite$inputInt(prompt: string | undefined, at: string): bigint {\n    lite$prompt(prompt);\n    const text = lite$word(at);\n    if (text === null) return lite$inputFault(at, \"EOF before inputInt value\");\n    if (!/^[+-]?[0-9]+$/.test(text)) return lite$inputFault(at, \"expected an integer token\");\n    const value = BigInt(text);\n    if (value < -(1n << 63n) || value > (1n << 63n) - 1n) return lite$inputFault(at, \"input outside signed 64-bit range\");\n    return value;\n}\n\nconst lite$intLines: readonly number[] = [0, 47, 80, 81, 112, 127, 151, 162, 171, 186, 188, 213, 214, 236, 277, 279, 280, 331, 370, 411, 413];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_number = lite$inputInt(\"Integer: \", \"2:11: InputFault: \");\n    void lite_number;\n    const lite_description = (Boolean(((lite_number) < (0n))) ? \"negative\" : (Boolean(((lite_number) === (0n))) ? \"zero\" : \"positive\"));\n    void lite_description;\n    const lite$report0 = lite_description;\n    lite$emit(lite$report0 + \"\\n\");\n    if (((): boolean => { const lite$compare0: bigint = 0n; const lite$compare1: bigint = lite_number; if (!(((lite$compare0) <= (lite$compare1)))) return false; const lite$compare2: bigint = 10n; return ((lite$compare1) < (lite$compare2)); })()) {\n        const lite$report1 = \"between zero and nine\";\n        lite$emit(lite$report1 + \"\\n\");\n    }\n    if (((((lite_number) !== (0n))) && (((lite$divideInt(100n, lite_number, 355)) > (5n))))) {\n        const lite$report2 = \"quotient exceeds five\";\n        lite$emit(lite$report2 + \"\\n\");\n    }\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "11:1: expected ; after local declaration description\n"
+        "stderr": ""
       }
     },
     {
@@ -6034,7 +6047,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6045,14 +6058,27 @@
             "stdout": "",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite_x = 1n;\n    void lite_x;\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:7: expected ; after local declaration x\n"
+        "stderr": ""
       }
     },
     {
@@ -6737,8 +6763,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "353941d860093225d58e16dbbd5ecd32df0f382802ab1df4065a17ad950c1e89",
-      "bytes": 162408,
+      "sourceSha256": "31f0536305e59431970f05631d00020f688422f54d65a407589bb4bb3ccfb132",
+      "bytes": 162523,
       "t00Check": {
         "accepted": true
       },
@@ -6747,7 +6773,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 292161
+        "stdoutBytes": 292651
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6756,7 +6782,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "4c5267dd0fa981c0bfda66434b8899577bec1a60345aa69a83b0786c1398fafa"
+      "artifactSha256": "d839e7d6195d79c81abb45ea2880c34d6949a4bdfcb7a70a04897de7911d4b2c"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6820,8 +6846,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "dcca8790e9eb4d8a8b2f73d458e3d975d4523c1e14e77828d8885b74a566ba34",
-      "bytes": 124109,
+      "sourceSha256": "710844dbb3dccf273f28f0db4e1d54dedd53eace9edec3264b6fb59af37fc19e",
+      "bytes": 124224,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6840,8 +6866,8 @@
     },
     {
       "path": "compiler/src/parser.lts",
-      "sourceSha256": "5e2f5bb3a7ef5e4944dbff1a7f5ead597c7990ddeaeffc3e5dddb7a3eca08d30",
-      "bytes": 27721,
+      "sourceSha256": "1b23e4a7037504f649dad2ce7c14980362ac99c6d68f97595318804b934d9905",
+      "bytes": 28321,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: function annotations currently require a numeric width, String, Bool, or Unit"
@@ -6860,8 +6886,8 @@
     },
     {
       "path": "compiler/tests/checker/checker-dump.lts",
-      "sourceSha256": "0144bb6b2cb0bf567baa5ee0fbafc3b6e793cb661e3511f8e1968be945e9f995",
-      "bytes": 93009,
+      "sourceSha256": "99e0258e37eeab9f91251ce72c950bac5b5d008ed05b03eb87637f19ca2d1b9a",
+      "bytes": 93609,
       "t00Check": {
         "accepted": true
       },
@@ -6870,7 +6896,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 188720
+        "stdoutBytes": 189575
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6879,7 +6905,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "0080628c0d090074380e35f1f1626eccd9d3d346d20a39147928e93f089eba49"
+      "artifactSha256": "7fa4b5cf6a310028e146bb65056f24fd492d0c2ca6ed67566abfde099013c769"
     },
     {
       "path": "compiler/tests/checker/symbols.lts",
@@ -6987,8 +7013,8 @@
     },
     {
       "path": "compiler/tests/parser/parser-decl-dump.lts",
-      "sourceSha256": "73897f949bbc402d359d417961f9f08e4b43e0c8a53a5841a8c60c32456fa50a",
-      "bytes": 54223,
+      "sourceSha256": "2cba8fa20bb921e38f451e5e15975e72412425585c6efcf59d96b3ae5643f31f",
+      "bytes": 54823,
       "t00Check": {
         "accepted": true
       },
@@ -6997,7 +7023,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 109803
+        "stdoutBytes": 110658
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7006,12 +7032,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "f560449001512f8b4999b500233ccc48bb984bb79666b27b579557fbb8947c82"
+      "artifactSha256": "106f9df5a0858d3afe0e8e18029195b40f00c488fc94524e3aff50627152d889"
     },
     {
       "path": "compiler/tests/parser/parser-dump.lts",
-      "sourceSha256": "615de8ebb771beefa7bc9e5f71079becfe4f0b5728c8f82eb226244bfed5fd01",
-      "bytes": 54232,
+      "sourceSha256": "279e33294323c744d448786dd90cf8f57f34429964a3f93bf46239bdc1abe675",
+      "bytes": 54832,
       "t00Check": {
         "accepted": true
       },
@@ -7020,7 +7046,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 109797
+        "stdoutBytes": 110652
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7029,12 +7055,12 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "c7f40d8762d1f3cab7f69324296f595f7d5302148eaeeabda53be6ac02d99350"
+      "artifactSha256": "6e9c3e74f04e26b86d0a714439062d30e9d72edf3dac099661294578eb44a3dd"
     },
     {
       "path": "compiler/tests/parser/parser-program-dump.lts",
-      "sourceSha256": "e466021e4e0fe8f51998c5c421db394097a41fa57f7f365b1a1c4d01c3896b56",
-      "bytes": 54219,
+      "sourceSha256": "cc48aa057ad82d4aa41debd8ff1097a970c5f59e57a49c882bc0f4dc000bf37b",
+      "bytes": 54819,
       "t00Check": {
         "accepted": true
       },
@@ -7043,7 +7069,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 109804
+        "stdoutBytes": 110659
       },
       "artifactTypecheck": {
         "status": 0,
@@ -7052,7 +7078,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "08eadb104e36a20dc07c12552cc6b98660e6d42eb3bc7f1b0c3a349040cb94ec"
+      "artifactSha256": "903316ae0c5ec4f38d4f02304a5ff7cc2cac7094c6c3be5426384e376e28aaa4"
     },
     {
       "path": "compiler/tests/parser/program.lts",
@@ -7088,8 +7114,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
-      "bytes": 173288,
+      "sourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
+      "bytes": 173403,
       "t00Check": {
         "accepted": true
       },
@@ -7749,6 +7775,22 @@
         "signal": null,
         "stderr": "",
         "stdoutBytes": 349
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-005-local-missing-semicolon.lts",
+      "sourceSha256": "e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8",
+      "bytes": 7,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 312
       },
       "status": "accepted"
     },
@@ -8451,22 +8493,6 @@
       "status": "rejected"
     },
     {
-      "path": "igniter/tests/compiler/002-005-local-missing-semicolon.lts",
-      "sourceSha256": "e4068c3a09bf6ddfe5e9922da6984961d90a5f7dad3d5436a201b1888e2e84d8",
-      "bytes": 7,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-005-local-missing-semicolon.lts:2:1: expected ; after local declaration x\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-005-unknown-local.lts",
       "sourceSha256": "e43691e06120f875fa58539d16726e460b8d186fd39c2c00a86bce1e772718ef",
       "bytes": 23,
@@ -9016,8 +9042,8 @@
     },
     "example": {
       "total": 19,
-      "matches": 10,
-      "rejected": 9,
+      "matches": 11,
+      "rejected": 8,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9049,8 +9075,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 29,
-      "rejected": 50,
+      "matches": 30,
+      "rejected": 49,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9130,7 +9156,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 63 program and 30 rejection cases",
+    "restricted compiler corpus keeps 64 program and 29 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9310,7 +9336,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T16:47:06.808Z",
+  "finishedAt": "2026-11-02T16:55:27.078Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

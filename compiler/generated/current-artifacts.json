@@ -1,10 +1,10 @@
 {
-  "note": "Current exact artifacts after empty-script support. Existing 61 program artifact pairs remain unchanged; two empty scripts now compile. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after statement-boundary support. Existing 63 program artifact pairs remain unchanged; the final-semicolon fixture now compiles. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
-  "compilerSha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
-  "programCases": 63,
-  "rejectedCases": 30,
+  "sourceSha256": "0e5038391ba190029682655f510dfe1a18c396fd834ab760a7b9b378e3f20a82",
+  "compilerSha256": "b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257",
+  "programCases": 64,
+  "rejectedCases": 29,
   "artifacts": [
     {
       "name": "empty-source",
@@ -215,6 +215,12 @@
       "source": "001-004-string-unicode.lts",
       "ts": "sha256:8645e7c05038d9add132468bf77e52b3caaa701fe6c81c83654662fb31eadbe3",
       "c": "sha256:04a919b50b33e47277428e38ff1befeb073b838493fae8098979fc93aae9ac70"
+    },
+    {
+      "name": "local-missing-semicolon",
+      "source": "001-005-local-missing-semicolon.lts",
+      "ts": "sha256:5775501338f38e86528c9afda595e7541cb8d29e8781521d75688d77df50d120",
+      "c": "sha256:e2ba9c60b354fe083f0ed5469a4d90e7e078f79a96d57587c52df7f7b02ea62a"
     },
     {
       "name": "output-values",

@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `b8876b75fb94ff3f01a09c1d205074250490f04c7f94ee1c173617e83e481257`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -19,23 +19,24 @@ This is the current measured support inventory, not acceptance of new language f
 ## Counts
 
 - feature: 38; 23 matches tested behavior; 15 T11 rejects source.
-- example: 19; 10 matches tested behavior; 9 T11 rejects source.
+- example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 29 matches tested behavior; 50 T11 rejects source.
+- probe: 79; 30 matches tested behavior; 49 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 29 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 81/164 executed source cases match; 83 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 31 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 83/164 executed source cases match; 81 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
 
 - feature: io.input
 - example: example.001-double-sum
+- example: example.002-decisions
 - example: example.003-sum-positive
 - example: example.004-factorial
 - example: example.005-scan-arithmetic
@@ -57,6 +58,7 @@ Closed original cases:
 - probe: function.report-order
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
+- probe: syntax.final-semicolon
 - probe: syntax.empty-script
 - probe: syntax.whitespace-script
 - probe: condition.dead-arithmetic
@@ -242,8 +244,7 @@ Closed original cases:
   First diagnostic: 1:14: expected an Int, String or Bool expression
 - **scope.same-block-shadow — T11 rejects source.** Later declarations shadow same-block bindings
   First diagnostic: 1:9: duplicate local x
-- **syntax.final-semicolon — T11 rejects source.** Final declaration can end at EOF without a semicolon
-  First diagnostic: 1:7: expected ; after local declaration x
+- **syntax.final-semicolon — matches tested behavior.** Final declaration can end at EOF without a semicolon
 - **syntax.empty-script — matches tested behavior.** Empty scripts complete silently
 - **syntax.whitespace-script — matches tested behavior.** Whitespace-only scripts complete silently
 - **condition.dead-arithmetic — matches tested behavior.** Arithmetic in an unselected branch does not fault
@@ -255,8 +256,7 @@ Closed original cases:
 ## example
 
 - **example.001-double-sum — matches tested behavior.** Prompted integer addition doubled and reported. Source: `examples/001-double-sum.lts`.
-- **example.002-decisions — T11 rejects source.** Sign, range, and short-circuit decisions for a supplied integer. Source: `examples/002-decisions.lts`.
-  First diagnostic: 11:1: expected ; after local declaration description
+- **example.002-decisions — matches tested behavior.** Sign, range, and short-circuit decisions for a supplied integer. Source: `examples/002-decisions.lts`.
 - **example.003-sum-positive — matches tested behavior.** Reads integers until zero, skipping negatives, and reports the positive sum. Source: `examples/003-sum-positive.lts`.
 - **example.004-factorial — matches tested behavior.** Prompts for an integer and reports its recursive factorial. Source: `examples/004-factorial.lts`.
 - **example.005-scan-arithmetic — matches tested behavior.** Scans an arithmetic line into number and symbol tokens. Source: `examples/005-scan-arithmetic.lts`.
@@ -389,6 +389,7 @@ Closed original cases:
 - `igniter/tests/compiler/001-004-string-local.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-004-string-multiline.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-004-string-unicode.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-005-local-missing-semicolon.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-output-values.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-report-mixed-values.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-005-report-three-statements.lts`: compile accepted; execution not tested.
@@ -439,7 +440,6 @@ Closed original cases:
 - `igniter/tests/compiler/002-004-bad-string-escape.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-004-unterminated-string.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-005-duplicate-local.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-005-local-missing-semicolon.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-005-unknown-local.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-005-unknown-value.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-006-unsupported-loop.lts`: T11 rejects source.

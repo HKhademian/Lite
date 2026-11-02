@@ -9,19 +9,19 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `cebdab4f…`. All inputs compile/check against the current reference, both
+seed `b8876b75…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
 
 - Canonical features: 23/38 match; 15 rejected.
-- Examples: 10/19 match; 9 rejected.
+- Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 29/79 match; 50 rejected; no differences among accepted probes.
+- Isolated boundary probes: 30/79 match; 49 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 81/164 match, 83 still fail. Compared with the
-  original inventory, 29 previously failing cases now match and none regress.
+- Total executed source cases: 83/164 match, 81 still fail. Compared with the
+  original inventory, 31 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -65,7 +65,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   ordering remains in the Float topic.
 - [x] **Empty scripts:** empty, whitespace-only and nested/raw-comment-only
   scripts compile silently on TS/C; malformed comments still reject.
-- [ ] **Script and lexical forms:** optional final semicolons,
+- [x] **Statement boundaries:** optional final semicolons, closing-scope and
+  directly closed-block boundaries; reject missing separators between simple
+  items in both generated frontend and standalone parser drivers.
+- [ ] **Script and lexical forms:**
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
@@ -216,3 +219,14 @@ coverage, strict checks and nine editor groups pass. The corpus is now 63
 programs/30 rejections; 61 older artifact pairs are unchanged. Source and seed
 size shrink slightly, while paired throughput stays steady. See the
 [empty-script ledger](parity.md#empty-script-support).
+
+Statement boundaries: 83/164 match, 81 remain; 31 original failures closed and
+none regress. The decisions example and final-semicolon probe now match. All
+262 full tests pass without skips in 63.4 s; fast passes 250 with 12 expected
+skips in 39.6 s. Strict checks, both 93-case corpora, 98 verifier executions,
+coverage and nine editor groups pass. Corpus: 64 programs/29 rejections; the
+63 earlier artifact pairs are unchanged. Shared boundary handling removes six
+duplicate trivia scans; paired compiler throughput stays steady with mixed small
+changes. The standalone parser's reference/generated drivers also cover nine
+valid and five rejected boundary sources. See the [boundary ledger](parity.md#statement-boundaries).
+Next: adjacent String literals, then trailing call commas and remaining scope forms.
