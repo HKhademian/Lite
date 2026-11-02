@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -21,7 +21,7 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 24 matches tested behavior; 14 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 35 matches tested behavior; 44 T11 rejects source.
+- probe: 81; 37 matches tested behavior; 44 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
@@ -29,7 +29,7 @@ This is the current measured support inventory, not acceptance of new language f
 ## Progress since the original inventory
 
 - 37 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 89/164 executed source cases match; 75 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 91/166 executed source cases match; 75 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -252,6 +252,8 @@ Closed original cases:
 - **comparison.parenthesized-not-equal — matches tested behavior.** Parenthesized inequality with a named left operand
 - **input.invalid-utf8 — matches tested behavior.** Invalid UTF-8 stdin is rejected rather than replaced
 - **comparison.bare-function-tail — matches tested behavior.** A bare inequality function tail remains a comparison rather than assignment
+- **flow.unreachable-tail — matches tested behavior.** A definite return excludes an unreachable ordinary tail from the function result
+- **flow.return-through-true-loop — matches tested behavior.** An unconditional return-through-loop produces a strictly runnable generated function
 
 ## example
 

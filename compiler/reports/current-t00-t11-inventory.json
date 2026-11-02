@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T18:54:14.622Z",
-  "revision": "1ba98c5f60bf0c1f748f9f70d25d460d35ce30f1",
+  "startedAt": "2026-11-02T19:17:01.255Z",
+  "revision": "31601cabca954bb145e2b4c06a759d1ffeaef49a",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/blocks-and-results.md\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/compiler/002-001-bare-name.json\n M igniter/tests/compiler/002-001-call-statement.json\n M igniter/tests/compiler/002-001-injected-source.json\n M igniter/tests/compiler/002-001-trailing-statement.json\n?? compiler/reports/2026-11-02-expression-items-ladder.json\n",
-  "compilerSourceSha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
-  "compilerSourceRevision": "3d698bed07e0ffb3124db445b7535ae06246ab1e",
+  "worktreeStatusAtStart": " M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/never-and-unreachable-flow.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n?? compiler/reports/2026-11-02-branch-results-ladder.json\n",
+  "compilerSourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
+  "compilerSourceRevision": "Branch-result source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+  "t11Sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -6478,6 +6478,96 @@
       }
     },
     {
+      "id": "flow.unreachable-tail",
+      "kind": "probe",
+      "summary": "A definite return excludes an unreachable ordinary tail from the function result",
+      "test": "function completion joins every conditional arm and preserves earlier definite returns",
+      "features": [],
+      "sourceSha256": "2bfd0693c1aaea1fd51e9bbcde8619c89853569800381d0f7b0ca6939554511c",
+      "source": "f := fn(): Int { return 1; \"unused\"; } outputLine(f());",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "boundary",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "1\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "1\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    function liteFn_f(): bigint {\n        return 1n;\n    }\n    void liteFn_f;\n    const lite$report0 = (liteFn_f()).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "id": "flow.return-through-true-loop",
+      "kind": "probe",
+      "summary": "An unconditional return-through-loop produces a strictly runnable generated function",
+      "test": "function completion joins every conditional arm and preserves earlier definite returns",
+      "features": [],
+      "sourceSha256": "0423b73598694807d45ddf79b427a6b16c0fff9e86eb2f738b1fa59e7e4b73e6",
+      "source": "f := fn(): Int { loop { return 7; } } outputLine(f());",
+      "t00Check": {
+        "accepted": true
+      },
+      "status": "matches",
+      "cases": [
+        {
+          "name": "boundary",
+          "stdin": "",
+          "args": [],
+          "t00": {
+            "status": 0,
+            "stdout": "7\n",
+            "stderr": "",
+            "signal": null
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "7\n",
+            "stderr": ""
+          },
+          "matches": true
+        }
+      ],
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    function liteFn_f(): bigint {\n        while (Boolean(true)) {\n            return 7n;\n        }\n        throw new Error(\"unreachable loop completion\");\n    }\n    void liteFn_f;\n    const lite$report0 = (liteFn_f()).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
+        "signal": null,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
       "id": "lib/tests/diag-fail.lts",
       "path": "lib/tests/diag-fail.lts",
       "kind": "library-test",
@@ -6841,8 +6931,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "2ba8804e4c3dfce599381b20ce1ad6868b28722d0942403a4087599807e81363",
-      "bytes": 160037,
+      "sourceSha256": "52846827bd1e8050c8dce4b245a2ee0e80d921a8bfe11a75f17b10378ad1566d",
+      "bytes": 165867,
       "t00Check": {
         "accepted": true
       },
@@ -6851,7 +6941,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 289953
+        "stdoutBytes": 299382
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6860,7 +6950,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "da985f98385595b28cc1ff7a959a65f4bd14b035267bf49ee312b5fedc3457ef"
+      "artifactSha256": "fb3372debe37536940776ad83aa3eab11d396a19a5fb3860230a5503cf0b73a4"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6914,8 +7004,8 @@
     },
     {
       "path": "compiler/src/emit-ts.lts",
-      "sourceSha256": "afe7fa967245e4c8b4e5a3739ebb2b81c67d11905b687cc27c0aa03a0ef74208",
-      "bytes": 28702,
+      "sourceSha256": "400d4cd4cfd001bc2c1d78d398e0e530f65b39ff0693a50976cb8b200e040ae4",
+      "bytes": 28835,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function skipName; forward function lookup is not supported yet"
@@ -6924,8 +7014,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "ce8c8daf064d2dd5a25c2d253e8d4bff6d0d27e096faa9d151bab7997c62af70",
-      "bytes": 121095,
+      "sourceSha256": "cd37fadb9b440d75f58b60c3708e8fe8850512a2015f48b9c3834c62bd0f55f4",
+      "bytes": 126925,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7192,8 +7282,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
-      "bytes": 170820,
+      "sourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
+      "bytes": 176783,
       "t00Check": {
         "accepted": true
       },
@@ -9152,8 +9242,8 @@
       "baseline": 0
     },
     "probe": {
-      "total": 79,
-      "matches": 35,
+      "total": 81,
+      "matches": 37,
       "rejected": 44,
       "typecheck": 0,
       "mismatch": 0,
@@ -9414,7 +9504,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T18:55:05.064Z",
+  "finishedAt": "2026-11-02T19:17:54.144Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9424,6 +9514,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
+  }
 }

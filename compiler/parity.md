@@ -1046,3 +1046,73 @@ are validation observations rather than speed comparisons. Strict host/seeds,
 both 93-case corpora, 100 verifier executions, coverage, nine editor groups and
 six strict native UBSan programs also pass. Inventory: 89/164 match, 75 remain;
 37 original failures closed, none regress, 210 tracked sources, no load errors.
+
+## Function completion
+
+Completion facts now belong to each lexical/control block. The parser saves the
+parent state on entry, joins every conditional arm only after a final else, and
+restores the parent on exit. A return in one arm no longer certifies an entire
+function. Empty/declaration/assignment-only result arms and incomplete nested
+return paths reject in Lite before artifact emission.
+
+The owner requested comparing approaches instead of treating T00 as automatic
+design authority. For this bounded slice, checking all ordinary source while
+omitting proved unreachable instructions follows Lite's block-result and
+control-transfer rules. A harmless ordinary tail after a definite return cannot
+change the returned type. Unknown names, malformed expressions, incompatible
+operators and explicit wrong-typed return payloads still reject, including on
+dead paths. The strict TS settings stay unchanged. Broader warning/public Never
+policies remain open in [the owning document](../docs/never-and-unreachable-flow.md).
+
+Both emitters receive only live instructions. Closing/else markers are retained
+for live openers, while parent liveness survives nested scopes and loop exits.
+The TS emitter records an unreachable-completion assertion after a proved
+return-through-loop: the assertion is never reached and lets the unchanged
+strict host check verify a function whose loop condition uses Boolean(true).
+Conditional/sequence loop zero/last-result lowering remains a separate gap;
+reference acceptance alone did not make the old generated artifact runnable.
+
+Coverage includes twenty TS function/completion programs, six TS/C transfer
+programs, fifteen rejected sources and two exact TS fault executions. Cases
+combine all-arm joins, partial/nested branches, early returns, Unit, tuples,
+Lists, break/continue, dead source errors and retained fault/output order. C
+explicitly rejects function sources. Six strict native UBSan cases verify the
+scalar transfer/pruning contracts. All 67 earlier program artifact pairs remain
+identical in both targets; the corpus stays at 67 programs/26 rejections.
+
+Two new boundary probes independently reproduce earlier failures: an ordinary
+unreachable String tail after return previously rejected, and a return through
+an unconditional loop previously produced TS that failed strict checking. Both
+now compile, strictly check and run with exact reference observations. Inventory:
+91/166 match, 75 remain; 37 original failures closed, no regressions. The added
+probes expand the denominator; they do not reduce the unchanged original-case
+remaining count. All 210 tracked Lite sources remain accounted for.
+
+The [generated-only ladder](reports/2026-11-02-branch-results-ladder.json)
+records three identical final TS generations, equal to the transitional output,
+with strict checks at every step. The compiler still uses the previously
+supported source subset. Per-block completion/liveness increases TS source by
+5963 bytes and artifact by 9675 bytes, C source by 5830 bytes and artifact by
+9429 bytes. The C emitter remains TS-hosted; native C self-hosting stays pending.
+
+Five paired fresh-process compiler-phase medians: TS outputs 71.9 → 75.2 ms,
+identical S 686.5 → 674.9 ms, constants 143.6 → 142.0 ms; C-emitter outputs
+85.5 → 85.2 ms, divisions 175.6 → 173.0 ms, constants 228.4 → 225.4 ms.
+These ordinary workload changes are mixed, without a general speedup claim.
+Their emitted bytes match exactly.
+
+A separate matched-source workload places 1000 outputs after an unconditional
+break. C-emitter time drops 66.8 → 46.2 ms and generated C shrinks from
+123183 to 293 bytes. Both old/new C artifacts compile strictly and print exactly
+7 followed by newline, matching T00. This measures compiler work and output
+size, not native runtime speed. TS compiler time is 53.3 → 50.9 ms and artifact
+size 92075 → 399 bytes; its older artifact fails the unchanged strict TS check,
+so that TS timing is not a prior working-program baseline. Full raw source,
+hashes, timings and separate strict/execution observations are in the
+[performance report](reports/2026-11-02-branch-results-performance.json).
+
+All 268 full tests pass without skips in 127.3 s; fast passes 256 with
+12 expected skips in 89.3 s. Strict host/seeds, both 93-case target corpora,
+100 verifier executions, coverage, nine editor groups and six native UBSan
+programs also pass. Gate durations are validation observations; the paired
+compiler measurements above ran without concurrent gates.

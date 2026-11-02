@@ -149,6 +149,10 @@ remain identical. See the [scope ledger](parity.md#statement-scopes) for focused
 generated fixed-point evidence, native sanitizer cases and paired timing data.
 
 
+Generated function completion now joins all conditional arms and validates dead
+source while omitting proved unreachable instructions. Strict target checks stay
+enabled. See the [completion assessment and evidence](parity.md#function-completion).
+
 ## Layout
 
 | Path | Role |

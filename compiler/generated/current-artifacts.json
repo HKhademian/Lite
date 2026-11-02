@@ -1,8 +1,8 @@
 {
-  "note": "Current exact artifacts after ordinary expression items, empty separators and checked function tails. All 67 earlier program artifact pairs remain unchanged. Four malformed-source diagnostics now report the specific unknown name or unterminated literal; historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after per-block function completion and checked unreachable-source elimination. All 67 earlier program artifact pairs remain unchanged; historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "af708f89f39c29ffaf25c1e8a097c42eff4fddb014a84767feec555b00a70193",
-  "compilerSha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+  "sourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
+  "compilerSha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
   "programCases": 67,
   "rejectedCases": 26,
   "artifacts": [

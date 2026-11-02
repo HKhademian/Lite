@@ -9,6 +9,8 @@ Local := type (name: String, runtime: String, kind: String, mutable: Bool, writa
 Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Flat program stream returned by parseProgram and consumed by a backend emitter. */
 Items := type List<Item>;
+/** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
+BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := type (text: String, width: Int);
 /** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
@@ -1832,6 +1834,13 @@ parseExpressionItem := fn(source: String, position: Int, prefix: String, locals:
     (next = next, returned = returned, code = if returned { if parsed.kind == "Unit" { unitEvaluationCode(parsed.code) } else { copiedValueCode(currentResult, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
 }
 
+/** Joins a block's definite completion: scopes preserve it, loops require a true header, and conditionals require every arm plus a final else. */
+blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool, hasElse: Bool, loopForever: Bool): Bool {
+    if kind == "scope" { completed }
+    else if kind == "loop" { loopForever and completed }
+    else { hasElse and branchesComplete and completed }
+}
+
 /** Parses complete source into a flat Items stream with an iterative block stack, dropping block-local declarations on `}`. Exits 2 on unsupported, malformed or faulting source. */
 parseProgram := fn(source: String, prefix: String): Items {
     size := textLength(source);
@@ -1849,6 +1858,13 @@ parseProgram := fn(source: String, prefix: String): Items {
     var currentName := "";
     var currentResult := "";
     var currentReturned := false;
+    var currentStopped := false;
+    var branchesReturned := true;
+    var branchesStopped := true;
+    var hasElse := false;
+    var loopForever := false;
+    var currentLive := true;
+    savedStates: mut List<BlockState> = [];
     loop position < size {
         ch := textAt(source, position);
         if ch == ";" {
@@ -1860,10 +1876,18 @@ parseProgram := fn(source: String, prefix: String): Items {
                 failAt(source, position, prefix, "unexpected }");
             }
             blockKind := blocks[blockCount - 1];
+            if blockKind == "ifvalue" and currentResult =!= "Unit" and not currentReturned {
+                failAt(source, position, prefix, "branch of function " + currentName + " must return " + displayKind(currentResult));
+            }
             after := skipTrivia(source, position + 1, prefix);
             if (blockKind == "if" or blockKind == "ifvalue") and after < size and wordAt(source, after, "else") {
                 locals = visibleLocals(locals, depth);
                 afterElse := skipTrivia(source, after + 4, prefix);
+                branchesReturned = branchesReturned and currentReturned;
+                branchesStopped = branchesStopped and currentStopped;
+                currentReturned = false;
+                currentStopped = false;
+                hasElse = not wordAt(source, afterElse, "if");
                 droppedIf := pop_back(mut blocks);
                 blockCount = blockCount - 1;
                 if wordAt(source, afterElse, "if") {
@@ -1878,12 +1902,12 @@ parseProgram := fn(source: String, prefix: String): Items {
                         condition.code
                     };
                     position = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
-                    push_back(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
-                        intValue = 0, textValue = ""));
+                    if currentLive { push_back(mut items, (kind = "ElseIf", name = "", runtime = "", code = conditionCode,
+                        intValue = 0, textValue = "")); }
                     push_back(mut blocks, blockKind);
                     blockCount = blockCount + 1;
                 } else {
-                    push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                    if currentLive { push_back(mut items, (kind = "Else", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
                     push_back(mut blocks, if blockKind == "ifvalue" { "ifvalue" } else { "else" });
                     blockCount = blockCount + 1;
                     position = expectSymbol(source, afterElse, "{", prefix);
@@ -1897,18 +1921,32 @@ parseProgram := fn(source: String, prefix: String): Items {
                 if currentResult =!= "Unit" and not currentReturned {
                     failAt(source, position, prefix, "function " + currentName + " must return " + currentResult);
                 }
-                push_back(mut items, (kind = "FunctionEnd", name = "", runtime = "liteFn_" + currentName,
-                    code = "", intValue = 0, textValue = ""));
+                if currentLive { push_back(mut items, (kind = "FunctionEnd", name = "", runtime = "liteFn_" + currentName,
+                    code = "", intValue = 0, textValue = "")); }
                 currentName = "";
                 currentResult = "";
                 currentReturned = false;
             } else if blockKind == "loop" {
-                push_back(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                if currentLive { push_back(mut items, (kind = "EndLoop", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else if blockKind == "scope" {
-                push_back(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                if currentLive { push_back(mut items, (kind = "EndScope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             } else {
-                push_back(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                if currentLive { push_back(mut items, (kind = "EndIf", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
             }
+            completedReturn := blockCompletion(blockKind, currentReturned, branchesReturned, hasElse, loopForever);
+            completedStop := blockCompletion(blockKind, if blockKind == "loop" { currentReturned } else { currentStopped },
+                branchesStopped, hasElse, loopForever);
+            if blockKind == "loop" and completedReturn and currentLive {
+                push_back(mut items, (kind = "Unreachable", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            }
+            parent := pop_back(mut savedStates);
+            currentReturned = parent.returned or (not parent.stopped and completedReturn and blockKind =!= "function");
+            currentStopped = parent.stopped or (completedStop and blockKind =!= "function");
+            branchesReturned = parent.branchesReturned;
+            branchesStopped = parent.branchesStopped;
+            hasElse = parent.hasElse;
+            loopForever = parent.loopForever;
+            currentLive = parent.live;
             droppedBlock := pop_back(mut blocks);
             blockCount = blockCount - 1;
             position = skipTrivia(source, position + 1, prefix);
@@ -1918,7 +1956,16 @@ parseProgram := fn(source: String, prefix: String): Items {
             continue;
         }
         if ch == "{" {
-            push_back(mut items, (kind = "Scope", name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Scope", name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+            push_back(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive));
+            currentLive = currentLive and not currentStopped;
+            currentReturned = false;
+            currentStopped = false;
+            branchesReturned = true;
+            branchesStopped = true;
+            hasElse = false;
+            loopForever = false;
             push_back(mut blocks, "scope");
             blockCount = blockCount + 1;
             depth = depth + 1;
@@ -1930,10 +1977,10 @@ parseProgram := fn(source: String, prefix: String): Items {
             (ch == "n" and wordAt(source, position, "not")) or (ch == "t" and wordAt(source, position, "true")) or
             (ch == "f" and wordAt(source, position, "false")) {
             expression := parseExpressionItem(source, position, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount));
-            push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
-                runtime = "", code = expression.code, intValue = 0, textValue = ""));
-            if expression.returned { currentReturned = true; }
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped);
+            if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
+                runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+            if expression.returned { currentReturned = true; currentStopped = true; }
             position = expression.next;
             continue;
         }
@@ -1960,9 +2007,10 @@ parseProgram := fn(source: String, prefix: String): Items {
                     failAt(source, nameStart, prefix, "function " + currentName + " must return " + currentResult);
                 }
                 position = consumeStatementEnd(source, valueStart, prefix);
-                push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
-                    intValue = 0, textValue = ""));
-                currentReturned = true;
+                if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = "",
+                    intValue = 0, textValue = "")); }
+                if not currentStopped { currentReturned = true; }
+                currentStopped = true;
                 continue;
             }
             if currentResult == "Unit" {
@@ -1976,9 +2024,10 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after return"); }
             position = statementNext;
-            push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
-                intValue = 0, textValue = ""));
-            currentReturned = true;
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = copiedValueCode(currentResult, parsed.code),
+                intValue = 0, textValue = "")); }
+            if not currentStopped { currentReturned = true; }
+            currentStopped = true;
             continue;
         }
         if name == "break" or name == "continue" {
@@ -1988,8 +2037,9 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, position, prefix);
             if statementNext < 0 { failAt(source, position, prefix, "expected ; after " + name); }
             position = statementNext;
-            push_back(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
-                code = "", intValue = 0, textValue = ""));
+            if currentLive and not currentStopped { push_back(mut items, (kind = if name == "break" { "Break" } else { "Continue" }, name = "", runtime = "",
+                code = "", intValue = 0, textValue = "")); }
+            currentStopped = true;
             continue;
         }
         var callableIndex := findFunction(functions, name);
@@ -2005,10 +2055,10 @@ parseProgram := fn(source: String, prefix: String): Items {
             (isAdmittedBuiltin(name) and localIndex(locals, name) < 0)) and
             position < size and textAt(source, position) == "(" {
             expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
-                currentResult, atValueTail(blocks, blockCount));
-            push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" }, name = callName, runtime = "",
-                code = expression.code, intValue = 0, textValue = ""));
-            if expression.returned { currentReturned = true; }
+                currentResult, atValueTail(blocks, blockCount) and not currentStopped);
+            if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Call" }, name = callName, runtime = "",
+                code = expression.code, intValue = 0, textValue = "")); }
+            if expression.returned { currentReturned = true; currentStopped = true; }
             position = expression.next;
             continue;
         }
@@ -2019,8 +2069,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             position = skipTrivia(source, position + 1, prefix);
             loop position < size and textAt(source, position) =!= ")" {
                 argument := parseExpression(source, position, prefix, locals, functions, functionParams, currentName);
-                push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
-                    intValue = argument.intValue, textValue = argument.textValue));
+                if currentLive and not currentStopped { push_back(mut items, (kind = argument.kind, name = "", runtime = "", code = argument.code,
+                    intValue = argument.intValue, textValue = argument.textValue)); }
                 position = skipTrivia(source, argument.next, prefix);
                 if position < size and textAt(source, position) == "," {
                     position = skipTrivia(source, position + 1, prefix);
@@ -2032,22 +2082,23 @@ parseProgram := fn(source: String, prefix: String): Items {
             statementNext := consumeStatementEnd(source, position, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, position, prefix), prefix, "expected ; after " + name); }
             position = statementNext;
-            push_back(mut items, (kind = if name == "outputLine" { "End" } else { "EndOutput" }, name = "", runtime = "", code = "",
-                intValue = 0, textValue = ""));
+            if currentLive and not currentStopped { push_back(mut items, (kind = if name == "outputLine" { "End" } else { "EndOutput" }, name = "", runtime = "", code = "",
+                intValue = 0, textValue = "")); }
             continue;
         }
         if name == "if" {
             var valueTailBranch := false;
-            if currentName =!= "" and atValueTail(blocks, blockCount) {
+            if currentName =!= "" and atValueTail(blocks, blockCount) and not currentStopped {
                 valueEnd := scanValueIfEnd(source, nameStart, prefix, true);
                 if valueEnd >= 0 {
                     afterChain := skipItemSeparators(source, valueEnd, prefix);
                     if afterChain < size and textAt(source, afterChain) == "}" {
                         expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
                             currentResult, true);
-                        push_back(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
-                            intValue = 0, textValue = ""));
+                        if currentLive and not currentStopped { push_back(mut items, (kind = "Return", name = "", runtime = "", code = expression.code,
+                            intValue = 0, textValue = "")); }
                         currentReturned = true;
+                        currentStopped = true;
                         position = expression.next;
                         continue;
                     }
@@ -2071,8 +2122,17 @@ parseProgram := fn(source: String, prefix: String): Items {
                 condition.code
             };
             position = expectSymbol(source, skipTrivia(source, condition.next, prefix), "{", prefix);
-            push_back(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
-                intValue = 0, textValue = ""));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "If", name = "", runtime = "", code = conditionCode,
+                intValue = 0, textValue = "")); }
+            push_back(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive));
+            currentLive = currentLive and not currentStopped;
+            currentReturned = false;
+            currentStopped = false;
+            branchesReturned = true;
+            branchesStopped = true;
+            hasElse = false;
+            loopForever = false;
             push_back(mut blocks, if valueTailBranch { "ifvalue" } else { "if" });
             blockCount = blockCount + 1;
             depth = depth + 1;
@@ -2119,12 +2179,21 @@ parseProgram := fn(source: String, prefix: String): Items {
                 push_back(mut locals, (name = itemName, runtime = runtime, kind = itemKind,
                     mutable = false, writable = false, depth = depth + 1, constant = false, code = runtime,
                     intValue = 0, textValue = ""));
-                push_back(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
-                    intValue = 0, textValue = itemKind));
+                if currentLive and not currentStopped { push_back(mut items, (kind = "LoopSeq", name = itemName, runtime = runtime, code = sequenceCode,
+                    intValue = 0, textValue = itemKind)); }
             } else {
-                push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
-                    intValue = 0, textValue = ""));
+                if currentLive and not currentStopped { push_back(mut items, (kind = "Loop", name = "", runtime = "", code = conditionCode,
+                    intValue = 0, textValue = "")); }
             }
+            push_back(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive));
+            currentLive = currentLive and not currentStopped;
+            currentReturned = false;
+            currentStopped = false;
+            branchesReturned = true;
+            branchesStopped = true;
+            hasElse = false;
+            loopForever = sequenceCode == "" and (conditionCode == "" or conditionCode == "true");
             push_back(mut blocks, "loop");
             blockCount = blockCount + 1;
             depth = depth + 1;
@@ -2171,8 +2240,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = localName, runtime = runtime, kind = parsed.kind,
                 mutable = true, writable = declaredWritable, depth = depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Var" + storageKind(parsed.kind), name = localName, runtime = runtime,
+                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if name == "else" {
@@ -2221,8 +2290,8 @@ parseProgram := fn(source: String, prefix: String): Items {
                 position = skipTrivia(source, header.next, prefix);
                 position = expectSymbol(source, position, "{", prefix);
                 push_back(mut functions, (name = name, result = header.result, first = parameterTotal, count = header.count));
-                push_back(mut items, (kind = "FunctionStart", name = name, runtime = "liteFn_" + name,
-                    code = header.result, intValue = header.count, textValue = header.params));
+                if currentLive and not currentStopped { push_back(mut items, (kind = "FunctionStart", name = name, runtime = "liteFn_" + name,
+                    code = header.result, intValue = header.count, textValue = header.params)); }
                 var entryStart := 0;
                 var entryIndex := 0;
                 loop entryIndex < header.count {
@@ -2243,7 +2312,15 @@ parseProgram := fn(source: String, prefix: String): Items {
                 }
                 currentName = name;
                 currentResult = header.result;
+                push_back(mut savedStates, (returned = currentReturned, stopped = currentStopped,
+                    branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive));
+                currentLive = currentLive and not currentStopped;
                 currentReturned = false;
+                currentStopped = false;
+                branchesReturned = true;
+                branchesStopped = true;
+                hasElse = false;
+                loopForever = false;
                 push_back(mut blocks, "function");
                 blockCount = blockCount + 1;
                 depth = depth + 1;
@@ -2262,8 +2339,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = name, runtime = runtime, kind = parsed.kind,
                 mutable = false, writable = false, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Local" + storageKind(parsed.kind), name = name, runtime = runtime,
+                code = copiedValueCode(parsed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if position < size and textAt(source, position) == ":" {
@@ -2283,8 +2360,8 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = name, runtime = runtime, kind = typed.kind,
                 mutable = false, writable = typed.writable, depth = depth, constant = parsed.constant, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
-                code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Local" + storageKind(typed.kind), name = name, runtime = runtime,
+                code = copiedValueCode(typed.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         if isSingleEquals(source, position) {
@@ -2307,15 +2384,15 @@ parseProgram := fn(source: String, prefix: String): Items {
             push_back(mut locals, (name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = true, writable = entry.writable, depth = entry.depth, constant = false, code = parsed.code,
                 intValue = parsed.intValue, textValue = parsed.textValue));
-            push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
-                code = copiedValueCode(entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+            if currentLive and not currentStopped { push_back(mut items, (kind = "Assign" + storageKind(entry.kind), name = name, runtime = entry.runtime,
+                code = copiedValueCode(entry.kind, parsed.code), intValue = parsed.intValue, textValue = itemTextPayload(parsed))); }
             continue;
         }
         expression := parseExpressionItem(source, nameStart, prefix, locals, functions, functionParams, currentName,
-            currentResult, atValueTail(blocks, blockCount));
-        push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
-            runtime = "", code = expression.code, intValue = 0, textValue = ""));
-        if expression.returned { currentReturned = true; }
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped);
+        if currentLive and not currentStopped { push_back(mut items, (kind = if expression.returned { "Return" } else { "Discard" }, name = expression.valueKind,
+            runtime = "", code = expression.code, intValue = 0, textValue = "")); }
+        if expression.returned { currentReturned = true; currentStopped = true; }
         position = expression.next;
     }
     if blockCount > 0 {

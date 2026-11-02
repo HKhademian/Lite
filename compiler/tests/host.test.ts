@@ -1040,3 +1040,81 @@ test('ordinary expression items evaluate silently and trailing separators retain
   }
   assertExecutions(executions);
 });
+
+test('function completion joins every conditional arm and preserves earlier definite returns', () => {
+  const executions: ArtifactExecution[] = [];
+  const sources = [
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } } outputLine(f(true), f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } 2; } outputLine(f(true), f(false));',
+    'f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } else { return 2; } } else { return 3; } } outputLine(f(true, true), f(true, false), f(false, true));',
+    'f := fn(n: Int): Int { if n < 0 { x := n; -x; } else if n == 0 { return 10; } else { n + 1; } } outputLine(f(-2), f(0), f(2));',
+    'f := fn(): Int { return 1; x := "dead"; x;; } outputLine(f());',
+    'f := fn(): Unit { return; 1;; } f(); outputLine("after");',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } "dead";; } outputLine(f(false));',
+    'f := fn(): Int { { return 1; } "dead";; } outputLine(f());',
+    'f := fn(flag: Bool): Int { loop flag { return 1; } 0; } outputLine(f(false), f(true));',
+    'f := fn(): Int { loop { return 1; } } outputLine(f());',
+    'f := fn(flag: Bool): Int { loop { if flag { return 1; } else { return 2; } } } outputLine(f(false));',
+    'f := fn(): Int { loop { break; return 1; } 2; } outputLine(f());',
+    'f := fn(flag: Bool): Unit { if flag { return; } outputLine("body"); } f(true); f(false);',
+    'f := fn(flag: Bool): String { if flag { return "a"; } else { return "b"; } Unit; } outputLine(f(false));',
+    'f := fn(flag: Bool): Bool { if flag { x := true; x; } else { x := false; x; } } outputLine(f(true), f(false));',
+    'f := fn(flag: Bool): (n: Int) { if flag { p := (n = 1); p; } else { return (n = 2); } } outputLine(f(true), f(false));',
+    'f := fn(flag: Bool): List<Int> { if flag { values: List<Int> = [1]; values; } else { values: List<Int> = [2]; return values; } } outputLine(f(true), f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { { return 2; } } } outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } if false { "ignored"; } Unit; } outputLine(f(true));',
+    'f := fn(flag: Bool): Unit { if flag { return; } else { return; } 1; } f(false); outputLine("after");',
+  ];
+  for (const text of sources) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    const compiled = compileTarget('ts', { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, context: text });
+    const c = compileTarget('c', { text }); assert.equal(c.status, 2, text); assert.equal(c.stdout.length, 0);
+  }
+  const scalarControl = ['loop { outputLine("live"); break; 1 / 0; } outputLine("after");',
+    'var n := 0; loop n < 2 { n = n + 1; continue; outputLine("dead"); } outputLine(n);',
+    'loop { if true { break; } else { break; } outputLine("dead"); } outputLine("after");',
+    'loop { { break; } outputLine("dead"); } outputLine("after");',
+    'var n := 0; loop { n = n + 1; if n > 1 { break; } else { continue; } outputLine("dead"); } outputLine(n);',
+    'loop { loop { break; } outputLine("outer"); break; } outputLine("after");'];
+  for (const text of scalarControl) {
+    const expected = runText(text); assert.equal(expected.status, 0, text + expected.stderr.toString());
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      executions.push({ target, artifact: compiled.stdout.toString(), expected, context: text });
+    }
+  }
+  const invalid = [
+    'loop { break; 1 + true; }', 'loop { break; unknown; }',
+    'f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } } outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { x := 1; } else { 2; } } outputLine(f(true));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } } outputLine(f(false));',
+    'f := fn(): Int { if true { return 1; } } outputLine(f());',
+    'f := fn(flag: Bool): Int { if flag { return 1; } x := 3; } outputLine(f(false));',
+    'f := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } } else { return 2; } } outputLine(f(true, false));',
+    'f := fn(n: Int): Int { if n < 0 { return 1; } else if n == 0 { x := 2; } else { return 3; } } outputLine(f(0));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { } } outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { outputLine("effect"); } } outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { var x := 2; x = 3; } } outputLine(f(false));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } "wrong"; } outputLine(f(false));',
+    'f := fn(): Int { return 1; return "wrong"; } outputLine(f());',
+    'f := fn(): Unit { return; return 1; } f();',
+  ];
+  for (const source of invalid) {
+    const text = 'outputLine("before");\r\n' + source;
+    const reference = runText(text); assert.equal(reference.status, 1, source); assert.equal(reference.stdout.length, 0, source);
+    for (const target of ['ts', 'c'] as const) {
+      const compiled = compileTarget(target, { text, name: 'branch سلام.lts' });
+      assert.equal(compiled.status, 2, source); assert.equal(compiled.stdout.length, 0, source);
+      assert.match(compiled.stderr.toString(), /^branch سلام\.lts:2:[0-9]+: /);
+    }
+  }
+  for (const text of ['outputLine("before"); f := fn(flag: Bool): Int { if flag { var zero := 0; return 1 / zero; } else { return 2; } } outputLine(f(true));',
+    'f := fn(flag: Bool): Int { if flag { return 1; } else { var max := 9223372036854775807; max + 1; } } outputLine(f(false));']) {
+    const name = 'branch سلام.lts', expected = runText(text, { name }); assert.equal(expected.status, 1, text);
+    const compiled = compileTarget('ts', { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+    executions.push({ target: 'ts', artifact: compiled.stdout.toString(), expected, context: text });
+  }
+  assertExecutions(executions);
+});

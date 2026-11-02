@@ -474,6 +474,8 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             } else {
                 outputLine(indent + "return " + item.code + ";");
             }
+        } else if item.kind == "Unreachable" {
+            outputLine(indent + "throw new Error(\"unreachable loop completion\");");
         } else if item.kind == "Break" {
             outputLine(indent + "break;");
         } else if item.kind == "Continue" {

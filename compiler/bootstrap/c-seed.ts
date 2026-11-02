@@ -1,16 +1,16 @@
-/** Verified generated expression-item seed; exact identities follow. */
+/** Verified generated branch-result seed; exact identities follow. */
 export const cSeed = Object.freeze({
   "artifact": "c-emitter.ts",
-  "sourceSha256": "2ba8804e4c3dfce599381b20ce1ad6868b28722d0942403a4087599807e81363",
-  "sourceBytes": 160037,
-  "artifactSha256": "9ae40155e852d3a1d2f94de74da3d0b37707f9bfc2573f64466dc18438f61f6c",
-  "artifactBytes": 289907,
-  "builderSha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+  "sourceSha256": "52846827bd1e8050c8dce4b245a2ee0e80d921a8bfe11a75f17b10378ad1566d",
+  "sourceBytes": 165867,
+  "artifactSha256": "9cf458bc6b84ae1d8c790cf6d9c3f9d381e5110e5413ca41ac13e33ca6be088b",
+  "artifactBytes": 299336,
+  "builderSha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "3d698bed07e0ffb3124db445b7535ae06246ab1e",
-  "artifactRevision": "3d698bed07e0ffb3124db445b7535ae06246ab1e",
-  "builderRevision": "3d698bed07e0ffb3124db445b7535ae06246ab1e",
+  "sourceRevision": "Branch-result source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "Branch-result artifact committed with this seed; see artifactSha256",
+  "builderRevision": "Current branch-result TS seed; see builderSha256",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"

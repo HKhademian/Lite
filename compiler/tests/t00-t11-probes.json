@@ -487,5 +487,17 @@
     "summary": "A bare inequality function tail remains a comparison rather than assignment",
     "source": "f := fn(value: String): Bool { value =!= \"\" } outputLine(f(\"x\"));",
     "test": "comparison tails distinguish =!= from assignment and named tuple field tokens"
+  },
+  {
+    "id": "flow.unreachable-tail",
+    "summary": "A definite return excludes an unreachable ordinary tail from the function result",
+    "source": "f := fn(): Int { return 1; \"unused\"; } outputLine(f());",
+    "test": "function completion joins every conditional arm and preserves earlier definite returns"
+  },
+  {
+    "id": "flow.return-through-true-loop",
+    "summary": "An unconditional return-through-loop produces a strictly runnable generated function",
+    "source": "f := fn(): Int { loop { return 7; } } outputLine(f());",
+    "test": "function completion joins every conditional arm and preserves earlier definite returns"
   }
 ]

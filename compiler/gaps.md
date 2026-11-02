@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `492bc99d…`. All inputs compile/check against the current reference, both
+seed `4877900c…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,13 +17,15 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 24/38 match; 14 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 35/79 match; 44 rejected; no differences among accepted probes.
+- Isolated boundary probes: 37/81 match; 44 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 89/164 match, 75 still fail. Compared with the
+- Total executed source cases: 91/166 match, 75 still fail. Compared with the
   original inventory, 37 previously failing cases now match and none regress.
-  The temporary-I/O case, retained function-tail probe and new chain feature
-  account for three additional matching cases.
+  The temporary-I/O case, retained function-tail probe, chain feature and two
+  completion probes account for five additional matching cases. The completion
+  probes separately expose corrected unreachable tails and return-through-loop
+  artifact checking; they are additions to the original inventory.
 
 These counts describe measured programs. Several failing cases share one cause;
 a passing broad case can still contain unsupported forms. The detailed report
@@ -84,6 +86,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   obey the newest type and mutation permission. Callable/type namespaces remain queued.
 - [x] **Script expressions:** discard ordinary expression values while retaining
   evaluation, effects and faults; accept empty item separators.
+- [x] **Function completion:** keep completion facts per block, join all conditional
+  arms, reject reachable missing results before artifact output, and validate
+  unreachable items while omitting their instructions. Retain early returns and
+  source errors in dead code; broader Never and loop-result behavior remain queued.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
   Valid constant folding remains; invalid arithmetic executes only when reached.
@@ -92,9 +98,8 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
   lossless widening, checked narrow results and Float32 rounding.
 - [ ] **Block and conditional values:** statement-bearing blocks, Unit tails,
-  partial defaults and false-branch no-write assignments. Audit every returning
-  branch: `f := fn(flag: Bool): Int { if flag { 1; } else { x := 2; } }`
-  rejects in T00 but T11 currently emits a function that fails strict TS checking.
+  partial defaults and false-branch no-write assignments. Function completion
+  checking over currently admitted statement forms is recorded separately below.
 - [ ] **Tuple shapes:** unnamed/mixed/unit/singleton tuples, shorthand fields,
   positional reads, destructuring, receiving-label conversion and display.
 - [ ] **Fixed arrays:** inferred/explicit extents, function contracts, aliases,
@@ -120,7 +125,12 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   function whose tail exits needs the supported bottom-type flow contract.
 - [ ] **Traversal forms:** unnamed item bindings and consistent scope.
 - [ ] **Loop values and exits:** value/then completion, metadata, payloads,
-  tagged break/continue and the reference's supported tagged returns.
+  tagged break/continue and the reference's supported tagged returns. A final
+  conditional loop must produce its selected zero/last value when it does not
+  return: T00 prints 0 for `f := fn(flag: Bool): Int { loop flag { return 1; } }
+  outputLine(f(false));`. The earlier generated compiler accepted this but emitted
+  a function that failed strict TS checking. Completing loop-result lowering is
+  separate from proving statement-block returns.
 - [ ] **Cleanup:** construct-level finally and exit/fault interactions.
 - [ ] **Match:** supported subjectless Boolean selection and combinations.
 - [ ] **Other existing builtins:** audit and port remaining reference helpers,
@@ -315,3 +325,17 @@ recorded without a general speedup claim. See the
 array/List tail admission and incomplete declaration-branch results stay queued.
 Next: branch-result checking, then broader function admission and control/value
 forms; Unicode columns remain in the final diagnostic audit.
+
+Function completion: per-block return/transfer facts close missing-arm admission
+and checked-artifact gaps. The owner-requested design comparison retains ordinary
+source checking and eliminates proved unreachable instructions; T00 is evidence
+rather than automatic semantic authority. Both new completion boundary probes
+pass, expanding the inventory to 91/166 matching cases with 75 remaining and
+no observed regressions. The original inventory still has 37 closed failures.
+All 268 full tests pass with no skips; fast passes 256 with 12 expected skips.
+Both corpora, strict checks, 100 verifier executions, coverage, nine editor
+groups and six native sanitizer programs pass. All 67 earlier program artifact
+pairs remain unchanged. A matched native dead-output workload compiles in
+66.8 → 46.2 ms, with exact behavior and C size 123183 → 293 bytes; ordinary
+compiler timings are mixed. See the [completion ledger](parity.md#function-completion).
+Broader value/loop-result, Never/callable/capture, native C and consumer gaps remain.

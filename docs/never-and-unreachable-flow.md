@@ -49,6 +49,23 @@ The no-final-`else` rule is explicitly retained as a noncontributing path. Given
 
 The internal state selected here is not an ordinary constructible/storage type and creates no new zero value or exception to ordinary value initialization. Public Never requires its own future contract.
 
+## Generated compiler checking and emission
+
+Implementation assessment, 2026-11-02: for the currently admitted structured
+control forms, generated Lite validates ordinary source items even after a
+proved return/break/continue. Unknown names, malformed syntax, incompatible
+operators and explicit return payloads still fail. It omits instructions on
+those proved unreachable paths when emitting the artifact. An unreachable
+ordinary tail cannot supply or change the function's normally returned result.
+
+Completion facts belong to each lexical/control block. A return in one
+conditional arm does not establish completion for all arms, and a reachable
+path missing a required function result is rejected in Lite before emission.
+Strict target checking remains enabled; target-specific unreachable-code
+rejection is not treated as a blanket Lite source rule. This bounded
+implementation choice does not select the broader warning, inference or public
+Never policies that remain open above.
+
 ## Future exploration requested by the user
 
 Keep these topics open for a later design review:

@@ -1,0 +1,182 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "31601cabca954bb145e2b4c06a759d1ffeaef49a",
+  "node": "v24.16.0",
+  "previousSeedSha256": "492bc99d34b7871cf360aeafe0268f0f58561d25da7edda1f9cb9854d9bbc07b",
+  "transitionalArtifactSha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
+    "bytes": 176783
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+      "bytes": 323028,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+      "bytes": 323028,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+      "bytes": 323028,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "52846827bd1e8050c8dce4b245a2ee0e80d921a8bfe11a75f17b10378ad1566d",
+    "sourceBytes": 165867,
+    "artifactSha256": "9cf458bc6b84ae1d8c790cf6d9c3f9d381e5110e5413ca41ac13e33ca6be088b",
+    "artifactBytes": 299336,
+    "builderSha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "tsFunctionCompletionPrograms": 20,
+    "scalarTransferProgramsOnTsAndC": 6,
+    "rejectionSources": 15,
+    "exactTsFaultExecutions": 2,
+    "fullSuite": {
+      "tests": 268,
+      "passed": 268,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 127266.91075
+    },
+    "fastSuite": {
+      "tests": 268,
+      "passed": 256,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 89275.637791
+    },
+    "hostGroups": 28,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/T11.ts",
+      "target": "ts",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "artifact": "<local-path>/Projects/LiteScript/compiler/bootstrap/c-emitter.ts",
+      "target": "c",
+      "cases": 93,
+      "programs": 67,
+      "rejections": 26,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 100,
+    "registeredFeatures": 38,
+    "coverage": true,
+    "existingCorpusArtifactPairsUnchanged": 67,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "loop { outputLine(\"live\"); break; 1 / 0; } outputLine(\"after\");",
+        "var n := 0; loop n < 2 { n = n + 1; continue; outputLine(\"dead\"); } outputLine(n);",
+        "loop { if true { break; } else { break; } outputLine(\"dead\"); } outputLine(\"after\");",
+        "loop { { break; } outputLine(\"dead\"); } outputLine(\"after\");",
+        "var n := 0; loop { n = n + 1; if n > 1 { break; } else { continue; } outputLine(\"dead\"); } outputLine(n);",
+        "loop { loop { break; } outputLine(\"outer\"); break; } outputLine(\"after\");"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true
+    },
+    "boundaryEvidence": [
+      {
+        "id": "flow.unreachable-tail",
+        "source": "f := fn(): Int { return 1; \"unused\"; } outputLine(f());",
+        "previousCompiler": {
+          "status": 2,
+          "stderr": "1:28: cannot return String from function f returning Int\n"
+        },
+        "previousArtifactPhase": null,
+        "current": {
+          "status": 0,
+          "stdout": "1\n",
+          "stderr": ""
+        }
+      },
+      {
+        "id": "flow.return-through-true-loop",
+        "source": "f := fn(): Int { loop { return 7; } } outputLine(f());",
+        "previousCompiler": {
+          "status": 0,
+          "stderr": ""
+        },
+        "previousArtifactPhase": "typecheck",
+        "current": {
+          "status": 0,
+          "stdout": "7\n",
+          "stderr": ""
+        }
+      }
+    ],
+    "priorLoopDefaultGap": {
+      "text": "f := fn(flag: Bool): Int { loop flag { return 1; } } outputLine(f(false));",
+      "previousCompiler": {
+        "phase": "run",
+        "status": 0
+      },
+      "previousArtifact": {
+        "phase": "typecheck",
+        "status": 1,
+        "stderr": ""
+      },
+      "t00": {
+        "status": 0,
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      "scope": "Loop-result seeding is a separate existing unsupported gap; old compiler acceptance did not produce a strictly runnable artifact."
+    },
+    "inventory": {
+      "matches": 91,
+      "total": 166,
+      "remaining": 75,
+      "originalFailuresClosed": 37,
+      "addedMatchingBoundaryProbes": 2,
+      "regressions": 0,
+      "trackedLiteFiles": 210,
+      "loadErrors": 0
+    },
+    "performanceReport": "2026-11-02-branch-results-performance.json",
+    "designAssessment": "Check source even on proved unreachable paths; omit unreachable instructions. Preserve strict TS checking and reject reachable missing results in Lite. This follows Lite block-result/control rules and the bounded checking model; broad warning/public Never policies remain open. T00 is reference evidence rather than automatic design authority.",
+    "knownLimits": "Broader value blocks, conditional/sequence loop zero/last results, Never-valued exit, array/List distinctions, function/type namespaces/captures, native C and consumer migration remain queued."
+  },
+  "reproductionCommands": [
+    "git show 31601cabca954bb145e2b4c06a759d1ffeaef49a:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}
