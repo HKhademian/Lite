@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/scripts/release.ts\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M docs/numbers.md\n M docs/operators.md\n M docs/power-and-negation.md\n M docs/release-automation.md\n M igniter/README.md\n M igniter/artifacts.ts\n M igniter/test.ts\n M igniter/verify.ts\n M verifications/features/num-power.json\n?? compiler/reports/2026-11-02-power-ladder.json\n",
   "compilerSourceSha256": "399d88b3520fe653c4b5b731f71733a8b8d96fdad9e99397fcd337b5d55591d3",
-  "compilerSourceRevision": "Power source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "59b8a218560f9140a661759d079747e7204a8f27",
   "node": "v24.16.0",
   "t11Sha256": "2052e0629ac603950b92461f06ec6f5de1babe09d7765da82022ba241cb73222",
   "rows": [
