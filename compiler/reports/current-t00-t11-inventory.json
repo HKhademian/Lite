@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/src/emit-ts.lts\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/never-and-unreachable-flow.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n?? compiler/reports/2026-11-02-branch-results-ladder.json\n",
   "compilerSourceSha256": "2074f582673f59d5dcaa30dfa2289e480328582467b4fa8fe5fc35427c187fdf",
-  "compilerSourceRevision": "Branch-result source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "992fa63ddd3b9872eed1000c4529df2a762097a1",
   "node": "v24.16.0",
   "t11Sha256": "4877900c315734fe19d729c62f18e010c071a282cbbfdcbbbbf9172f458bfca5",
   "rows": [
@@ -9514,5 +9514,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
 }
