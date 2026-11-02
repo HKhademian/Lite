@@ -374,6 +374,33 @@ function divisionFaultSource(expression: string): string {
   return '/* 🙂 */ outputLine("before");\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808; var zero := 0;\r\noutputLine(' + expression + ');';
 }
 
+test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
+  if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
+  const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';
+  const cases = [
+    'outputLine("prefix", 1 / zero);', 'output("prefix", 1 / zero);',
+    'outputLine("prefix", true, maximum + 1);', 'outputLine(Unit, 1 % zero);',
+    'outputLine("prefix", 1 / zero, maximum + 1);', 'outputLine("prefix", maximum + 1, 1 / zero);',
+    'outputLine("before"); outputLine("prefix", 1 :/ zero);',
+    'output("before"); output("prefix", 1 :% zero);',
+    'var n := 2; loop n >= 0 { outputLine("value", 10 / n); n = n - 1; }',
+    'var text := "value"; outputLine(text + "x", 1 / zero);',
+    'outputLine(Unit, (), true, "text", 7);',
+    'outputLine(Unit); output(); outputLine(); output("x", Unit); outputLine();',
+    'var lt_output_0 := 3; outputLine(lt_output_0, "x", true);',
+    'var n := 0; loop n < 2 { if n == 0 { output("a", n); } else { outputLine("b", n); } n = n + 1; }',
+  ];
+  for (const body of cases) {
+    const text = prefix + body, name = 'output سلام🙂.lts';
+    const compiled = compileTarget('c', { text, name });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    const expected = runText(text, { name }), actual = runCArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+    assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, body);
+  }
+});
+
 test('generated TS division family matches boundary values, fault positions and call effects', () => {
   for (const source of [int64BoundaryProgram(true), 'var n := -9223372036854775808; outputLine(n % -1, n :% -1, -9223372036854775808 % -1);',
     'touch := fn(n: Int): Int { outputLine("arg", n); n } outputLine(touch(-7) / touch(2), touch(-7) % touch(2), touch(-7) :/ touch(2), touch(-7) :% touch(2));',

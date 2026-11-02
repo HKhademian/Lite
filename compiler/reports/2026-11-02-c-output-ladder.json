@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "deed712558d75a76bad0ec25ef06c9b5999ae71d",
+  "recipe": "Unchanged verified T11 compiles current C S; strictly check generated TS emitter. No T00 execution or TS compiler source/artifact changes.",
+  "c": {
+    "artifact": "c-emitter.ts",
+    "sourceSha256": "b109e2dde95a0fd961e3fa7d06dd3d742bc6eb6e63346853a9e4e41916c6d9cd",
+    "sourceBytes": 161052,
+    "artifactSha256": "ec6d4b7b48f61101d8160c464409ccf846e8b0136890d58c54cf7c1198511928",
+    "artifactBytes": 286924,
+    "builderSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
+    "native": false,
+    "sourceManifest": "compiler/manifests/c.json",
+    "sourceRevision": "C output source snapshot committed with this seed; see sourceSha256",
+    "artifactRevision": "C output artifact committed with this seed; see artifactSha256",
+    "builderRevision": "30e0981fae4850bcd03e782a5e7175952ec12ab3",
+    "builder": "Current generated TS seed compiling Lite C emitter",
+    "node": "v24.16.0",
+    "typescript": "7.0.2"
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "focusedPrograms": 14,
+    "fullSuite": {
+      "tests": 256,
+      "passed": 256,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 48473.469958
+    },
+    "fastSuite": {
+      "tests": 256,
+      "passed": 244,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 27196.018792
+    },
+    "hostGroups": 16,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "target": "ts",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "target": "c",
+      "cases": 93,
+      "programs": 55,
+      "rejections": 38,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 95,
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "var zero := 0; outputLine(\"prefix\", 1 / zero);",
+        "var zero := 0; output(\"prefix\", 1 :% zero);",
+        "var x := 9223372036854775807; outputLine(\"prefix\", x + 1);",
+        "var n := 2; loop n >= 0 { outputLine(\"value\", 10 / n); n = n - 1; }",
+        "outputLine(Unit, true, \"value\", 7);",
+        "var z := 0; outputLine(\"before\"); outputLine(\"prefix\", z / z);"
+      ],
+      "cases": 6,
+      "exactStatusAndStreams": true
+    },
+    "performanceReport": "2026-11-02-c-output-performance.json",
+    "tsSourceAndArtifactUnchanged": true,
+    "tsInventory": {
+      "matches": 71,
+      "total": 162,
+      "remaining": 91
+    },
+    "knownLimits": "C input/aggregates, native compiler self-hosting, remaining TS feature/diagnostic gaps and run/check migration remain pending. Unit storage is still rejected by the shared frontend; this slice covers admitted Unit output values only."
+  },
+  "reproductionCommands": [
+    "node --input-type=module -e 'import{writeFileSync}from\"node:fs\";import{loadBundle}from\"./igniter/loader.ts\";writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact compiler/bootstrap/T11.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

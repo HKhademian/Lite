@@ -1,5 +1,5 @@
 {
-  "note": "Current exact artifacts after single-pass helper discovery. Program artifact hashes remain unchanged from the division-family checkpoint.",
+  "note": "Current exact artifacts after C multi-value output evaluates all arguments before writing. TS source/seed and all TS artifacts remain unchanged.",
   "recorded": "2026-11-02",
   "sourceSha256": "9de37c318f9ba014f1f1c50c1f4036a99c2b86a3504b0e9e47eb8b1f86b3d0b8",
   "compilerSha256": "c25922d7a3c843395844deb30e99c34e73e1cbc66a04740b2a596c1d433c7683",
@@ -160,7 +160,7 @@
       "name": "report-two-strings",
       "source": "001-004-report-two-strings.lts",
       "ts": "sha256:ba1519a69120e6228233aa425ea12bbdd22338198e56dcb5172ccdc0a2ec3d6b",
-      "c": "sha256:9a1b37655c2871222004b1b0d302951740f4a51ffb0340e6b31e6e66acc26eba"
+      "c": "sha256:908d178ccf25054bb7bc38efd9392e7729304ee20866d48b7825d46be7b8a4a8"
     },
     {
       "name": "string-concatenation",
@@ -208,13 +208,13 @@
       "name": "output-values",
       "source": "001-005-output-values.lts",
       "ts": "sha256:efa3032ab0367c694031aa79edefe00a5e44978af161bfadbe18a8e2d965cb64",
-      "c": "sha256:0e015cfd0ba063224d913bbb5a4ed9810756bf727881c5389c3f13c8593e9367"
+      "c": "sha256:95e3bcd6d23843f1178d2f23e7ee48434f8f172331f818c0410a5d63ee94d45f"
     },
     {
       "name": "report-mixed-values",
       "source": "001-005-report-mixed-values.lts",
       "ts": "sha256:eacebfdca140f5b539e38069ed586045a63562e86e2942e0c80d2fc4e973cc4e",
-      "c": "sha256:e32ec34b90ee9290158d5d3fb8b0c8631d2517ab867ff14658c4e67903e35172"
+      "c": "sha256:ae3636d9acc92bee1c45d9044b783349de1e13f99174872fb6ae25165d8c2e89"
     },
     {
       "name": "report-three-statements",
@@ -256,7 +256,7 @@
       "name": "local-hygiene-string",
       "source": "001-006-local-hygiene-string.lts",
       "ts": "sha256:70af661f3b8edc3fac9b24ff6a01460e369f8b855183d8e3722499ca2538df73",
-      "c": "sha256:4c0499e2f455458a9eaee61543cdc0cdc55986b2e8a8802617a715e0fc0b1e57"
+      "c": "sha256:d01240f5bc99e5f9abaa3f2de0336a8b69f05badff1f4e62106734e1b17f60e7"
     },
     {
       "name": "local-macro-name",
@@ -268,7 +268,7 @@
       "name": "report-empty-value",
       "source": "001-006-report-empty-value.lts",
       "ts": "sha256:79be685a385490900b8eee6e37de72225113763d47404eb75c385e3676e0eaca",
-      "c": "sha256:577647794c407ef0d3de4479bfb66d18c3e23f01438a83986da58ce36dab4818"
+      "c": "sha256:73de8b631fb2d8fa78db89b2c64e61da4b482262ae974ea139bdce0d525c5bf0"
     },
     {
       "name": "report-literal-sequence",
@@ -280,13 +280,13 @@
       "name": "bool-literals-logic",
       "source": "001-007-bool-literals-logic.lts",
       "ts": "sha256:6c0e10e9fb882777d4fe06d911a807f7c6ba0cc1efacb6a9f515f3d16f317619",
-      "c": "sha256:7a2a6da58ee2cafead043b77fb9e7a46e8b910b0797f208501119d881199dec8"
+      "c": "sha256:bdaa4c0c3ea4d44b399cca83ff5ac425b550ef601e9396d13215408b22221024"
     },
     {
       "name": "int-comparisons-if-else",
       "source": "001-007-int-comparisons-if-else.lts",
       "ts": "sha256:5f826978edea15c2ba0550a6c92e1ad82c6031a11a0168a46768e660170f7e5a",
-      "c": "sha256:ef39d705a5fa975a988136fe2542dcd78651bfe45b1e589fb1235f0822c0d715"
+      "c": "sha256:ac6c98e487c5058758d044c28fb0a890fa33621404165886bdbe8bb6005e821d"
     },
     {
       "name": "mutable-counter-loop",
@@ -298,7 +298,7 @@
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
       "ts": "sha256:5345e4242b7a0c1409463c37658bc5bfe347f3e71d9faccb8c0f499b1197b60b",
-      "c": "sha256:4db939813b296c30240d94d7139aa95c784e4f3fd60e106aeebf48e4493d1553"
+      "c": "sha256:e3723913a1ba7dfe17909add9228333f4922b8c80e3150115043c548584924c9"
     },
     {
       "name": "not-precedence",
@@ -310,7 +310,7 @@
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
       "ts": "sha256:187f01996912951c76172cfdf1ffabfbde6ecb25f238f2d3a6f70ebcbc52203d",
-      "c": "sha256:211883b55588ac6753754c74b7db2b58eb3af0ca4078659110fd10d162bb4dba"
+      "c": "sha256:ac4375917684343e3ed8a94666f50c459e68d0073ac53ea865f0c113acb4d916"
     },
     {
       "name": "string-equality-if",

@@ -400,6 +400,42 @@ with eleven expected skips (30.3 s), both 93-case corpus comparisons, all 95
 verifier executions and all nine editor groups pass. The next behavior topic is
 the discovered C output argument-fault ordering gap.
 
+## C output argument evaluation
+
+The C emitter now evaluates all arguments of a multi-value output/outputLine
+call once, from left to right, before printing any part of that call. Typed,
+hygienic temporaries hold Int/String/Bool/Float values; admitted Unit values need
+no stored payload. A later arithmetic fault leaves no partial call or separator,
+while previous output calls remain visible. Single-value calls retain their
+exact emitted C and avoid temporary-name construction. Empty calls preserve the
+selected newline behavior. Existing C input/aggregate restrictions remain.
+
+Fourteen focused native programs compare exact status/stdout/stderr with T00,
+including later and competing faults, Unicode source names/positions, prior
+output, loops/scopes, output without newline, empty/Unit/mixed values and source
+names resembling temporary names. Six programs also pass strict C11 and
+undefined-behavior sanitizer checks. Multi-value C corpus hashes are refreshed;
+historical snapshots and all TS artifacts remain unchanged.
+
+Only C S changes: 161052 bytes, SHA-256
+`b109e2dde95a0fd961e3fa7d06dd3d742bc6eb6e63346853a9e4e41916c6d9cd`.
+Unchanged T11 (`c25922d7…`) emits the strictly checked TS-hosted C compiler,
+286924 bytes, SHA-256
+`ec6d4b7b48f61101d8160c464409ccf846e8b0136890d58c54cf7c1198511928`.
+The [C-only refresh](reports/2026-11-02-c-output-ladder.json) records provenance
+and reproduction. It does not reclassify this TS-hosted emitter as native C11.
+
+The [five-pair C-emitter measurements](reports/2026-11-02-c-output-performance.json)
+are steady within noise: 78.8 → 79.6 ms for 1,000 single-value outputs,
+185.7 → 181.7 ms for 200 multi-value outputs. Single-value artifacts match
+exactly; multi-value artifacts intentionally add argument temporaries.
+
+Strict checks, all 256 full tests (zero skips, 48.5 s), fast 244 pass with twelve
+expected skips (27.2 s), both 93-case corpus comparisons, 95 verifier executions
+and nine editor groups pass. The TS inventory remains 71/162, with 91 failing
+cases. C output ordering is closed; positioned bounds diagnostics, comparison
+parsing and the other [live gaps](gaps.md) remain pending.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

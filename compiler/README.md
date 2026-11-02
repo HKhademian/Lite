@@ -223,7 +223,9 @@ unchanged by that [refresh](parity.md#checked-int64-arithmetic). The subsequent
 [division-family slice](parity.md#positioned-integer-division-family) matches
 positioned runtime faults and makes MIN%-1 a valid zero result. C checks both
 division overflow and zero before evaluating the operation; all integer helper
-operands evaluate once from left to right. Function syntax,
+operands evaluate once from left to right. C multi-value output also evaluates
+every argument before writing, so a later argument fault leaves no partial call.
+Single-value calls retain their exact emitted C. Function syntax,
 tuple values, list values and total value `if` expressions are
 emitted as runnable TS; the C path rejects them with a clear status-2
 diagnostic. List values lower to TS arrays and a checked `lite$listAt` helper;

@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 15
+code-point copies. The current test suite has 236 interpreter groups, 16
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -51,6 +51,11 @@ Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 outpu
 statements and from 899.0 to 649.8 ms for identical compiler source, with exact
 emitted bytes. All 522 previous/current compiler comparisons match; see the
 [helper-scan ledger](../compiler/parity.md#single-pass-helper-discovery).
+
+C multi-value output now evaluates every argument before any write, preserving
+left-to-right faults and earlier output. Single-value emitted C is unchanged.
+All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](../compiler/parity.md#c-output-argument-evaluation)
+records coverage, unchanged TS seeds and steady paired C-emitter timings.
 
 ## Run
 

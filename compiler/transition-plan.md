@@ -36,6 +36,18 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: C multi-value output evaluates every argument once before any
+  write, preserving earlier calls and left-to-right fault order. Single-value
+  calls retain exact emitted C and avoid unused temporary names. Fourteen
+  focused programs cover later/competing faults, output/outputLine, empty/Unit/
+  mixed values, loops and name hygiene; six also pass native sanitizers. The
+  [C-only ladder](reports/2026-11-02-c-output-ladder.json) records an emitter
+  rebuilt by unchanged T11, with TS source/seed/artifacts unchanged. All 256 full
+  tests pass (zero skips, 48.5 s); fast 244 pass/12 expected skips, strict checks,
+  both 93-case corpora, 95 verifier runs and nine editor groups pass. Paired C
+  timings are steady: 78.8 → 79.6 ms for 1,000 single-value calls, 185.7 → 181.7 ms
+  for 200 multi-value calls. Next: positioned bounds faults, then comparisons.
+
 - 2026-11-02: target helper requirements are collected once per program, skipping
   escaped quoted text and consuming whole identifiers. TS/C helper queries now
   read a distinct-name set instead of rescanning item code and copying the full

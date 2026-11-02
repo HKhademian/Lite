@@ -2449,11 +2449,14 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    (void)lite_s;\n' +
     '    if (printf("%s", lite_s) < 0) { status = 1; }\n' +
     '    if (printf("\\n") < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64, (int64_t)(INT64_C(1))) < 0) { status = 1; }\n' +
+    '    int64_t lt_output_0 = INT64_C(1);\n' +
+    '    const char *lt_output_1 = lite_s;\n' +
+    '    int64_t lt_output_2 = INT64_C(2);\n' +
+    '    if (printf("%" PRId64, (int64_t)(lt_output_0)) < 0) { status = 1; }\n' +
     '    if (printf(" ") < 0) { status = 1; }\n' +
-    '    if (printf("%s", lite_s) < 0) { status = 1; }\n' +
+    '    if (printf("%s", lt_output_1) < 0) { status = 1; }\n' +
     '    if (printf(" ") < 0) { status = 1; }\n' +
-    '    if (printf("%" PRId64, (int64_t)(INT64_C(2))) < 0) { status = 1; }\n' +
+    '    if (printf("%" PRId64, (int64_t)(lt_output_2)) < 0) { status = 1; }\n' +
     '    if (printf("\\n") < 0) { status = 1; }\n' +
     '    return status;\n}\n' });
 });

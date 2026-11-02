@@ -10,11 +10,12 @@ preserves the recipe, previous seed revision and transitional artifact
 hashes. Historical T00-built ladder identities remain in the parity ledger.
 
 `c-emitter.ts` is the current Lite C emitter compiled by the refreshed TS seed.
-It is 284104 bytes, SHA-256 `eba31df8…`; C source
-SHA-256 `450a6578…`, builder SHA-256 `c25922d7…`.
+It is 286924 bytes, SHA-256 `ec6d4b7b…`; C source
+SHA-256 `b109e2dd…`, builder SHA-256 `c25922d7…`.
 Its metadata is in [c-seed.ts](c-seed.ts). It supports admitted scalar output
-forms and checked dynamic Int64 arithmetic, including positioned division-family faults;
-it still rejects unsupported input/aggregate forms explicitly. It is a
+forms and checked dynamic Int64 arithmetic, including positioned division-family faults.
+Multi-value output evaluates every argument before writing; the [C-only refresh](../reports/2026-11-02-c-output-ladder.json)
+records this emitter's identity. TS S/seed remain unchanged. The C emitter still rejects unsupported input/aggregate forms explicitly. It is a
 TS-hosted C emitter, not the pending native C11 compiler or a native fixed point.
 
 The owner approved starting the default-compiler transition on 2026-11-02.

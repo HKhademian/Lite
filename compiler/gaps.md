@@ -86,10 +86,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   including inputWord; preserve the selected six-helper public contract.
 - [ ] **C target parity:** functions, aggregates/copies, text/input, control
   flow and complete runtime/memory support. Audit TS-only acceptance explicitly.
-- [ ] **C output argument faults:** `var zero := 0;
+- [x] **C output argument faults:** `var zero := 0;
   outputLine("prefix", 1 / zero);` must evaluate arguments before printing any
-  part of the call. C currently prints `prefix ` before the fault; T00/TS do not.
-  Next behavior slice.
+  part of the call. C now matches T00/TS and prints no partial call on a fault.
 - [ ] **Native C ladder:** C11, historical-node equality and cross-host fixed
   points, strict native compilation, boundary cases and clean rebuilds.
 - [ ] **Consumers:** generated check/run and remaining regression consumers,
@@ -135,3 +134,15 @@ inventory remains the measured behavior snapshot, with unchanged case counts.
 Paired C-emitter medians also improve: 133.0 → 81.0 ms for 1,000 outputs and
 238.5 → 170.9 ms for 200 dynamic divisions. All measured emitted outputs match
 exactly. The no-helper fast path removes the initial output-only C slowdown.
+
+The C output-order slice closes the discovered native prefix-on-fault flaw.
+Multi-value calls evaluate once before writing; single-value emitted C stays
+identical and skips unused temporary names. Fourteen focused programs and six
+sanitizer cases cover faults, prior output, scopes/loops, empty/Unit/mixed values
+and name hygiene. TS S/seed/artifacts are unchanged, so the TS inventory remains
+71/162 with 91 failing cases. All 256 full tests pass with zero skips in 48.5 s;
+fast 244 pass/12 expected skips, strict checks, both 93-case target comparisons,
+all 95 verifier executions and nine editor groups also pass. The paired C-emitter
+timings are steady within noise: 78.8 → 79.6 ms for 1,000 single-value outputs;
+185.7 → 181.7 ms for 200 multi-value outputs. Next: positioned bounds diagnostics,
+followed by comparison parsing.

@@ -13,7 +13,12 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 15 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 16 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+C multi-value output now evaluates every argument before any write, preserving
+left-to-right faults and earlier output. Single-value emitted C is unchanged.
+All 256 full tests pass with zero skips (48.5 s); the [C output-order ledger](../compiler/parity.md#c-output-argument-evaluation)
+records coverage, unchanged TS seeds and steady paired C-emitter timings.
 
 Single-pass target helper discovery now avoids repeated emitted-code scans.
 Paired compiler-phase measurements improve from 100.0 to 60.4 ms for 1,000 output

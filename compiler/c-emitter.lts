@@ -3155,7 +3155,22 @@ emitStringConcatHelper := fn(): Unit {
     outputLine("");
 }
 
-/** Emits the C program from the flat item stream. Locals become int64_t, const char pointer or bool declarations, control flow becomes braces, and every report printf keeps the shared write-failure status. */
+/** Evaluates one multi-value output argument into a hygienic scalar temporary. Unit has no stored payload or supported C-side effect. */
+emitOutputArgument := fn(kind: String, code: String, name: String, indent: String): Unit {
+    if kind == "Unit" { return; }
+    typeCode := if kind == "Int" { "int64_t " }
+        else if kind == "Bool" { "bool " }
+        else if kind == "Float" { "double " }
+        else { "const char *" };
+    outputLine(indent + typeCode + name + " = " + code + ";");
+}
+
+/** Formats one output write after every argument has evaluated successfully. */
+outputWriteCode := fn(kind: String, code: String, indent: String): String {
+    indent + "if (" + cCall(kind, code) + " < 0) { status = 1; }\n"
+}
+
+/** Emits the C program from the flat item stream. Multi-value output evaluates its arguments before any write; every printf keeps the shared write-failure status. */
 emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     calls := targetHelperCalls(items);
     loop items as item {
@@ -3195,6 +3210,11 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
     emitArithmeticTemporaries(items);
     var indent := "    ";
     var count := 0;
+    var tempIndex := 0;
+    var firstKind := "";
+    var firstCode := "";
+    var firstTemp := "";
+    var writes := "";
     loop items as item {
         if item.kind == "LocalInt" or item.kind == "VarInt" {
             outputLine(indent + "int64_t " + item.runtime + " = " + item.code + ";");
@@ -3236,11 +3256,27 @@ emitProgram := fn(items: Items, source: String, prefix: String): Unit {
             indent = dedent(indent);
             outputLine(indent + "}");
         } else if item.kind == "End" or item.kind == "EndOutput" {
+            if count == 1 { output(outputWriteCode(firstKind, firstCode, indent)); }
+            else if count > 1 { output(writes); }
             if item.kind == "End" { outputLine(indent + "if (printf(\"\\n\") < 0) { status = 1; }"); }
             count = 0;
+            writes = "";
         } else {
-            if count > 0 { outputLine(indent + "if (printf(\" \") < 0) { status = 1; }"); }
-            outputLine(indent + "if (" + cCall(item.kind, item.code) + " < 0) { status = 1; }");
+            if count == 0 {
+                firstKind = item.kind;
+                firstCode = item.code;
+            } else {
+                if count == 1 {
+                    firstTemp = "lt_output_" + intText(tempIndex);
+                    tempIndex = tempIndex + 1;
+                    emitOutputArgument(firstKind, firstCode, firstTemp, indent);
+                    writes = outputWriteCode(firstKind, firstTemp, indent);
+                }
+                temp := "lt_output_" + intText(tempIndex);
+                tempIndex = tempIndex + 1;
+                emitOutputArgument(item.kind, item.code, temp, indent);
+                writes = writes + indent + "if (printf(\" \") < 0) { status = 1; }\n" + outputWriteCode(item.kind, temp, indent);
+            }
             count = count + 1;
         }
     }
