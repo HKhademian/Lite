@@ -2,7 +2,7 @@
 
 Runtime environment details omitted for privacy.
 
-T11 identity: `0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -20,15 +20,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 37; 22 matches tested behavior; 15 T11 rejects source.
 - example: 19; 10 matches tested behavior; 9 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 24 matches tested behavior; 55 T11 rejects source.
+- probe: 79; 26 matches tested behavior; 53 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 209.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 24 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 75/163 executed source cases match; 88 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 26 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 77/163 executed source cases match; 86 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -55,6 +55,8 @@ Closed original cases:
 - probe: function.report-order
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
+- probe: condition.dead-arithmetic
+- probe: logic.short-circuit-fault
 - probe: comparison.parenthesized-not-equal
 - probe: input.invalid-utf8
 
@@ -242,10 +244,8 @@ Closed original cases:
   First diagnostic: 1:1: expected a statement: output/outputLine, declaration, assignment, if or loop
 - **syntax.whitespace-script — T11 rejects source.** Whitespace-only scripts complete silently
   First diagnostic: 2:1: expected a statement: output/outputLine, declaration, assignment, if or loop
-- **condition.dead-arithmetic — T11 rejects source.** Arithmetic in an unselected branch does not fault
-  First diagnostic: 1:25: division by zero in integer expression
-- **logic.short-circuit-fault — T11 rejects source.** Short-circuiting skips a failing arithmetic operand
-  First diagnostic: 1:25: division by zero in integer expression
+- **condition.dead-arithmetic — matches tested behavior.** Arithmetic in an unselected branch does not fault
+- **logic.short-circuit-fault — matches tested behavior.** Short-circuiting skips a failing arithmetic operand
 - **comparison.parenthesized-not-equal — matches tested behavior.** Parenthesized inequality with a named left operand
 - **input.invalid-utf8 — matches tested behavior.** Invalid UTF-8 stdin is rejected rather than replaced
 - **comparison.bare-function-tail — matches tested behavior.** A bare inequality function tail remains a comparison rather than assignment
@@ -407,6 +407,12 @@ Closed original cases:
 - `igniter/tests/compiler/001-009-runtime-division.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-009-runtime-remainder.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-010-runtime-string-concat.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-division-by-zero.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-min-divide-minus-one.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-overflow-add.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-overflow-multiply-large.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-overflow-multiply.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-011-overflow-subtract.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/002-001-adjacent-strings.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-bare-name.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-call-statement.lts`: not-a-standalone-T00-program.
@@ -425,15 +431,9 @@ Closed original cases:
 - `igniter/tests/compiler/002-002-string-plus-int-local.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-002-string-times-int.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-002-unary-minus-string.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-003-division-by-zero.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-003-literal-above-max.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-003-literal-below-min.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-003-literal-too-large.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-003-min-divide-minus-one.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-003-overflow-add.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-003-overflow-multiply-large.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-003-overflow-multiply.lts`: T11 rejects source.
-- `igniter/tests/compiler/002-003-overflow-subtract.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-004-bad-string-escape.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-004-unterminated-string.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-005-duplicate-local.lts`: T11 rejects source.

@@ -13,7 +13,13 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 37 features, 19 examples, 20 samples, 77 scenarios, 95 target executions
-- Tests: 236 interpreter groups, 18 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 19 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+
+Constant integer arithmetic faults now execute only when reached. Dead branches,
+false loops, skipped Boolean operands and unused functions compile safely; invalid
+literals/types still reject before effects. Six fixtures now model runtime faults,
+so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
+full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
 
 Parenthesized inequality and bare String/Int/Bool function tails now stay
 comparisons, using a shared equals-token check. All 258 full tests pass with zero

@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T15:38:44.998Z",
-  "revision": "2c787bcfcca54cb73db7004ec4f1b68780e6583a",
+  "startedAt": "2026-11-02T15:58:05.457Z",
+  "revision": "191977e1d4fff5cfa8aad2a38398f51837725f61",
   "node": "v24.16.0",
-  "t11Sha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+  "t11Sha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -15,8 +15,8 @@
       "features": [
         "int.arithmetic"
       ],
-      "sourceSha256": "77f8048fd1f4f8e78ce7b14732c1d09bd010208a4432cfeb9e43bab5aad94655",
-      "source": "outputLine(1 + 2 * (3 - 4));\noutputLine(20 / 3);\noutputLine(-7 / 2);\n",
+      "sourceSha256": "1347783539e94a3f8547d209aac8a334a7a00ec1e7ba02c32f78828dc76a5a5b",
+      "source": "outputLine(1 + 2 * (3 - 4));\noutputLine(20 / 3);\noutputLine(-7 / 2);\n\nif false { outputLine(1 / 0); }\noutputLine(false and (1 / 0 > 0), true or (9223372036854775807 + 1 > 0));\n",
       "t00Check": {
         "accepted": true
       },
@@ -28,7 +28,7 @@
           "args": [],
           "t00": {
             "status": 0,
-            "stdout": "-1\n6\n-3\n",
+            "stdout": "-1\n6\n-3\nfalse true\n",
             "stderr": "",
             "signal": null
           },
@@ -36,7 +36,7 @@
           "t11": {
             "status": 0,
             "signal": null,
-            "stdout": "-1\n6\n-3\n",
+            "stdout": "-1\n6\n-3\nfalse true\n",
             "stderr": ""
           },
           "matches": true
@@ -45,7 +45,7 @@
       "t11Compile": {
         "status": 0,
         "signal": null,
-        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = ((1n + (2n * ((3n - 4n))))).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((20n / 3n)).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = (((-7n) / 2n)).toString();\n    lite$emit(lite$report2 + \"\\n\");\n    return lite_out;\n}\n",
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0, 29, 49, 69, 70, 102, 176];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\nfunction lite$addInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedInt(left + right, at); }\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = ((1n + (2n * ((3n - 4n))))).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    const lite$report1 = ((20n / 3n)).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    const lite$report2 = (((-7n) / 2n)).toString();\n    lite$emit(lite$report2 + \"\\n\");\n    if (Boolean(false)) {\n        const lite$report3 = (lite$divideInt(1n, 0n, 94)).toString();\n        lite$emit(lite$report3 + \"\\n\");\n    }\n    const lite$report4 = ((((false) && ((((lite$divideInt(1n, 0n, 126)) > (0n)))))) ? \"true\" : \"false\") + \" \" + ((((true) || ((((lite$addInt(9223372036854775807n, 1n, 165)) > (0n)))))) ? \"true\" : \"false\");\n    lite$emit(lite$report4 + \"\\n\");\n    return lite_out;\n}\n",
         "stderr": ""
       },
       "artifactTypecheck": {
@@ -6063,7 +6063,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6074,14 +6074,27 @@
             "stdout": "7\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "7\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    if (Boolean(false)) {\n        const lite$report0 = (lite$divideInt(1n, 0n, 24)).toString();\n        lite$emit(lite$report0 + \"\\n\");\n    }\n    const lite$report1 = (7n).toString();\n    lite$emit(lite$report1 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:25: division by zero in integer expression\n"
+        "stderr": ""
       }
     },
     {
@@ -6095,7 +6108,7 @@
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6106,14 +6119,27 @@
             "stdout": "false\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "false\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "declare const process: {\n    argv: string[];\n    exit(code: number): never;\n    getBuiltinModule(name: \"node:fs\"): {\n        readSync(fd: number, buffer: Uint8Array, offset: number, length: number, position: null): number;\n        writeSync(fd: number, text: string): number;\n    };\n};\n\nconst lite$intLines: readonly number[] = [0];\nconst lite$intSource = \"\";\nconst lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;\nfunction lite$fault(category: string, at: number, message: string): never {\n    let line = 0;\n    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;\n    const column = at - (lite$intLines[line] ?? 0) + 1;\n    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");\n    process.exit(1);\n}\nfunction lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }\nfunction lite$checkedInt(value: bigint, at: number): bigint {\n    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");\n    return value;\n}\n\nfunction lite$divideInt(left: bigint, right: bigint, at: number): bigint {\n    if (right === 0n) lite$intFault(at, \"division by zero\");\n    return lite$checkedInt(left / right, at);\n}\n\nexport function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = ((((false) && ((((lite$divideInt(1n, 0n, 24)) > (0n)))))) ? \"true\" : \"false\");\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:25: division by zero in integer expression\n"
+        "stderr": ""
       }
     },
     {
@@ -6618,8 +6644,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "1b5adf7998d2e335d37be55a4f17d535fe03e10709a7bc967d77bb0c69907b1d",
-      "bytes": 161163,
+      "sourceSha256": "e52694da6923f1f6b3cc85c94a69849eee558cb10825a41931eb0edad22674d9",
+      "bytes": 158134,
       "t00Check": {
         "accepted": true
       },
@@ -6628,7 +6654,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 288656
+        "stdoutBytes": 283606
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6637,7 +6663,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "90e0fade96288932cd909ed341d2eb4bd0a676a4f6086bdb3d08e878444f8cc3"
+      "artifactSha256": "a6866f6a86094fe0aaf9cd39ec47f114de4b15f565f2df0afe59d9c19776abf3"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6701,8 +6727,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "b0f2f04f8713f908d40bd8ca830ef1618a4bc31350d98a8b2cc14b6aa7b5e7b1",
-      "bytes": 124983,
+      "sourceSha256": "e1842de34bfcea47a6030b39940787304e4dffe249e27c7ce163eafd3b51b9b4",
+      "bytes": 121954,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -6969,8 +6995,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1",
-      "bytes": 173318,
+      "sourceSha256": "8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110",
+      "bytes": 170289,
       "t00Check": {
         "accepted": true
       },
@@ -7954,6 +7980,102 @@
       "status": "accepted"
     },
     {
+      "path": "igniter/tests/compiler/001-011-division-by-zero.lts",
+      "sourceSha256": "393a66a6ac176247595c66d38f7bba079d14a2295f28a2e4017945dff4ae928d",
+      "bytes": 19,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1753
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-011-min-divide-minus-one.lts",
+      "sourceSha256": "2e6ee56e1748da36a61e1aec2d7ec6ae73d82613d4fdb993d2fc014162a1210c",
+      "bytes": 39,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1781
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-011-overflow-add.lts",
+      "sourceSha256": "c14764e9740d3799768926d96db86988b6211fb54c0f2d2bcd91110f8afc271b",
+      "bytes": 37,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1695
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-011-overflow-multiply-large.lts",
+      "sourceSha256": "4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7",
+      "bytes": 37,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1716
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-011-overflow-multiply.lts",
+      "sourceSha256": "a3a6a486455bbdddddffabdf23451ecd13138feb5cec8f1a19cf9f9b02802b38",
+      "bytes": 39,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1716
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-011-overflow-subtract.lts",
+      "sourceSha256": "521be89ae4b5416694d44fb845f84f2a4a9239aa1eb93d4f025ce3cbe2b88bea",
+      "bytes": 38,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 1713
+      },
+      "status": "accepted"
+    },
+    {
       "path": "igniter/tests/compiler/002-001-adjacent-strings.lts",
       "sourceSha256": "bde8f4e9bf1602c4fd31f26cc9b5cefd5ba64648d61407739e0f4aa31f3e1ad1",
       "bytes": 21,
@@ -8170,22 +8292,6 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
-      "path": "igniter/tests/compiler/002-003-division-by-zero.lts",
-      "sourceSha256": "393a66a6ac176247595c66d38f7bba079d14a2295f28a2e4017945dff4ae928d",
-      "bytes": 19,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-division-by-zero.lts:1:14: division by zero in integer expression\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-003-literal-above-max.lts",
       "sourceSha256": "b26538cfc6e2f5dab8c65c0ececc7e53fe1c8751dbac2327dcbf016ff9d07522",
       "bytes": 33,
@@ -8214,86 +8320,6 @@
         "diagnostic": "SourceError: integer outside signed 64-bit range"
       },
       "coverage": "not-a-standalone-T00-program"
-    },
-    {
-      "path": "igniter/tests/compiler/002-003-min-divide-minus-one.lts",
-      "sourceSha256": "2e6ee56e1748da36a61e1aec2d7ec6ae73d82613d4fdb993d2fc014162a1210c",
-      "bytes": 39,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-min-divide-minus-one.lts:1:33: integer expression outside signed 64-bit range\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
-      "path": "igniter/tests/compiler/002-003-overflow-add.lts",
-      "sourceSha256": "c14764e9740d3799768926d96db86988b6211fb54c0f2d2bcd91110f8afc271b",
-      "bytes": 37,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-overflow-add.lts:1:32: integer expression outside signed 64-bit range\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
-      "path": "igniter/tests/compiler/002-003-overflow-multiply-large.lts",
-      "sourceSha256": "4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7",
-      "bytes": 37,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-overflow-multiply-large.lts:1:23: integer expression outside signed 64-bit range\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
-      "path": "igniter/tests/compiler/002-003-overflow-multiply.lts",
-      "sourceSha256": "a3a6a486455bbdddddffabdf23451ecd13138feb5cec8f1a19cf9f9b02802b38",
-      "bytes": 39,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-overflow-multiply.lts:1:33: integer expression outside signed 64-bit range\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
-      "path": "igniter/tests/compiler/002-003-overflow-subtract.lts",
-      "sourceSha256": "521be89ae4b5416694d44fb845f84f2a4a9239aa1eb93d4f025ce3cbe2b88bea",
-      "bytes": 38,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-003-overflow-subtract.lts:1:33: integer expression outside signed 64-bit range\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
     },
     {
       "path": "igniter/tests/compiler/002-004-bad-string-escape.lts",
@@ -8925,8 +8951,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 24,
-      "rejected": 55,
+      "matches": 26,
+      "rejected": 53,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9006,7 +9032,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 55 program and 38 rejection cases",
+    "restricted compiler corpus keeps 61 program and 32 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9186,7 +9212,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T15:39:31.944Z",
+  "finishedAt": "2026-11-02T15:58:52.148Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,

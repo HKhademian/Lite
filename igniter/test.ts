@@ -722,6 +722,28 @@ type CompilerFixture = Readonly<{
   exitCode: number;
 }>;
 
+/** Captures reference runtime faults as process results without changing throwing interpreter unit tests. */
+function runCompilerFixture(fixture: CompilerFixture): ReturnType<typeof run> {
+  const result = runText(fixture.source, { stdin: fixture.stdin.toString('utf8') });
+  return { code: result.status, output: result.stdout.toString(), errors: result.stderr.toString() };
+}
+
+/** Keeps pure successful cores importable, and isolates faulting/input-bearing TS or translated JS programs. */
+async function assertImportedFixture(path: string, fixture: CompilerFixture): Promise<void> {
+  if (fixture.exitCode === 0 && fixture.stdin.length === 0 && fixture.stderr.length === 0) {
+    assert.equal(await importedMain(path), fixture.stdout.toString('utf8'), fixture.name);
+    return;
+  }
+  const entry = new URL('../compiler/entry.ts', import.meta.url).pathname;
+  const result = spawnSync(process.execPath, [entry, path], {
+    input: fixture.stdin, timeout: 5000, maxBuffer: 8 * 1024 * 1024,
+  });
+  assert.equal(result.error, undefined, fixture.name); assert.equal(result.signal, null, fixture.name);
+  assert.equal(result.status, fixture.exitCode, fixture.name);
+  assert.deepEqual(result.stdout, fixture.stdout, fixture.name);
+  assert.deepEqual(result.stderr, fixture.stderr, fixture.name);
+}
+
 const fixtureFile = /^(\d{3})-(\d{3})-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
 const fixtureStream = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const sha256 = (bytes: Buffer): string => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -1634,9 +1656,9 @@ test('restricted compiler treats nested, doc and raw comments as separating triv
   }
 });
 
-test('restricted compiler corpus keeps 55 program and 38 rejection cases', () => {
-  assert.equal(programFixtures.length, 55);
-  assert.equal(rejectionFixtures.length, 38);
+test('restricted compiler corpus keeps 61 program and 32 rejection cases', () => {
+  assert.equal(programFixtures.length, 61);
+  assert.equal(rejectionFixtures.length, 32);
 });
 
 test('restricted compiler compiles scalar functions, calls and returns to runnable TS', () => {
@@ -2208,12 +2230,11 @@ test('Lite-generated native C, TS and igniter programs have identical output byt
       }
       const expectedOutput = fixture.stdout.toString('utf8');
       const expectedError = fixture.stderr.toString('utf8');
-      const baseline = run(fixture.source, fixture.stdin.toString('utf8'));
+      const baseline = runCompilerFixture(fixture);
       assert.equal(baseline.code, fixture.exitCode, fixture.name);
       assert.equal(baseline.output, expectedOutput, fixture.name);
       assert.equal(baseline.errors, expectedError, fixture.name);
-      const typescript = await importedMain(tsPath);
-      assert.equal(typescript, expectedOutput, fixture.name);
+      await assertImportedFixture(tsPath, fixture);
       // Feed stdin through a file descriptor rather than a pipe: a program that
       // exits without reading its input (outputLine(0) ignores the fixture bytes)
       // otherwise races the parent's write and spuriously reports EPIPE, which
@@ -2502,11 +2523,11 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
       writeFileSync(corePath, emitted.output); corePaths.push(corePath);
       const expectedOutput = fixture.stdout.toString('utf8');
       const expectedError = fixture.stderr.toString('utf8');
-      const baseline = run(fixture.source, fixture.stdin.toString('utf8'));
+      const baseline = runCompilerFixture(fixture);
       assert.equal(baseline.code, fixture.exitCode, fixture.name);
       assert.equal(baseline.output, expectedOutput, fixture.name);
       assert.equal(baseline.errors, expectedError, fixture.name);
-      assert.equal(await importedMain(corePath), expectedOutput, fixture.name);
+      await assertImportedFixture(corePath, fixture);
     }
     const base: unknown = JSON.parse(readFileSync(new URL('./tsconfig.json', import.meta.url), 'utf8'));
     if (typeof base !== 'object' || base === null || !('compilerOptions' in base) ||
@@ -2527,7 +2548,7 @@ test('emitted TS and igniter outputs match byte for byte across the admitted com
     });
     assert.equal(translated.error, undefined); assert.equal(translated.status, 0, translated.stdout + translated.stderr);
     for (const [index, fixture] of programFixtures.entries()) {
-      assert.equal(await importedMain(join(jsDirectory, `program-${index}.js`)), fixture.stdout.toString('utf8'), fixture.name);
+      await assertImportedFixture(join(jsDirectory, `program-${index}.js`), fixture);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 55 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 61 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -204,8 +204,9 @@ support `.label` reads. Total value
 expressions are accepted in initializers, assignments, arguments, returns and
 function-tail positions; every branch must produce one expression of the same
 kind and a final `else` is required. Unnamed tuples, nested tuples, nested lists,
-destructuring, spread, list equality and arrays remain rejected. Constant-only expressions
-keep their compile-time folding and range/division diagnostics; runtime
+destructuring, spread, list equality and arrays remain rejected. Valid constant expressions retain compile-time folding. Arithmetic panics,
+including constant ones, execute only when reached; invalid literals/types
+still reject before effects. Other runtime
 expressions lower to target control flow and a runtime report accumulator for TS
 or direct `printf` calls for C. Dynamic `/ % :/ :%` and dynamic String
 concatenation lower to checked helpers; TS emits ordinary left-to-right `+`

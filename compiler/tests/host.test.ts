@@ -454,6 +454,59 @@ test('inequality stays distinct from assignment and tuple fields in grouping and
   }
 });
 
+test('constant integer faults execute only when reached, preserving short-circuit and operand order', () => {
+  const expressions = ['1 / 0', '1 % 0', '1 :/ 0', '1 :% 0', '9223372036854775807 + 1',
+    '-9223372036854775808 - 1', '9223372036854775807 * 2', '-(-9223372036854775808)',
+    '-9223372036854775808 / -1', '-9223372036854775808 :/ -1',
+    '(9223372036854775807 + 1) - 1', '0 * (9223372036854775807 + 1)',
+    '(9223372036854775807 + 1) / (1 / 0)', '(1 / 0) + (9223372036854775807 + 1)'];
+  const skipped = expressions.flatMap(expression => [
+    `if false { outputLine(${expression}); }`, `loop false { outputLine(${expression}); }`,
+    `outputLine(false and (${expression} > 0), true or (${expression} > 0));`,
+  ]).join('\n');
+  const valid = skipped + '\noutputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);';
+  const compiled = compileTs({ text: valid }), expected = runText(valid);
+  assert.equal(expected.status, 0, expected.stderr.toString()); assert.equal(compiled.status, 0, compiled.stderr.toString());
+  const actual = runTsArtifact(compiled.stdout.toString()); assert.equal(actual.phase, 'run');
+  assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+  if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+    const c = compileTarget('c', { text: valid }); assert.equal(c.status, 0, c.stderr.toString());
+    const native = runCArtifact(c.stdout.toString()); assert.equal(native.phase, 'run', native.stderr.toString());
+    assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected);
+  }
+  const branches = expressions.map((expression, index) => `${index === 0 ? 'if' : 'else if'} pick == ${index} { outputLine(${expression}); }`).join('\r\n');
+  const name = 'constant faults سلام.lts', text = 'outputLine("before"); pick := inputInt();\r\n' + branches;
+  const faults = compileTs({ text, name }); assert.equal(faults.status, 0, faults.stderr.toString());
+  withTsArtifact(faults.stdout.toString(), run => {
+    for (const [index, expression] of expressions.entries()) {
+      const expected = runText(text, { stdin: String(index), name }), actual = run({ stdin: String(index) });
+      assert.equal(expected.status, 1); assert.equal(actual.phase, 'run'); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected, expression);
+      if (process.env['LITE_SKIP_NATIVE'] !== '1') {
+        const text = `outputLine("before");\r\noutputLine(${expression});`;
+        const c = compileTarget('c', { text, name }); assert.equal(c.status, 0, c.stderr.toString());
+        const native = runCArtifact(c.stdout.toString()), expected = runText(text, { name });
+        assert.equal(native.phase, 'run'); assert.equal(native.signal, null);
+        assert.deepEqual({ status: native.status, stdout: native.stdout, stderr: native.stderr }, expected);
+      }
+    }
+  });
+  for (const text of ['unused := fn(): Int { 1 / 0 } outputLine(7);',
+    'value := if true { 5 } else { 1 / 0 }; outputLine(value);',
+    'value := if false { 1 / 0 } else { 5 }; outputLine(value);']) {
+    const c = compileTs({ text }); assert.equal(c.status, 0, c.stderr.toString());
+    const r = runTsArtifact(c.stdout.toString()), e = runText(text);
+    assert.equal(r.phase, 'run'); assert.deepEqual({ status: r.status, stdout: r.stdout, stderr: r.stderr }, e);
+  }
+  for (const text of ['if false { outputLine(missing); }', 'outputLine(false and ("x" + 1 > 0));',
+    'if false { outputLine(9223372036854775808); }']) {
+    assert.equal(runText(text).status, 1);
+    for (const target of ['ts', 'c'] as const) {
+      const c = compileTarget(target, { text }); assert.equal(c.status, 2); assert.equal(c.stdout.length, 0);
+    }
+  }
+});
+
 test('C output evaluates all arguments before writing, including mixed scalar and Unit values', context => {
   if (process.env['LITE_SKIP_NATIVE'] === '1') { context.skip('LITE_SKIP_NATIVE=1'); return; }
   const prefix = '/* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n';

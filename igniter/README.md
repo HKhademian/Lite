@@ -25,7 +25,7 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 236 interpreter groups, 18
+code-point copies. The current test suite has 236 interpreter groups, 19
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
 
 Generated TS now preserves nested report effects and left-to-right report
@@ -67,6 +67,12 @@ Parenthesized inequality and bare String/Int/Bool function tails now stay
 comparisons, using a shared equals-token check. All 258 full tests pass with zero
 skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
 Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
+
+Constant integer arithmetic faults now execute only when reached. Dead branches,
+false loops, skipped Boolean operands and unused functions compile safely; invalid
+literals/types still reject before effects. Six fixtures now model runtime faults,
+so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
+full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
 
 ## Run
 
@@ -815,7 +821,9 @@ warm cache.
 
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
-`NNN-MMM-title-subtitle.json` (category 001 program, 002 rejection). The schema
+`NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
+There are 61 programs and 32 rejections; accepted programs include six expected
+arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and
 expected-output arrays. Invalid UTF-8 compiler input, source-name diagnostics,

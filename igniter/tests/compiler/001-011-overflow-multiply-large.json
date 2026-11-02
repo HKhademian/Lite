@@ -1,7 +1,7 @@
 {
   "name": "overflow-multiply-large",
   "source": {
-    "file": "002-003-overflow-multiply-large.lts",
+    "file": "001-011-overflow-multiply-large.lts",
     "hash": "sha256:4e2d9e4795f70a38bbe98a94f6308410b506a0b61a711f8df765a09e1088f4f7"
   },
   "cases": [
@@ -12,10 +12,10 @@
         "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "stderr": {
-        "text": "1:23: integer expression outside signed 64-bit range\n",
-        "hash": "sha256:f3456e7d3801b94fd48ba19f4633cd0ad66e9465f2d321e6cf5f9f3d10f5093f"
+        "text": "1:23: ArithmeticPanic: integer outside Int range\n",
+        "hash": "sha256:f7799c128df8a9196f1e4199133861ee26489b9b62f9be9f362eddac9c173ae5"
       },
-      "exitCode": 2
+      "exitCode": 1
     }
   ]
 }

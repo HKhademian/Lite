@@ -1,10 +1,10 @@
 {
-  "note": "Current exact artifacts after distinguishing assignment/tuple equals from =!= comparisons. Existing corpus program artifact hashes remain unchanged.",
+  "note": "Current exact artifacts after deferring constant arithmetic faults to execution. Six former compile-rejection fixtures are now runtime-fault programs; valid existing program artifact hashes remain unchanged.",
   "recorded": "2026-11-02",
-  "sourceSha256": "55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1",
-  "compilerSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
-  "programCases": 55,
-  "rejectedCases": 38,
+  "sourceSha256": "8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110",
+  "compilerSha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+  "programCases": 61,
+  "rejectedCases": 32,
   "artifacts": [
     {
       "name": "output-line-empty-arguments",
@@ -335,6 +335,42 @@
       "source": "001-010-runtime-string-concat.lts",
       "ts": "sha256:32888da95c212578fd31bb061d52cfa03e3b563852d3a159272cfa83401aa25b",
       "c": "sha256:f6b847aa713ce6d18ce00527f26946a64665e3727a6b9ab4da0890d67548838f"
+    },
+    {
+      "name": "division-by-zero",
+      "source": "001-011-division-by-zero.lts",
+      "ts": "sha256:eaf35af1233dd92d4b8bd9bc957887c6040d112af7b1e2731002735835aded0b",
+      "c": "sha256:0bfd167d4b329de5dae25fc4f795943d818c9e1f7ba9309cb8778c840f982652"
+    },
+    {
+      "name": "min-divide-minus-one",
+      "source": "001-011-min-divide-minus-one.lts",
+      "ts": "sha256:855c471b01cb2a8fd47ac97a523df9bb9747f57eb76900e81c69363a2f0a2b9f",
+      "c": "sha256:9ec4c82212cb8ff8093e3f53f42ee8907eed3e157c62cd0dc9901e8b5f4647ab"
+    },
+    {
+      "name": "overflow-add",
+      "source": "001-011-overflow-add.lts",
+      "ts": "sha256:2c4f393ad9442d8f3116beb97978c30c9afc04c54ac36d43bfb072bf39db5905",
+      "c": "sha256:fd27f267b0d770cfae01b995363569bca237f8d80a4fae324d82cc8a72168326"
+    },
+    {
+      "name": "overflow-multiply-large",
+      "source": "001-011-overflow-multiply-large.lts",
+      "ts": "sha256:33522291ab52639dd8a528f766be47718b5843b5701002078f2fbaae6a6f95dd",
+      "c": "sha256:59e127585f78fac73294f0cbb7aca5b6ca4571c6cbb5beb911c64c92a4d81607"
+    },
+    {
+      "name": "overflow-multiply",
+      "source": "001-011-overflow-multiply.lts",
+      "ts": "sha256:16e6768a58194a037f3a79471bc8171fde341ea8d006853f323a40ab3bae1b2f",
+      "c": "sha256:06de0356cd9b925f44f9bad645567976f5b1b7a4fb638b04b8dd4a14590ae230"
+    },
+    {
+      "name": "overflow-subtract",
+      "source": "001-011-overflow-subtract.lts",
+      "ts": "sha256:a9e6690432d5188a795ebb491d817b084352f628fd7791fcd56b1abfbc4ac024",
+      "c": "sha256:b31a53060d748e12bfd4890c7cb8e6cedd386484a12c409f608e63a46933203f"
     }
   ]
 }

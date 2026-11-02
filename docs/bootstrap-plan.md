@@ -77,7 +77,7 @@ bounded code-point views; that source snapshot has a 668 ms self-build median in
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
 strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
 preserves output produced by calls inside report arguments and records a new
-three-generation fixed point. Current tests include 236 interpreter groups, 18 compiler-host
+three-generation fixed point. Current tests include 236 interpreter groups, 19 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 The full-source lexer/parser/checker sweeps now run generated TS drivers, checked
 once per sweep and executed in isolated processes. Focused fixtures retain
@@ -87,7 +87,7 @@ The owner-selected [temporary I/O migration](tooling-and-learning.md#temporary-i
 renames S's report calls to outputLine, adds output without a newline, and ports
 the four prompted input helpers to generated TS. This explicit owner decision
 updates the temporary helper contract; it does not add general optional/variadic
-function grammar. Current corpus: 55 programs/38 rejections; verification:
+function grammar. Current corpus: 61 programs/32 rejections; verification:
 37 features, 77 scenarios, 95 target executions. The generated-only spelling
 adapter and that snapshot's fixed point are in the [I/O ladder](../compiler/reports/2026-11-02-io-migration-ladder.json).
 
@@ -124,6 +124,12 @@ Parenthesized inequality and bare String/Int/Bool function tails now stay
 comparisons, using a shared equals-token check. All 258 full tests pass with zero
 skips (47.3 s); the measured inventory is 75/163 matching cases, 88 remaining.
 Existing corpus artifacts are unchanged; see the [inequality ledger](../compiler/parity.md#inequality-token-discrimination).
+
+Constant integer arithmetic faults now execute only when reached. Dead branches,
+false loops, skipped Boolean operands and unused functions compile safely; invalid
+literals/types still reject before effects. Six fixtures now model runtime faults,
+so the compiler corpus is 61 programs/32 rejections (still 93 sources). All 259
+full tests pass with zero skips (53.4 s). See the [deferred-fault ledger](../compiler/parity.md#deferred-constant-arithmetic-faults).
 
 ## Historical P0 baseline, 2026-11-01
 

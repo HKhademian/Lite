@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the checked Int64
-seed `0cacf4b4…`. All inputs compile/check against the current reference, both
+seed `c1a94363…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 22/37 match; 15 rejected.
 - Examples: 10/19 match; 9 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 24/79 match; 55 rejected; no differences among accepted probes.
+- Isolated boundary probes: 26/79 match; 53 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 209 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 75/163 match, 88 still fail. Compared with the
-  original inventory, 24 previously failing cases now match and none regress.
+- Total executed source cases: 77/163 match, 86 still fail. Compared with the
+  original inventory, 26 previously failing cases now match and none regress.
   The temporary-I/O case and a newly retained function-tail probe account for
   two additional matching cases.
 
@@ -61,13 +61,13 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Equals-token discrimination:** parenthesized inequality and bare
   function tails stay comparisons; assignment and tuple fields still work.
 - [ ] **Comparison chains:** adjacent comparisons, middle-operand single
-  evaluation and short-circuiting. Depends on deferred arithmetic faults.
+  evaluation and short-circuiting. Deferred faults are now ready; next slice.
 - [ ] **Script and lexical forms:** empty scripts, optional final semicolons,
   adjacent Strings, trailing call commas, standalone scope blocks, expression
   statements and same-block shadowing.
-- [ ] **Deferred arithmetic faults:** constant arithmetic must fault only when
+- [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
-  Next slice, before comparison-chain lowering.
+  Valid constant folding remains; invalid arithmetic executes only when reached.
 - [ ] **Float arithmetic:** decimal/exponent literals, mixed operations,
   comparisons, finite-result faults, power and display.
 - [ ] **Numeric widths:** explicit Int64/Float aliases, narrow types, promotion,
@@ -175,3 +175,16 @@ also passes. Paired TS medians: 63.2 → 62.9 ms for 1,000 outputs, 634.8 → 64
 for identical S. C-emitter medians: 80.4 → 85.9 ms for 1,000 outputs,
 174.6 → 174.4 ms for 200 divisions. Mixed timing changes are recorded without a
 speedup claim. Next: deferred arithmetic faults before comparison chains.
+
+Deferred constant faults pass fourteen expression families, 56 skipped fault
+sites, six static rejection checks and sixteen native sanitizer programs. All
+259 full tests pass with zero skips in 53.4 s; fast 247 pass/12 expected skips,
+strict checks, both 93-case corpora, 95 verifier executions and nine editor
+groups pass. Six original sources now model runtime faults, yielding 61 program
+and 32 rejection fixtures; all 55 older valid program artifact hashes stay
+unchanged. Final staged-path inventory: 209 Lite files, no load errors,
+77/163 matching cases, 86 rejecting, 26 original failures closed, no regressions.
+Source shrinks by 3029 bytes and the TS compiler by 5045 bytes after removing
+eight obsolete eager-failure wrappers. Paired throughput stays steady (see the
+[raw measurements](reports/2026-11-02-deferred-faults-performance.json)).
+Comparison chains are next; supplementary-character column units remain pending.

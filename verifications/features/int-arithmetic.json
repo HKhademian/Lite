@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "int-arithmetic.lts",
-    "hash": "sha256:77f8048fd1f4f8e78ce7b14732c1d09bd010208a4432cfeb9e43bab5aad94655"
+    "hash": "sha256:1347783539e94a3f8547d209aac8a334a7a00ec1e7ba02c32f78828dc76a5a5b"
   },
   "features": [
     "int.arithmetic"
   ],
-  "guideline": "Checks precedence, left associativity, truncating division, and a negative quotient.",
+  "guideline": "Checks integer precedence, valid folding, and unexecuted arithmetic faults in dead branches and short-circuit operands.",
   "targets": [
     "igniter",
     "ts",
@@ -18,8 +18,8 @@
     {
       "name": "precedence-and-division",
       "stdout": {
-        "text": "-1\n6\n-3\n",
-        "hash": "sha256:d2d4f6a710003ba3ae4b730b005d39350c4e1f406536f119b7a957942ec46e65"
+        "text": "-1\n6\n-3\nfalse true\n",
+        "hash": "sha256:953cdc0cfa9ee267eecf3483a5066e01f9a73fd15ba4d0dffe9a68cb5c71d237"
       },
       "exitCode": 0
     }

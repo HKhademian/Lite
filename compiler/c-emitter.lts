@@ -1161,70 +1161,26 @@ boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Parsed {
     (kind = "Bool", code = code, intValue = if value { 1 } else { 0 }, textValue = "", constant = constant, next = next)
 }
 
-/* Checked compile-time evaluation keeps every emitted operation in signed 64-bit range. */
-/** Checked signed 64-bit addition; reports at `at` and exits 2 on overflow. */
-addIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intAdd(left, right);
-    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
-    result.value
+/** Tries a constant integer operation without raising a compile-time runtime fault. */
+tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: Bool) {
+    if operator == "+" { return intAdd(left, right); }
+    if operator == "-" { return intSubtract(left, right); }
+    if operator == "*" { return intMultiply(left, right); }
+    if operator == "/" { return intDivide(left, right); }
+    if operator == "%" { return intRemainder(left, right); }
+    if operator == ":/" { return intFloorDivide(left, right); }
+    intFloorModulo(left, right)
 }
 
-/** Checked signed 64-bit subtraction; reports at `at` and exits 2 on overflow. */
-subtractIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intSubtract(left, right);
-    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
-    result.value
-}
-
-/** Checked signed 64-bit multiplication; reports at `at` and exits 2 on overflow. */
-multiplyIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intMultiply(left, right);
-    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
-    result.value
-}
-
-/** Truncating signed 64-bit division; reports at `at` and exits 2 on zero or MIN divided by -1. */
-divideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intDivide(left, right);
-    if not result.ok {
-        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
-        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    result.value
-}
-
-/** Checked truncating Int remainder; reports at `at` and exits 2 on zero divisor or signed overflow. */
-remainderIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intRemainder(left, right);
-    if not result.ok {
-        if right == 0 { failAt(source, at, prefix, "remainder by zero in integer expression"); }
-        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    result.value
-}
-
-/** Checked floor division; reports at `at` and exits 2 on zero or signed overflow. */
-floorDivideIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intFloorDivide(left, right);
-    if not result.ok {
-        if right == 0 { failAt(source, at, prefix, "division by zero in integer expression"); }
-        failAt(source, at, prefix, "integer expression outside signed 64-bit range");
-    }
-    result.value
-}
-
-/** Checked floor modulo; reports at `at` and exits 2 on zero. */
-floorModuloIntegers := fn(source: String, at: Int, left: Int, right: Int, prefix: String): Int {
-    result := intFloorModulo(left, right);
-    if not result.ok { failAt(source, at, prefix, "modulo by zero in integer expression"); }
-    result.value
-}
-
-/** Checked unary negation; reports at `at` and exits 2 for the signed minimum. */
-negateInteger := fn(source: String, at: Int, value: Int, prefix: String): Int {
-    result := intNegate(value);
-    if not result.ok { failAt(source, at, prefix, "integer expression outside signed 64-bit range"); }
-    result.value
+/** Lowers a checked integer operation whose result is not a safe constant, preserving evaluation and fault timing. */
+runtimeIntegerCode := fn(operator: String, left: String, right: String, position: Int): String {
+    if operator == "+" { return intAddCode(left, right, position); }
+    if operator == "-" { return intSubtractCode(left, right, position); }
+    if operator == "*" { return intMultiplyCode(left, right, position); }
+    if operator == "/" { return intDivideCode(left, right, position); }
+    if operator == "%" { return intRemainderCode(left, right, position); }
+    if operator == ":/" { return intFloorDivideCode(left, right, position); }
+    intFloorModuloCode(left, right, position)
 }
 
 /** Returns the index of the newest visible `name` in `locals`, or -1 when it is not visible. */
@@ -1735,8 +1691,9 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             }
             code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
             if operand.constant {
-                value := if ch == "-" { negateInteger(source, start, operand.intValue, prefix) } else { operand.intValue };
-                left = intParsed(code, value, true, operand.next);
+                folded := if ch == "-" { intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
+                if folded.ok { left = intParsed(code, folded.value, true, operand.next); }
+                else { left = intParsed(intNegateCode(operand.code, start), 0, false, operand.next); }
             } else {
                 runtimeCode := if ch == "-" { intNegateCode(operand.code, start) } else { code };
                 left = intParsed(runtimeCode, 0, false, operand.next);
@@ -2075,30 +2032,19 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
             left = compareParsed(source, operatorPosition, operator.text, left, right, prefix);
         } else if left.kind == "Int" and right.kind == "Int" {
             if left.constant and right.constant {
-                folded := if operator.text == "+" { addIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else if operator.text == "-" { subtractIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else if operator.text == "*" { multiplyIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else if operator.text == "%" { remainderIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else if operator.text == ":/" { floorDivideIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else if operator.text == ":%" { floorModuloIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) }
-                    else { divideIntegers(source, operatorPosition, left.intValue, right.intValue, prefix) };
-                code := if operator.text == ":/" { floorDivCode(left.code, right.code) }
-                    else if operator.text == ":%" { floorModCode(left.code, right.code) }
-                    else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
-                left = intParsed(code, folded, true, right.next);
-            } else if operator.text == "/" {
-                left = intParsed(intDivideCode(left.code, right.code, operatorPosition), 0, false, right.next);
-            } else if operator.text == "%" {
-                left = intParsed(intRemainderCode(left.code, right.code, operatorPosition), 0, false, right.next);
-            } else if operator.text == ":/" {
-                left = intParsed(intFloorDivideCode(left.code, right.code, operatorPosition), 0, false, right.next);
-            } else if operator.text == ":%" {
-                left = intParsed(intFloorModuloCode(left.code, right.code, operatorPosition), 0, false, right.next);
+                folded := tryFoldInteger(operator.text, left.intValue, right.intValue);
+                if folded.ok {
+                    code := if (operator.text == "%" or operator.text == ":%") and left.intValue == intMin() and right.intValue == -1 {
+                            intLiteralCode(0, false, "0")
+                        } else if operator.text == ":/" { floorDivCode(left.code, right.code) }
+                        else if operator.text == ":%" { floorModCode(left.code, right.code) }
+                        else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
+                    left = intParsed(code, folded.value, true, right.next);
+                } else {
+                    left = intParsed(runtimeIntegerCode(operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
+                }
             } else {
-                runtimeCode := if operator.text == "+" { intAddCode(left.code, right.code, operatorPosition) }
-                    else if operator.text == "-" { intSubtractCode(left.code, right.code, operatorPosition) }
-                    else { intMultiplyCode(left.code, right.code, operatorPosition) };
-                left = intParsed(runtimeCode, 0, false, right.next);
+                left = intParsed(runtimeIntegerCode(operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
             }
         } else if operator.text == "+" and left.kind == "String" and right.kind == "String" {
             if left.constant and right.constant {

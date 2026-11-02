@@ -18,7 +18,11 @@ external stream files:
 - `title-subtitle` — lowercase hyphenated slug; must equal `name` in the JSON.
 
 The sibling `.lts` file is the entry source. A manifest may hold several
-scenarios for that one source under `cases`.
+scenarios for that one source under `cases`. Program category 001 means the
+source compiles successfully; its execution may exit nonzero with a modeled
+runtime fault. Category 002 models compiler rejection before artifact output.
+The current corpus has 61 programs and 32 rejections; six arithmetic-fault
+sources moved to 001-011 without changing their source bytes.
 
 ### Subcategories
 
@@ -32,6 +36,7 @@ Programs (`001-*`):
 | 004 | Strings, escapes, Unicode, concatenation |
 | 005 | Multiple report statements or values |
 | 006 | Runtime-name hygiene and unused locals |
+| 011 | Accepted programs that fault at runtime (including constant arithmetic) |
 
 Rejections (`002-*`):
 
@@ -39,7 +44,7 @@ Rejections (`002-*`):
 |---|---|
 | 001 | Source shape and syntax |
 | 002 | Mixed Int/String and unary type errors |
-| 003 | Range, overflow and division faults |
+| 003 | Out-of-range integer literals |
 | 004 | Malformed String literals/escapes |
 | 005 | Local/name resolution and duplicate declarations |
 

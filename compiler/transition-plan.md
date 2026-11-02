@@ -36,6 +36,21 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: constant arithmetic attempts return checked results; an invalid
+  result lowers to the existing runtime helper instead of failing compilation.
+  Dead branches, false loops, short-circuit operands and unused function bodies
+  therefore do not execute their faults. Valid folding stays intact; literal
+  range/type/name errors still reject before effects. Constant MIN%-1/MIN:%-1
+  emit zero, avoiding native C undefined remainder. Eight obsolete eager-fail
+  wrappers are removed. Six unchanged source fixtures move from compile
+  rejection to runtime-fault programs: corpus 61 programs/32 rejections, still
+  93 sources. TS/translated-JS fault runs are isolated without removing
+  return-text coverage for pure successful cores. The
+  [ladder](reports/2026-11-02-deferred-faults-ladder.json) records three matching
+  generated generations, native sanitizer coverage and gates. Inventory is
+  77/163 matching, 86 remaining, 26 original failures closed, no regressions.
+  Next: comparison-chain lowering; Unicode column units remain separately pending.
+
 - 2026-11-02: a shared single-equals token check distinguishes assignment/tuple
   fields from both == and =!=. Parenthesized inequality and bare String/Int/Bool
   function tails now work; ordinary assignment and named tuple fields retain
@@ -283,10 +298,10 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 314867 bytes, SHA-256
-  `0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36`.
-- Current S is 173318 bytes, SHA-256
-  `55dfd45e27e5a31a4d90c3833b8750fba22e0a258ee86ad8b570d767b3a1bab1`.
+- The current seed is 309822 bytes, SHA-256
+  `c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8`.
+- Current S is 170289 bytes, SHA-256
+  `8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s

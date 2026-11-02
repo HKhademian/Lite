@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-02",
+  "baseRevision": "191977e1d4fff5cfa8aad2a38398f51837725f61",
+  "node": "v24.16.0",
+  "previousSeedSha256": "0cacf4b4907e8c1c83a343a00ab954df726bd79ed58a3e41e4878691eaa15b36",
+  "transitionalArtifactSha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+  "recipe": "Previous generated seed compiling current S -> transitional compiler; transitional compiler compiling the same S -> stage1; stage1 and stage2 compile the same S into stage2 and stage3. No source rewriting or T00 execution.",
+  "source": {
+    "sha256": "8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110",
+    "bytes": 170289
+  },
+  "generations": [
+    {
+      "name": "stage1",
+      "sha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+      "bytes": 309822,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage2",
+      "sha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+      "bytes": 309822,
+      "strictTypecheck": true,
+      "status": 0
+    },
+    {
+      "name": "stage3",
+      "sha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+      "bytes": 309822,
+      "strictTypecheck": true,
+      "status": 0
+    }
+  ],
+  "fixedPoint": true,
+  "c": {
+    "sourceSha256": "e52694da6923f1f6b3cc85c94a69849eee558cb10825a41931eb0edad22674d9",
+    "sourceBytes": 158134,
+    "artifactSha256": "6c04b9cee27e59a786c0348c5c03a222d8816dee831c04bbbdfce6782bbf77b0",
+    "artifactBytes": 283560,
+    "builderSha256": "c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8",
+    "native": false
+  },
+  "validation": {
+    "strictHostAndSeeds": true,
+    "faultExpressions": 14,
+    "skippedFaultSites": 56,
+    "staticRejectionTargetChecks": 6,
+    "fullSuite": {
+      "tests": 259,
+      "passed": 259,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 53394.630208
+    },
+    "fastSuite": {
+      "tests": 259,
+      "passed": 247,
+      "failed": 0,
+      "skipped": 12,
+      "durationMs": 31547.5965
+    },
+    "hostGroups": 19,
+    "editorGroups": 9,
+    "tsCorpus": {
+      "phase": "compare",
+      "target": "ts",
+      "cases": 93,
+      "programs": 61,
+      "rejections": 32,
+      "mismatches": 0,
+      "first": []
+    },
+    "cCorpus": {
+      "phase": "compare",
+      "target": "c",
+      "cases": 93,
+      "programs": 61,
+      "rejections": 32,
+      "mismatches": 0,
+      "first": []
+    },
+    "verifierExecutions": 95,
+    "oldValidProgramArtifactHashesUnchanged": true,
+    "unchangedSourcesMovedFromRejectionToRuntimeFaultPrograms": 6,
+    "sourceCoverage": {
+      "trackedLiteFiles": 209,
+      "loadErrors": 0
+    },
+    "undefinedBehaviorSanitizer": {
+      "compiler": "cc",
+      "flags": [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "sources": [
+        "outputLine(\"before\"); outputLine(1 / 0);",
+        "outputLine(\"before\"); outputLine(1 % 0);",
+        "outputLine(\"before\"); outputLine(1 :/ 0);",
+        "outputLine(\"before\"); outputLine(1 :% 0);",
+        "outputLine(\"before\"); outputLine(9223372036854775807 + 1);",
+        "outputLine(\"before\"); outputLine(-9223372036854775808 - 1);",
+        "outputLine(\"before\"); outputLine(9223372036854775807 * 2);",
+        "outputLine(\"before\"); outputLine(-(-9223372036854775808));",
+        "outputLine(\"before\"); outputLine(-9223372036854775808 / -1);",
+        "outputLine(\"before\"); outputLine(-9223372036854775808 :/ -1);",
+        "outputLine(\"before\"); outputLine((9223372036854775807 + 1) - 1);",
+        "outputLine(\"before\"); outputLine(0 * (9223372036854775807 + 1));",
+        "outputLine(\"before\"); outputLine((9223372036854775807 + 1) / (1 / 0));",
+        "outputLine(\"before\"); outputLine((1 / 0) + (9223372036854775807 + 1));",
+        "outputLine(-9223372036854775808 % -1, -9223372036854775808 :% -1);",
+        "if false { outputLine(1 / 0); } outputLine(false and (1 / 0 > 0), true or (1 / 0 > 0));\nif false { outputLine(1 % 0); } outputLine(false and (1 % 0 > 0), true or (1 % 0 > 0));\nif false { outputLine(1 :/ 0); } outputLine(false and (1 :/ 0 > 0), true or (1 :/ 0 > 0));\nif false { outputLine(1 :% 0); } outputLine(false and (1 :% 0 > 0), true or (1 :% 0 > 0));\nif false { outputLine(9223372036854775807 + 1); } outputLine(false and (9223372036854775807 + 1 > 0), true or (9223372036854775807 + 1 > 0));\nif false { outputLine(-9223372036854775808 - 1); } outputLine(false and (-9223372036854775808 - 1 > 0), true or (-9223372036854775808 - 1 > 0));\nif false { outputLine(9223372036854775807 * 2); } outputLine(false and (9223372036854775807 * 2 > 0), true or (9223372036854775807 * 2 > 0));\nif false { outputLine(-(-9223372036854775808)); } outputLine(false and (-(-9223372036854775808) > 0), true or (-(-9223372036854775808) > 0));\nif false { outputLine(-9223372036854775808 / -1); } outputLine(false and (-9223372036854775808 / -1 > 0), true or (-9223372036854775808 / -1 > 0));\nif false { outputLine(-9223372036854775808 :/ -1); } outputLine(false and (-9223372036854775808 :/ -1 > 0), true or (-9223372036854775808 :/ -1 > 0));\nif false { outputLine((9223372036854775807 + 1) - 1); } outputLine(false and ((9223372036854775807 + 1) - 1 > 0), true or ((9223372036854775807 + 1) - 1 > 0));\nif false { outputLine(0 * (9223372036854775807 + 1)); } outputLine(false and (0 * (9223372036854775807 + 1) > 0), true or (0 * (9223372036854775807 + 1) > 0));\nif false { outputLine((9223372036854775807 + 1) / (1 / 0)); } outputLine(false and ((9223372036854775807 + 1) / (1 / 0) > 0), true or ((9223372036854775807 + 1) / (1 / 0) > 0));\nif false { outputLine((1 / 0) + (9223372036854775807 + 1)); } outputLine(false and ((1 / 0) + (9223372036854775807 + 1) > 0), true or ((1 / 0) + (9223372036854775807 + 1) > 0));"
+      ],
+      "cases": 16,
+      "exactStatusAndStreams": true
+    },
+    "inventory": {
+      "matches": 77,
+      "total": 163,
+      "remaining": 86,
+      "originalFailuresClosed": 26,
+      "regressions": 0
+    },
+    "performanceReport": "2026-11-02-deferred-faults-performance.json",
+    "knownLimits": "Comparison-chain lowering is next. Supplementary-character column convention, broader types/control/data/functions, native C compiler/runtime and run/check migration remain pending."
+  },
+  "reproductionCommands": [
+    "git show 191977e1d4fff5cfa8aad2a38398f51837725f61:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node --input-type=module -e 'import {writeFileSync} from \"node:fs\"; import {loadBundle} from \"./igniter/loader.ts\"; writeFileSync(\"/tmp/S.lts\",loadBundle(\"compiler/manifests/ts.json\").text); writeFileSync(\"/tmp/C-S.lts\",loadBundle(\"compiler/manifests/c.json\").text);'",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/stage1.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage1.ts --source /tmp/S.lts --out /tmp/stage2.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage2.ts --source /tmp/S.lts --out /tmp/stage3.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/stage3.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ]
+}

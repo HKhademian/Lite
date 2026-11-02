@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 55 program / 38 rejection
+Immediate scope: the bootstrap subset L, S, and the 61 program / 32 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -517,6 +517,53 @@ expected skips (30.4 s), both 93-case corpora, all 95 verifier executions and ni
 editor groups pass. Paired TS medians: 63.2 → 62.9 ms for 1,000 outputs,
 634.8 → 647.0 ms for identical S. C-emitter medians: 80.4 → 85.9 ms for 1,000
 outputs, 174.6 → 174.4 ms for 200 divisions. No speedup is claimed for this slice.
+
+## Deferred constant arithmetic faults
+
+Valid Int64 constants still fold. When a checked fold would overflow or divide,
+remainder or modulo by zero, the compiler now emits the positioned runtime
+operation instead of raising a compile-time arithmetic failure. Such faults
+happen only when execution reaches them: dead branches, false loops, skipped
+Boolean operands and unused functions remain unevaluated. Literal range errors,
+unknown names and type errors still reject the whole source before effects.
+Unary negation follows the same rule; later valid operations cannot cancel an
+earlier fault. Constant MIN%-1 and MIN:%-1 emit literal zero to avoid undefined
+native C remainder, including in otherwise valid constant expressions.
+
+Eight unused eager-failure wrappers are removed. Source is 3029 bytes smaller;
+the generated TS compiler is 5045 bytes smaller. Six original source files are
+preserved byte for byte but move to program category 001-011, with modeled
+runtime status 1 and exact ArithmeticPanic stderr. Corpus: 61 programs and 32
+rejections, still 93 sources. Runtime-fault TS/translated-JS executions now use
+isolated processes; pure successful cores retain direct-return import coverage.
+Both normal TS and translated JS still receive strict checking.
+
+The focused suite covers fourteen fault expressions, all seven binary integer
+operations, unary negation, competing faults, prior output, dead branches/loops,
+short-circuit operands, unused functions, value-if branches and static rejection
+inside dead code. Existing canonical integer arithmetic gains skipped-fault
+cases on all three targets. Sixteen native sanitizer programs compare exact
+status/stdout/stderr, including valid constant MIN remainders.
+
+Current TS S is 170289 bytes, SHA-256
+`8801038265573d0f5552913834a79d64acd6eccb767c5f53d39a497d8fe82110`.
+Three generated generations match, 309822 bytes, SHA-256
+`c1a9436393f31334aa3574bfc86569e6f2048cd923920b651af9fe74f9a061d8`.
+The TS-hosted C emitter is 283560 bytes, SHA-256
+`6c04b9cee27e59a786c0348c5c03a222d8816dee831c04bbbdfce6782bbf77b0`,
+from C source SHA-256
+`e52694da6923f1f6b3cc85c94a69849eee558cb10825a41931eb0edad22674d9`.
+The [generated-only ladder](reports/2026-11-02-deferred-faults-ladder.json)
+records provenance and validation.
+
+All 259 full tests pass with zero skips in 53.4 s; fast is 247 pass/twelve
+expected skips (31.5 s). Strict checks, both 93-case compiler comparisons,
+95 canonical target executions and nine editor groups pass. Inventory is
+77/163 matching, 86 rejecting; 26 original failures are now closed, without an
+original passing case regressing. The [paired performance report](reports/2026-11-02-deferred-faults-performance.json)
+records steady throughput, including a new constant-arithmetic workload.
+Comparison chains are next. Supplementary-character column units, wider
+features, native C self-hosting and run/check replacement remain pending.
 
 ## Rule
 
