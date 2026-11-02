@@ -1,6 +1,7 @@
 # T00 versus T11 support inventory
 
 Runtime environment details omitted for privacy.
+Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
 T11 identity: `cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993`. The preserved artifact passed its separate strict TypeScript check.
 

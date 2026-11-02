@@ -107,7 +107,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   part of the call. C now matches T00/TS and prints no partial call on a fault.
 - [ ] **Native C ladder:** C11, historical-node equality and cross-host fixed
   points, strict native compilation, boundary cases and clean rebuilds.
-- [ ] **Inventory provenance:** report HEAD as the base revision when auditing
+- [x] **Inventory provenance:** report HEAD as the base revision when auditing
   uncommitted compiler changes; retain actual artifact/source hashes and record
   worktree state rather than labeling HEAD as the complete audited snapshot.
 - [ ] **Consumers:** generated check/run and remaining regression consumers,

@@ -72,7 +72,11 @@ const hash = (value: string | Uint8Array) => createHash('sha256').update(value).
 if (hash(readFileSync(artifact)) !== seed.artifactSha256) throw new Error('T11 seed identity mismatch');
 mkdirSync(dirname(prefix), { recursive: true });
 writeFileSync(join(scratch, 'package.json'), '{"type":"module"}\n');
+const worktreeStatusAtStart = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=normal'], { cwd: root, encoding: 'utf8' });
 const report = { schema: 1, date, startedAt: new Date().toISOString(), revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+  revisionMeaning: 'HEAD at audit start; artifact and per-source hashes identify the measured inputs',
+  workingTreeDirtyAtStart: worktreeStatusAtStart.length > 0, worktreeStatusAtStart,
+  compilerSourceSha256: seed.sourceSha256, compilerSourceRevision: seed.sourceRevision,
   node: process.version, t11Sha256: seed.artifactSha256, rows: [] as AuditRow[], sourceFiles: [] as SourceFile[], counts: {} as Record<string, number | ({ total: number } & Partial<Record<Status, number>>)>, seedStrictTypecheck: '', testGroups: [] as string[], finishedAt: '', status: '',
   method: { compilationTimeoutMs: 20000, executionTimeoutMs: 5000, strictArtifactTypecheck: true,
     canonical: 'all feature/example/sample/showcase manifests; each supplied scenario runs under T00 and the T11-generated program',
@@ -251,7 +255,8 @@ try {
   const closed = report.rows.filter(row => row.status === 'matches' && previous.has(`${row.kind}:${row.id}`) && previous.get(`${row.kind}:${row.id}`) !== 'matches');
   const regressed = report.rows.filter(row => row.status !== 'matches' && previous.get(`${row.kind}:${row.id}`) === 'matches');
   const remaining = report.rows.filter(row => row.status !== 'matches');
-  const lines = [ '# T00 versus T11 support inventory', '', `Date: ${date}. Audited revision: \`${report.revision}\`. Node ${report.node}.`, '',
+  const lines = [ '# T00 versus T11 support inventory', '', `Date: ${date}. Base revision (HEAD at audit start): \`${report.revision}\`. Node ${report.node}.`,
+    `Working tree at audit start: ${report.workingTreeDirtyAtStart ? 'modified' : 'clean'}. The raw report records its status; artifact and per-source hashes identify the measured inputs.`, '',
     `T11 identity: \`${seed.artifactSha256}\`. The preserved artifact passed its separate strict TypeScript check.`, '',
     'This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.', '',
     '## Scope and interpretation', '',

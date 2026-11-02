@@ -1,8 +1,13 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T16:42:56.354Z",
-  "revision": "b3af27fb211bd19f5b8601cf54c53be6ea519a0c",
+  "startedAt": "2026-11-02T16:46:24.085Z",
+  "revision": "7057b3e76a706f5888b30e63481be73a51c24dcc",
+  "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
+  "workingTreeDirtyAtStart": true,
+  "worktreeStatusAtStart": " M compiler/scripts/t00-t11-inventory.ts\n",
+  "compilerSourceSha256": "a8e60844bf85c2cc84fc424a67168a68437ec4e7210a197238fd2b68b8af79e5",
+  "compilerSourceRevision": "25987b5a8e07c59e64db47999a449ef2c7cd6ab6",
   "node": "v24.16.0",
   "t11Sha256": "cebdab4f094ba8d47938fe6d20381bb72bf5d7606d0a8199a2402912936eb993",
   "rows": [
@@ -9305,7 +9310,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T16:43:45.132Z",
+  "finishedAt": "2026-11-02T16:47:06.808Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
