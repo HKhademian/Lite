@@ -203,6 +203,29 @@ record both the generated-only refresh and the independent T00 audit. The
 text-cache timings above describe their earlier source snapshot, not a benchmark
 of this refresh. Fault-time output retention is a separate remaining gap.
 
+## Generated full-source test consumers
+
+The three full-source lexer/parser/checker sweeps now run the Lite drivers
+compiled by T11 instead of interpreting their work through T00. Each driver is
+strictly checked once per sweep, and each input runs in a fresh process. Existing
+S, C-source, helper-source and corpus assertions are retained; small successful
+and rejected fixtures also compare exact status/stdout/stderr against T00.
+Focused interpreter tests still exercise T00 directly.
+
+The checker uses an equivalent local Boolean for named tuple-field matching,
+avoiding the already-inventoried parenthesized-comparison parser gap. This does
+not add language surface or modify S in either backend manifest. Both compiler
+seeds and their source/artifact hashes remain unchanged. A new regression group
+checks prepared-runner process isolation and strict-typecheck failure handling.
+
+The recorded full gate falls from 580556.73 ms to 47618.322917 ms (12.19×):
+248 passed, zero failures, zero skips. The same three sweeps fall from 547043 ms
+to 15809 ms combined. The fast gate passes 239 with its nine existing skips in
+26.7 s. These are single before/after runs on the same workspace, not a new
+compiler-throughput benchmark. [Raw timings and method](reports/2026-11-02-generated-sweeps.json).
+This migrates three test consumers; full feature parity, native C11 and run/check
+replacement remain pending.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:

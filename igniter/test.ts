@@ -9,7 +9,8 @@ import { test } from 'node:test';
 import { compile, execute, LiteFault } from './lite.ts';
 import { loadBundle, loadManifest, loadSource } from './loader.ts';
 import { benchmark, hashBytes, loadCompiler, nondeterminismReasons, runBundle, runText } from './bootstrap.ts';
-import { runCArtifact, runTsArtifact } from './artifacts.ts';
+import { runCArtifact, runTsArtifact, withTsArtifact } from './artifacts.ts';
+import { compileTs } from '../compiler/host.ts';
 import {
   INT_MAX, INT_MIN, checkedAdd, checkedDivide, checkedFloorDivide, checkedFloorModulo,
   checkedMultiply, checkedNegate, checkedRemainder, checkedSubtract, intText, listCopy,
@@ -53,6 +54,19 @@ function run(source: string, input = '', args: readonly string[] = []): { code: 
 /** Loads a file through the temporary flat-import loader and executes it. */
 function runFile(path: string, input = '', args: readonly string[] = []): { code: number; output: string; errors: string } {
   return run(loadSource(path), input, args);
+}
+/** Compiles a Lite test driver with T11 once, strictly checks it once, and runs isolated inputs. */
+function withGeneratedDriver(path: string, check: (run: (input: string) => { code: number; output: string; errors: string }) => void): void {
+  const compiled = compileTs({ text: loadSource(path) });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  assert.equal(compiled.stderr.length, 0);
+  withTsArtifact(compiled.stdout.toString(), run => check(input => {
+    const result = run({ stdin: input });
+    assert.equal(result.phase, 'run', result.stdout.toString() + result.stderr.toString());
+    assert.equal(result.signal, null);
+    assert.notEqual(result.status, null);
+    return { code: result.status!, output: result.stdout.toString(), errors: result.stderr.toString() };
+  }));
 }
 /** Imports an emitted TS/JS core and returns its main() string. */
 async function importedMain(path: string): Promise<string> {
@@ -269,34 +283,25 @@ test('Lite parser parses the assembled compiler S and lexer source', context => 
   if (process.env['LITE_SKIP_HEAVY'] === '1') {
     context.skip('LITE_SKIP_HEAVY=1'); return;
   }
-  const program = compile(loadSource(parserProgramDumpPath));
-  const runParser = (input: string): { code: number; output: string; errors: string } => {
-    const chars = Array.from(input);
-    let cursor = 0;
-    let output = '';
-    let errors = '';
-    const code = execute(program, {
-      args: [],
-      read: () => chars[cursor++] ?? null,
-      report: text => { output += text; },
-      reportError: text => { errors += text; },
-    });
-    return { code, output, errors };
-  };
-  const bootstrap = runParser(loadBundle(tsManifestPath).text);
-  assert.equal(bootstrap.code, 0, bootstrap.errors);
-  assert.equal(bootstrap.errors, '');
-  assert.match(bootstrap.output, /^Program\|\|/);
-  const lexer = runParser(loadSource(lexerDumpPath));
-  assert.equal(lexer.code, 0, lexer.errors);
-  assert.equal(lexer.errors, '');
-  const cBody = ['c-literals.lts', 'emit-c.lts', 'driver-c.lts']
-    .map(file => readFileSync(new URL(`../compiler/src/${file}`, import.meta.url), 'utf8'))
-    .join('\n');
-  const c = runParser(cBody);
-  assert.equal(c.code, 0, c.errors);
-  assert.equal(c.errors, '');
-  assert.match(c.output, /^Program\|\|/);
+  withGeneratedDriver(parserProgramDumpPath, runParser => {
+    const fixture = readFileSync(new URL('../compiler/tests/parser/program.lts', import.meta.url), 'utf8');
+    assert.deepEqual(runParser(fixture), runFile(parserProgramDumpPath, fixture));
+    assert.deepEqual(runParser('match x { _ => 1 }'), runFile(parserProgramDumpPath, 'match x { _ => 1 }'));
+    const bootstrap = runParser(loadBundle(tsManifestPath).text);
+    assert.equal(bootstrap.code, 0, bootstrap.errors);
+    assert.equal(bootstrap.errors, '');
+    assert.match(bootstrap.output, /^Program\|\|/);
+    const lexer = runParser(loadSource(lexerDumpPath));
+    assert.equal(lexer.code, 0, lexer.errors);
+    assert.equal(lexer.errors, '');
+    const cBody = ['c-literals.lts', 'emit-c.lts', 'driver-c.lts']
+      .map(file => readFileSync(new URL(`../compiler/src/${file}`, import.meta.url), 'utf8'))
+      .join('\n');
+    const c = runParser(cBody);
+    assert.equal(c.code, 0, c.errors);
+    assert.equal(c.errors, '');
+    assert.match(c.output, /^Program\|\|/);
+  });
 });
 
 test('Lite parser rejects unsupported constructs by name', () => {
@@ -377,11 +382,17 @@ test('Lite checker collects symbols from the assembled S', context => {
   if (process.env['LITE_SKIP_HEAVY'] === '1') {
     context.skip('LITE_SKIP_HEAVY=1'); return;
   }
-  const result = runFile(checkerDumpPath, loadBundle(tsManifestPath).text);
-  assert.equal(result.code, 0, result.errors);
-  assert.equal(result.errors, '');
-  assert.match(result.output, /^function\|intMin\|/);
-  assert.match(result.output, /\nvalue\|source\|/);
+  withGeneratedDriver(checkerDumpPath, runChecker => {
+    const fixture = readFileSync(new URL('../compiler/tests/checker/symbols.lts', import.meta.url), 'utf8');
+    assert.deepEqual(runChecker(fixture), runFile(checkerDumpPath, fixture));
+    const duplicate = 'x := 1; x := 2;';
+    assert.deepEqual(runChecker(duplicate), runFile(checkerDumpPath, duplicate));
+    const result = runChecker(loadBundle(tsManifestPath).text);
+    assert.equal(result.code, 0, result.errors);
+    assert.equal(result.errors, '');
+    assert.match(result.output, /^function\|intMin\|/);
+    assert.match(result.output, /\nvalue\|source\|/);
+  });
 });
 
 test('Lite parser parses type aliases and rejects malformed types', () => {
@@ -913,62 +924,69 @@ test('Lite lexer tokenizes all bootstrap S and compiler cases', context => {
   if (process.env['LITE_SKIP_HEAVY'] === '1') {
     context.skip('LITE_SKIP_HEAVY=1'); return;
   }
-  const program = compile(loadSource(lexerDumpPath));
-  const runLexer = (input: string): { code: number; output: string; errors: string } => {
-    const chars = Array.from(input);
-    let cursor = 0;
-    let output = '';
-    let errors = '';
-    const code = execute(program, {
-      args: [],
-      read: () => chars[cursor++] ?? null,
-      report: text => { output += text; },
-      reportError: text => { errors += text; },
-    });
-    return { code, output, errors };
-  };
-  const bootstrap = runLexer(loadBundle(tsManifestPath).text);
-  assert.equal(bootstrap.code, 0, bootstrap.errors);
-  assert.equal(bootstrap.errors, '');
-  assert.match(bootstrap.output, /^Name@\d+:\d+:\d+ /);
-  assert.match(bootstrap.output, /EOF@\d+:\d+:\d+ \n$/);
-  for (const path of [
-    new URL('../compiler/src/c-literals.lts', import.meta.url).pathname,
-    new URL('../compiler/src/emit-c.lts', import.meta.url).pathname,
-    new URL('../compiler/src/driver-c.lts', import.meta.url).pathname,
-    new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/src/parser.lts', import.meta.url).pathname,
-    new URL('../compiler/src/check.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/parser/parser-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/parser/parser-decl-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname,
-    new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname]) {
-    const result = runLexer(readFileSync(path, 'utf8'));
-    assert.equal(result.code, 0, `${path}: ${result.errors}`);
-    assert.equal(result.errors, '', path);
-    assert.match(result.output, /EOF@/, path);
-  }
-  const lexicalFailures = new Map<string, RegExp>([
-    ['injected-source', /unterminated string literal/],
-    ['literal-below-min', /integer literal outside signed 64-bit range/],
-    ['literal-too-large', /integer literal outside signed 64-bit range/],
-    ['bad-string-escape', /unsupported string escape/],
-    ['unterminated-string', /unterminated string literal/],
-  ]);
-  for (const fixture of compilerFixtures) {
-    const result = runLexer(fixture.source);
-    const expected = lexicalFailures.get(fixture.name);
-    if (expected === undefined) {
-      assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
-      assert.equal(result.errors, '', fixture.name);
-      assert.match(result.output, /EOF@/, fixture.name);
-    } else {
-      assert.equal(result.code, 2, fixture.name);
-      assert.equal(result.output, '', fixture.name);
-      assert.match(result.errors, expected, fixture.name);
+  withGeneratedDriver(lexerDumpPath, runLexer => {
+    for (const name of ['tokens', 'symbols', 'comments', 'strings', 'int']) {
+      const fixture = readFileSync(new URL(`../compiler/tests/lexer/${name}.lts`, import.meta.url), 'utf8');
+      assert.deepEqual(runLexer(fixture), runFile(lexerDumpPath, fixture), name);
     }
-  }
+    const bootstrap = runLexer(loadBundle(tsManifestPath).text);
+    assert.equal(bootstrap.code, 0, bootstrap.errors);
+    assert.equal(bootstrap.errors, '');
+    assert.match(bootstrap.output, /^Name@\d+:\d+:\d+ /);
+    assert.match(bootstrap.output, /EOF@\d+:\d+:\d+ \n$/);
+    for (const path of [
+      new URL('../compiler/src/c-literals.lts', import.meta.url).pathname,
+      new URL('../compiler/src/emit-c.lts', import.meta.url).pathname,
+      new URL('../compiler/src/driver-c.lts', import.meta.url).pathname,
+      new URL('../compiler/src/lexer.lts', import.meta.url).pathname,
+      new URL('../compiler/tests/lexer/lexer-dump.lts', import.meta.url).pathname,
+      new URL('../compiler/src/parser.lts', import.meta.url).pathname,
+      new URL('../compiler/src/check.lts', import.meta.url).pathname,
+      new URL('../compiler/tests/parser/parser-dump.lts', import.meta.url).pathname,
+      new URL('../compiler/tests/parser/parser-decl-dump.lts', import.meta.url).pathname,
+      new URL('../compiler/tests/parser/parser-program-dump.lts', import.meta.url).pathname,
+      new URL('../compiler/tests/checker/checker-dump.lts', import.meta.url).pathname]) {
+      const result = runLexer(readFileSync(path, 'utf8'));
+      assert.equal(result.code, 0, `${path}: ${result.errors}`);
+      assert.equal(result.errors, '', path);
+      assert.match(result.output, /EOF@/, path);
+    }
+    const lexicalFailures = new Map<string, RegExp>([
+      ['injected-source', /unterminated string literal/],
+      ['literal-below-min', /integer literal outside signed 64-bit range/],
+      ['literal-too-large', /integer literal outside signed 64-bit range/],
+      ['bad-string-escape', /unsupported string escape/],
+      ['unterminated-string', /unterminated string literal/],
+    ]);
+    for (const fixture of compilerFixtures) {
+      const result = runLexer(fixture.source);
+      const expected = lexicalFailures.get(fixture.name);
+      if (expected === undefined) {
+        assert.equal(result.code, 0, `${fixture.name}: ${result.errors}`);
+        assert.equal(result.errors, '', fixture.name);
+        assert.match(result.output, /EOF@/, fixture.name);
+      } else {
+        assert.equal(result.code, 2, fixture.name);
+        assert.equal(result.output, '', fixture.name);
+        assert.match(result.errors, expected, fixture.name);
+      }
+    }
+  });
+});
+
+test('prepared TS artifacts run in fresh processes and retain typecheck failures', () => {
+  withTsArtifact('let calls = 0; export function main(): string { calls += 1; return String(calls); }', run => {
+    for (let invocation = 0; invocation < 2; invocation += 1) {
+      assert.deepEqual(run(), { phase: 'run', status: 0, signal: null,
+        stdout: Buffer.from('1'), stderr: Buffer.alloc(0) });
+    }
+  });
+  withTsArtifact('export function main(): string { return 42; }', run => {
+    const result = run();
+    assert.equal(result.phase, 'typecheck');
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout.toString(), /not assignable to type 'string'/);
+  });
 });
 
 test('TS runtime helpers preserve checked Int64, text and list semantics', () => {

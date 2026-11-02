@@ -38,11 +38,16 @@ function checkOptions(): Record<string, unknown> {
   return options as Record<string, unknown>;
 }
 
+/** Runs one prepared TS artifact in an isolated process with fixed input. */
+export type TsArtifactRunner = (options?: ArtifactOptions) => ArtifactRun;
+
 /**
- * Writes emitted TS to a temporary package, strict-typechecks it with the
- * repository TypeScript, then runs a thin adapter and captures raw streams.
+ * Strict-typechecks emitted TS once, then supplies a reusable process runner to
+ * a synchronous callback. Every invocation has fresh process state; temporary
+ * files are removed when the callback returns or throws. A failed typecheck is
+ * returned by the runner without executing the artifact.
  */
-export function runTsArtifact(source: string, options: ArtifactOptions = {}): ArtifactRun {
+export function withTsArtifact<Result>(source: string, use: (run: TsArtifactRunner) => Result): Result {
   const directory = mkdtempSync(join(tmpdir(), 'lite-artifact-ts-'));
   try {
     const artifact = join(directory, 'artifact.ts');
@@ -59,21 +64,29 @@ export function runTsArtifact(source: string, options: ArtifactOptions = {}): Ar
     const checked = spawnSync(process.execPath, [tsc, '-p', config], { encoding: 'utf8', timeout: 30000 });
     if (checked.error !== undefined) throw checked.error;
     if (checked.status !== 0) {
-      return {
+      const failure: ArtifactRun = {
         phase: 'typecheck', status: checked.status, signal: checked.signal,
         stdout: Buffer.from(checked.stdout), stderr: Buffer.from(checked.stderr),
       };
+      return use(() => failure);
     }
-    const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])],
-      { input: inputBytes(options.stdin), timeout: 10000 });
-    if (result.error !== undefined) throw result.error;
-    return {
-      phase: 'run', status: result.status, signal: result.signal,
-      stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0),
-    };
+    return use((options = {}) => {
+      const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])],
+        { input: inputBytes(options.stdin), timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
+      if (result.error !== undefined) throw result.error;
+      return {
+        phase: 'run', status: result.status, signal: result.signal,
+        stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0),
+      };
+    });
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+/** Strict-typechecks and runs one emitted TS artifact, capturing raw streams. */
+export function runTsArtifact(source: string, options: ArtifactOptions = {}): ArtifactRun {
+  return withTsArtifact(source, run => run(options));
 }
 
 /**

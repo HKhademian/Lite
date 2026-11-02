@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-02",
+  "node": "v24.16.0",
+  "baseRevision": "e1e355b12ae52d4faca98858cba0374a90d69a34",
+  "beforeRevision": "3f5fbce277790a58d6671f69665604d05738586b",
+  "method": "One recorded before and one after full-gate run on the same workspace. Timing includes all tests and child processes; these are observations, not statistical benchmarks. Existing full-source/corpus assertions are retained; small fixtures compare exact generated and T00 streams/status. No new full-gate skips.",
+  "before": {
+    "command": "./lite test --full",
+    "tests": 247,
+    "passed": 247,
+    "skipped": 0,
+    "durationMs": 580556.73,
+    "sweeps": [
+      {
+        "test": "Lite parser parses the assembled compiler S and lexer source",
+        "durationMs": 175439.609708
+      },
+      {
+        "test": "Lite checker collects symbols from the assembled S",
+        "durationMs": 184055.290792
+      },
+      {
+        "test": "Lite lexer tokenizes all bootstrap S and compiler cases",
+        "durationMs": 187548.024167
+      }
+    ]
+  },
+  "after": {
+    "command": "./lite test --full",
+    "tests": 248,
+    "passed": 248,
+    "skipped": 0,
+    "durationMs": 47618.322917,
+    "sweeps": [
+      {
+        "test": "Lite parser parses the assembled compiler S and lexer source",
+        "durationMs": 3156.250833
+      },
+      {
+        "test": "Lite checker collects symbols from the assembled S",
+        "durationMs": 5475.856625
+      },
+      {
+        "test": "Lite lexer tokenizes all bootstrap S and compiler cases",
+        "durationMs": 7177.149875
+      }
+    ]
+  },
+  "observedSpeedup": 12.19187687504085,
+  "fast": {
+    "command": "./lite test --fast",
+    "tests": 248,
+    "passed": 239,
+    "skipped": 9,
+    "durationMs": 26702.542208
+  },
+  "changes": [
+    "Run full-source lexer/parser/checker sweeps as T11-generated TS instead of T00 interpretation",
+    "Strictly check each prepared artifact once; run every input in a fresh process",
+    "Express checker tuple-field matching through an equivalent local Boolean to stay inside the supported subset",
+    "Add a prepared-runner isolation and strict-typecheck-failure regression group"
+  ],
+  "compiler": {
+    "artifactSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+    "sourceSha256": "70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10",
+    "seedsUnchanged": true
+  },
+  "reproducedBy": [
+    "node igniter/node_modules/typescript/bin/tsc -p igniter/tsconfig.json",
+    "./lite test --fast",
+    "./lite test --full"
+  ]
+}

@@ -36,6 +36,17 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: migrate full-source lexer/parser/checker test consumers from T00
+  interpretation to T11-generated, strictly checked TS drivers. Retain every
+  sweep assertion and compare focused fixtures exactly with T00; reuse each
+  checked artifact across fresh input processes. An equivalent checker local
+  Boolean avoids the known parenthesized-comparison gap, with no S/seed changes.
+  A prepared-runner regression checks isolation and typecheck failure phases.
+  [Recorded full-gate timing](reports/2026-11-02-generated-sweeps.json) falls from
+  580.6 s to 47.6 s (12.19×); all 248 tests pass with zero skips. Fast: 239 pass,
+  nine existing skips, 26.7 s. Strict checking passes. Native C11, feature parity
+  and run/check migration remain pending.
+
 - 2026-11-02: the first existing-feature-parity slice fixes generated TS report
   evaluation order in the Lite emitter. Arguments evaluate once, left to right,
   before appending the outer line, retaining nested report effects. Six focused

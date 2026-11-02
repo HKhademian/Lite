@@ -5,7 +5,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 36 features, 19 examples, 20 samples, 75 scenarios, 91 target executions
-- Tests: 235 interpreter groups, 7 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 8 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 The igniter tags are annotated and pinned to the source commit that produced
 each milestone. Do not move or delete a published tag; corrections get a new
@@ -21,7 +21,7 @@ The C emitter is now also compiled by T11 and shipped as a TS-hosted compiler;
 both compile targets and compiler verification avoid T00. Interpreter run/check
 remain on T00. This is a tooling migration,
 not a language release, new tag, full-feature parity or native self-hosting claim.
-Eight host migration/verification-selection/report-order tests join the 235 interpreter groups
+Eight host migration/verification-selection/report-order tests join the 236 interpreter groups
 in `lite test`. A bounded cache in generated text helpers eliminates repeated
 whole-source code-point copies. The [benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 3.49 s → 146 ms for 1,000 statements, and 668 ms median self-compilation
@@ -30,7 +30,9 @@ this does not complete feature parity or native C self-hosting. The subsequent
 [report-order refresh](../compiler/parity.md#report-order-seed-refresh) fixes lost
 output from reporting functions called inside `report(...)`, including multiple
 arguments, recursion and exit. The current corpus hashes are recorded separately
-from the preserved historical P0 baseline.
+from the preserved historical P0 baseline. Full-source lexer/parser/checker test
+consumers now use T11-generated drivers; the [recorded full gate](../compiler/parity.md#generated-full-source-test-consumers)
+falls from 580.6 s to 47.6 s with all 248 tests passing and zero skips.
 
 | Tag | Date | Commit | Milestone |
 |---|---|---|---|

@@ -204,7 +204,8 @@ tupleComponentType := fn(typeText: String, member: String): String {
             cursor = cursor + 2;
         }
         component := parseType(tokens, cursor, "");
-        if (label =!= "" and member == label) or member == intText(index) {
+        namedMatch := label =!= "" and member == label;
+        if namedMatch or member == intText(index) {
             return component.text;
         }
         cursor = component.next;
