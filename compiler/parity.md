@@ -18,7 +18,7 @@ audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
 
 Interpreter run/check and the interpreter regression tests still use
 T00. The C emitter is now a TS-hosted compiler built by T11; its exact source,
-artifact and builder hashes are in `bootstrap/c-seed.ts`. The text-cache seed
+artifact and builder hashes are in `bootstrap/c-seed.ts`. The report-order seed
 refresh below records T11 == T12 == T13 for its source snapshot. Native C01/C11
 remain unrecorded. These host transition slices do
 not complete feature parity or authorize deleting T00 before its replacements pass.
@@ -168,6 +168,41 @@ record a 668 ms self-compilation median and a 23.91× process-time improvement
 for 1,000 report statements with exact emitted-output equality. Old self-build
 timeouts remain censored; no whole-source speedup ratio is inferred.
 
+## Report-order seed refresh
+
+Recorded 2026-11-02, based on `d82cfe348889deb7518e8298c2e0cfbf88322069`.
+Generated reports evaluate their joined line into a fresh temporary before
+reading or appending to the output buffer. Calls in report arguments therefore
+retain their own report effects, execute once in written order, and finish before
+the outer line is appended. Six focused scenarios compare exact streams and
+status with T00: surrounding output, multiple arguments, recursion, mixed scalar
+values in a loop, exit after a report, and exit inside an argument.
+
+- S: 156467 bytes, SHA-256
+  `70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10`.
+- T11 == T12 == T13: 253122 bytes, SHA-256
+  `49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c`.
+- The refresh also works without T00: the previous generated seed emits updated
+  S into a transitional compiler (`b92698c1…`); that compiler emits the refreshed
+  fixed-point artifact. The explicit historical T00 audit independently emits
+  the same bytes. The extra generation is necessary because the previous seed
+  still emits the old report lowering.
+- The unchanged C source (`413044da…`) compiled by the refreshed TS compiler
+  produces a 237671-byte TS-hosted C emitter, SHA-256 `4dd040ad…`. C program
+  artifacts retain their bytes; native C11 and C functions remain pending.
+- Strict checks, all eight host tests, both 92-case corpus comparisons and all
+  91 verification executions pass. The fast suite passes 238 tests with nine
+  expected skips; all nine editor groups pass. The full suite passes all 247
+  tests with zero failures or skips (581 s, including the T00 sweeps).
+- [`generated/current-artifacts.json`](generated/current-artifacts.json) records
+  current hashes for all 53 program cases, checked without optional hash skips.
+  Historical P0 hashes and the original support inventory remain unchanged.
+
+[Exact ladder identities and reproduction commands](reports/2026-11-02-report-order-ladder.json)
+record both the generated-only refresh and the independent T00 audit. The
+text-cache timings above describe their earlier source snapshot, not a benchmark
+of this refresh. Fault-time output retention is a separate remaining gap.
+
 ## Rule
 
 For one Lite source at a time, starting with the compiler corpus and then S:
@@ -256,9 +291,9 @@ freeze prevents the target from growing while it is approached.
   features; any new capability is a Lite-first owner decision.
 - T00 exists. The refreshed T11, T12 and T13 are recorded and byte-identical for
   the bootstrap surface. The native C ladder remains pending.
-- The P0 artifact hashes in
-  [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) are
-  the reference for the 50 program cases.
+- [`generated/current-artifacts.json`](generated/current-artifacts.json) contains
+  the current artifact hashes for all 53 program cases. The original 50-case P0
+  hashes remain in `generated/baseline-artifacts.json` as historical evidence.
 
 Useful internal tools:
 
@@ -272,7 +307,7 @@ Useful internal tools:
 
 | Date | Target | Source | First difference | Class | Resolution |
 |---|---|---|---|---|---|
-| 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | open; no S site depends on it, fix with the P6 artifact-hash refresh |
+| 2026-11-02 | TS | `report(f())` where `f` itself reports | Stage 0 prints `f`'s line before the outer line; the emitted `lite_out += f()` reads the accumulator before its arguments, so `f`'s line is dropped | emitter argument-order bug | closed by the report-order seed refresh above; six focused T00/generated scenarios and current corpus hashes |
 | 2026-11-02 | TS | Dynamic Int64 addition, subtraction, multiplication and negation overflow | T00 faults; generated TS returns out-of-range BigInt values | checked-arithmetic gap | open; exact probes in the support inventory |
 | 2026-11-02 | TS | A report followed by an indexed-read runtime fault | T00 retains the earlier report; generated TS loses it because main never returns the accumulator | output-retention gap | open; `output.before-fault` probe |
 | 2026-11-02 | TS | `inputAll()` with invalid UTF-8 stdin | T00 returns InputFault; generated TS substitutes a replacement character and succeeds | input-decoding gap | open; `input.invalid-utf8` probe |

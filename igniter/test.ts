@@ -864,8 +864,9 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
   const cCompiler = compilerFor(cManifestPath);
   assert.equal(tsCompiler.bundle.lineMap.length, tsCompiler.bundle.text.split('\n').length - 1);
   assert.equal(cCompiler.bundle.lineMap.length, cCompiler.bundle.text.split('\n').length - 1);
+  // Intentional emitter changes refresh the current hashes; P0 stays historical.
   const baselineValue: unknown = JSON.parse(readFileSync(
-    new URL('../compiler/generated/baseline-artifacts.json', import.meta.url), 'utf8'));
+    new URL('../compiler/generated/current-artifacts.json', import.meta.url), 'utf8'));
   if (typeof baselineValue !== 'object' || baselineValue === null || Array.isArray(baselineValue)) {
     throw new Error('invalid baseline artifacts');
   }
@@ -882,6 +883,7 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
       hashes.set(name, { ts, c });
     }
   }
+  assert.equal(hashes.size, new Set(programFixtures.map(fixture => fixture.name)).size);
   for (const [target, compiler] of [['ts', tsCompiler], ['c', cCompiler]] as const) {
     for (const fixture of compilerFixtures) {
       const actual = compiler.compile({ text: fixture.source });
@@ -893,10 +895,8 @@ test('bundle compilers reproduce every compiler case with exact artifacts and di
         assert.equal(actual.status, 0, `${target}: ${fixture.name}/${fixture.caseName}`);
         assert.deepEqual(actual.stderr, Buffer.alloc(0), `${target}: ${fixture.name}/${fixture.caseName}`);
         const baseline = hashes.get(fixture.name)?.[target];
-        if (baseline !== undefined) {
-          assert.equal(baseline, `sha256:${hashBytes(actual.stdout)}`,
-            `${target}: ${fixture.name}/${fixture.caseName}`);
-        }
+        assert.equal(baseline, `sha256:${hashBytes(actual.stdout)}`,
+          `${target}: ${fixture.name}/${fixture.caseName}`);
       }
     }
   }
@@ -2228,13 +2228,13 @@ test('Lite-written TS emitter produces a deterministic readable reference with n
   assert.equal(runCompiler(tsManifestPath, 'report(42);').output, runCompiler(tsManifestPath, 'report(42);').output);
   assert.equal(runCompiler(tsManifestPath, ' report ( +00042 ) ; ').output, expected);
   assert.equal(runCompiler(tsManifestPath, 'report(-000);').output,
-    'export function main(): string {\n    let lite_out = "";\n    lite_out += (0n).toString() + "\\n";\n    return lite_out;\n}\n');
+    'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (0n).toString();\n    lite_out += lite$report0 + "\\n";\n    return lite_out;\n}\n');
 });
 test('Lite-written TS and C compilers sequence multiple report statements deterministically', () => {
   const program = 'report(10);\nreport(20);\nreport(-30);\n';
   const tsOutput = runCompiler(tsManifestPath, program);
   assert.equal(tsOutput.code, 0); assert.equal(tsOutput.errors, '');
-  assert.equal(tsOutput.output, 'export function main(): string {\n    let lite_out = "";\n    lite_out += (10n).toString() + "\\n";\n    lite_out += (20n).toString() + "\\n";\n    lite_out += ((-30n)).toString() + "\\n";\n    return lite_out;\n}\n');
+  assert.equal(tsOutput.output, 'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (10n).toString();\n    lite_out += lite$report0 + "\\n";\n    const lite$report1 = (20n).toString();\n    lite_out += lite$report1 + "\\n";\n    const lite$report2 = ((-30n)).toString();\n    lite_out += lite$report2 + "\\n";\n    return lite_out;\n}\n');
   const cOutput = runCompiler(cManifestPath, program);
   assert.equal(cOutput.code, 0); assert.equal(cOutput.errors, '');
   assert.equal(cOutput.output, '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n    int status = 0;\n' +
@@ -2253,8 +2253,8 @@ test('Lite-written TS and C compilers lower arithmetic expressions and immutable
     '    let lite_out = "";\n' +
     '    const lite_x = (2n * ((3n - 4n)));\n' +
     '    void lite_x;\n' +
-    '    lite_out += ((lite_x + 10n)).toString() + "\\n";\n' +
-    '    lite_out += ((-lite_x)).toString() + "\\n";\n' +
+    '    const lite$report0 = ((lite_x + 10n)).toString();\n    lite_out += lite$report0 + "\\n";\n' +
+    '    const lite$report1 = ((-lite_x)).toString();\n    lite_out += lite$report1 + "\\n";\n' +
     '    return lite_out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
@@ -2425,8 +2425,8 @@ test('Lite-written TS and C compilers lower String values and multi-value report
     '    let lite_out = "";\n' +
     '    const lite_s = "a\\"b";\n' +
     '    void lite_s;\n' +
-    '    lite_out += lite_s + "\\n";\n' +
-    '    lite_out += (1n).toString() + " " + lite_s + " " + (2n).toString() + "\\n";\n' +
+    '    const lite$report0 = lite_s;\n    lite_out += lite$report0 + "\\n";\n' +
+    '    const lite$report1 = (1n).toString() + " " + lite_s + " " + (2n).toString();\n    lite_out += lite$report1 + "\\n";\n' +
     '    return lite_out;\n}\n' });
   assert.deepEqual(runCompiler(cManifestPath, program), { code: 0, errors: '', output:
     '#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\nint main(void) {\n' +
@@ -2468,7 +2468,7 @@ test('compiler applications reject fixture sources with exact diagnostics, posit
 });
 test('restricted TS compiler emits a deterministic report sequence', () => {
   assert.equal(runCompiler(tsManifestPath, 'report(42);\nreport(9);').output,
-    'export function main(): string {\n    let lite_out = "";\n    lite_out += (42n).toString() + "\\n";\n    lite_out += (9n).toString() + "\\n";\n    return lite_out;\n}\n');
+    'export function main(): string {\n    let lite_out = "";\n    const lite$report0 = (42n).toString();\n    lite_out += lite$report0 + "\\n";\n    const lite$report1 = (9n).toString();\n    lite_out += lite$report1 + "\\n";\n    return lite_out;\n}\n');
 });
 test('emitted TS and igniter outputs match byte for byte across the admitted compiler corpus', async () => {
   const root = new URL('../', import.meta.url).pathname;

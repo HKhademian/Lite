@@ -21,10 +21,12 @@ strictly typechecked before publication under a source/builder-keyed
 `.cache/compiler/` directory. Corrupt seeds/caches and rejected rebuilds fail
 explicitly; there is no silent T00 fallback. `node compiler/scripts/build.ts`
 selects or rebuilds both target compilers and prints their provenance. The
-[text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) reduces
-current full-source self-compilation to a 668 ms median on the recorded machine,
-excluding strict checking. Language implementation belongs in `src/` and `lib/core/`,
-not in the generated seed or host glue.
+[text-cache optimization](../benchmark/reports/2026-11-02-text-cache.md) records
+a 668 ms median self-compilation for its source snapshot on the recorded machine,
+excluding strict checking. The [report-order refresh](parity.md#report-order-seed-refresh)
+preserves nested report effects and records the current generated seeds.
+Language implementation belongs in `src/` and `lib/core/`, not in the generated
+seed or host glue.
 
 The staged path from this prototype to runnable TS/C bootstrap compilers is the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md). It is an
@@ -52,8 +54,9 @@ line-map contract and current hashes are recorded in:
   and test evidence.
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
-- [`generated/baseline-artifacts.json`](generated/baseline-artifacts.json) —
-  emitted-artifact hashes for all 50 program cases.
+- [`generated/current-artifacts.json`](generated/current-artifacts.json) —
+  current emitted-artifact hashes for all 53 program cases; the P0 hashes remain
+  in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
 the ordered manifests, and [`../igniter/bootstrap.ts`](../igniter/bootstrap.ts)

@@ -36,6 +36,21 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: the first existing-feature-parity slice fixes generated TS report
+  evaluation order in the Lite emitter. Arguments evaluate once, left to right,
+  before appending the outer line, retaining nested report effects. Six focused
+  scenarios cover multiple arguments, recursion, mixed scalars, loops and exit.
+  The [refreshed seeds](parity.md#report-order-seed-refresh) reproduce themselves
+  across three generations (`49ac81d6…`), both from a generated-only refresh and
+  an independent T00 audit. The C source and emitted C programs are unchanged;
+  its TS-hosted seed is refreshed with the new TS compiler. Current exact hashes
+  cover all 53 program fixtures; P0 hashes and the support inventory stay
+  historical. Strict checks, eight host tests, both 92-case target comparisons,
+  91 verifier executions, 238 fast tests (nine expected skips), all 247 full
+  tests (zero skips, 581 s), and nine editor groups pass. Next: checked dynamic
+  Int64 arithmetic. Full feature parity, native C11 and T00 retirement remain
+  pending.
+
 - 2026-11-02: owner-required [code-file policy](../docs/tooling-source-policy.md)
   converts compiler/benchmark/challenge tooling and editor tests to strictly
   checked TS. Command aliases link to TS entries, the JSX report is removed,
@@ -119,7 +134,10 @@ verification cases, seed/build records and relevant docs.
 distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
-and record feature parity. Include the known report argument-order difference.
+and record feature parity. The report argument-order difference is closed by the
+first feature-parity slice; next port checked dynamic Int64 arithmetic, then continue the measured
+input, expression/control-flow and data/function gaps. No new language surface
+is selected by this order.
 **Acceptance:** every existing T00-supported contract has an equivalent Lite
 compiler path or an explicitly approved exception; no new language decisions.
 **Verify:** focused boundary probes per slice, strict check, fast suite, canonical
@@ -161,15 +179,16 @@ active T00 implementation; bootstrap recovery remains reproducible from history.
 - Do not modify published tags or create release tags without a release decision.
 - Preserve source names, invalid UTF-8 rejection, output streams and status.
 - Source/manifest changes must not silently use a stale generated compiler.
-- The current seed is 245146 bytes, SHA-256
-  `56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c`.
-- Current S is 156236 bytes, SHA-256
-  `17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f`.
+- The current seed is 253122 bytes, SHA-256
+  `49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c`.
+- Current S is 156467 bytes, SHA-256
+  `70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10`.
 - Source/builder identities are in `bootstrap/seed.ts` and `bootstrap/c-seed.ts`;
   actual host Node v24.16.0, repository pin 26.13.0, TypeScript 7.0.2.
 - Original TS self-compilation was slow; the original benchmark's two 60 s
-  timeouts remain censored observations. The refreshed source has a recorded
-  three-generation equality and a 668 ms successful self-build median.
+  timeouts remain censored observations. The text-cache snapshot has a recorded
+  668 ms successful self-build median. The current report-order source has its
+  own three-generation equality; its timings are not a new benchmark.
 
 ## Overall acceptance
 

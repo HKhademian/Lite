@@ -64,9 +64,11 @@ Run/check and interpreter regressions still depend on T00. Feature
 parity, the native C ladder and eventual T00 removal remain pending. The
 [text-cache seed refresh](../compiler/parity.md#text-cache-seed-refresh) records
 T11 == T12 == T13 for its exact source snapshot. Generated text scanning reuses
-bounded code-point views; the current self-build median is 668 ms in the
+bounded code-point views; that source snapshot has a 668 ms self-build median in the
 [before/after benchmark](../benchmark/reports/2026-11-02-text-cache.md), excluding
-strict checking. Current tests include 235 interpreter groups, 7 compiler-host
+strict checking. The subsequent [report-order refresh](../compiler/parity.md#report-order-seed-refresh)
+preserves output produced by calls inside report arguments and records a new
+three-generation fixed point. Current tests include 235 interpreter groups, 8 compiler-host
 groups, 4 policy/tooling groups and 9 editor grammar groups; the historical P0 counts below remain fixed.
 
 ## Historical P0 baseline, 2026-11-01

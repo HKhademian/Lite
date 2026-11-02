@@ -1,0 +1,102 @@
+{
+  "date": "2026-11-02",
+  "sourceBaseRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+  "sourceSnapshot": "report-order source snapshot committed with this record; identified by source.sha256",
+  "sourceManifest": "compiler/manifests/ts.json",
+  "source": {
+    "bytes": 156467,
+    "sha256": "70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10"
+  },
+  "generatedRefresh": {
+    "previousSeedRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+    "previousSeedSha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+    "transitionalCompilerSha256": "b92698c1850f82882dd01c1e96130abefd09363fee18109c4345847324769560",
+    "explanation": "The previous generated seed emits updated S with its older report lowering. Running this transitional compiler on the same S emits the refreshed fixed-point artifact, without T00 execution."
+  },
+  "t00BuilderRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+  "t00Audit": {
+    "bytes": 253122,
+    "sha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+    "status": 0,
+    "stderrBytes": 0,
+    "equalsGeneratedRefresh": true
+  },
+  "generations": [
+    {
+      "node": "T11",
+      "builder": "T00 executing S, independently matched by generated-only refresh",
+      "bytes": 253122,
+      "sha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    },
+    {
+      "node": "T12",
+      "builder": "T11 compiling S",
+      "bytes": 253122,
+      "sha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    },
+    {
+      "node": "T13",
+      "builder": "T12 compiling S",
+      "bytes": 253122,
+      "sha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+      "status": 0,
+      "stderrBytes": 0,
+      "strictTypecheck": true
+    }
+  ],
+  "byteIdentical": true,
+  "cEmitter": {
+    "sourceManifest": "compiler/manifests/c.json",
+    "sourceSha256": "413044da0f81b912e4029632218512c77b179f82a3701ff0931fbc1cc707acc6",
+    "sourceBytes": 149119,
+    "bytes": 237671,
+    "sha256": "4dd040adee51f4854c78b5947edd4be94233f3e9cd3f3825e106765082ccf2af",
+    "builderSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+    "sourceRevision": "41d15fc8c424a03b0c87e602995c0a5199d48b6a",
+    "native": false
+  },
+  "reproductionCommands": [
+    "node --input-type=module -e 'import {loadBundle} from \"./igniter/loader.ts\"; process.stdout.write(loadBundle(\"compiler/manifests/ts.json\").text);' > /tmp/S.lts",
+    "git show d82cfe348889deb7518e8298c2e0cfbf88322069:compiler/bootstrap/T11.ts > /tmp/previous-seed.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/previous-seed.ts --source /tmp/S.lts --out /tmp/transitional.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/transitional.ts --source /tmp/S.lts --out /tmp/T11.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T12.ts --source /tmp/S.lts --out /tmp/T13.ts",
+    "node compiler/scripts/self-host.ts --out /tmp/t00-audit",
+    "node --input-type=module -e 'import {loadBundle} from \"./igniter/loader.ts\"; process.stdout.write(loadBundle(\"compiler/manifests/c.json\").text);' > /tmp/C-S.lts",
+    "node compiler/scripts/run-ts-artifact.ts --artifact /tmp/T11.ts --source /tmp/C-S.lts --out /tmp/c-emitter.ts"
+  ],
+  "validation": {
+    "strictHostAndSeeds": true,
+    "focusedReportScenarios": 6,
+    "hostTests": 8,
+    "tsCorpus": {
+      "cases": 92,
+      "mismatches": 0
+    },
+    "cCorpus": {
+      "cases": 92,
+      "mismatches": 0
+    },
+    "verifierExecutions": 91,
+    "fastSuite": {
+      "tests": 247,
+      "passed": 238,
+      "skipped": 9
+    },
+    "editorGroups": 9,
+    "fullSuite": {
+      "tests": 247,
+      "passed": 247,
+      "skipped": 0,
+      "failed": 0,
+      "durationMs": 580556.73
+    }
+  }
+}

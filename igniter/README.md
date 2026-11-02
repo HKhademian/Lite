@@ -19,8 +19,11 @@ this igniter's supported language. The refreshed T11/T12/T13 fixed point covers
 the bootstrap subset; full existing T00 feature parity and the native C ladder
 remain pending. The [text-cache benchmark](../benchmark/reports/2026-11-02-text-cache.md)
 records 668 ms median self-compilation after eliminating repeated whole-source
-code-point copies. The current test suite has 235 interpreter groups, 7
+code-point copies. The current test suite has 235 interpreter groups, 8
 compiler-host groups and 4 policy/tooling groups, with 9 separate editor grammar groups.
+
+Generated TS now preserves nested report effects and left-to-right report
+argument evaluation; see the [report-order refresh](../compiler/parity.md#report-order-seed-refresh).
 
 ## Run
 

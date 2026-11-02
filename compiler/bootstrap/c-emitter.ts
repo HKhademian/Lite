@@ -3761,55 +3761,95 @@ export function main(): string {
     }
     void liteFn_usesStringConcat;
     function liteFn_emitIntDivideHelper(): void {
-        lite_out += "static int64_t lite_divide_int(int64_t left, int64_t right) {" + "\n";
-        lite_out += "    if (right == 0) {" + "\n";
-        lite_out += "        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    if (left == INT64_MIN && right == -1) {" + "\n";
-        lite_out += "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    return left / right;" + "\n";
-        lite_out += "}" + "\n";
-        lite_out += "" + "\n";
+        const lite$report0 = "static int64_t lite_divide_int(int64_t left, int64_t right) {";
+        lite_out += lite$report0 + "\n";
+        const lite$report1 = "    if (right == 0) {";
+        lite_out += lite$report1 + "\n";
+        const lite$report2 = "        fprintf(stderr, \"ArithmeticPanic: division by zero in integer expression\\n\");";
+        lite_out += lite$report2 + "\n";
+        const lite$report3 = "        exit(1);";
+        lite_out += lite$report3 + "\n";
+        const lite$report4 = "    }";
+        lite_out += lite$report4 + "\n";
+        const lite$report5 = "    if (left == INT64_MIN && right == -1) {";
+        lite_out += lite$report5 + "\n";
+        const lite$report6 = "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");";
+        lite_out += lite$report6 + "\n";
+        const lite$report7 = "        exit(1);";
+        lite_out += lite$report7 + "\n";
+        const lite$report8 = "    }";
+        lite_out += lite$report8 + "\n";
+        const lite$report9 = "    return left / right;";
+        lite_out += lite$report9 + "\n";
+        const lite$report10 = "}";
+        lite_out += lite$report10 + "\n";
+        const lite$report11 = "";
+        lite_out += lite$report11 + "\n";
     }
     void liteFn_emitIntDivideHelper;
     function liteFn_emitIntRemainderHelper(): void {
-        lite_out += "static int64_t lite_remainder_int(int64_t left, int64_t right) {" + "\n";
-        lite_out += "    if (right == 0) {" + "\n";
-        lite_out += "        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    if (left == INT64_MIN && right == -1) {" + "\n";
-        lite_out += "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    return left % right;" + "\n";
-        lite_out += "}" + "\n";
-        lite_out += "" + "\n";
+        const lite$report12 = "static int64_t lite_remainder_int(int64_t left, int64_t right) {";
+        lite_out += lite$report12 + "\n";
+        const lite$report13 = "    if (right == 0) {";
+        lite_out += lite$report13 + "\n";
+        const lite$report14 = "        fprintf(stderr, \"ArithmeticPanic: remainder by zero in integer expression\\n\");";
+        lite_out += lite$report14 + "\n";
+        const lite$report15 = "        exit(1);";
+        lite_out += lite$report15 + "\n";
+        const lite$report16 = "    }";
+        lite_out += lite$report16 + "\n";
+        const lite$report17 = "    if (left == INT64_MIN && right == -1) {";
+        lite_out += lite$report17 + "\n";
+        const lite$report18 = "        fprintf(stderr, \"ArithmeticPanic: integer expression outside signed 64-bit range\\n\");";
+        lite_out += lite$report18 + "\n";
+        const lite$report19 = "        exit(1);";
+        lite_out += lite$report19 + "\n";
+        const lite$report20 = "    }";
+        lite_out += lite$report20 + "\n";
+        const lite$report21 = "    return left % right;";
+        lite_out += lite$report21 + "\n";
+        const lite$report22 = "}";
+        lite_out += lite$report22 + "\n";
+        const lite$report23 = "";
+        lite_out += lite$report23 + "\n";
     }
     void liteFn_emitIntRemainderHelper;
     function liteFn_emitIntFloorDivideHelper(): void {
-        lite_out += "static int64_t lite_floor_divide_int(int64_t left, int64_t right) {" + "\n";
-        lite_out += "    const int64_t quotient = lite_divide_int(left, right);" + "\n";
-        lite_out += "    const int64_t remainder = left % right;" + "\n";
-        lite_out += "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;" + "\n";
-        lite_out += "}" + "\n";
-        lite_out += "" + "\n";
+        const lite$report24 = "static int64_t lite_floor_divide_int(int64_t left, int64_t right) {";
+        lite_out += lite$report24 + "\n";
+        const lite$report25 = "    const int64_t quotient = lite_divide_int(left, right);";
+        lite_out += lite$report25 + "\n";
+        const lite$report26 = "    const int64_t remainder = left % right;";
+        lite_out += lite$report26 + "\n";
+        const lite$report27 = "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;";
+        lite_out += lite$report27 + "\n";
+        const lite$report28 = "}";
+        lite_out += lite$report28 + "\n";
+        const lite$report29 = "";
+        lite_out += lite$report29 + "\n";
     }
     void liteFn_emitIntFloorDivideHelper;
     function liteFn_emitIntFloorModuloHelper(): void {
-        lite_out += "static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {" + "\n";
-        lite_out += "    if (right == 0) {" + "\n";
-        lite_out += "        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    if (left == INT64_MIN && right == -1) { return 0; }" + "\n";
-        lite_out += "    const int64_t remainder = left % right;" + "\n";
-        lite_out += "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;" + "\n";
-        lite_out += "}" + "\n";
-        lite_out += "" + "\n";
+        const lite$report30 = "static int64_t lite_floor_modulo_int(int64_t left, int64_t right) {";
+        lite_out += lite$report30 + "\n";
+        const lite$report31 = "    if (right == 0) {";
+        lite_out += lite$report31 + "\n";
+        const lite$report32 = "        fprintf(stderr, \"ArithmeticPanic: modulo by zero in integer expression\\n\");";
+        lite_out += lite$report32 + "\n";
+        const lite$report33 = "        exit(1);";
+        lite_out += lite$report33 + "\n";
+        const lite$report34 = "    }";
+        lite_out += lite$report34 + "\n";
+        const lite$report35 = "    if (left == INT64_MIN && right == -1) { return 0; }";
+        lite_out += lite$report35 + "\n";
+        const lite$report36 = "    const int64_t remainder = left % right;";
+        lite_out += lite$report36 + "\n";
+        const lite$report37 = "    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;";
+        lite_out += lite$report37 + "\n";
+        const lite$report38 = "}";
+        lite_out += lite$report38 + "\n";
+        const lite$report39 = "";
+        lite_out += lite$report39 + "\n";
     }
     void liteFn_emitIntFloorModuloHelper;
     function liteFn_emitIntDivisionHelpers(lite_items: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[]): void {
@@ -3830,19 +3870,32 @@ export function main(): string {
     }
     void liteFn_emitIntDivisionHelpers;
     function liteFn_emitStringConcatHelper(): void {
-        lite_out += "static const char *lite_concat(const char *left, const char *right) {" + "\n";
-        lite_out += "    const size_t left_length = strlen(left);" + "\n";
-        lite_out += "    const size_t right_length = strlen(right);" + "\n";
-        lite_out += "    char *combined = malloc(left_length + right_length + 1);" + "\n";
-        lite_out += "    if (combined == NULL) {" + "\n";
-        lite_out += "        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");" + "\n";
-        lite_out += "        exit(1);" + "\n";
-        lite_out += "    }" + "\n";
-        lite_out += "    memcpy(combined, left, left_length);" + "\n";
-        lite_out += "    memcpy(combined + left_length, right, right_length + 1);" + "\n";
-        lite_out += "    return combined;" + "\n";
-        lite_out += "}" + "\n";
-        lite_out += "" + "\n";
+        const lite$report40 = "static const char *lite_concat(const char *left, const char *right) {";
+        lite_out += lite$report40 + "\n";
+        const lite$report41 = "    const size_t left_length = strlen(left);";
+        lite_out += lite$report41 + "\n";
+        const lite$report42 = "    const size_t right_length = strlen(right);";
+        lite_out += lite$report42 + "\n";
+        const lite$report43 = "    char *combined = malloc(left_length + right_length + 1);";
+        lite_out += lite$report43 + "\n";
+        const lite$report44 = "    if (combined == NULL) {";
+        lite_out += lite$report44 + "\n";
+        const lite$report45 = "        fprintf(stderr, \"MemoryFault: cannot allocate concatenated text\\n\");";
+        lite_out += lite$report45 + "\n";
+        const lite$report46 = "        exit(1);";
+        lite_out += lite$report46 + "\n";
+        const lite$report47 = "    }";
+        lite_out += lite$report47 + "\n";
+        const lite$report48 = "    memcpy(combined, left, left_length);";
+        lite_out += lite$report48 + "\n";
+        const lite$report49 = "    memcpy(combined + left_length, right, right_length + 1);";
+        lite_out += lite$report49 + "\n";
+        const lite$report50 = "    return combined;";
+        lite_out += lite$report50 + "\n";
+        const lite$report51 = "}";
+        lite_out += lite$report51 + "\n";
+        const lite$report52 = "";
+        lite_out += lite$report52 + "\n";
     }
     void liteFn_emitStringConcatHelper;
     function liteFn_emitProgram(lite_items: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[]): void {
@@ -3873,19 +3926,26 @@ export function main(): string {
                 liteFn_fail("", "C backend does not support value if expressions yet");
             }
         }
-        lite_out += "#include <stdio.h>" + "\n";
+        const lite$report53 = "#include <stdio.h>";
+        lite_out += lite$report53 + "\n";
         if (((liteFn_usesIntDivision([...(lite_items)])) || (liteFn_usesStringConcat([...(lite_items)])))) {
-            lite_out += "#include <stdlib.h>" + "\n";
+            const lite$report54 = "#include <stdlib.h>";
+            lite_out += lite$report54 + "\n";
         }
-        lite_out += "#include <inttypes.h>" + "\n";
-        lite_out += "#include <stdbool.h>" + "\n";
-        lite_out += "#include <string.h>" + "\n";
+        const lite$report55 = "#include <inttypes.h>";
+        lite_out += lite$report55 + "\n";
+        const lite$report56 = "#include <stdbool.h>";
+        lite_out += lite$report56 + "\n";
+        const lite$report57 = "#include <string.h>";
+        lite_out += lite$report57 + "\n";
         liteFn_emitIntDivisionHelpers([...(lite_items)]);
         if (liteFn_usesStringConcat([...(lite_items)])) {
             liteFn_emitStringConcatHelper();
         }
-        lite_out += "int main(void) {" + "\n";
-        lite_out += "    int status = 0;" + "\n";
+        const lite$report58 = "int main(void) {";
+        lite_out += lite$report58 + "\n";
+        const lite$report59 = "    int status = 0;";
+        lite_out += lite$report59 + "\n";
         let lite_indent = "    ";
         void lite_indent;
         let lite_count = 0n;
@@ -3893,55 +3953,75 @@ export function main(): string {
         for (const lite_item of [...(lite_items)]) {
             void lite_item;
             if ((((((lite_item).kind) === ("LocalInt"))) || ((((lite_item).kind) === ("VarInt"))))) {
-                lite_out += ((((((((((lite_indent) + ("int64_t "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";")) + "\n";
-                lite_out += ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";")) + "\n";
+                const lite$report60 = ((((((((((lite_indent) + ("int64_t "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite_out += lite$report60 + "\n";
+                const lite$report61 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
+                lite_out += lite$report61 + "\n";
             } else if ((((((lite_item).kind) === ("LocalString"))) || ((((lite_item).kind) === ("VarString"))))) {
-                lite_out += ((((((((((lite_indent) + ("const char *"))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";")) + "\n";
-                lite_out += ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";")) + "\n";
+                const lite$report62 = ((((((((((lite_indent) + ("const char *"))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite_out += lite$report62 + "\n";
+                const lite$report63 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
+                lite_out += lite$report63 + "\n";
             } else if ((((((lite_item).kind) === ("LocalBool"))) || ((((lite_item).kind) === ("VarBool"))))) {
-                lite_out += ((((((((((lite_indent) + ("bool "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";")) + "\n";
-                lite_out += ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";")) + "\n";
+                const lite$report64 = ((((((((((lite_indent) + ("bool "))) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite_out += lite$report64 + "\n";
+                const lite$report65 = ((((((lite_indent) + ("(void)"))) + ((lite_item).runtime))) + (";"));
+                lite_out += lite$report65 + "\n";
             } else if ((((((((lite_item).kind) === ("AssignInt"))) || ((((lite_item).kind) === ("AssignString"))))) || ((((lite_item).kind) === ("AssignBool"))))) {
-                lite_out += ((((((((lite_indent) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";")) + "\n";
+                const lite$report66 = ((((((((lite_indent) + ((lite_item).runtime))) + (" = "))) + ((lite_item).code))) + (";"));
+                lite_out += lite$report66 + "\n";
             } else if ((((lite_item).kind) === ("Break"))) {
-                lite_out += ((lite_indent) + ("break;")) + "\n";
+                const lite$report67 = ((lite_indent) + ("break;"));
+                lite_out += lite$report67 + "\n";
             } else if ((((lite_item).kind) === ("Continue"))) {
-                lite_out += ((lite_indent) + ("continue;")) + "\n";
+                const lite$report68 = ((lite_indent) + ("continue;"));
+                lite_out += lite$report68 + "\n";
             } else if ((((lite_item).kind) === ("If"))) {
-                lite_out += ((((((lite_indent) + ("if ("))) + ((lite_item).code))) + (") {")) + "\n";
+                const lite$report69 = ((((((lite_indent) + ("if ("))) + ((lite_item).code))) + (") {"));
+                lite_out += lite$report69 + "\n";
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("Else"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                lite_out += ((lite_indent) + ("} else {")) + "\n";
+                const lite$report70 = ((lite_indent) + ("} else {"));
+                lite_out += lite$report70 + "\n";
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("ElseIf"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                lite_out += ((((((lite_indent) + ("} else if ("))) + ((lite_item).code))) + (") {")) + "\n";
+                const lite$report71 = ((((((lite_indent) + ("} else if ("))) + ((lite_item).code))) + (") {"));
+                lite_out += lite$report71 + "\n";
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("EndIf"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                lite_out += ((lite_indent) + ("}")) + "\n";
+                const lite$report72 = ((lite_indent) + ("}"));
+                lite_out += lite$report72 + "\n";
             } else if ((((lite_item).kind) === ("Loop"))) {
                 const lite_condition = (Boolean((((lite_item).code) === (""))) ? "true" : (lite_item).code);
                 void lite_condition;
-                lite_out += ((((((lite_indent) + ("while ("))) + (lite_condition))) + (") {")) + "\n";
+                const lite$report73 = ((((((lite_indent) + ("while ("))) + (lite_condition))) + (") {"));
+                lite_out += lite$report73 + "\n";
                 lite_indent = ((lite_indent) + ("    "));
             } else if ((((lite_item).kind) === ("EndLoop"))) {
                 lite_indent = liteFn_dedent(lite_indent);
-                lite_out += ((lite_indent) + ("}")) + "\n";
+                const lite$report74 = ((lite_indent) + ("}"));
+                lite_out += lite$report74 + "\n";
             } else if ((((lite_item).kind) === ("End"))) {
-                lite_out += ((lite_indent) + ("if (printf(\"\\n\") < 0) { status = 1; }")) + "\n";
+                const lite$report75 = ((lite_indent) + ("if (printf(\"\\n\") < 0) { status = 1; }"));
+                lite_out += lite$report75 + "\n";
                 lite_count = 0n;
             } else {
                 if (((lite_count) > (0n))) {
-                    lite_out += ((lite_indent) + ("if (printf(\" \") < 0) { status = 1; }")) + "\n";
+                    const lite$report76 = ((lite_indent) + ("if (printf(\" \") < 0) { status = 1; }"));
+                    lite_out += lite$report76 + "\n";
                 }
-                lite_out += ((((((lite_indent) + ("if ("))) + (liteFn_cCall((lite_item).kind, (lite_item).code)))) + (" < 0) { status = 1; }")) + "\n";
+                const lite$report77 = ((((((lite_indent) + ("if ("))) + (liteFn_cCall((lite_item).kind, (lite_item).code)))) + (" < 0) { status = 1; }"));
+                lite_out += lite$report77 + "\n";
                 lite_count = (lite_count + 1n);
             }
         }
-        lite_out += "    return status;" + "\n";
-        lite_out += "}" + "\n";
+        const lite$report78 = "    return status;";
+        lite_out += lite$report78 + "\n";
+        const lite$report79 = "}";
+        lite_out += lite$report79 + "\n";
     }
     void liteFn_emitProgram;
     const lite_prefix = liteFn_sourcePrefix();

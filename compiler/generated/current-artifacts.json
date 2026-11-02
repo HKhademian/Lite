@@ -1,0 +1,328 @@
+{
+  "note": "Current corpus artifact hashes after the intentional TS report-order lowering change. Historical P0 hashes remain in baseline-artifacts.json. C artifacts are unchanged.",
+  "recorded": "2026-11-02",
+  "sourceSha256": "70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10",
+  "compilerSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+  "programCases": 53,
+  "rejectedCases": 39,
+  "artifacts": [
+    {
+      "name": "report-crlf-spacing",
+      "source": "001-001-report-crlf-spacing.lts",
+      "ts": "sha256:d9b8c8dddf2354f5f855a6c346d1687db458cba5b7bfc94c087ffd6131bd24e8",
+      "c": "sha256:72ba75703fd1f2563a31900093ebdb4240c47648cedae75824df194b155d8323"
+    },
+    {
+      "name": "report-int-42",
+      "source": "001-001-report-int-42.lts",
+      "ts": "sha256:809f96fe8a0c2c3ca6c2fa2a133a216cf4bb0e1bd013ae5cbb1d1b214f94601b",
+      "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
+    },
+    {
+      "name": "report-int-max",
+      "source": "001-001-report-int-max.lts",
+      "ts": "sha256:60d9cea26018531a42c4611579ed14bc3c9e77e7366a4dba8bc7605f6bcf0da7",
+      "c": "sha256:fb29222965b8c03d3124068998fb49344986a25e1a7af9e12a14f6b04aa44caa"
+    },
+    {
+      "name": "report-int-min",
+      "source": "001-001-report-int-min.lts",
+      "ts": "sha256:2732d4916578793bf4069a1c97070311556ed60c1c0b342dd653ebea11cc6d18",
+      "c": "sha256:3395cfa3c507a424276363c2eb8a2189a3e60e889dd506e9f6ecfe974f0be26b"
+    },
+    {
+      "name": "report-large-magnitude",
+      "source": "001-001-report-large-magnitude.lts",
+      "ts": "sha256:683bf1dd147af2240f8b8d0fb3ce6c376d7f60b9ef968a4597f7c243d3c76d22",
+      "c": "sha256:98a3e1cd5df34c08a9561fb35bda0ab4865201d7a7bab6b9c93968e47ada2d1d"
+    },
+    {
+      "name": "report-leading-plus-zeroes",
+      "source": "001-001-report-leading-plus-zeroes.lts",
+      "ts": "sha256:809f96fe8a0c2c3ca6c2fa2a133a216cf4bb0e1bd013ae5cbb1d1b214f94601b",
+      "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
+    },
+    {
+      "name": "report-multiline-spacing",
+      "source": "001-001-report-multiline-spacing.lts",
+      "ts": "sha256:809f96fe8a0c2c3ca6c2fa2a133a216cf4bb0e1bd013ae5cbb1d1b214f94601b",
+      "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
+    },
+    {
+      "name": "report-negative-zero",
+      "source": "001-001-report-negative-zero.lts",
+      "ts": "sha256:2253eb668e69c5b80481e4912737d3d3ba6c528a08cfdaea9a71f82cd2ecacd9",
+      "c": "sha256:2dcb562462999ae4cc60c94e382e472c1aa4b3b59d05b0abe0ee55e45fbc6894"
+    },
+    {
+      "name": "report-spaced-negative",
+      "source": "001-001-report-spaced-negative.lts",
+      "ts": "sha256:d9b8c8dddf2354f5f855a6c346d1687db458cba5b7bfc94c087ffd6131bd24e8",
+      "c": "sha256:72ba75703fd1f2563a31900093ebdb4240c47648cedae75824df194b155d8323"
+    },
+    {
+      "name": "report-zero",
+      "source": "001-001-report-zero.lts",
+      "ts": "sha256:2253eb668e69c5b80481e4912737d3d3ba6c528a08cfdaea9a71f82cd2ecacd9",
+      "c": "sha256:2dcb562462999ae4cc60c94e382e472c1aa4b3b59d05b0abe0ee55e45fbc6894"
+    },
+    {
+      "name": "report-zeroes",
+      "source": "001-001-report-zeroes.lts",
+      "ts": "sha256:2253eb668e69c5b80481e4912737d3d3ba6c528a08cfdaea9a71f82cd2ecacd9",
+      "c": "sha256:2dcb562462999ae4cc60c94e382e472c1aa4b3b59d05b0abe0ee55e45fbc6894"
+    },
+    {
+      "name": "arithmetic-beyond-32-bit",
+      "source": "001-002-arithmetic-beyond-32-bit.lts",
+      "ts": "sha256:5975f919d989d39fc5b381a2845f433e7c266d3bb8b8b0d8e7aa2988ed08f6ca",
+      "c": "sha256:31a4fc5ee0fec41f40e9993223444495d8ac66b5416b20f7007882d2a1e58959"
+    },
+    {
+      "name": "arithmetic-int-min",
+      "source": "001-002-arithmetic-int-min.lts",
+      "ts": "sha256:579bce5724f847544ca7bfb06f72d4a3b622dbd1161f30000972ba719541248c",
+      "c": "sha256:94c2b0f003c1d3c7ed4eb7bc8ef89144abf0f48c3349272ef380bb0c150a8fb9"
+    },
+    {
+      "name": "arithmetic-negative-division",
+      "source": "001-002-arithmetic-negative-division.lts",
+      "ts": "sha256:ba89223e0f121b58c9ea6155aa4860140da0d6eac8e957f23da31ba83e48be82",
+      "c": "sha256:4b0fc43470a73fb8d3799e2fdd4f49f0f24eefbbea03a5d99289126265b74f6e"
+    },
+    {
+      "name": "arithmetic-parentheses",
+      "source": "001-002-arithmetic-parentheses.lts",
+      "ts": "sha256:e7606942c507ba6993dc3ed665bea8c0a94c67266a39d9103d7693b8c10d7d6a",
+      "c": "sha256:3980c5dc01539f37be88a74fcb0fa7381f44e86f007b36add6e56043c0e39fc4"
+    },
+    {
+      "name": "arithmetic-precedence",
+      "source": "001-002-arithmetic-precedence.lts",
+      "ts": "sha256:d9f91a4883eecb1535ae5a8092c93ec4582b6b8b8d9904c00fb3ee7b2012ba9f",
+      "c": "sha256:53c09a2dcbda8a229fcfeb94e2543562169dfae1d89a8e5f4be64835fa93498c"
+    },
+    {
+      "name": "arithmetic-unary-signs",
+      "source": "001-002-arithmetic-unary-signs.lts",
+      "ts": "sha256:71889ad6f3f6cb813812fadf3f4759bbd9a40a7b7dc132b35685e9b70a88bced",
+      "c": "sha256:72e14fbdf2be22be7f60c46b32d3f5738522b01e286c7d52e66000afbcbb1835"
+    },
+    {
+      "name": "floor-int",
+      "source": "001-002-floor-int.lts",
+      "ts": "sha256:bc8f04a382371232a13acf9af056d5f96861ea5a0ae85650efa9fe89c29b5c11",
+      "c": "sha256:2b422f87447c02275a68de14eb61f772d32f5a7a21e4ae5109b8f84a3b342fe1"
+    },
+    {
+      "name": "remainder-int",
+      "source": "001-002-remainder-int.lts",
+      "ts": "sha256:90ec72024103fe4c0122e1bb95fd6b561af2e1e03ee364ebeefdcd033398f7ba",
+      "c": "sha256:0804cc9afe721032a2557f2f2fcc3332cb417aa1d6e76e631193babd0f4aa738"
+    },
+    {
+      "name": "report-signed-sequence",
+      "source": "001-002-report-signed-sequence.lts",
+      "ts": "sha256:cec7a3dc5f61c29f34a159694e666928c9192574a2e52f1d87bc5e70e66d1193",
+      "c": "sha256:0457c72613f8e7c22f352e78bf2240643d11901bd146fed344da37c0bd6ee4b8"
+    },
+    {
+      "name": "arithmetic-large-multiply",
+      "source": "001-003-arithmetic-large-multiply.lts",
+      "ts": "sha256:8ceb315605f03d172939c4c595d20d9ab2ae2ec9d87af3892530360177edba55",
+      "c": "sha256:c64065523ba6ef1d244484ac08c64b65953a4a2e57b130035108c63bfd617ece"
+    },
+    {
+      "name": "local-arithmetic",
+      "source": "001-003-local-arithmetic.lts",
+      "ts": "sha256:41b7656ff70cb724c51b9570af9ff608cbdc9a93a275cecd01f0454bf3a7ec61",
+      "c": "sha256:13e5a6c3b3f0de158ed869ff9b3d6b3c88b93aa0e7e36fb3fdde55ea64bb22f3"
+    },
+    {
+      "name": "local-dependencies",
+      "source": "001-003-local-dependencies.lts",
+      "ts": "sha256:6197f938117974cfeef4c1a75135f2fcca86b836e60ff41bf24a5503419a5d5e",
+      "c": "sha256:23b7dc3d9d2b9b146abd7521e1e73baf42ac159699b60b2ba4b6f461b8f85f98"
+    },
+    {
+      "name": "local-unused",
+      "source": "001-004-local-unused.lts",
+      "ts": "sha256:5de67d2a4e249e802c9399f5d573d93aaf73e091062fa801ec4449f16d401b50",
+      "c": "sha256:5a8b322f2cafa7410547e03441fdb33f6156d9b4cc6630b872c56a019a686622"
+    },
+    {
+      "name": "report-two-strings",
+      "source": "001-004-report-two-strings.lts",
+      "ts": "sha256:88f65e07484d68efaf37971b851e7d9c4a4f62a7dc1fdafe263fc3662ad9982a",
+      "c": "sha256:9a1b37655c2871222004b1b0d302951740f4a51ffb0340e6b31e6e66acc26eba"
+    },
+    {
+      "name": "string-concatenation",
+      "source": "001-004-string-concatenation.lts",
+      "ts": "sha256:a19e7fd9be005ef4e0760807a44b8e14eeb5524457de11cbb2a779ab1267e342",
+      "c": "sha256:5f23b59f08eb6e7bf106f711f7bdccd2ada61f27a16ff5ee2b289f61428c3b82"
+    },
+    {
+      "name": "string-empty",
+      "source": "001-004-string-empty.lts",
+      "ts": "sha256:b9bf4dc198a1ec46da2833dce8a25af54fa87e7f6599b1cf02a43e3366a6f1f0",
+      "c": "sha256:d186a21b9f6781b6c06bcb6ff3e6d7746f81ac99151f692b97d89363052641fa"
+    },
+    {
+      "name": "string-escapes",
+      "source": "001-004-string-escapes.lts",
+      "ts": "sha256:7e182a5ba2d5894991b63593891bd521233ce492d0569cafe4f2f7f0f4042d25",
+      "c": "sha256:7689d9489e5c3e2170f105fa7012ff856f5b8c7ed1c2256abfd3f64df0929af4"
+    },
+    {
+      "name": "string-hello",
+      "source": "001-004-string-hello.lts",
+      "ts": "sha256:32fb2ff541121552eb7338a0ca0de41c6e7d72f037cd835ffbed950bf9b13201",
+      "c": "sha256:3db7043afc82d3eed242d582915f161be94542483ed7db192cbc958f9eb0c6c6"
+    },
+    {
+      "name": "string-local",
+      "source": "001-004-string-local.lts",
+      "ts": "sha256:2caee1976817fb3f48be142c0d8c1a1dc255f7d8a8966c964f8c97448e08c34d",
+      "c": "sha256:e653410710e37b5f9edead2cc305f7057f7367bdf1fea138c0098be16cdec7b3"
+    },
+    {
+      "name": "string-multiline",
+      "source": "001-004-string-multiline.lts",
+      "ts": "sha256:07503ca16cdb071ab3f9befd9803a9c7582d488f4deffaadc6d935a1540698c5",
+      "c": "sha256:b7074371dbbda1a8ce6c7e204843c79486a91b796f94865ce722297c3d5dff63"
+    },
+    {
+      "name": "string-unicode",
+      "source": "001-004-string-unicode.lts",
+      "ts": "sha256:5a2d43b522bc5a2a5ffea60c41c4bc4ac37af8f7d82a89b6ce0ce6079df8f8a2",
+      "c": "sha256:04a919b50b33e47277428e38ff1befeb073b838493fae8098979fc93aae9ac70"
+    },
+    {
+      "name": "report-mixed-values",
+      "source": "001-005-report-mixed-values.lts",
+      "ts": "sha256:df006cbb3d568d078faf33505ca2c8ef1fb5778db1c68ade64d9c71d10370415",
+      "c": "sha256:e32ec34b90ee9290158d5d3fb8b0c8631d2517ab867ff14658c4e67903e35172"
+    },
+    {
+      "name": "report-three-statements",
+      "source": "001-005-report-three-statements.lts",
+      "ts": "sha256:ce38b36dd3bd29074e6b7eb5ac9724e4f1887f35ce6ee1f5f2dfc9b252e1e6dc",
+      "c": "sha256:4979c15f0db40f85ac69447ffe00a0d6e1c828e727c4c4cb2b2cf451661290c8"
+    },
+    {
+      "name": "report-trailing-newline",
+      "source": "001-005-report-trailing-newline.lts",
+      "ts": "sha256:809f96fe8a0c2c3ca6c2fa2a133a216cf4bb0e1bd013ae5cbb1d1b214f94601b",
+      "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
+    },
+    {
+      "name": "report-two-statements",
+      "source": "001-005-report-two-statements.lts",
+      "ts": "sha256:ad4dfc17d25ef9f1fadfe96448d3d90e0c70a6b1803c4c9db15248e9a009176f",
+      "c": "sha256:0481941e04c2abba53cee3aea5336fbe4c30d4c018c0e1471811705717fcab5d"
+    },
+    {
+      "name": "string-local-chain",
+      "source": "001-005-string-local-chain.lts",
+      "ts": "sha256:06ad2b7318384864883701b6ae0da851b60725b05084b328fcaa441266161aea",
+      "c": "sha256:f9003f61404f853331332d5d9ad16fd5d9c49084a2eaeb620bbdfa8a1373eddf"
+    },
+    {
+      "name": "string-percent-trigraph",
+      "source": "001-005-string-percent-trigraph.lts",
+      "ts": "sha256:513d697a19f130510ef8d8a5c9a0576879c25625539c38819c5c4a736bc81616",
+      "c": "sha256:8105b60420c0b139c0989aff04e58b0a35747a79031c2d8de957e6fd7eec7ec8"
+    },
+    {
+      "name": "local-hygiene-int",
+      "source": "001-006-local-hygiene-int.lts",
+      "ts": "sha256:a9bf5a2d83cff07d98ec433adeaece602ec73997c836c43878880d507525369c",
+      "c": "sha256:36456803ac935140a20e2ad743f720b0985a3f700ad951db93d0bd8c07843f7e"
+    },
+    {
+      "name": "local-hygiene-string",
+      "source": "001-006-local-hygiene-string.lts",
+      "ts": "sha256:74ed691f10b2d4be9c38079e20199f4b5e59c88523d9dd26fadd19c3ee6ec584",
+      "c": "sha256:4c0499e2f455458a9eaee61543cdc0cdc55986b2e8a8802617a715e0fc0b1e57"
+    },
+    {
+      "name": "local-macro-name",
+      "source": "001-006-local-macro-name.lts",
+      "ts": "sha256:2dca745ea069515f70c02e601aaa9f3a49fa570f9baec30250c4f3ba070f2033",
+      "c": "sha256:86ae6809b45297bd3def1d2867bb98528478552ac3cda9f5c861a45601bc1ab7"
+    },
+    {
+      "name": "report-empty-value",
+      "source": "001-006-report-empty-value.lts",
+      "ts": "sha256:169ce20a487f1d475c1b21f48745e9cbcfabbaf17fc14a67f402a8c6cb247e2e",
+      "c": "sha256:577647794c407ef0d3de4479bfb66d18c3e23f01438a83986da58ce36dab4818"
+    },
+    {
+      "name": "report-literal-sequence",
+      "source": "001-006-report-literal-sequence.lts",
+      "ts": "sha256:e1999b890c80241bb3497bb76795911275b93b7b8c472eb4e66e323f57dc39fd",
+      "c": "sha256:53fffd2c1fb81643d679c4f16c740de1f0a314122ef1e6e3401a12f19d7a97e5"
+    },
+    {
+      "name": "bool-literals-logic",
+      "source": "001-007-bool-literals-logic.lts",
+      "ts": "sha256:0eb2c503d84bd6df5ffb61f1a2d84e53bf82fb6ad0f1fa98600f83c6f1df46d1",
+      "c": "sha256:7a2a6da58ee2cafead043b77fb9e7a46e8b910b0797f208501119d881199dec8"
+    },
+    {
+      "name": "int-comparisons-if-else",
+      "source": "001-007-int-comparisons-if-else.lts",
+      "ts": "sha256:41920bc8bb9368046f9a509e8e4fe4a6fcc5d8a3f755ef1ec218f762e691e374",
+      "c": "sha256:ef39d705a5fa975a988136fe2542dcd78651bfe45b1e589fb1235f0822c0d715"
+    },
+    {
+      "name": "mutable-counter-loop",
+      "source": "001-007-mutable-counter-loop.lts",
+      "ts": "sha256:44cb3a0091aa2a84b7402b78060de4891d62528054a8e689eaa0003a73e14131",
+      "c": "sha256:b4c7e33e8698eab7afeb7fe8f6a71bf7967dad1267be97f1356824d9e013794e"
+    },
+    {
+      "name": "nested-if-in-loop",
+      "source": "001-007-nested-if-in-loop.lts",
+      "ts": "sha256:d627db1c7770855540b802f7f8207a912bb281fa60382b61dc96e7c9830e393d",
+      "c": "sha256:2ec8b2cd949f83e27727d8afd6d77845afba0875916058d7199df4b0d68bbefe"
+    },
+    {
+      "name": "not-precedence",
+      "source": "001-007-not-precedence.lts",
+      "ts": "sha256:93e2a569f0bd216c6cb7392e4ef9fac49c4809a375c721df88c18eb9ec359019",
+      "c": "sha256:eac217c623eb9c4bb824143f91a3ef6f811f88235b45d0c952408858999cbfbc"
+    },
+    {
+      "name": "report-in-loop",
+      "source": "001-007-report-in-loop.lts",
+      "ts": "sha256:fa8879ca959c04e962ebd2f9734363b99f0615a2d65cdd45a1786a95091e4718",
+      "c": "sha256:e3886c3994bc187363e25997b644e086e777e44bb7f2338e3ecb531823e294b7"
+    },
+    {
+      "name": "string-equality-if",
+      "source": "001-007-string-equality-if.lts",
+      "ts": "sha256:55b988cfcf6e7e52fa3b8086ea2984f30cbf947aa11fea826dce04374bb0ebf7",
+      "c": "sha256:1097dfcc008fd8949be11885a8d0faa53b2baaab3582a4c4711511e9ec6d0ca9"
+    },
+    {
+      "name": "runtime-division",
+      "source": "001-009-runtime-division.lts",
+      "ts": "sha256:cc6c7d3be7b8eff866800e9e378de34d3ab5ff62f9d0263bc2ffbce43286ddbf",
+      "c": "sha256:d736ed09462fa56f309da1c4481f4acb1f91a272c2eab8f43b6313acf2a0352f"
+    },
+    {
+      "name": "runtime-remainder",
+      "source": "001-009-runtime-remainder.lts",
+      "ts": "sha256:ab87fafd5d92b4d66cbec2b5bf53ba7db8fa7c4fe92d29ffa47a71bb6cb24b8c",
+      "c": "sha256:92ca2815d9a3849c64f5619c115b6ef4cb4c4ec4b90f0fb93ea7f1beef609bbc"
+    },
+    {
+      "name": "runtime-string-concat",
+      "source": "001-010-runtime-string-concat.lts",
+      "ts": "sha256:d4d74d6a232042d23d3621c4085f51b49e4f55c7652c37232b5be82fa3116114",
+      "c": "sha256:f6b847aa713ce6d18ce00527f26946a64665e3727a6b9ab4da0890d67548838f"
+    }
+  ]
+}

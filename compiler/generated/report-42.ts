@@ -1,5 +1,6 @@
 export function main(): string {
     let lite_out = "";
-    lite_out += (42n).toString() + "\n";
+    const lite$report0 = (42n).toString();
+    lite_out += lite$report0 + "\n";
     return lite_out;
 }

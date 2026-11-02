@@ -288,7 +288,7 @@ emitIntDivisionHelpers := fn(items: Items): Unit {
     return;
 }
 
-/** Emits the TS module from the flat item stream. Locals become const/let declarations, control flow becomes braces, and reports append to and return `lite_out`. */
+/** Emits the TS module from the flat item stream. Report arguments evaluate once, left to right, before reading and appending to `lite_out`, preserving reports made by argument calls. */
 emitProgram := fn(items: Items): Unit {
     hasExit := usesBuiltin(items, "exit");
     if hasExit {
@@ -304,6 +304,7 @@ emitProgram := fn(items: Items): Unit {
     var indent := "    ";
     var line := "";
     var count := 0;
+    var reportIndex := 0;
     loop items as item {
         if item.kind == "FunctionStart" {
             report(indent + "function " + item.runtime + "(" + tsParameterList(item.textValue) + "): " +
@@ -380,7 +381,10 @@ emitProgram := fn(items: Items): Unit {
             indent = dedent(indent);
             report(indent + "}");
         } else if item.kind == "End" {
-            report(indent + "lite_out += " + line + " + \"\\n\";");
+            temporary := "lite$report" + intText(reportIndex);
+            report(indent + "const " + temporary + " = " + line + ";");
+            report(indent + "lite_out += " + temporary + " + \"\\n\";");
+            reportIndex = reportIndex + 1;
             line = "";
             count = 0;
         } else {

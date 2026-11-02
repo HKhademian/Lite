@@ -9,9 +9,40 @@ import { loadBundle } from '../../igniter/loader.ts';
 import { buildCompiler, buildTsCompiler, compileTarget, compileTs, type CompilerTarget } from '../host.ts';
 import { seed } from '../bootstrap/seed.ts';
 import { cSeed } from '../bootstrap/c-seed.ts';
+import { runText } from '../../igniter/bootstrap.ts';
+import { runTsArtifact } from '../../igniter/artifacts.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env['PATH'] ?? '') };
+
+test('generated reports evaluate arguments once in order and preserve nested output', () => {
+  const cases = [
+    { source: 'f := fn(): Int { report("inner"); 7 } report("before"); report(f()); report("after");',
+      stdout: 'before\ninner\n7\nafter\n', status: 0 },
+    { source: 'echo := fn(n: Int): Int { report("arg", n); n } report(echo(1), echo(2), echo(3));',
+      stdout: 'arg 1\narg 2\narg 3\n1 2 3\n', status: 0 },
+    { source: 'f := fn(n: Int): Int { if n > 0 { report(n, self(n - 1)); } n } report(f(2));',
+      stdout: '1 0\n2 1\n2\n', status: 0 },
+    { source: 'text := fn(): String { report("text"); "🙂" } flag := fn(): Bool { report("flag"); true } ' +
+        'loop [1, 2] as n { report(n, text(), flag()); }',
+      stdout: 'text\nflag\n1 🙂 true\ntext\nflag\n2 🙂 true\n', status: 0 },
+    { source: 'f := fn(): Int { report("inner"); 7 } report(f()); exit(3);',
+      stdout: 'inner\n7\n', status: 3 },
+    { source: 'stop := fn(): Int { report("stopped"); exit(4); 9 } report("before"); report("outer", stop());',
+      stdout: 'before\nstopped\n', status: 4 },
+  ];
+  for (const { source, stdout, status } of cases) {
+    const expected = runText(source);
+    assert.deepEqual(expected, { status, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0) });
+    const compiled = compileTs({ text: source });
+    assert.equal(compiled.status, 0, compiled.stderr.toString());
+    assert.equal(compiled.stderr.length, 0);
+    const actual = runTsArtifact(compiled.stdout.toString());
+    assert.equal(actual.phase, 'run', actual.stdout.toString() + actual.stderr.toString());
+    assert.equal(actual.signal, null);
+    assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+  }
+});
 
 /** Copies only host glue, the seed and Lite sources; the T00 implementation is deliberately absent. */
 function isolatedCheckout(): string {

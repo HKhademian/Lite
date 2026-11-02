@@ -1,19 +1,25 @@
 /** Current verified TS seed; exact historical identities remain in Git and the parity ledger. */
 export const seed = Object.freeze({
   "artifact": "T11.ts",
-  "artifactSha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
-  "sourceSha256": "17e53ce5a8eb6a603b84e25af67378c58a6bdec6d9914200c80f056931f8d74f",
-  "sourceBytes": 156236,
-  "artifactBytes": 245146,
-  "revision": "7e64da2ef001e431c85d384a33a3e1c9de857851",
-  "sourceRevision": "7e64da2ef001e431c85d384a33a3e1c9de857851",
-  "artifactRevision": "7e64da2ef001e431c85d384a33a3e1c9de857851",
-  "sourceBaseRevision": "6c6b55b4d23a54b95697cabac7484b5aa70dec97",
-  "sourceSnapshot": "exact committed source at sourceRevision, identified by sourceSha256",
+  "artifactSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c",
+  "sourceSha256": "70918b20caf5a8f89fe56127f9bce52550e7e9f80542aa35f555384585524f10",
+  "sourceBytes": 156467,
+  "artifactBytes": 253122,
+  "revision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+  "sourceRevision": "source snapshot committed with this seed; see sourceSha256",
+  "artifactRevision": "artifact committed with this seed; see artifactSha256",
+  "sourceBaseRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+  "sourceSnapshot": "report-order source snapshot based on sourceBaseRevision, identified by sourceSha256",
   "sourceManifest": "compiler/manifests/ts.json",
-  "builder": "T00 at builderRevision executing the Lite source snapshot; two further TS self-compilation generations are byte-identical",
-  "builderRevision": "6c6b55b4d23a54b95697cabac7484b5aa70dec97",
+  "builder": "T00 at builderRevision executing the Lite source snapshot; independently rebuilt from the previous generated seed through the recorded transitional compiler",
+  "builderRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
   "recordedNode": "v24.16.0",
   "typescript": "7.0.2",
-  "fixedPoint": "stage1 == stage2 == stage3 for this source snapshot; historical T11/T12 identities remain in the parity ledger"
+  "fixedPoint": "stage1 == stage2 == stage3 for this source snapshot; see reports/2026-11-02-report-order-ladder.json",
+  "generatedRefresh": {
+    "previousSeedSha256": "56d99755c2c816305136da6c54299e2d61e6ff3ab215817a4fd479f85cd6361c",
+    "previousSeedRevision": "d82cfe348889deb7518e8298c2e0cfbf88322069",
+    "transitionalCompilerSha256": "b92698c1850f82882dd01c1e96130abefd09363fee18109c4345847324769560",
+    "artifactSha256": "49ac81d68078c8f4c189391a4979e84c2fec353c1589cb747c75bdbd61111b9c"
+  }
 });
