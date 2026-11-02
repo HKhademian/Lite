@@ -3,13 +3,19 @@
 An experimental TypeScript interpreter for the first Lite FVP checkpoints.
 Keep active handwritten host development minimal; move compiler development into
 Lite as soon as the supported subset and TS emission permit, keeping the igniter
-alongside it until the self-hosted path is satisfactory. Preserve this readable TS
-bootstrap permanently. TS remains a maintained web target and C the first native/
-export target; full self-hosting and library export are not implemented yet.
+alongside it until its supported features have replacements. TS compilation now
+defaults to the verified generated [T11 bootstrap](../compiler/bootstrap/README.md);
+the TS verifier uses it too. T00 still handles `lite run`, `lite check`, C-emitter
+execution and interpreter regressions. The [transition plan](../compiler/transition-plan.md)
+tracks migration, feature parity and eventual T00 removal from the active tree,
+with its original seed/source preserved in Git history. TS remains a maintained
+web target and C the first native/export target; native self-hosting and library
+export are not implemented yet.
 
 The staged compiler-bootstrap path and agent gates are recorded in the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
-this igniter's supported language or claim a self-hosted result.
+this igniter's supported language. The recorded T11/T12 fixed point covers the
+bootstrap subset, not all existing T00 features or the C ladder.
 
 ## Run
 

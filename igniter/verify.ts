@@ -5,8 +5,9 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { compile, execute, LiteFault } from './lite.ts';
-import { loadSource } from './loader.ts';
+import { loadBundle, loadSource } from './loader.ts';
 import { loadCompiler } from './bootstrap.ts';
+import { compileTs } from '../compiler/host.ts';
 
 type Stream = Readonly<{ text?: string; bytes?: readonly number[]; file?: string; hash?: string }>;
 type Source = Readonly<{ file?: string; text?: string; bytes?: readonly number[]; hash?: string }>;
@@ -307,6 +308,12 @@ const runtimeHash = createHash('sha256')
   .update(readFileSync(resolve(root, 'igniter/lite.ts')))
   .update(readFileSync(resolve(root, 'igniter/loader.ts')))
   .update(readFileSync(resolve(root, 'igniter/verify.ts')))
+  .update(readFileSync(resolve(root, 'compiler/host.ts')))
+  .update(readFileSync(resolve(root, 'compiler/entry.ts')))
+  .update(readFileSync(resolve(root, 'compiler/bootstrap/seed.ts')))
+  .update(readFileSync(resolve(root, 'compiler/bootstrap/T11.ts')))
+  .update(loadBundle(resolve(root, 'compiler/manifests/ts.json')).text)
+  .update(loadBundle(resolve(root, 'compiler/manifests/c.json')).text)
   .update(process.version)
   .digest('hex');
 
@@ -549,6 +556,13 @@ const compilerPrograms = new Map<string, ReturnType<typeof loadCompiler>>();
 
 /** Compiles one compiler application and runs it over the feature source. */
 function compilerEmit(manifestPath: string, source: string): string {
+  if (manifestPath === resolve(root, 'compiler/manifests/ts.json')) {
+    const result = compileTs({ text: source });
+    if (result.status !== 0) {
+      throw new Error(`compiler exited ${result.status}: ${result.stderr.toString('utf8').trim()}`);
+    }
+    return result.stdout.toString('utf8');
+  }
   let compiler = compilerPrograms.get(manifestPath);
   if (compiler === undefined) {
     compiler = loadCompiler(manifestPath);

@@ -5,8 +5,20 @@ TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
 Immediate scope: the bootstrap subset L, S, and the 53 program / 39 rejection
-cases. Replacing the TS igniter for features outside L is a larger owner
-decision and is not assumed here.
+cases. The owner approved starting full T00 replacement on 2026-11-02; existing
+features beyond L remain pending work in the [transition plan](transition-plan.md).
+
+## Default compiler transition
+
+TS compilation and the verifier's TS emission use the checked-in
+[T11 seed](bootstrap/README.md), with exact artifact/source identity checks.
+Changed S is rebuilt by T11 into a strictly checked, source-keyed cache; there
+is no implicit T00 fallback. The historical T00 ladder remains an explicit
+audit through `igniter/bundle-cli.ts`, so its node labels remain accurate.
+
+C emission, interpreter run/check and the interpreter regression tests still use
+T00. Native C01/C21 and T13 remain unrecorded. This first transition slice does
+not complete feature parity or authorize deleting T00 before its replacements pass.
 
 ## Terms
 
@@ -47,8 +59,8 @@ T23 = CompileTS(C22, lite)
 The owner's `T1 == T2 == T3` shorthand maps to the defined
 `T11 == T12 == T13` nodes.
 
-**Immediate priority: T00 → T11 → T12.** Stop after T12 is recorded; do not
-start C01/P7 first. T11 is stage 0 running S on S and emitting TS. T12 is T11
+**Original priority: T00 → T11 → T12.** These two artifacts are now recorded;
+the owner-approved default-host transition above follows. T11 is stage 0 running S on S and emitting TS. T12 is T11
 running on S and emitting TS. A TS artifact and its execution are the deliverable;
 no separate IR artifact is produced.
 
@@ -71,7 +83,9 @@ TS ladder record, 2026-11-02:
 | T11 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
 | T12 | 243 216 | `8273ce69973afb8beb25052dc2c8ef4b0682c00f4af866623ece751531b15e39` |
 
-T11 was produced by `./litec ts` from S. T12 was produced by T11 running on the
+T11 was originally produced by `./litec ts` from S while that launcher used T00.
+Historical reproduction now uses `node igniter/bundle-cli.ts ts S.lts` explicitly.
+T12 was produced by T11 running on the
 same S after a strict artifact typecheck. Both artifacts ran the probe source and
 their emitted TS matched stage 0 byte for byte. T13 is the next TS node; it is
 expected to equal T11/T12 but is not recorded yet.
@@ -98,7 +112,7 @@ TS ladder commands:
 # S is the ordered TS manifest bundle.
 node --input-type=module -e 'import {loadBundle} from "./igniter/loader.ts"; process.stdout.write(loadBundle("compiler/manifests/ts.json").text);' > /tmp/S.lts
 # T11 = stage 0 compiling S.
-./litec ts /tmp/S.lts > /tmp/T11.ts
+node igniter/bundle-cli.ts ts /tmp/S.lts > /tmp/T11.ts
 # T12 = T11 compiling S; the runner typechecks T11 strictly first.
 node compiler/scripts/run-ts-artifact.mjs --artifact /tmp/T11.ts --source /tmp/S.lts --out /tmp/T12.ts
 shasum -a 256 /tmp/S.lts /tmp/T11.ts /tmp/T12.ts
@@ -146,9 +160,9 @@ slice, then give stage 0 only the minimal execution support needed to run S.
 | Igniter-only surface: Float, fixed arrays, `match`, loop metadata, `finally`, compound updates, closures and other non-L forms | yes | no | no | frozen; do not add more; port only by owner decision |
 | New capability | no | no | no | Lite-first owner decision; never stage-0-first |
 
-The bootstrap parity gate needs only the first row. Full replacement of the TS
-igniter for every existing feature is a separate, larger decision; the freeze
-keeps that target from growing while it is approached.
+The bootstrap parity gate needs only the first row. The owner-approved transition
+also includes porting existing T00 features, but that work remains pending; the
+freeze prevents the target from growing while it is approached.
 
 ## Current state
 

@@ -1,0 +1,10 @@
+{
+  "extends": "../../igniter/tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "typeRoots": [],
+    "lib": ["ESNext"]
+  },
+  "include": [],
+  "files": ["T11.ts"]
+}

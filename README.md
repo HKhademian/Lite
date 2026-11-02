@@ -16,12 +16,16 @@ The wider language remains a design draft. The first Lite-written compiler stage
 now lives in [compiler/](compiler/README.md): a shared restricted front-end with
 TypeScript and C backends. Run it with `./ltc --target ts file.lts` (short),
 `./litec` (full binary), or `./lite compile` (CLI). It supports
-Int/String/Bool expressions, immutable and mutable locals, `if`/`else`, Boolean
-and unconditional `loop`, and multi-value reports. Fifty-two program cases have
-identical output bytes/status across the igniter, TS and native C paths, and 40
-rejection cases check exact compiler diagnostics. Each case pairs a sibling `.lts` entry source with a JSON
-model under [igniter/tests/compiler](igniter/tests/compiler/). These restricted
-prototypes are not a full/self-hosted compiler.
+the bootstrap subset, including functions, flat named tuples and lists on the TS
+path. TS compilation now defaults to the verified Lite-generated **T11** compiler;
+the 53 program and 39 rejection compiler cases match stage 0 exactly. Its source
+and builder identities are preserved in the [bootstrap seed](compiler/bootstrap/README.md).
+Changed Lite compiler source rebuilds through that seed before use. C emission
+still runs its smaller subset under T00; `lite run` and `lite check` also retain
+T00 until their existing features have replacements. The
+[transition plan](compiler/transition-plan.md) tracks C host migration, existing
+feature parity, native self-hosting and eventual T00 retirement. No full-language
+or native self-hosting claim follows from the TS bootstrap fixed point.
 
 Tool entry points follow one naming matrix: compiler `./ltc`, `./litec` or
 `./lite compile`; runner `./lite run`; checker `./lite check`. Linker

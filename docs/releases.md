@@ -12,6 +12,15 @@ each milestone. Do not move or delete a published tag; corrections get a new
 version. Detailed milestone prose remains in the
 [igniter bootstrap history](../igniter/README.md#bootstrap-milestone).
 
+Unreleased, 2026-11-02: the owner-approved
+[T11 transition](../compiler/transition-plan.md) makes the verified generated T11
+seed the default TS compiler and TS verification emitter. The exact seed and
+source/builder hashes are [preserved](../compiler/bootstrap/README.md); source
+changes rebuild with T11 rather than silently using an older artifact or T00.
+C emission and interpreter run/check remain on T00. This is a tooling migration,
+not a language release, new tag, full-feature parity or native self-hosting claim.
+Four host migration tests join the existing 234 interpreter groups in `lite test`.
+
 | Tag | Date | Commit | Milestone |
 |---|---|---|---|
 | `igniter-v0.1.0-alpha.1` | 2026-10-30 | `8c74537` | First experimental TypeScript/Node igniter checkpoint; Node 26.13.0, TypeScript 7.0.2; strict checking and 15 test groups pass. No self-hosted successor compiler yet. |

@@ -2,6 +2,26 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## T11 default compiler and staged T00 retirement, 2026-11-02
+
+The owner approved starting the transition after the T11/T12 fixed point and
+compiler benchmark: make T11 the default bootstrap compiler, migrate CLI/build/
+verification callers, port existing T00 features into the Lite compiler, complete
+native C self-hosting and cross-host parity, then remove the handwritten T00
+implementation from the active tree while preserving its exact seed/source in
+tagged Git history. This replaces the earlier assumption that active T00 source
+must remain shipped forever; published tags remain immutable.
+
+The first slice selects a checked-in, readable generated T11 seed with recorded
+artifact/source hashes and builder revision. Default TS compilation and TS
+verification use that seed/current Lite compiler; changed S rebuilds with T11
+and is strictly checked before use. There is no implicit T00 fallback. C emission,
+run/check and interpreter regression tests remain on T00 until their replacement
+gates pass. Existing-feature ports are approved scope, not proof of parity already
+achieved; no new syntax, builtin, observable semantics or compiler release/tag
+stream is selected. See the [transition plan](../compiler/transition-plan.md) and
+[seed provenance](../compiler/bootstrap/README.md).
+
 ## Power association and Float-default result, 2026-11-01
 
 `**` is right-associative: `2 ** 3 ** 2` reads as `2 ** (3 ** 2) = 512`.

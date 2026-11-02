@@ -264,8 +264,9 @@ The compiler implementation now lives in
 [`compiler/`](../compiler/README.md), not in runnable examples. Its source is
 split under `compiler/src/` and assembled by ordered manifests: L0 libraries,
 target literal encoders, shared front-end, target emitter and target driver.
-`litec` compiles the manifest bundle through
-[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts); there is no module/import
+`litec` enters through [`compiler/cli.ts`](../compiler/cli.ts): TS uses the
+verified T11 seed/current Lite compiler; C still delegates to
+[`igniter/bundle-cli.ts`](../igniter/bundle-cli.ts) during host migration. There is no module/import
 syntax, and compiler source no longer uses `importFlatAll`. Access is
 `./litec --target ts|c file.lts`, `./lite compile ...`, or the short `./ltc`
 command. This removes the duplicated parser/checker while keeping separate
@@ -311,8 +312,14 @@ a permanent shippable readable TS bootstrap, source provenance and fixed tags.
 TypeScript remains an important maintained web target, while C is the selected
 first native target and a maintained library/project export and migration path.
 Possible AssemblyScript/early Wasm support needs its own compatibility checks.
-This target direction is selected; a complete self-hosted compiler snapshot and
-verified compiler-to-compiler rebuild chain do not exist yet. The staged
+Update **2026-11-02**: T11/T12 are recorded byte-identical for the bootstrap
+subset, and the owner approved the [transition](../compiler/transition-plan.md)
+to T11 as the default TS compiler, followed by C host migration, existing-feature
+parity, native self-hosting and eventual T00 retirement. The readable generated
+TS seed is shipped with exact source/builder hashes; the original T00 route and
+published tags remain preserved. Default TS compilation has no automatic T00
+fallback. T13, native C fixed points and full existing-feature parity remain
+unverified. The staged
 implementation route, agent gates and definition of done are in the
 [bootstrap and self-hosting plan](bootstrap-plan.md); it records implementation
 defaults without selecting new language, module or std rules.

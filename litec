@@ -1,5 +1,5 @@
 #!/bin/sh
-# litec: temporary Lite-written compiler driver. Selects the TS or C backend.
+# litec: Lite-written compiler driver. TS uses T11; C awaits host migration.
 lite_dir=$(CDPATH= cd -P -- "$(dirname -- "$0")" && pwd) || exit 1
 
 usage() {
@@ -43,4 +43,4 @@ source=$1
 case "$source" in *.lts) ;; *) printf '%s\n' 'litec: source must be a .lts file' >&2; exit 2 ;; esac
 [ -f "$source" ] || { printf '%s\n' "litec: cannot read $source" >&2; exit 2; }
 
-exec node "$lite_dir/igniter/bundle-cli.ts" "$target" "$source"
+exec node "$lite_dir/compiler/cli.ts" "$target" "$source"

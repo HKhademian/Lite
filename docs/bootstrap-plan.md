@@ -51,7 +51,19 @@ The explicit T11-T13, C01/C21-C23 and T21-T23 ladder and its completion
 equalities are recorded in
 [`compiler/parity.md`](../compiler/parity.md#bootstrap-ladder).
 
-## Current baseline
+## Current transition, 2026-11-02
+
+The owner approved starting the [T11/C transition](../compiler/transition-plan.md)
+after the recorded T11/T12 fixed point and performance comparison. TS compilation
+and TS verification now select the preserved [T11 seed](../compiler/bootstrap/README.md)
+without executing T00. Changed S is rebuilt by T11 and strictly checked before
+use; artifact/source identities prevent stale or corrupt compiler selection.
+C emission, run/check and interpreter regressions still depend on T00. Feature
+parity, the native C ladder, T13 and eventual T00 removal remain pending.
+
+## Historical P0 baseline, 2026-11-01
+
+The counts and implementation limits below describe P0, not the current compiler.
 
 - Igniter **0.1.0-alpha.38**, tag `igniter-v0.1.0-alpha.38`.
 - **234** interpreter test groups and **9** editor grammar groups; the fast lane
@@ -79,7 +91,8 @@ new documents.
 2026-11-01; update this line when a gate is completed and use the phase
 checklists as the source of truth.
 
-**Critical path priority (owner direction, 2026-11-01): T00 → T11 → T12.**
+**Original critical path (owner direction, 2026-11-01): T00 → T11 → T12.**
+T11/T12 are recorded; the 2026-11-02 transition above is the current host work.
 Do not start the C emitter (P7) or packaging (P9) until both T11 and T12 are
 recorded. The deliverables are TS artifacts: S emitted through stage 0 is T11;
 T11 compiling S again is T12. No separate IR artifact is required.
@@ -524,7 +537,8 @@ the point.
 - [ ] Update `docs/releases.md`, the component READMEs, the specification stage
       lines and this plan.
 - [ ] Document unsupported constructs, host prerequisites and rebuild limits.
-- [ ] Keep the readable TypeScript bootstrap shipped.
+- [x] Keep the verified generated T11 seed shipped with exact source/builder hashes.
+      T00 remains active until the transition's feature and consumer gates pass.
 
 **Gate:** a clean checkout rebuilds the chain and reproduces the recorded hashes;
 a reviewer can follow the commands without guessing.
@@ -688,7 +702,8 @@ The point is reached only when all of these are true:
 9. No stage-1+ runtime dependency on stage 0 or the Lite compiler.
 10. A clean checkout reproduces the artifacts and hashes.
 11. Tags, source/builder map, provenance and limitations are recorded.
-12. The readable TypeScript bootstrap remains preserved.
+12. A readable generated TypeScript seed remains shipped. T00's exact seed/source
+    remains reproducible from Git history after the approved retirement gates.
 
 ## Decisions and stop points
 
@@ -706,7 +721,7 @@ The point is reached only when all of these are true:
 | D10 | Records/enums/`match` become necessary for the AST/checker | **stop and ask** |
 | D11 | Modules/imports become necessary for compiler self-assembly | **stop and ask** |
 | D12 | Host file/process APIs become necessary for the CLI | **stop and ask** |
-| D13 | Compiler release tag stream and artifact check-in policy | **stop and ask** |
+| D13 | Compiler release tag stream and artifact check-in policy | T11 seed check-in selected by owner-approved transition 2026-11-02; release tag stream remains open |
 | D14 | C memory model (arena/refcount/free) | choose at P7 and record |
 | D15 | Stage 0 feature freeze and Lite-first lockstep parity (B8/B11) | owner direction 2026-11-01; changing it requires owner |
 

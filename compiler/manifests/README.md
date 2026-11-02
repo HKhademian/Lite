@@ -2,7 +2,9 @@
 
 Status: **P4 implemented, 2026-11-01**. The bundle loader lives in
 [`../../igniter/loader.ts`](../../igniter/loader.ts); the internal driver,
-harness and `litec` bundle entry live under [`../../igniter/`](../../igniter/).
+harness remain under [`../../igniter/`](../../igniter/). The default `litec`
+entry is now [`../cli.ts`](../cli.ts): TS uses T11 through the
+[current compiler host](../host.ts), while C still uses the legacy bundle driver.
 No public `bootstrap` command is exposed.
 
 A manifest is the ordered assembly description for one bootstrap target. It

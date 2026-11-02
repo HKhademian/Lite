@@ -3,7 +3,7 @@
  * Runs the TS bootstrap ladder end to end and reports the artifact hashes.
  *
  *   S   = the ordered TS manifest bundle
- *   T11 = stage-0 `litec` compiling S
+ *   T11 = explicit stage-0 bundle driver compiling S (not the default CLI)
  *   T12 = T11 compiling S, after a strict artifact typecheck
  *
  * Usage:
@@ -65,7 +65,8 @@ if (bundle.status !== 0) {
 const sourcePath = join(outDirectory, 'S.lts');
 writeFileSync(sourcePath, bundle.stdout ?? Buffer.alloc(0));
 
-const stage0 = run(join(repository, 'litec'), ['ts', sourcePath]);
+// The default litec now uses T11. Keep this historical audit's T00 builder explicit.
+const stage0 = run(process.execPath, [join(repository, 'igniter', 'bundle-cli.ts'), 'ts', sourcePath]);
 const t11Path = join(outDirectory, 'T11.ts');
 writeFileSync(t11Path, stage0.stdout);
 writeFileSync(`${t11Path}.err`, stage0.stderr);
