@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/gaps.md\n M compiler/generated/current-artifacts.json\n M compiler/manifests/c.json\n M compiler/manifests/ts.json\n M compiler/reports/current-t00-t11-inventory.json\n M compiler/reports/current-t00-t11-inventory.md\n M compiler/src/c-literals.lts\n M compiler/src/check.lts\n M compiler/src/emit-c.lts\n M compiler/src/frontend.lts\n M compiler/src/lexer.lts\nAM compiler/src/numeric-literals.lts\n M compiler/src/parser.lts\n M compiler/src/ts-literals.lts\n M compiler/tests/checker/checker-dump.lts\n M compiler/tests/host.test.ts\n M compiler/tests/lexer/lexer-dump.lts\n M compiler/tests/parser/parser-decl-dump.lts\n M compiler/tests/parser/parser-dump.lts\n M compiler/tests/parser/parser-program-dump.lts\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/numbers.md\n M docs/releases.md\n M docs/spec/README.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nRM igniter/tests/compiler/002-001-decimal-literal.json -> igniter/tests/compiler/001-001-decimal-literal.json\nR  igniter/tests/compiler/002-001-decimal-literal.lts -> igniter/tests/compiler/001-001-decimal-literal.lts\nRM igniter/tests/compiler/002-001-exponent-literal.json -> igniter/tests/compiler/001-001-exponent-literal.json\nR  igniter/tests/compiler/002-001-exponent-literal.lts -> igniter/tests/compiler/001-001-exponent-literal.lts\n M igniter/tests/compiler/002-001-report-missing-expression.json\n M igniter/tests/compiler/002-002-unary-minus-string.json\n M igniter/tests/compiler/002-006-unsupported-loop.json\n?? compiler/reports/2026-11-02-float-literals-ladder.json\n",
   "compilerSourceSha256": "88ca3169f1106ff609248688a78e756d59f6286f58169d54b70821653113d064",
-  "compilerSourceRevision": "Float-literal source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "97ef6650874198a30f3bc94950a0630fd2440571",
   "node": "v24.16.0",
   "t11Sha256": "554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49",
   "rows": [
@@ -9538,5 +9538,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerRevisionResolution": "Source/artifact revision resolved after committing the audited snapshot; audit base and working-tree state above remain unchanged."
 }

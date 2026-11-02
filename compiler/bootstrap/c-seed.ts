@@ -8,9 +8,9 @@ export const cSeed = Object.freeze({
   "builderSha256": "554f6e1c20cbf62f24eac56a051ab678ed1b728af2b31715ce55db9ecd860f49",
   "native": false,
   "sourceManifest": "compiler/manifests/c.json",
-  "sourceRevision": "Float-literal source snapshot committed with this seed; see sourceSha256",
-  "artifactRevision": "Float-literal artifact committed with this seed; see artifactSha256",
-  "builderRevision": "Current float-literal TS seed; see builderSha256",
+  "sourceRevision": "97ef6650874198a30f3bc94950a0630fd2440571",
+  "artifactRevision": "97ef6650874198a30f3bc94950a0630fd2440571",
+  "builderRevision": "97ef6650874198a30f3bc94950a0630fd2440571",
   "builder": "Refreshed generated TS compiler compiling current Lite C emitter",
   "node": "v24.16.0",
   "typescript": "7.0.2"
