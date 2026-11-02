@@ -7,7 +7,7 @@
   "workingTreeDirtyAtStart": true,
   "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M igniter/test.ts\nR  igniter/tests/compiler/002-001-report-missing-argument.json -> igniter/tests/compiler/001-001-report-missing-argument.json\nR  igniter/tests/compiler/002-001-report-missing-argument.lts -> igniter/tests/compiler/001-001-report-missing-argument.lts\n?? compiler/reports/2026-11-02-trailing-commas-ladder.json\n",
   "compilerSourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
-  "compilerSourceRevision": "Trailing-comma source snapshot committed with this seed; see sourceSha256",
+  "compilerSourceRevision": "33e45bc87aa7b1ce58646a00429da8d25d6880ae",
   "node": "v24.16.0",
   "t11Sha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
   "rows": [
@@ -9372,5 +9372,6 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  }
+  },
+  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
 }
