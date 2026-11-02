@@ -429,7 +429,7 @@
     "id": "call.trailing-comma",
     "summary": "Trailing comma in a call argument list",
     "source": "outputLine(1,);",
-    "test": "compiler fixture 002-001-report-missing-argument.lts"
+    "test": "compiler fixture 001-001-report-missing-argument.lts"
   },
   {
     "id": "scope.same-block-shadow",

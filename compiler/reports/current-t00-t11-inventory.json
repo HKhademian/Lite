@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "startedAt": "2026-11-02T17:02:24.804Z",
-  "revision": "7caf511a4997379ae514b408ae012db1abd8863b",
+  "startedAt": "2026-11-02T17:12:15.713Z",
+  "revision": "ffe27eca92049c31d98e5e4e64d05602cbeb58e9",
   "revisionMeaning": "HEAD at audit start; artifact and per-source hashes identify the measured inputs",
   "workingTreeDirtyAtStart": true,
-  "worktreeStatusAtStart": " M compiler/README.md\n M compiler/bootstrap/README.md\n M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/parity.md\n M compiler/src/frontend.lts\n M compiler/src/parser.lts\n M compiler/tests/host.test.ts\n M compiler/tests/t00-t11-probes.json\n M compiler/ts-emitter.lts\n M docs/bootstrap-plan.md\n M docs/releases.md\n M docs/spec/README.md\n M docs/strings.md\n M igniter/README.md\n M igniter/test.ts\n M igniter/tests/README.md\nR  igniter/tests/compiler/002-001-adjacent-strings.json -> igniter/tests/compiler/001-001-adjacent-strings.json\nR  igniter/tests/compiler/002-001-adjacent-strings.lts -> igniter/tests/compiler/001-001-adjacent-strings.lts\n?? compiler/reports/2026-11-02-adjacent-strings-ladder.json\n",
-  "compilerSourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
-  "compilerSourceRevision": "e295ddedd16ee601efb9229f83cd390c4457a640",
+  "worktreeStatusAtStart": " M compiler/bootstrap/T11.ts\n M compiler/bootstrap/c-emitter.ts\n M compiler/bootstrap/c-seed.ts\n M compiler/bootstrap/seed.ts\n M compiler/c-emitter.lts\n M compiler/generated/current-artifacts.json\n M compiler/src/frontend.lts\n M compiler/tests/host.test.ts\n M compiler/ts-emitter.lts\n M igniter/test.ts\nR  igniter/tests/compiler/002-001-report-missing-argument.json -> igniter/tests/compiler/001-001-report-missing-argument.json\nR  igniter/tests/compiler/002-001-report-missing-argument.lts -> igniter/tests/compiler/001-001-report-missing-argument.lts\n?? compiler/reports/2026-11-02-trailing-commas-ladder.json\n",
+  "compilerSourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
+  "compilerSourceRevision": "Trailing-comma source snapshot committed with this seed; see sourceSha256",
   "node": "v24.16.0",
-  "t11Sha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
+  "t11Sha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
   "rows": [
     {
       "id": "int.arithmetic",
@@ -5989,14 +5989,14 @@
       "id": "call.trailing-comma",
       "kind": "probe",
       "summary": "Trailing comma in a call argument list",
-      "test": "compiler fixture 002-001-report-missing-argument.lts",
+      "test": "compiler fixture 001-001-report-missing-argument.lts",
       "features": [],
       "sourceSha256": "ec42616c982977d15e63e12fb68f90e6353f7f302c27e5fa90b71c83c655034f",
       "source": "outputLine(1,);",
       "t00Check": {
         "accepted": true
       },
-      "status": "rejected",
+      "status": "matches",
       "cases": [
         {
           "name": "boundary",
@@ -6007,14 +6007,27 @@
             "stdout": "1\n",
             "stderr": "",
             "signal": null
-          }
+          },
+          "t11": {
+            "status": 0,
+            "signal": null,
+            "stdout": "1\n",
+            "stderr": ""
+          },
+          "matches": true
         }
       ],
       "t11Compile": {
-        "status": 2,
+        "status": 0,
+        "signal": null,
+        "stdout": "export function main(lite$write?: (text: string) => void): string {\n    let lite_out = \"\";\n    function lite$emit(text: string): void {\n        if (lite$write === undefined) lite_out += text;\n        else lite$write(text);\n    }\n    void lite$emit;\n    const lite$report0 = (1n).toString();\n    lite$emit(lite$report0 + \"\\n\");\n    return lite_out;\n}\n",
+        "stderr": ""
+      },
+      "artifactTypecheck": {
+        "status": 0,
         "signal": null,
         "stdout": "",
-        "stderr": "1:14: expected an Int, String or Bool expression\n"
+        "stderr": ""
       }
     },
     {
@@ -6776,8 +6789,8 @@
   "sourceFiles": [
     {
       "path": "compiler/c-emitter.lts",
-      "sourceSha256": "5475c59b62328e313de014c4f4bfaba0011e8d85fdbc5766059ee9b179421832",
-      "bytes": 162826,
+      "sourceSha256": "7d9aed5e81347c209b40b8b662f9dac0ee62e0f24d77a8a9c721c536091aa90e",
+      "bytes": 163270,
       "t00Check": {
         "accepted": true
       },
@@ -6786,7 +6799,7 @@
         "status": 0,
         "signal": null,
         "stderr": "",
-        "stdoutBytes": 293216
+        "stdoutBytes": 294092
       },
       "artifactTypecheck": {
         "status": 0,
@@ -6795,7 +6808,7 @@
         "stderr": ""
       },
       "status": "accepted",
-      "artifactSha256": "f6095c09a3f8b8aae5078363d24a106b7c1de1716bb4c6d859260865064151b7"
+      "artifactSha256": "19443f284040d85dfb1c21354dccc254b507eb07cf70100a40ec736b02b4d548"
     },
     {
       "path": "compiler/src/c-literals.lts",
@@ -6859,8 +6872,8 @@
     },
     {
       "path": "compiler/src/frontend.lts",
-      "sourceSha256": "205bba9e8f9a52928803f289932387b25238b2726eed5b0b9f52d6d9b57e6951",
-      "bytes": 124527,
+      "sourceSha256": "84bbfd6b3cde44782bc46ade6e8c77632887fdb6d37458b7ce3055d4364c034e",
+      "bytes": 124971,
       "t00Check": {
         "accepted": false,
         "diagnostic": "TypeError: unknown helper/function lineColumn; forward function lookup is not supported yet"
@@ -7127,8 +7140,8 @@
     },
     {
       "path": "compiler/ts-emitter.lts",
-      "sourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
-      "bytes": 173706,
+      "sourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
+      "bytes": 174150,
       "t00Check": {
         "accepted": true
       },
@@ -7372,6 +7385,22 @@
         "signal": null,
         "stderr": "",
         "stdoutBytes": 351
+      },
+      "status": "accepted"
+    },
+    {
+      "path": "igniter/tests/compiler/001-001-report-missing-argument.lts",
+      "sourceSha256": "251d478c9ff04f740ce8368491106f99e38ce9859a74090e81d77426534e5495",
+      "bytes": 16,
+      "t00Check": {
+        "accepted": true
+      },
+      "coverage": "compile-only",
+      "t11Compile": {
+        "status": 0,
+        "signal": null,
+        "stderr": "",
+        "stdoutBytes": 350
       },
       "status": "accepted"
     },
@@ -8334,22 +8363,6 @@
       "coverage": "not-a-standalone-T00-program"
     },
     {
-      "path": "igniter/tests/compiler/002-001-report-missing-argument.lts",
-      "sourceSha256": "251d478c9ff04f740ce8368491106f99e38ce9859a74090e81d77426534e5495",
-      "bytes": 16,
-      "t00Check": {
-        "accepted": true
-      },
-      "coverage": "compile-only",
-      "t11Compile": {
-        "status": 2,
-        "signal": null,
-        "stderr": "igniter/tests/compiler/002-001-report-missing-argument.lts:1:14: expected an Int, String or Bool expression\n",
-        "stdoutBytes": 0
-      },
-      "status": "rejected"
-    },
-    {
       "path": "igniter/tests/compiler/002-001-report-missing-close.lts",
       "sourceSha256": "f6e43a79efd48a000ebbd4ad8ddcd151e7c54954722c0430d94c81dd44172d8e",
       "bytes": 13,
@@ -9088,8 +9101,8 @@
     },
     "probe": {
       "total": 79,
-      "matches": 31,
-      "rejected": 48,
+      "matches": 32,
+      "rejected": 47,
       "typecheck": 0,
       "mismatch": 0,
       "diagnostic": 0,
@@ -9169,7 +9182,7 @@
     "restricted compiler diagnoses invalid leading and/or forms",
     "restricted compiler compiles list mutation grants, push and pop to runnable TS",
     "restricted compiler treats nested, doc and raw comments as separating trivia",
-    "restricted compiler corpus keeps 65 program and 28 rejection cases",
+    "restricted compiler corpus keeps 66 program and 27 rejection cases",
     "restricted compiler compiles scalar functions, calls and returns to runnable TS",
     "restricted compiler completes scalar functions from tail expressions",
     "restricted compiler completes function tails from Bool literals and calls",
@@ -9349,7 +9362,7 @@
     "type aliases follow single lexical scope with value shadowing and rejection",
     "type alias example runs and checks through the root launcher"
   ],
-  "finishedAt": "2026-11-02T17:03:14.673Z",
+  "finishedAt": "2026-11-02T17:13:05.750Z",
   "status": "complete",
   "method": {
     "compilationTimeoutMs": 20000,
@@ -9359,6 +9372,5 @@
     "probes": "additional existing T00 contracts drawn from interpreter tests; exact source is included for reproduction",
     "sourceFiles": "all tracked .lt/.lts files are checked as standalone T00 programs; files not accepted by T00 are excluded, not called T11 gaps",
     "limits": "Finite corpus and explicit probes, not proof for every program. Compile-only acceptance does not imply runtime parity. T11 remains a restricted compiler."
-  },
-  "compilerSourceRevisionResolution": "Verified after committing the measured source and artifact; audit base/worktree fields are unchanged."
+  }
 }

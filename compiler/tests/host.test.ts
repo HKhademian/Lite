@@ -786,3 +786,54 @@ test('adjacent String literals join across trivia before expressions and encode 
     assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, runText(text, { name }));
   }
 });
+
+test('nonempty calls admit one trailing comma without adding a value or weakening arity', () => {
+  const both = ['outputLine(1,);', 'output(1,); outputLine("x",);', 'outputLine(1, "x", true,);',
+    'outputLine(Unit,);', 'outputLine("a" "b", /* nested /* comment */ */);',
+    'outputLine(0 < 1 < 2,);', 'var x := 7; outputLine(x + 1,);',
+    'if true { outputLine("yes",) }', 'output(); outputLine();'];
+  const tsOnly = ['identity := fn(n: Int): Int { n } outputLine(identity(7,),);',
+    'sum := fn(a: Int, b: Int): Int { a + b } outputLine(sum(2, 3,),);',
+    'touch := fn(n: Int): Int { outputLine(n,); n } add := fn(a: Int, b: Int): Int { a + b } outputLine(add(touch(1,), touch(2,),),);',
+    'outputLine(inputAll("All: ",),);', 'outputLine(inputLine("Line: ",),);',
+    'outputLine(inputInt("Int: ",),);', 'outputLine(inputFloat("Float: ",),);',
+    'outputLine(textLength("ab",), textAt("ab", 1,), textSlice("abcd", 1, 3,),);',
+    'values: mut List<Int> = [1]; push_back(mut values, 2,); outputLine(pop_back(mut values,), pop_back(mut values,),);',
+    'values: List<Int> = [1, 2]; pair := (label = "x", n = 7); outputLine(values, pair,);',
+    'reportError("err",); outputLine("after",);', 'outputLine("before",); exit(3,);'];
+  for (const [sources, targets] of [[both, ['ts', 'c']], [tsOnly, ['ts']]] as const) for (const text of sources) {
+    const stdin = text.includes('inputInt(') ? '7\n' : '1.5\n';
+    const reference = runText(text, { stdin });
+    assert.ok(reference.status === 0 || text.includes('exit(3,') && reference.status === 3, text + reference.stderr.toString());
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text }); assert.equal(compiled.status, 0, text + compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin }) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString()); assert.equal(actual.signal, null);
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, reference, text);
+    }
+  }
+  const invalid = ['outputLine(,);', 'outputLine(1,,);', 'outputLine(,1);', 'outputLine(1,',
+    'inputArgs(,);', 'inputLine(,);', 'inputInt("Prompt", 1,);', 'textAt("x",);',
+    'f := fn(n: Int): Int { n } outputLine(f(,));', 'f := fn(n: Int): Int { n } outputLine(f(1,,));',
+    'f := fn(a: Int, b: Int): Int { a + b } outputLine(f(1,));',
+    'values: mut List<Int> = [1]; push_back(mut values,);', 'values: mut List<Int> = [1]; pop_back(mut values,,);'];
+  for (const text of invalid) {
+    assert.equal(runText(text).status, 1, text);
+    for (const target of ['ts', 'c'] as const) {
+      const result = compileTarget(target, { text }); assert.equal(result.status, 2, text); assert.equal(result.stdout.length, 0);
+    }
+  }
+  for (const text of ['outputLine("before");\nvar zero := 0; outputLine("prefix", 1 / zero,);',
+    'outputLine(inputInt("Int: ",),);', 'values: mut List<Int> = []; outputLine(pop_back(mut values,),);']) {
+    const targets = text.includes('zero') ? ['ts', 'c'] as const : ['ts'] as const, name = 'comma سلام.lts';
+    const expected = runText(text, { name, stdin: 'bad' }); assert.equal(expected.status, 1);
+    for (const target of targets) {
+      const compiled = compileTarget(target, { text, name }); assert.equal(compiled.status, 0, compiled.stderr.toString());
+      if (target === 'c' && process.env['LITE_SKIP_NATIVE'] === '1') continue;
+      const actual = target === 'ts' ? runTsArtifact(compiled.stdout.toString(), { stdin: 'bad' }) : runCArtifact(compiled.stdout.toString());
+      assert.equal(actual.phase, 'run', actual.stderr.toString());
+      assert.deepEqual({ status: actual.status, stdout: actual.stdout, stderr: actual.stderr }, expected);
+    }
+  }
+});

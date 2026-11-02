@@ -1,10 +1,10 @@
 {
-  "note": "Current exact artifacts after adjacent-literal support. Existing 64 program artifact pairs remain unchanged; adjacent literals now compile. Historical checkpoints remain preserved.",
+  "note": "Current exact artifacts after trailing-comma support. Existing 65 program artifact pairs remain unchanged; the trailing-comma fixture now compiles. Historical checkpoints remain preserved.",
   "recorded": "2026-11-02",
-  "sourceSha256": "dd03f09997dab38159bf81ef613b46290674be6b669a710aa39a582f0183d0c6",
-  "compilerSha256": "526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829",
-  "programCases": 65,
-  "rejectedCases": 28,
+  "sourceSha256": "5dc2eb8664ffe5a3bc55d6d9cbafde4de9973d47cf407a22ca5d06a4a5b63b33",
+  "compilerSha256": "3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd",
+  "programCases": 66,
+  "rejectedCases": 27,
   "artifacts": [
     {
       "name": "adjacent-strings",
@@ -59,6 +59,12 @@
       "source": "001-001-report-leading-plus-zeroes.lts",
       "ts": "sha256:5fb05e7e91d97183f219c365e1bbdd188be380e99d7c8663497b60a5c9e33625",
       "c": "sha256:7b245669f9a1bc4a1d81c797e3a4a16268270bffcc67014cf13d18d5b452f101"
+    },
+    {
+      "name": "report-missing-argument",
+      "source": "001-001-report-missing-argument.lts",
+      "ts": "sha256:bcb9a5b754eba67ec3af5ffa5521c024b19b6e5c0c340a2f2cac0f9a0c15f90c",
+      "c": "sha256:e97ff9eb3fd16ca9e3dc4829894bdb4d9c20200dd32ce34f61156b06a1867720"
     },
     {
       "name": "report-multiline-spacing",

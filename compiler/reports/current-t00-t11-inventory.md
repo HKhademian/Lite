@@ -3,7 +3,7 @@
 Runtime environment details omitted for privacy.
 Working tree at audit start: modified. The raw report records its status; artifact and per-source hashes identify the measured inputs.
 
-T11 identity: `526d0d0bad0d6221f21bfed7495b99519f2daef27bfbce1f83f6bde9c5d34829`. The preserved artifact passed its separate strict TypeScript check.
+T11 identity: `3fe0dd566163b06861e0a05cb84da47afdc8934921133f02ac626e0e9975fcdd`. The preserved artifact passed its separate strict TypeScript check.
 
 This is the current measured support inventory, not acceptance of new language features. Dated historical inventories remain unchanged.
 
@@ -21,15 +21,15 @@ This is the current measured support inventory, not acceptance of new language f
 - feature: 38; 23 matches tested behavior; 15 T11 rejects source.
 - example: 19; 11 matches tested behavior; 8 T11 rejects source.
 - sample: 20; 11 matches tested behavior; 9 T11 rejects source.
-- probe: 79; 31 matches tested behavior; 48 T11 rejects source.
+- probe: 79; 32 matches tested behavior; 47 T11 rejects source.
 - library-test: 8; 8 matches tested behavior.
 - trackedSourceFiles: 210.
 - Showcases: none currently implemented.
 
 ## Progress since the original inventory
 
-- 32 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
-- 84/164 executed source cases match; 80 still fail. These are case counts, not distinct missing features or an overall completion percentage.
+- 33 formerly failing cases now match; 0 formerly matching cases regress. Case identity includes kind and id.
+- 85/164 executed source cases match; 79 still fail. These are case counts, not distinct missing features or an overall completion percentage.
 - Native C, compile-only sources and run/check migration have separate gates in [the live gap tracker](../gaps.md).
 
 Closed original cases:
@@ -59,6 +59,7 @@ Closed original cases:
 - probe: text.bounds-diagnostic
 - probe: output.before-fault
 - probe: text.adjacent-literals
+- probe: call.trailing-comma
 - probe: syntax.final-semicolon
 - probe: syntax.empty-script
 - probe: syntax.whitespace-script
@@ -240,8 +241,7 @@ Closed original cases:
 - **function.escaped-environments — T11 rejects source.** Escaped helper functions retain distinct lexical environments
   First diagnostic: 1:14: unsupported feature "fn": see docs/functions.md; the restricted compiler accepts Int/String/Bool expressions, locals, output/outputLine, if/else and loop only
 - **text.adjacent-literals — matches tested behavior.** Adjacent quoted strings concatenate
-- **call.trailing-comma — T11 rejects source.** Trailing comma in a call argument list
-  First diagnostic: 1:14: expected an Int, String or Bool expression
+- **call.trailing-comma — matches tested behavior.** Trailing comma in a call argument list
 - **scope.same-block-shadow — T11 rejects source.** Later declarations shadow same-block bindings
   First diagnostic: 1:9: duplicate local x
 - **syntax.final-semicolon — matches tested behavior.** Final declaration can end at EOF without a semicolon
@@ -363,6 +363,7 @@ Closed original cases:
 - `igniter/tests/compiler/001-001-report-int-min.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-large-magnitude.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-leading-plus-zeroes.lts`: compile accepted; execution not tested.
+- `igniter/tests/compiler/001-001-report-missing-argument.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-multiline-spacing.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-negative-zero.lts`: compile accepted; execution not tested.
 - `igniter/tests/compiler/001-001-report-spaced-negative.lts`: compile accepted; execution not tested.
@@ -424,7 +425,6 @@ Closed original cases:
 - `igniter/tests/compiler/002-001-decimal-literal.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-exponent-literal.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-injected-source.lts`: not-a-standalone-T00-program.
-- `igniter/tests/compiler/002-001-report-missing-argument.lts`: T11 rejects source.
 - `igniter/tests/compiler/002-001-report-missing-close.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-missing-expression.lts`: not-a-standalone-T00-program.
 - `igniter/tests/compiler/002-001-report-without-call.lts`: not-a-standalone-T00-program.

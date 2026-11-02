@@ -1624,6 +1624,13 @@ builtinResultKind := fn(name: String): String {
     else { "Unit" }
 }
 
+/** Closes a call after at least one parsed argument, consuming at most one trailing comma and its trivia. */
+expectNonemptyCallClose := fn(source: String, position: Int, prefix: String): Int {
+    var cursor := skipTrivia(source, position, prefix);
+    if cursor < textLength(source) and textAt(source, cursor) == "," { cursor = skipTrivia(source, cursor + 1, prefix); }
+    expectSymbol(source, cursor, ")", prefix)
+}
+
 /** Parses the `mut name` grant after one list end-operation opener, rejecting a missing grant, a non-list target and a binding without writable held data. */
 parseListGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     var cursor := skipTrivia(source, open + 1, prefix);
@@ -1924,6 +1931,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                         cursor = skipTrivia(source, argument.next, prefix);
                         if cursor < textLength(source) and textAt(source, cursor) == "," {
                             cursor = skipTrivia(source, cursor + 1, prefix);
+                            if cursor < textLength(source) and textAt(source, cursor) == ")" { break; }
                         } else {
                             break;
                         }
@@ -1971,6 +1979,7 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                             builtinCursor = skipTrivia(source, builtinValue.next, prefix);
                             if builtinCursor < textLength(source) and textAt(source, builtinCursor) == "," {
                                 builtinCursor = skipTrivia(source, builtinCursor + 1, prefix);
+                                if builtinCursor < textLength(source) and textAt(source, builtinCursor) == ")" { break; }
                             } else {
                                 break;
                             }
@@ -2006,12 +2015,12 @@ parseBinary := fn(source: String, position: Int, prefix: String, locals: List<Lo
                     failAt(source, valueStart, prefix, "push_back element must be " + displayKind(elementKind) +
                         ", got " + displayKind(value.kind));
                 }
-                close := expectSymbol(source, skipTrivia(source, value.next, prefix), ")", prefix);
+                close := expectNonemptyCallClose(source, value.next, prefix);
                 left = (kind = "Unit", code = grant.runtime + ".push(" + value.code + ")",
                     intValue = 0, textValue = "", constant = false, next = close);
             } else if name == "pop_back" and afterName < textLength(source) and textAt(source, afterName) == "(" {
                 grant := parseListGrant(source, afterName, prefix, locals, "pop_back");
-                close := expectSymbol(source, skipTrivia(source, grant.next, prefix), ")", prefix);
+                close := expectNonemptyCallClose(source, grant.next, prefix);
                 left = (kind = listElementKind(grant.kind), code = "lite$listPopBack(" + grant.runtime + ", " + intText(nameStart) + ")",
                     intValue = 0, textValue = "", constant = false, next = close);
             } else {
@@ -2613,7 +2622,6 @@ parseProgram := fn(source: String, prefix: String): Items {
                 position = skipTrivia(source, argument.next, prefix);
                 if position < size and textAt(source, position) == "," {
                     position = skipTrivia(source, position + 1, prefix);
-                    if position < size and textAt(source, position) == ")" { failAt(source, position, prefix, "expected an Int, String or Bool expression"); }
                 } else {
                     break;
                 }

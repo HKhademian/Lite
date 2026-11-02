@@ -1,0 +1,21 @@
+{
+  "name": "report-missing-argument",
+  "source": {
+    "file": "001-001-report-missing-argument.lts",
+    "hash": "sha256:251d478c9ff04f740ce8368491106f99e38ce9859a74090e81d77426534e5495"
+  },
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "1\n",
+        "hash": "sha256:4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      "stderr": {
+        "text": "",
+        "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "exitCode": 0
+    }
+  ]
+}

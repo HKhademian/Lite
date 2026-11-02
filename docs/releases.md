@@ -13,7 +13,7 @@ Current components:
 - Igniter: **0.1.0-alpha.38**
 - VS Code extension: **0.1.1**
 - Verification corpus: 38 features, 19 examples, 20 samples, 78 scenarios, 98 target executions
-- Tests: 236 interpreter groups, 23 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
+- Tests: 236 interpreter groups, 24 compiler-host groups, 4 policy/tooling groups and 9 editor grammar groups
 
 Constant integer arithmetic faults now execute only when reached. Dead branches,
 false loops, skipped Boolean operands and unused functions compile safely; invalid
@@ -160,6 +160,13 @@ TS/C and both standalone parser drivers, with malformed later tokens still
 rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
 artifact pairs stay identical. See the [adjacent-literal ledger](../compiler/parity.md#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
+
+
+Nonempty calls now admit one trailing comma on generated targets while empty
+comma-only lists, doubled commas and arity/type errors still reject before effects.
+Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
+See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
+focused combinations and paired timing evidence.
 
 
 ## Current tag conventions

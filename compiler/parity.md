@@ -4,7 +4,7 @@ Status: **active, 2026-11-02**. This ledger drives the owner direction that the
 TS igniter and the generated compilers converge into the same compiler for the
 bootstrap surface. It is a burndown list, not a claim that parity already holds.
 
-Immediate scope: the bootstrap subset L, S, and the 65 program / 28 rejection
+Immediate scope: the bootstrap subset L, S, and the 66 program / 27 rejection
 cases. The owner approved starting full T00 replacement on 2026-11-02; existing
 features beyond L remain pending work in the [transition plan](transition-plan.md).
 
@@ -827,3 +827,44 @@ isolated compiler timings are recorded separately above.
 Inventory: 84/164 match, 80 remain; 32 original failures closed, no regressions,
 210 tracked Lite sources and no load errors. Next: trailing call commas and
 remaining scope/statement forms. Broader literal grammar remains separate.
+
+## Trailing call commas
+
+Nonempty calls now admit one final comma without supplying an extra value.
+Output/outputLine, scalar functions, admitted builtins and list end operations
+share this contract. Output parsing drops the old rejection; function/builtin
+loops check for `)` only after consuming a comma. List end operations share one
+final-argument close helper. Calls without commas retain their emitted bytes.
+Empty comma-only lists, doubled separators, wrong types and missing/excess
+arguments still reject before artifact output or program effects.
+
+Coverage includes nine TS/C programs and twelve TS function/aggregate/input
+programs: zero/one/many outputs, Unit, literal joining/comments, comparisons,
+branches, functions, nested operand effects, all four prompted input helpers,
+text helpers, writable-list ends, display, stderr and exit. Thirteen rejection
+sources cover separators, zero/required arities and list grants. Four runtime
+fault executions compare exact status and streams. Two valid and one invalid
+case run through both standalone parser drivers.
+
+The original trailing-comma fixture moves to 001-001 without changing source
+bytes. Corpus: 66 programs/27 rejections, still 93 sources. All 65 earlier program
+artifact pairs remain identical. Both compiler corpora, 98 verifier executions,
+coverage, strict host/seeds and nine editor groups pass. The
+[generated-only ladder](reports/2026-11-02-trailing-commas-ladder.json) records
+three identical TS generations and the TS-hosted C emitter.
+
+Five paired compiler-phase medians remain steady: TS outputs 62.1 → 62.0 ms,
+identical S 644.2 → 653.6 ms, constant expressions 128.5 → 127.6 ms;
+C-emitter outputs 79.3 → 79.8 ms, divisions 167.7 → 170.7 ms, constant
+expressions 210.7 → 214.5 ms. All measured output bytes match exactly.
+Mixed small timing changes are recorded without a general speedup claim in the
+[raw performance report](reports/2026-11-02-trailing-commas-performance.json).
+
+All 264 full tests pass with zero skips in 78.9 s; fast passes 252 with
+12 expected skips in 58.5 s. Gate durations are validation observations; paired
+compiler timings are measured separately above.
+
+Inventory: 85/164 match, 79 remain; 33 original failures closed, no regressions,
+210 tracked Lite sources and no load errors. `exit()` still needs its existing
+zero-argument contract (T00 exits zero; T11 rejects); this is recorded separately
+from trailing separators. The remaining scope/statement forms are next.

@@ -103,6 +103,13 @@ rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
 artifact pairs stay identical. See the [adjacent-literal ledger](../compiler/parity.md#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
 
+
+Nonempty calls now admit one trailing comma on generated targets while empty
+comma-only lists, doubled commas and arity/type errors still reject before effects.
+Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
+See the [trailing-comma ledger](../compiler/parity.md#trailing-call-commas) for generated bootstrap,
+focused combinations and paired timing evidence.
+
 ## Run
 
 Use Node **26.13.0** (pinned in [.node-version](.node-version)); TypeScript
@@ -851,7 +858,7 @@ warm cache.
 Compiler verification cases are one JSON model plus a sibling `.lts` entry
 source per case under [tests/compiler](tests/compiler/); filenames follow
 `NNN-MMM-title-subtitle.json` (category 001 accepted program, 002 compiler rejection).
-There are 65 programs and 28 rejections; accepted programs include six expected
+There are 66 programs and 27 rejections; accepted programs include six expected
 arithmetic runtime faults. The schema
 and workflow are documented in [tests/README.md](tests/README.md). The suite
 loads all cases and does not keep separate inline source, input, and

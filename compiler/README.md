@@ -77,7 +77,7 @@ line-map contract and current hashes are recorded in:
 - [`parity.md`](parity.md) — stage-0 versus generated-compiler burndown; the
   current TS/C parity target and difference log.
 - [`generated/current-artifacts.json`](generated/current-artifacts.json) —
-  current emitted-artifact hashes for all 65 program cases; the P0 hashes remain
+  current emitted-artifact hashes for all 66 program cases; the P0 hashes remain
   in `generated/baseline-artifacts.json`.
 
 The bundle path is green: [`../igniter/loader.ts`](../igniter/loader.ts) loads
@@ -133,6 +133,13 @@ TS/C and both standalone parser drivers, with malformed later tokens still
 rejected before effects. Corpus: 65 programs/28 rejections; all 64 earlier
 artifact pairs stay identical. See the [adjacent-literal ledger](parity.md#adjacent-string-literals)
 for focused coverage, generated bootstrap and paired timing evidence.
+
+
+Nonempty calls now admit one trailing comma on generated targets while empty
+comma-only lists, doubled commas and arity/type errors still reject before effects.
+Corpus: 66 programs/27 rejections; all 65 earlier artifact pairs stay identical.
+See the [trailing-comma ledger](parity.md#trailing-call-commas) for generated bootstrap,
+focused combinations and paired timing evidence.
 
 
 ## Layout

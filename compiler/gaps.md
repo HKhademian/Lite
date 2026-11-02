@@ -9,7 +9,7 @@ This tracker covers the T00 replacement goal, including newly discovered flaws.
 
 The [current inventory](reports/current-t00-t11-inventory.md) and
 [raw observations](reports/current-t00-t11-inventory.json) use the generated
-seed `526d0d0b…`. All inputs compile/check against the current reference, both
+seed `3fe0dd56…`. All inputs compile/check against the current reference, both
 execution paths use identical anonymous diagnostic naming, and raw-byte input
 probes follow the real CLI's lazy strict UTF-8 decoding. Historical reports stay
 unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sources`.
@@ -17,11 +17,11 @@ unchanged. Refresh with `node compiler/scripts/t00-t11-inventory.ts --large-sour
 - Canonical features: 23/38 match; 15 rejected.
 - Examples: 11/19 match; 8 rejected.
 - Implemented samples: 11/20 match; 9 rejected.
-- Isolated boundary probes: 31/79 match; 48 rejected; no differences among accepted probes.
+- Isolated boundary probes: 32/79 match; 47 rejected; no differences among accepted probes.
 - Library tests: 8/8 match. All 210 tracked Lite sources are accounted for;
   compile-only acceptance is distinguished from executed parity.
-- Total executed source cases: 84/164 match, 80 still fail. Compared with the
-  original inventory, 32 previously failing cases now match and none regress.
+- Total executed source cases: 85/164 match, 79 still fail. Compared with the
+  original inventory, 33 previously failing cases now match and none regress.
   The temporary-I/O case, retained function-tail probe and new chain feature
   account for three additional matching cases.
 
@@ -71,7 +71,10 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
 - [x] **Adjacent String literals:** concatenate decoded literal tokens across
   whitespace/comments before expression parsing; encode the joined value once
   in both frontend and standalone parser.
-- [ ] **Script and lexical forms:** trailing call commas, standalone scope blocks, expression
+- [x] **Trailing call commas:** nonempty output, function, builtin and list-end
+  calls accept one final comma; empty comma-only lists, doubled commas, wrong
+  types and missing/excess arguments still reject.
+- [ ] **Script and lexical forms:** standalone scope blocks, expression
   statements and same-block shadowing.
 - [x] **Deferred arithmetic faults:** constant arithmetic must fault only when
   reached; dead branches and short-circuit operands must remain unevaluated.
@@ -103,8 +106,9 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   tagged break/continue and the reference's supported tagged returns.
 - [ ] **Cleanup:** construct-level finally and exit/fault interactions.
 - [ ] **Match:** supported subjectless Boolean selection and combinations.
-- [ ] **Other existing input:** audit and port remaining reference helpers,
-  including inputWord; preserve the selected six-helper public contract.
+- [ ] **Other existing builtins:** audit and port remaining reference helpers,
+  including inputWord and default-argument `exit()` (T00 exits zero; T11
+  currently requires one argument); preserve the selected six-helper public contract.
 - [ ] **C target parity:** functions, aggregates/copies, text/input, control
   flow and complete runtime/memory support. Audit TS-only acceptance explicitly.
 - [x] **C output argument faults:** `var zero := 0;
@@ -241,3 +245,12 @@ programs/28 rejections; all 64 earlier artifact pairs remain identical. Literal
 pieces are decoded in one scan and encoded once. Paired compiler throughput
 stays steady with mixed small changes; see the [literal ledger](parity.md#adjacent-string-literals).
 Next: trailing call commas, then remaining scope/statement forms.
+
+Trailing call commas: 85/164 match, 79 remain; 33 original failures closed and
+none regress. All 264 full tests pass with zero skips in 78.9 s; fast passes
+252 with 12 expected skips in 58.5 s. Strict checks, both 93-case corpora,
+98 verifier executions, coverage and nine editor groups pass. Corpus: 66
+programs/27 rejections; all 65 earlier artifact pairs stay identical. Paired
+compiler throughput remains steady; see the [comma ledger](parity.md#trailing-call-commas).
+Default-argument exit() remains a separately verified builtin gap. Remaining
+scope/statement forms and broader type/control/native/consumer work stay queued.
