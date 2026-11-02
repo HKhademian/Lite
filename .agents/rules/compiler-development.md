@@ -5,28 +5,17 @@ features, syntax support, semantic checks, bug fixes, edge cases and target
 lowering belong in the Lite compiler source. Every change needs multiple
 focused test cases and coverage of combined feature usage.
 
-This is the ongoing development policy. The [bootstrap plan](bootstrap-plan.md)
+This is the ongoing development policy. The [bootstrap plan](../../docs/bootstrap-plan.md)
 records the initial bootstrap constraints and gates; the
-[transition plan](../compiler/transition-plan.md) tracks the remaining ports.
+[transition plan](../../compiler/transition-plan.md) tracks the remaining ports.
 This policy does not itself select new language syntax or mark pending support
 complete.
 
 ## Atomic commits for all project changes
 
-All project work must follow atomic commits, including compiler implementation,
-language specifications, investigations, tests, tooling, documentation,
-configuration and generated assets. Each commit has one coherent purpose and
-includes its required tests, documentation and artifact updates. Separate
-independent fixes, refactors, decisions and release/version work.
-
-Review the diff and run the checks appropriate to that scope before committing.
-Stage only the intended files or hunks; preserve unrelated or concurrent changes.
-Create the commit before reporting the unit complete or starting independent
-work, and report its ID and verification. If committing is blocked, state the
-blocker and uncommitted scope explicitly. Keep feature support and subsequent
-compiler-source adoption separately reviewable, with a working bootstrap at
-each step. The repository-wide [agent instructions](../AGENTS.md) keep this
-requirement visible to future contributors using the agent.
+Follow the project-wide [atomic commit rules](atomic-commits.md) for all work.
+Keep feature support and subsequent compiler-source adoption separately
+reviewable, with a working bootstrap at each step.
 
 ## Lite source and generated igniters
 
@@ -35,7 +24,7 @@ in `lib/core/`. Generate the readable TypeScript igniter/bootstrap from those
 sources, with C as the later native bootstrap target. Do not hand-edit generated
 seeds or flattened emitter bundles to implement language behavior. TypeScript
 host adapters, test harnesses and platform glue may remain TypeScript under the
-[source-file policy](tooling-source-policy.md); they must not become a parallel
+[source-file policy](../../docs/tooling-source-policy.md); they must not become a parallel
 language implementation.
 
 The current generated TS compiler can rebuild its own supported source subset.
@@ -119,10 +108,10 @@ by the compiler source.
 
 Use the existing harnesses and schemas:
 
-- [Feature verifications](../verifications/README.md) carry semantic contracts,
+- [Feature verifications](../../verifications/README.md) carry semantic contracts,
   feature IDs and named input/output scenarios. Extend `cases` for multiple
   inputs to the same source, and add focused sources for different forms.
-- [Compiler fixtures](../igniter/tests/README.md) cover admitted programs and
+- [Compiler fixtures](../../igniter/tests/README.md) cover admitted programs and
   compile-time rejections with exact expected streams/status.
 - `compiler/tests/lexer/`, `parser/` and `checker/` hold focused phase fixtures.
   Targeted harness tests can cover CLI options, raw bytes, artifact structure or
@@ -142,7 +131,7 @@ declaring an implementation complete, run `./lite test --full`,
 TS checks and affected editor grammar checks. When changing compiler source or
 seeds, also verify generated rebuilds, determinism, the relevant fixed-point
 ladder and corpus parity. Record commands, case names, results, skips and target
-gaps; the [bootstrap seed guide](../compiler/bootstrap/README.md) describes the
+gaps; the [bootstrap seed guide](../../compiler/bootstrap/README.md) describes the
 current build and historical audit paths. Documentation-only edits need link and
 consistency review rather than a compiler rebuild.
 
@@ -151,7 +140,7 @@ consistency review rather than a compiler rebuild.
 Syntax or semantic alternatives may be investigated with explicitly flagged
 support in the **Lite compiler**, within the stated investigation scope. Keep
 the candidate contract, alternatives and open questions in an
-[investigation](../investigations/README.md) or proposal. A bounded experiment
+[investigation](../../investigations/README.md) or proposal. A bounded experiment
 does not make its syntax part of the selected language; normal design acceptance
 still follows the project's explicit-consent process.
 

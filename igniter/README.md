@@ -14,7 +14,7 @@ web target and C the first native/export target; native self-hosting and library
 export are not implemented yet.
 
 Ongoing language work follows the
-[compiler development guidelines](../docs/compiler-development.md): implement in
+[compiler development guidelines](../.agents/rules/compiler-development.md): implement in
 Lite, verify multiple focused and combined-feature cases, and accept generated
 igniter support before using a new feature in compiler source. The generated TS
 igniter is distinct from this historical handwritten T00 implementation.

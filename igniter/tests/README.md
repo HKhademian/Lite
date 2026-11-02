@@ -141,7 +141,7 @@ the current implementation.
 
 ## Adding a case
 
-Follow the [compiler development guidelines](../../docs/compiler-development.md):
+Follow the [compiler development guidelines](../../.agents/rules/compiler-development.md):
 each feature, syntax change or bug fix needs multiple focused cases plus multiple
 feature combinations. Use several named `cases` for different inputs to one
 source, and separate fixtures for distinct syntax or rejection paths. Include

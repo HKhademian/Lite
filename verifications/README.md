@@ -181,7 +181,7 @@ examples and samples are verified consumers. See the
 
 ## Adding a case
 
-The [compiler development guidelines](../docs/compiler-development.md) require
+The [compiler development guidelines](../.agents/rules/compiler-development.md) require
 multiple focused cases and combined-feature cases for each feature, syntax/spec
 change, bug fix and edge-case correction. Use named scenarios for different
 inputs and separate sources for distinct forms. Include boundaries and invalid

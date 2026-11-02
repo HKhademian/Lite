@@ -141,7 +141,7 @@ design approval. Keep unapproved experiments clearly labeled pending review.
 
 Owner direction, **2026-11-02**, permits bounded syntax investigations with
 opt-in, default-off support in the Lite compiler under the
-[compiler development guidelines](../docs/compiler-development.md#syntax-investigations-and-feature-flags).
+[compiler development guidelines](../.agents/rules/compiler-development.md#syntax-investigations-and-feature-flags).
 Record the candidate contract and scope and test enabled/disabled behavior with
 multiple focused and combined-feature cases. This permits experimental evidence;
 it does not select the candidate language design, authorize unrelated additions,

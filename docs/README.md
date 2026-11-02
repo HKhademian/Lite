@@ -234,7 +234,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 
 ## Project and implementation direction
 
-- [Compiler development guidelines](compiler-development.md): develop language support in Lite, require multiple focused and combined-feature cases, investigate behind opt-in flags, and accept generated-igniter support before using new features in compiler source.
+- [Compiler development guidelines](../.agents/rules/compiler-development.md): develop language support in Lite, require multiple focused and combined-feature cases, investigate behind opt-in flags, and accept generated-igniter support before using new features in compiler source.
 - [Release and tag history](releases.md): published igniter tags, current component versions, and test/verification counts.
 - [Bootstrap and self-hosting plan](bootstrap-plan.md): staged compiler-bootstrap defaults, igniter tooling, shared library layers, gates, agent workflow, and the self-host definition of done; an implementation plan, not a language, module or std decision.
 - [Naming and versioning](versioning-and-naming.md): canonical `lite` project, LiteLang language, LiteScript programs, `litec` compiler, `literun` runtime, `lite` CLI, independent version streams, `LP-NNNN` proposals, component tags, and compatibility rules.

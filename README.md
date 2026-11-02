@@ -41,7 +41,7 @@ are `./lite docs`; help is `./lite help`. See
 - [Language documentation and reading order](docs/README.md)
 - [Numbered runnable examples](examples/README.md): small language demonstrations shared by the interpreter and editor tooling.
 - [Lite compiler prototype](compiler/README.md): shared front-end and TS/C backends, run with `./ltc`, `./litec`, or `./lite compile`.
-- [Compiler development guidelines](docs/compiler-development.md): Lite source implementation, multiple focused and combined-feature tests, flagged investigations, and verified generated-igniter support before compiler-source adoption.
+- [Compiler development guidelines](.agents/rules/compiler-development.md): Lite source implementation, multiple focused and combined-feature tests, flagged investigations, and verified generated-igniter support before compiler-source adoption.
 - [Verification cases](verifications/README.md): feature contracts and artifact manifests, run with `./lite verify`.
 - [Small VS Code highlighter](editors/vscode/README.md): local Lite highlighting for `.lt` and `.lts` files, with an installable VSIX and no extension runtime code.
 - [Source file kinds](docs/modules-and-packages.md#distinct-script-and-module-files): convenient `.lts` scripts and explicit `.lt` module files; module files have no implicit imports, and standard module providers are intended to be replaceable.

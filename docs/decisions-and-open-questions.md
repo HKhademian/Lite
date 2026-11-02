@@ -19,7 +19,7 @@ Once the contract and generated-igniter support are accepted and fully checked
 for the intended bootstrap target, compiler source may use the feature; this is
 encouraged where useful, not mandatory. Support and seed acceptance precede
 source adoption, with reproducible builds and the applicable fixed-point and
-corpus gates. See the [development guidelines](compiler-development.md) for the
+corpus gates. See the [development guidelines](../.agents/rules/compiler-development.md) for the
 workflow and the distinction between current TS self-hosting and pending native
 C self-hosting. This updates the development process, not implementation status.
 

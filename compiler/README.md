@@ -49,7 +49,7 @@ contract or select new language syntax.
 
 ## Bootstrap source subset
 
-Follow the [compiler development guidelines](../docs/compiler-development.md)
+Follow the [compiler development guidelines](../.agents/rules/compiler-development.md)
 for all feature support, syntax changes, bug fixes and edge cases: implement in
 Lite, add multiple focused and combined-feature cases, and verify generated
 targets. New features may be used in compiler source after their contracts and
