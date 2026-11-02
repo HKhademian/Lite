@@ -201,6 +201,14 @@ compiler diagnostics from flattened rows back to original files, and provides
 sha-256, nondeterminism and benchmark helpers. [`artifacts.ts`](artifacts.ts)
 strict-typechecks and runs emitted TS, and compiles/runs emitted C with
 `-std=c11 -Wall -Wextra -Werror`, capturing raw streams and status.
+TS runs capture stdout and stderr through fresh temporary regular files so
+synchronous generated writes cannot hit nonblocking-pipe `EAGAIN` or silently
+truncate a large write. Prompts, diagnostics and output before faults or explicit
+exit retain their exact bytes. Each run keeps the ten-second timeout and reads
+at most 16 MiB per stream into the parent; the size check happens after execution,
+so it bounds memory capture rather than temporary disk usage. Files are truncated
+between runs and removed with the artifact directory. Host regressions cover
+large raw Unicode/NUL output, repeated reports, prompts, faults and early exit.
 
 The manifests are [compiler/manifests/ts.json](../compiler/manifests/ts.json) and
 [c.json](../compiler/manifests/c.json). They list the L0 libraries, target

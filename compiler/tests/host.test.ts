@@ -36,6 +36,60 @@ function assertExecutions(executions: readonly ArtifactExecution[]): void {
   });
 }
 
+test('TS artifact capture preserves large synchronous writes and the returned tail', () => {
+  const chunk = '🙂سلام\0\r\n'.repeat(32768);
+  const artifact = `export function main(report: (text: string) => void): string {
+    const chunk = ${JSON.stringify(chunk)};
+    report(chunk);
+    report(chunk);
+    return "tail\\n";
+  }`;
+  const actual = runTsArtifact(artifact);
+  assert.equal(actual.phase, 'run');
+  assert.equal(actual.status, 0, actual.stderr.toString());
+  assert.equal(actual.signal, null);
+  assert.equal(actual.stderr.length, 0);
+  assert.ok(actual.stdout.equals(Buffer.from(chunk + chunk + 'tail\n')), 'complete raw output including returned tail');
+});
+
+test('TS artifact capture preserves repeated output, diagnostics and early exit across fresh runs', () => {
+  const chunk = '🙂سلام\r\n'.repeat(128);
+  const source = 'mode := inputInt(); var n := 0; loop n < 512 { ' +
+    `output(${JSON.stringify(chunk)}); reportError(${JSON.stringify(chunk)}); n = n + 1; } ` +
+    'output(inputAll("prompt: ")); if mode == 1 { exit(7); } ' +
+    'if mode == 2 { outputLine(1 / 0); } outputLine("tail");';
+  const compiled = compileTs({ text: source, name: 'capture.lts' });
+  assert.equal(compiled.status, 0, compiled.stderr.toString());
+  withTsArtifact(compiled.stdout.toString(), run => {
+    for (const mode of [0, 1, 2, 0]) {
+      const actual = run({ stdin: `${mode}\nreply\n` });
+      assert.equal(actual.phase, 'run');
+      assert.equal(actual.signal, null);
+      assert.equal(actual.status, mode === 0 ? 0 : mode === 1 ? 7 : 1, actual.stderr.subarray(-512).toString());
+      const stdout = chunk.repeat(512) + 'prompt: \nreply\n' + (mode === 0 ? 'tail\n' : '');
+      assert.ok(actual.stdout.equals(Buffer.from(stdout)), `stdout for mode ${mode}`);
+      // reportError adds one newline per call; runtime faults follow those bytes.
+      const errors = (chunk + '\n').repeat(512);
+      assert.ok(actual.stderr.subarray(0, Buffer.byteLength(errors)).equals(Buffer.from(errors)), `stderr for mode ${mode}`);
+      const suffix = actual.stderr.subarray(Buffer.byteLength(errors)).toString();
+      if (mode === 2) assert.match(suffix, /^capture\.lts:1:\d+: ArithmeticPanic: division by zero\n$/);
+      else assert.equal(suffix, '');
+    }
+  });
+});
+
+test('TS artifact capture rejects oversized buffers and clears output before the next run', () => {
+  withTsArtifact(`declare const process: { argv: string[] };
+    export function main(): string {
+      return process.argv[2] === "large" ? "x".repeat(16 * 1024 * 1024 + 1) : "small";
+    }`, run => {
+    assert.throws(() => run({ args: ['large'] }), /TS artifact output exceeds 16 MiB capture limit/);
+    assert.deepEqual(run(), {
+      phase: 'run', status: 0, signal: null, stdout: Buffer.from('small'), stderr: Buffer.alloc(0),
+    });
+  });
+});
+
 test('generated reports evaluate arguments once in order and preserve nested output', () => {
   const cases = [
     { source: 'f := fn(): Int { outputLine("inner"); 7 } outputLine("before"); outputLine(f()); outputLine("after");',

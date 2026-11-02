@@ -1,7 +1,7 @@
 /** Internal artifact runner for emitted bootstrap TS and C. */
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -89,13 +89,32 @@ export function withTsArtifacts<Result>(sources: readonly string[], use: (runs: 
       return use(sources.map(() => () => failure));
     }
     return use(runners.map((runner): TsArtifactRunner => (options = {}) => {
-      const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])],
-        { input: inputBytes(options.stdin), timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
-      if (result.error !== undefined) throw result.error;
-      return {
-        phase: 'run', status: result.status, signal: result.signal,
-        stdout: result.stdout ?? Buffer.alloc(0), stderr: result.stderr ?? Buffer.alloc(0),
-      };
+      const stdoutPath = `${runner}.stdout`;
+      const stderrPath = `${runner}.stderr`;
+      let stdout: number | undefined;
+      let stderr: number | undefined;
+      try {
+        // Generated programs write synchronously, including before exit/faults.
+        // Node's captured pipes can short-write or throw EAGAIN under pressure.
+        // Fresh regular files retain exact bytes without buffering past exit.
+        stdout = openSync(stdoutPath, 'w');
+        stderr = openSync(stderrPath, 'w');
+        const result = spawnSync(process.execPath, [runner, ...(options.args ?? [])], {
+          input: inputBytes(options.stdin), timeout: 10000, stdio: ['pipe', stdout, stderr],
+        });
+        if (result.error !== undefined) throw result.error;
+        // Bound the buffers read into the parent, as with the former pipe capture.
+        if ([stdoutPath, stderrPath].some(path => statSync(path).size > 16 * 1024 * 1024)) {
+          throw new Error('TS artifact output exceeds 16 MiB capture limit');
+        }
+        return {
+          phase: 'run', status: result.status, signal: result.signal,
+          stdout: readFileSync(stdoutPath), stderr: readFileSync(stderrPath),
+        };
+      } finally {
+        if (stderr !== undefined) closeSync(stderr);
+        if (stdout !== undefined) closeSync(stdout);
+      }
     }));
   } finally {
     rmSync(directory, { recursive: true, force: true });
