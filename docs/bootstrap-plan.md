@@ -12,6 +12,15 @@ imports, a standard library, a CLI design or a native ABI. It records the
 bootstrap defaults agents must follow, the gates that must pass, and the point
 where work stops for an owner decision.
 
+For ongoing feature work, the owner-selected
+[compiler development guidelines](compiler-development.md) (2026-11-02) extend
+this initial bootstrap plan: language implementation stays in Lite, changes
+require multiple focused and combined-feature cases, and accepted, verified
+generated support can precede adoption of a feature in S. Bounded flagged
+investigations are permitted under those guidelines. The restrictions below
+describe the current L and bootstrap phase scope; they do not permanently freeze
+Lite compiler feature development. Native C self-hosting remains pending.
+
 Related direction:
 
 - [TypeScript igniter and early self-hosting](tooling-and-learning.md#typescript-igniter-and-early-self-hosting)
@@ -188,7 +197,7 @@ requires the project owner's explicit selection and an update to this page and t
 | **B6** | Fixed point means **byte-identical** `T2 == T` and `C2 == C`. Behavioral parity with a normalized diff is a fallback only after the cause is understood and recorded. | Makes nondeterminism visible. |
 | **B7** | No official std, module/import, CLI or ABI decision is made by this plan. | Keeps bootstrap scaffolding replaceable. |
 | **B8** | **Stage 0 feature freeze for bootstrap:** do not add a new igniter language feature, builtin, host API or CLI behavior. If one is genuinely required, stop; the owner decision must add the same slice to L/S and its compiler plan. | Prevents the generated compiler from chasing a moving TS target. |
-| **B9** | S may use only **L**. Adding a construct to S expands the compiler's required parser/checker/emitter surface. | The compiler must compile its own source at the gate. |
+| **B9** | S may use only **L**. Expand L after contract and generated-support acceptance, then adopt the feature in S under the [development guidelines](compiler-development.md#accept-support-before-using-it-in-compiler-source). | The selected seed must support the compiler source before adoption. |
 | **B10** | Bootstrap artifacts are **single-file** per target (or one source plus one documented runtime file); no target-level package system. | Keeps the build chain auditable. |
 | **B11** | Stage 0, L/S and T/C are kept in **lockstep feature parity**. Igniter-only capability is debt, not progress; closing the gap is part of the bootstrap. | Keeps a Lite implementation reachable instead of chasing an ever-growing TS igniter. |
 
@@ -211,9 +220,12 @@ requires the project owner's explicit selection and an update to this page and t
    examples or samples and is not added to the design specification.
 6. **No npm in visible commands.** Local gates use `./lite ...`. The repository
    CI separately runs the strict TypeScript check.
-7. **Every behavior change has a test.** Compiler behavior uses compiler cases;
-   a language feature uses the standard feature case plus manifest; libraries get
-   direct unit tests.
+7. **Every change has multiple focused and combined-feature cases.** Follow the
+   [development guidelines](compiler-development.md) for features, syntax/spec
+   changes, bug fixes and edge cases. Vary input/output where relevant and cover
+   boundaries, invalid forms and interactions. Compiler behavior uses compiler
+   cases; language contracts use feature cases and manifests; libraries get
+   direct unit tests. Verify generated targets explicitly.
 8. **Keep counts and links current.** Update `docs/releases.md`,
    `docs/spec/README.md`, `compiler/README.md`, `igniter/README.md` and this page
    when their facts change.

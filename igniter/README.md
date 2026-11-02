@@ -13,6 +13,12 @@ with its original seed/source preserved in Git history. TS remains a maintained
 web target and C the first native/export target; native self-hosting and library
 export are not implemented yet.
 
+Ongoing language work follows the
+[compiler development guidelines](../docs/compiler-development.md): implement in
+Lite, verify multiple focused and combined-feature cases, and accept generated
+igniter support before using a new feature in compiler source. The generated TS
+igniter is distinct from this historical handwritten T00 implementation.
+
 The staged compiler-bootstrap path and agent gates are recorded in the
 [bootstrap and self-hosting plan](../docs/bootstrap-plan.md); it does not change
 this igniter's supported language. The refreshed T11/T12/T13 fixed point covers

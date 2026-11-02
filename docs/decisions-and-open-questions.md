@@ -2,6 +2,27 @@
 
 Snapshot: **2026-10-30**. Source: the language-design discussion in this chat. No compiler implementation or conformance result is implied.
 
+## Lite compiler development and coverage policy, 2026-11-02
+
+The owner directs ongoing language implementation into Lite source, with a
+generated TS igniter/bootstrap and C as the later native bootstrap target. Every
+feature, syntax/specification change, bug fix and edge-case correction requires
+multiple focused cases, relevant input/output variations, and multiple combined
+feature cases. Specification changes include expected cases even before support
+is executable. Generated-target execution must be verified explicitly; T00-only
+tests or a successful self-build do not establish feature coverage.
+
+Bounded syntax investigations may use opt-in, default-off feature support in the
+Lite compiler, with enabled/disabled tests and explicit experimental status.
+This selects no particular syntax, flag mechanism or new language contract.
+Once the contract and generated-igniter support are accepted and fully checked
+for the intended bootstrap target, compiler source may use the feature; this is
+encouraged where useful, not mandatory. Support and seed acceptance precede
+source adoption, with reproducible builds and the applicable fixed-point and
+corpus gates. See the [development guidelines](compiler-development.md) for the
+workflow and the distinction between current TS self-hosting and pending native
+C self-hosting. This updates the development process, not implementation status.
+
 ## Temporary I/O helper migration approved, 2026-11-02
 
 The owner selects optional positional String prompts for inputAll, inputLine,

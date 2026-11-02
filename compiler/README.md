@@ -46,13 +46,21 @@ contract or select new language syntax.
 
 ## Bootstrap source subset
 
+Follow the [compiler development guidelines](../docs/compiler-development.md)
+for all feature support, syntax changes, bug fixes and edge cases: implement in
+Lite, add multiple focused and combined-feature cases, and verify generated
+targets. New features may be used in compiler source after their contracts and
+generated-igniter support have been accepted and checked. Flagged investigations
+remain opt-in experiments, separate from accepted support.
+
 These Lite sources are also the bootstrap source **S**. S must remain inside the
 bootstrap subset **L** defined in the
 [bootstrap plan](../docs/bootstrap-plan.md#compiler-source-subset-l). Do not add
 `match`, records, enums, unions, `Float`, arrays, closures, `mut` parameters,
 modules, `finally`, loop metadata or compound operators to S just because the
-igniter supports them. Adding a construct to L is an owner decision, not an
-implementation convenience: the compiler must parse, check and lower it too.
+historical igniter supports them. Expand L through the guidelines' support and
+seed acceptance gates before adopting a construct in S: the selected generated
+compiler must parse, check and lower it too.
 
 P4 moves the compiler source under `src/` and makes manifest order
 authoritative. Compiler source and `lib/core` no longer use `importFlatAll`; the

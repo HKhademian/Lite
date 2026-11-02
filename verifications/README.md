@@ -181,6 +181,15 @@ examples and samples are verified consumers. See the
 
 ## Adding a case
 
+The [compiler development guidelines](../docs/compiler-development.md) require
+multiple focused cases and combined-feature cases for each feature, syntax/spec
+change, bug fix and edge-case correction. Use named scenarios for different
+inputs and separate sources for distinct forms. Include boundaries and invalid
+counterparts, and select supported generated targets explicitly; the default
+igniter target alone does not establish compiler support. Proposed or flagged
+syntax tests remain experimental until accepted and must not be registered as
+selected language support merely because they run.
+
 1. Add the `.lts` source.
 2. Add the manifest with id, kind, `source.file`/`source.text`/`source.bytes`, features,
    guideline/description and cases.

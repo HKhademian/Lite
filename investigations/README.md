@@ -139,6 +139,15 @@ then obtain explicit consent before implementing it or marking it selected.
 Implementation evidence, passing tests, commits and milestone tags do not grant
 design approval. Keep unapproved experiments clearly labeled pending review.
 
+Owner direction, **2026-11-02**, permits bounded syntax investigations with
+opt-in, default-off support in the Lite compiler under the
+[compiler development guidelines](../docs/compiler-development.md#syntax-investigations-and-feature-flags).
+Record the candidate contract and scope and test enabled/disabled behavior with
+multiple focused and combined-feature cases. This permits experimental evidence;
+it does not select the candidate language design, authorize unrelated additions,
+or permit using experimental syntax in the normal compiler source. Accepted and
+verified generated-igniter support must precede source adoption.
+
 ### Automatic progression within selected contracts
 
 Authorized by the user, **2026-10-31**: continue automatically to the next bounded

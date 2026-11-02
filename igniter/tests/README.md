@@ -133,6 +133,13 @@ the current implementation.
 
 ## Adding a case
 
+Follow the [compiler development guidelines](../../docs/compiler-development.md):
+each feature, syntax change or bug fix needs multiple focused cases plus multiple
+feature combinations. Use several named `cases` for different inputs to one
+source, and separate fixtures for distinct syntax or rejection paths. Include
+boundaries, diagnostics and runtime failures where relevant. A single passing
+fixture does not establish support; verify each claimed generated target.
+
 1. Choose the category and next subcategory.
 2. Add `NNN-MMM-title-subtitle.lts` with the entry source.
 3. Add `NNN-MMM-title-subtitle.json` with the matching `name`, a `source`
