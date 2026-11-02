@@ -21,7 +21,8 @@ The C emitter is now also compiled by T11 and shipped as a TS-hosted compiler;
 both compile targets and compiler verification avoid T00. Interpreter run/check
 remain on T00. This is a tooling migration,
 not a language release, new tag, full-feature parity or native self-hosting claim.
-Six host migration tests join the existing 234 interpreter groups in `lite test`.
+Seven host migration/verification-selection tests join the existing 234 interpreter
+groups in `lite test`.
 
 | Tag | Date | Commit | Milestone |
 |---|---|---|---|

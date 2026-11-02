@@ -162,3 +162,28 @@ test('changed C compiler source rebuilds with T11 without a T00 implementation',
     assert.equal(ts.status, 0); assert.notEqual(ts.stdout.toString(), result.stdout.toString());
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('default verifier selects consumers after compiler changes and ignores inventory-only edits', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lite-compiler-selection-'));
+  try {
+    const git = join(directory, 'git');
+    const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
+    // Supply a changed-file listing without editing compiler source or the real Git index.
+    for (const path of ['compiler/host.ts', 'compiler/bootstrap/c-emitter.ts', 'compiler/src/frontend.lts',
+      'compiler/manifests/c.json', 'lib/core/int.lts']) {
+      writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
+      chmodSync(git, 0o755);
+      const result = spawnSync(join(root, 'lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+        env: changedEnv, encoding: 'utf8', timeout: 30000,
+      });
+      assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /verification passed: 3 executed, 0 cached/, path);
+    }
+    writeFileSync(git, "#!/bin/sh\nprintf '%s\\n' ' M compiler/reports/2026-11-02-t00-t11-inventory.md'\n");
+    const documentation = spawnSync(join(root, 'lite'), ['verify', '--no-cache', '--filter', 'features/int-arithmetic.json'], {
+      env: changedEnv, encoding: 'utf8', timeout: 30000,
+    });
+    assert.equal(documentation.status, 0, documentation.stderr);
+    assert.match(documentation.stdout, /verification passed: no selected scenarios/);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});

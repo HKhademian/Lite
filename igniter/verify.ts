@@ -386,7 +386,14 @@ function changedPaths(): Set<string> | undefined {
 const invalidating = new Set([
   'igniter/lite.ts', 'igniter/loader.ts', 'igniter/verify.ts', 'igniter/cli.ts',
   'verifications/features.json', 'verifications/schema/verification.schema.json',
+  'compiler/host.ts', 'compiler/entry.ts', 'compiler/cli.ts',
 ]);
+
+/** Compiler implementation or assembly changes may affect any verified consumer. */
+function invalidatesVerification(path: string): boolean {
+  return invalidating.has(path) || ['compiler/src/', 'compiler/bootstrap/', 'compiler/manifests/',
+    'compiler/runtime/', 'lib/core/'].some(prefix => path.startsWith(prefix));
+}
 
 function affectedFeatures(items: readonly Manifest[], changed: ReadonlySet<string>): Set<string> {
   const features = new Set<string>();
@@ -402,7 +409,7 @@ function affectedFeatures(items: readonly Manifest[], changed: ReadonlySet<strin
 function affected(item: Manifest, changed: ReadonlySet<string> | undefined,
                   features: ReadonlySet<string>): boolean {
   if (!options.changed || changed === undefined) return true;
-  if ([...invalidating].some(path => changed.has(path))) return true;
+  if ([...changed].some(invalidatesVerification)) return true;
   const manifestPath = relative(root, item.file);
   if (changed.has(manifestPath)) return true;
   const sourcePath = item.sourcePath === undefined ? undefined : relative(root, item.sourcePath);

@@ -72,6 +72,9 @@ compiler fixtures.
   the [transition](../compiler/transition-plan.md). Verification cache identity includes
   both generated seeds, the host adapter and both assembled compiler sources, so changing them
   cannot reuse a pass from an older compiler.
+  Changes to compiler host/source/seeds/manifests/runtime or `lib/core` select
+  verified consumers in the default changed-case mode. Inventory reports do not
+  invalidate runtime cases by themselves.
 - `source.hash` — SHA-256 of the original source bytes (`file`, UTF-8 `text` or raw `bytes`).
   Changed source fails verification until `--update` is reviewed.
 - `cases` — one or more scenarios:

@@ -36,6 +36,12 @@ features may be ported; new syntax, builtins and semantics still require approva
 
 ## Done
 
+- 2026-11-02: default verification now selects consumers after compiler host,
+  seed, source, manifest, runtime and core-library changes. A real CLI test
+  supplies changed-file listings without modifying Git state and verifies all
+  three targets, while inventory-only edits select none. Strict checking,
+  all 7 host/selection tests and the fast suite (232 passed, 9 expected skips)
+  pass. No language or compiler-output contract changed in this slice.
 - 2026-11-02: C emission and compiler verification now use the Lite C emitter
   compiled by T11 into a TS-hosted compiler (`bootstrap/c-emitter.ts`, 233360
   bytes, SHA-256 `b5459cc7…`). Its source hash is `413044da…` and builder is the
@@ -94,9 +100,6 @@ distinguishing implemented contracts from wider language design. Then
 port one existing feature per checked slice into Lite; update TS/C lowering and
 runtime support, preserve checked semantics, refresh generated compiler artifacts
 and record feature parity. Include the known report argument-order difference.
-Before source-changing slices, extend verifier changed-file selection to compiler
-host/seed/source and core-library changes: its runtime hash includes those inputs,
-but the current affected-case selector only explicitly recognizes igniter files.
 **Acceptance:** every existing T00-supported contract has an equivalent Lite
 compiler path or an explicitly approved exception; no new language decisions.
 **Verify:** focused boundary probes per slice, strict check, fast suite, canonical
